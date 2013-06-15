@@ -199,6 +199,37 @@ class Cloud(object):
         self.__cached_provider_queries[query] = output
         return output
 
+    def get_running_by_names(self, names, query='list_nodes', cached=False):
+        if isinstance(names, basestring):
+            names = [names]
+
+        matches = {}
+        handled_drivers = {}
+        mapped_providers = self.map_providers_parallel(query, cached)
+        for alias, drivers in mapped_providers.iteritems():
+            for driver, vms in drivers.iteritems():
+                if driver not in handled_drivers:
+                    handled_drivers[driver] = alias
+
+                for vm_name, details in vms.iteritems():
+                    # XXX: The logic bellow can be removed once the aws driver
+                    # is removed
+                    if vm_name not in names:
+                        continue
+                    elif driver == 'ec2' and 'aws' in handled_drivers and \
+                            vm_name in matches[handled_drivers['aws']]['aws']:
+                        continue
+                    elif driver == 'aws' and 'ec2' in handled_drivers and \
+                            vm_name in matches[handled_drivers['ec2']]['ec2']:
+                        continue
+
+                    if alias not in matches:
+                        matches[alias] = {}
+                    if driver not in matches[alias]:
+                        matches[alias][driver] = {}
+                    matches[alias][driver][vm_name] = details
+        return matches
+
     def location_list(self, lookup='all'):
         '''
         Return a mapping of all location data for available providers
@@ -351,112 +382,114 @@ class Cloud(object):
         '''
         Destroy the named VMs
         '''
-        ret = []
+        processed = {}
         names = set(names)
+        matching = self.get_running_by_names(names)
+        vms_to_destroy = set()
+        for alias, drivers in matching.iteritems():
+            for driver, vms in drivers.iteritems():
+                for name in vms:
+                    if name in names:
+                        vms_to_destroy.add((alias, driver, name))
 
-        pmap = self.map_providers_parallel()
-        dels = {}
-        for prov, nodes in pmap.items():
-            dels[prov] = []
-            for node in nodes:
-                if node in names:
-                    dels[prov].append(node)
-                    names.remove(node)
+        for alias, driver, name in vms_to_destroy:
+            fun = '{0}.destroy'.format(driver)
+            with CloudProviderContext(self.clouds[fun], alias, driver):
+                ret = self.clouds[fun](name)
+            if alias not in processed:
+                processed[alias] = {}
+            if driver not in processed[alias]:
+                processed[alias][driver] = {}
+            processed[alias][driver][name] = ret
+            names.remove(name)
 
-        for prov, names_ in dels.items():
-            fun = '{0}.destroy'.format(prov)
-            for name in names_:
-                delret = self.clouds[fun](name)
-                ret.append({name: (True, delret)})
+            if not ret:
+                continue
 
-                if not delret:
+            key_file = os.path.join(
+                self.opts['pki_dir'], 'minions', name
+            )
+            globbed_key_file = glob.glob('{0}.*'.format(key_file))
+
+            if not os.path.isfile(key_file) and not globbed_key_file:
+                # There's no such key file!? It might have been renamed
+                if isinstance(ret, dict) and 'newname' in ret:
+                    saltcloud.utils.remove_key(
+                        self.opts['pki_dir'], ret['newname']
+                    )
+                continue
+
+            if os.path.isfile(key_file) and not globbed_key_file:
+                # Single key entry. Remove it!
+                saltcloud.utils.remove_key(self.opts['pki_dir'], name)
+                continue
+
+            if not os.path.isfile(key_file) and globbed_key_file:
+                # Since we have globbed matches, there are probably
+                # some keys for which their minion configuration has
+                # append_domain set.
+                if len(globbed_key_file) == 1:
+                    # Single entry, let's remove it!
+                    saltcloud.utils.remove_key(
+                        self.opts['pki_dir'],
+                        os.path.basename(globbed_key_file[0])
+                    )
                     continue
 
-                key_file = os.path.join(
-                    self.opts['pki_dir'], 'minions', name
+            # Since we can't get the profile or map entry used to create
+            # the VM, we can't also get the append_domain setting.
+            # And if we reached this point, we have several minion keys
+            # who's name starts with the machine name we're deleting.
+            # We need to ask one by one!?
+            print(
+                'There are several minion keys who\'s name starts '
+                'with {0!r}. We need to ask you which one should be '
+                'deleted:'.format(
+                    name
                 )
-                globbed_key_file = glob.glob('{0}.*'.format(key_file))
-
-                if not os.path.isfile(key_file) and not globbed_key_file:
-                    # There's no such key file!? It might have been renamed
-                    if isinstance(delret, dict) and 'newname' in delret:
-                        saltcloud.utils.remove_key(
-                            self.opts['pki_dir'], delret['newname']
-                        )
-                    continue
-
-                if os.path.isfile(key_file) and not globbed_key_file:
-                    # Single key entry. Remove it!
-                    saltcloud.utils.remove_key(self.opts['pki_dir'], name)
-                    continue
-
-                if not os.path.isfile(key_file) and globbed_key_file:
-                    # Since we have globbed matches, there are probably
-                    # some keys for which their minion configuration has
-                    # append_domain set.
-                    if len(globbed_key_file) == 1:
-                        # Single entry, let's remove it!
-                        saltcloud.utils.remove_key(
-                            self.opts['pki_dir'],
-                            os.path.basename(globbed_key_file[0])
-                        )
-                        continue
-
-                # Since we can't get the profile or map entry used to create
-                # the VM, we can't also get the append_domain setting.
-                # And if we reached this point, we have several minion keys
-                # who's name starts with the machine name we're deleting.
-                # We need to ask one by one!?
-                print(
-                    'There are several minion keys who\'s name starts '
-                    'with {0!r}. We need to ask you which one should be '
-                    'deleted:'.format(
-                        name
-                    )
+            )
+            while True:
+                for idx, filename in enumerate(globbed_key_file):
+                    print(' {0}: {1}'.format(
+                        idx, os.path.basename(filename)
+                    ))
+                selection = raw_input(
+                    'Which minion key should be deleted(number)? '
                 )
-                while True:
-                    for idx, filename in enumerate(globbed_key_file):
-                        print(' {0}: {1}'.format(
-                            idx, os.path.basename(filename)
-                        ))
-                    selection = raw_input(
-                        'Which minion key should be deleted(number)? '
+                try:
+                    selection = int(selection)
+                except ValueError:
+                    print(
+                        '{0!r} is not a valid selection.'.format(selection)
                     )
-                    try:
-                        selection = int(selection)
-                    except ValueError:
-                        print(
-                            '{0!r} is not a valid selection.'.format(selection)
-                        )
 
-                    try:
-                        filename = os.path.basename(
-                            globbed_key_file.pop(selection)
-                        )
-                    except:
-                        continue
-
-                    delete = raw_input(
-                        'Delete {0!r}? [Y/n]? '.format(filename)
+                try:
+                    filename = os.path.basename(
+                        globbed_key_file.pop(selection)
                     )
-                    if delete == '' or delete.lower().startswith('y'):
-                        saltcloud.utils.remove_key(
-                            self.opts['pki_dir'], filename
-                        )
-                        print('Deleted {0!r}'.format(filename))
-                        break
+                except:
+                    continue
 
-                    print('Did not delete {0!r}'.format(filename))
+                delete = raw_input(
+                    'Delete {0!r}? [Y/n]? '.format(filename)
+                )
+                if delete == '' or delete.lower().startswith('y'):
+                    saltcloud.utils.remove_key(
+                        self.opts['pki_dir'], filename
+                    )
+                    print('Deleted {0!r}'.format(filename))
                     break
 
-        # This machine was asked to be destroyed but could not be found
-        for name in names:
-            ret.append({name: False})
+                print('Did not delete {0!r}'.format(filename))
+                break
 
-        if not ret:
+        if names:
+            # These machines were asked to be destroyed but could not be found
+            ret['Not Found'] = names
+
+        if not processed:
             raise SaltCloudSystemExit('No machines were destroyed!')
-
-        return ret
+        return processed
 
     def reboot(self, names):
         '''
@@ -574,34 +607,6 @@ class Cloud(object):
             )
 
         return output
-
-    def profile_provider(self, profile=None):
-        for definition in self.opts['profiles'].values():
-            if definition['profile'] != profile:
-                continue
-
-            if 'provider' in definition:
-                provider = definition['provider']
-                if ':' in provider:
-                    # We have the alias and the provider
-                    # Return the provider
-                    alias, provider = provider.split(':')
-                    return provider
-
-                if provider not in self.opts['providers']:
-                    # We do not know the provider, send the one, if any,
-                    # specified from CLI
-                    if 'provider' in self.opts:
-                        return self.opts['provider']
-
-                    raise SaltCloudSystemExit(
-                        'The {0!r} provider is not known'.format(provider)
-                    )
-
-                # There's no <alias>:<provider> entry, return the first one
-                return self.opts['providers'][provider][0]['provider']
-
-            return self.opts['provider']
 
     def run_profile(self, profile, names):
         '''
@@ -756,37 +761,64 @@ class Map(Cloud):
         Cloud.__init__(self, opts)
         self.rendered_map = self.read()
 
-    def interpolated_map(self, query=None):
-        query_map = self.map_providers_parallel(query=query)
-        full_map = {}
-        rendered_map = self.read()
-        for profile, vmap in rendered_map.items():
-            provider = self.profile_provider(profile)
-            if provider is None:
-                log.info(
-                    'No provider for the mapped {0!r} profile was '
-                    'found.'.format(
-                        profile
+    def interpolated_map(self, query='list_nodes', cached=False):
+        rendered_map = self.read().copy()
+        interpolated_map = {}
+
+        for profile, mapped_vms in rendered_map.items():
+            names = set(mapped_vms.keys())
+            if profile not in self.opts['profiles']:
+                if 'Errors' not in interpolated_map:
+                    interpolated_map['Errors'] = {}
+                msg = (
+                    'No provider for the mapped {0!r} profile was found. '
+                    'Skipped VMS: {1}'.format(
+                        profile, ', '.join(names)
                     )
                 )
+                log.info(msg)
+                interpolated_map['Errors'][profile] = msg
                 continue
-            for vm in [vm.get('name') for vm in vmap]:
-                if provider not in full_map:
-                    full_map[provider] = {}
 
-                if vm in query_map[provider]:
-                    full_map[provider][vm] = query_map[provider][vm]
-                else:
-                    full_map[provider][vm] = 'Absent'
-        return full_map
+            matching = self.get_running_by_names(names, query, cached)
+            for alias, drivers in matching.iteritems():
+                for driver, vms in drivers.iteritems():
+                    for vm_name, vm_details in vms.iteritems():
+                        if alias not in interpolated_map:
+                            interpolated_map[alias] = {}
+                        if driver not in interpolated_map[alias]:
+                            interpolated_map[alias][driver] = {}
+                        interpolated_map[alias][driver][vm_name] = vm_details
+                        names.remove(vm_name)
+
+            if not names:
+                continue
+
+            profile_details = self.opts['profiles'][profile]
+            alias, driver = profile_details['provider'].split(':')
+            for vm_name in names:
+                if alias not in interpolated_map:
+                    interpolated_map[alias] = {}
+                if driver not in interpolated_map[alias]:
+                    interpolated_map[alias][driver] = {}
+                interpolated_map[alias][driver][vm_name] = 'Absent'
+
+        return interpolated_map
 
     def delete_map(self, query=None):
         query_map = self.interpolated_map(query=query)
-        names = []
-        for profile in query_map:
-            for vm in query_map[profile]:
-                names.append(vm)
-        return names
+        for alias, drivers in query_map.copy().iteritems():
+            for driver, vms in drivers.copy().iteritems():
+                for vm_name, vm_details in vms.copy().iteritems():
+                    if vm_details == 'Absent':
+                        query_map[alias][driver].pop(vm_name)
+                    elif vm_details['state'].lower() != 'running':
+                        query_map[alias][driver].pop(vm_name)
+                if not query_map[alias][driver]:
+                    query_map[alias].pop(driver)
+            if not query_map[alias]:
+                query_map.pop(alias)
+        return query_map
 
     def read(self):
         '''

@@ -174,14 +174,25 @@ class SaltCloud(parsers.SaltCloudParser):
                                        self.config.get('map', None)):
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
-                names = mapper.delete_map(query='list_nodes')
+                matching = mapper.delete_map(query='list_nodes')
             else:
-                names = self.config.get('names', None)
+                matching = mapper.get_running_by_names(
+                    self.config.get('names', ())
+                )
+
+            if not matching:
+                print('No machines were found to be destroyed')
+                self.exit()
 
             msg = 'The following virtual machines are set to be destroyed:\n'
-            for name in names:
-                msg += '  {0}\n'.format(name)
-
+            names = set()
+            for alias, drivers in matching.iteritems():
+                msg += '  {0}:\n'.format(alias)
+                for driver, vms in drivers.iteritems():
+                    msg += '    {0}:\n'.format(driver)
+                    for name in vms:
+                        msg += '      {0}\n'.format(name)
+                        names.add(name)
             try:
                 if self.print_confirm(msg):
                     ret = mapper.destroy(names)
