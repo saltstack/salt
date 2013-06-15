@@ -105,13 +105,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    pkginfo = _get_package_info(name)
-    if not pkginfo:
-        return False
-    latest = latest_version(name)
-    if latest:
-        return True
-    return False
+    return latest_version(name) != ''
 
 
 def list_upgrades(refresh=True):
