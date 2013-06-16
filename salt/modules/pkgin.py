@@ -9,8 +9,8 @@ import os
 # Import salt libs
 import salt.utils
 
-
 log = logging.getLogger(__name__)
+
 
 @salt.utils.memoize
 def _check_pkgin():
@@ -33,7 +33,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is supported by pkgin
     '''
-    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin']
+    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin', 'SmartOS']
 
     if __grains__['os'] in supported and _check_pkgin():
         return 'pkg'
@@ -43,7 +43,7 @@ def __virtual__():
 
 def _splitpkg(name):
     # name is in the format foobar-1.0nb1, already space-splitted
-    if name[0].isalnum() and name != 'No': # avoid < > = and 'No result'
+    if name[0].isalnum() and name != 'No':  # avoid < > = and 'No result'
         return name.rsplit('-', 1)
 
 
@@ -91,7 +91,7 @@ def latest_version(*names, **kwargs):
         if pkgin:
             for line in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, name)
                                            ).splitlines():
-                p = line.split() # pkgname-version status
+                p = line.split()  # pkgname-version status
                 if p:
                     s = _splitpkg(p[0])
                     if s:
