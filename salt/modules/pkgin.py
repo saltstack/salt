@@ -3,12 +3,14 @@ Package support for pkgin based systems, inspired from freebsdpkg.py
 '''
 
 # Import python libs
-import logging
 import os
+import re
+import logging
 
 # Import salt libs
 import salt.utils
 
+VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
 
 
@@ -29,6 +31,24 @@ def _check_pkgin():
     return ppath
 
 
+@salt.utils.memoize
+def _supports_regex():
+    '''
+    Get the pkgin version
+    '''
+    ppath = _check_pkgin()
+    version_string = __salt__['cmd.run']('{0} -v'.format(ppath))
+    if version_string is None:
+        # Dunno why it would, but...
+        return False
+
+    version_match = VERSION_MATCH.search(version_string)
+    if not version_match:
+        return False
+
+    return tuple([int(i) for i in version_match.group(1).split('.')]) > (0, 5)
+
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is supported by pkgin
@@ -37,7 +57,6 @@ def __virtual__():
 
     if __grains__['os'] in supported and _check_pkgin():
         return 'pkg'
-
     return False
 
 
@@ -61,7 +80,7 @@ def search(pkg_name):
     if not pkgin:
         return pkglist
 
-    if __grains__['os'] != 'SmartOS':
+    if _supports_regex():
         pkg_name = '^{0}$'.format(pkg_name)
 
     for p in __salt__['cmd.run']('{0} se {1}'.format(pkgin, pkg_name)
@@ -94,25 +113,22 @@ def latest_version(*names, **kwargs):
         return pkglist
 
     for name in names:
-        if __grains__['os'] != 'SmartOS':
+        if _supports_regex():
             name = '^{0}$'.format(name)
         for line in __salt__['cmd.run']('{0} se {1}'.format(pkgin, name)
                                         ).splitlines():
             p = line.split()  # pkgname-version status
-            if p and  __grains__['os'] == 'SmartOS' and p[0] in ('=:', '<:',
-                                                                 '>:'):
+            if p and p[0] in ('=:', '<:', '>:'):
                 continue
             elif p:
                 s = _splitpkg(p[0])
                 if s:
-                    if __grains__['os'] == 'SmartOS':
-                        if len(p) > 1 and p[1] in ('<', '='):
+                    if _supports_regex():
+                        if len(p) > 1 and p[1] == '<':
                             pkglist[s[0]] = s[1]
                         else:
                             pkglist[s[0]] = ''
-                        continue
-
-                    if len(p) > 1 and p[1] == '<':
+                    if len(p) > 1 and p[1] in ('<', '='):
                         pkglist[s[0]] = s[1]
                     else:
                         pkglist[s[0]] = ''
