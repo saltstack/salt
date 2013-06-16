@@ -769,10 +769,10 @@ def os_data():
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
-                    grains['os'] = 'Solaris'
+                    grains['os'] = grains['osfullname'] = 'Solaris'
                     grains['osrelease'] = ''
                 else:
-                    grains['os'] = osname
+                    grains['os'] = grains['osfullname'] = osname
                     grains['osrelease'] = osrelease
 
         grains.update(_sunos_cpudata())
