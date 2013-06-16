@@ -119,16 +119,12 @@ def latest_version(*names, **kwargs):
                                         ).splitlines():
             p = line.split()  # pkgname-version status
             if p and p[0] in ('=:', '<:', '>:'):
+                # These are explanation comments
                 continue
             elif p:
                 s = _splitpkg(p[0])
                 if s:
-                    if _supports_regex():
-                        if len(p) > 1 and p[1] == '<':
-                            pkglist[s[0]] = s[1]
-                        else:
-                            pkglist[s[0]] = ''
-                    if len(p) > 1 and p[1] in ('<', '='):
+                    if len(p) > 1 and p[1] == '<':
                         pkglist[s[0]] = s[1]
                     else:
                         pkglist[s[0]] = ''
