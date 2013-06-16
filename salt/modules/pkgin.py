@@ -4,6 +4,7 @@ Package support for pkgin based systems, inspired from freebsdpkg.py
 
 # Import python libs
 import logging
+import os
 
 # Import salt libs
 import salt.utils
@@ -18,10 +19,12 @@ def _check_pkgin():
     '''
     ppath = salt.utils.which('pkgin')
     if ppath is None:
-        # can't find pkgin in default PATH, try default location
-        ppath = '/usr/pkg/bin/pkgin'
-        if os.path.exists(ppath) is False:
-            return None
+        # pkgin was not found in $PATH, try to find it via LOCALBASE
+        localbase = __salt__['cmd.run']('pkg_info -B pkgin|grep ^LOCALBASE')
+        if localbase is not None:
+            ppath = '{0}/bin/pkgin'.format(localbase.split('=', 1)[1])
+            if os.path.exists(ppath) is False:
+                return None
 
     return ppath
 
