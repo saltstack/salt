@@ -58,16 +58,20 @@ def search(pkg_name):
 
     pkglist = {}
     pkgin = _check_pkgin()
-
-    if pkgin:
-        for p in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, pkg_name)
-                                     ).splitlines():
-            if p:
-                s = _splitpkg(p.split()[0])
-                if s:
-                    pkglist[s[0]] = s[1]
-
+    if not pkgin:
         return pkglist
+
+    if __grains__['os'] != 'SmartOS':
+        pkg_name = '^{0}$'.format(pkg_name)
+
+    for p in __salt__['cmd.run']('{0} se {1}'.format(pkgin, pkg_name)
+                                 ).splitlines():
+        if p:
+            s = _splitpkg(p.split()[0])
+            if s:
+                pkglist[s[0]] = s[1]
+
+    return pkglist
 
 
 def latest_version(*names, **kwargs):
@@ -86,19 +90,32 @@ def latest_version(*names, **kwargs):
 
     pkglist = {}
     pkgin = _check_pkgin()
+    if not pkgin:
+        return pkglist
 
     for name in names:
-        if pkgin:
-            for line in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, name)
-                                           ).splitlines():
-                p = line.split()  # pkgname-version status
-                if p:
-                    s = _splitpkg(p[0])
-                    if s:
-                        if len(p) > 1 and p[1] == '<':
+        if __grains__['os'] != 'SmartOS':
+            name = '^{0}$'.format(name)
+        for line in __salt__['cmd.run']('{0} se {1}'.format(pkgin, name)
+                                        ).splitlines():
+            p = line.split()  # pkgname-version status
+            if p and  __grains__['os'] == 'SmartOS' and p[0] in ('=:', '<:',
+                                                                 '>:'):
+                continue
+            elif p:
+                s = _splitpkg(p[0])
+                if s:
+                    if __grains__['os'] == 'SmartOS':
+                        if len(p) > 1 and p[1] in ('<', '='):
                             pkglist[s[0]] = s[1]
                         else:
                             pkglist[s[0]] = ''
+                        continue
+
+                    if len(p) > 1 and p[1] == '<':
+                        pkglist[s[0]] = s[1]
+                    else:
+                        pkglist[s[0]] = ''
 
     if len(names) == 1 and pkglist:
         return pkglist[names[0]]
@@ -309,8 +326,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
         salt '*' pkg.remove <package name>
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name, pkgs)
     if not pkg_params:
         return {}
 
