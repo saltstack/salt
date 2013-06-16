@@ -131,14 +131,25 @@ def nslookup(host):
         salt '*' network.nslookup archlinux.org
     '''
     ret = []
+    addresses = []
     cmd = 'nslookup {0}'.format(salt.utils.network.sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
+        if addresses:
+            # We're in the last block listing addresses
+            addresses.append(line.strip())
+            continue
         if line.startswith('Non-authoritative'):
             continue
+        if 'Addresses' in line:
+            comps = line.split(":", 1)
+            addresses.append(comps[1].strip())
+            continue
         if ":" in line:
-            comps = line.split(":")
+            comps = line.split(":", 1)
             ret.append({comps[0].strip(): comps[1].strip()})
+    if addresses:
+        ret.append({'Addresses': addresses})
     return ret
 
 
