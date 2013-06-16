@@ -70,10 +70,10 @@ def latest_version(*names, **kwargs):
             continue
         if len(pkginfo) == 1:
             candidate = pkginfo.keys()[0]
-            name = pkginfo[candidate]['full_name']
+            full_name = pkginfo[candidate]['full_name']
             ret[name] = ''
-            if name in pkgs:
-                version_num = pkgs[name]
+            if full_name in pkgs:
+                version_num = pkgs[full_name]
             if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
                                        pkg2=str(version_num)):
                 ret[name] = candidate
@@ -82,13 +82,15 @@ def latest_version(*names, **kwargs):
             if __salt__['pkg.compare'](pkg1=str(ver), oper='>',
                                        pkg2=str(candidate)):
                 candidate = ver
-        name = pkginfo[candidate]['full_name']
+        full_name = pkginfo[candidate]['full_name']
         ret[name] = ''
-        if name in pkgs:
-            version_num = pkgs[name]
+        if full_name in pkgs:
+            version_num = pkgs[full_name]
         if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
                                    pkg2=str(version_num)):
             ret[name] = candidate
+    if len(names) == 1:
+        return ret[names[0]]
     return ret
 
 # available_version is being deprecated
@@ -103,8 +105,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    log.warning('pkg.upgrade_available not implemented on Windows yet')
-    return False
+    return latest_version(name) != ''
 
 
 def list_upgrades(refresh=True):
@@ -115,13 +116,16 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    log.warning('pkg.list_upgrades not implemented on Windows yet')
+    if salt.utils.is_true(refresh):
+        refresh_db()
 
-    # Uncomment the below once pkg.list_upgrades has been implemented
-
-    #if salt.utils.is_true(refresh):
-    #    refresh_db()
-    return {}
+    ret = {}
+    for name, data in _get_repo_data().items():
+        if version(name):
+            latest = latest_version(name)
+            if latest:
+                ret[name]=latest
+    return ret
 
 
 def list_available(*names):
@@ -140,7 +144,7 @@ def list_available(*names):
         if not pkginfo:
             return ''
         versions = pkginfo.keys()
-    if len(names) > 1:
+    else:
         versions = {}
         for name in names:
             pkginfo = _get_package_info(name)
@@ -166,11 +170,11 @@ def version(*names, **kwargs):
             for val in versions.itervalues():
                 if 'full_name' in val and len(val.get('full_name', '')) > 0:
                     win_names.append(val.get('full_name', ''))
-        nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
-        if len(nums):
-            for num, val in nums.iteritems():
-                if len(val) > 0:
-                    return val
+        else:
+            win_names.append(names[0])
+        val = __salt__['pkg_resource.version'](win_names[0], **kwargs)
+        if len(val):
+            return val
         return ''
     if len(names) > 1:
         reverse_dict = {}
@@ -182,13 +186,18 @@ def version(*names, **kwargs):
                     if 'full_name' in val and len(val.get('full_name', '')) > 0:
                         reverse_dict[val.get('full_name', '')] = name
                         win_names.append(val.get('full_name', ''))
+            else:
+                win_names.append(name)
         nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
         if len(nums):
             for num, val in nums.iteritems():
                 if len(val) > 0:
-                    ret[reverse_dict[num]] = val
+                    try:
+                        ret[reverse_dict[num]] = val
+                    except KeyError:
+                        ret[num] = val
             return ret
-        return ''
+        return dict([(x, '') for x in names])
     return ret
 
 
@@ -443,17 +452,22 @@ def install(name=None, refresh=False, **kwargs):
     old = list_pkgs()
     pkginfo = _get_package_info(name)
     if not pkginfo:
-        return 'Error: Unable to locate package {0}'.format(name)
-    for pkg in pkginfo.keys():
-        if pkginfo[pkg]['full_name'] in old:
-            return '{0} already installed'.format(pkginfo[pkg]['full_name'])
+        return {name: {'old': 'Error: Unable to locate package {0}'.format(name),
+                       'new': 'Error: Unable to locate package {0}'.format(name)}}
     if kwargs.get('version') is not None:
         version_num = kwargs['version']
     else:
         version_num = _get_latest_pkg_version(pkginfo)
+    for pkg in pkginfo.keys():
+        if pkginfo[pkg]['full_name'] in old and old[pkginfo[pkg]['full_name']] == version_num:
+            return {name: {'old': version_num, 'new': version_num}}
+    if not pkginfo.has_key(version_num):
+        return {name: {'old': 'Error: version {0} not found for package {1}'.format(version_num, name),
+                       'new': 'Error: version {0} not found for package {1}'.format(version_num, name)}}
     installer = pkginfo[version_num].get('installer')
     if not installer:
-        return 'Error: No installer configured for package {0}'.format(name)
+        return {name: {'old': 'Error: No installer configured for package {0}'.format(name),
+                       'new': 'Error: No installer configured for package {0}'.format(name)}}
     if installer.startswith('salt:') or installer.startswith('http:') or installer.startswith('https:') or installer.startswith('ftp:'):
         cached_pkg = __salt__['cp.is_cached'](installer)
         if not cached_pkg:
@@ -470,7 +484,6 @@ def install(name=None, refresh=False, **kwargs):
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
-
 
 def upgrade(refresh=True):
     '''
@@ -590,13 +603,7 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
     '''
     return remove(name=name, pkgs=pkgs, version=version, **kwargs)
 
-
-def _get_package_info(name):
-    '''
-    Return package info.
-    Returns empty map if package not available
-    TODO: Add option for version
-    '''
+def _get_repo_data():
     repocache = __opts__['win_repo_cachefile']
     cached_repo = __salt__['cp.is_cached'](repocache)
     if not cached_repo:
@@ -605,17 +612,24 @@ def _get_package_info(name):
         with salt.utils.fopen(cached_repo, 'r') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
+                return repodata
             except Exception:
                 return ''
     except IOError:
         log.debug('Not able to read repo file')
         return ''
+
+def _get_package_info(name):
+    '''
+    Return package info.
+    Returns empty map if package not available
+    TODO: Add option for version
+    '''
+    repodata=_get_repo_data()
     if not repodata:
         return ''
     if name in repodata:
         return repodata[name]
-    else:
-        return ''
     return ''
 
 
