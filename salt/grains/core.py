@@ -756,7 +756,7 @@ def os_data():
         uname_v = __salt__['cmd.run']('uname -v')
         if 'joyent_' in uname_v:
             # See https://github.com/joyent/smartos-live/issues/224
-            grains['os'] = 'SmartOS'
+            grains['os'] = grains['osfullname'] = 'SmartOS'
             grains['osrelease'] = uname_v
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
@@ -769,10 +769,10 @@ def os_data():
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
-                    grains['os'] = 'Solaris'
+                    grains['os'] = grains['osfullname'] = 'Solaris'
                     grains['osrelease'] = ''
                 else:
-                    grains['os'] = osname
+                    grains['os'] = grains['osfullname'] = osname
                     grains['osrelease'] = osrelease
 
         grains.update(_sunos_cpudata())
