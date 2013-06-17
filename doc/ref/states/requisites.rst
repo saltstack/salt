@@ -96,14 +96,14 @@ The ``prereq`` requisite is a powerful requisite added in 0.16.0. This
 requisite allows for actions to be taken based on the expected results of
 a state that has not yet been executed. In more practical terms, a service
 can be shut down because the prereq knows that underlying code is going to
-be updated and the service should be off-line while the update occurs.
+be updated and the service should be offline while the update occurs.
 
 The motivation to add this requisite was to allow for routines to remove a
-systems from a load balancer while code was updated.
+system from a load balancer while code is being updated.
 
 The ``prereq`` checks if the required state expects to have any changes by
-running the single state with test=True. If the pre-required state returns
-changes then the state requiring it will execute.
+running the single state with ``test=True``. If the pre-required state returns
+changes, then the state requiring it will execute.
 
 Use
 ---
