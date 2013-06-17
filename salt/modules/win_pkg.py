@@ -124,7 +124,7 @@ def list_upgrades(refresh=True):
         if version(name):
             latest = latest_version(name)
             if latest:
-                ret[name]=latest
+                ret[name] = latest
     return ret
 
 
@@ -625,7 +625,7 @@ def _get_package_info(name):
     Returns empty map if package not available
     TODO: Add option for version
     '''
-    repodata=_get_repo_data()
+    repodata = _get_repo_data()
     if not repodata:
         return ''
     if name in repodata:
