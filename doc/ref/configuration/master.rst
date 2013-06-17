@@ -358,6 +358,7 @@ The state_output setting changes if the output is the full multi line
 output for each changed state if set to 'full', but if set to 'terse'
 the output will be shortened to a single line.  If set to 'mixed', the output
 will be terse unless a state failed, in which case that output will be full.
+If set to 'changes', the output will be fill unless the state didn't change.
 
 .. code-block:: yaml
 
