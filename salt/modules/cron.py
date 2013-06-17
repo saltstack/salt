@@ -4,12 +4,24 @@ Work with cron
 
 # Import python libs
 import os
+import random
 
 # Import salt libs
 import salt.utils
 
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
+
+
+def _needs_change(old, new):
+    if old != new:
+        if new == 'random':
+            # Allow switch from '*' or not present to 'random'
+            if old == '*':
+                return True
+        elif new is not None:
+            return True
+    return False
 
 
 def _render_tab(lst):
@@ -97,6 +109,7 @@ def _date_time_match(cron, **kwargs):
     the dict returned from list_tab().
     '''
     return all([kwargs.get(x) is None or cron[x] == str(kwargs[x])
+                or (str(kwargs[x]).lower() == 'random' and cron[x] != '*')
                 for x in ('minute', 'hour', 'daymonth', 'month', 'dayweek')])
 
 
@@ -192,6 +205,44 @@ def set_special(user, special, cmd):
     return 'new'
 
 
+def _get_cron_date_time(**kwargs):
+    '''
+    Returns a dict of date/time values to be used in a cron entry
+    '''
+    # Define ranges (except daymonth, as it depends on the month)
+    range_max = {
+        'minute': range(60),
+        'hour': range(24),
+        'month': range(1, 13),
+        'dayweek': range(7)
+    }
+
+    ret = {}
+    for param in ('minute', 'hour', 'month', 'dayweek'):
+        value = str(kwargs.get(param, '1')).lower()
+        if value == 'random':
+            ret[param] = str(random.sample(range_max[param], 1)[0])
+        else:
+            ret[param] = value
+
+    if ret['month'] in '1 3 5 7 8 10 12'.split():
+        daymonth_max = 31
+    elif ret['month'] in '4 6 9 11'.split():
+        daymonth_max = 30
+    else:
+        # This catches both '2' and '*'
+        daymonth_max = 28
+
+    daymonth = str(kwargs.get('daymonth', '1')).lower()
+    if daymonth == 'random':
+        ret['daymonth'] = \
+            str(random.sample(range(1, (daymonth_max + 1)), 1)[0])
+    else:
+        ret['daymonth'] = daymonth
+
+    return ret
+
+
 def set_job(user, minute, hour, daymonth, month, dayweek, cmd):
     '''
     Sets a cron job up for a specified user.
@@ -201,20 +252,33 @@ def set_job(user, minute, hour, daymonth, month, dayweek, cmd):
         salt '*' cron.set_job root '*' '*' '*' '*' 1 /usr/local/weekly
     '''
     # Scrub the types
-    minute = str(minute)
-    hour = str(hour)
-    daymonth = str(daymonth)
-    month = str(month)
-    dayweek = str(dayweek)
+    minute = str(minute).lower()
+    hour = str(hour).lower()
+    daymonth = str(daymonth).lower()
+    month = str(month).lower()
+    dayweek = str(dayweek).lower()
     lst = list_tab(user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if minute != cron['minute'] or \
-                    hour != cron['hour'] or \
-                    daymonth != cron['daymonth'] or \
-                    month != cron['month'] or \
-                    dayweek != cron['dayweek']:
+            if any([_needs_change(x, y) for x, y in
+                    ((cron['minute'], minute), (cron['hour'], hour),
+                     (cron['daymonth'], daymonth), (cron['month'], month),
+                     (cron['dayweek'], dayweek))]):
                 rm_job(user, cmd)
+
+                # Use old values when setting the new job if there was no
+                # change needed for a given parameter
+                if not _needs_change(cron['minute'], minute):
+                    minute = cron['minute']
+                if not _needs_change(cron['hour'], hour):
+                    hour = cron['hour']
+                if not _needs_change(cron['daymonth'], daymonth):
+                    daymonth = cron['daymonth']
+                if not _needs_change(cron['month'], month):
+                    month = cron['month']
+                if not _needs_change(cron['dayweek'], dayweek):
+                    dayweek = cron['dayweek']
+
                 jret = set_job(user, minute, hour, daymonth,
                                month, dayweek, cmd)
                 if jret == 'new':
@@ -222,12 +286,10 @@ def set_job(user, minute, hour, daymonth, month, dayweek, cmd):
                 else:
                     return jret
             return 'present'
-    cron = {'minute': minute,
-            'hour': hour,
-            'daymonth': daymonth,
-            'month': month,
-            'dayweek': dayweek,
-            'cmd': cmd}
+    cron = {'cmd': cmd}
+    cron.update(_get_cron_date_time(minute=minute, hour=hour,
+                                    daymonth=daymonth, month=month,
+                                    dayweek=dayweek))
     lst['crons'].append(cron)
     comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
