@@ -86,6 +86,13 @@ def output(data):
                         msg = _format_terse(tcolor, comps, ret, colors)
                         hstrs.append(msg)
                         continue
+                elif __opts__.get('state_output', 'full').lower() == 'changes':
+                    # Print terse if no error and no changes, otherwise, be
+                    # verbose
+                    if ret['result'] is not False and not ret['changes']:
+                        msg = _format_terse(tcolor, comps, ret, colors)
+                        hstrs.append(msg)
+                        continue
                 hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                               .format(tcolor, comps[0], colors)))
                 hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
