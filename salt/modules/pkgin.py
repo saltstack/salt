@@ -22,9 +22,9 @@ def _check_pkgin():
     ppath = salt.utils.which('pkgin')
     if ppath is None:
         # pkgin was not found in $PATH, try to find it via LOCALBASE
-        localbase = __salt__['cmd.run']('pkg_info -B pkgin|grep ^LOCALBASE')
+        localbase = __salt__['cmd.run']('pkg_info -Q LOCALBASE pkgin')
         if localbase is not None:
-            ppath = '{0}/bin/pkgin'.format(localbase.split('=', 1)[1])
+            ppath = '{0}/bin/pkgin'.format(localbase)
             if os.path.exists(ppath) is False:
                 return None
 
