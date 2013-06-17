@@ -112,6 +112,10 @@ def latest_version(*names, **kwargs):
     if not pkgin:
         return pkglist
 
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     for name in names:
         if _supports_regex():
             name = '^{0}$'.format(name)

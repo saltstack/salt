@@ -165,6 +165,10 @@ def latest_version(name, **kwargs):
 
         salt '*' pkgutil.latest_version CSWpython
     '''
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     cmd = '/opt/csw/bin/pkgutil -a --parse {0}'.format(name)
     namever = __salt__['cmd.run_stdout'](cmd).split()[2].strip()
     if namever:

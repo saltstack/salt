@@ -185,6 +185,10 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
 
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     yumbase = yum.YumBase()
     error = _set_repo_options(yumbase, **kwargs)
     if error:
