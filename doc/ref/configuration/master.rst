@@ -280,9 +280,10 @@ public keys from the minions
 
 Default ``not defined``
 
-If the autosign_file is specified incoming keys specified in
-the autosign_file will be automatically accepted. Regular expressions as
-well as globbing can be used. This is insecure!
+If the autosign_file is specified incoming keys specified in the autosign_file
+will be automatically accepted.  Matches will be searched for first by string
+comparison, then by globbing, then by full-string regex matching.  This is
+insecure!
 
 .. conf_master:: client_acl
 
