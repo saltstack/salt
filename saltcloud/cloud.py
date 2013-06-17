@@ -212,7 +212,7 @@ class Cloud(object):
         )
         try:
             parallel_pmap = pool.map(
-                func=run_paralel_map_providers_query,
+                func=run_parallel_map_providers_query,
                 iterable=multiprocessing_data
             )
         except KeyboardInterrupt:
@@ -1157,7 +1157,7 @@ def create_multiprocessing(parallel_data):
     }
 
 
-def run_paralel_map_providers_query(data):
+def run_parallel_map_providers_query(data):
     '''
     This function will be called from another process when building the
     providers map.
