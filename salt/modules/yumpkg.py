@@ -856,7 +856,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     fileout.write(content)
     fileout.close()
 
-    return 'Repo {0} has been remooved from {1}'.format(repo, repofile)
+    return 'Repo {0} has been removed from {1}'.format(repo, repofile)
 
 
 def mod_repo(repo, basedir=None, **kwargs):
