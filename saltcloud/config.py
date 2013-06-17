@@ -161,7 +161,8 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     opts = apply_cloud_config(overrides, defaults)
 
     # 3rd - Include Cloud Providers
-    if 'providers' in opts and (providers_config or providers_config_path):
+    if 'providers' in opts and (providers_config is not None or (
+            providers_config and os.path.isfile(providers_config_path))):
         raise saltcloud.exceptions.SaltCloudConfigError(
             'Do not mix the old cloud providers configuration with '
             'the new one. The providers configuration should now go in '
@@ -170,8 +171,15 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             '`/etc/salt/cloud.providers`.'
         )
     elif 'providers' not in opts and providers_config is None:
+        # Load from configuration file, even if that files does not exist since
+        # it will be populated with defaults.
         providers_config = cloud_providers_config(providers_config_path)
-    opts['providers'] = providers_config
+    elif 'providers' not in opts and providers_config is not None:
+        # We're being passed a configuration dictionary
+        opts['providers'] = providers_config
+    else:
+        # Old style config
+        providers_config = opts['providers']
 
     # 4th - Include VM profiles config
     if vm_config is None:
