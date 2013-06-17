@@ -243,8 +243,6 @@ def parse_targets(name=None, pkgs=None, sources=None, **kwargs):
         return None, None
 
     elif pkgs:
-        if name:
-            log.warning('"name" parameter will be ignored in favor of "pkgs"')
         pkgs = pack_pkgs(pkgs)
         if not pkgs:
             return None, None
@@ -252,10 +250,6 @@ def parse_targets(name=None, pkgs=None, sources=None, **kwargs):
             return pkgs, 'repository'
 
     elif sources and __grains__['os'] != 'MacOS':
-        # No need to warn for Solaris, warning taken care of above.
-        if name:
-            log.warning('"name" parameter will be ignored in favor of '
-                        '"sources".')
         sources = pack_sources(sources)
         if not sources:
             return None, None
