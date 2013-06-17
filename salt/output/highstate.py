@@ -77,25 +77,20 @@ def output(data):
                 if __opts__.get('state_output', 'full').lower() == 'terse':
                     # Print this chunk in a terse way and continue in the
                     # loop
-                    msg = (' {0}Name: {1} - Function: {2}.{3} - '
-                           'Result: {4}{5}').format(tcolor,
-                                                    comps[2],
-                                                    comps[0],
-                                                    comps[-1],
-                                                    str(ret['result']),
-                                                    colors['ENDC'])
+                    msg = _format_terse(tcolor, comps, ret, colors)
                     hstrs.append(msg)
                     continue
                 elif __opts__.get('state_output', 'full').lower() == 'mixed':
                     # Print terse unless it failed
                     if ret['result'] is not False:
-                        msg = (' {0}Name: {1} - Function: {2}.{3} - '
-                               'Result: {4}{5}').format(tcolor,
-                                                        comps[2],
-                                                        comps[0],
-                                                        comps[-1],
-                                                        str(ret['result']),
-                                                        colors['ENDC'])
+                        msg = _format_terse(tcolor, comps, ret, colors)
+                        hstrs.append(msg)
+                        continue
+                elif __opts__.get('state_output', 'full').lower() == 'changes':
+                    # Print terse if no error and no changes, otherwise, be
+                    # verbose
+                    if ret['result'] is not False and not ret['changes']:
+                        msg = _format_terse(tcolor, comps, ret, colors)
                         hstrs.append(msg)
                         continue
                 hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
@@ -159,3 +154,18 @@ def _strip_clean(returns):
     for tag in rm_tags:
         returns.pop(tag)
     return returns
+
+
+def _format_terse(tcolor, comps, ret, colors):
+    '''
+    Terse formatting of a message.
+    '''
+    msg = (' {0}Name: {1} - Function: {2}.{3} - '
+           'Result: {4}{5}').format(tcolor,
+                                    comps[2],
+                                    comps[0],
+                                    comps[-1],
+                                    str(ret['result']),
+                                    colors['ENDC'])
+
+    return msg
