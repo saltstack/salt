@@ -51,9 +51,9 @@ def __virtual__():
 def __check_table(name, table):
     dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    query = 'CHECK TABLE `{0}`.`{1}`'.format(name, table)
-    log.debug('Doing query: {0}'.format(query))
-    cur.execute(query)
+    qry = 'CHECK TABLE `{0}`.`{1}`'.format(name, table)
+    log.debug('Doing query: {0}'.format(qry))
+    cur.execute(qry)
     results = cur.fetchall()
     log.debug(results)
     return results
@@ -62,9 +62,9 @@ def __check_table(name, table):
 def __repair_table(name, table):
     dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    query = 'REPAIR TABLE `{0}`.`{1}`'.format(name, table)
-    log.debug('Doing query: {0}'.format(query))
-    cur.execute(query)
+    qry = 'REPAIR TABLE `{0}`.`{1}`'.format(name, table)
+    log.debug('Doing query: {0}'.format(qry))
+    cur.execute(qry)
     results = cur.fetchall()
     log.debug(results)
     return results
@@ -73,9 +73,9 @@ def __repair_table(name, table):
 def __optimize_table(name, table):
     dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    query = 'OPTIMIZE TABLE `{0}`.`{1}`'.format(name, table)
-    log.debug('Doing query: {0}'.format(query))
-    cur.execute(query)
+    qry = 'OPTIMIZE TABLE `{0}`.`{1}`'.format(name, table)
+    log.debug('Doing query: {0}'.format(qry))
+    cur.execute(qry)
     results = cur.fetchall()
     log.debug(results)
     return results
@@ -158,7 +158,7 @@ def query(database, query):
     # into Python objects. It leaves them as strings.
     orig_conv = MySQLdb.converters.conversions
     conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str,] * len(orig_conv.keys())))
+    conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
 
     ret = {}
     dbc = _connect(**{'db': database, 'conv': conv})
@@ -326,10 +326,10 @@ def db_tables(name):
     ret = []
     dbc = _connect()
     cur = dbc.cursor()
-    query = 'SHOW TABLES IN {0}'.format(name)
-    log.debug('Doing query: {0}'.format(query))
+    qry = 'SHOW TABLES IN {0}'.format(name)
+    log.debug('Doing query: {0}'.format(qry))
 
-    cur.execute(query)
+    cur.execute(qry)
     results = cur.fetchall()
     for table in results:
         ret.append(table[0])
@@ -347,9 +347,9 @@ def db_exists(name):
     '''
     dbc = _connect()
     cur = dbc.cursor()
-    query = 'SHOW DATABASES LIKE \'{0}\''.format(name)
-    log.debug('Doing query: {0}'.format(query))
-    cur.execute(query)
+    qry = 'SHOW DATABASES LIKE \'{0}\''.format(name)
+    log.debug('Doing query: {0}'.format(qry))
+    cur.execute(qry)
     cur.fetchall()
     return cur.rowcount == 1
 
@@ -370,9 +370,9 @@ def db_create(name):
     # db doesn't exist, proceed
     dbc = _connect()
     cur = dbc.cursor()
-    query = 'CREATE DATABASE `{0}`;'.format(name)
-    log.debug('Query: {0}'.format(query))
-    if cur.execute(query):
+    qry = 'CREATE DATABASE `{0}`;'.format(name)
+    log.debug('Query: {0}'.format(qry))
+    if cur.execute(qry):
         log.info('DB \'{0}\' created'.format(name))
         return True
     return False
@@ -398,9 +398,9 @@ def db_remove(name):
     # db doesn't exist, proceed
     dbc = _connect()
     cur = dbc.cursor()
-    query = 'DROP DATABASE `{0}`;'.format(name)
-    log.debug('Doing query: {0}'.format(query))
-    cur.execute(query)
+    qry = 'DROP DATABASE `{0}`;'.format(name)
+    log.debug('Doing query: {0}'.format(qry))
+    cur.execute(qry)
 
     if not db_exists(name):
         log.info('Database \'{0}\' has been removed'.format(name))
@@ -439,16 +439,16 @@ def user_exists(user, host='localhost', password=None, password_hash=None):
     '''
     dbc = _connect()
     cur = dbc.cursor()
-    query = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
-             'Host = \'{1}\''.format(user, host))
+    qry = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
+           'Host = \'{1}\''.format(user, host))
 
     if password:
-        query = query + ' AND password = PASSWORD(\'{0}\')'.format(password)
+        qry += ' AND password = PASSWORD(\'{0}\')'.format(password)
     elif password_hash:
-        query = query + ' AND password = \'{0}\''.format(password_hash)
+        qry += ' AND password = \'{0}\''.format(password_hash)
 
-    log.debug('Doing query: {0}'.format(query))
-    cur.execute(query)
+    log.debug('Doing query: {0}'.format(qry))
+    cur.execute(qry)
     return cur.rowcount == 1
 
 
@@ -462,10 +462,10 @@ def user_info(user, host='localhost'):
     '''
     dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    query = ('SELECT * FROM mysql.user WHERE User = \'{0}\' AND '
-             'Host = \'{1}\''.format(user, host))
-    log.debug('Query: {0}'.format(query))
-    cur.execute(query)
+    qry = ('SELECT * FROM mysql.user WHERE User = \'{0}\' AND '
+           'Host = \'{1}\''.format(user, host))
+    log.debug('Query: {0}'.format(qry))
+    cur.execute(qry)
     result = cur.fetchone()
     log.debug(result)
     return result
@@ -490,14 +490,14 @@ def user_create(user,
 
     dbc = _connect()
     cur = dbc.cursor()
-    query = 'CREATE USER \'{0}\'@\'{1}\''.format(user, host)
+    qry = 'CREATE USER \'{0}\'@\'{1}\''.format(user, host)
     if password is not None:
-        query = query + ' IDENTIFIED BY \'{0}\''.format(password)
+        qry += ' IDENTIFIED BY \'{0}\''.format(password)
     elif password_hash is not None:
-        query = query + ' IDENTIFIED BY PASSWORD \'{0}\''.format(password_hash)
+        qry += ' IDENTIFIED BY PASSWORD \'{0}\''.format(password_hash)
 
-    log.debug('Query: {0}'.format(query))
-    cur.execute(query)
+    log.debug('Query: {0}'.format(qry))
+    cur.execute(qry)
 
     if user_exists(user, host, password, password_hash):
         log.info('User \'{0}\'@\'{1}\' has been created'.format(user, host))
@@ -530,10 +530,10 @@ def user_chpass(user,
 
     dbc = _connect()
     cur = dbc.cursor()
-    query = ('UPDATE mysql.user SET password={0} WHERE User=\'{1}\' AND '
-             'Host = \'{2}\';'.format(password_sql, user, host))
-    log.debug('Query: {0}'.format(query))
-    if cur.execute(query):
+    qry = ('UPDATE mysql.user SET password={0} WHERE User=\'{1}\' AND '
+           'Host = \'{2}\';'.format(password_sql, user, host))
+    log.debug('Query: {0}'.format(qry))
+    if cur.execute(qry):
         cur.execute('FLUSH PRIVILEGES;')
         log.info(
             'Password for user \'{0}\'@\'{1}\' has been changed'.format(
@@ -559,9 +559,9 @@ def user_remove(user,
     '''
     dbc = _connect()
     cur = dbc.cursor()
-    query = 'DROP USER \'{0}\'@\'{1}\''.format(user, host)
-    log.debug('Query: {0}'.format(query))
-    cur.execute(query)
+    qry = 'DROP USER \'{0}\'@\'{1}\''.format(user, host)
+    log.debug('Query: {0}'.format(qry))
+    cur.execute(qry)
     if not user_exists(user, host):
         log.info('User \'{0}\'@\'{1}\' has been removed'.format(user, host))
         return True
@@ -670,13 +670,13 @@ def __grant_generate(grant,
             dbc = '`{0}`'.format(dbc)
         if table is not '*':
             table = '`{0}`'.format(table)
-    query = 'GRANT {0} ON {1}.{2} TO \'{3}\'@\'{4}\''.format(
+    qry = 'GRANT {0} ON {1}.{2} TO \'{3}\'@\'{4}\''.format(
         grant, dbc, table, user, host
     )
     if grant_option:
-        query += ' WITH GRANT OPTION'
-    log.debug('Query generated: {0}'.format(query))
-    return query
+        qry += ' WITH GRANT OPTION'
+    log.debug('Query generated: {0}'.format(qry))
+    return qry
 
 
 def user_grants(user,
@@ -695,10 +695,10 @@ def user_grants(user,
     ret = []
     dbc = _connect()
     cur = dbc.cursor()
-    query = 'SHOW GRANTS FOR \'{0}\'@\'{1}\''.format(user, host)
-    log.debug('Doing query: {0}'.format(query))
+    qry = 'SHOW GRANTS FOR \'{0}\'@\'{1}\''.format(user, host)
+    log.debug('Doing query: {0}'.format(qry))
 
-    cur.execute(query)
+    cur.execute(qry)
     results = cur.fetchall()
     for grant in results:
         ret.append(grant[0].split(' IDENTIFIED BY')[0])
@@ -754,9 +754,9 @@ def grant_add(grant,
     dbc = _connect()
     cur = dbc.cursor()
 
-    query = __grant_generate(grant, database, user, host, grant_option, escape)
-    log.debug('Query: {0}'.format(query))
-    cur.execute(query)
+    qry = __grant_generate(grant, database, user, host, grant_option, escape)
+    log.debug('Query: {0}'.format(qry))
+    cur.execute(qry)
     if grant_exists(grant, database, user, host, grant_option, escape):
         log.info(
             'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been added'.format(
@@ -792,11 +792,11 @@ def grant_revoke(grant,
 
     if grant_option:
         grant += ', GRANT OPTION'
-    query = 'REVOKE {0} ON {1} FROM \'{2}\'@\'{3}\';'.format(
+    qry = 'REVOKE {0} ON {1} FROM \'{2}\'@\'{3}\';'.format(
         grant, database, user, host
     )
-    log.debug('Query: {0}'.format(query))
-    cur.execute(query)
+    log.debug('Query: {0}'.format(qry))
+    cur.execute(qry)
     if not grant_exists(grant, database, user, host, grant_option, escape):
         log.info(
             'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been '

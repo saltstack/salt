@@ -57,14 +57,15 @@ def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=True,
+        home=None,
         shell=None,
         unique=True,
         system=False,
         fullname='',
         roomnumber='',
         workphone='',
-        homephone=''):
+        homephone='',
+        createhome=True):
     '''
     Add a user to the minion
 
@@ -83,15 +84,16 @@ def add(name,
         cmd += '-g {0} '.format(gid)
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
-    if home:
-        if home is not True:
-            if system:
-                cmd += '-d {0} '.format(home)
-            else:
-                cmd += '-m -d {0} '.format(home)
+
+    if home is None:
+        if createhome:
+            cmd += '-m '
+    else:
+        if createhome:
+            cmd += '-m -d {0} '.format(home)
         else:
-            if not system:
-                cmd += '-m '
+            cmd += '-d {0} '.format(home)
+
     if not unique:
         cmd += '-o '
     cmd += name

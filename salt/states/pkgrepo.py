@@ -11,7 +11,7 @@ Package repositories can be managed with the pkgrepo state:
         - humanname: CentOS-$releasever - Base
         - mirrorlist: http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os
         - comments:
-            - #http://mirror.centos.org/centos/$releasever/os/$basearch/
+            - '#http://mirror.centos.org/centos/$releasever/os/$basearch/'
         - gpgcheck: 1
         - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
@@ -225,7 +225,7 @@ def managed(name, **kwargs):
                                                                       str(e))
         return ret
     try:
-        repodict = __salt__['pkg.get_repo'](repokwargs['repo'], 
+        repodict = __salt__['pkg.get_repo'](repokwargs['repo'],
                                             ppa_auth=repokwargs.get('ppa_auth', None))
         if repo:
             for kwarg in sanitizedkwargs:
@@ -298,4 +298,3 @@ def absent(name, **kwargs):
     ret['result'] = False
     ret['comment'] = 'Failed to remove repo {0}'.format(name)
     return ret
-
