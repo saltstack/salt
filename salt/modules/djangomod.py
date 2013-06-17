@@ -134,15 +134,19 @@ def loaddata(settings_module,
         salt '*' django.loaddata settings.py <comma delimited list of fixtures>
 
     '''
-    dja = _get_django_admin(bin_env)
-    cmd = '{0} loaddata --settings={1} {2}'.format(
-        dja, settings_module, ' '.join(fixtures.split(',')))
-    if database:
-        cmd = '{0} --database={1}'.format(cmd, database)
-    if pythonpath:
-        cmd = '{0} --pythonpath={1}'.format(cmd, pythonpath)
-    return __salt__['cmd.run'](cmd)
 
+
+    kwargs = {}
+    if database:
+        kwargs['database'] = database
+
+    return command(settings_module,
+                   'loaddata',
+                   bin_env,
+                   pythonpath,
+                   env,
+                   *fixtures.split(','),
+                   **kwargs)
 
 def collectstatic(settings_module,
                   bin_env=None,
