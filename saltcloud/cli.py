@@ -254,6 +254,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.profile and self.config.get('names', False):
             try:
+                #import pdb; pdb.set_trace()
                 ret = mapper.run_profile()
                 if self.config.get('show_deploy_args', False) is False:
                     # Strip deploy_args from the returned data since we don't
