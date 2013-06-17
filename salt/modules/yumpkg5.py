@@ -150,6 +150,10 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
 
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
     updates = _repoquery('{0} --pkgnarrow=available --queryformat "{1}" '

@@ -76,6 +76,10 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
 
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     cmd = 'zypper info -t package {0}'.format(' '.join(names))
     output = __salt__['cmd.run_all'](cmd).get('stdout', '')
     output = re.split('Information for package \\S+:\n', output)
