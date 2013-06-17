@@ -29,13 +29,9 @@ def _check_mkfile():
 
 def __virtual__():
     '''
-    Provides zpool only on supported OS
+    Provides zpool.
     '''
-    supported = set(('Solaris', 'SmartOS', 'FreeBSD'))
-    if __grains__['os'] in supported and _check_zpool():
-        # Don't let this work on Solaris 9 since ZFS is not available on it.
-        if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == '5.9':
-            return False
+    if _check_zpool():
         return 'zpool'
     return False
 
@@ -47,9 +43,23 @@ def status(name=''):
     CLI Example::
 
         salt '*' zpool.status
-    ''' 
+    '''
     zpool = _check_zpool()
     res = __salt__['cmd.run']('{0} status {1}'.format(zpool, name))
+    ret = res.splitlines()
+    return ret
+
+
+def iostat(name=''):
+    '''
+    Display I/O statistics for the given pools
+
+    CLI Example::
+
+        salt '*' zpool.iostat
+    '''
+    zpool = _check_zpool()
+    res = __salt__['cmd.run']('{0} iostat -v {1}'.format(zpool, name))
     ret = res.splitlines()
     return ret
 
@@ -57,10 +67,10 @@ def status(name=''):
 def zpool_list():
     '''
     Return a list of all pools in the system with health status and space usage
-    
+
     CLI Example::
 
-        salt '*' zpool.zpool_list 
+        salt '*' zpool.zpool_list
     '''
     zpool = _check_zpool()
     res = __salt__['cmd.run']('{0} list'.format(zpool))
@@ -73,7 +83,7 @@ def exists(pool_name):
     Check if a ZFS storage pool is active
 
     CLI Example::
-    
+
         salt '*' zpool.exists myzpool
     '''
     current_pools = zpool_list()
@@ -99,6 +109,28 @@ def destroy(pool_name):
         if not exists(pool_name):
             ret[pool_name] = "Deleted"
             return ret
+    else:
+        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+
+
+def scrub(pool_name=None):
+    '''
+    Begin a scrub
+
+    CLI Example::
+
+        salt '*' zpool.scrub myzpool
+    '''
+    ret = {}
+    if not pool_name:
+        ret['Error'] = 'zpool name parameter is mandatory.'
+        return ret
+    if exists(pool_name):
+        zpool = _check_zpool()
+        cmd = '{0} scrub {1}'.format(zpool, pool_name)
+        res = __salt__['cmd.run'](cmd)
+        ret[pool_name] = res.splitlines()
+        return ret
     else:
         ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
 
@@ -198,7 +230,7 @@ def replace(pool_name, old, new):
         ret['Error'] = '{0}: is not on the file system.'.format(new)
         return ret
 
-    # Replace vdevs 
+    # Replace vdevs
     zpool = _check_zpool()
     cmd = '{0} replace {1} {2} {3}'.format(zpool, pool_name, old, new)
     __salt__['cmd.run'](cmd)
@@ -221,7 +253,7 @@ def create_file_vdev(size, *vdevs):
 
     CLI Example::
 
-        salt '*' zpool.create_file_vdev 7g /path/to/vdev1 [/path/to/vdev2] [...] 
+        salt '*' zpool.create_file_vdev 7g /path/to/vdev1 [/path/to/vdev2] [...]
 
         Depending on file size this may take a while to return
     '''

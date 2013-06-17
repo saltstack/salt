@@ -29,6 +29,8 @@ def _conf():
         return '/etc/sysconfig/iptables'
     elif __grains__['os_family'] == 'Arch':
         return '/etc/iptables/iptables.rules'
+    elif __grains__['os'] == 'Gentoo':
+        return '/var/lib/iptables/rules-save'
     else:
         return False
 
@@ -602,4 +604,3 @@ def _parser():
     add_arg('--ulog-qthreshold', dest='ulog-qthreshold', action='append')
 
     return parser
-

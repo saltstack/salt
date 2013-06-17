@@ -11,6 +11,10 @@ service state via provider interface:
 import os
 import re
 
+# Function alias to not shadow built-ins.
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
 if os.path.exists('/service'):
     SERVICE_DIR = "/service"
@@ -66,12 +70,12 @@ def term(name):
 
 
 #-- states.service compatible
-def reload(name):
+def reload_(name):
     '''
     Wrapper for term()
 
     CLI Example::
-    
+
         salt '*' daemontools.reload <service name>
     '''
     term(name)
@@ -96,7 +100,7 @@ def restart(name):
 def full_restart(name):
     '''
     Calls daemontools.restart() function
-    
+
     CLI Example::
 
         salt '*' daemontools.full_restart <service name>

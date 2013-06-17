@@ -285,6 +285,28 @@ The concepts of targets are used on the command line with salt, but also
 function in many other areas as well, including the state system and the
 systems used for ACLs and user permissions.
 
+Passing in Arguments
+~~~~~~~~~~~~~~~~~~~~
+
+Many of the functions available accept arguments, these arguments can be
+passed in on the command line:
+
+    # salt '*' pkg.install vim
+
+This example passes the argument `vim` to the pkg.install function, since many
+functions can accept more complex input then just a string the arguments are
+parsed through YAML, allowing for more complex data to be sent on the command
+line:
+
+    # salt '*' test.echo 'foo: bar'
+
+In this case Salt translates the string 'foo: bar' into the dictionary
+"{'foo': 'bar'}"
+
+.. note::
+
+    Any line that contains a newline will not be parsed by yaml.
+
 Salt States
 ===========
 

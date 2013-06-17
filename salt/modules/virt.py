@@ -109,13 +109,14 @@ def _get_target(target, ssh):
     return ' %s://%s/%s' % (proto, target, 'system')
 
 
-def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
+def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
     '''
     Generate the XML string to define a libvirt vm
     '''
     mem = mem * 1024
+    print 'emulator: {}'.format(emulator)
     data = '''
-<domain type='kvm'>
+<domain type='%%EMULATOR%%'>
         <name>%%NAME%%</name>
         <vcpu>%%CPU%%</vcpu>
         <memory>%%MEM%%</memory>
@@ -137,6 +138,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
         </features>
 </domain>
 '''
+    data = data.replace('%%EMULATOR%%', emulator)
     data = data.replace('%%NAME%%', name)
     data = data.replace('%%CPU%%', str(cpu))
     data = data.replace('%%MEM%%', str(mem))
@@ -173,8 +175,8 @@ def _image_type(vda):
     '''
     Detect what driver needs to be used for the given image
     '''
-    out = __salt__['cmd.run']('file {0}'.format(vda))
-    if 'Qcow' in out and 'Version: 2' in out:
+    out = __salt__['cmd.run']('qemu-img {0}'.format(vda))
+    if 'qcow2' in out:
         return 'qcow2'
     else:
         return 'raw'
@@ -188,7 +190,7 @@ def _nic_profile(nic):
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
 
 
-def init(name, cpu, mem, image, nic='default', **kwargs):
+def init(name, cpu, mem, image, nic='default', emulator='kvm', **kwargs):
     '''
     Initialize a new vm
 
@@ -206,7 +208,7 @@ def init(name, cpu, mem, image, nic='default', **kwargs):
         os.makedirs(img_dir)
     nicp = _nic_profile(nic)
     salt.utils.copyfile(sfn, img_dest)
-    xml = _gen_xml(name, cpu, mem, img_dest, nicp, **kwargs)
+    xml = _gen_xml(name, cpu, mem, img_dest, nicp, emulator, **kwargs)
     define_xml_str(xml)
     if kwargs.get('seed'):
         __salt__['img.seed'](img_dest, name, kwargs.get('config'))
@@ -464,7 +466,7 @@ def get_disks(vm_):
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
             if qemu_target:
-                disks[target.getAttribute('dev')] = {\
+                disks[target.getAttribute('dev')] = {
                     'file': qemu_target}
     for dev in disks:
         try:
@@ -1021,7 +1023,7 @@ def vm_cputime(vm_=None):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
                 'cputime': int(raw[4]),
-                'cputime_percent': int('%.0f' %cputime_percent)
+                'cputime_percent': int('%.0f' % cputime_percent)
                }
     info = {}
     if vm_:
@@ -1061,14 +1063,14 @@ def vm_netstats(vm_=None):
         dom = _get_dom(vm_)
         nics = get_nics(vm_)
         ret = {
-                'rx_bytes'   : 0,
-                'rx_packets' : 0,
-                'rx_errs'    : 0,
-                'rx_drop'    : 0,
-                'tx_bytes'   : 0,
-                'tx_packets' : 0,
-                'tx_errs'    : 0,
-                'tx_drop'    : 0
+                'rx_bytes'  : 0,
+                'rx_packets': 0,
+                'rx_errs'   : 0,
+                'rx_drop'   : 0,
+                'tx_bytes'  : 0,
+                'tx_packets': 0,
+                'tx_errs'   : 0,
+                'tx_drop'   : 0
                }
         for attrs in nics.values():
             if 'target' in attrs:
@@ -1130,11 +1132,11 @@ def vm_diskstats(vm_=None):
         # and unsuitable for any sort of real time statistics
         disks = get_disk_devs(vm_)
         ret = {
-                'rd_req'   : 0,
-                'rd_bytes' : 0,
-                'wr_req'   : 0,
-                'wr_bytes' : 0,
-                'errs'     : 0
+                'rd_req'  : 0,
+                'rd_bytes': 0,
+                'wr_req'  : 0,
+                'wr_bytes': 0,
+                'errs'    : 0
                }
         for disk in disks:
             stats = dom.blockStats(disk)

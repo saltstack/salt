@@ -3,14 +3,16 @@ Package support for pkgin based systems, inspired from freebsdpkg.py
 '''
 
 # Import python libs
-import logging
 import os
+import re
+import logging
 
 # Import salt libs
 import salt.utils
 
-
+VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
+
 
 @salt.utils.memoize
 def _check_pkgin():
@@ -29,21 +31,38 @@ def _check_pkgin():
     return ppath
 
 
+@salt.utils.memoize
+def _supports_regex():
+    '''
+    Get the pkgin version
+    '''
+    ppath = _check_pkgin()
+    version_string = __salt__['cmd.run']('{0} -v'.format(ppath))
+    if version_string is None:
+        # Dunno why it would, but...
+        return False
+
+    version_match = VERSION_MATCH.search(version_string)
+    if not version_match:
+        return False
+
+    return tuple([int(i) for i in version_match.group(1).split('.')]) > (0, 5)
+
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is supported by pkgin
     '''
-    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin']
+    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin', 'SmartOS']
 
     if __grains__['os'] in supported and _check_pkgin():
         return 'pkg'
-
     return False
 
 
 def _splitpkg(name):
     # name is in the format foobar-1.0nb1, already space-splitted
-    if name[0].isalnum() and name != 'No': # avoid < > = and 'No result'
+    if name[0].isalnum() and name != 'No':  # avoid < > = and 'No result'
         return name.rsplit('-', 1)
 
 
@@ -58,16 +77,20 @@ def search(pkg_name):
 
     pkglist = {}
     pkgin = _check_pkgin()
-
-    if pkgin:
-        for p in  __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, pkg_name)
-                                     ).splitlines():
-            if p:
-                s = _splitpkg(p.split()[0])
-                if s:
-                    pkglist[s[0]] = s[1]
-
+    if not pkgin:
         return pkglist
+
+    if _supports_regex():
+        pkg_name = '^{0}$'.format(pkg_name)
+
+    for p in __salt__['cmd.run']('{0} se {1}'.format(pkgin, pkg_name)
+                                 ).splitlines():
+        if p:
+            s = _splitpkg(p.split()[0])
+            if s:
+                pkglist[s[0]] = s[1]
+
+    return pkglist
 
 
 def latest_version(*names, **kwargs):
@@ -86,21 +109,27 @@ def latest_version(*names, **kwargs):
 
     pkglist = {}
     pkgin = _check_pkgin()
+    if not pkgin:
+        return pkglist
 
     for name in names:
-        if pkgin:
-            for line in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, name)
-                                           ).splitlines():
-                p = line.split() # pkgname-version status
-                if p:
-                    s = _splitpkg(p[0])
-                    if s :
-                        if len(p) > 1 and p[1] == '<':
-                            pkglist[s[0]] = s[1]
-                        else:
-                            pkglist[s[0]] = ''
+        if _supports_regex():
+            name = '^{0}$'.format(name)
+        for line in __salt__['cmd.run']('{0} se {1}'.format(pkgin, name)
+                                        ).splitlines():
+            p = line.split()  # pkgname-version status
+            if p and p[0] in ('=:', '<:', '>:'):
+                # These are explanation comments
+                continue
+            elif p:
+                s = _splitpkg(p[0])
+                if s:
+                    if len(p) > 1 and p[1] == '<':
+                        pkglist[s[0]] = s[1]
+                    else:
+                        pkglist[s[0]] = ''
 
-    if len(names) == 1 and pkglist :
+    if len(names) == 1 and pkglist:
         return pkglist[names[0]]
 
     return pkglist
@@ -141,7 +170,7 @@ def refresh_db():
     return {}
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
@@ -152,6 +181,9 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
 
     pkgin = _check_pkgin()
     if pkgin:
@@ -218,7 +250,8 @@ def install(name=None, refresh=False, fromrepo=None,
     '''
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
 
     # Support old "repo" argument
     repo = kwargs.get('repo', '')
@@ -305,8 +338,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
         salt '*' pkg.remove <package name>
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name, pkgs)
     if not pkg_params:
         return {}
 

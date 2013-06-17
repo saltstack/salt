@@ -40,6 +40,10 @@ import os
 # Import salt libs
 import salt.utils
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 
 def __virtual__():
     '''
@@ -95,7 +99,7 @@ def _default_runlevel():
     # Kinky.
     try:
         valid_strings = set(
-                ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
+            ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
         with salt.utils.fopen('/proc/cmdline') as fp_:
             for line in fp_:
                 for arg in line.strip().split():
@@ -112,12 +116,16 @@ def _runlevel():
     '''
     Return the current runlevel
     '''
+    if 'upstart._runlevel' in __context__:
+        return __context__['upstart._runlevel']
     out = __salt__['cmd.run']('runlevel {0}'.format(_find_utmp()))
     try:
-        return out.split()[1]
+        ret = out.split()[1]
     except IndexError:
         # The runlevel is unknown, return the default
-        return _default_runlevel()
+        ret = _default_runlevel()
+    __context__['upstart._runlevel'] = ret
+    return ret
 
 
 def _is_symlink(name):
@@ -138,11 +146,11 @@ def _service_is_upstart(name):
 def _upstart_is_disabled(name):
     '''
     An Upstart service is assumed disabled if a manual stanza is
-    placed in /etc/init/[name].conf.override.
+    placed in /etc/init/[name].override.
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
     '''
-    return os.access('/etc/init/{0}.conf.override'.format(name), os.R_OK)
+    return os.access('/etc/init/{0}.override'.format(name), os.R_OK)
 
 
 def _upstart_is_enabled(name):
@@ -297,7 +305,7 @@ def full_restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name):
+def reload_(name):
     '''
     Reload the named service
 
@@ -362,7 +370,7 @@ def _upstart_enable(name):
     '''
     Enable an Upstart service.
     '''
-    override = '/etc/init/{0}.conf.override'.format(name)
+    override = '/etc/init/{0}.override'.format(name)
     if os.access(override, os.R_OK):
         os.unlink(override)
     return _upstart_is_enabled(name)

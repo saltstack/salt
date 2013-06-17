@@ -6,11 +6,17 @@ Support for YUM
 import copy
 import logging
 import collections
+import os
 
 # Import salt libs
 import salt.utils
+from salt.utils import namespaced_function
+from salt.modules.yumpkg import (mod_repo, _parse_repo_file, list_repos,
+                                 get_repo, expand_repo_def, del_repo)
 
 log = logging.getLogger(__name__)
+
+__QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}'
 
 
 def __virtual__():
@@ -25,42 +31,69 @@ def __virtual__():
     except Exception:
         return False
 
+    valid = False
     # Fedora <= 10 need to use this module
     if os_grain == 'Fedora' and os_major_version < 11:
-        return 'pkg'
+        valid = True
     # XCP == 1.x uses a CentOS 5 base
     elif os_grain == 'XCP':
         if os_major_version == 1:
-            return 'pkg'
+            valid = True
     # XenServer 6 and earlier uses a CentOS 5 base
     elif os_grain == 'XenServer':
         if os_major_version <= 6:
-            return 'pkg'
+            valid = True
     else:
         # RHEL <= 5 and all variants need to use this module
         if os_family == 'RedHat' and os_major_version <= 5:
-            return 'pkg'
+            valid = True
+    if valid:
+        global mod_repo, _parse_repo_file, list_repos, get_repo
+        global expand_repo_def, del_repo
+        mod_repo = namespaced_function(mod_repo, globals())
+        _parse_repo_file = namespaced_function(_parse_repo_file, globals())
+        list_repos = namespaced_function(list_repos, globals())
+        get_repo = namespaced_function(get_repo, globals())
+        expand_repo_def = namespaced_function(expand_repo_def, globals())
+        del_repo = namespaced_function(del_repo, globals())
+        return 'pkg'
     return False
 
 
-def _parse_yum(arg):
+def _parse_pkginfo(line):
     '''
-    A small helper to parse yum output; returns a list of namedtuples
+    A small helper to parse package information; returns a namedtuple
     '''
-    cmd = 'yum -q {0}'.format(arg)
-    out = __salt__['cmd.run_stdout'](cmd)
-    yum_out = collections.namedtuple('YumOut', ('name', 'version', 'status'))
+    pkginfo = collections.namedtuple('PkgInfo', ('name', 'version'))
 
-    results = []
+    try:
+        name, pkgver, rel, arch = line.split('_|-')
+    # Handle unpack errors (should never happen with the queryformat we are
+    # using, but can't hurt to be careful).
+    except ValueError:
+        return None
 
-    for line in out.splitlines():
-        if not line.startswith('Loaded plugin'):
-            line = line.split()
-            if len(line) == 3:
-                namearchstr, pkgver, pkgstatus = line
-                pkgname = namearchstr.rpartition('.')[0]
-                results.append(yum_out(pkgname, pkgver, pkgstatus))
-    return results
+    # Support 32-bit packages on x86_64 systems
+    if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
+        name += '.i686'
+    if rel:
+        pkgver += '-{0}'.format(rel)
+
+    return pkginfo(name, pkgver)
+
+
+def _repoquery(repoquery_args):
+    '''
+    Runs a repoquery command and returns a list of namedtuples
+    '''
+    ret = []
+    cmd = 'repoquery {0}'.format(repoquery_args)
+    output = __salt__['cmd.run_all'](cmd).get('stdout', '').splitlines()
+    for line in output:
+        pkginfo = _parse_pkginfo(line)
+        if pkginfo is not None:
+            ret.append(pkginfo)
+    return ret
 
 
 def _get_repo_options(**kwargs):
@@ -119,8 +152,10 @@ def latest_version(*names, **kwargs):
 
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
-    updates = _parse_yum('{0} list available {1}'.format(repo_arg,
-                                                         ' '.join(names)))
+    updates = _repoquery('{0} --pkgnarrow=available --queryformat "{1}" '
+                         '{2}'.format(repo_arg,
+                                      __QUERYFORMAT,
+                                      ' '.join(names)))
     for pkg in updates:
         ret[pkg.name] = pkg.version
     # Return a string if only one package name passed
@@ -157,7 +192,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
@@ -168,6 +203,9 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
 
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
@@ -178,21 +216,12 @@ def list_pkgs(versions_as_list=False):
             return ret
 
     ret = {}
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-' \
-          '%{ARCH}\n"'
+    cmd = 'rpm -qa --queryformat "{0}\n"'.format(__QUERYFORMAT)
     for line in __salt__['cmd.run'](cmd).splitlines():
-        try:
-            name, pkgver, rel, arch = line.split('_|-')
-        # Handle unpack errors (should never happen with the queryformat we are
-        # using, but can't hurt to be careful).
-        except ValueError:
+        pkginfo = _parse_pkginfo(line)
+        if pkginfo is None:
             continue
-        # Support 32-bit packages on x86_64 systems
-        if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
-            name += '.i686'
-        if rel:
-            pkgver += '-{0}'.format(rel)
-        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+        __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, pkginfo.version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
@@ -201,7 +230,7 @@ def list_pkgs(versions_as_list=False):
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -211,8 +240,11 @@ def list_upgrades(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
-    out = _parse_yum('check-update')
-    return dict([(i.name, i.version) for i in out])
+
+    repo_arg = _get_repo_options(**kwargs)
+    updates = _repoquery('{0} --all --pkgnarrow=updates --queryformat '
+                         '"{1}"'.format(repo_arg, __QUERYFORMAT))
+    return dict([(x.name, x.version) for x in updates])
 
 
 def refresh_db():
@@ -310,7 +342,8 @@ def install(name=None,
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 

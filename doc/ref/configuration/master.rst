@@ -211,6 +211,22 @@ local job cache on the master
 
     ext_job_cache: redis
 
+.. conf_master:: minion_data_cache
+
+``minion_data_cache``
+---------------------
+
+Default: True
+
+The minion data cache is a cache of information about the minions stored on the
+master, this information is primarily the pillar and grains data. The data is
+cached in the Master cachedir under the name of the minion and used to pre
+determine what minions are expected to reply from executions.
+
+.. code-block:: yaml
+
+    minion_cache_dir: True
+
 .. conf_master:: sock_dir
 
 ``sock_dir``
@@ -645,7 +661,7 @@ A group consists of a group name and a compound target.
 .. code-block:: yaml
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
 
 Master Logging Settings

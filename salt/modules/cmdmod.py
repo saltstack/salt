@@ -17,7 +17,9 @@ import yaml
 
 # Import salt libs
 import salt.utils
+import salt.utils.timed_subprocess
 from salt.exceptions import CommandExecutionError
+import salt.exceptions
 import salt.grains.extra
 
 # Only available on POSIX systems, nonfatal on windows
@@ -163,7 +165,8 @@ def _run(cmd,
          env=(),
          rstrip=True,
          template=None,
-         umask=None):
+         umask=None,
+         timeout=None):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -245,7 +248,6 @@ def _run(cmd,
             msg = 'Environment could not be retrieved for User \'{0}\''.format(runas)
             raise CommandExecutionError(msg)
 
-
     if not quiet:
         # Put the most common case first
         log.info(
@@ -295,8 +297,18 @@ def _run(cmd,
         kwargs['close_fds'] = True
 
     # This is where the magic happens
-    proc = subprocess.Popen(cmd, **kwargs)
-    out, err = proc.communicate()
+    proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+    try:
+        proc.wait(timeout)
+    except salt.exceptions.TimedProcTimeoutError, e:
+        ret['stdout'] = e.message
+        ret['stderr'] = ''
+        ret['pid'] = proc.process.pid
+        # ok return code for timeouts?
+        ret['retcode'] = 1
+        return ret
+
+    out, err = proc.stdout, proc.stderr
 
     if rstrip:
         if out is not None:
@@ -306,8 +318,8 @@ def _run(cmd,
 
     ret['stdout'] = out
     ret['stderr'] = err
-    ret['pid'] = proc.pid
-    ret['retcode'] = proc.returncode
+    ret['pid'] = proc.process.pid
+    ret['retcode'] = proc.process.returncode
     return ret
 
 
@@ -317,7 +329,8 @@ def _run_quiet(cmd,
                shell=DEFAULT_SHELL,
                env=(),
                template=None,
-               umask=None):
+               umask=None,
+               timeout=None):
     '''
     Helper for running commands quietly for minion startup
     '''
@@ -329,7 +342,8 @@ def _run_quiet(cmd,
                 shell=shell,
                 env=env,
                 template=template,
-                umask=umask)['stdout']
+                umask=umask,
+                timeout=timeout)['stdout']
 
 
 def _run_all_quiet(cmd,
@@ -338,7 +352,8 @@ def _run_all_quiet(cmd,
                    shell=DEFAULT_SHELL,
                    env=(),
                    template=None,
-                   umask=None):
+                   umask=None,
+                   timeout=None):
     '''
     Helper for running commands quietly for minion startup.
     Returns a dict of return data
@@ -350,7 +365,8 @@ def _run_all_quiet(cmd,
                 env=env,
                 quiet=True,
                 template=template,
-                umask=umask)
+                umask=umask,
+                timeout=timeout)
 
 
 def run(cmd,
@@ -362,19 +378,20 @@ def run(cmd,
         rstrip=True,
         umask=None,
         quiet=False,
+        timeout=None,
         **kwargs):
     '''
     Execute the passed command and return the output as a string
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
+        salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     '''
     out = _run(cmd,
@@ -386,7 +403,8 @@ def run(cmd,
                template=template,
                rstrip=rstrip,
                umask=umask,
-               quiet=quiet)['stdout']
+               quiet=quiet,
+               timeout=timeout)['stdout']
     if not quiet:
         log.debug('output: {0}'.format(out))
     return out
@@ -401,19 +419,20 @@ def run_stdout(cmd,
                rstrip=True,
                umask=None,
                quiet=False,
+               timeout=None,
                **kwargs):
     '''
     Execute a command, and only return the standard out
 
     CLI Example::
 
-        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
+        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     '''
     stdout = _run(cmd,
@@ -424,7 +443,8 @@ def run_stdout(cmd,
                   template=template,
                   rstrip=rstrip,
                   umask=umask,
-                  quiet=quiet)["stdout"]
+                  quiet=quiet,
+                  timeout=timeout)["stdout"]
     if not quiet:
         log.debug('stdout: {0}'.format(stdout))
     return stdout
@@ -439,19 +459,20 @@ def run_stderr(cmd,
                rstrip=True,
                umask=None,
                quiet=False,
+               timeout=None,
                **kwargs):
     '''
     Execute a command and only return the standard error
 
     CLI Example::
 
-        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
+        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     '''
     stderr = _run(cmd,
@@ -462,7 +483,8 @@ def run_stderr(cmd,
                   template=template,
                   rstrip=rstrip,
                   umask=umask,
-                  quiet=quiet)["stderr"]
+                  quiet=quiet,
+                  timeout=timeout)["stderr"]
     if not quiet:
         log.debug('stderr: {0}'.format(stderr))
     return stderr
@@ -477,19 +499,20 @@ def run_all(cmd,
             rstrip=True,
             umask=None,
             quiet=False,
+            timeout=None,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
 
     CLI Example::
 
-        salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
+        salt '*' cmd.run_all "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     '''
     ret = _run(cmd,
@@ -500,7 +523,8 @@ def run_all(cmd,
                template=template,
                rstrip=rstrip,
                umask=umask,
-               quiet=quiet)
+               quiet=quiet,
+               timeout=timeout)
 
     if not quiet:
         if ret['retcode'] != 0:
@@ -528,7 +552,8 @@ def retcode(cmd,
             env=(),
             template=None,
             umask=None,
-            quiet=False):
+            quiet=False,
+            timeout=None):
     '''
     Execute a shell command and return the command's return code.
 
@@ -551,7 +576,8 @@ def retcode(cmd,
             env=env,
             template=template,
             umask=umask,
-            quiet=quiet)['retcode']
+            quiet=quiet,
+            timeout=timeout)['retcode']
 
 
 def script(
@@ -563,6 +589,7 @@ def script(
         env='base',
         template='jinja',
         umask=None,
+        timeout=None,
         **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -599,7 +626,8 @@ def script(
             quiet=kwargs.get('quiet', False),
             runas=runas,
             shell=shell,
-            umask=umask
+            umask=umask,
+            timeout=timeout
             )
     os.remove(path)
     return ret
@@ -613,6 +641,7 @@ def script_retcode(
         env='base',
         template='jinja',
         umask=None,
+        timeout=None,
         **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -638,6 +667,7 @@ def script_retcode(
             env,
             template,
             umask=umask,
+            timeout=timeout,
             **kwargs)['retcode']
 
 

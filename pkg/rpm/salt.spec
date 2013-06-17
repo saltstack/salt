@@ -5,13 +5,13 @@
 %define __python %{_bindir}/python%{?pybasever}
 %endif
 
-%global include_tests 0
+%global include_tests 1
 
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.15.1
+Version: 0.15.3
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -36,6 +36,7 @@ Requires: dmidecode
 %endif
 
 Requires: pciutils
+Requires: yum-utils
 
 %if 0%{?with_python26}
 BuildRequires: python26-zmq
@@ -309,6 +310,14 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Sat Jun 1 2013 Clint Savage <herlo1@gmail.com> - 0.15.3-1
+- Update to patch release 0.15.3
+- Removed OrderedDict patch
+
+* Fri May 31 2013 Clint Savage <herlo1@gmail.com> - 0.15.2-1
+- Update to patch release 0.15.2
+- Patch OrderedDict for failed tests (SaltStack#4912)
+
 * Wed May 8 2013 Clint Savage <herlo1@gmail.com> - 0.15.1-1
 - Update to patch release 0.15.1
 

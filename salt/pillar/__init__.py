@@ -107,7 +107,7 @@ class Pillar(object):
         else:
             opts['state_top'] = os.path.join('salt://', opts['state_top'])
         if self.__valid_ext(ext):
-            if 'ext_pillar'  in opts:
+            if 'ext_pillar' in opts:
                 opts['ext_pillar'].append(ext)
             else:
                 opts['ext_pillar'].append(ext)

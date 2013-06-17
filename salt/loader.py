@@ -13,6 +13,7 @@ import tempfile
 # Import salt libs
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
+from salt.utils.decorators import Depends
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +100,9 @@ def minion_mods(opts, context=None, whitelist=None):
         pack,
         whitelist=whitelist
     )
+    # Enforce dependancies of module functions from "functions"
+    Depends.enforce_dependancies(functions)
+
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():
@@ -747,7 +751,7 @@ class Loader(object):
                     continue
 
             if whitelist:
-                # It a whitelist is defined then only load the module if it is
+                # If a whitelist is defined then only load the module if it is
                 # in the whitelist
                 if module_name not in whitelist:
                     continue
@@ -849,13 +853,6 @@ class Loader(object):
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
-            if key[key.index('.') + 1:] != 'core':
-                continue
-            ret = fun()
-            if not isinstance(ret, dict):
-                continue
-            grains_data.update(ret)
-        for key, fun in funcs.items():
             if key[key.index('.') + 1:] == 'core':
                 continue
             try:
@@ -869,6 +866,13 @@ class Loader(object):
                     exc_info=True
                 )
                 continue
+            if not isinstance(ret, dict):
+                continue
+            grains_data.update(ret)
+        for key, fun in funcs.items():
+            if key[key.index('.') + 1:] != 'core':
+                continue
+            ret = fun()
             if not isinstance(ret, dict):
                 continue
             grains_data.update(ret)

@@ -31,7 +31,7 @@ def _render_tab(lst):
         else:
             ret.append('{0}={1}\n'.format(env['name'], env['value']))
     for cron in lst['crons']:
-        ret.append('{0} {1} {2} {3} {4} {5}\n'.format(cron['min'],
+        ret.append('{0} {1} {2} {3} {4} {5}\n'.format(cron['minute'],
                                                       cron['hour'],
                                                       cron['daymonth'],
                                                       cron['month'],
@@ -91,6 +91,15 @@ def _write_cron_lines(user, lines):
     return ret
 
 
+def _date_time_match(cron, **kwargs):
+    '''
+    Returns true if the minute, hour, etc. params match their counterparts from
+    the dict returned from list_tab().
+    '''
+    return all([kwargs.get(x) is None or cron[x] == str(kwargs[x])
+                for x in ('minute', 'hour', 'daymonth', 'month', 'dayweek')])
+
+
 def raw_cron(user):
     '''
     Return the contents of the user's crontab
@@ -139,7 +148,7 @@ def list_tab(user):
                 # Appears to be a standard cron line
                 comps = line.split()
                 dat = {}
-                dat['min'] = comps[0]
+                dat['minute'] = comps[0]
                 dat['hour'] = comps[1]
                 dat['daymonth'] = comps[2]
                 dat['month'] = comps[3]
@@ -183,7 +192,7 @@ def set_special(user, special, cmd):
     return 'new'
 
 
-def set_job(user, minute, hour, dom, month, dow, cmd):
+def set_job(user, minute, hour, daymonth, month, dayweek, cmd):
     '''
     Sets a cron job up for a specified user.
 
@@ -194,29 +203,30 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
     # Scrub the types
     minute = str(minute)
     hour = str(hour)
-    dom = str(dom)
+    daymonth = str(daymonth)
     month = str(month)
-    dow = str(dow)
+    dayweek = str(dayweek)
     lst = list_tab(user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if minute != cron['min'] or \
+            if minute != cron['minute'] or \
                     hour != cron['hour'] or \
-                    dom != cron['daymonth'] or \
+                    daymonth != cron['daymonth'] or \
                     month != cron['month'] or \
-                    dow != cron['dayweek']:
-                rm_job(user, minute, hour, dom, month, dow, cmd)
-                jret = set_job(user, minute, hour, dom, month, dow, cmd)
+                    dayweek != cron['dayweek']:
+                rm_job(user, cmd)
+                jret = set_job(user, minute, hour, daymonth,
+                               month, dayweek, cmd)
                 if jret == 'new':
                     return 'updated'
                 else:
                     return jret
             return 'present'
-    cron = {'min': minute,
+    cron = {'minute': minute,
             'hour': hour,
-            'daymonth': dom,
+            'daymonth': daymonth,
             'month': month,
-            'dayweek': dow,
+            'dayweek': dayweek,
             'cmd': cmd}
     lst['crons'].append(cron)
     comdat = _write_cron_lines(user, _render_tab(lst))
@@ -226,20 +236,41 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
     return 'new'
 
 
-def rm_job(user, minute, hour, dom, month, dow, cmd):
+def rm_job(user,
+           cmd,
+           minute=None,
+           hour=None,
+           daymonth=None,
+           month=None,
+           dayweek=None):
     '''
-    Remove a cron job for a specified user.
+    Remove a cron job for a specified user. If any of the day/time params are
+    specified, the job will only be removed if the specified params match.
 
     CLI Example::
 
-        salt '*' cron.rm_job root '*' '*' '*' '*' 1 /usr/local/weekly
+        salt '*' cron.rm_job root /usr/local/weekly
+        salt '*' cron.rm_job root /usr/bin/foo dayweek=1
     '''
     lst = list_tab(user)
     ret = 'absent'
     rm_ = None
     for ind in range(len(lst['crons'])):
+        if rm_ is not None:
+            break
         if cmd == lst['crons'][ind]['cmd']:
-            rm_ = ind
+            if not any([x is not None
+                        for x in (minute, hour, daymonth, month, dayweek)]):
+                # No date/time params were specified
+                rm_ = ind
+            else:
+                if _date_time_match(lst['crons'][ind],
+                                    minute=minute,
+                                    hour=hour,
+                                    daymonth=daymonth,
+                                    month=month,
+                                    dayweek=dayweek):
+                    rm_ = ind
     if rm_ is not None:
         lst['crons'].pop(rm_)
         ret = 'removed'

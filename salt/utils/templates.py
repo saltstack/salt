@@ -11,6 +11,7 @@ import imp
 import logging
 import tempfile
 import traceback
+import sys
 
 # Import third party libs
 import jinja2
@@ -55,6 +56,10 @@ def wrap_tmpl_func(render_str):
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
+            if salt.utils.is_windows():
+                # Write out with Windows newlines
+                output = os.linesep.join(output.splitlines())
+
         except SaltTemplateRenderError as exc:
             return dict(result=False, data=str(exc))
         except Exception:
@@ -101,11 +106,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(**env_args)
     else:
         jinja_env = jinja2.Environment(
-                        undefined=jinja2.StrictUndefined,**env_args)
+                        undefined=jinja2.StrictUndefined, **env_args)
     try:
         output = jinja_env.from_string(tmplstr).render(**context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
-        raise SaltTemplateRenderError(str(exc))
+        error = '{0}; line {1} in template'.format(
+                exc,
+                traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        )
+        raise SaltTemplateRenderError(error)
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)

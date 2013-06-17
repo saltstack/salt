@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import hmac
+import shutil
 import hashlib
 import logging
 
@@ -28,15 +29,25 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-def dropfile(cachedir):
+def dropfile(cachedir, user=None):
     '''
     Set an aes dropfile to update the publish session key
     '''
+    dfnt = os.path.join(cachedir, '.dfnt')
     dfn = os.path.join(cachedir, '.dfn')
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
-    with open(dfn, 'w+') as fp_:
+    with open(dfnt, 'w+') as fp_:
         fp_.write(aes)
+    if user:
+        try:
+            import pwd
+            uid = pwd.getpwnam(user).pw_uid
+            os.chown(dfnt, uid, -1)
+            shutil.move(dfnt, dfn)
+        except (KeyError, ImportError, OSError, IOError):
+            pass
+
     os.umask(mask)
 
 

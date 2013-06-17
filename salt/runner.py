@@ -2,13 +2,11 @@
 Execute salt convenience routines
 '''
 
-# Import python libs
-import inspect
-
 # Import salt libs
 import salt.loader
 import salt.exceptions
 import salt.utils
+import salt.minion
 
 
 class RunnerClient(object):
@@ -32,8 +30,7 @@ class RunnerClient(object):
         Return a dictionary of functions and the inline documentation for each
         '''
         ret = [(fun, self.functions[fun].__doc__)
-                for fun in sorted(self.functions)
-                if fun.startswith(self.opts['fun'])]
+                for fun in sorted(self.functions)]
 
         return dict(ret)
 
@@ -44,11 +41,11 @@ class RunnerClient(object):
         if not isinstance(kwarg, dict):
             kwarg = {}
         self._verify_fun(fun)
-        aspec = inspect.getargspec(self.functions[fun])
-        if aspec[2]:
-            return self.functions[fun](*arg, **kwarg)
-        else:
-            return self.functions[fun](*arg)
+        args, kwargs = salt.minion.parse_args_and_kwargs(
+                self.functions[fun],
+                arg,
+                kwarg)
+        return self.functions[fun](*args, **kwargs)
 
     def low(self, fun, low):
         '''

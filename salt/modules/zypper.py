@@ -78,7 +78,7 @@ def latest_version(*names, **kwargs):
 
     cmd = 'zypper info -t package {0}'.format(' '.join(names))
     output = __salt__['cmd.run_all'](cmd).get('stdout', '')
-    output = re.split('Information for package \S+:\n', output)
+    output = re.split('Information for package \\S+:\n', output)
     for package in output:
         pkginfo = {}
         for line in package.splitlines():
@@ -133,7 +133,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
@@ -144,6 +144,9 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
 
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
@@ -256,7 +259,8 @@ def install(name=None,
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 

@@ -43,12 +43,15 @@ import salt.utils
 if salt.utils.is_windows():
     from salt.utils import namespaced_function
     from salt.modules.win_pkg import _get_package_info
+    from salt.modules.win_pkg import _get_repo_data
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
-    global _get_package_info, _get_latest_pkg_version, _reverse_cmp_pkg_versions
     _get_package_info = namespaced_function(_get_package_info, globals())
+    _get_repo_data = namespaced_function(_get_repo_data, globals())
     _get_latest_pkg_version = namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = namespaced_function(_reverse_cmp_pkg_versions, globals())
+    # The following imports are used by the namespaced win_pkg funcs
+    # and need to be included in their globals.
     import msgpack
     from distutils.version import LooseVersion
 
@@ -103,6 +106,12 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
     else:
         if salt.utils.is_windows():
             pkginfo = _get_package_info(name)
+            if not pkginfo:
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': 'Package {0} not found in the '
+                                   'repository.'.format(name)}
             if version is None:
                 version = _get_latest_pkg_version(pkginfo)
             name = pkginfo[version]['full_name']
@@ -648,7 +657,11 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = __salt__['pkg.list_pkgs'](versions_as_list=True)
     if not salt.utils.is_windows():
-        targets = sorted([x for x in pkg_params if x in old])
+        targets = [x for x in pkg_params if x in old]
+        if action == 'purge':
+            old_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
+                                                    removed=True)
+            targets.extend([x for x in pkg_params if x in old_removed])
     else:
         targets = []
         for item in pkg_params:
@@ -659,7 +672,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
                 version_num = _get_latest_pkg_version(pkginfo)
             if pkginfo[version_num]['full_name'] in old:
                 targets.append(pkginfo[version_num]['full_name'])
-    targets = sorted(targets)
+    targets.sort()
 
     if not targets:
         return {'name': name,
@@ -677,6 +690,11 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, **kwargs)
     new = __salt__['pkg.list_pkgs'](versions_as_list=True)
     failed = [x for x in pkg_params if x in new]
+    if action == 'purge':
+        new_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
+                                                removed=True)
+        failed.extend([x for x in pkg_params if x in new_removed])
+    failed.sort()
 
     if failed:
         return {'name': name,
@@ -748,9 +766,13 @@ def mod_init(low):
     When originally setting up the mod_init for pkg a number of corner cases
     arose with different package managers and how they refresh package data.
     '''
+    ret = True
+    if 'pkg.ex_mod_init' in __salt__:
+        ret = __salt__['pkg.ex_mod_init'](low)
+
     if low['fun'] == 'installed' or low['fun'] == 'latest':
         rtag = __gen_rtag()
         if not os.path.exists(rtag):
             salt.utils.fopen(rtag, 'w+').write('')
-        return True
+        return ret
     return False

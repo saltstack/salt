@@ -63,15 +63,6 @@ def _error(ret, err_msg):
     return ret
 
 
-def _is_bin(path):
-    '''
-    Return True if a file is a bin, just checks for NULL char, this should be
-    expanded to reflect how git checks for bins
-    '''
-    with salt.utils.fopen(path, 'rb') as ifile:
-        return '\0' in ifile.read(2048)
-
-
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
@@ -918,6 +909,37 @@ def touch(name, atime=None, mtime=None):
 
     return os.path.exists(name)
 
+def symlink(src, link):
+    '''
+    Create a symbolic link to a file
+    CLI Example::
+        salt '*' file.symlink /path/to/file /path/to/link
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        os.symlink(src, link)
+        return True
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not create "{0}"'.format(link))
+    return False
+
+def rename(src, dst):
+    '''  
+    Rename a file or directory
+    CLI Example
+        salt '*' file.rename /path/to/src /path/to/dst
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try: 
+        os.rename(src, dst) 
+        return True 
+    except OSError:
+        raise CommandExecutionError('Could not rename "{0}" to "{1}"'.format(src, dst))
+    return False
 
 def stats(path, hash_type='md5', follow_symlink=False):
     '''
@@ -1322,11 +1344,12 @@ def check_managed(
     # If the source is a list then find which file exists
     source, source_hash = source_list(source, source_hash, env)
 
-    sfn, source_sum, comment = '', None, ''
+    sfn = ''
+    source_sum = None
 
     if contents is None:
         # Gather the source file from the server
-        sfn, source_sum, comment = get_managed(
+        sfn, source_sum, comments = get_managed(
                 name,
                 template,
                 source,
@@ -1338,17 +1361,16 @@ def check_managed(
                 context,
                 defaults,
                 **kwargs)
-        if comment:
+        if comments:
             __clean_tmp(sfn)
-            return False, comment
+            return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, env, template, contents)
     __clean_tmp(sfn)
     if changes:
-        comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
-            comment += '{0}: {1}\n'.format(key, val)
-        return None, comment
+        comments = ['The following values are set to be changed:\n']
+        comments.extend('{0}: {1}\n'.format(key, val) for key, val in changes.iteritems())
+        return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
 
@@ -1513,7 +1535,8 @@ def manage_file(name,
                     return ret
 
             # Check to see if the files are bins
-            if _is_bin(sfn) or _is_bin(name):
+            if not salt.utils.istextfile(sfn) \
+                    or not salt.utils.istextfile(name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 with contextlib.nested(
@@ -1742,13 +1765,8 @@ def makedirs(path, user=None, group=None, mode=None):
     # create parent directories from the topmost to the most deeply nested one
     directories_to_create.reverse()
     for directory_to_create in directories_to_create:
-        if directory_to_create == os.path.normpath(path):
-            # only the directory passed to this function gets the user, group,
-            # set
-            mkdir(directory_to_create, user=user, group=group, mode=mode)
-            continue
-        # Create the directory
-        mkdir(directory_to_create)
+        # all directories have the user, group and mode set!!
+        mkdir(directory_to_create, user=user, group=group, mode=mode)
 
 
 def makedirs_perms(name, user=None, group=None, mode='0755'):

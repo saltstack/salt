@@ -10,6 +10,8 @@ A state module to manage system installed python packages
       pip.installed
 '''
 
+import urlparse
+
 # Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -37,6 +39,7 @@ def installed(name,
               upgrade=False,
               force_reinstall=False,
               ignore_installed=False,
+              exists_action=None,
               no_deps=False,
               no_install=False,
               no_download=False,
@@ -63,8 +66,15 @@ def installed(name,
     elif env and not bin_env:
         bin_env = env
 
-    # Pull off any requirements specifiers
-    prefix = name.split('=')[0].split('<')[0].split('>')[0].strip()
+    scheme, netloc, path, query, fragment = urlparse.urlsplit(name)
+    if scheme and netloc:
+        # parse as VCS url
+        prefix = path.lstrip('/').split('@', 1)[0]
+        if scheme.startswith("git+"):
+            prefix = prefix.rstrip(".git")
+    else:
+        # Pull off any requirements specifiers
+        prefix = name.split('=')[0].split('<')[0].split('>')[0].strip()
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     try:
@@ -122,6 +132,7 @@ def installed(name,
         upgrade=upgrade,
         force_reinstall=force_reinstall,
         ignore_installed=ignore_installed,
+        exists_action=exists_action,
         no_deps=no_deps,
         no_install=no_install,
         no_download=no_download,

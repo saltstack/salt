@@ -69,12 +69,12 @@ def getfacl(*args):
                               user=ret[dentry]['comments']['owner'],
                               group=ret[dentry]['comments']['group'])
             acl_type = vals['type']
-            del(vals['type'])
+            del vals['type']
             for entity in ('user', 'group'):
                 plural = entity + 's'
                 if entity in vals.keys():
                     usergroup = vals[entity]
-                    del(vals[entity])
+                    del vals[entity]
                     if acl_type == 'acl':
                         ret[dentry][plural].append({usergroup: vals})
                     elif acl_type == 'default':
@@ -85,7 +85,7 @@ def getfacl(*args):
                         ret[dentry]['defaults'][plural].append({usergroup: vals})
             for entity in ('other', 'mask'):
                 if entity in vals.keys():
-                    del(vals[entity])
+                    del vals[entity]
                     ret[dentry][entity] = vals
     return ret
 
@@ -204,4 +204,3 @@ def delfacl(acl_type, acl_name, *args):
         cmd += ' {0}'.format(dentry)
     __salt__['cmd.run'](cmd)
     return True
-

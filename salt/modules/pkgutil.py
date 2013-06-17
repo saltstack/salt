@@ -101,7 +101,7 @@ def upgrade(refresh=True, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
@@ -113,6 +113,9 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
 
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
@@ -202,7 +205,9 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
         refresh_db()
 
     # Ignore 'sources' argument
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    pkg_params = __salt__['pkg_resource.parse_targets'](name,
+                                                        pkgs,
+                                                        **kwargs)[0]
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}

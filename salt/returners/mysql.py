@@ -22,7 +22,7 @@ Use the following mysql database schema::
       DEFAULT CHARACTER SET utf8
       DEFAULT COLLATE utf8_general_ci;
 
-    USE `salt`;  
+    USE `salt`;
 
     --
     -- Table structure for table `jids`
@@ -112,6 +112,8 @@ def returner(ret):
         sql = '''INSERT INTO `salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''
+        if len(ret['return']) == str(ret['return']).count("'result': True"):
+            ret['success'] = True
         cur.execute(sql, (ret['fun'], ret['jid'],
                             str(ret['return']), ret['id'],
                             ret['success'], json.dumps(ret)))

@@ -4,6 +4,7 @@ Salt module to manage unix mounts and the fstab file
 
 # Import python libs
 import os
+import re
 import logging
 
 # Import salt libs
@@ -53,6 +54,13 @@ def _active_mounts(ret):
                              'opts': comps[3].split(',')}
     return ret
 
+def _active_mounts_freebsd(ret):
+    for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        ret[comps[1]] = {'device': comps[0],
+                         'fstype': comps[2],
+                         'opts': comps[3].split(',')}
+    return ret
 
 def active():
     '''
@@ -63,10 +71,13 @@ def active():
         salt '*' mount.active
     '''
     ret = {}
-    try:
-        _active_mountinfo(ret)
-    except CommandExecutionError:
-        _active_mounts(ret)
+    if __grains__['os'] in ('FreeBSD'):
+        _active_mounts_freebsd(ret)
+    else:
+        try:
+            _active_mountinfo(ret)
+        except CommandExecutionError:
+            _active_mounts(ret)
     return ret
 
 
@@ -276,9 +287,10 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
     lopts = ','.join(opts)
-    cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
+    args = '-o {0}'.format(lopts)
     if fstype:
-        cmd += ' -t {0}'.format(fstype)
+        args += ' -t {0}'.format(fstype)
+    cmd = 'mount {0} {1} {2} '.format(args, device, name)
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode']:
         return out['stderr']
@@ -302,9 +314,10 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
         if 'remount' not in opts:
             opts.append('remount')
         lopts = ','.join(opts)
-        cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
+        args = '-o {0}'.format(lopts)
         if fstype:
-            cmd += ' -t {0}'.format(fstype)
+            args += ' -t {0}'.format(fstype)
+        cmd = 'mount {0} {1} {2} '.format(args, device, name)
         out = __salt__['cmd.run_all'](cmd)
         if out['retcode']:
             return out['stderr']
@@ -350,3 +363,69 @@ def is_fuse_exec(cmd):
 
     out = __salt__['cmd.run']('ldd {0}'.format(cmd_path))
     return 'libfuse' in out
+
+
+def swaps():
+    '''
+    Return a dict containing information on active swap
+
+    CLI Example::
+
+        salt '*' mount.swaps
+    '''
+    ret = {}
+    with open('/proc/swaps') as fp_:
+        for line in fp_:
+            if line.startswith('Filename'):
+                continue
+            comps = line.split()
+            ret[comps[0]] = {
+                    'type': comps[1],
+                    'size': comps[2],
+                    'used': comps[3],
+                    'priority': comps[4]}
+    return ret
+
+
+def swapon(name, priority=None):
+    '''
+    Activate a swap disk
+
+    CLI Example::
+
+        salt '*' mount.swapon /root/swapfile
+    '''
+    ret = {}
+    on_ = swaps()
+    if name in on_:
+        ret['stats'] = on_[name]
+        ret['new'] = False
+        return ret
+    cmd = 'swapon {0}'.format(name)
+    if priority:
+        cmd += ' -p {0}'.format(priority)
+    __salt__['cmd.run'](cmd)
+    on_ = swaps()
+    if name in on_:
+        ret['stats'] = on_[name]
+        ret['new'] = True
+        return ret
+    return ret
+
+
+def swapoff(name):
+    '''
+    Deactivate a named swap mount
+
+    CLI Example::
+
+        salt '*' mount.swapoff /root/swapfile
+    '''
+    on_ = swaps()
+    if name in on_:
+        __salt__['cmd.run']('swapoff {0}'.format(name))
+        on_ = swaps()
+        if name in on_:
+            return False
+        return True
+    return None

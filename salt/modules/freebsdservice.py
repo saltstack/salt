@@ -10,6 +10,9 @@ import os
 import salt.utils
 from salt.exceptions import CommandNotFoundError
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
 log = logging.getLogger(__name__)
 
@@ -280,7 +283,7 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name):
+def reload_(name):
     '''
     Restart the named service
 
@@ -303,6 +306,8 @@ def status(name, sig=None):
 
         salt '*' service.status <service name>
     '''
+    if sig:
+        return bool(__salt__['status.pid'](sig))
     cmd = '{0} {1} onestatus'.format(_cmd(), name)
     return not __salt__['cmd.retcode'](cmd)
 

@@ -5,6 +5,9 @@ Support for nzbget
 # Import salt libs
 import salt.utils
 
+__func_alias__ = {
+    'list_': 'list'
+}
 
 def __virtual__():
     '''
@@ -27,7 +30,7 @@ def version():
     cmd = 'nzbget -v'
     out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
-    return {'version': ret[1] }
+    return {'version': ret[1]}
 
 
 def serverversion():
@@ -82,7 +85,7 @@ def stop(user=None):
     return out
 
 
-def list(user=None):
+def list_(user=None):
     '''
     Return list of active downloads using nzbget -L.
     Default user is root.
@@ -149,4 +152,3 @@ def unpause(user=None):
         cmd = cmd + ' -c ~' + user + '/.nzbget'
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-

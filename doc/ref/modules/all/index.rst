@@ -26,7 +26,7 @@ Full list of builtin execution modules
     augeas_cfg
     bluez
     brew
-    butterkvm
+    bridge
     cassandra
     cmdmod
     config
@@ -37,6 +37,7 @@ Full list of builtin execution modules
     data
     debconfmod
     debian_service
+    dig
     disk
     djangomod
     dnsmasq
@@ -44,6 +45,7 @@ Full list of builtin execution modules
     dpkg
     ebuild
     eix
+    eselect
     event
     extfs
     file
@@ -69,14 +71,13 @@ Full list of builtin execution modules
     key
     keystone
     kmod
-    kvm_hyper
     launchctl
     layman
     ldapmod
     linux_acl
     linux_lvm
     linux_sysctl
-    locale
+    localemod
     locate
     logrotate
     makeconf
@@ -89,6 +90,8 @@ Full list of builtin execution modules
     mount
     munin
     mysql
+    netbsdservice
+    netbsd_sysctl
     network
     nfs3
     nginx
@@ -104,6 +107,7 @@ Full list of builtin execution modules
     pecl
     pillar
     pip
+    pkgin
     pkgng
     pkg_resource
     pkgutil
@@ -118,6 +122,7 @@ Full list of builtin execution modules
     qemu_nbd
     quota
     rabbitmq
+    rbenv
     reg
     ret
     rh_ip
@@ -129,6 +134,8 @@ Full list of builtin execution modules
     selinux
     service
     shadow
+    smartos_imgadm
+    smartos_vmadm
     smf
     solaris_group
     solarispkg
@@ -161,8 +168,11 @@ Full list of builtin execution modules
     win_service
     win_shadow
     win_status
+    win_system
     win_useradd
+    xapi
     yumpkg5
     yumpkg
+    zfs
     zpool
     zypper

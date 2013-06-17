@@ -2,7 +2,7 @@
 Return data to a postgresql server
 
 :maintainer:    None
-:maturity:      New 
+:maturity:      New
 :depends:       psycopg2
 :platform:      all
 

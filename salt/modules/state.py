@@ -185,7 +185,7 @@ def highstate(test=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
-        opts['test'] = None
+        opts['test'] = __opts__.get('test', None)
 
     if 'env' in kwargs:
         opts['environment'] = kwargs['env']
@@ -244,7 +244,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
-        opts['test'] = None
+        opts['test'] = __opts__.get('test', None)
 
     pillar = kwargs.get('pillar')
 
@@ -322,7 +322,7 @@ def top(topfn, test=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         __opts__['test'] = True
     else:
-        __opts__['test'] = None
+        __opts__['test'] = __opts__.get('test', None)
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
@@ -381,7 +381,7 @@ def show_sls(mods, env='base', test=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
-        opts['test'] = None
+        opts['test'] = __opts__.get('test', None)
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
@@ -430,7 +430,7 @@ def show_top():
 #    return st_.compile_master()
 
 
-def single(fun, name, test=None, kwval_as='yaml', **kwargs):
+def single(fun, name, test=None, **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
@@ -461,32 +461,12 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
-        opts['test'] = None
+        opts['test'] = __opts__.get('test', None)
     st_ = salt.state.State(opts)
     err = st_.verify_data(kwargs)
     if err:
         __context__['retcode'] = 1
         return err
-
-    if kwval_as == 'yaml':
-        def parse_kwval(value):
-            return _yaml_load(value, _YamlCustomLoader)
-    elif kwval_as == 'json':
-        def parse_kwval(value):
-            return json.loads(value)
-    elif kwval_as is None or kwval_as == 'verbatim':
-        parse_kwval = lambda value: value
-    else:
-        __context__['retcode'] = 1
-        return 'Unknown format({0}) for state keyword arguments!'.format(
-                kwval_as)
-
-    for key, value in kwargs.iteritems():
-        if not key.startswith('__pub_'):
-            if not isinstance(value, list):
-                kwargs[key] = parse_kwval(value)
-            else:
-                kwargs[key] = value
 
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}

@@ -644,6 +644,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
         return True
     else:
         log.info('Failed to delete user \'{0}\'.'.format(name, ))
+        return False
 
 
 def user_remove(username,
@@ -778,8 +779,8 @@ def owner_to(dbname,
     sqlfile.write('alter database {0} owner to {1};\n'.format(dbname, ownername))
 
     queries = (
-        #schemas
-        ( 
+        # schemas
+        (
          'alter schema %(n)s owner to %(owner)s;',
          'select quote_ident(schema_name) as n from information_schema.schemata;'
          ),
@@ -814,15 +815,15 @@ def owner_to(dbname,
         ret = psql_query(query, user=user, host=host, port=port, maintenance_db=dbname,
                    password=password, runas=runas)
         for row in ret:
-            line = fmt % {'owner': ownername, 'n':row['n']}
-            sqlfile.write(line+"\n")
+            line = fmt % {'owner': ownername, 'n': row['n']}
+            sqlfile.write(line + "\n")
 
     sqlfile.write('commit;\n')
     sqlfile.flush()
     os.chmod(sqlfile.name, 0644) # ensure psql can read the file
 
     # run the generated sqlfile in the db
-    cmd = _psql_cmd('-f', sqlfile.name, user=user, host=host, port=port, \
+    cmd = _psql_cmd('-f', sqlfile.name, user=user, host=host, port=port,
                 password=password, maintenance_db=dbname)
     cmdret = _run_psql(cmd, runas=runas, password=password)
     return cmdret

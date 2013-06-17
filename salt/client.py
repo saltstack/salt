@@ -108,7 +108,7 @@ class LocalClient(object):
         user = getpass.getuser()
         # if our user is root, look for other ways to figure out
         # who we are
-        if user == 'root' or 'SUDO_USER' in os.environ:
+        if (user == 'root' or user == self.opts['user']) and 'SUDO_USER' in os.environ:
             env_vars = ['SUDO_USER']
             for evar in env_vars:
                 if evar in os.environ:
@@ -250,13 +250,13 @@ class LocalClient(object):
             cli=False,
             **kwargs):
         '''
-        Execute a command on a randome subset of the targetted systems, pass
+        Execute a command on a random subset of the targetted systems, pass
         in the subset via the sub option to signify the number of systems to
         execute on.
         '''
         group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
         f_tgt = []
-        for minion. ret in group.items():
+        for minion, ret in group.items():
             if len(f_tgt) >= sub:
                 break
             if fun in ret:
@@ -612,6 +612,7 @@ class LocalClient(object):
         if not os.path.isdir(jid_dir):
             yield {}
         # Wait for the hosts to check in
+        syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
             if raw is not None:
@@ -632,11 +633,21 @@ class LocalClient(object):
                     yield ret
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
+                    if self.opts['order_masters']:
+                        if syndic_wait < self.opts.get('syndic_wait', 1):
+                            syndic_wait += 1
+                            time.sleep(1)
+                            continue
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
+                if self.opts['order_masters']:
+                    if syndic_wait < self.opts.get('syndic_wait', 1):
+                        syndic_wait += 1
+                        time.sleep(1)
+                        continue
                 break
             if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
@@ -818,6 +829,7 @@ class LocalClient(object):
                     continue
                 found.add(raw['id'])
                 ret[raw['id']] = {'ret': raw['return']}
+                ret[raw['id']]['success'] = raw.get('success', False)
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 if len(found.intersection(minions)) >= len(minions):
@@ -881,6 +893,7 @@ class LocalClient(object):
         if not os.path.isdir(jid_dir):
             yield {}
         # Wait for the hosts to check in
+        syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
             if raw is not None:
@@ -897,11 +910,21 @@ class LocalClient(object):
                 yield ret
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
+                    if self.opts['order_masters']:
+                        if syndic_wait < self.opts.get('syndic_wait', 1):
+                            syndic_wait += 1
+                            time.sleep(1)
+                            continue
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
+                if self.opts['order_masters']:
+                    if syndic_wait < self.opts.get('syndic_wait', 1):
+                        syndic_wait += 1
+                        time.sleep(1)
+                        continue
                 break
             if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
@@ -1074,7 +1097,7 @@ class LocalClient(object):
                 return payload
 
         # We have the payload, let's get rid of SREQ fast(GC'ed faster)
-        del(sreq)
+        del sreq
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1085,7 +1108,7 @@ class LocalClient(object):
         # threads per test case which uses self.client
         if hasattr(self, 'event'):
             # The call bellow will take care of calling 'self.event.destroy()'
-            del(self.event)
+            del self.event
 
 
 class FunctionWrapper(dict):
@@ -1148,5 +1171,5 @@ class Caller(object):
         Call a single salt function
         '''
         func = self.sminion.functions[fun]
-        args, kwargs = salt.minion.detect_kwargs(func, args, kwargs)
+        args, kwargs = salt.minion.parse_args_and_kwargs(func, args, kwargs)
         return func(*args, **kwargs)

@@ -122,7 +122,7 @@ def list_upgrades(refresh=True):
                 pkglist, [pkg]
             )
             for pkg in exactmatch:
-                if pkg.arch == rpmUtils.arch.getBaseArch() \
+                if pkg.arch in rpmUtils.arch.legitMultiArchesInSameLib() \
                         or pkg.arch == 'noarch':
                     versions_list[pkg['name']] = '-'.join(
                         [pkg['version'], pkg['release']]
@@ -200,7 +200,7 @@ def latest_version(*names, **kwargs):
         )
         for pkg in exactmatch:
             if pkg.name in ret \
-                    and (pkg.arch == rpmUtils.arch.getBaseArch()
+                    and (pkg.arch in rpmUtils.arch.legitMultiArchesInSameLib()
                          or pkg.arch == 'noarch'):
                 ret[pkg.name] = '-'.join([pkg.version, pkg.release])
 
@@ -238,7 +238,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
@@ -249,6 +249,9 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
 
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
@@ -456,7 +459,8 @@ def install(name=None,
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
@@ -852,7 +856,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     fileout.write(content)
     fileout.close()
 
-    return 'Repo {0} has been remooved from {1}'.format(repo, repofile)
+    return 'Repo {0} has been removed from {1}'.format(repo, repofile)
 
 
 def mod_repo(repo, basedir=None, **kwargs):

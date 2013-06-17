@@ -4,6 +4,7 @@ Compendium of generic DNS utilities
 
 # Import salt libs
 import salt.utils
+import socket
 
 # Import python libs
 import logging
@@ -21,7 +22,7 @@ def __virtual__():
 
 def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     '''
-    Parse /etc/hosts file. 
+    Parse /etc/hosts file.
 
     CLI Example::
 
@@ -205,7 +206,7 @@ def _has_dig():
     because they are also DNS utilities, a compatibility layer exists. This
     function helps add that layer.
     '''
-    return not salt.utils.which('dig')
+    return salt.utils.which('dig') != None
 
 
 def check_ip(ip_addr):
@@ -234,6 +235,13 @@ def A(host, nameserver=None):
     '''
     if _has_dig():
         return __salt__['dig.A'](host, nameserver)
+    elif nameserver is None:
+        # fall back to the socket interface, if we don't care who resolves
+        try:
+            (hostname, aliases, addresses) = socket.gethostbyname_ex(host)
+            return addresses
+        except socket.error:
+            return 'Unabled to resolve {0}'.format(host)
 
     return 'This function requires dig, which is not currently available'
 

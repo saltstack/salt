@@ -38,6 +38,9 @@ def __virtual__():
     '''
     if __grains__['os_family'] != 'Debian':
         return False
+    # Check that debconf was loaded
+    if 'debconf.show' not in __salt__:
+        return False
 
     return 'debconf'
 
@@ -101,7 +104,7 @@ def set(name, data):
 
     data:
         A set of questions/answers for debconf. Note that everything under
-	this must be indented twice.
+        this must be indented twice.
 
     question:
         The question the is being pre-answered

@@ -65,6 +65,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
+#KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$", re.UNICODE) # python 3
+KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$")
 
 log = logging.getLogger(__name__)
 
@@ -659,7 +661,11 @@ def format_call(fun, data):
         if arg in kwargs:
             ret['args'].append(kwargs[arg])
         else:
-            ret['args'].append(data[arg])
+            try:
+                ret['args'].append(data[arg])
+            except KeyError:
+                # Bad arg match, can safely proceed
+                pass
     return ret
 
 
@@ -701,7 +707,17 @@ def istextfile(fp_, blocksize=512):
     text_characters = (
         b''.join(int2byte(i) for i in range(32, 127)) +
         b'\n\r\t\f\b')
-    block = fp_.read(blocksize)
+    try:
+        block = fp_.read(blocksize)
+    except AttributeError:
+        # This wasn't an open filehandle, so treat it as a file path and try to
+        # open the file
+        try:
+            with open(fp_, 'rb') as fp2_:
+                block = fp2_.read(blocksize)
+        except IOError:
+            # Unable to open file, bail out and return false
+            return False
     if b'\x00' in block:
         # Files with null bytes are binary
         return False
@@ -836,7 +852,7 @@ def mkstemp(*args, **kwargs):
     if close_fd is False:
         return (fd_, fpath)
     os.close(fd_)
-    del(fd_)
+    del fd_
     return fpath
 
 
@@ -1136,7 +1152,7 @@ def get_hash(path, form='md5', chunk_size=4096):
 
 
 def namespaced_function(function, global_dict, defaults=None):
-    ''' 
+    '''
     Redefine(clone) a function under a different globals() namespace scope
     '''
     if defaults is None:
@@ -1147,6 +1163,25 @@ def namespaced_function(function, global_dict, defaults=None):
         global_dict,
         name=function.__name__,
         argdefs=defaults
-    )   
+    )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
+
+def parse_kwarg(string):
+    '''
+    Parses the string and looks for the kwarg format:
+    "{argument name}={argument value}"
+    For example:
+    "my_message=Hello world"
+    The argument name must have a valid python identifier format (it should
+    match the following regular expression: [^\\d\\W]\\w*).
+    If the string matches, then this function returns the following tuple:
+    ({argument name}, {value})
+    Or else it returns:
+    (None, None)
+    '''
+    match = KWARG_REGEX.match(string)
+    if match:
+        return match.groups()
+    else:
+        return None, None

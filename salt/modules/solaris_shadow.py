@@ -6,8 +6,11 @@ Manage the shadow file
 import os
 try:
     import spwd
+    HAS_SPWD = True
 except ImportError:
-    pass
+    # SmartOS joyent_20130322T181205Z does not have spwd
+    HAS_SPWD = False
+    import pwd
 
 # Import salt libs
 import salt.utils
@@ -28,27 +31,87 @@ def info(name):
 
         salt '*' shadow.info root
     '''
+    if HAS_SPWD:
+        try:
+            data = spwd.getspnam(name)
+            ret = {
+                'name': data.sp_nam,
+                'pwd': data.sp_pwd,
+                'lstchg': data.sp_lstchg,
+                'min': data.sp_min,
+                'max': data.sp_max,
+                'warn': data.sp_warn,
+                'inact': data.sp_inact,
+                'expire': data.sp_expire}
+        except KeyError:
+            ret = {
+                'name': '',
+                'pwd': '',
+                'lstchg': '',
+                'min': '',
+                'max': '',
+                'warn': '',
+                'inact': '',
+                'expire': ''}
+        return ret
+
+    # SmartOS joyent_20130322T181205Z does not have spwd, but not all is lost
+    # Return what we can know
+    ret = {
+        'name': '',
+        'pwd': '',
+        'lstchg': '',
+        'min': '',
+        'max': '',
+        'warn': '',
+        'inact': '',
+        'expire': ''}
+
     try:
-        data = spwd.getspnam(name)
-        ret = {
-            'name': data.sp_nam,
-            'pwd': data.sp_pwd,
-            'lstchg': data.sp_lstchg,
-            'min': data.sp_min,
-            'max': data.sp_max,
-            'warn': data.sp_warn,
-            'inact': data.sp_inact,
-            'expire': data.sp_expire}
+        data = pwd.getpwnam(name)
+        ret.update({
+            'name': name,
+            'pwd': data.pw_dir
+        })
     except KeyError:
-        ret = {
-            'name': '',
-            'pwd': '',
-            'lstchg': '',
-            'min': '',
-            'max': '',
-            'warn': '',
-            'inact': '',
-            'expire': ''}
+        return ret
+
+    # For SmartOS `passwd -s <username>` and the output format is:
+    #   name status mm/dd/yy min max warn
+    #
+    # Fields:
+    #  1. Name: username
+    #  2. Status:
+    #      - LK: locked
+    #      - NL: no login
+    #      - NP: No password
+    #      - PS: Password
+    #  3. Last password change
+    #  4. Minimum age
+    #  5. Maximum age
+    #  6. Warning period
+
+    output = __salt__['cmd.run_all']('passwd -s {0}'.format(name))
+    if output['retcode'] != 0:
+        return ret
+
+    fields = output['stdout'].split()
+    if len(fields) == 2:
+        # For example:
+        #   root      NL
+        return
+    # We have all fields:
+    #   buildbot L 05/09/2013 0 99999 7
+    ret.update({
+        'name': data.pw_name,
+        'pwd': data.pw_dir,
+        'lstchg': fields[2],
+        'min': int(fields[3]),
+        'max': int(fields[4]),
+        'warn': int(fields[5]),
+        'inact': '',
+        'expire': ''
+    })
     return ret
 
 

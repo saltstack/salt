@@ -6,6 +6,11 @@ Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 import re
 import os
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'list_': 'list'
+}
+
 __opts__ = {
     'rvm.runas': None,
 }
@@ -41,7 +46,7 @@ def _rvm_do(ruby, command, runas=None):
 def is_installed(runas=None):
     '''
     Check if RVM is installed.
-    
+
     CLI Example::
 
         salt '*' rvm.is_installed
@@ -102,7 +107,7 @@ def reinstall_ruby(ruby, runas=None):
     return _rvm('reinstall', ruby, runas=runas)
 
 
-def list(runas=None):
+def list_(runas=None):
     '''
     List all rvm installed rubies.
 
@@ -170,7 +175,7 @@ def wrapper(ruby_string, wrapper_prefix, runas=None, *binaries):
         The names of the binaries to create wrappers for. When nothing is given, wrappers for ruby, gem, rake, irb, rdoc, ri and testrb are generated.
 
     CLI Example::
-    
+
         salt '*' rvm.wrapper <ruby_string> <wrapper_prefix>
     '''
     return _rvm('wrapper', '{ruby_string} {wrapper_prefix} {binaries}'.

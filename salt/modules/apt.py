@@ -44,12 +44,6 @@ def __virtual__():
     '''
     if __grains__['os_family'] != 'Debian':
         return False
-    if not apt_support:
-        err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
-        log.error(err_str.format(str(e)))
-    if not ppa_format_support and __grains__['os'] == 'Ubuntu':
-        err_str = 'Unable to import "softwareproperties.ppa": {0}'
-        log.warning(err_str.format(str(e)))
     return 'pkg'
 
 
@@ -139,7 +133,7 @@ def latest_version(*names, **kwargs):
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
-    pkgs = list_pkgs()
+    pkgs = list_pkgs(versions_as_list=True)
     fromrepo = _get_repo(**kwargs)
     repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
         if fromrepo else ''
@@ -154,10 +148,15 @@ def latest_version(*names, **kwargs):
         else:
             candidate = ''
 
-        installed = pkgs.get(name, '')
-        if candidate:
-            if not installed or compare(pkg1=installed, oper='<',
-                                        pkg2=candidate):
+        installed = pkgs.get(name, [])
+        if not installed:
+            ret[name] = candidate
+        else:
+            # If there are no installed versions that are greater than or equal
+            # to the install candidate, then the candidate is an upgrade, so
+            # add it to the return dict
+            if not any([compare(pkg1=x, oper='>=', pkg2=candidate)
+                        for x in installed]):
                 ret[name] = candidate
 
     # Return a string if only one package name passed
@@ -292,7 +291,8 @@ def install(name=None,
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
 
     # Support old "repo" argument
     repo = kwargs.get('repo', '')
@@ -305,6 +305,9 @@ def install(name=None,
         except Exception as e:
             log.exception(e)
 
+    old = list_pkgs()
+
+    downgrade = False
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -323,11 +326,17 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
+                cver = old.get(param)
+                if cver is not None \
+                        and __salt__['pkg.compare'](pkg1=version_num,
+                                                    oper='<', pkg2=cver):
+                    downgrade = True
                 targets.append('"{0}={1}"'.format(param, version_num))
         if fromrepo:
             log.info('Targeting repo "{0}"'.format(fromrepo))
-        cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install ' \
-              '{pkg}'.format(
+        cmd = 'apt-get -q -y {force_yes} {confold} {confdef} {verify} ' \
+              '{target} install {pkg}'.format(
+                  force_yes='--force-yes' if downgrade else '',
                   confold='-o DPkg::Options::=--force-confold',
                   confdef='-o DPkg::Options::=--force-confdef',
                   verify='--allow-unauthenticated' if skip_verify else '',
@@ -335,7 +344,6 @@ def install(name=None,
                   pkg=' '.join(targets),
               )
 
-    old = list_pkgs()
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -355,14 +363,25 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
+    old_removed = list_pkgs(removed=True)
     targets = [x for x in pkg_params if x in old]
+    if action == 'purge':
+        targets.extend([x for x in pkg_params if x in old_removed])
     if not targets:
         return {}
     cmd = 'apt-get -q -y {0} {1}'.format(action, ' '.join(targets))
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    new_removed = list_pkgs(removed=True)
+
+    ret = {'installed': __salt__['pkg_resource.find_changes'](old, new)}
+    if action == 'purge':
+        ret['removed'] = __salt__['pkg_resource.find_changes'](old_removed,
+                                                               new_removed)
+        return ret
+    else:
+        return ret['installed']
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -442,11 +461,28 @@ def upgrade(refresh=True, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def list_pkgs(versions_as_list=False):
+def _clean_pkglist(pkgs):
+    '''
+    Go through package list and, if any packages have a mix of actual versions
+    and virtual package markers, remove the virtual package markers.
+    '''
+    for key in pkgs.keys():
+        if '1' in pkgs[key] and len(pkgs[key]) > 1:
+            while True:
+                try:
+                    pkgs[key].remove('1')
+                except ValueError:
+                    break
+
+
+def list_pkgs(versions_as_list=False, removed=False):
     '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
+
+    If removed is ``True``, then only packages which have been removed (but not
+    purged) will be returned.
 
     External dependencies::
 
@@ -459,32 +495,43 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    removed = salt.utils.is_true(removed)
 
     if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
+        if removed:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs']['removed'])
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            ret = copy.deepcopy(__context__['pkg.list_pkgs']['installed'])
+        if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
-            return ret
+        return ret
 
-    ret = {}
+    ret = {'installed': {}, 'removed': {}}
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version}\n\' -W'
 
     out = __salt__['cmd.run_all'](cmd).get('stdout', '')
-    # Typical line of output:
+    # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1
+    # deinstall ok config-files mc 3:4.8.1-2ubuntu1
     for line in out.splitlines():
         cols = line.split()
         try:
-            linetype, status, name, version_num = [cols[x] for x in (0, 2, 3, 4)]
+            linetype, status, name, version_num = \
+                [cols[x] for x in (0, 2, 3, 4)]
         except ValueError:
             continue
         name = _pkgname_without_arch(name)
-        if len(cols) and ('install' in linetype or 'hold' in linetype) and \
-                'installed' in status:
-            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
+        if len(cols):
+            if ('install' in linetype or 'hold' in linetype) and \
+                    'installed' in status:
+                __salt__['pkg_resource.add_pkg'](ret['installed'],
+                                                 name,
+                                                 version_num)
+            elif 'deinstall' in linetype:
+                __salt__['pkg_resource.add_pkg'](ret['removed'],
+                                                 name,
+                                                 version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
     if __salt__['cmd.has_exec']('grep-available'):
@@ -502,8 +549,16 @@ def list_pkgs(versions_as_list=False):
             # Set virtual package versions to '1'
             __salt__['pkg_resource.add_pkg'](ret, virtname, '1')
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
+    for pkglist_type in ('installed', 'removed'):
+        __salt__['pkg_resource.sort_pkglist'](ret[pkglist_type])
+        _clean_pkglist(ret[pkglist_type])
+
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+
+    if removed:
+        ret = ret['removed']
+    else:
+        ret = ret['installed']
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -646,7 +701,9 @@ def list_repos():
        salt '*' pkg.list_repos disabled=True
     '''
     if not apt_support:
-        return 'Error: aptsources.sourceslist python module not found'
+        msg = 'Error: aptsources.sourceslist python module not found'
+        log.error(msg)
+        return msg
 
     repos = {}
     sources = sourceslist.SourcesList()

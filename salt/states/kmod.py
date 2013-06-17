@@ -42,7 +42,7 @@ def present(name, persist=False):
         # Intersection of persist and non persist module
         mods_set = list(set(mods) & set(persist_mods))
     else:
-        mods_set = mods 
+        mods_set = mods
     if name in mods_set:
         ret['comment'] = ('Kernel module {0} is already present'
                               .format(name))

@@ -58,9 +58,28 @@ def _cpv_to_name(cpv):
 
 
 def _cpv_to_version(cpv):
-    if cpv == '':
-        return ''
-    return str(cpv[len(_cpv_to_name(cpv) + '-'):])
+    return portage.versions.cpv_getversion(cpv)
+
+def _process_emerge_err(stderr):
+    '''
+    Used to parse emerge output to provide meaningful output when emerge fails
+    '''
+    ret = {}
+    changes = {}
+    rexp = re.compile(r'([<>=][^ ]+/[^ ]+ [^\n]+)')
+
+    sections = re.split('\n\n', stderr)
+    for section in sections:
+        if 'The following keyword changes' in section:
+            changes['keywords'] = rexp.findall(section)
+        elif 'The following license changes' in section:
+            changes['license'] = rexp.findall(section)
+        elif 'The following USE changes' in section:
+            changes['use'] = rexp.findall(section)
+        elif 'The following mask changes' in section:
+            changes['mask'] = rexp.findall(section)
+    ret['changes'] = changes
+    return ret
 
 
 def latest_version(*names, **kwargs):
@@ -180,7 +199,7 @@ def porttree_matches(name):
                 if x.endswith('/' + str(name))]
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
@@ -191,6 +210,9 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
 
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
@@ -223,8 +245,21 @@ def refresh_db():
     '''
     if 'eix.sync' in __salt__:
         return __salt__['eix.sync']()
-    return __salt__['cmd.retcode']('emerge --sync --ask n --quiet') == 0
 
+    if 'makeconf.features_contains'in __salt__ and __salt__['makeconf.features_contains']('webrsync-gpg'):
+        # GPG sign verify is supported only for "webrsync"
+        cmd = 'emerge-webrsync -q'
+        if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'
+            cmd = 'emerge-delta-webrsync -q'
+        return __salt__['cmd.retcode'](cmd) == 0
+    else:
+        if __salt__['cmd.retcode']('emerge --sync --ask n --quiet') == 0:
+            return True
+        # We fall back to "webrsync" if "rsync" fails for some reason
+        cmd = 'emerge-webrsync -q'
+        if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'
+            cmd = 'emerge-delta-webrsync -q'
+        return __salt__['cmd.retcode'](cmd) == 0
 
 def install(name=None,
             refresh=False,
@@ -300,7 +335,8 @@ def install(name=None,
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
 
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
@@ -338,8 +374,10 @@ def install(name=None,
         targets = pkg_params
     cmd = 'emerge --quiet --ask n {0} {1}'.format(emerge_opts, ' '.join(targets))
     old = list_pkgs()
-    __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stderr'])
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -371,8 +409,10 @@ def update(pkg, slot=None, refresh=False):
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --oneshot --with-bdeps=y --ask n --quiet {0}'.format(full_atom)
-    __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stderr'])
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -395,8 +435,10 @@ def upgrade(refresh=True):
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --deep --with-bdeps=y --ask n --quiet world'
-    __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stderr'])
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 

@@ -16,12 +16,23 @@ Useful documentation:
 . http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD
 '''
 
-import os
+# Import python libs
 import sys
 import contextlib
-import importlib
+import os
 
+try:
+    import importlib
+    HAS_IMPORTLIB = True
+except ImportError:
+    # Python < 2.7 does not have importlib
+    HAS_IMPORTLIB = False
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError
 import salt.utils
+
+
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
@@ -31,12 +42,15 @@ def _check_xenapi():
         debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
         if os.path.isfile(debian_xen_version):
             # __salt__ is not available in __virtual__
-            xenversion =  salt.modules.cmdmod._run_quiet(debian_xen_version)
+            xenversion = salt.modules.cmdmod._run_quiet(debian_xen_version)
             xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
             if os.path.isdir(xapipath):
                 sys.path.append(xapipath)
+
     try:
-        return importlib.import_module('xen.xm.XenAPI')
+        if HAS_IMPORTLIB:
+            return importlib.import_module('xen.xm.XenAPI')
+        return __import__('xen.xm.XenAPI')
     except ImportError:
         return False
 
@@ -71,7 +85,7 @@ def _get_xapi_session():
         session.xenapi.login_with_password(xapi_login, xapi_password)
 
         yield session.xenapi
-    except:
+    except Exception:
         raise CommandExecutionError('Failed to connect to XenAPI socket.')
     finally:
         session.xenapi.session.logout()
@@ -109,7 +123,7 @@ def _get_label_uuid(xapi, rectype, label):
     '''
     try:
         return getattr(xapi, rectype).get_by_name_label(label)[0]
-    except:
+    except Exception:
         return False
 
 
@@ -227,9 +241,10 @@ def vm_state(vm_=None):
 
         if vm_:
             info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
-        else:
-            for vm_ in list_vms():
-                info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
+            return info
+
+        for vm_ in list_vms():
+            info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
         return info
 
 
@@ -279,11 +294,11 @@ def node_info():
                                     ["software_version", "machine"]),
                 'cputhreads': _get_val(host_rec,
                                     ["cpu_configuration", "threads_per_core"]),
-                'phymemory': int(host_metrics_rec["memory_total"])/1024/1024,
+                'phymemory': int(host_metrics_rec["memory_total"]) / 1024 / 1024,
                 'cores_per_sockets': _get_val(host_rec,
                                     ["cpu_configuration", "cores_per_socket"]),
                 'free_cpus': getFreeCpuCount(),
-                'free_memory': int(host_metrics_rec["memory_free"])/1024/1024,
+                'free_memory': int(host_metrics_rec["memory_free"]) / 1024 / 1024,
                 'xen_major': _get_val(host_rec,
                                     ["software_version", "xen_major"]),
                 'xen_minor': _get_val(host_rec,
@@ -408,7 +423,7 @@ def setmem(vm_, memory):
             xapi.VM.set_memory_dynamic_max_live(vm_uuid, mem_target)
             xapi.VM.set_memory_dynamic_min_live(vm_uuid, mem_target)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -429,7 +444,7 @@ def setvcpus(vm_, vcpus):
         try:
             xapi.VM.set_VCPUs_number_live(vm_uuid, vcpus)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -455,8 +470,8 @@ def vcpu_pin(vm_, vcpu, cpus):
                 if c == '':
                     continue
                 if c.find('-') != -1:
-                    (x,y) = c.split('-')
-                    for i in range(int(x),int(y)+1):
+                    (x, y) = c.split('-')
+                    for i in range(int(x), int(y) + 1):
                         cpus.append(int(i))
                 else:
                     # remove this element from the list
@@ -465,8 +480,8 @@ def vcpu_pin(vm_, vcpu, cpus):
                     else:
                         cpus.append(int(c))
             cpus.sort()
-            return ",".join(map(str, cpus))
-    
+            return ','.join(map(str, cpus))
+
         if cpus == 'all':
             cpumap = cpu_make_map('0-63')
         else:
@@ -474,13 +489,13 @@ def vcpu_pin(vm_, vcpu, cpus):
 
         try:
             xapi.VM.add_to_VCPUs_params_live(vm_uuid,
-                                            'cpumap{0}'.format(vcpu), cpumap)
+                                             'cpumap{0}'.format(vcpu), cpumap)
             return True
         # VM.add_to_VCPUs_params_live() implementation in xend 4.1+ has
         # a bug which makes the client call fail.
         # That code is accurate for all others XenAPI implementations, but
         # for that particular one, fallback to xm / xl instead.
-        except:
+        except Exception:
             return __salt__['cmd.run']('{0} vcpu-pin {1} {2} {3}'.format(
                                             _get_xtool(), vm_, vcpu, cpus))
 
@@ -535,7 +550,7 @@ def shutdown(vm_):
         try:
             xapi.VM.clean_shutdown(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -554,7 +569,7 @@ def pause(vm_):
         try:
             xapi.VM.pause(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -573,7 +588,7 @@ def resume(vm_):
         try:
             xapi.VM.unpause(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -591,6 +606,7 @@ def create(config_):
         salt '*' virt.create <path to Xen cfg file>
     '''
     return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_))
+
 
 def start(config_):
     '''
@@ -618,7 +634,7 @@ def reboot(vm_):
         try:
             xapi.VM.clean_reboot(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -637,7 +653,7 @@ def reset(vm_):
         try:
             xapi.VM.hard_reboot(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -670,7 +686,7 @@ def migrate(vm_, target,
         try:
             xapi.VM.migrate(vm_uuid, target, bool(live), other_config)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -690,7 +706,7 @@ def destroy(vm_):
         try:
             xapi.VM.hard_shutdown(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -740,6 +756,7 @@ def vm_cputime(vm_=None):
     with _get_xapi_session() as xapi:
         def _info(vm_):
             host_rec = _get_record_by_label(xapi, 'VM', vm_)
+            host_cpus = len(host_rec['host_CPUs'])
             if host_rec is False:
                 return False
             host_metrics = _get_metrics_record(xapi, 'VM', host_rec)
@@ -749,16 +766,16 @@ def vm_cputime(vm_=None):
             if cputime:
                 # Divide by vcpus to always return a number between 0 and 100
                 cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
-            return {
-                    'cputime': int(cputime),
-                    'cputime_percent': int('%.0f' %cputime_percent)
-                   }
+            return {'cputime': int(cputime),
+                    'cputime_percent': int('%.0f' % cputime_percent)}
         info = {}
         if vm_:
             info[vm_] = _info(vm_)
-        else:
-            for vm_ in list_vms():
-                info[vm_] = _info(vm_)
+            return info
+
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+
         return info
 
 
@@ -792,8 +809,8 @@ def vm_netstats(vm_=None):
                 return False
             for vif in vm_rec['VIFs']:
                 vif_rec = _get_record(xapi, 'VIF', vif)
-                ret[vif_rec['device']] = _get_metrics_record(xapi,'VIF',
-                                                            vif_rec)
+                ret[vif_rec['device']] = _get_metrics_record(xapi, 'VIF',
+                                                             vif_rec)
                 del ret[vif_rec['device']]['last_updated']
 
             return ret
@@ -836,7 +853,7 @@ def vm_diskstats(vm_=None):
             for vbd in xapi.VM.get_VBDs(vm_uuid):
                 vbd_rec = _get_record(xapi, 'VBD', vbd)
                 ret[vbd_rec['device']] = _get_metrics_record(xapi, 'VBD',
-                                                            vbd_rec)
+                                                             vbd_rec)
                 del ret[vbd_rec['device']]['last_updated']
 
             return ret
@@ -848,6 +865,3 @@ def vm_diskstats(vm_=None):
             for vm_ in list_vms():
                 info[vm_] = _info(vm_)
         return info
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

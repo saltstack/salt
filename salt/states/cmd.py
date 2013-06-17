@@ -201,47 +201,34 @@ def _is_true(val):
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
 
-def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group):
+def _run_check(cmd_kwargs, onlyif, unless, group):
     '''
-    Execute the onlyif logic and return data if the onlyif fails
+    Execute the onlyif and unless logic.
+    Return a result dict if:
+    * group is not available
+    * onlyif failed (onlyif != 0)
+    * unless succeeded (unless == 0)
+    else return True
     '''
-    ret = {}
-
     if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
             if not __opts__['test']:
                 os.setegid(egid)
         except KeyError:
-            ret['comment'] = 'The group {0} is not available'.format(group)
             return {'comment': 'The group {0} is not available'.format(group),
                     'result': False}
 
     if onlyif:
-        if 'runas' in cmd_kwargs:
-            user = cmd_kwargs.pop('runas')
-        if 'cwd' in cmd_kwargs:
-            cwd = cmd_kwargs.pop('cwd')
-        if __salt__['cmd.retcode'](onlyif,
-                                   cwd=cwd,
-                                   runas=user,
-                                   **cmd_kwargs) != 0:
-            ret['comment'] = 'onlyif exec failed'
-            ret['result'] = True
-            return {'comment': 'onlyif exec failed',
+        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+            return {'comment': 'onlyif execution failed',
                     'result': True}
 
     if unless:
-        if 'runas' in cmd_kwargs:
-            user = cmd_kwargs.pop('runas')
-        if 'cwd' in cmd_kwargs:
-            cwd = cmd_kwargs.pop('cwd')
-        if __salt__['cmd.retcode'](unless,
-                                   cwd=cwd,
-                                   runas=user,
-                                   **cmd_kwargs) == 0:
-            return {'comment': 'unless executed successfully',
+        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+            return {'comment': 'unless execution succeeded',
                     'result': True}
+
     # No reason to stop, return True
     return True
 
@@ -291,6 +278,7 @@ def wait(name,
         The command being executed is expected to return data about executing
         a state
     '''
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -361,6 +349,7 @@ def wait_script(name,
         The command being executed is expected to return data about executing
         a state
     '''
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -378,6 +367,7 @@ def run(name,
         stateful=False,
         umask=None,
         quiet=False,
+        timeout=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met
@@ -408,8 +398,12 @@ def run(name,
         The shell to use for execution, defaults to the shell grain
 
     env
-        The root directory of the environment for the referencing script. The
-        environments are defined in the master config file.
+        Pass in a list or dict of environment variables to be applied to the
+        command upon execution
+
+    stateful
+        The command being executed is expected to return data about executing
+        a state
 
     umask
         The umask (in octal) to use when running the command.
@@ -418,10 +412,15 @@ def run(name,
         The command will be executed quietly, meaning no log entries of the
         actual command or its return data
 
-    stateful
-        The command being executed is expected to return data about executing
-        a state
+    timeout
+        If the command has not terminated after timeout seconds, send the
+        subprocess sigterm, and if sigterm is ignored, follow up with sigkill
     '''
+    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
+    ###       cannot be removed from the function definition, otherwise the use
+    ###       of unsupported arguments in a cmd.run state will result in a
+    ###       traceback.
+
     ret = {'name': name,
            'changes': {},
            'result': False,
@@ -484,7 +483,7 @@ def run(name,
                   'quiet': quiet}
 
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group)
+        cret = _run_check(cmd_kwargs, onlyif, unless, group)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -492,7 +491,7 @@ def run(name,
         # Wow, we passed the test, run this sucker!
         if not __opts__['test']:
             try:
-                cmd_all = __salt__['cmd.run_all'](name, **cmd_kwargs)
+                cmd_all = __salt__['cmd.run_all'](name, timeout=timeout, **cmd_kwargs)
             except CommandExecutionError as err:
                 ret['comment'] = str(err)
                 return ret
@@ -522,6 +521,7 @@ def script(name,
            env=None,
            stateful=False,
            umask=None,
+           timeout=None,
            **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
@@ -573,6 +573,11 @@ def script(name,
     stateful
         The command being executed is expected to return data about executing
         a state
+
+    timeout
+        If the command has not terminated after timeout seconds, send the
+        subprocess sigterm, and if sigterm is ignored, follow up with sigkill
+
     '''
     ret = {'changes': {},
            'comment': '',
@@ -599,7 +604,8 @@ def script(name,
                        'group': group,
                        'cwd': cwd,
                        'template': template,
-                       'umask': umask})
+                       'umask': umask,
+                       'timeout': timeout})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,
@@ -611,9 +617,13 @@ def script(name,
     if source is None:
         source = name
 
+    # If script args present split from name and define args
+    if len(name.split()) > 1:
+        cmd_kwargs.update({'args': name.split(' ', 1)[1]})
+
     try:
         cret = _run_check(
-            run_check_cmd_kwargs, onlyif, unless, cwd, user, group
+            run_check_cmd_kwargs, onlyif, unless, group
         )
         if isinstance(cret, dict):
             ret.update(cret)
@@ -691,7 +701,7 @@ def call(name, func, args=(), kws=None,
     if HAS_GRP:
         pgid = os.getegid()
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, None, None, None)
+        cret = _run_check(cmd_kwargs, onlyif, unless, None)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -721,6 +731,7 @@ def wait_call(name,
               unless=None,
               stateful=False,
               **kwargs):
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,

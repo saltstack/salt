@@ -111,13 +111,13 @@ declaration that will restart Apache whenever the Apache configuration file,
       file:
         - managed
 
-    .. seealso:: watch_in and require_in
+.. seealso:: watch_in and require_in
 
-        Sometimes it is more convenient to use the :term:`watch_in` or 
-        :term:`require_in` syntax instead of extending another ``SLS``
-        file.
+    Sometimes it is more convenient to use the :term:`watch_in` or 
+    :term:`require_in` syntax instead of extending another ``SLS``
+    file.
 
-        :doc:`State Requisites </ref/states/requisites>`
+    :doc:`State Requisites </ref/states/requisites>`
 
 State declaration
 -----------------

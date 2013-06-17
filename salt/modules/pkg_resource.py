@@ -225,7 +225,7 @@ def check_desired(desired=None):
     return problems
 
 
-def parse_targets(name=None, pkgs=None, sources=None):
+def parse_targets(name=None, pkgs=None, sources=None, **kwargs):
     '''
     Parses the input to pkg.install and returns back the package(s) to be
     installed. Returns a list of packages, as well as a string noting whether
@@ -266,7 +266,9 @@ def parse_targets(name=None, pkgs=None, sources=None):
                 # Cache package from remote source (salt master, HTTP, FTP)
                 srcinfo.append((pkg_name,
                                 pkg_src,
-                               __salt__['cp.cache_file'](pkg_src),
+                               __salt__['cp.cache_file'](pkg_src,
+                                                         kwargs.get('__env__',
+                                                                    'base')),
                                'remote'))
             else:
                 # Package file local to the minion

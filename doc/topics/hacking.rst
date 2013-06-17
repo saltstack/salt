@@ -18,8 +18,8 @@ The following is an example (from `Open Comparison Contributing Docs`_ )
 of an efficient workflow for forking, cloning, branching, committing, and 
 sending a pull request for a github repository.
 
-First, make a local clone of your github fork of the salt github repo and make edits and 
-changes locally.
+First, make a local clone of your github fork of the salt github repo and make
+edits and changes locally.
 
 Then, create a new branch on your clone by entering the following commands::
 
@@ -313,9 +313,9 @@ For greater control while running the tests, please try::
 Editing and previewing the documention
 --------------------------------------
 
-You need ``sphinx-build`` command to build the docs. In Debian/Ubuntu this is provided
-in the ``python-sphinx`` package.  You can also install this directly to your virtual
-environment using pip::
+You need ``sphinx-build`` command to build the docs. In Debian/Ubuntu this is
+provided in the ``python-sphinx`` package. Sphinx can also be installed
+to a virtualenv using pip::
 
     pip install Sphinx
 
@@ -323,15 +323,23 @@ Change to salt documention directory, then::
 
     cd doc; make html
 
-- The docs then are built in the ``docs/_build/html/`` folder. If you make
-  changes and want to see the results, ``make html`` again.
+- This will build the HTML docs. Run ``make`` without any arguments to see the
+  available make targets, which include :strong:`html`, :strong:`man`, and
+  :strong:`text`.
+- The docs then are built within the :strong:`docs/_build/` folder. To update
+  the docs after making changes, run ``make`` again.
 - The docs use `reStructuredText <http://sphinx-doc.org/rest.html>`_ for markup.
   See a live demo at http://rst.ninjs.org/.
 - The help information on each module or state is culled from the python code
   that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``.
-- If you are developing using Arch Linux (or any other distribution for which
-  Python 3 is the default Python installation), then ``sphinx-build`` may be
-  named ``sphinx-build2`` instead. If this is the case, then you will need to
-  run the following ``make`` command::
+
+- To build the docs on Arch Linux, the :strong:`python2-sphinx` package is
+  required. Additionally, it is necessary to tell :strong:`make` where to find
+  the proper :strong:`sphinx-build` binary, like so::
 
     make SPHINXBUILD=sphinx-build2 html
+
+- To build the docs on RHEL/CentOS 6, the :strong:`python-sphinx10` package
+  must be installed from EPEL, and the following make command must be used::
+
+    make SPHINXBUILD=sphinx-1.0-build html
