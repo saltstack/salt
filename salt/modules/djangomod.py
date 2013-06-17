@@ -27,6 +27,7 @@ def command(settings_module,
             command,
             bin_env=None,
             pythonpath=None,
+            env=None,
             *args, **kwargs):
     '''
     Run arbitrary django management command
@@ -47,7 +48,7 @@ def command(settings_module,
     for key, value in kwargs.items():
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, env=env)
 
 
 def syncdb(settings_module,
@@ -55,6 +56,7 @@ def syncdb(settings_module,
            migrate=False,
            database=None,
            pythonpath=None,
+           env=None,
            noinput=True):
     '''
     Run syncdb
@@ -80,6 +82,7 @@ def syncdb(settings_module,
                   'syncdb',
                    bin_env,
                    pythonpath,
+                   env,
                    *args, **kwargs)
 
 
@@ -88,7 +91,8 @@ def createsuperuser(settings_module,
                     email,
                     bin_env=None,
                     database=None,
-                    pythonpath=None):
+                    pythonpath=None,
+                    env=None):
     '''
     Create a super user for the database.
     This function defaults to use the ``--noinput`` flag which prevents the
@@ -109,6 +113,7 @@ def createsuperuser(settings_module,
                    'createsuperuser',
                    bin_env,
                    pythonpath,
+                   env,
                    *args, **kwargs)
 
 
@@ -116,7 +121,8 @@ def loaddata(settings_module,
              fixtures,
              bin_env=None,
              database=None,
-             pythonpath=None):
+             pythonpath=None,
+             env=None):
     '''
     Load fixture data
 
@@ -146,7 +152,8 @@ def collectstatic(settings_module,
                   clear=False,
                   link=False,
                   no_default_ignore=False,
-                  pythonpath=None):
+                  pythonpath=None,
+                  env=None):
     '''
     Collect static files from each of your applications into a single location
     that can easily be served in production.
@@ -174,4 +181,5 @@ def collectstatic(settings_module,
                    'collectstatic',
                    bin_env,
                    pythonpath,
+                   env,
                    *args, **kwargs)
