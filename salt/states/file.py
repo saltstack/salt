@@ -301,7 +301,7 @@ def _check_directory(name,
                     changes[path] = fchange
     else:
         ret, perms = __salt__['file.check_perms'](name,
-                                                  None,
+                                                  {},
                                                   user,
                                                   group,
                                                   mode)
