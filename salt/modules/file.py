@@ -1327,7 +1327,7 @@ def check_perms(name, ret, user, group, mode):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
-    if __opts__['test'] is True:
+    if __opts__['test'] is True and ret['changes']:
         ret['result'] = None
     return ret, perms
 
