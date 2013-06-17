@@ -67,7 +67,7 @@ def syncdb(settings_module,
 
     CLI Example::
 
-        salt '*' django.syncdb settings.py
+        salt '*' django.syncdb <settings_module>
     '''
     args = []
     kwargs = {}
@@ -100,7 +100,7 @@ def createsuperuser(settings_module,
 
     CLI Example::
 
-        salt '*' django.createsuperuser settings.py user user@example.com
+        salt '*' django.createsuperuser <settings_module> user user@example.com
     '''
     args = ['noinput']
     kwargs = dict(
@@ -131,7 +131,7 @@ def loaddata(settings_module,
 
     CLI Example::
 
-        salt '*' django.loaddata settings.py <comma delimited list of fixtures>
+        salt '*' django.loaddata <settings_module> <comma delimited list of fixtures>
 
     '''
 
@@ -164,7 +164,7 @@ def collectstatic(settings_module,
 
     CLI Example::
 
-        salt '*' django.collectstatic settings.py
+        salt '*' django.collectstatic <settings_module>
     '''
     args = ['noinput']
     kwargs = {}
