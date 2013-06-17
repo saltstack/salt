@@ -678,7 +678,9 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'None of the targeted packages are installed'}
+                'comment': 'None of the targeted packages are installed'
+                           '{0}'.format(' or partially installed'
+                                        if action == 'purge' else '')}
 
     if __opts__['test']:
         return {'name': name,
