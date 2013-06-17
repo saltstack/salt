@@ -25,7 +25,7 @@ def _check_pkgin():
         localbase = __salt__['cmd.run']('pkg_info -Q LOCALBASE pkgin')
         if localbase is not None:
             ppath = '{0}/bin/pkgin'.format(localbase)
-            if os.path.exists(ppath) is False:
+            if not os.path.exists(ppath):
                 return None
 
     return ppath
