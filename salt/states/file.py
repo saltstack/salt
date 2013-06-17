@@ -299,6 +299,13 @@ def _check_directory(name,
                 fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
+    else:
+        ret, perms = __salt__['file.check_perms'](name,
+                                                  None,
+                                                  user,
+                                                  group,
+                                                  mode)
+        changes[name] = ret['changes']
     if clean:
         keep = _gen_keep_files(name, require)
         for root, dirs, files in os.walk(name):

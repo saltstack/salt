@@ -1272,15 +1272,18 @@ def check_perms(name, ret, user, group, mode):
     # Mode changes if needed
     if mode:
         if str(mode) != perms['lmode']:
-            if not __opts__['test']:
-                __salt__['file.set_mode'](name, mode)
-            if str(mode) != str(__salt__['file.get_mode'](name)).lstrip('0'):
-                ret['result'] = False
-                ret['comment'].append(
-                    'Failed to change mode to {0}'.format(mode)
-                )
-            else:
+            if __opts__['test'] is True:
                 ret['changes']['mode'] = mode
+            else:
+                __salt__['file.set_mode'](name, mode)
+                if (str(mode) !=
+                        str(__salt__['file.get_mode'](name)).lstrip('0')):
+                    ret['result'] = False
+                    ret['comment'].append(
+                        'Failed to change mode to {0}'.format(mode)
+                    )
+                else:
+                    ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
     if user:
         if user != perms['luser']:
@@ -1301,15 +1304,22 @@ def check_perms(name, ret, user, group, mode):
 
     if user:
         if user != __salt__['file.get_user'](name):
-            ret['result'] = False
-            ret['comment'].append('Failed to change user to {0}'.format(user))
+            if __opts__['test'] is True:
+                ret['changes']['user'] = user
+            else:
+                ret['result'] = False
+                ret['comment'].append('Failed to change user to {0}'
+                                      .format(user))
         elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
         if group != __salt__['file.get_group'](name):
-            ret['result'] = False
-            ret['comment'].append('Failed to change group to {0}'
-                               .format(group))
+            if __opts__['test'] is True:
+                ret['changes']['group'] = group
+            else:
+                ret['result'] = False
+                ret['comment'].append('Failed to change group to {0}'
+                                      .format(group))
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
