@@ -192,6 +192,9 @@ class Cloud(object):
             pool.join()
 
         for alias, driver, details in parallel_pmap:
+            if not details:
+                # There's no providers details?! Skip it!
+                continue
             if alias not in output:
                 output[alias] = {}
             output[alias][driver] = details
@@ -1244,4 +1247,4 @@ def run_paralel_map_providers_query(data):
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
         # Failed to communicate with the provider, don't list any nodes
-        return (data['alias'], data['driver'], [])
+        return (data['alias'], data['driver'], ())
