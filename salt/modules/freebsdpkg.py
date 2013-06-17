@@ -65,6 +65,10 @@ def latest_version(*names, **kwargs):
 
     ret = {}
 
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     if _check_pkgng():
         for line in __salt__['cmd.run_stdout']('{0} upgrade -nq'.format(
             _cmd('pkg'))
