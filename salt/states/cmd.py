@@ -578,6 +578,10 @@ def script(name,
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
 
+    args
+        String of command line args to pass to the script.  Only used if no
+        args are specified as part of the `name` argument.
+
     '''
     ret = {'changes': {},
            'comment': '',
