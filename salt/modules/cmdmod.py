@@ -579,7 +579,8 @@ def retcode(cmd,
             template=template,
             umask=umask,
             quiet=quiet,
-            timeout=timeout)['retcode']
+            timeout=timeout,
+            with_communicate=False)['retcode']
 
 
 def script(
