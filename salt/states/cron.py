@@ -31,6 +31,12 @@ Is changed to this:
 
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
+
+Additionally, the temporal parameters (minute, hour, etc.) can be randomized
+by using ``random`` instead of using a specific value. However, please note
+that if a cron job already has a numeric value (in other words, not ``*``),
+changing the value to ``random`` will not modify this field. Otherwise, the
+value would be modified every time the state was applied.
 '''
 
 # Import python libs
@@ -38,20 +44,36 @@ import os
 
 # Import salt libs
 from salt.utils import mkstemp, fopen
+from salt.modules.cron import _needs_change
 
 
-def _check_cron(user, cmd, minute, hour, daymonth, month, dayweek):
+def _check_cron(user,
+                cmd,
+                minute=None,
+                hour=None,
+                daymonth=None,
+                month=None,
+                dayweek=None):
     '''
     Return the changes
     '''
+    if minute is not None:
+        minute = str(minute).lower()
+    if hour is not None:
+        hour = str(hour).lower()
+    if daymonth is not None:
+        daymonth = str(daymonth).lower()
+    if month is not None:
+        month = str(month).lower()
+    if dayweek is not None:
+        dayweek = str(dayweek).lower()
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if str(minute) != cron['minute'] or \
-                    str(hour) != cron['hour'] or \
-                    str(daymonth) != cron['daymonth'] or \
-                    str(month) != cron['month'] or \
-                    str(dayweek) != cron['dayweek']:
+            if any([_needs_change(x, y) for x, y in
+                    ((cron['minute'], minute), (cron['hour'], hour),
+                     (cron['daymonth'], daymonth), (cron['month'], month),
+                     (cron['dayweek'], dayweek))]):
                 return 'update'
             return 'present'
     return 'absent'
@@ -166,11 +188,7 @@ def present(name,
 
 def absent(name,
            user='root',
-           minute='*',
-           hour='*',
-           daymonth='*',
-           month='*',
-           dayweek='*'):
+           **kwargs):
     '''
     Verifies that the specified cron job is absent for the specified user; only
     the name is matched when removing a cron job.
@@ -181,24 +199,11 @@ def absent(name,
     user
         The name of the user who's crontab needs to be modified, defaults to
         the root user
-
-    minute
-        The information to be set into the minute section, this can be any
-        string supported by your cron system's the minute field. Default is
-        ``*``
-
-    hour
-        The information to be set in the hour section. Default is ``*``
-
-    daymonth
-        The information to be set in the day of month section. Default is ``*``
-
-    month
-        The information to be set in the month section. Default is ``*``
-
-    dayweek
-        The information to be set in the day of week section. Default is ``*``
     '''
+    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
+    ###       cannot be removed from the function definition, otherwise the use
+    ###       of unsupported arguments will result in a traceback.
+
     name = ' '.join(name.strip().split())
     ret = {'name': name,
            'result': True,
@@ -206,13 +211,7 @@ def absent(name,
            'comment': ''}
 
     if __opts__['test']:
-        status = _check_cron(user,
-                             name,
-                             minute,
-                             hour,
-                             daymonth,
-                             month,
-                             dayweek)
+        status = _check_cron(user, name)
         ret['result'] = None
         if status == 'absent':
             ret['result'] = True
@@ -221,13 +220,7 @@ def absent(name,
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
 
-    data = __salt__['cron.rm_job'](user,
-                                   name,
-                                   minute,
-                                   hour,
-                                   daymonth,
-                                   month,
-                                   dayweek)
+    data = __salt__['cron.rm_job'](user, name)
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
         return ret
