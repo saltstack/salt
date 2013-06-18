@@ -26,6 +26,10 @@ def wait(name, **kwargs):
 
     ``**kwargs``
         Pass any arguments needed to execute the function
+
+    Note that this function actually does nothing -- however, if the `watch`
+    is satisfied, then `mod_watch` (defined at the bottom of this file) will be
+    run.  In this case, `mod_watch` is an alias for `run()`.
     '''
     return {'name': name,
             'changes': {},
