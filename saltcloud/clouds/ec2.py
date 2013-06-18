@@ -1312,7 +1312,11 @@ def _list_nodes_full(location=None):
     params = {'Action': 'DescribeInstances'}
     instances = query(params, location=location)
     if 'error' in instances:
-        return instances
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                instances['error']['Errors']['Error']['Message']
+            )
+        )
 
     for instance in instances:
         # items could be type dict or list (for stopped EC2 instances)
@@ -1354,7 +1358,11 @@ def list_nodes():
     ret = {}
     nodes = list_nodes_full()
     if 'error' in nodes:
-        return nodes
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                nodes['error']['Errors']['Error']['Message']
+            )
+        )
     for node in nodes:
         ret[node] = {
             'id': nodes[node]['id'],
@@ -1374,6 +1382,13 @@ def list_nodes_select():
     ret = {}
 
     nodes = list_nodes_full()
+    if 'error' in nodes:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                nodes['error']['Errors']['Error']['Message']
+            )
+        )
+
     for node in nodes:
         pairs = {}
         data = nodes[node]
