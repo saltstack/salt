@@ -42,6 +42,18 @@ salt fileserver. Here's an example:
         - group: users
         - mode: 644
 
+The ``source`` parameter can also specify a file in another Salt environment.
+In this example ``foo.conf`` in the ``dev`` environment will be used instead.
+
+.. code-block:: yaml
+
+    /etc/foo.conf:
+      file.managed:
+        - source:
+          - salt://foo.conf?env=dev
+        - user: foo
+        - group: users
+        - mode: 644
 
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
