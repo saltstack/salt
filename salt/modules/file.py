@@ -909,10 +909,13 @@ def touch(name, atime=None, mtime=None):
 
     return os.path.exists(name)
 
+
 def symlink(src, link):
     '''
     Create a symbolic link to a file
+
     CLI Example::
+
         salt '*' file.symlink /path/to/file /path/to/link
     '''
     if not os.path.isabs(src):
@@ -925,10 +928,13 @@ def symlink(src, link):
         raise CommandExecutionError('Could not create "{0}"'.format(link))
     return False
 
+
 def rename(src, dst):
     '''  
     Rename a file or directory
-    CLI Example
+
+    CLI Example::
+
         salt '*' file.rename /path/to/src /path/to/dst
     '''
     if not os.path.isabs(src):
@@ -940,6 +946,7 @@ def rename(src, dst):
     except OSError:
         raise CommandExecutionError('Could not rename "{0}" to "{1}"'.format(src, dst))
     return False
+
 
 def stats(path, hash_type='md5', follow_symlink=False):
     '''
