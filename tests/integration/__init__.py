@@ -499,7 +499,6 @@ class TestDaemon(object):
             for target in responses:
                 if target not in expected_connections:
                     # Someone(minion) else "listening"?
-                    print target
                     continue
                 expected_connections.remove(target)
                 sys.stdout.write('\r' + ' ' * PNUM + '\r')

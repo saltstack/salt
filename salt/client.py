@@ -125,7 +125,7 @@ class LocalClient(object):
         try:
             return range_.expand(tgt)
         except seco.range.RangeException as err:
-            print("Range server exception: {0}".format(err))
+            print('Range server exception: {0}'.format(err))
             return []
 
     def _get_timeout(self, timeout):
