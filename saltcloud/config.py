@@ -185,6 +185,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # 4th - Include VM profiles config
     if vm_config is None:
+        # Load profiles configuration from the provided file
         vm_config = vm_profiles_config(vm_config_path, providers_config)
     opts['profiles'] = vm_config
 
@@ -309,9 +310,11 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                     )
                     vms.pop(profile)
                     continue
-                providers[alias][driver].setdefault('profiles', {}).update(
-                    {profile: details}
-                )
+
+                if 'profiles' not in providers[alias][driver]:
+                    providers[alias][driver]['profiles'] = {}
+                providers[alias][driver]['profiles'][profile] = details
+
             if details['provider'] not in providers:
                 log.warning(
                     'The profile {0!r} is defining {1[provider]!r} as the '
