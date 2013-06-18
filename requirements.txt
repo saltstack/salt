@@ -1,4 +1,4 @@
 # pip requirements file for Salt Cloud
-salt>=0.16.0
+salt
 PyYAML
 apache-libcloud
