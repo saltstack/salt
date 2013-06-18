@@ -358,8 +358,8 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 continue
 
             driver = providers[extended['provider']].keys()[0]
-            providers[details['provider']][driver].setdefault(
-                'profiles', {}).update({profile: details})
+            providers[extended['provider']][driver].setdefault(
+                'profiles', {}).update({profile: extended})
 
             extended['provider'] = '{0[provider]}:{1}'.format(extended, driver)
         else:
