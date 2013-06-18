@@ -472,6 +472,12 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 )
 
         for entry in val:
+            if 'provider' not in entry:
+                raise saltcloud.exceptions.SaltCloudConfigError(
+                    'There\'s at least one cloud driver details under '
+                    'the {0!r} cloud provider alias which does not have '
+                    'the required \'provider\' setting'.format(key)
+                )
             providers.setdefault(key, {}).update({entry['provider']: entry})
 
     # Is any provider extending data!?
