@@ -173,7 +173,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     elif 'providers' not in opts and providers_config is None:
         # Load from configuration file, even if that files does not exist since
         # it will be populated with defaults.
-        providers_config = cloud_providers_config(providers_config_path)
+        opts['providers'] = providers_config = cloud_providers_config(
+            providers_config_path
+        )
     elif 'providers' not in opts and providers_config is not None:
         # We're being passed a configuration dictionary
         opts['providers'] = providers_config
