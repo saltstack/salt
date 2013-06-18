@@ -32,11 +32,14 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 
+
 Additionally, the temporal parameters (minute, hour, etc.) can be randomized
 by using ``random`` instead of using a specific value. However, please note
 that if a cron job already has a numeric value (in other words, not ``*``),
 changing the value to ``random`` will not modify this field. Otherwise, the
 value would be modified every time the state was applied.
+
+.. versionadded:: 0.16.0
 '''
 
 # Import python libs

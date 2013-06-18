@@ -324,23 +324,26 @@ def upgrade():
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package.
-
-    name : None
+    name
         The name of the package to be deleted.
 
-    pkgs : None
-        A list of packages to delete. Must be passed as a python list.
 
-        CLI Example::
+    Multiple Package Options:
 
-            salt '*' pkg.remove pkgs='["foo","bar"]'
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
 
     Returns a list containing the removed packages.
 
     CLI Example::
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name, pkgs)
     if not pkg_params:
@@ -376,17 +379,33 @@ def remove(name=None, pkgs=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with pkg_delete
+    Package purges are not supported, this function is identical to
+    ``remove()``.
 
-    Returns a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name)
+    return remove(name=name, pkgs=pkgs)
 
 
 def rehash():

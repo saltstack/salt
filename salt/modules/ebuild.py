@@ -465,6 +465,8 @@ def remove(name=None, slot=None, pkgs=None, **kwargs):
         Uninstall multiple packages. ``slot`` argument is ignored if this
         argument is present. Must be passed as a python list.
 
+    .. versionadded:: 0.16.0
+
 
     Returns a dict containing the changes.
 
@@ -510,6 +512,8 @@ def purge(name=None, slot=None, pkgs=None, **kwargs):
     pkgs
         Uninstall multiple packages. ``slot`` argument is ignored if this
         argument is present. Must be passed as a python list.
+
+    .. versionadded:: 0.16.0
 
 
     Returns a dict containing the changes.
