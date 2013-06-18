@@ -60,7 +60,6 @@ class Depends(object):
                     continue
                 logging.debug('Unloading {0}.{1} because dependancy ({2}) is not imported'.format(module, func, dependancy))
                 # if not, unload dependand_set
-                print
                 mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
                                            func.__name__)
 
