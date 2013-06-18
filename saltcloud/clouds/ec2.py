@@ -1311,6 +1311,8 @@ def _list_nodes_full(location=None):
     ret = {}
     params = {'Action': 'DescribeInstances'}
     instances = query(params, location=location)
+    if 'error' in instances:
+        return instances
 
     for instance in instances:
         # items could be type dict or list (for stopped EC2 instances)
@@ -1351,6 +1353,8 @@ def list_nodes():
     '''
     ret = {}
     nodes = list_nodes_full()
+    if 'error' in nodes:
+        return nodes
     for node in nodes:
         ret[node] = {
             'id': nodes[node]['id'],
