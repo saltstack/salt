@@ -3,7 +3,7 @@ Salt 0.16.0 Release Notes
 =========================
 
 The 0.16.0 release is an exciting one, with new features in master redundancy,
-and a new, powerful, requisite.
+and a new, powerful requisite.
 
 Major Features
 ==============
@@ -12,7 +12,7 @@ Multi-Master
 ------------
 
 This new capability allows for a minion to be actively connected to multiple
-salt masters at the same. This allows for multiple masters to send out commands
+salt masters at the same time. This allows for multiple masters to send out commands
 to minions and for minions to automatically reconnect to masters that have gone
 down.
 
@@ -23,8 +23,8 @@ The new `prereq` requisite is very powerful! It allows for states to execute
 based on a state that is expected to make changes in the future. This allows
 for a change on the system to be preempted by another execution. A good example
 is needing to shut down a service before modifying files associated with it,
-allowing for instance, a webserver to be shut down allowing a load balancer to
-stop sending requests while server side code is updated. In this case the
+allowing, for instance, a webserver to be shut down allowing a load balancer to
+stop sending requests while server side code is updated. In this case, the
 prereq will only run if changes are expected to happen in the prerequired
 state, and the prerequired state will always run after the prereq state and
 only if the prereq state succeeds.

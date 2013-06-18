@@ -2,15 +2,15 @@
 Multi Master Tutorial
 =====================
 
-As on Salt 0.16.0 the ability to connect minions to multiple masters has been
+As of Salt 0.16.0, the ability to connect minions to multiple masters has been
 made available. The multi-master system allows for redundancy of Salt
 masters and facilitates multiple points of communication out to minions. When
-using a multi-master setup all masters are running hot, and any active master
+using a multi-master setup, all masters are running hot, and any active master
 can be used to send commands out to the minions.
 
-In 0.16.0 the masters do not share any information, keys need to be accepted on
-both masters and shared files need to be shared manually or use tools like the
-git fileserver backend to ensure that the file_roots are kept consistent.
+In 0.16.0, the masters do not share any information, keys need to be accepted on
+both masters, and shared files need to be shared manually or use tools like the
+git fileserver backend to ensure that the ``file_roots`` are kept consistent.
 
 Summary of Steps
 ----------------
@@ -25,26 +25,26 @@ Summary of Steps
 Prepping a Redundant Master
 ---------------------------
 
-The first task is to prepare the redundant master, there is only one
+The first task is to prepare the redundant master. There is only one
 requirement when preparing a redundant master, which is that masters share the
-same private key. When the first master was created the master's identifying
-key was generated and placed in the master's ``pki_dir``, the default location
+same private key. When the first master was created, the master's identifying
+key was generated and placed in the master's ``pki_dir``. The default location
 of the key is `/etc/salt/pki/master/master.pem`. Take this key and copy it to
 the same location on the redundant master. Assuming that no minions have yet
-been connected to the new redundant master it is safe to delete any existing
+been connected to the new redundant master, it is safe to delete any existing
 key in this location and replace it.
 
 .. note::
     There is no logical limit to the number of redundant masters that can be
     used.
 
-Once the new key is in place the redundant master can be safely started.
+Once the new key is in place, the redundant master can be safely started.
 
 Configure Minions
 -----------------
 
-Since minions need to be master aware, the new master needs to be added to the
-minion configurations, simply update the minion configurations to list all
+Since minions need to be master-aware, the new master needs to be added to the
+minion configurations. Simply update the minion configurations to list all
 connected masters:
 
 .. code-block:: yaml
@@ -56,7 +56,7 @@ connected masters:
 Now the minion can be safely restarted.
 
 Now the minions will check into the original master and also check into the new
-redundant master. Both masters are first class and have rights to the minions.
+redundant master. Both masters are first-class and have rights to the minions.
 
 Sharing Files Between Masters
 -----------------------------
@@ -67,9 +67,9 @@ files should be shared or sharing of these files should be strongly considered.
 Minion Keys
 ```````````
 
-Minion keys can be accepted the normal way using `salt-key` on both masters,
-keys accepted, deleted or rejected on one master will NOT be automatically
-managed on redundant masters, this needs to be taken care of by running
+Minion keys can be accepted the normal way using `salt-key` on both masters.
+Keys accepted, deleted, or rejected on one master will NOT be automatically
+managed on redundant masters; this needs to be taken care of by running
 salt-key on both masters or sharing the
 `/etc/salt/pki/master/{minions,minions_pre,minions_rejected}` directories
 between masters.
@@ -77,15 +77,15 @@ between masters.
 .. note::
 
     While sharing the `/etc/salt/pki/master` directory will work, it is
-    stringly discouraged, since allowing access to the master.pem key outside
+    strongly discouraged, since allowing access to the `master.pem` key outside
     of Salt creates are *SERIOUS* security risk.
 
 File_Roots
 ``````````
 
-The file_roots contents should be kept consistent between masters. Otherwise
+The `file_roots` contents should be kept consistent between masters. Otherwise
 state runs will not always be consistent on minions since instructions managed
-by one master will no agree with other masters.
+by one master will not agree with other masters.
 
 The recommended way to sync these is to use a fileserver backend like gitfs or
 to keep these files on shared storage.
@@ -93,19 +93,19 @@ to keep these files on shared storage.
 Pillar_Roots
 ````````````
 
-Pillar roots should be given the same considerations as file_roots.
+Pillar roots should be given the same considerations as `file_roots`.
 
 Master Configurations
 `````````````````````
 
 While reasons may exist to maintain separate master configurations, it is wise
-to remember that each master maintains independent control over minions,
-therefore access controls should be in sync between masters unless a valid
+to remember that each master maintains independent control over minions.
+Therefore, access controls should be in sync between masters unless a valid
 reason otherwise exists to keep them inconsistent.
 
 These access control options include but are not limited to:
 
-1. external_auth
-2. client_acl
-3. peer
-4. peer_run
+1. `external_auth`
+2. `client_acl`
+3. `peer`
+4. `peer_run`
