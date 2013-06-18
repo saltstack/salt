@@ -120,7 +120,9 @@ class Client(object):
         minion file cache
         '''
         ret = []
-        for path in paths.split(','):
+        if isinstance(paths, str):
+            paths = paths.split(',')
+        for path in paths:
             ret.append(self.cache_file(path, env))
         return ret
 
