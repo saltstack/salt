@@ -78,35 +78,11 @@ class CloudConfigMixIn(object):
                 continue
             self.__assure_absolute_paths(option.dest)
 
-        # Grab data from the 4 sources
+        # Grab data from the 4 sources (done in self.process_cloud_config)
         # 1st - Master config
-        # Loaded in CloudConfigMixIn.process_master_config()
-        # Start our configuration with a copy of the masters configuration
-        self.config = self.master_config.copy()
-
-        # 2nd Override master config with salt-cloud config
-        # Loaded in CloudConfigMixIn.process_cloud_config()
-        # Let's override with the cloud's loaded settings.
-        self.config.update(self.cloud_config)
-
-        # 3rd - Include VM config
-        # Loaded in CloudConfigMixIn.process_vm_config()
-        self.config['vm'] = self.profiles_config
-
-        # 4th - Include Cloud Providers
-        if 'providers' in self.config and self.providers_config:
-            self.error(
-                'Do not mix the old cloud providers configuration with '
-                'the new one. The providers configuration should now go in '
-                'the file `/etc/salt/cloud.providers` or a separate `*.conf` '
-                'file within `cloud.providers.d/` which is relative to '
-                '`/etc/salt/cloud.providers`. To provide another location '
-                'for the providers configuration file, please use '
-                '`--providers-config`.'
-            )
-        elif 'providers' not in self.config:
-            self.config['providers'] = self.providers_config
-
+        # 2nd - Override master config with salt-cloud config
+        # 3rd - Include Cloud Providers
+        # 4th - Include VM config
         # 5th - Override config with cli options
         # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
 
@@ -131,66 +107,14 @@ class CloudConfigMixIn(object):
 
     def process_cloud_config(self):
         try:
-
-            self.cloud_config = config.cloud_config(self.options.cloud_config)
-        except exceptions.SaltCloudConfigError as exc:
-            self.error(exc)
-
-        # Store a temporary config dict with just the cloud settings so the
-        # logging level can be retrieved in LogLevelMixIn.process_log_level()
-        self.config = self.cloud_config
-
-        if self.options.master_config is None:
-            # No master config was provided from cli
-            # Set the master configuration file path to the one provided in
-            # the cloud's configuration or the default path.
-            self.options.master_config = self.cloud_config.get(
-                'master_config', '/etc/salt/master'
-            )
-        if self.options.vm_config is None:
-            # No profiles config was provided from cli
-            # Set the profiles configuration file path to the one provided in
-            # the cloud's configuration or the default path.
-            self.options.vm_config = self.cloud_config.get(
-                'vm_config', '/etc/salt/cloud.profiles'
-            )
-        if self.options.providers_config is None:
-            # No providers config was provided from cli
-            # Set the profiles configuration file path to the one provided in
-            # the cloud's configuration or the default path.
-            self.options.providers_config = self.cloud_config.get(
-                'providers_config', '/etc/salt/cloud.providers'
-            )
-
-    def process_master_config(self):
-        try:
-            self.master_config = salt.config.master_config(
-                self.options.master_config
+            self.config = config.cloud_config(
+                self.options.cloud_config,
+                master_config_path=self.options.master_config,
+                providers_config_path=self.options.providers_config,
+                vm_config_path=self.options.vm_config
             )
         except exceptions.SaltCloudConfigError as exc:
             self.error(exc)
-    # Force process_master_config to run AFTER process_cloud_config
-    process_master_config._mixin_prio_ = -999
-
-    def process_vm_config(self):
-        try:
-            self.profiles_config = config.vm_profiles_config(
-                self.options.vm_config
-            )
-        except exceptions.SaltCloudConfigError as exc:
-            self.error(exc)
-    # Force process_vm_config to run AFTER process_master_config
-    process_vm_config._mixin_prio_ = -998
-
-    def process_providers_config(self):
-        try:
-            self.providers_config = config.cloud_providers_config(
-                self.options.providers_config
-            )
-        except exceptions.SaltCloudConfigError as exc:
-            self.error(exc)
-    # Force process_providers_config to run AFTER process_vm_config
-    process_providers_config._mixin_prio_ = -997
 
 
 class ExecutionOptionsMixIn(object):

@@ -8,7 +8,7 @@ Primary interfaces for the salt-cloud system
 # salt VM config, where VMs are defined - /etc/salt/cloud.profiles
 #
 # The cli, master and cloud configs will merge for opts
-# the VM data will be in opts['vm']
+# the VM data will be in opts['profiles']
 
 # Import python libs
 import os
@@ -174,17 +174,28 @@ class SaltCloud(parsers.SaltCloudParser):
                                        self.config.get('map', None)):
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
-                names = mapper.delete_map(query='list_nodes')
+                matching = mapper.delete_map(query='list_nodes')
             else:
-                names = self.config.get('names', None)
+                matching = mapper.get_running_by_names(
+                    self.config.get('names', ())
+                )
+
+            if not matching:
+                print('No machines were found to be destroyed')
+                self.exit()
 
             msg = 'The following virtual machines are set to be destroyed:\n'
-            for name in names:
-                msg += '  {0}\n'.format(name)
-
+            names = set()
+            for alias, drivers in matching.iteritems():
+                msg += '  {0}:\n'.format(alias)
+                for driver, vms in drivers.iteritems():
+                    msg += '    {0}:\n'.format(driver)
+                    for name in vms:
+                        msg += '      {0}\n'.format(name)
+                        names.add(name)
             try:
                 if self.print_confirm(msg):
-                    ret = mapper.destroy(names)
+                    ret = mapper.destroy(names, cached=True)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error destroying machines: {0}'
                 self.handle_exception(msg, exc)
@@ -223,18 +234,6 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.handle_exception(msg, exc)
 
         elif self.options.function:
-            prov_func = '{0}.{1}'.format(
-                self.function_provider,
-                self.function_name
-            )
-            if prov_func not in mapper.clouds:
-                self.error(
-                    'The {0!r} provider does not define the function '
-                    '{1!r}'.format(
-                        self.function_provider, self.function_name
-                    )
-                )
-
             kwargs = {}
             args = self.args[:]
             for arg in args:
@@ -259,36 +258,50 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.profile and self.config.get('names', False):
             try:
-                ret = mapper.run_profile()
-                if self.config.get('show_deploy_args', False) is False:
-                    # Strip deploy_args from the returned data since we don't
-                    # want to see it
-                    ret.pop('deploy_kwargs', None)
+                ret = mapper.run_profile(
+                    self.options.profile,
+                    self.config.get('names')
+                )
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a profile error: {0}'
                 self.handle_exception(msg, exc)
 
         elif self.config.get('map', None) and \
                 self.selected_query_option is None:
-            if len(mapper.map) == 0:
+            if len(mapper.rendered_map) == 0:
                 sys.stderr.write('No nodes defined in this map')
                 self.exit(1)
             try:
-                dmap = mapper.map_data()
-                if 'destroy' not in dmap and len(dmap['create']) == 0:
-                    sys.stderr.write('All nodes in this map already exist')
-                    self.exit(1)
-
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
+                dmap = mapper.map_data()
 
-                msg = 'The following virtual machines are set to be created:\n'
-                for name in dmap['create']:
-                    msg += '  {0}\n'.format(name)
+                msg = ''
+                if 'errors' in dmap:
+                    msg += 'Found the following errors:\n'
+                    for profile_name, error in dmap['errors'].iteritems():
+                        msg += '  {0}: {1}\n'.format(profile_name, error)
+
+                if 'existing' in dmap:
+                    msg += ('The following virtual machines were found '
+                            'already running:\n')
+                    for name in dmap['existing']:
+                        msg += '  {0}\n'.format(name)
+
+                if dmap['create']:
+                    msg += ('The following virtual machines are set to be '
+                            'created:\n')
+                    for name in dmap['create']:
+                        msg += '  {0}\n'.format(name)
+
                 if 'destroy' in dmap:
                     msg += ('The following virtual machines are set to be '
                             'destroyed:\n')
                     for name in dmap['destroy']:
                         msg += '  {0}\n'.format(name)
+
+                if not dmap['create'] and not dmap.get('destroy', None):
+                    print(msg)
+                    self.exit(1)
 
                 if self.print_confirm(msg):
                     ret = mapper.run_map(dmap)

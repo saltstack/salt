@@ -55,6 +55,7 @@ import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
+from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
 from saltcloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
@@ -116,7 +117,7 @@ def __virtual__():
 
     global avail_images, avail_sizes, script, list_nodes
     global avail_locations, list_nodes_full, list_nodes_select, get_image
-    global get_size
+    global get_size, libcloudfuncs_destroy
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
@@ -132,6 +133,9 @@ def __virtual__():
     list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
     list_nodes_select = namespaced_function(
         list_nodes_select, globals(), (conn,)
+    )
+    libcloudfuncs_destroy = namespaced_function(
+        libcloudfuncs_destroy, globals(), (conn,)
     )
 
     log.debug('Loading Libcloud AWS cloud module')
@@ -159,7 +163,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        'aws',
+        __active_provider_name__ or 'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
     )
 
@@ -662,6 +666,7 @@ def rename(name, kwargs, call=None):
             # Show the traceback if the debug logging level is enabled
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
+    return kwargs['newname']
 
 
 def destroy(name):
@@ -685,17 +690,12 @@ def destroy(name):
         )
         ret['newname'] = newname
 
-    from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
-    location = get_location()
-    conn = get_conn(location=location)
-    libcloudfuncs_destroy = namespaced_function(
-        libcloudfuncs_destroy, globals(), (conn,)
-    )
     try:
-        result = libcloudfuncs_destroy(newname, conn)
+        result = libcloudfuncs_destroy(newname, get_conn())
         ret.update({'Destroyed': result})
     except Exception as exc:
         if not exc.message.startswith('OperationNotPermitted'):
+            log.exception(exc)
             raise exc
 
         log.info(

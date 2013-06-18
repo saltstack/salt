@@ -102,7 +102,9 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__, 'rackspace', ('user', 'apikey')
+        __opts__,
+        __active_provider_name__ or 'rackspace',
+        ('user', 'apikey')
     )
 
 

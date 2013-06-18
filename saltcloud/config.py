@@ -50,14 +50,68 @@ PROVIDER_CONFIG_DEFAULTS = {
 log = logging.getLogger(__name__)
 
 
-def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
+def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
+                 master_config_path=None, master_config=None,
+                 providers_config_path=None, providers_config=None,
+                 vm_config_path=None, vm_config=None):
     '''
     Read in the salt cloud config and return the dict
     '''
+    # Load the cloud configuration
+    overrides = salt.config.load_config(path, env_var)
+
+    if master_config_path is not None and master_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `master_config` or `master_config_path`, not both.'
+        )
+    elif master_config_path is None and master_config is None:
+        master_config = salt.config.master_config(
+            overrides.get(
+                # use the value from the cloud config file
+                'master_config',
+                # if not found, use the default path
+                '/etc/salt/master'
+            )
+        )
+    elif master_config_path is not None and master_config is None:
+        master_config = salt.config.master_config(master_config_path)
+
+    if providers_config_path is not None and providers_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `providers_config` or `providers_config_path`, '
+            'not both.'
+        )
+    elif providers_config_path is None and providers_config is None:
+        providers_config_path = overrides.get(
+            # use the value from the cloud config file
+            'providers_config',
+            # if not found, use the default path
+            '/etc/salt/cloud.providers'
+        )
+
+    if vm_config_path is not None and vm_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `vm_config` or `vm_config_path`, not both.'
+        )
+    elif vm_config_path is None and vm_config is None:
+        vm_config_path = overrides.get(
+            # use the value from the cloud config file
+            'vm_config',
+            # if not found, use the default path
+            '/etc/salt/cloud.profiles'
+        )
+
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
-    overrides = salt.config.load_config(path, env_var)
+    # Grab data from the 4 sources
+    # 1st - Master config
+    # 2nd Override master config with salt-cloud config
+    master_config.update(overrides)
+
+    # We now set the gathered data as the overrides
+    overrides = master_config
+
     default_include = overrides.get(
         'default_include', defaults['default_include']
     )
@@ -104,28 +158,60 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
         deploy_scripts_search_path=tuple(deploy_scripts_search_path)
     )
 
-    return apply_cloud_config(overrides, defaults)
+    opts = apply_cloud_config(overrides, defaults)
+
+    # 3rd - Include Cloud Providers
+    if 'providers' in opts and (providers_config is not None or (
+            providers_config and os.path.isfile(providers_config_path))):
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Do not mix the old cloud providers configuration with '
+            'the new one. The providers configuration should now go in '
+            'the file `/etc/salt/cloud.providers` or a separate `*.conf` '
+            'file within `cloud.providers.d/` which is relative to '
+            '`/etc/salt/cloud.providers`.'
+        )
+    elif 'providers' not in opts and providers_config is None:
+        # Load from configuration file, even if that files does not exist since
+        # it will be populated with defaults.
+        opts['providers'] = providers_config = cloud_providers_config(
+            providers_config_path
+        )
+    elif 'providers' not in opts and providers_config is not None:
+        # We're being passed a configuration dictionary
+        opts['providers'] = providers_config
+    else:
+        # Old style config
+        providers_config = opts['providers']
+
+    # 4th - Include VM profiles config
+    if vm_config is None:
+        # Load profiles configuration from the provided file
+        vm_config = vm_profiles_config(vm_config_path, providers_config)
+    opts['profiles'] = vm_config
+
+    # Return the final options
+    return opts
 
 
 def apply_cloud_config(overrides, defaults=None):
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
-    opts = defaults.copy()
+    config = defaults.copy()
     if overrides:
-        opts.update(overrides)
+        config.update(overrides)
 
     # If the user defined providers in salt cloud's main configuration file, we
     # need to take care for proper and expected format.
-    if 'providers' in opts:
-        for alias, details in opts.copy()['providers'].items():
+    if 'providers' in config:
+        for alias, details in config.copy()['providers'].items():
             if isinstance(details, dict):
-                opts['providers'][alias] = [details]
+                config['providers'][alias] = [details]
 
     # Migrate old configuration
-    opts = old_to_new(opts)
+    config = old_to_new(config)
 
-    return opts
+    return config
 
 
 def old_to_new(opts):
@@ -153,17 +239,21 @@ def old_to_new(opts):
             name = opt.split('.', 1)[1]
             provider_config[name] = value
 
+        lprovider = provider.lower()
         if provider_config:
-            provider_config['provider'] = provider.lower()
-            opts.setdefault('providers', {}).setdefault(
-                provider.lower(), []).append(
-                    provider_config
-                )
-
+            provider_config['provider'] = lprovider
+            opts.setdefault('providers', {})
+            # provider alias
+            opts['providers'][lprovider] = {}
+            # provider alias, provider driver
+            opts['providers'][lprovider][lprovider] = provider_config
     return opts
 
 
-def vm_profiles_config(path, env_var='SALT_CLOUDVM_CONFIG', defaults=None):
+def vm_profiles_config(path,
+                       providers,
+                       env_var='SALT_CLOUDVM_CONFIG',
+                       defaults=None):
     '''
     Read in the salt cloud VM config file
     '''
@@ -182,26 +272,26 @@ def vm_profiles_config(path, env_var='SALT_CLOUDVM_CONFIG', defaults=None):
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
-    return apply_vm_profiles_config(overrides, defaults)
+    return apply_vm_profiles_config(providers, overrides, defaults)
 
 
-def apply_vm_profiles_config(overrides, defaults=None):
+def apply_vm_profiles_config(providers, overrides, defaults=None):
     if defaults is None:
         defaults = VM_CONFIG_DEFAULTS
 
-    opts = defaults.copy()
+    config = defaults.copy()
     if overrides:
-        opts.update(overrides)
+        config.update(overrides)
 
     vms = {}
 
-    for key, val in opts.items():
+    for key, val in config.items():
         if key in ('conf_file', 'include', 'default_include'):
             continue
         if not isinstance(val, dict):
             raise saltcloud.exceptions.SaltCloudConfigError(
                 'The VM profiles configuration found in {0[conf_file]!r} is '
-                'not in the proper format'.format(opts)
+                'not in the proper format'.format(config)
             )
         val['profile'] = key
         vms[key] = val
@@ -209,6 +299,38 @@ def apply_vm_profiles_config(overrides, defaults=None):
     # Is any VM profile extending data!?
     for profile, details in vms.copy().items():
         if 'extends' not in details:
+            if ':' in details['provider']:
+                alias, driver = details['provider'].split(':')
+                if alias not in providers or driver not in providers[alias]:
+                    log.warning(
+                        'The profile {0!r} is defining {1[provider]!r} as the '
+                        'provider. Since there\'s no valid configuration for '
+                        'that provider, the profile will be removed from the '
+                        'available listing'.format(profile, details)
+                    )
+                    vms.pop(profile)
+                    continue
+
+                if 'profiles' not in providers[alias][driver]:
+                    providers[alias][driver]['profiles'] = {}
+                providers[alias][driver]['profiles'][profile] = details
+
+            if details['provider'] not in providers:
+                log.warning(
+                    'The profile {0!r} is defining {1[provider]!r} as the '
+                    'provider. Since there\'s no valid configuration for '
+                    'that provider, the profile will be removed from the '
+                    'available listing'.format(profile, details)
+                )
+                vms.pop(profile)
+                continue
+
+            driver = providers[details['provider']].keys()[0]
+            providers[details['provider']][driver].setdefault(
+                'profiles', {}).update({profile: details})
+            details['provider'] = '{0[provider]}:{1}'.format(details, driver)
+            vms[profile] = details
+
             continue
 
         extends = details.pop('extends')
@@ -216,20 +338,53 @@ def apply_vm_profiles_config(overrides, defaults=None):
             log.error(
                 'The {0!r} profile is trying to extend data from {1!r} '
                 'though {1!r} is not defined in the salt profiles loaded '
-                'data. Not extending!'.format(
+                'data. Not extending and removing from listing!'.format(
                     profile, extends
                 )
             )
+            vms.pop(profile)
             continue
 
         extended = vms.get(extends).copy()
         extended.pop('profile')
         extended.update(details)
 
+        if ':' not in extended['provider']:
+            if extended['provider'] not in providers:
+                log.warning(
+                    'The profile {0!r} is defining {1[provider]!r} as the '
+                    'provider. Since there\'s no valid configuration for '
+                    'that provider, the profile will be removed from the '
+                    'available listing'.format(profile, extended)
+                )
+                vms.pop(profile)
+                continue
+
+            driver = providers[extended['provider']].keys()[0]
+            providers[extended['provider']][driver].setdefault(
+                'profiles', {}).update({profile: extended})
+
+            extended['provider'] = '{0[provider]}:{1}'.format(extended, driver)
+        else:
+            alias, driver = extended['provider'].split(':')
+            if alias not in providers or driver not in providers[alias]:
+                log.warning(
+                    'The profile {0!r} is defining {1[provider]!r} as the '
+                    'provider. Since there\'s no valid configuration for '
+                    'that provider, the profile will be removed from the '
+                    'available listing'.format(profile, extended)
+                )
+                vms.pop(profile)
+                continue
+
+            providers[alias][driver].setdefault('profiles', {}).update(
+                {profile: extended}
+            )
+
         # Update the profile's entry with the extended data
         vms[profile] = extended
 
-    return vms.values()
+    return vms
 
 
 def cloud_providers_config(path,
@@ -263,30 +418,28 @@ def apply_cloud_providers_config(overrides, defaults=None):
     if defaults is None:
         defaults = PROVIDER_CONFIG_DEFAULTS
 
-    opts = defaults.copy()
+    config = defaults.copy()
     if overrides:
-        opts.update(overrides)
+        config.update(overrides)
 
     # Is the user still using the old format in the new configuration file?!
-    for name, config in opts.copy().items():
+    for name, settings in config.copy().items():
         if '.' in name:
             log.warn(
                 'Please switch to the new providers configuration syntax'
             )
 
             # Let's help out and migrate the data
-            opts = old_to_new(opts)
+            config = old_to_new(config)
 
             # old_to_new will migrate the old data into the 'providers' key of
-            # the opts dictionary. Let's map it correctly
-            for name, config in opts.pop('providers').items():
-                opts[name] = config
-
+            # the config dictionary. Let's map it correctly
+            for prov_name, prov_settings in config.pop('providers').items():
+                config[prov_name] = prov_settings
             break
 
     providers = {}
-
-    for key, val in opts.items():
+    for key, val in config.items():
         if key in ('conf_file', 'include', 'default_include'):
             continue
 
@@ -317,16 +470,27 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         'The cloud provider alias {0!r} has multiple entries '
                         'for the {1[provider]!r} driver.'.format(key, details)
                     )
-                handled_providers.add(
-                    details['provider']
-                )
+                handled_providers.add(details['provider'])
 
-        providers[key] = val
+        for entry in val:
+            if 'provider' not in entry:
+                raise saltcloud.exceptions.SaltCloudConfigError(
+                    'There\'s at least one cloud driver details under '
+                    'the {0!r} cloud provider alias which does not have '
+                    'the required \'provider\' setting'.format(key)
+                )
+            if key not in providers:
+                providers[key] = {}
+            if entry['provider'] not in providers[key]:
+                providers[key][entry['provider']] = entry
 
     # Is any provider extending data!?
     for provider_alias, entries in providers.copy().items():
 
-        for idx, details in enumerate(entries):
+        for driver, details in entries.iteritems():
+            # Set a holder for the defined profiles
+            providers[provider_alias][driver]['profiles'] = {}
+
             if 'extends' not in details:
                 continue
 
@@ -347,12 +511,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     )
                     continue
 
-                for entry in providers.get(alias):
-                    if entry['provider'] == provider:
-                        extended = entry.copy()
-                        break
-                else:
-                    log.error(
+                if provider not in providers.get(alias):
+                    raise saltcloud.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend data from \'{2}:{3}\' though {3!r} is not '
                         'defined in {1!r}'.format(
@@ -362,6 +522,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             provider
                         )
                     )
+
+                extended = providers.get(alias).get(provider).copy()
             elif providers.get(extends) and len(providers.get(extends)) > 1:
                 log.error(
                     'The {0!r} cloud provider entry in {1!r} is trying to '
@@ -381,13 +543,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 )
                 continue
             else:
-                extended = providers.get(extends)[:][0]
+                extended = providers.get(extends).get(driver).copy()
 
             # Update the data to extend with the data to be extended
             extended.update(details)
 
             # Update the provider's entry with the extended data
-            providers[provider_alias][idx] = extended
+            providers[provider_alias][driver] = extended
 
     return providers
 
@@ -411,16 +573,15 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
     if vm_ and name:
         if ':' in vm_['provider']:
             # The provider is defined as <provider-alias>:<provider-name>
-            alias, provider = vm_['provider'].split(':')
-            if alias in opts['providers']:
-                for entry in opts['providers'][alias]:
-                    if entry['provider'] == provider:
-                        if name in entry:
-                            if type(value) is dict:
-                                value.update(entry[name])
-                            else:
-                                value = entry[name]
-                            break
+            alias, driver = vm_['provider'].split(':')
+            if alias in opts['providers'] and \
+                    driver in opts['providers'][alias]:
+                details = opts['providers'][alias][driver]
+                if name in details:
+                    if isinstance(value, dict):
+                        value.update(details[name].copy())
+                    else:
+                        value = details[name]
         elif len(opts['providers'].get(vm_['provider'], ())) > 1:
             # The provider is NOT defined as <provider-alias>:<provider-name>
             # and there's more than one entry under the alias.
@@ -435,17 +596,21 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
                 )
             )
 
-        if name in opts['providers'].get(vm_['provider'], [{}])[0]:
-            # The setting name exists in the VM's provider configuration.
-            # Return it!
-            if type(value) is dict:
-                value.update(opts['providers'][vm_['provider']][0][name])
-            else:
-                value = opts['providers'][vm_['provider']][0][name]
+        if vm_['provider'] in opts['providers']:
+            # There's only one driver defined for this provider. This is safe.
+            alias_defs = opts['providers'].get(vm_['provider'])
+            provider_driver_defs = alias_defs[alias_defs.keys()[0]]
+            if name in provider_driver_defs:
+                # The setting name exists in the VM's provider configuration.
+                # Return it!
+                if isinstance(value, dict):
+                    value.update(provider_driver_defs[name].copy())
+                else:
+                    value = provider_driver_defs[name]
 
     if name and vm_ and name in vm_:
         # The setting name exists in VM configuration.
-        if type(value) is dict:
+        if isinstance(value, dict):
             value.update(vm_[name])
         else:
             value = vm_[name]
@@ -458,12 +623,24 @@ def is_provider_configured(opts, provider, required_keys=()):
     Check and return the first matching and fully configured cloud provider
     configuration.
     '''
-    for provider_details_list in opts['providers'].values():
-        for provider_details in provider_details_list:
-            if 'provider' not in provider_details:
-                continue
+    if ':' in provider:
+        alias, driver = provider.split(':')
+        if alias not in opts['providers']:
+            return False
+        if driver not in opts['providers'][alias]:
+            return False
+        for key in required_keys:
+            if opts['providers'][alias][driver].get(key, None) is None:
+                # There's at least one require configuration key which is not
+                # set.
+                return False
+        # If we reached this far, there's a properly configured provider,
+        # return it!
+        return opts['providers'][alias][driver]
 
-            if provider_details['provider'] != provider:
+    for alias, drivers in opts['providers'].iteritems():
+        for driver, provider_details in drivers.iteritems():
+            if driver != provider:
                 continue
 
             # If we reached this far, we have a matching provider, let's see if

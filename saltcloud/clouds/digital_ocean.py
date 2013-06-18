@@ -75,7 +75,9 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__, 'digital_ocean', ('api_key',)
+        __opts__,
+        __active_provider_name__ or 'digital_ocean',
+        ('api_key',)
     )
 
 

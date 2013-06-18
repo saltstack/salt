@@ -175,7 +175,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        'ec2',
+        __active_provider_name__ or 'ec2',
         ('id', 'key', 'keyname', 'private_key')
     )
 
@@ -1270,8 +1270,8 @@ def list_nodes_full(location=None):
     if not location:
         ret = {}
         locations = set(
-            get_location(vm_) for vm_ in __opts__['vm']
-            if _vm_provider(vm_) == 'ec2'
+            get_location(vm_) for vm_ in __opts__['profiles'].values()
+            if _vm_provider_driver(vm_)
         )
         for loc in locations:
             ret.update(_list_nodes_full(loc))
@@ -1280,15 +1280,15 @@ def list_nodes_full(location=None):
     return _list_nodes_full(location)
 
 
-def _vm_provider(vm_):
-    if vm_['provider'] not in __opts__['providers']:
-        return __opts__.get('provider', None)
+def _vm_provider_driver(vm_):
+    alias, driver = vm_['provider'].split(':')
+    if alias not in __opts__['providers']:
+        return None
 
-    for provider in __opts__['providers'][vm_['provider']]:
-        if provider['provider'] == 'ec2':
-            return 'ec2'
+    if driver not in __opts__['providers'][alias]:
+        return None
 
-    return __opts__.get('provider', None)
+    return driver == 'ec2'
 
 
 def _extract_name_tag(item):
@@ -1311,6 +1311,12 @@ def _list_nodes_full(location=None):
     ret = {}
     params = {'Action': 'DescribeInstances'}
     instances = query(params, location=location)
+    if 'error' in instances:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                instances['error']['Errors']['Error']['Message']
+            )
+        )
 
     for instance in instances:
         # items could be type dict or list (for stopped EC2 instances)
@@ -1351,6 +1357,12 @@ def list_nodes():
     '''
     ret = {}
     nodes = list_nodes_full()
+    if 'error' in nodes:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                nodes['error']['Errors']['Error']['Message']
+            )
+        )
     for node in nodes:
         ret[node] = {
             'id': nodes[node]['id'],
@@ -1370,6 +1382,13 @@ def list_nodes_select():
     ret = {}
 
     nodes = list_nodes_full()
+    if 'error' in nodes:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                nodes['error']['Errors']['Error']['Message']
+            )
+        )
+
     for node in nodes:
         pairs = {}
         data = nodes[node]

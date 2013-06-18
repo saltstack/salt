@@ -8,7 +8,6 @@ import glob
 import time
 import signal
 import logging
-import tempfile
 import multiprocessing
 
 # Import saltcloud libs
@@ -38,6 +37,10 @@ except ImportError:
     log.debug('Mako not available')
 
 
+# Simple alias to improve code readability
+CloudProviderContext = saltcloud.utils.CloudProviderContext
+
+
 class Cloud(object):
     '''
     An object for the creation of new VMs
@@ -45,73 +48,25 @@ class Cloud(object):
     def __init__(self, opts):
         self.opts = opts
         self.clouds = saltcloud.loader.clouds(self.opts)
-
-    def provider(self, vm_):
-        '''
-        Return the top level module that will be used for the given VM data
-        set
-        '''
-        provider = vm_['provider']
-        if ':' in provider:
-            # We have the alias and the provider
-            # Return the provider
-            alias, provider = provider.split(':')
-            return provider
-
-        try:
-            # There's no <alias>:<provider> entry, return the first one if
-            # defined
-            if provider in self.opts['providers']:
-                return self.opts['providers'][provider][0]['provider']
-        except Exception, err:
-            log.error(
-                'Failed to get the proper cloud provider. '
-                'Error: {0}'.format(err),
-                # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
-            )
-
-        # Let's try, as a last resort, to get the provider from self.opts
-        if 'provider' in self.opts:
-            if '{0}.create'.format(self.opts['provider']) in self.clouds:
-                return self.opts['provider']
-
-    def get_providers(self):
-        '''
-        Return the providers configured within the VM settings.
-        '''
-        provs = set()
-        for fun in self.clouds:
-            if not '.' in fun:
-                continue
-            provs.add(fun[:fun.index('.')])
-        return provs
+        self.__filter_non_working_providers()
+        self.__cached_provider_queries = {}
 
     def get_configured_providers(self):
         providers = set()
-        for alias, entries in self.opts['providers'].iteritems():
-            for entry in entries:
-                provider = entry.get('provider', None)
-                if provider is None:
-                    log.warn(
-                        'There\'s a configured provider under {0} lacking the '
-                        '\'provider\' required configuration setting.'.format(
-                            alias
-                        )
-                    )
-                    continue
-                if provider is not None and alias not in providers:
-                    providers.add(alias)
+        for alias, drivers in self.opts['providers'].iteritems():
+            if len(drivers) > 1:
+                for driver in drivers:
+                    providers.add('{0}:{1}'.format(alias, driver))
+                continue
+            providers.add(alias)
         return providers
 
-    def build_lookup(self, lookup):
+    def lookup_providers(self, lookup):
         if lookup == 'all':
-            providers = []
+            providers = set()
             for alias, entries in self.opts['providers'].iteritems():
-                for entry in entries:
-                    provider = entry.get('provider', None)
-                    if provider is not None and provider not in providers:
-                        providers.append(provider)
+                for driver in entries:
+                    providers.add((alias, driver))
 
             if not providers:
                 raise SaltCloudSystemExit(
@@ -122,28 +77,22 @@ class Cloud(object):
 
         if ':' in lookup:
             alias, provider = lookup.split(':')
-            if alias not in self.opts['providers']:
+            if alias not in self.opts['providers'] or \
+                    driver not in self.opts['providers'][alias]:
                 raise SaltCloudSystemExit(
                     'No cloud providers matched {0!r}. Available: {1}'.format(
                         lookup, ', '.join(self.get_configured_providers())
                     )
                 )
 
-            for entry in self.opts['providers'].get(alias):
-                if entry.get('provider', None) == provider:
-                    return [provider]
+            return (alias, provider)
 
-            raise SaltCloudSystemExit(
-                'No cloud providers matched {0!r}. Available: {1}'.format(
-                    lookup, ', '.join(self.get_configured_providers())
-                )
-            )
+        providers = set()
+        for alias, drivers in self.opts['providers'].iteritems():
+            for driver, details in drivers.iteritems():
+                if lookup in (alias, driver):
+                    providers.add((alias, driver))
 
-        providers = [
-            d.get('provider', None) for d in
-            self.opts['providers'].get(lookup, [{}])
-            if d and d.get('provider', None) is not None
-        ]
         if not providers:
             raise SaltCloudSystemExit(
                 'No cloud providers matched {0!r}. '
@@ -153,61 +102,80 @@ class Cloud(object):
             )
         return providers
 
-    def map_providers(self, query='list_nodes'):
+    def map_providers(self, query='list_nodes', cached=False):
         '''
         Return a mapping of what named VMs are running on what VM providers
         based on what providers are defined in the configuration and VMs
         '''
-        provs = self.get_providers()
+        if cached is True and query in self.__cached_provider_queries:
+            return self.__cached_provider_queries[query]
+
         pmap = {}
-        for prov in provs:
-            fun = '{0}.{1}'.format(prov, query)
-            if fun not in self.clouds:
-                log.error(
-                    'Public cloud provider {0} is not available'.format(
-                        prov
+        for alias, drivers in self.opts['providers'].iteritems():
+            for driver, details in drivers.iteritems():
+                fun = '{0}.{1}'.format(driver, query)
+                if fun not in self.clouds:
+                    log.error(
+                        'Public cloud provider {0} is not available'.format(
+                            driver
+                        )
                     )
-                )
-                continue
-            try:
-                pmap[prov] = self.clouds[fun]()
-            except Exception:
-                # Failed to communicate with the provider, don't list any
-                # nodes
-                pmap[prov] = []
+                    continue
+                if alias not in pmap:
+                    pmap[alias] = {}
+
+                try:
+                    with CloudProviderContext(self.clouds[fun], alias, driver):
+                        pmap[alias][driver] = self.clouds[fun]()
+                except Exception as err:
+                    log.debug(
+                        'Failed to execute \'{0}()\' while querying for '
+                        'running nodes: {1}'.format(fun, err),
+                        # Show the traceback if the debug logging level is
+                        # enabled
+                        exc_info=log.isEnabledFor(logging.DEBUG)
+                    )
+                    # Failed to communicate with the provider, don't list any
+                    # nodes
+                    pmap[alias][driver] = []
+        self.__cached_provider_queries[query] = pmap
         return pmap
 
-    def map_providers_parallel(self, query='list_nodes'):
+    def map_providers_parallel(self, query='list_nodes', cached=False):
         '''
         Return a mapping of what named VMs are running on what VM providers
         based on what providers are defined in the configuration and VMs
 
         Same as map_providers but query in parallel.
         '''
-        providers = self.get_providers()
+        if cached is True and query in self.__cached_provider_queries:
+            return self.__cached_provider_queries[query]
 
         opts = self.opts.copy()
         multiprocessing_data = []
-        for provider in providers:
-            fun = '{0}.{1}'.format(provider, query)
-            if fun not in self.clouds:
-                log.error(
-                    'Public cloud provider {0} is not available'.format(
-                        provider
+        for alias, drivers in self.opts['providers'].iteritems():
+            for driver, details in drivers.iteritems():
+                fun = '{0}.{1}'.format(driver, query)
+                if fun not in self.clouds:
+                    log.error(
+                        'Public cloud provider {0} is not available'.format(
+                            driver
+                        )
                     )
-                )
-                continue
-            multiprocessing_data.append({
-                'fun': fun,
-                'opts': opts,
-                'query': query,
-                'provider': provider
-            })
+                    continue
+
+                multiprocessing_data.append({
+                    'fun': fun,
+                    'opts': opts,
+                    'query': query,
+                    'alias': alias,
+                    'driver': driver
+                })
 
         output = {}
-        providers_count = len(providers)
+        data_count = len(multiprocessing_data)
         pool = multiprocessing.Pool(
-            providers_count < 10 and providers_count or 10,
+            data_count < 10 and data_count or 10,
             init_pool_worker
         )
         try:
@@ -224,139 +192,186 @@ class Cloud(object):
             pool.close()
             pool.join()
 
-        for obj in parallel_pmap:
-            output.update(obj)
+        for alias, driver, details in parallel_pmap:
+            if not details:
+                # There's no providers details?! Skip it!
+                continue
+            if alias not in output:
+                output[alias] = {}
+            output[alias][driver] = details
+
+        self.__cached_provider_queries[query] = output
         return output
+
+    def get_running_by_names(self, names, query='list_nodes', cached=False):
+        if isinstance(names, basestring):
+            names = [names]
+
+        matches = {}
+        handled_drivers = {}
+        mapped_providers = self.map_providers_parallel(query, cached=cached)
+        for alias, drivers in mapped_providers.iteritems():
+            for driver, vms in drivers.iteritems():
+                if driver not in handled_drivers:
+                    handled_drivers[driver] = alias
+
+                for vm_name, details in vms.iteritems():
+                    # XXX: The logic bellow can be removed once the aws driver
+                    # is removed
+                    if vm_name not in names:
+                        continue
+
+                    elif driver == 'ec2' and 'aws' in handled_drivers and \
+                            'aws' in matches[handled_drivers['aws']] and \
+                            vm_name in matches[handled_drivers['aws']]['aws']:
+                        continue
+                    elif driver == 'aws' and 'ec2' in handled_drivers and \
+                            'ec2' in matches[handled_drivers['ec2']] and \
+                            vm_name in matches[handled_drivers['ec2']]['ec2']:
+                        continue
+
+                    if alias not in matches:
+                        matches[alias] = {}
+                    if driver not in matches[alias]:
+                        matches[alias][driver] = {}
+                    matches[alias][driver][vm_name] = details
+
+        return matches
 
     def location_list(self, lookup='all'):
         '''
         Return a mapping of all location data for available providers
         '''
+        data = {}
 
-        provs = self.get_providers()
-        locations = {}
-
-        lookups = self.build_lookup(lookup)
+        lookups = self.lookup_providers(lookup)
         if not lookups:
-            return locations
+            return data
 
-        for prov in provs:
-            # If all providers are not desired, then don't get them
-            if prov not in lookups:
-                continue
-
-            fun = '{0}.avail_locations'.format(prov)
+        for alias, driver in lookups:
+            fun = '{0}.avail_locations'.format(driver)
             if fun not in self.clouds:
                 # The capability to gather locations is not supported by this
                 # cloud module
                 log.debug(
-                    'The {0!r} cloud provider is unable to get the locations '
-                    'information'.format(prov)
+                    'The {0!r} cloud driver defined under {1!r} provider '
+                    'alias is unable to get the locations information'.format(
+                        driver, alias
+                    )
                 )
                 continue
+
+            if alias not in data:
+                data[alias] = {}
+
             try:
-                locations[prov] = self.clouds[fun]()
+                with CloudProviderContext(self.clouds[fun], alias, driver):
+                    data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
                     'Failed to get the output of \'{0}()\': {1}'.format(
-                        fun, err,
+                        fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
                 )
-        return locations
+        return data
 
     def image_list(self, lookup='all'):
         '''
         Return a mapping of all image data for available providers
         '''
-        provs = self.get_providers()
-        images = {}
+        data = {}
 
-        lookups = self.build_lookup(lookup)
+        lookups = self.lookup_providers(lookup)
         if not lookups:
-            return images
+            return data
 
-        for prov in provs:
-            # If all providers are not desired, then don't get them
-            if prov not in lookups:
-                continue
-
-            fun = '{0}.avail_images'.format(prov)
-            if not fun in self.clouds:
+        for alias, driver in lookups:
+            fun = '{0}.avail_images'.format(driver)
+            if fun not in self.clouds:
                 # The capability to gather images is not supported by this
                 # cloud module
                 log.debug(
-                    'The {0!r} cloud provider is unable to get the images '
-                    'information'.format(prov)
+                    'The {0!r} cloud driver defined under {1!r} provider '
+                    'alias is unable to get the images information'.format(
+                        driver,
+                        alias
+                    )
                 )
                 continue
+
+            if alias not in data:
+                data[alias] = {}
+
             try:
-                images[prov] = self.clouds[fun]()
+                with CloudProviderContext(self.clouds[fun], alias, driver):
+                    data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
                     'Failed to get the output of \'{0}()\': {1}'.format(
-                        fun, err,
+                        fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
                 )
-        return images
+        return data
 
     def size_list(self, lookup='all'):
         '''
         Return a mapping of all image data for available providers
         '''
-        provs = self.get_providers()
-        sizes = {}
+        data = {}
 
-        lookups = self.build_lookup(lookup)
+        lookups = self.lookup_providers(lookup)
         if not lookups:
-            return sizes
+            return data
 
-        for prov in provs:
-            # If all providers are not desired, then don't get them
-            if prov not in lookups:
-                continue
-
-            fun = '{0}.avail_sizes'.format(prov)
-            if not fun in self.clouds:
+        for alias, driver in lookups:
+            fun = '{0}.avail_sizes'.format(driver)
+            if fun not in self.clouds:
                 # The capability to gather sizes is not supported by this
                 # cloud module
                 log.debug(
-                    'The {0!r} cloud provider is unable to get the sizes '
-                    'information'.format(prov)
+                    'The {0!r} cloud driver defined under {1!r} provider '
+                    'alias is unable to get the sizes information'.format(
+                        driver,
+                        alias
+                    )
                 )
                 continue
+
+            if alias not in data:
+                data[alias] = {}
+
             try:
-                sizes[prov] = self.clouds[fun]()
+                with CloudProviderContext(self.clouds[fun], alias, driver):
+                    data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
                     'Failed to get the output of \'{0}()\': {1}'.format(
-                        fun, err,
+                        fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
                 )
-        return sizes
+        return data
 
     def provider_list(self, lookup='all'):
         '''
         Return a mapping of all image data for available providers
         '''
-        provs = self.get_providers()
-        prov_list = {}
-
-        lookups = self.build_lookup(lookup)
+        data = {}
+        lookups = self.lookup_providers(lookup)
         if not lookups:
-            return prov_list
+            return data
 
-        for prov in provs:
-            if prov not in lookups:
-                continue
-
-            prov_list[prov] = {}
-        return prov_list
+        for alias, driver in lookups:
+            if alias not in data:
+                data[alias] = {}
+            if driver not in data[alias]:
+                data[alias][driver] = {}
+        return data
 
     def create_all(self):
         '''
@@ -364,123 +379,125 @@ class Cloud(object):
         '''
         ret = []
 
-        for vm_ in self.opts['vm']:
+        for vm_name, vm_details in self.opts['profiles'].iteritems():
             ret.append(
-                {vm_['name']: self.create(vm_)}
+                {vm_name: self.create(vm_details)}
             )
 
         return ret
 
-    def destroy(self, names):
+    def destroy(self, names, cached=False):
         '''
         Destroy the named VMs
         '''
-        ret = []
+        processed = {}
         names = set(names)
+        matching = self.get_running_by_names(names, cached=cached)
+        vms_to_destroy = set()
+        for alias, drivers in matching.iteritems():
+            for driver, vms in drivers.iteritems():
+                for name in vms:
+                    if name in names:
+                        vms_to_destroy.add((alias, driver, name))
 
-        pmap = self.map_providers_parallel()
-        dels = {}
-        for prov, nodes in pmap.items():
-            dels[prov] = []
-            for node in nodes:
-                if node in names:
-                    dels[prov].append(node)
-                    names.remove(node)
+        for alias, driver, name in vms_to_destroy:
+            fun = '{0}.destroy'.format(driver)
+            with CloudProviderContext(self.clouds[fun], alias, driver):
+                ret = self.clouds[fun](name)
+            if alias not in processed:
+                processed[alias] = {}
+            if driver not in processed[alias]:
+                processed[alias][driver] = {}
+            processed[alias][driver][name] = ret
+            names.remove(name)
 
-        for prov, names_ in dels.items():
-            fun = '{0}.destroy'.format(prov)
-            for name in names_:
-                delret = self.clouds[fun](name)
-                ret.append({name: (True, delret)})
+            if not ret:
+                continue
 
-                if not delret:
+            key_file = os.path.join(
+                self.opts['pki_dir'], 'minions', name
+            )
+            globbed_key_file = glob.glob('{0}.*'.format(key_file))
+
+            if not os.path.isfile(key_file) and not globbed_key_file:
+                # There's no such key file!? It might have been renamed
+                if isinstance(ret, dict) and 'newname' in ret:
+                    saltcloud.utils.remove_key(
+                        self.opts['pki_dir'], ret['newname']
+                    )
+                continue
+
+            if os.path.isfile(key_file) and not globbed_key_file:
+                # Single key entry. Remove it!
+                saltcloud.utils.remove_key(self.opts['pki_dir'], name)
+                continue
+
+            if not os.path.isfile(key_file) and globbed_key_file:
+                # Since we have globbed matches, there are probably
+                # some keys for which their minion configuration has
+                # append_domain set.
+                if len(globbed_key_file) == 1:
+                    # Single entry, let's remove it!
+                    saltcloud.utils.remove_key(
+                        self.opts['pki_dir'],
+                        os.path.basename(globbed_key_file[0])
+                    )
                     continue
 
-                key_file = os.path.join(
-                    self.opts['pki_dir'], 'minions', name
+            # Since we can't get the profile or map entry used to create
+            # the VM, we can't also get the append_domain setting.
+            # And if we reached this point, we have several minion keys
+            # who's name starts with the machine name we're deleting.
+            # We need to ask one by one!?
+            print(
+                'There are several minion keys who\'s name starts '
+                'with {0!r}. We need to ask you which one should be '
+                'deleted:'.format(
+                    name
                 )
-                globbed_key_file = glob.glob('{0}.*'.format(key_file))
-
-                if not os.path.isfile(key_file) and not globbed_key_file:
-                    # There's no such key file!? It might have been renamed
-                    if isinstance(delret, dict) and 'newname' in delret:
-                        saltcloud.utils.remove_key(
-                            self.opts['pki_dir'], delret['newname']
-                        )
-                    continue
-
-                if os.path.isfile(key_file) and not globbed_key_file:
-                    # Single key entry. Remove it!
-                    saltcloud.utils.remove_key(self.opts['pki_dir'], name)
-                    continue
-
-                if not os.path.isfile(key_file) and globbed_key_file:
-                    # Since we have globbed matches, there are probably
-                    # some keys for which their minion configuration has
-                    # append_domain set.
-                    if len(globbed_key_file) == 1:
-                        # Single entry, let's remove it!
-                        saltcloud.utils.remove_key(
-                            self.opts['pki_dir'],
-                            os.path.basename(globbed_key_file[0])
-                        )
-                        continue
-
-                # Since we can't get the profile or map entry used to create
-                # the VM, we can't also get the append_domain setting.
-                # And if we reached this point, we have several minion keys
-                # who's name starts with the machine name we're deleting.
-                # We need to ask one by one!?
-                print(
-                    'There are several minion keys who\'s name starts '
-                    'with {0!r}. We need to ask you which one should be '
-                    'deleted:'.format(
-                        name
-                    )
+            )
+            while True:
+                for idx, filename in enumerate(globbed_key_file):
+                    print(' {0}: {1}'.format(
+                        idx, os.path.basename(filename)
+                    ))
+                selection = raw_input(
+                    'Which minion key should be deleted(number)? '
                 )
-                while True:
-                    for idx, filename in enumerate(globbed_key_file):
-                        print(' {0}: {1}'.format(
-                            idx, os.path.basename(filename)
-                        ))
-                    selection = raw_input(
-                        'Which minion key should be deleted(number)? '
+                try:
+                    selection = int(selection)
+                except ValueError:
+                    print(
+                        '{0!r} is not a valid selection.'.format(selection)
                     )
-                    try:
-                        selection = int(selection)
-                    except ValueError:
-                        print(
-                            '{0!r} is not a valid selection.'.format(selection)
-                        )
 
-                    try:
-                        filename = os.path.basename(
-                            globbed_key_file.pop(selection)
-                        )
-                    except:
-                        continue
-
-                    delete = raw_input(
-                        'Delete {0!r}? [Y/n]? '.format(filename)
+                try:
+                    filename = os.path.basename(
+                        globbed_key_file.pop(selection)
                     )
-                    if delete == '' or delete.lower().startswith('y'):
-                        saltcloud.utils.remove_key(
-                            self.opts['pki_dir'], filename
-                        )
-                        print('Deleted {0!r}'.format(filename))
-                        break
+                except:
+                    continue
 
-                    print('Did not delete {0!r}'.format(filename))
+                delete = raw_input(
+                    'Delete {0!r}? [Y/n]? '.format(filename)
+                )
+                if delete == '' or delete.lower().startswith('y'):
+                    saltcloud.utils.remove_key(
+                        self.opts['pki_dir'], filename
+                    )
+                    print('Deleted {0!r}'.format(filename))
                     break
 
-        # This machine was asked to be destroyed but could not be found
-        for name in names:
-            ret.append({name: False})
+                print('Did not delete {0!r}'.format(filename))
+                break
 
-        if not ret:
+        if names:
+            # These machines were asked to be destroyed but could not be found
+            ret['Not Found'] = names
+
+        if not processed:
             raise SaltCloudSystemExit('No machines were destroyed!')
-
-        return ret
+        return processed
 
     def reboot(self, names):
         '''
@@ -513,11 +530,14 @@ class Cloud(object):
             'minion', vm_, self.opts, default={}
         )
 
-        fun = '{0}.create'.format(self.provider(vm_))
+        alias, driver = vm_['provider'].split(':')
+        fun = '{0}.create'.format(driver)
         if fun not in self.clouds:
             log.error(
-                'Public cloud provider {0} is not available'.format(
-                    self.provider(vm_)
+                'Creating {0[name]!r} using {0[provider]!r} as the provider '
+                'cannot complete since {1!r} is not available'.format(
+                    vm_,
+                    driver
                 )
             )
             return
@@ -568,8 +588,10 @@ class Cloud(object):
         vm_['os'] = config.get_config_value('script', vm_, self.opts)
 
         try:
-            output = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
-
+            alias, driver = vm_['provider'].split(':')
+            func = '{0}.create'.format(driver)
+            with CloudProviderContext(self.clouds[func], alias, driver):
+                output = self.clouds[func](vm_)
             if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
                         'all', 'modules', 'states', 'grains'):
@@ -594,95 +616,54 @@ class Cloud(object):
 
         return output
 
-    def profile_provider(self, profile=None):
-        for definition in self.opts['vm']:
-            if definition['profile'] != profile:
-                continue
-
-            if 'provider' in definition:
-                provider = definition['provider']
-                if ':' in provider:
-                    # We have the alias and the provider
-                    # Return the provider
-                    alias, provider = provider.split(':')
-                    return provider
-
-                if provider not in self.opts['providers']:
-                    # We do not know the provider, send the one, if any,
-                    # specified from CLI
-                    if 'provider' in self.opts:
-                        return self.opts['provider']
-
-                    raise SaltCloudSystemExit(
-                        'The {0!r} provider is not known'.format(provider)
-                    )
-
-                # There's no <alias>:<provider> entry, return the first one
-                return self.opts['providers'][provider][0]['provider']
-
-            return self.opts['provider']
-
-    def run_profile(self):
+    def run_profile(self, profile, names):
         '''
         Parse over the options passed on the command line and determine how to
         handle them
         '''
-        ret = {}
-        pmap = self.map_providers_parallel()
-        found = False
-        for name in self.opts['names']:
-            for vm_ in self.opts['vm']:
-                vm_profile = vm_['profile']
-                if vm_profile != self.opts['profile']:
-                    continue
-
-                # It all checks out, make the VM
-                found = True
-                provider = self.profile_provider(vm_profile)
-                if provider not in pmap:
-                    ret[name] = {
-                        'Error': 'The defined profile provider {0!r} was not '
-                                 'found.'.format(vm_['provider'])
-                    }
-                    continue
-
-                boxes = pmap[provider]
-                if name in boxes and \
-                        boxes[name]['state'].lower() != 'terminated':
-                    # The specified VM already exists, don't make a new one
-                    msg = '{0} already exists on {1}'.format(
-                        name, provider
-                    )
-                    log.error(msg)
-                    ret[name] = {'Error': msg}
-                    continue
-
-                vm_['name'] = name
-                if self.opts['parallel']:
-                    process = multiprocessing.Process(
-                        target=self.create,
-                        args=(vm_,)
-                    )
-                    process.start()
-                    ret[name] = {
-                        'Provisioning': 'VM being provisioned in parallel. '
-                                        'PID: {0}'.format(process.pid)
-                    }
-                    continue
-
-                try:
-                    ret[name] = self.create(vm_)
-                    if self.opts.get('show_deploy_args', False) is False:
-                        ret[name].pop('deploy_kwargs', None)
-                except (SaltCloudSystemExit, SaltCloudConfigError), exc:
-                    if len(self.opts['names']) == 1:
-                        raise
-                    ret['name'] = {'Error': exc.message}
-
-        if not found:
-            msg = 'Profile {0} is not defined'.format(self.opts['profile'])
-            ret['Error'] = msg
+        if profile not in self.opts['profiles']:
+            msg = 'Profile {0} is not defined'.format(profile)
             log.error(msg)
+            return {'Error': msg}
+
+        ret = {}
+        profile_details = self.opts['profiles'][profile]
+        alias, driver = profile_details['provider'].split(':')
+        mapped_providers = self.map_providers_parallel()
+        vms = mapped_providers[alias][driver]
+        for name in names:
+            if name in vms and vms[name]['state'].lower() != 'terminated':
+                msg = '{0} already exists under {0}:{1}'.format(
+                    name, alias, driver
+                )
+                log.error(msg)
+                ret[name] = {'Error': msg}
+                continue
+
+            vm_ = profile_details.copy()
+            vm_['name'] = name
+            if self.opts['parallel']:
+                process = multiprocessing.Process(
+                    target=self.create,
+                    args=(vm_,)
+                )
+                process.start()
+                ret[name] = {
+                    'Provisioning': 'VM being provisioned in parallel. '
+                                    'PID: {0}'.format(process.pid)
+                }
+                continue
+
+            try:
+                # No need to use CloudProviderContext here because self.create
+                # takes care of that
+                ret[name] = self.create(vm_)
+                if self.opts.get('show_deploy_args', False) is False:
+                    ret[name].pop('deploy_kwargs', None)
+            except (SaltCloudSystemExit, SaltCloudConfigError), exc:
+                if len(names) == 1:
+                    raise
+                ret[name] = {'Error': exc.message}
 
         return ret
 
@@ -690,63 +671,113 @@ class Cloud(object):
         '''
         Perform an action on a VM which may be specific to this cloud provider
         '''
-        pmap = self.map_providers_parallel()
-
         ret = {}
+        names = set(names)
 
-        current_boxen = {}
-        for provider in pmap:
-            for box in pmap[provider]:
-                current_boxen[box] = provider
-
-        acts = {}
-        for prov, nodes in pmap.items():
-            acts[prov] = []
-            for node in nodes:
-                if node in names:
-                    acts[prov].append(node)
-
-        ret = {}
-        completed = []
-        for prov, names_ in acts.items():
-            for name in names:
-                if name in names_:
-                    fun = '{0}.{1}'.format(prov, self.opts['action'])
-                    if fun not in self.clouds:
-                        # The cloud provider does not provide the action
-                        continue
-                    if kwargs:
-                        ret[name] = self.clouds[fun](
-                            name, kwargs, call='action'
+        for alias, drivers in self.map_providers_parallel().iteritems():
+            if not names:
+                break
+            for driver, vms in drivers.iteritems():
+                if not names:
+                    break
+                fun = '{0}.{1}'.format(driver, self.opts['action'])
+                if fun not in self.clouds:
+                    log.info(
+                        '\'{0}()\' is not available. Not actioning...'.format(
+                            fun
                         )
-                    else:
-                        ret[name] = self.clouds[fun](name, call='action')
-                    completed.append(name)
+                    )
+                    continue
+                for vm_name, vm_details in vms.iteritems():
+                    if not names:
+                        break
+                    if vm_name not in names:
+                        continue
+                    with CloudProviderContext(self.clouds[fun], alias, driver):
+                        if alias not in ret:
+                            ret[alias] = {}
+                        if driver not in ret[alias]:
+                            ret[alias][driver] = {}
 
-        for name in names:
-            if name not in completed:
-                print('{0} was not found, not running {1} action'.format(
-                    name, self.opts['action'])
-                )
+                        if kwargs:
+                            ret[alias][driver][vm_name] = self.clouds[fun](
+                                vm_name, kwargs, call='action'
+                            )
+                        else:
+                            ret[alias][driver][vm_name] = self.clouds[fun](
+                                vm_name, call='action'
+                            )
+                        names.remove(vm_name)
 
+        if not names:
+            return ret
+
+        ret['Not Actioned/Not Running'] = list(names)
         return ret
 
     def do_function(self, prov, func, kwargs):
         '''
         Perform a function against a cloud provider
         '''
-        fun = '{0}.{1}'.format(prov, func)
+        matches = self.lookup_providers(prov)
+        if len(matches) > 1:
+            raise SaltCloudSystemExit(
+                'More than one results matched {0!r}. Please specify '
+                'one of: {1}'.format(
+                    ', '.join([
+                        '{0}:{1}'.format((alias, driver)) for
+                        (alias, driver) in matches
+                    ])
+                )
+            )
+
+        alias, driver = matches.pop()
+        fun = '{0}.{1}'.format(driver, func)
+        if fun not in self.clouds:
+            raise SaltCloudSystemExit(
+                'The {0!r} cloud provider alias, for the {1!r} driver, does '
+                'not define the function {2!r}'.format(alias, driver, func)
+            )
+
         log.debug(
             'Trying to execute {0!r} with the following kwargs: {1}'.format(
                 fun, kwargs
             )
         )
-        if kwargs:
-            ret = self.clouds[fun](call='function', kwargs=kwargs)
-        else:
-            ret = self.clouds[fun](call='function')
 
-        return ret
+        with CloudProviderContext(self.clouds[fun], alias, driver):
+            if kwargs:
+                return {
+                    alias: {
+                        driver: self.clouds[fun](
+                            call='function', kwargs=kwargs
+                        )
+                    }
+                }
+            return {
+                alias: {
+                    driver: self.clouds[fun](call='function')
+                }
+            }
+
+    def __filter_non_working_providers(self):
+        '''
+        Remove any mis-configured cloud providers from the available listing
+        '''
+        for alias, drivers in self.opts['providers'].copy().iteritems():
+            for driver in drivers.copy().keys():
+                fun = '{0}.get_configured_provider'.format(driver)
+                with CloudProviderContext(self.clouds[fun], alias, driver):
+                    if self.clouds[fun]() is False:
+                        log.warn(
+                            'The cloud driver, {0!r}, configured under the '
+                            '{1!r} cloud provider alias is not properly '
+                            'configured. Removing it from the available '
+                            'providers list'.format(driver, alias)
+                        )
+                        self.opts['providers'][alias].pop(driver)
+            if not self.opts['providers'][alias]:
+                self.opts['providers'].pop(alias)
 
 
 class Map(Cloud):
@@ -755,39 +786,66 @@ class Map(Cloud):
     '''
     def __init__(self, opts):
         Cloud.__init__(self, opts)
-        self.map = self.read()
+        self.rendered_map = self.read()
 
-    def interpolated_map(self, query=None):
-        query_map = self.map_providers_parallel(query=query)
-        full_map = {}
-        dmap = self.read()
-        for profile, vmap in dmap.items():
-            provider = self.profile_provider(profile)
-            if provider is None:
-                log.info(
-                    'No provider for the mapped {0!r} profile was '
-                    'found.'.format(
-                        profile
+    def interpolated_map(self, query='list_nodes', cached=False):
+        rendered_map = self.read().copy()
+        interpolated_map = {}
+
+        for profile, mapped_vms in rendered_map.items():
+            names = set(mapped_vms.keys())
+            if profile not in self.opts['profiles']:
+                if 'Errors' not in interpolated_map:
+                    interpolated_map['Errors'] = {}
+                msg = (
+                    'No provider for the mapped {0!r} profile was found. '
+                    'Skipped VMS: {1}'.format(
+                        profile, ', '.join(names)
                     )
                 )
+                log.info(msg)
+                interpolated_map['Errors'][profile] = msg
                 continue
-            for vm in [vm.get('name') for vm in vmap]:
-                if provider not in full_map:
-                    full_map[provider] = {}
 
-                if vm in query_map[provider]:
-                    full_map[provider][vm] = query_map[provider][vm]
-                else:
-                    full_map[provider][vm] = 'Absent'
-        return full_map
+            matching = self.get_running_by_names(names, query, cached)
+            for alias, drivers in matching.iteritems():
+                for driver, vms in drivers.iteritems():
+                    for vm_name, vm_details in vms.iteritems():
+                        if alias not in interpolated_map:
+                            interpolated_map[alias] = {}
+                        if driver not in interpolated_map[alias]:
+                            interpolated_map[alias][driver] = {}
+                        interpolated_map[alias][driver][vm_name] = vm_details
+                        names.remove(vm_name)
+
+            if not names:
+                continue
+
+            profile_details = self.opts['profiles'][profile]
+            alias, driver = profile_details['provider'].split(':')
+            for vm_name in names:
+                if alias not in interpolated_map:
+                    interpolated_map[alias] = {}
+                if driver not in interpolated_map[alias]:
+                    interpolated_map[alias][driver] = {}
+                interpolated_map[alias][driver][vm_name] = 'Absent'
+
+        return interpolated_map
 
     def delete_map(self, query=None):
         query_map = self.interpolated_map(query=query)
-        names = []
-        for profile in query_map:
-            for vm in query_map[profile]:
-                names.append(vm)
-        return names
+        for alias, drivers in query_map.copy().iteritems():
+            for driver, vms in drivers.copy().iteritems():
+                for vm_name, vm_details in vms.copy().iteritems():
+                    if vm_details == 'Absent':
+                        query_map[alias][driver].pop(vm_name)
+                    elif vm_details['state'].lower() != 'running':
+                        query_map[alias][driver].pop(vm_name)
+                if not query_map[alias][driver]:
+                    query_map[alias].pop(driver)
+            if not query_map[alias]:
+                query_map.pop(alias)
+        return query_map
 
     def read(self):
         '''
@@ -826,7 +884,7 @@ class Map(Cloud):
         # Create expected data format if needed
         for profile, mapped in map_.copy().items():
             if isinstance(mapped, (list, tuple)):
-                entries = []
+                entries = {}
                 for mapping in mapped:
                     if isinstance(mapping, basestring):
                         # Foo:
@@ -840,7 +898,7 @@ class Map(Cloud):
                             #   - bar2:
                             overrides = {}
                         overrides.setdefault('name', name)
-                        entries.append(overrides)
+                        entries[name] = overrides
                 map_[profile] = entries
                 continue
 
@@ -853,10 +911,10 @@ class Map(Cloud):
                 #  bar2:
                 #    grains:
                 #      foo: bar
-                entries = []
+                entries = {}
                 for name, overrides in mapped.iteritems():
                     overrides.setdefault('name', name)
-                    entries.append(overrides)
+                    entries[name] = overrides
                 map_[profile] = entries
                 continue
 
@@ -865,32 +923,39 @@ class Map(Cloud):
                 # the next step
                 mapped = [mapped]
 
-            map_[profile] = [{'name': name} for name in mapped]
+            map_[profile] = {}
+            for name in mapped:
+                map_[profile][name] = {'name': name}
         return map_
 
-    def map_data(self):
+    def map_data(self, cached=False):
         '''
         Create a data map of what to execute on
         '''
-        ret = {}
-        pmap = self.map_providers_parallel()
-        ret['create'] = {}
+        ret = {'create': {}}
+        pmap = self.map_providers_parallel(cached=cached)
         exist = set()
         defined = set()
-        for profile in self.map:
-            pdata = {}
-            for pdef in self.opts['vm']:
-                # The named profile does not exist
-                if pdef.get('profile', None) == profile:
-                    pdata = pdef
-
-            if not pdata:
+        for profile_name, nodes in self.rendered_map.iteritems():
+            if profile_name not in self.opts['profiles']:
+                msg = (
+                    'The required profile, {0!r}, defined in the map '
+                    'does not exist. The defined nodes, {1}, will not '
+                    'be created.'.format(
+                        profile_name,
+                        ', '.join('{0!r}'.format(node) for node in nodes)
+                    )
+                )
+                log.error(msg)
+                if 'errors' not in ret:
+                    ret['errors'] = {}
+                ret['errors'][profile_name] = msg
                 continue
 
-            for overrides in self.map[profile]:
+            profile_data = self.opts['profiles'].get(profile_name)
+            for nodename, overrides in nodes.iteritems():
                 # Get the VM name
-                nodename = overrides.get('name')
-                nodedata = pdata.copy()
+                nodedata = profile_data.copy()
                 # Update profile data with the map overrides
                 for setting in ('grains', 'master', 'minion', 'volumes'):
                     deprecated = 'map_{0}'.format(setting)
@@ -909,34 +974,58 @@ class Map(Cloud):
                 # Add the computed information to the return data
                 ret['create'][nodename] = nodedata
                 # Add the node name to the defined set
-                defined.add(nodename)
+                alias, driver = nodedata['provider'].split(':')
+                defined.add((alias, driver, nodename))
 
-        for prov in pmap:
-            for name in pmap[prov]:
-                exist.add(name)
-                if name not in ret['create']:
-                    continue
+        def get_matching_by_name(name):
+            matches = {}
+            for alias, drivers in pmap.iteritems():
+                for driver, vms in drivers.iteritems():
+                    for vm_name, details in vms.iteritems():
+                        if vm_name == name:
+                            if driver not in matches:
+                                matches[driver] = details['state']
+            return matches
 
-                # FIXME: what about other providers?
-                if prov in ('aws', 'ec2'):
-                    if ('aws' in pmap and
-                            pmap['aws'][name]['state'] != 'TERMINATED') or (
-                            'ec2' in pmap and
-                            pmap['ec2'][name]['state'] != 'TERMINATED'):
-                        log.info(
-                            '{0!r} already exists, removing from the '
-                            'create map'.format(name)
-                        )
-                        ret['create'].pop(name)
-                    continue
+        for alias, drivers in pmap.iteritems():
+            for driver, vms in drivers.iteritems():
+                for name, details in vms.iteritems():
+                    exist.add((alias, driver, name))
+                    if name not in ret['create']:
+                        continue
 
-                # Regarding other providers, simply remove them for the create
-                # map.
-                log.warn(
-                    '{0!r} already exists, removing from the '
-                    'create map'.format(name)
-                )
-                ret['create'].pop(name)
+                    # The machine is set to be created. Does it already exist?
+                    matching = get_matching_by_name(name)
+                    if not matching:
+                        continue
+
+                    # A machine by the same name exists
+                    for mdriver, state in matching.iteritems():
+                        if name not in ret['create']:
+                            # Machine already removed
+                            break
+
+                        if mdriver not in ('aws', 'ec2') and \
+                                state.lower() != 'terminated':
+                            # Regarding other providers, simply remove
+                            # them for the create map.
+                            log.warn(
+                                '{0!r} already exists, removing from '
+                                'the create map'.format(name)
+                            )
+                            if 'existing' not in ret:
+                                ret['existing'] = {}
+                            ret['existing'][name] = ret['create'].pop(name)
+                            continue
+
+                        if state.lower() != 'terminated':
+                            log.info(
+                                '{0!r} already exists, removing '
+                                'from the create map'.format(name)
+                            )
+                            if 'existing' not in ret:
+                                ret['existing'] = {}
+                            ret['existing'][name] = ret['create'].pop(name)
 
         if self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
@@ -1143,8 +1232,7 @@ def create_multiprocessing(parallel_data):
             'Failed to deploy {0[name]!r}. Error: {1}'.format(
                 parallel_data, exc
             ),
-            # Show the traceback if the debug logging level is
-            # enabled
+            # Show the traceback if the debug logging level is enabled
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return {parallel_data['name']: {'Error': str(exc)}}
@@ -1164,12 +1252,23 @@ def run_parallel_map_providers_query(data):
     '''
     cloud = Cloud(data['opts'])
     try:
-        return {
-            data['provider']: saltcloud.utils.simple_types_filter(
-                cloud.clouds[data['fun']]()
+        with CloudProviderContext(cloud.clouds[data['fun']],
+                                  data['alias'],
+                                  data['driver']):
+            return (
+                data['alias'],
+                data['driver'],
+                saltcloud.utils.simple_types_filter(
+                    cloud.clouds[data['fun']]()
+                )
             )
-        }
-    except Exception:
-        # Failed to communicate with the provider, don't list any
-        # nodes
-        return {data['provider']: []}
+    except Exception as err:
+        log.debug(
+            'Failed to execute \'{0}()\' while querying for running '
+            'nodes: {1}'.format(data['fun'], err),
+            # Show the traceback if the debug logging level is
+            # enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
+        # Failed to communicate with the provider, don't list any nodes
+        return (data['alias'], data['driver'], ())

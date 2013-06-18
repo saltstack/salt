@@ -55,7 +55,15 @@ def clouds(opts):
             base_path=salt_base_path,
         )
 
-    functions = load.gen_functions()
+    # Let's bring __active_provider_name__, defaulting to None, to all cloud
+    # drivers. This will get temporarily updated/overridden with a context
+    # manager when needed.
+    pack = {
+        'name': '__active_provider_name__',
+        'value': None
+    }
+
+    functions = load.gen_functions(pack)
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.debug(
             '{0!r} has been marked as not supported. Removing from the list '

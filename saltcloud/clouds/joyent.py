@@ -125,7 +125,9 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__, 'joyent', ('user', 'password')
+        __opts__,
+        __active_provider_name__ or 'joyent',
+        ('user', 'password')
     )
 
 
@@ -942,12 +944,8 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
     if command:
         path += '/{0}'.format(command)
 
-    #log.debug("PATH: {2}\nCredentials: {0}/{1}".format(user, password, path))
     log.debug('User: {0!r} on PATH: {1}'.format(user, path))
-
     auth_key = base64.b64encode('{0}:{1}'.format(user, password))
-
-    log.debug("Data: {0}".format(data))
 
     headers = {
         'Content-Type': 'application/json',
