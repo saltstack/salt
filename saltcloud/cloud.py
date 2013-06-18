@@ -48,6 +48,7 @@ class Cloud(object):
     def __init__(self, opts):
         self.opts = opts
         self.clouds = saltcloud.loader.clouds(self.opts)
+        self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
 
     def get_configured_providers(self):
@@ -208,7 +209,7 @@ class Cloud(object):
 
         matches = {}
         handled_drivers = {}
-        mapped_providers = self.map_providers_parallel(query, cached)
+        mapped_providers = self.map_providers_parallel(query, cached=cached)
         for alias, drivers in mapped_providers.iteritems():
             for driver, vms in drivers.iteritems():
                 if driver not in handled_drivers:
@@ -219,10 +220,13 @@ class Cloud(object):
                     # is removed
                     if vm_name not in names:
                         continue
+
                     elif driver == 'ec2' and 'aws' in handled_drivers and \
+                            'aws' in matches[handled_drivers['aws']] and \
                             vm_name in matches[handled_drivers['aws']]['aws']:
                         continue
                     elif driver == 'aws' and 'ec2' in handled_drivers and \
+                            'ec2' in matches[handled_drivers['ec2']] and \
                             vm_name in matches[handled_drivers['ec2']]['ec2']:
                         continue
 
@@ -231,6 +235,7 @@ class Cloud(object):
                     if driver not in matches[alias]:
                         matches[alias][driver] = {}
                     matches[alias][driver][vm_name] = details
+
         return matches
 
     def location_list(self, lookup='all'):
@@ -754,6 +759,25 @@ class Cloud(object):
                     driver: self.clouds[fun](call='function')
                 }
             }
+
+    def __filter_non_working_providers(self):
+        '''
+        Remove any mis-configured cloud providers from the available listing
+        '''
+        for alias, drivers in self.opts['providers'].copy().iteritems():
+            for driver in drivers.copy().keys():
+                fun = '{0}.get_configured_provider'.format(driver)
+                with CloudProviderContext(self.clouds[fun], alias, driver):
+                    if self.clouds[fun]() is False:
+                        log.warn(
+                            'The cloud driver, {0!r}, configured under the '
+                            '{1!r} cloud provider alias is not properly '
+                            'configured. Removing it from the available '
+                            'providers list'.format(driver, alias)
+                        )
+                        self.opts['providers'][alias].pop(driver)
+            if not self.opts['providers'][alias]:
+                self.opts['providers'].pop(alias)
 
 
 class Map(Cloud):

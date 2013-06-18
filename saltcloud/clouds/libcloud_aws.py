@@ -695,6 +695,7 @@ def destroy(name):
         ret.update({'Destroyed': result})
     except Exception as exc:
         if not exc.message.startswith('OperationNotPermitted'):
+            log.exception(exc)
             raise exc
 
         log.info(

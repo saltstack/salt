@@ -470,9 +470,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         'The cloud provider alias {0!r} has multiple entries '
                         'for the {1[provider]!r} driver.'.format(key, details)
                     )
-                handled_providers.add(
-                    details['provider']
-                )
+                handled_providers.add(details['provider'])
 
         for entry in val:
             if 'provider' not in entry:
@@ -481,7 +479,10 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     'the {0!r} cloud provider alias which does not have '
                     'the required \'provider\' setting'.format(key)
                 )
-            providers.setdefault(key, {}).update({entry['provider']: entry})
+            if key not in providers:
+                providers[key] = {}
+            if entry['provider'] not in providers[key]:
+                providers[key][entry['provider']] = entry
 
     # Is any provider extending data!?
     for provider_alias, entries in providers.copy().items():
