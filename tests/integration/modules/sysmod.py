@@ -29,7 +29,13 @@ class SysModuleTest(integration.ModuleCase):
         docs = self.run_function('sys.doc')
         nodoc = set()
         noexample = set()
-        allow_failure = ('pkg.expand_repo_def',)
+        allow_failure = (
+                'pkg.expand_repo_def',
+                'runtests_decorators.depends',
+                'runtests_decorators.depends_will_fallback',
+                'runtests_decorators.missing_depends',
+                'runtests_decorators.missing_depends_will_fallback',)
+
         for fun in docs:
             if fun.startswith('runtests_helpers'):
                 continue

@@ -6,6 +6,9 @@ def _fallbackfunc():
 
 
 def working_function():
+    '''
+    CLI Example::
+    '''
     return True
 
 @salt.utils.decorators.depends('time')
