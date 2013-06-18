@@ -98,7 +98,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             # use the value from the cloud config file
             'vm_config',
             # if not found, use the default path
-            '/etc/salt/cloud.providers'
+            '/etc/salt/cloud.profiles'
         )
 
     if defaults is None:
