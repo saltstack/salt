@@ -157,23 +157,51 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def latest_version(name, **kwargs):
+def latest_version(*names, **kwargs):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkgutil.latest_version CSWpython
+        salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
     '''
+    if len(names) == 0:
+        return ''
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+
     # Refresh before looking for the latest version available
     if salt.utils.is_true(kwargs.get('refresh', True)):
         refresh_db()
 
-    cmd = '/opt/csw/bin/pkgutil -a --parse {0}'.format(name)
-    namever = __salt__['cmd.run_stdout'](cmd).split()[2].strip()
-    if namever:
-        return namever
-    return ''
+    pkgs = list_pkgs()
+    cmd = '/opt/csw/bin/pkgutil -a --parse {0}'.format(' '.join(names))
+    output = __salt__['cmd.run_all'](cmd).get('stdout', '').splitlines()
+    for line in output:
+        try:
+            name, version_rev = line.split()[1:3]
+        except ValueError:
+            continue
+
+        if name in names:
+            cver = pkgs.get(name, '')
+            version = version_rev.split(',')[0]
+            if not cver or compare(pkg1=cver, oper='<', pkg2=version):
+                # Remove revision for version comparison
+                ret[name] = version_rev
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 # available_version is being deprecated
 available_version = latest_version
