@@ -428,7 +428,6 @@ if __name__ == '__main__':
         else:
             sys.exit(0)
 
-    print
     print_header(u'  Overall Tests Report  ', sep=u'=', centered=True, inline=True)
 
     no_problems_found = True
