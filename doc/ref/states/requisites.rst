@@ -3,7 +3,7 @@ Requisites
 ==========
 
 The Salt requisite system is used to create relationships between states. The
-core idea being, that when one state it dependent somehow on another that
+core idea being that, when one state is dependent somehow on another, that
 inter-dependency can be easily defined.
 
 Requisites come in two types. Direct requisites, and requisite_ins. The
@@ -40,13 +40,13 @@ something", requisite_ins say "Someone depends on me":
 So here, with a requisite_in, the same thing is accomplished, but just from
 the other way around. The vim package is saying "/etc/vimrc depends on me".
 
-In the end a single dependency map is created and everything is executed in a
+In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
 
 .. note:: Requisite matching
 
     Requisites match on both the ID Declaration and the ``name`` parameter.
-    This means that in the example above, the ``require_in`` requisite would
+    This means that, in the example above, the ``require_in`` requisite would
     also have been matched if the ``/etc/vimrc`` state was written as follows:
 
     .. code-block:: yaml
@@ -222,9 +222,9 @@ Prereq In
 ---------
 
 The ``prereq_in`` requisite in follows the same assignment logic as the
-``require_in`` requisite in. Simply that the ``prereq_in`` call assigns
-``prereq`` to the state referenced, the above example for ``prereq`` can
-be assigned to function in the same way using ``prereq_in``:
+``require_in`` requisite in. The ``prereq_in`` call simply assigns
+``prereq`` to the state referenced. The above example for ``prereq`` can
+be modified to function in the same way using ``prereq_in``:
 
 .. code-block:: yaml
 
