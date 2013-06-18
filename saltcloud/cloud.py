@@ -381,13 +381,13 @@ class Cloud(object):
 
         return ret
 
-    def destroy(self, names):
+    def destroy(self, names, cached=False):
         '''
         Destroy the named VMs
         '''
         processed = {}
         names = set(names)
-        matching = self.get_running_by_names(names)
+        matching = self.get_running_by_names(names, cached=cached)
         vms_to_destroy = set()
         for alias, drivers in matching.iteritems():
             for driver, vms in drivers.iteritems():
