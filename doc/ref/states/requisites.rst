@@ -95,8 +95,8 @@ Prereq
 The ``prereq`` requisite is a powerful requisite added in 0.16.0. This
 requisite allows for actions to be taken based on the expected results of
 a state that has not yet been executed. In more practical terms, a service
-can be shut down because the prereq knows that underlying code is going to
-be updated and the service should be offline while the update occurs.
+can be shut down because the ``prereq`` knows that underlying code is going to
+be updated and the service should be off-line while the update occurs.
 
 The motivation to add this requisite was to allow for routines to remove a
 system from a load balancer while code is being updated.
@@ -104,6 +104,24 @@ system from a load balancer while code is being updated.
 The ``prereq`` checks if the required state expects to have any changes by
 running the single state with ``test=True``. If the pre-required state returns
 changes, then the state requiring it will execute.
+
+.. code-block:: yaml
+
+    graceful-down:
+      cmd.run:
+        - name: service apache graceful
+        - prereq:
+          - file: site-code
+
+    site-code:
+      file.recurse:
+        - name: /opt/site_code
+        - source: salt://site/code
+
+In this case the apache server will only be shutdown if the site-code state
+expects to deploy fresh code via the file.recurse call, and the site-code
+deployment will only be executed if the graceful-down run completes
+successfully.
 
 Use
 ---
@@ -199,3 +217,25 @@ Watch In
 
 Watch in functions the same was as require in, but applies a watch statement
 rather than a require statement to the external state declaration.
+
+Prereq In
+---------
+
+The ``prereq_in`` requisite in follows the same assignment logic as the
+``require_in`` requisite in. Simply that the ``prereq_in`` call assigns
+``prereq`` to the state referenced, the above example for ``prereq`` can
+be assigned to function in the same way using ``prereq_in``:
+
+.. code-block:: yaml
+
+    graceful-down:
+      cmd.run:
+        - name: service apache graceful
+
+    site-code:
+      file.recurse:
+        - name: /opt/site_code
+        - source: salt://site/code
+        - prereq_in:
+          - cmd: graceful-down
+
