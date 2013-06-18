@@ -125,6 +125,9 @@ simultaneous configuration of tens of thousands of hosts.
         Install packages, create users, transfer files, start services, and
         much more.
 
+    :doc:`Pillar System <topics/pillar/index>`
+        Salt's Pillar system
+
     :doc:`States Overview<ref/states/index>`
         An overview of States and some of the core components.
 
