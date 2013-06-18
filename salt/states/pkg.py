@@ -735,6 +735,8 @@ def removed(name, pkgs=None, **kwargs):
     pkgs
         A list of packages to remove. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
     '''
     return _uninstall(action='remove', name=name, pkgs=pkgs, **kwargs)
 
@@ -753,6 +755,8 @@ def purged(name, pkgs=None, **kwargs):
     pkgs
         A list of packages to purge. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
     '''
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
