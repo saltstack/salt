@@ -149,6 +149,8 @@ def run(name, **kwargs):
             returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
     ret['result'] = True
+    if ret['changes'].get('retcode', 0) != 0:
+        ret['result'] = False
     return ret
 
 mod_watch = run  # pylint: disable-msg=C0103
