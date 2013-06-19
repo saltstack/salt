@@ -56,7 +56,7 @@ class Depends(object):
             for module, func, fallback_funcion in dependant_set:
                 # check if you have the dependancy
                 if dependancy in dir(module):
-                    logging.debug('Dependancy ({0}) already loaded, skipping'.format(dependancy))
+                    logging.debug('Dependancy ({0}) already loaded inside {1}, skipping'.format(dependancy, module.__name__.split('.')[-1]))
                     continue
                 logging.debug('Unloading {0}.{1} because dependancy ({2}) is not imported'.format(module, func, dependancy))
                 # if not, unload dependand_set
@@ -77,31 +77,6 @@ class Depends(object):
                     logging.debug('{0} already removed, skipping'.format(mod_key))
                     continue
 
-    @classmethod
-    def old_enforce_dependancies(self):
-        '''
-        This is a class global method to enforce the dependancies that you currently know about
-        '''
-        for dependancy, dependant_set in self.dependancy_dict.iteritems():
-            # check if dependancy is loaded
-            for module, func, fallback_funcion in dependant_set:
-                # check if you have the dependancy
-                if dependancy in dir(module):
-                    logging.debug('Dependancy ({0}) already loaded, skipping'.format(dependancy))
-                    continue
-                logging.debug('Unloading {0}.{1} because dependancy ({2}) is not imported'.format(module, func, dependancy))
-                # if not, unload dependand_set
-
-
-                try:
-                    if fallback_funcion is not None:
-                        setattr(module, func.__name__, fallback_funcion)
-                    else:
-                        delattr(module, func.__name__)
-                except AttributeError:
-                    # we already did???
-                    logging.debug('{0}.{1} already removed, skipping'.format(module, func.__name__))
-                    continue
 
 class depends(Depends):
     '''
