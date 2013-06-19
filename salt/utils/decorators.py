@@ -56,7 +56,7 @@ class Depends(object):
             for module, func, fallback_funcion in dependant_set:
                 # check if you have the dependancy
                 if dependancy in dir(module):
-                    logging.debug('Dependancy ({0}) already loaded, skipping'.format(dependancy))
+                    logging.debug('Dependancy ({0}) already loaded inside {1}, skipping'.format(dependancy, module.__name__.split('.')[-1]))
                     continue
                 logging.debug('Unloading {0}.{1} because dependancy ({2}) is not imported'.format(module, func, dependancy))
                 # if not, unload dependand_set
