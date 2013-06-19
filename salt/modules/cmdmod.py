@@ -14,6 +14,7 @@ import functools
 import sys
 import json
 import yaml
+import traceback
 
 # Import salt libs
 import salt.utils
@@ -188,6 +189,20 @@ def _run(cmd,
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
+
+    if shell.lower().strip() == 'powershell':
+        # If we were called by script(), then fakeout the Windows
+        # shell to run a Powershell script.
+        # Else just run a Powershell command.
+        stack = traceback.extract_stack(limit=2)
+
+        # extract_stack() returns a list of tuples.
+        # The last item in the list [-1] is the currrent method.
+        # The third item[2] in each tuple is the name of that method.
+        if stack[-2][2] == 'script':
+            cmd = 'Powershell -File ' + cmd
+        else:
+            cmd = 'Powershell ' + cmd
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template)
