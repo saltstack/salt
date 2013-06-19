@@ -105,6 +105,11 @@ suits your deployment:
 In this setup all systems will pull the global SLS from the base environment,
 as well as pull from their respective environments.
 
+.. note::
+
+    The top files from all defined environments will be compiled into a single
+    top file for all states.  Top files are environment agnostic.
+
 Remember, that since everything is a file in Salt, the environments are
 primarily file server environments, this means that environments that have
 nothing to do with states can be defined and used to distribute other files.
