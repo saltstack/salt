@@ -64,8 +64,8 @@ class Cloud(object):
     def lookup_providers(self, lookup):
         if lookup == 'all':
             providers = set()
-            for alias, entries in self.opts['providers'].iteritems():
-                for driver in entries:
+            for alias, drivers in self.opts['providers'].iteritems():
+                for driver in drivers:
                     providers.add((alias, driver))
 
             if not providers:
@@ -76,16 +76,16 @@ class Cloud(object):
             return providers
 
         if ':' in lookup:
-            alias, provider = lookup.split(':')
+            alias, driver = lookup.split(':')
             if alias not in self.opts['providers'] or \
-                    provider not in self.opts['providers'][alias]:
+                    driver not in self.opts['providers'][alias]:
                 raise SaltCloudSystemExit(
                     'No cloud providers matched {0!r}. Available: {1}'.format(
                         lookup, ', '.join(self.get_configured_providers())
                     )
                 )
 
-            return (alias, provider)
+            return (alias, driver)
 
         providers = set()
         for alias, drivers in self.opts['providers'].iteritems():
