@@ -26,6 +26,10 @@ def wait(name, **kwargs):
 
     ``**kwargs``
         Pass any arguments needed to execute the function
+
+    Note that this function actually does nothing -- however, if the `watch`
+    is satisfied, then `mod_watch` (defined at the bottom of this file) will be
+    run.  In this case, `mod_watch` is an alias for `run()`.
     '''
     return {'name': name,
             'changes': {},
@@ -149,6 +153,8 @@ def run(name, **kwargs):
             returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
     ret['result'] = True
+    if ret['changes'].get('retcode', 0) != 0:
+        ret['result'] = False
     return ret
 
 mod_watch = run  # pylint: disable-msg=C0103
