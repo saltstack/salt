@@ -88,23 +88,59 @@ more via the shared pillar `dict`_:
 
 .. _`dict`: http://docs.python.org/library/stdtypes.html#mapping-types-dict
 
+
+Note that you cannot just list key/value-information in ``top.sls``.
+
+
 Viewing Minion Pillar
 =====================
 
 Once the pillar is set up the data can be viewed on the minion via the
-``pillar`` module, the pillar module comes with two functions, ``pillar.data``
-and ``pillar.raw``. ``pillar.data`` will return a freshly reloaded pillar and
-``pillar.raw`` wil return the current pillar without a refresh:
+``pillar`` module, the pillar module comes with two functions,
+:mod:`pillar.data <salt.modules.pillar.data>` and and :mod:`pillar.raw
+<salt.modules.pillar.raw>`.  :mod:`pillar.data <salt.modules.pillar.data>` will
+return a freshly reloaded pillar and :mod:`pillar.raw
+<salt.modules.pillar.raw>` will return the current pillar without a refresh:
 
 .. code-block:: bash
 
     # salt '*' pillar.data
 
 
-Footnotes
----------
+Pillar "get" Function
+=====================
 
-.. [#nokeyvalueintop] Note that you cannot just list key/value-information in ``top.sls``.
+.. versionadded:: 0.14.0
+
+The :mod:`pillar.get <salt.modules.pillar.get>` function works much in the same
+way as the ``get`` method in a python dict, but with an enhancement: nested
+dict components can be extracted using a `:` delimiter.
+
+If a structure like this is in pillar:
+
+.. code-block:: yaml
+
+    foo:
+      bar:
+        baz: qux
+
+Extracting it from the raw pillar in an sls formula or file template is done
+this way:
+
+.. code-block:: jinja
+
+    {{ pillar['foo']['bar']['baz'] }}
+
+Now, with the new :mod:`pillar.get <salt.modules.pillar.get>` function the data
+can be safely gathered and a default can be set, allowing the template to fall
+back if the value is not available:
+
+.. code-block:: jinja
+
+    {{ salt['pillar.get']('foo:bar:baz', 'qux') }}
+
+This makes handling nested structures much easier.
+
 
 Refreshing Pillar Data
 ======================
