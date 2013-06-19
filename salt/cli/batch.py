@@ -128,6 +128,7 @@ class Batch(object):
                 if self.opts.get('raw'):
                     yield data
                 else:
+		    ret[minion] = data['ret']
                     yield {minion: data['ret']}
                 if not self.quiet:
                     ret[minion] = data['ret']
