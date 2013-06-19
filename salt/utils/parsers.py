@@ -15,6 +15,7 @@ import os
 import sys
 import logging
 import optparse
+import warnings
 import traceback
 from functools import partial
 
@@ -560,41 +561,6 @@ class OutputOptionsMixIn(object):
             self, "Output Options", "Configure your preferred output format"
         )
         self.add_option_group(group)
-        group.add_option(
-            '--raw-out',
-            default=False,
-            action='store_true',
-            help=('DEPRECATED. Print the output from the \'{0}\' command in '
-                  'raw python form, this is suitable for re-reading the '
-                  'output into an executing python script with eval.'.format(
-                      self.get_prog_name()
-                  ))
-        )
-        group.add_option(
-            '--yaml-out',
-            default=False,
-            action='store_true',
-            help=('DEPRECATED. Print the output from the \'{0}\' command in '
-                  'yaml.'.format(self.get_prog_name()))
-        )
-        group.add_option(
-            '--json-out',
-            default=False,
-            action='store_true',
-            help=('DEPRECATED. Print the output from the \'{0}\' command in '
-                  'json.'.format(self.get_prog_name()))
-        )
-
-        if self._include_text_out_:
-            group.add_option(
-                '--text-out',
-                default=False,
-                action='store_true',
-                help=('DEPRECATED. Print the output from the \'{0}\' command '
-                      'in the same form the shell would.'.format(
-                          self.get_prog_name()
-                      ))
-            )
 
         outputters = loader.outputters(
             config.minion_config(None)
@@ -632,18 +598,6 @@ class OutputOptionsMixIn(object):
                 default = self.defaults.get(opt.dest)
                 if getattr(self.options, opt.dest, default) is False:
                     return
-
-                if opt.dest not in ('out', 'output_indent', 'no_color'):
-                    if version.__version_info__ >= (0, 12):
-                        # XXX: CLEAN THIS CODE WHEN 0.13 is about to come out
-                        self.error(
-                            'The option {0} was deprecated. Please use '
-                            '\'--out {1}\' instead.'.format(
-                                opt.get_opt_string(),
-                                opt.dest.split('_', 1)[0]
-                            )
-                        )
-
                 self.selected_output_option = opt.dest
 
             funcname = 'process_{0}'.format(option.dest)
@@ -673,7 +627,23 @@ class OutputOptionsMixIn(object):
 
 
 class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
+    # This should also be removed
     _include_text_out_ = True
+
+    def __new__(cls, *args, **kwargs):
+        instance = super(OutputOptionsMixIn, cls).__new__(cls, *args, **kwargs)
+        # Let the next warning show up at least once since DeprecationWarning's
+        # are, by default, ignored by python default filters
+        warnings.filterwarnings(
+            'once', '', DeprecationWarning, 'salt.utils.parsers'
+        )
+        warnings.warn(
+            '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
+            'start using \'OutputOptionsMixIn\', your code should not need '
+            'any more change.',
+            DeprecationWarning,
+        )
+        return instance
 
 
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -760,7 +730,7 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           TimeoutMixIn, ExtendedTargetOptionsMixIn,
-                          OutputOptionsWithTextMixIn):
+                          OutputOptionsMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1139,7 +1109,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                           LogLevelMixIn, OutputOptionsWithTextMixIn):
+                           LogLevelMixIn, OutputOptionsMixIn):
     __metaclass__ = OptionParserMeta
 
     _default_logging_level_ = 'info'
