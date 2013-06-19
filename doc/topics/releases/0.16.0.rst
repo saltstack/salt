@@ -28,3 +28,24 @@ stop sending requests while server side code is updated. In this case, the
 prereq will only run if changes are expected to happen in the prerequired
 state, and the prerequired state will always run after the prereq state and
 only if the prereq state succeeds.
+
+Muliple Targets for pkg.removed, pkg.purged States
+--------------------------------------------------
+
+Both the :mod:`pkg.removed <salt.states.pkg.removed>` and :mod:`pkg.purged
+<salt.states.pkg.purged>` now support the ``pkgs`` argument, which allow for
+multiple packages to be targeted in a single state. This, as in
+:mod:`pkg.installed <salt.states.pkg.installed>`, helps speed up these
+states by reducing the number of times that the package management tools (apt,
+yum, etc.) need to be run.
+
+Random Times in Cron States
+---------------------------
+
+The temporal parameters in :mod:`cron.present <salt.states.cron.present>`
+states (minute, hour, etc.) can now be randomized by using ``random`` instead
+of a specific value. However, please note that if a cron job already has a
+numeric value (in other words, not ``*``), changing the value to ``random``
+will not modify this field in the crontab. Otherwise, the value would be
+modified every time the state was applied.
+
