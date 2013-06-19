@@ -29,7 +29,7 @@ class Batch(object):
         args = [self.opts['tgt'],
                 'test.ping',
                 [],
-                1,
+                5,
                 ]
 
         selected_target_option = self.opts.get('selected_target_option', None)
