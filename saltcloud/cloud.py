@@ -630,7 +630,9 @@ class Cloud(object):
         profile_details = self.opts['profiles'][profile]
         alias, driver = profile_details['provider'].split(':')
         mapped_providers = self.map_providers_parallel()
-        vms = mapped_providers[alias][driver]
+        alias_data = mapped_providers.setdefault(alias, {})
+        vms = alias_data.setdefault(driver, {})
+
         for name in names:
             if name in vms and vms[name]['state'].lower() != 'terminated':
                 msg = '{0} already exists under {0}:{1}'.format(
