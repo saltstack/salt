@@ -85,11 +85,11 @@ class Cloud(object):
                     )
                 )
 
-            return (alias, driver)
+            return set((alias, driver))
 
         providers = set()
         for alias, drivers in self.opts['providers'].iteritems():
-            for driver, details in drivers.iteritems():
+            for driver in drivers:
                 if lookup in (alias, driver):
                     providers.add((alias, driver))
 
@@ -724,8 +724,9 @@ class Cloud(object):
             raise SaltCloudSystemExit(
                 'More than one results matched {0!r}. Please specify '
                 'one of: {1}'.format(
+                    prov,
                     ', '.join([
-                        '{0}:{1}'.format((alias, driver)) for
+                        '{0}:{1}'.format(alias, driver) for
                         (alias, driver) in matches
                     ])
                 )
