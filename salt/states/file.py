@@ -312,12 +312,9 @@ def _check_directory(name,
                 if fchange:
                     changes[path] = fchange
     else:
-        ret, perms = __salt__['file.check_perms'](name,
-                                                  {},
-                                                  user,
-                                                  group,
-                                                  mode)
-        changes[name] = ret['changes']
+        fchange = _check_dir_meta(name, user, group, mode)
+        if fchange:
+            changes[name] = fchange
     if clean:
         keep = _gen_keep_files(name, require)
         for root, dirs, files in os.walk(name):
@@ -361,6 +358,9 @@ def _check_dir_meta(
     '''
     stats = __salt__['file.stats'](name)
     changes = {}
+    if not stats:
+        changes['directory'] = 'new'
+        return changes
     if user is not None and user != stats['user']:
         changes['user'] = user
     if group is not None and group != stats['group']:
