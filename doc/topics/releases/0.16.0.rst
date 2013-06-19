@@ -44,8 +44,22 @@ Random Times in Cron States
 
 The temporal parameters in :mod:`cron.present <salt.states.cron.present>`
 states (minute, hour, etc.) can now be randomized by using ``random`` instead
-of a specific value. However, please note that if a cron job already has a
-numeric value (in other words, not ``*``), changing the value to ``random``
-will not modify this field in the crontab. Otherwise, the value would be
-modified every time the state was applied.
+of a specific value. For example, by using the ``random`` keyword in the
+``minute`` parameter of a cron state, the same cron job can be pushed to
+hundreds or thousands of hosts, and they would each use a randomly-generated
+minute. This can be helpful when the cron job accesses a network resource, and
+it is not desirable for all hosts to run the job concurrently.
 
+.. code-block:: yaml
+
+    /path/to/cron/script:
+      cron.present:
+        - user: root
+        - minute: random
+        - hour: 2
+
+Since Salt assumes a value of ``*`` for unspecified temporal parameters, adding
+a parameter to the state and setting it to ``random`` will change that value
+from ``*`` to a randomized numeric value. However, if the cron entry contains a
+numeric value on the minion, then using the ``random`` keyword will not modify
+this field.
