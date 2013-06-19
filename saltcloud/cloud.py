@@ -78,7 +78,7 @@ class Cloud(object):
         if ':' in lookup:
             alias, provider = lookup.split(':')
             if alias not in self.opts['providers'] or \
-                    driver not in self.opts['providers'][alias]:
+                    provider not in self.opts['providers'][alias]:
                 raise SaltCloudSystemExit(
                     'No cloud providers matched {0!r}. Available: {1}'.format(
                         lookup, ', '.join(self.get_configured_providers())
