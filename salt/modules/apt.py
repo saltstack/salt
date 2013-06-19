@@ -797,7 +797,7 @@ def get_repo(repo, **kwargs):
     raise Exception('repo "{0}" was not found'.format(repo))
 
 
-def del_repo(repo, refresh=False, **kwargs):
+def del_repo(repo, **kwargs):
     '''
     Delete a repo from the sources.list / sources.list.d
 
@@ -811,7 +811,6 @@ def del_repo(repo, refresh=False, **kwargs):
     CLI Examples::
 
         salt '*' pkg.del_repo "myrepo definition"
-        salt '*' pkg.del_repo "myrepo definition" refresh=True
     '''
     if not apt_support:
         return 'Error: aptsources.sourceslist python module not found'
