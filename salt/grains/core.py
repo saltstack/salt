@@ -134,6 +134,14 @@ def _linux_gpu_data():
       - vendor: nvidia|amd|ati|...
         model: string
     '''
+    lspci = salt.utils.which('lspci')
+    if not lspci:
+        log.info(
+            'The `lspci` binary is not available on the system. GPU grains '
+            'will not be available.'
+        )
+        return {}
+
     # dominant gpu vendors to search for (MUST be lowercase for matching below)
     known_vendors = ['nvidia', 'amd', 'ati', 'intel']
 
