@@ -63,7 +63,7 @@ def present(name,
     dbs = __salt__['postgres.db_list'](runas=runas)
     db_params = dbs.get(name, {})
 
-    if all((
+    if name in dbs and all((
         db_params.get('Tablespace') == tablespace if tablespace else True,
         db_params.get('Encoding') == encoding if encoding else True,
         db_params.get('Collate') == lc_collate if lc_collate else True,
