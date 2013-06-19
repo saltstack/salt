@@ -336,7 +336,7 @@ class SaltCloud(parsers.SaltCloudParser):
             self.options.output, self.config
         )
         # display output using salt's outputter system
-        print(self.display_output(ret))
+        print(display_output(ret))
         self.exit(0)
 
     def print_confirm(self, msg):
