@@ -966,14 +966,15 @@ def simple_types_filter(datadict):
     Convert the data dictionary into simple types, ie, int, float, string,
     bool, etc.
     '''
-    simpletypes = (str, unicode, int, long, float, bool)
+    simpletypes_keys = (str, unicode, int, long, float, bool)
+    simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
     simpledict = {}
     for key, value in datadict.iteritems():
-        if key is not None and not isinstance(key, simpletypes):
+        if key is not None and not isinstance(key, simpletypes_keys):
             key = repr(key)
-        if isinstance(value, dict):
+        if value is not None and isinstance(value, dict):
             value = simple_types_filter(value)
-        elif value is not None and not isinstance(value, simpletypes):
+        elif value is not None and not isinstance(value, simpletypes_values):
             value = repr(value)
         simpledict[key] = value
     return simpledict
