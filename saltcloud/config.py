@@ -11,6 +11,7 @@ import salt.config
 import salt.utils
 
 # Import salt cloud libs
+import saltcloud.output
 import saltcloud.exceptions
 
 
@@ -75,6 +76,11 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         )
     elif master_config_path is not None and master_config is None:
         master_config = salt.config.master_config(master_config_path)
+
+    # Let's register our double-layer outputter into salt's outputters
+    master_config['outputter_dirs'].append(
+        os.path.dirname(saltcloud.output.__file__)
+    )
 
     if providers_config_path is not None and providers_config is not None:
         raise saltcloud.exceptions.SaltCloudConfigError(

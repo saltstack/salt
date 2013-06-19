@@ -361,7 +361,7 @@ class CloudProvidersListsMixIn(object):
 class SaltCloudParser(parsers.OptionParser,
                       parsers.LogLevelMixIn,
                       parsers.MergeConfigMixIn,
-                      parsers.OutputOptionsWithTextMixIn,
+                      parsers.OutputOptionsMixIn,
                       CloudConfigMixIn,
                       CloudQueriesMixIn,
                       ExecutionOptionsMixIn,

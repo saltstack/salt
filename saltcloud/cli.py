@@ -99,12 +99,6 @@ class SaltCloud(parsers.SaltCloudParser):
                     continue
             self.error('Failed to update the bootstrap script')
 
-        # Setup the outputter soon so we don't get late logging when trying to
-        # finally display the data
-        self.display_output = salt.output.get_printout(
-            self.options.output, self.config
-        )
-
         # Late imports so logging works as expected
         log.info('salt-cloud starting')
         mapper = saltcloud.cloud.Map(self.config)
@@ -114,9 +108,10 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.selected_query_option is not None:
             if self.selected_query_option == 'list_providers':
                 try:
-                    saltcloud.output.double_layer(
-                        mapper.provider_list()
+                    display_output = salt.output.get_printout(
+                        self.options.output or 'double_layer', self.config
                     )
+                    print(display_output(mapper.provider_list()))
                     self.exit(0)
                 except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error listing providers: {0}'
@@ -142,8 +137,15 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.list_locations is not None:
             try:
-                saltcloud.output.double_layer(
-                    mapper.location_list(self.options.list_locations)
+                display_output = salt.output.get_printout(
+                    self.options.output or 'double_layer', self.config
+                )
+                print(
+                    display_output(
+                        mapper.location_list(
+                            self.options.list_locations
+                        )
+                    )
                 )
                 self.exit(0)
             except (SaltCloudException, Exception) as exc:
@@ -152,8 +154,15 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.list_images is not None:
             try:
-                saltcloud.output.double_layer(
-                    mapper.image_list(self.options.list_images)
+                display_output = salt.output.get_printout(
+                    self.options.output or 'double_layer', self.config
+                )
+                print(
+                    display_output(
+                        mapper.image_list(
+                            self.options.list_images
+                        )
+                    )
                 )
                 self.exit(0)
             except (SaltCloudException, Exception) as exc:
@@ -162,8 +171,15 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.list_sizes is not None:
             try:
-                saltcloud.output.double_layer(
-                    mapper.size_list(self.options.list_sizes)
+                display_output = salt.output.get_printout(
+                    self.options.output or 'double_layer', self.config
+                )
+                print(
+                    display_output(
+                        mapper.size_list(
+                            self.options.list_sizes
+                        )
+                    )
                 )
                 self.exit(0)
             except (SaltCloudException, Exception) as exc:
@@ -315,8 +331,12 @@ class SaltCloud(parsers.SaltCloudParser):
 
         else:
             self.error('Nothing was done. Using the proper arguments?')
+
+        display_output = salt.output.get_printout(
+            self.options.output, self.config
+        )
         # display output using salt's outputter system
-        print(self.display_output(ret))
+        print(display_output(ret))
         self.exit(0)
 
     def print_confirm(self, msg):
