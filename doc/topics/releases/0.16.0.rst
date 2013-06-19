@@ -32,7 +32,7 @@ only if the prereq state succeeds.
 Muliple Targets for pkg.removed, pkg.purged States
 --------------------------------------------------
 
-Both the :mod:`pkg.removed <salt.states.pkg.removed>` and :mod:`pkg.purged
+Both :mod:`pkg.removed <salt.states.pkg.removed>` and :mod:`pkg.purged
 <salt.states.pkg.purged>` now support the ``pkgs`` argument, which allow for
 multiple packages to be targeted in a single state. This, as in
 :mod:`pkg.installed <salt.states.pkg.installed>`, helps speed up these
