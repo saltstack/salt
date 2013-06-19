@@ -112,7 +112,7 @@ class DjangoModuleTest(integration.ModuleCase):
                 env=None
             )
 
-    def test_loaddata(self):
+    def no_test_loaddata(self):
         mock = MagicMock()
         with patch.dict(django.__salt__,
                         {'cmd.run': mock}):
