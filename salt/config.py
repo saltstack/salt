@@ -407,7 +407,7 @@ def load_config(path, env_var):
     if not env_path or not os.path.isfile(env_path):
         env_path = path
     # If non-default path from `-c`, use that over the env variable
-    if path != '/etc/salt/master':
+    if path != DEFAULT_MASTER_OPTS['conf_file']:
         env_path = path
     path = env_path
 
