@@ -41,7 +41,12 @@ def genrepo():
                                   '{0}: {1}'.format(os.path.join(root, name), exc))
                         print 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)
                 if config:
-                    ret.update(config)
+                    ret.setdefault('repo', {}).update(config)
+                    revmap = {}
+                    for pkgname, versions in config.iteritems():
+                        for repodata in versions.values():
+                            revmap[repodata['full_name']] = pkgname
+                    ret.setdefault('name_map', {}).update(revmap)
     with salt.utils.fopen(os.path.join(repo, winrepo), 'w') as repo:
         repo.write(msgpack.dumps(ret))
     salt.output.display_output(ret, 'pprint', __opts__)
