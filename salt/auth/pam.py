@@ -99,17 +99,18 @@ try:
     PAM_AUTHENTICATE.restype = c_int
     PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
 except Exception:
-    pass
+    HAS_PAM = False
+else:
+    HAS_PAM = True
 
 
 def __virtual__():
     '''
     Only load on Linux systems
     '''
-    try:
-        PAM_AUTHENTICATE
+    if HAS_PAM:
         return 'pam'
-    except Exception:
+    else:
         return False
 
 
