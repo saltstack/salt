@@ -1636,6 +1636,13 @@ class BaseHighState(object):
             if opts['local_state']:
                 return opts
         mopts = self.client.master_opts()
+        if not isinstance(mopts, dict):
+            # An error happened on the master
+            opts['renderer'] = 'yaml_jinja'
+            opts['failhard'] = False
+            opts['state_top'] = 'salt://top.sls'
+            opts['nodegroups'] = {}
+            opts['file_roots'] = {'base': ['/srv/salt']}
         opts['renderer'] = mopts['renderer']
         opts['failhard'] = mopts.get('failhard', False)
         if mopts['state_top'].startswith('salt://'):
