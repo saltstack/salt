@@ -14,6 +14,7 @@ import logging
 import time
 import signal
 import subprocess
+import pickle
 from hashlib import md5
 from subprocess import PIPE, Popen
 from datetime import datetime, timedelta
@@ -1050,3 +1051,86 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
+
+
+class MultiprocessingTest(ShellCase):
+    '''
+    Test multiprocessing windows requirements are satisfied
+    '''
+    def test_minion_pickle(self):
+        '''
+        Test minion instance can be pickled
+        '''
+        minion_opts = salt.config.minion_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+        )
+        minion = salt.minion.Minion(minion_opts)
+        try:
+            pickle.dumps(minion)
+        except pickle.PicklingError as e:
+            if hasattr(minion, '__getstate__'):
+                state = minion.__getstate__()
+            else:
+                state = minion.__dict__
+            failed_attrs=[]
+            for k, v in state.items():
+                try:
+                    pickle.dumps(v)
+                except pickle.PicklingError:
+                    failed_attrs.append(k)
+            self.fail('Minion instance attrs are not picklable: {0}'.format(failed_attrs))
+
+    def test_minion_schedule_pickle(self):
+        '''
+        Test minion schedule instance can be pickled
+        '''
+        minion_opts = salt.config.minion_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+        )
+        minion = salt.minion.Minion(minion_opts)
+        try:
+            pickle.dumps(minion.schedule)
+        except pickle.PicklingError as e:
+            if hasattr(minion.schedule, '__getstate__'):
+                state = minion.schedule.__getstate__()
+            else:
+                state = minion.schedule.__dict__
+            failed_attrs=[]
+            for k, v in state.items():
+                try:
+                    pickle.dumps(v)
+                except pickle.PicklingError:
+                    failed_attrs.append(k)
+            self.fail('Schedule instance attrs are not picklable: {0}'.format(failed_attrs))
+
+    def test_minion_main_import(self):
+        '''
+        Test minion salt-minion.py is importable
+        '''
+        module = 'salt-minion'
+        script = '{0}.py'.format(module)
+        path = os.path.join(SCRIPT_DIR, script)
+        if not os.path.isfile(path):
+            self.fail('{0} not found'.format(script))
+
+        ppath = 'PYTHONPATH={0}:{1}:{2}'.format(SCRIPT_DIR, CODE_DIR, ':'.join(sys.path[1:]))
+        cmd = '{0} {1} -m {2} --version'.format(ppath, PYEXEC, module)
+
+        popen_kwargs = {
+            'shell': True,
+            'stdout': PIPE
+        }
+        if not sys.platform.lower().startswith('win'):
+            popen_kwargs['close_fds'] = True
+
+
+        if not sys.platform.lower().startswith('win'):
+            popen_kwargs['close_fds'] = True
+
+        process = Popen(cmd, **popen_kwargs)
+        data = process.communicate()[0].splitlines()
+
+        expected = self.run_script('salt-minion', '--version')
+
+        self.assertEqual(data[0].split()[1:], expected[0].split()[1:])
+
