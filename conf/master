@@ -13,6 +13,10 @@
 # The address of the interface to bind to
 #interface: 0.0.0.0
 
+# Whether the master should listen for IPv6 connections. If this is set to True,
+# the interface option must be adjusted too (for example: "interface: '::'")
+#ipv6: False
+
 # The tcp port used by the publisher
 #publish_port: 4505
 
