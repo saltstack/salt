@@ -95,5 +95,87 @@ allowing users to store parallel execution logs. Finally, keyboard interrupts
 (such as ^C) are now properly handled.
 
 
+Internal Data Structure
+=======================
+On 0.8.7 we unleashed the power of multiple cloud provider profiles, it even 
+allows multiple profiles for the same cloud provider.  That was a much asked 
+feature and was adopted by users right away.  Unfortunately, all that power had 
+a small point of failure when multiple profiles existed for the same cloud 
+provider. Only the first was used in most operations.
+To fix this small issue, salt-cloud's internal data structure changed quite a 
+bit. Every action, function, virtual machine creation, etc, is now, **always** 
+"attached" to a provider alias and the(one of the) cloud drivers defined.
+Internally, when loading the configuration, all the defined profiles are 
+matched to the available providers. If the provider does not exits, the profile 
+gets removed. The same happens for the defined providers, they all know which 
+profiles they can manage. This closes that small point of failure.
+
+Data Presentation
+=================
+With the internal data structure change also came a data presentation change.  
+Most, unless not applicable, output is now done in an ``<provider-alias>`` 
+|srarr| ``<provider-driver>`` |srarr| ``<detailed-output>``. An example is 
+always better. For an ``ec2-config`` provider alias with an ``ec2`` driver 
+configured:
+
+.. code-block::
+
+    salt-cloud -f show_image ec2-config image=ami-35eb835c
 
 
+.. code-block::
+
+    ec2-config:
+        ----------
+        ec2:
+            ----------
+            - architecture:
+                x86_64
+            - blockDeviceMapping:
+                ----------
+                item:
+                    ----------
+                    deviceName:
+                        /dev/sda
+                    ebs:
+                        ----------
+                        deleteOnTermination:
+                            true
+                        snapshotId:
+                            snap-59724004
+                        volumeSize:
+                            8
+                        volumeType:
+                            standard
+            - description:
+                OmniOS r151006 Base (Stable)
+            - hypervisor:
+                xen
+            - imageId:
+                ami-35eb835c
+            - imageLocation:
+                182711560792/OmniOS r151006c
+            - imageOwnerId:
+                182711560792
+            - imageState:
+                available
+            - imageType:
+                machine
+            - isPublic:
+                true
+            - kernelId:
+                aki-b4aa75dd
+            - name:
+                OmniOS r151006c
+            - rootDeviceName:
+                /dev/sda
+            - rootDeviceType:
+                ebs
+            - virtualizationType:
+                paravirtual
+
+
+We're now always aware of what was done using what.
+
+
+.. include:: <isoamsa.txt>
