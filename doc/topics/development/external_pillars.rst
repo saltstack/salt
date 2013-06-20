@@ -194,3 +194,15 @@ This function has access to some useful globals:
 :__grains__:
     A dictionary of the grains of the minion making this pillar call.
 
+
+
+Example configuration
+---------------------
+
+As an example, if you wanted to add external pillar via the ``cmd_json``
+external pillar, add something like this to your master config:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - cmd_json: "echo {'arg':'value'}"
