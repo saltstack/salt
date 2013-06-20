@@ -158,7 +158,7 @@ class OptionParser(optparse.OptionParser):
                 logging.getLogger(__name__).exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
-                        process_option_func, traceback.format_exc(err)
+                        mixin_after_parsed_func, traceback.format_exc(err)
                     )
                 )
 
