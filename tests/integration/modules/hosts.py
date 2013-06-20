@@ -204,8 +204,13 @@ class HostsModuleTest(integration.ModuleCase):
         lines = salt.utils.fopen(HFN, 'r').read().splitlines()
         self.assertEqual(lines, [
             '192.168.1.3\t\thost3.fqdn.com',
-            '192.168.1.1\t\thost1.fqdn.com\thost1\thost1-reorder',
-            '192.168.1.2\t\thost2.fqdn.com\thost2\toldhost2\thost2-reorder'
+            '192.168.1.1\t\thost1.fqdn.com',
+            '192.168.1.1\t\thost1',
+            '192.168.1.1\t\thost1-reorder',
+            '192.168.1.2\t\thost2.fqdn.com',
+            '192.168.1.2\t\thost2',
+            '192.168.1.2\t\toldhost2',
+            '192.168.1.2\t\thost2-reorder'
         ])
 
 
