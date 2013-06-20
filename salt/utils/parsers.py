@@ -143,6 +143,7 @@ class OptionParser(optparse.OptionParser):
             try:
                 process_option_func()
             except Exception as err:
+                logging.getLogger(__name__).exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
                         process_option_func, traceback.format_exc(err)
@@ -151,7 +152,15 @@ class OptionParser(optparse.OptionParser):
 
         # Run the functions on self._mixin_after_parsed_funcs
         for mixin_after_parsed_func in self._mixin_after_parsed_funcs:
-            mixin_after_parsed_func(self)
+            try:
+                mixin_after_parsed_func(self)
+            except Exception as err:
+                logging.getLogger(__name__).exception(err)
+                self.error(
+                    'Error while processing {0}: {1}'.format(
+                        mixin_after_parsed_func, traceback.format_exc(err)
+                    )
+                )
 
         if self.config.get('conf_file', None) is not None:
             logging.getLogger(__name__).info(
@@ -445,7 +454,13 @@ class LogLevelMixIn(object):
                 ),
                 self.config.get(
                     'log_fmt_logfile',
-                    self.config['log_fmt_console']
+                    self.config.get(
+                        'log_fmt_console',
+                        self.config.get(
+                            'log_fmt',
+                            config._DFLT_LOG_FMT_CONSOLE
+                        )
+                    )
                 )
             )
         )
@@ -507,7 +522,15 @@ class LogLevelMixIn(object):
             # Remove it from config so it inherits from log_fmt_console
             self.config.pop(cli_log_fmt)
 
-        logfmt = self.config.get(cli_log_fmt, 'log_fmt_console')
+        logfmt = self.config.get(
+            cli_log_fmt, self.config.get(
+                'log_fmt_console',
+                self.config.get(
+                    'log_fmt',
+                    config._DFLT_LOG_FMT_CONSOLE
+                )
+            )
+        )
 
         cli_log_datefmt = 'cli_{0}_log_datefmt'.format(
             self.get_prog_name().replace('-', '_')
