@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
-# vim: sw=4 ts=4 fenc=utf-8
-"""
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: Apache 2.0, see LICENSE for more details
-"""
+'''
+    saltcloud.utils.parsers
+    ~~~~~~~~~~~~~~~~~~~~~~~
 
+    This is where the salt-cloud parser system gets setup.
+
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+'''
 # Import python libs
 import os
 import sys
@@ -12,7 +16,6 @@ import optparse
 from functools import partial
 
 # Import salt libs
-import salt.config
 import salt.utils.parsers as parsers
 
 # Import salt cloud libs
@@ -32,7 +35,7 @@ class CloudConfigMixIn(object):
         self.providers_config = {}
         group = self.config_group = optparse.OptionGroup(
             self,
-            "Configuration Options",
+            'Configuration Options',
             # Include description here as a string
         )
         group.add_option(
@@ -124,7 +127,7 @@ class ExecutionOptionsMixIn(object):
     def _mixin_setup(self):
         group = self.execution_group = optparse.OptionGroup(
             self,
-            "Execution Options",
+            'Execution Options',
             # Include description here as a string
         )
         group.add_option(
@@ -234,7 +237,7 @@ class CloudQueriesMixIn(object):
     def _mixin_setup(self):
         group = self.cloud_queries_group = optparse.OptionGroup(
             self,
-            "Query Options",
+            'Query Options',
             # Include description here as a string
         )
         group.add_option(
@@ -296,8 +299,8 @@ class CloudQueriesMixIn(object):
         )
         if len(group_options_selected) > 1:
             self.error(
-                "The options {0} are mutually exclusive. Please only choose "
-                "one of them".format('/'.join([
+                'The options {0} are mutually exclusive. Please only choose '
+                'one of them'.format('/'.join([
                     option.get_opt_string() for option in
                     group_options_selected
                 ]))
@@ -312,7 +315,7 @@ class CloudProvidersListsMixIn(object):
     def _mixin_setup(self):
         group = self.providers_listings_group = optparse.OptionGroup(
             self,
-            "Cloud Providers Listings",
+            'Cloud Providers Listings',
             # Include description here as a string
         )
         group.add_option(
@@ -368,7 +371,12 @@ class SaltCloudParser(parsers.OptionParser,
                       CloudProvidersListsMixIn):
 
     __metaclass__ = parsers.OptionParserMeta
-    _default_logging_level_ = "info"
+
+    # LogLevelMixIn attributes
+    _default_logging_level_ = 'info'
+    _logfile_config_setting_name_ = 'log_file'
+    _loglevel_config_setting_name_ = 'log_level_logfile'
+    _default_logging_logfile_ = '/var/log/salt/cloud'
 
     VERSION = version.__version__
 
