@@ -98,6 +98,11 @@ def latest_version(*names, **kwargs):
     '''
     if len(names) == 0:
         return ''
+
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
@@ -399,7 +404,7 @@ def update(pkg, slot=None, refresh=False):
 
         salt '*' pkg.update <package name>
     '''
-    if(refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     if slot is not None:
@@ -460,6 +465,8 @@ def remove(name=None, slot=None, pkgs=None, **kwargs):
         Uninstall multiple packages. ``slot`` argument is ignored if this
         argument is present. Must be passed as a python list.
 
+    .. versionadded:: 0.16.0
+
 
     Returns a dict containing the changes.
 
@@ -505,6 +512,8 @@ def purge(name=None, slot=None, pkgs=None, **kwargs):
     pkgs
         Uninstall multiple packages. ``slot`` argument is ignored if this
         argument is present. Must be passed as a python list.
+
+    .. versionadded:: 0.16.0
 
 
     Returns a dict containing the changes.

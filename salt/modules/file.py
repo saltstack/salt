@@ -909,10 +909,13 @@ def touch(name, atime=None, mtime=None):
 
     return os.path.exists(name)
 
+
 def symlink(src, link):
     '''
     Create a symbolic link to a file
+
     CLI Example::
+
         salt '*' file.symlink /path/to/file /path/to/link
     '''
     if not os.path.isabs(src):
@@ -924,6 +927,26 @@ def symlink(src, link):
     except (OSError, IOError):
         raise CommandExecutionError('Could not create "{0}"'.format(link))
     return False
+
+
+def rename(src, dst):
+    '''  
+    Rename a file or directory
+
+    CLI Example::
+
+        salt '*' file.rename /path/to/src /path/to/dst
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try: 
+        os.rename(src, dst) 
+        return True 
+    except OSError:
+        raise CommandExecutionError('Could not rename "{0}" to "{1}"'.format(src, dst))
+    return False
+
 
 def stats(path, hash_type='md5', follow_symlink=False):
     '''
@@ -1256,15 +1279,18 @@ def check_perms(name, ret, user, group, mode):
     # Mode changes if needed
     if mode:
         if str(mode) != perms['lmode']:
-            if not __opts__['test']:
-                __salt__['file.set_mode'](name, mode)
-            if str(mode) != str(__salt__['file.get_mode'](name)).lstrip('0'):
-                ret['result'] = False
-                ret['comment'].append(
-                    'Failed to change mode to {0}'.format(mode)
-                )
-            else:
+            if __opts__['test'] is True:
                 ret['changes']['mode'] = mode
+            else:
+                __salt__['file.set_mode'](name, mode)
+                if (str(mode) !=
+                        str(__salt__['file.get_mode'](name)).lstrip('0')):
+                    ret['result'] = False
+                    ret['comment'].append(
+                        'Failed to change mode to {0}'.format(mode)
+                    )
+                else:
+                    ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
     if user:
         if user != perms['luser']:
@@ -1285,15 +1311,22 @@ def check_perms(name, ret, user, group, mode):
 
     if user:
         if user != __salt__['file.get_user'](name):
-            ret['result'] = False
-            ret['comment'].append('Failed to change user to {0}'.format(user))
+            if __opts__['test'] is True:
+                ret['changes']['user'] = user
+            else:
+                ret['result'] = False
+                ret['comment'].append('Failed to change user to {0}'
+                                      .format(user))
         elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
         if group != __salt__['file.get_group'](name):
-            ret['result'] = False
-            ret['comment'].append('Failed to change group to {0}'
-                               .format(group))
+            if __opts__['test'] is True:
+                ret['changes']['group'] = group
+            else:
+                ret['result'] = False
+                ret['comment'].append('Failed to change group to {0}'
+                                      .format(group))
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
@@ -1301,6 +1334,8 @@ def check_perms(name, ret, user, group, mode):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
+    if __opts__['test'] is True and ret['changes']:
+        ret['result'] = None
     return ret, perms
 
 

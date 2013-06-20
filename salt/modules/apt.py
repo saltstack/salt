@@ -137,6 +137,11 @@ def latest_version(*names, **kwargs):
     fromrepo = _get_repo(**kwargs)
     repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
         if fromrepo else ''
+
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     for name in names:
         cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
         out = __salt__['cmd.run_all'](cmd)
@@ -398,6 +403,8 @@ def remove(name=None, pkgs=None, **kwargs):
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    .. versionadded:: 0.16.0
+
 
     Returns a dict containing the changes.
 
@@ -424,6 +431,9 @@ def purge(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
 
     Returns a dict containing the changes.
 
@@ -787,7 +797,7 @@ def get_repo(repo, **kwargs):
     raise Exception('repo "{0}" was not found'.format(repo))
 
 
-def del_repo(repo, refresh=False, **kwargs):
+def del_repo(repo, **kwargs):
     '''
     Delete a repo from the sources.list / sources.list.d
 
@@ -801,7 +811,6 @@ def del_repo(repo, refresh=False, **kwargs):
     CLI Examples::
 
         salt '*' pkg.del_repo "myrepo definition"
-        salt '*' pkg.del_repo "myrepo definition" refresh=True
     '''
     if not apt_support:
         return 'Error: aptsources.sourceslist python module not found'

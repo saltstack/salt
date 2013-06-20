@@ -44,7 +44,11 @@ def latest_version(*names, **kwargs):
     '''
     if len(names) == 0:
         return ''
-    refresh_db()
+
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
@@ -349,6 +353,8 @@ def remove(name=None, pkgs=None, **kwargs):
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    .. versionadded:: 0.16.0
+
 
     Returns a dict containing the changes.
 
@@ -375,6 +381,8 @@ def purge(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
 
 
     Returns a dict containing the changes.

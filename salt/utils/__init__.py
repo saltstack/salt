@@ -428,6 +428,7 @@ def jid_dir(jid, cachedir, sum_type):
     '''
     Return the jid_dir for the given job id
     '''
+    jid = str(jid)
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 

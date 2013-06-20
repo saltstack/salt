@@ -59,6 +59,16 @@ class KeyCLI(object):
         '''
         Accept the keys matched
         '''
+        def _print_accepted(matches, after_match):
+            if 'minions_pre' in after_match:
+                accepted = set(matches['minions_pre']).difference(
+                        set(after_match['minions_pre'])
+                        )
+            else:
+                accepted = matches['minions_pre']
+            for key in accepted:
+                print('Key for minion {0} accepted.'.format(key))
+
         matches = self.key.name_match(match)
         if not matches.get('minions_pre', False):
             print(
@@ -67,15 +77,25 @@ class KeyCLI(object):
                     )
                 )
             return
-        after_match = self.key.accept(match)
-        if 'minions_pre' in after_match:
-            accepted = set(matches['minions_pre']).difference(
-                    set(after_match['minions_pre'])
-                    )
+        if not self.opts.get('yes', False):
+            print('The following keys are going to be accepted:')
+            salt.output.display_output(
+                    {'minions_pre': matches['minions_pre']},
+                    'key',
+                    self.opts)
+            try:
+                veri = raw_input('Proceed? [n/Y] ')
+            except KeyboardInterrupt:
+                raise SystemExit("\nExiting on CTRL-c")
+            if not veri or veri.lower().startswith('y'):
+                _print_accepted(matches, self.key.accept(match))
         else:
-            accepted = matches['minions_pre']
-        for key in accepted:
-            print('Key for minion {0} accepted.'.format(key))
+            print('The following keys are going to be accepted:')
+            salt.output.display_output(
+                    {'minions_pre': matches['minions_pre']},
+                    'key',
+                    self.opts)
+            _print_accepted(matches, self.key.accept(match))
 
     def accept_all(self):
         '''
@@ -404,7 +424,7 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'])
+        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def delete_all(self):
@@ -422,7 +442,7 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'])
+        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def reject(self, match):
@@ -450,7 +470,7 @@ class Key(object):
                 except (IOError, OSError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'])
+        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.name_match(match)
 
     def reject_all(self):
@@ -477,7 +497,7 @@ class Key(object):
             except (IOError, OSError):
                 pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'])
+        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def finger(self, match):

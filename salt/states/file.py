@@ -42,6 +42,18 @@ salt fileserver. Here's an example:
         - group: users
         - mode: 644
 
+The ``source`` parameter can also specify a file in another Salt environment.
+In this example ``foo.conf`` in the ``dev`` environment will be used instead.
+
+.. code-block:: yaml
+
+    /etc/foo.conf:
+      file.managed:
+        - source:
+          - salt://foo.conf?env=dev
+        - user: foo
+        - group: users
+        - mode: 644
 
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
@@ -299,6 +311,10 @@ def _check_directory(name,
                 fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
+    else:
+        fchange = _check_dir_meta(name, user, group, mode)
+        if fchange:
+            changes[name] = fchange
     if clean:
         keep = _gen_keep_files(name, require)
         for root, dirs, files in os.walk(name):
@@ -342,6 +358,9 @@ def _check_dir_meta(
     '''
     stats = __salt__['file.stats'](name)
     changes = {}
+    if not stats:
+        changes['directory'] = 'new'
+        return changes
     if user is not None and user != stats['user']:
         changes['user'] = user
     if group is not None and group != stats['group']:
@@ -474,10 +493,10 @@ def symlink(
     Create a symlink
 
     If the file already exists and is a symlink pointing to any location other
-    then the specified target, the symlink will be replaced. If the specified
-    location if the symlink is a regular file or directory then the state will
-    return False. If the regular file or directory is desired to be replaced
-    with a symlink pass force: True.
+    than the specified target, the symlink will be replaced. If the symlink is
+    a regular file or directory then the state will return False. If the
+    regular file or directory is desired to be replaced with a symlink pass
+    force: True.
 
     name
         The location of the symlink to create
