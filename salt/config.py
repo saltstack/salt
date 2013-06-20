@@ -406,6 +406,9 @@ def load_config(path, env_var):
     env_path = os.environ.get(env_var, path)
     if not env_path or not os.path.isfile(env_path):
         env_path = path
+    # If non-default path from `-c`, use that over the env variable
+    if path != '/etc/salt/master':
+        env_path = path
     path = env_path
 
     # If the configuration file is missing, attempt to copy the template,
