@@ -3,6 +3,7 @@ Test the grains module
 '''
 # Import python libs
 import time
+import os
 
 # Import salt libs
 import integration
