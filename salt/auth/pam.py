@@ -106,9 +106,10 @@ def __virtual__():
     '''
     Only load on Linux systems
     '''
-    if __grains__['kernel'] == 'Linux':
+    try:
+        PAM_AUTHENTICATE
         return 'pam'
-    else:
+    except Exception:
         return False
 
 
