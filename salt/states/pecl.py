@@ -38,9 +38,10 @@ def installed(
             ret['result'] = True
             ret['comment'] = 'Pecl is already installed.'
             return ret
-        else:
-            # Modify the name to include the version and proceed.
-            name = '{0}-{1}'.format(name, version)
+
+    if version is not None:
+        # Modify the name to include the version and proceed.
+        name = '{0}-{1}'.format(name, version)
 
     if __opts__['test']:
         ret['comment'] = 'The pecl {0} would have been installed'.format(name)
