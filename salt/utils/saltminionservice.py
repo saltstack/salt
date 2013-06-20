@@ -6,6 +6,7 @@ import salt
 import win32serviceutil
 import win32service
 import winerror
+import win32api
 
 # Import python libs
 import sys
@@ -27,8 +28,14 @@ class MinionService(Service):
         self.runflag = False
         self.log("Shutting down the Salt Minion")
 
+def console_event_handler(event):
+    if event == 5:
+        # Do nothing on CTRL_LOGOFF_EVENT
+        return True
+    return False
 
 def _main():
+    win32api.SetConsoleCtrlHandler(console_event_handler, 1)
     servicename = 'salt-minion'
     try:
         status = win32serviceutil.QueryServiceStatus(servicename)
