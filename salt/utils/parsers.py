@@ -260,7 +260,7 @@ class ConfigDirMixIn(object):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                "WARNING: \"{0}\" directory does not exist.\n".format(
+                'WARNING: "{0}" directory does not exist.\n'.format(
                     self.options.config_dir
                 )
             )
@@ -409,7 +409,7 @@ class TargetOptionsMixIn(object):
 
     def _mixin_setup(self):
         group = self.target_options_group = optparse.OptionGroup(
-            self, "Target Options", "Target Selection Options"
+            self, 'Target Options', 'Target Selection Options'
         )
         self.add_option_group(group)
         group.add_option(
@@ -480,8 +480,8 @@ class TargetOptionsMixIn(object):
         )
         if len(group_options_selected) > 1:
             self.error(
-                "The options {0} are mutually exclusive. Please only choose "
-                "one of them".format('/'.join(
+                'The options {0} are mutually exclusive. Please only choose '
+                'one of them'.format('/'.join(
                     [option.get_opt_string()
                      for option in group_options_selected]))
             )
@@ -558,7 +558,7 @@ class OutputOptionsMixIn(object):
 
     def _mixin_setup(self):
         group = self.output_options_group = optparse.OptionGroup(
-            self, "Output Options", "Configure your preferred output format"
+            self, 'Output Options', 'Configure your preferred output format'
         )
         self.add_option_group(group)
 
@@ -652,7 +652,7 @@ class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     __metaclass__ = OptionParserMeta
 
-    description = "The Salt master, used to control the Salt minions."
+    description = 'The Salt master, used to control the Salt minions.'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -736,7 +736,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     default_timeout = 5
 
-    usage = "%prog [options] '<target>' <function> [arguments]"
+    usage = '%prog [options] \'<target>\' <function> [arguments]'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -888,14 +888,14 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     __metaclass__ = OptionParserMeta
 
     description = (
-        "salt-cp is NOT intended to broadcast large files, it is intended to "
-        "handle text files.\nsalt-cp can be used to distribute configuration "
-        "files."
+        'salt-cp is NOT intended to broadcast large files, it is intended to '
+        'handle text files.\nsalt-cp can be used to distribute configuration '
+        'files.'
     )
 
     default_timeout = 5
 
-    usage = "%prog [options] '<target>' SOURCE DEST"
+    usage = '%prog [options] \'<target>\' SOURCE DEST'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -932,7 +932,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
 
-        actions_group = optparse.OptionGroup(self, "Actions")
+        actions_group = optparse.OptionGroup(self, 'Actions')
         actions_group.add_option(
             '-l', '--list',
             default='',
@@ -1038,8 +1038,9 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Answer Yes to all questions presented, defaults to False'
         )
 
-        key_options_group = optparse.OptionGroup(self,
-                                                 "Key Generation Options")
+        key_options_group = optparse.OptionGroup(
+            self, 'Key Generation Options'
+        )
         self.add_option_group(key_options_group)
         key_options_group.add_option(
             '--gen-keys',
@@ -1089,9 +1090,9 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def process_keysize(self):
         if self.options.keysize < 2048:
-            self.error("The minimum value for keysize is 2048")
+            self.error('The minimum value for keysize is 2048')
         elif self.options.keysize > 32768:
-            self.error("The maximum value for keysize is 32768")
+            self.error('The maximum value for keysize is 32768')
 
     def process_gen_keys_dir(self):
         # Schedule __create_keys_dir() to run if there's a value for
@@ -1178,7 +1179,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
-                self.error("-g/--grains does not accept any arguments")
+                self.error('-g/--grains does not accept any arguments')
 
             self.config['fun'] = self.args[0]
             self.config['arg'] = self.args[1:]
@@ -1204,7 +1205,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     default_timeout = 1
 
-    usage = "%prog [options]"
+    usage = '%prog [options]'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
