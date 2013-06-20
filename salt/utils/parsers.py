@@ -1077,6 +1077,9 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                     os.makedirs(self.options.gen_keys_dir)
                 self.options.config_dir = self.options.gen_keys_dir
         super(SaltKeyOptionParser, self).process_config_dir()
+    # Don't change it's mixin priority!
+    process_config_dir._mixin_prio_ = ConfigDirMixIn._mixin_prio_
+
 
     def setup_config(self):
         keys_config = config.master_config(self.get_config_file_path())
