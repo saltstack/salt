@@ -493,7 +493,7 @@ def symlink(
     Create a symlink
 
     If the file already exists and is a symlink pointing to any location other
-    then the specified target, the symlink will be replaced. If the symlink is
+    than the specified target, the symlink will be replaced. If the symlink is
     a regular file or directory then the state will return False. If the
     regular file or directory is desired to be replaced with a symlink pass
     force: True.
