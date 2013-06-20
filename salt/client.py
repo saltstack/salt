@@ -1080,7 +1080,9 @@ class LocalClient(object):
             payload_kwargs['to'] = timeout
 
         sreq = salt.payload.SREQ(
-            'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+            #'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+            'tcp://' + salt.utils.ip_bracket(self.opts['interface']) +
+            ':' + self.opts['ret_port'],
         )
         payload = sreq.send('clear', payload_kwargs)
 
