@@ -657,8 +657,8 @@ def get_repo_data():
 
         salt '*' pkg.get_repo_data
     '''
-    if 'winrepo.data' in __context__:
-        return __context__['winrepo.data']
+    #if 'winrepo.data' in __context__:
+    #    return __context__['winrepo.data']
     repocache = __opts__['win_repo_cachefile']
     cached_repo = __salt__['cp.is_cached'](repocache)
     if not cached_repo:
@@ -667,7 +667,7 @@ def get_repo_data():
         with salt.utils.fopen(cached_repo, 'r') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
-                __context__['winrepo.data'] = repodata
+                #__context__['winrepo.data'] = repodata
                 return repodata
             except Exception as exc:
                 log.exception(exc)
