@@ -11,6 +11,12 @@ class TimedProc(object):
     def __init__(self, args, **kwargs):
 
         self.command = args
+
+        self.with_communicate = True
+        if 'with_communicate' in kwargs:
+            self.with_communicate = kwargs['with_communicate']
+            del kwargs['with_communicate']
+
         self.process = subprocess.Popen(args, **kwargs)
 
     def wait(self, timeout=None):
@@ -19,7 +25,11 @@ class TimedProc(object):
         If timeout is reached, throw TimedProcTimeoutError
         '''
         def receive():
-            (self.stdout, self.stderr) = self.process.communicate()
+            if self.with_communicate:
+                (self.stdout, self.stderr) = self.process.communicate()
+            else:
+                self.process.wait()
+                (self.stdout, self.stderr) = (None, None)
 
         if timeout:
             if not isinstance(timeout, (int, float)):
