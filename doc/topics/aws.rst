@@ -523,6 +523,9 @@ them have never been used, much less tested, by the Salt Stack team.
 * `Gentoo`__
 .. __: https://aws.amazon.com/amis?platform=Gentoo&selection=platform
 
+* `OmniOS`__
+.. __: http://omnios.omniti.com/wiki.php/Installation#IntheCloud
+
 * `All Images on Amazon`__
 .. __: https://aws.amazon.com/amis
 
