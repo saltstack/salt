@@ -9,7 +9,7 @@ class DecoratorTest(integration.ModuleCase):
                     )
                 )
 
-    def test_depends(self):
+    def not_test_depends(self):
         ret = self.run_function('runtests_decorators.depends')
         self.assertTrue(ret['ret'])
         self.assertTrue(type(ret['time']) == float)
@@ -21,7 +21,7 @@ class DecoratorTest(integration.ModuleCase):
                     )
                 )
 
-    def test_depends_will_fallback(self):
+    def not_test_depends_will_fallback(self):
         ret = self.run_function('runtests_decorators.depends_will_fallback')
         self.assertTrue(ret['ret'])
         self.assertTrue(type(ret['time']) == float)
