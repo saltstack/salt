@@ -125,7 +125,7 @@ def list_upgrades(refresh=True):
         refresh_db()
 
     ret = {}
-    for name, data in _get_repo_data().items():
+    for name, data in get_repo_data().items():
         if version(name):
             latest = latest_version(name)
             if latest:
@@ -231,10 +231,15 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
+    name_map = _get_name_map()
     with salt.utils.winapi.Com():
         for key, val in _get_reg_software().iteritems():
+            if key in name_map:
+                key = name_map[key]
             __salt__['pkg_resource.add_pkg'](ret, key, val)
         for key, val in _get_msi_software().iteritems():
+            if key in name_map:
+                key = name_map[key]
             __salt__['pkg_resource.add_pkg'](ret, key, val)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
@@ -427,6 +432,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    __context__.pop('winrepo.data', None)
     repocache = __opts__['win_repo_cachefile']
     cached_repo = __salt__['cp.is_cached'](repocache)
     if not cached_repo:
@@ -643,7 +649,16 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
     return remove(name=name, pkgs=pkgs, version=version, **kwargs)
 
 
-def _get_repo_data():
+def get_repo_data():
+    '''
+    Returns the cached winrepo data
+
+    CLI Example::
+
+        salt '*' pkg.get_repo_data
+    '''
+    #if 'winrepo.data' in __context__:
+    #    return __context__['winrepo.data']
     repocache = __opts__['win_repo_cachefile']
     cached_repo = __salt__['cp.is_cached'](repocache)
     if not cached_repo:
@@ -652,12 +667,22 @@ def _get_repo_data():
         with salt.utils.fopen(cached_repo, 'r') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
+                #__context__['winrepo.data'] = repodata
                 return repodata
-            except Exception:
-                return ''
-    except IOError:
-        log.debug('Not able to read repo file')
-        return ''
+            except Exception as exc:
+                log.exception(exc)
+                return {}
+    except IOError as exc:
+        log.error('Not able to read repo file')
+        log.exception(exc)
+        return {}
+
+
+def _get_name_map():
+    '''
+    Return a reverse map of full pkg names to the names recognized by winrepo.
+    '''
+    return get_repo_data().get('name_map', {})
 
 
 def _get_package_info(name):
@@ -666,12 +691,7 @@ def _get_package_info(name):
     Returns empty map if package not available
     TODO: Add option for version
     '''
-    repodata = _get_repo_data()
-    if not repodata:
-        return ''
-    if name in repodata:
-        return repodata[name]
-    return ''
+    return get_repo_data().get('repo', {}).get(name, {})
 
 
 def _reverse_cmp_pkg_versions(pkg1, pkg2):
