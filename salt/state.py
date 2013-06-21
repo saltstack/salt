@@ -1358,7 +1358,6 @@ class State(object):
                     fun_stats.add('pre')
                 else:
                     fun_stats.add('met')
-        print fun_stats
 
         if 'unmet' in fun_stats:
             return 'unmet'
@@ -1387,7 +1386,6 @@ class State(object):
             status = self.check_requisite(low, running, chunks, True)
         else:
             status = self.check_requisite(low, running, chunks)
-        print status
         if status == 'unmet':
             lost = {}
             reqs = []
