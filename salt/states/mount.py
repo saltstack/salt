@@ -19,17 +19,15 @@ Mount any type of mountable filesystem with the mounted function:
 from salt._compat import string_types
 
 
-def mounted(
-        name,
-        device,
-        fstype,
-        mkmnt=False,
-        opts=None,
-        dump=0,
-        pass_num=0,
-        config='/etc/fstab',
-        persist=True,
-        ):
+def mounted(name,
+            device,
+            fstype,
+            mkmnt=False,
+            opts=None,
+            dump=0,
+            pass_num=0,
+            config='/etc/fstab',
+            persist=True):
     '''
     Verify that a device is mounted
 
@@ -94,7 +92,10 @@ def mounted(
             ret['result'] = False
         elif out is True:
             # Remount worked!
+            ret['comment'] = 'Target was successfully mounted'
             ret['changes']['mount'] = True
+    else:
+        ret['comment'] = 'Target was already mounted'
 
     if persist:
         if __opts__['test']:
@@ -107,27 +108,26 @@ def mounted(
 
         # present, new, change, bad config
         # Make sure the entry is in the fstab
-        out = __salt__['mount.set_fstab'](
-                name,
-                device,
-                fstype,
-                opts,
-                dump,
-                pass_num,
-                config)
+        out = __salt__['mount.set_fstab'](name,
+                                          device,
+                                          fstype,
+                                          opts,
+                                          dump,
+                                          pass_num,
+                                          config)
         if out == 'present':
             return ret
         if out == 'new':
             ret['changes']['persist'] = 'new'
-            ret['comment'] += ' and added new entry to the fstab'
+            ret['comment'] += '. Added new entry to the fstab.'
             return ret
         if out == 'change':
             ret['changes']['persist'] = 'update'
-            ret['comment'] += ' and updated the entry in the fstab'
+            ret['comment'] += '. Updated the entry in the fstab.'
             return ret
         if out == 'bad config':
             ret['result'] = False
-            ret['comment'] += ' but the fstab was not found'
+            ret['comment'] += '. However, the fstab was not found.'
             return ret
 
     return ret
@@ -181,26 +181,25 @@ def swap(name, persist=True, config='/etc/fstab'):
 
         # present, new, change, bad config
         # Make sure the entry is in the fstab
-        out = __salt__['mount.set_fstab'](
-                'none',
-                name,
-                'swap',
-                ['defaults'],
-                0,
-                0,
-                config)
+        out = __salt__['mount.set_fstab']('none',
+                                          name,
+                                          'swap',
+                                          ['defaults'],
+                                          0,
+                                          0,
+                                          config)
         if out == 'present':
             return ret
         if out == 'new':
             ret['changes']['persist'] = 'new'
-            ret['comment'] += ' and added new entry to the fstab'
+            ret['comment'] += '. Added new entry to the fstab.'
             return ret
         if out == 'change':
             ret['changes']['persist'] = 'update'
-            ret['comment'] += ' and updated the entry in the fstab'
+            ret['comment'] += '. Updated the entry in the fstab.'
             return ret
         if out == 'bad config':
             ret['result'] = False
-            ret['comment'] += ' but the fstab was not found'
+            ret['comment'] += '. However, the fstab was not found.'
             return ret
     return ret
