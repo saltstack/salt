@@ -402,8 +402,15 @@ def load_config(path, env_var):
         # defaults, not actually loading the whole configuration.
         return {}
 
-    if not path or not os.path.isfile(path):
-        path = os.environ.get(env_var, path)
+    # Default to the environment variable path, if it exists
+    env_path = os.environ.get(env_var, path)
+    if not env_path or not os.path.isfile(env_path):
+        env_path = path
+    # If non-default path from `-c`, use that over the env variable
+    if path != DEFAULT_MASTER_OPTS['conf_file']:
+        env_path = path
+    path = env_path
+
     # If the configuration file is missing, attempt to copy the template,
     # after removing the first header line.
     if not os.path.isfile(path):
