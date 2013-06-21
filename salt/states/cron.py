@@ -53,9 +53,9 @@ concurrently.
 
 Since Salt assumes a value of ``*`` for unspecified temporal parameters, adding
 a parameter to the state and setting it to ``random`` will change that value
-from ``*`` to a randomized numeric value. However, if the cron entry contains a
-numeric value on the minion, then using the ``random`` keyword will not modify
-this field.
+from ``*`` to a randomized numeric value. However, if that field in the cron
+entry on the minion already contains a numeric value, then using the ``random``
+keyword will not modify it.
 '''
 
 # Import python libs
