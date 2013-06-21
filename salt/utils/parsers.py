@@ -261,8 +261,11 @@ class ConfigDirMixIn(object):
     _config_filename_ = None
 
     def _mixin_setup(self):
+        default = '/etc/salt'
+        if utils.is_windows():
+            default = 'c:\salt\conf'
         self.add_option(
-            '-c', '--config-dir', default='/etc/salt',
+            '-c', '--config-dir', default=default,
             help=('Pass in an alternative configuration directory. Default: '
                   '%default')
         )
