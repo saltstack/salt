@@ -1871,7 +1871,26 @@ def patch(name,
 def touch(name, atime=None, mtime=None, makedirs=False):
     '''
     Replicate the 'nix "touch" command to create a new empty
-    file or update the atime and mtime of an existing  file.
+    file or update the atime and mtime of an existing file.
+
+    Note that if you just want to create a file and don't care about atime or
+    mtime, you should use ``file.managed`` instead, as it is more
+    feature-complete.  (Just leave out the ``source``/``template``/``contents``
+    arguments, and it will just create the file and/or check its permissions,
+    without messing with contents)
+
+    name
+        name of the file
+
+    atime
+        atime of the file
+
+    mtime
+        mtime of the file
+
+    makedirs
+        whether we should create the parent directory/directories in order to
+        touch the file
 
     Usage::
 
