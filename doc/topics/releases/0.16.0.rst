@@ -42,6 +42,11 @@ When templating files on Windows, Salt will now correctly use Windows
 appropriate line endings. This makes it much easier to edit and consume files
 on Windows.
 
+When using the cmd state the ```shell``` option now allows for specifying
+Windows Powershell as an alternate shell to execute cmd.run and cmd.script.
+This opens up Salt to all the power of Windows Powershell and its advanced
+Windows management capabilities.
+
 Muliple Targets for pkg.removed, pkg.purged States
 --------------------------------------------------
 
