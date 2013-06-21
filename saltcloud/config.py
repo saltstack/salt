@@ -4,6 +4,7 @@ Manage configuration files in salt-cloud
 
 # Import python libs
 import os
+import glob
 import logging
 
 # Import salt libs
@@ -167,27 +168,39 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     opts = apply_cloud_config(overrides, defaults)
 
     # 3rd - Include Cloud Providers
-    if 'providers' in opts and (providers_config is not None or (
-            providers_config and os.path.isfile(providers_config_path))):
-        raise saltcloud.exceptions.SaltCloudConfigError(
-            'Do not mix the old cloud providers configuration with '
-            'the new one. The providers configuration should now go in '
-            'the file `/etc/salt/cloud.providers` or a separate `*.conf` '
-            'file within `cloud.providers.d/` which is relative to '
-            '`/etc/salt/cloud.providers`.'
-        )
-    elif 'providers' not in opts and providers_config is None:
+    if 'providers' in opts:
+        if providers_config is not None:
+            raise saltcloud.exceptions.SaltCloudConfigError(
+               'Do not mix the old cloud providers configuration with '
+                'the passing a pre-configured providers configuration '
+                'dictionary.'
+            )
+
+        if providers_config_path is not None:
+            providers_confd = os.path.join(
+                os.path.dirname(providers_config_path),
+                'cloud.providers.d', '*'
+            )
+
+            if os.path.isfile(providers_config_path) or \
+                    glob.glob(providers_confd):
+                raise saltcloud.exceptions.SaltCloudConfigError(
+                    'Do not mix the old cloud providers configuration with '
+                    'the new one. The providers configuration should now go '
+                    'in the file `/etc/salt/cloud.providers` or a separate '
+                    '`*.conf` file within `cloud.providers.d/` which is '
+                    'relative to `/etc/salt/cloud.providers`.'
+                )
+        # No exception was raised? It's the old configuration alone
+        providers_config = opts['providers']
+
+    elif providers_config_path is not None:
         # Load from configuration file, even if that files does not exist since
         # it will be populated with defaults.
-        opts['providers'] = providers_config = cloud_providers_config(
-            providers_config_path
-        )
-    elif 'providers' not in opts and providers_config is not None:
-        # We're being passed a configuration dictionary
-        opts['providers'] = providers_config
-    else:
-        # Old style config
-        providers_config = opts['providers']
+        providers_config = cloud_providers_config(providers_config_path)
+
+    # Let's assign back the computed providers configuration
+    opts['providers'] = providers_config
 
     # 4th - Include VM profiles config
     if vm_config is None:
