@@ -463,7 +463,6 @@ class Minion(object):
             self.opts,
             self.functions,
             self.returners)
-        signal.signal(signal.SIGTERM, self.clean_die)
 
     def __getstate__(self):
         # Minion instance must be picklable for multiprocessing on windows
@@ -904,6 +903,7 @@ class Minion(object):
                 ),
                 exc_info=err
             )
+        signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         self.context = zmq.Context()
 
