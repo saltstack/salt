@@ -1352,18 +1352,21 @@ class State(object):
                 if r_state == 'watch' and run_dict[tag]['changes']:
                     fun_stats.add('change')
                     continue
-                if r_state == 'prereq' and run_dict[tag]['changes']:
-                    fun_stats.add('unmet')
+                if r_state == 'prereq' and run_dict[tag]['result'] is None:
+                    fun_stats.add('premet')
                 if r_state == 'prereq' and not run_dict[tag]['result'] is None:
                     fun_stats.add('pre')
                 else:
                     fun_stats.add('met')
+        print fun_stats
 
         if 'unmet' in fun_stats:
             return 'unmet'
         elif 'fail' in fun_stats:
             return 'fail'
         elif 'pre' in fun_stats:
+            if 'premet' in fun_stats:
+                return 'met'
             return 'pre'
         elif 'change' in fun_stats:
             return 'change'
@@ -1384,6 +1387,7 @@ class State(object):
             status = self.check_requisite(low, running, chunks, True)
         else:
             status = self.check_requisite(low, running, chunks)
+        print status
         if status == 'unmet':
             lost = {}
             reqs = []
