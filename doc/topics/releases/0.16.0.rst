@@ -63,3 +63,11 @@ a parameter to the state and setting it to ``random`` will change that value
 from ``*`` to a randomized numeric value. However, if the cron entry contains a
 numeric value on the minion, then using the ``random`` keyword will not modify
 this field.
+
+Confirmation Prompt on Key Acceptance
+-------------------------------------
+
+When accepting new keys with ``salt-key -a minion-id`` or ``salt-key -A``,
+there is now a prompt that will show the affected keys and ask for confirmation
+before proceeding. This prompt can be bypassed using the ``-y`` or ``--yes``
+command line argument, as with other ``salt-key`` commands.
