@@ -1352,6 +1352,8 @@ class State(object):
                 if r_state == 'watch' and run_dict[tag]['changes']:
                     fun_stats.add('change')
                     continue
+                if r_state == 'prereq' and run_dict[tag]['changes']:
+                    fun_stats.add('unmet')
                 if r_state == 'prereq' and not run_dict[tag]['result'] is None:
                     fun_stats.add('pre')
                 else:
