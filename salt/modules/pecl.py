@@ -24,6 +24,7 @@ def _pecl(command):
     if ret['retcode'] == 0:
         return ret['stdout']
     else:
+        log.error('Problem running pecl. Is php-pear installed?')
         return ''
 
 
