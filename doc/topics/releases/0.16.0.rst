@@ -14,7 +14,7 @@ Multi-Master
 This new capability allows for a minion to be actively connected to multiple
 salt masters at the same time. This allows for multiple masters to send out commands
 to minions and for minions to automatically reconnect to masters that have gone
-down.
+down. A tutorial is available to 
 
 Prereq, the New Requisite
 -------------------------
@@ -28,6 +28,28 @@ stop sending requests while server side code is updated. In this case, the
 prereq will only run if changes are expected to happen in the prerequired
 state, and the prerequired state will always run after the prereq state and
 only if the prereq state succeeds.
+
+Peer System Improvements
+------------------------
+
+The peer system has been revamped to make it more reliable, faster, and like
+the rest of Salt, async. The peer calls when an updated minion and master are
+used together will be much faster!
+
+Relative Includes
+-----------------
+
+The ability to include an sls relative to the defined sls has been added, the
+new syntax id documented here:
+
+:doc:`Includes </ref/states/include>`
+
+More State Output Options
+-------------------------
+
+The ``state_output`` option in the past only supported `full` and `terse`,
+0.16.0 add the `mixed` and `changes` modes further refining how states are sent
+to users' eyes.
 
 Improved Windows Support
 ------------------------
