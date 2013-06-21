@@ -38,6 +38,10 @@ recognized by the short names defined in the :doc:`repository SLS
 pkg.version firefox`` and get back results from Windows and non-Windows minions
 alike.
 
+When templating files on Windows, Salt will now correctly use Windows
+appropriate line endings. This makes it much easier to edit and consume files
+on Windows.
+
 Muliple Targets for pkg.removed, pkg.purged States
 --------------------------------------------------
 
