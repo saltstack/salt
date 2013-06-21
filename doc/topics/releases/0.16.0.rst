@@ -31,21 +31,33 @@ only if the prereq state succeeds.
 
 Improved Windows Support
 ------------------------
-Support for Salt on Windows continues to get better. Software management has
-become more seamless with Linux/UNIX/BSD, with installed software now
-recognized by the short names defined in the :doc:`repository SLS
-</ref/windows-package-manager>`. This makes it possible to run ``salt '*'
-pkg.version firefox`` and get back results from Windows and non-Windows minions
-alike.
+
+Support for Salt on Windows continues to improve. Software management on
+Windows has become more seamless with Linux/UNIX/BSD software management.
+Installed software is now recognized by the short names defined in the
+:doc:`repository SLS </ref/windows-package-manager>`. This makes it possible to
+run ``salt '*' pkg.version firefox`` and get back results from Windows and
+non-Windows minions alike.
 
 When templating files on Windows, Salt will now correctly use Windows
 appropriate line endings. This makes it much easier to edit and consume files
 on Windows.
 
-When using the cmd state the ```shell``` option now allows for specifying
+When using the cmd state the ``shell`` option now allows for specifying
 Windows Powershell as an alternate shell to execute cmd.run and cmd.script.
 This opens up Salt to all the power of Windows Powershell and its advanced
 Windows management capabilities.
+
+Several fixes and optimizations were added for the Windows networking modules,
+especially when working with IPv6.
+
+A system module was added that makes it easy to restart and shutdown Windows
+minions.
+
+The Salt Minion will now look for its config file in ``c:\salt\conf`` by
+default. This means that it's no longer necessary to specify the ``-c`` option
+to specify the location of the config file when starting the Salt Minion on
+Windows in a terminal.
 
 Muliple Targets for pkg.removed, pkg.purged States
 --------------------------------------------------
