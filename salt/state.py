@@ -1643,16 +1643,17 @@ class BaseHighState(object):
             opts['state_top'] = 'salt://top.sls'
             opts['nodegroups'] = {}
             opts['file_roots'] = {'base': ['/srv/salt']}
-        opts['renderer'] = mopts['renderer']
-        opts['failhard'] = mopts.get('failhard', False)
-        if mopts['state_top'].startswith('salt://'):
-            opts['state_top'] = mopts['state_top']
-        elif mopts['state_top'].startswith('/'):
-            opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
         else:
-            opts['state_top'] = os.path.join('salt://', mopts['state_top'])
-        opts['nodegroups'] = mopts.get('nodegroups', {})
-        opts['file_roots'] = mopts['file_roots']
+            opts['renderer'] = mopts['renderer']
+            opts['failhard'] = mopts.get('failhard', False)
+            if mopts['state_top'].startswith('salt://'):
+                opts['state_top'] = mopts['state_top']
+            elif mopts['state_top'].startswith('/'):
+                opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
+            else:
+                opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+            opts['nodegroups'] = mopts.get('nodegroups', {})
+            opts['file_roots'] = mopts['file_roots']
         return opts
 
     def _get_envs(self):
