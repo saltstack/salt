@@ -210,9 +210,49 @@ def apply_cloud_config(overrides, defaults=None):
     # If the user defined providers in salt cloud's main configuration file, we
     # need to take care for proper and expected format.
     if 'providers' in config:
-        for alias, details in config.copy()['providers'].items():
-            if isinstance(details, dict):
-                config['providers'][alias] = [details]
+        # Keep a copy of the defined providers
+        providers = config['providers'].copy()
+        # Reset the providers dictionary
+        config['providers'] = {}
+        # Populate the providers dictionary
+        for alias, details in providers.items():
+            if isinstance(details, list):
+                for detail in details:
+                    if 'provider' not in detail:
+                        raise saltcloud.exceptions.SaltCloudConfigError(
+                            'The cloud provider alias {0!r} has an entry '
+                            'missing the required setting \'provider\''.format(
+                                alias
+                            )
+                        )
+
+                    driver = detail['provider']
+                    if ':' in driver:
+                        # Weird, but...
+                        alias, driver = driver.split(':')
+
+                    if alias not in config['providers']:
+                        config['providers'][alias] = {}
+
+                    detail['provider'] = '{0}:{1}'.format(alias, driver)
+                    config['providers'][alias][driver] = detail
+            elif isinstance(details, dict):
+                if 'provider' not in details:
+                    raise saltcloud.exceptions.SaltCloudConfigError(
+                        'The cloud provider alias {0!r} has an entry '
+                        'missing the required setting \'provider\''.format(
+                            alias
+                        )
+                    )
+                driver = details['provider']
+                if ':' in driver:
+                    # Weird, but...
+                    alias, driver = driver.split(':')
+                if alias not in config['providers']:
+                    config['providers'][alias] = {}
+
+                details['provider'] = '{0}:{1}'.format(alias, driver)
+                config['providers'][alias][driver] = details
 
     # Migrate old configuration
     config = old_to_new(config)
@@ -223,6 +263,7 @@ def apply_cloud_config(overrides, defaults=None):
 def old_to_new(opts):
     providers = (
         'AWS',
+        'CLOUDSTACK',
         'DIGITAL_OCEAN',
         'EC2',
         'GOGRID',
