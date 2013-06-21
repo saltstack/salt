@@ -4,6 +4,7 @@ import threading
 import time
 import pickle
 import subprocess
+import copy
 
 import integration
 
@@ -21,11 +22,12 @@ class MultiprocessingTest(integration.ShellCase):
         minion_opts = salt.config.minion_config(
             os.path.join(integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
         )
-        minion = salt.minion.Minion(minion_opts)
-        process = threading.Thread(target=minion.tune_in)
-        process.daemon=True
+        my_opts=copy.copy(minion_opts)
+        my_opts['id']='test_minion_pickle'
+        minion = salt.minion.Minion(my_opts)
+        process = threading.Thread(target=minion.tune_in_no_block)
         process.start()
-        time.sleep(5)
+        process.join()
         try:
             pickle.dumps(minion)
         except:
@@ -48,7 +50,12 @@ class MultiprocessingTest(integration.ShellCase):
         minion_opts = salt.config.minion_config(
             os.path.join(integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
         )
-        minion = salt.minion.Minion(minion_opts)
+        my_opts=copy.copy(minion_opts)
+        my_opts['id']='test_minion_schedule_pickle'
+        minion = salt.minion.Minion(my_opts)
+        process = threading.Thread(target=minion.tune_in_no_block)
+        process.start()
+        process.join()
         
         try:
             pickle.dumps(minion.schedule)
