@@ -24,7 +24,7 @@ def _pecl(command):
     if ret['retcode'] == 0:
         return ret['stdout']
     else:
-        return False
+        return ''
 
 
 def install(pecls):
