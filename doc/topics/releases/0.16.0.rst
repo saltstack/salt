@@ -33,7 +33,7 @@ Improved Windows Support
 ------------------------
 Support for Salt on Windows continues to get better. Software management has
 become more seamless with Linux/UNIX/BSD, with installed software now
-recognized by the short names defined in the :ref:`repository SLS
+recognized by the short names defined in the :doc:`repository SLS
 </ref/windows-package-manager>`. This makes it possible to run ``salt '*'
 pkg.version firefox`` and get back results from Windows and non-Windows minions
 alike.
