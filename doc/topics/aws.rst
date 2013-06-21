@@ -656,14 +656,14 @@ Alternate Endpoint
 Normally, EC2 endpoints are build using the region and the service_url. The 
 resulting endpoint would follow this pattern:
 
-.. code-block::
+.. code-block:: bash
 
     ec2.<region>.<service_url>
 
 
 This results in an endpoint that looks like:
 
-.. code-block::
+.. code-block:: bash
 
     ec2.us-east-1.amazonaws.com
 

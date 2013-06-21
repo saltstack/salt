@@ -68,7 +68,7 @@ Compute Region
 
 Rackspace currently has three compute regions which may be used:
 
-.. code-block::
+.. code-block:: bash
 
     DFW -> Dallas/Forth Worth
     ORD -> Chicago

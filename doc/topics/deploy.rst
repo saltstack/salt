@@ -47,7 +47,7 @@ If you want to be assured of always using the latest Salt Bootstrap script,
 there are a few generic templates available in the deploy directory of your
 saltcloud source tree:
 
-.. code-block::
+.. code-block:: bash
 
     curl-bootstrap
     curl-bootstrap-git
