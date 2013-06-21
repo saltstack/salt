@@ -14,6 +14,7 @@ import salt.output
 import salt.utils
 import logging
 import salt.minion
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -41,11 +42,14 @@ def genrepo():
                                   '{0}: {1}'.format(os.path.join(root, name), exc))
                         print 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)
                 if config:
-                    ret.setdefault('repo', {}).update(config)
                     revmap = {}
                     for pkgname, versions in config.iteritems():
-                        for repodata in versions.values():
+                        for version, repodata in versions.iteritems():
+                            if not isinstance(version, string_types):
+                                config[pkgname][str(version)] = \
+                                    config[pkgname].pop(version)
                             revmap[repodata['full_name']] = pkgname
+                    ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)
     with salt.utils.fopen(os.path.join(repo, winrepo), 'w') as repo:
         repo.write(msgpack.dumps(ret))
