@@ -15,6 +15,7 @@ import time
 import signal
 import subprocess
 import pickle
+import threading
 from hashlib import md5
 from subprocess import PIPE, Popen
 from datetime import datetime, timedelta
@@ -1065,9 +1066,13 @@ class MultiprocessingTest(ShellCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
         )
         minion = salt.minion.Minion(minion_opts)
+        process = threading.Thread(target=minion.tune_in)
+        process.daemon=True
+        process.start()
+        time.sleep(5)
         try:
             pickle.dumps(minion)
-        except pickle.PicklingError as e:
+        except:
             if hasattr(minion, '__getstate__'):
                 state = minion.__getstate__()
             else:
@@ -1076,7 +1081,7 @@ class MultiprocessingTest(ShellCase):
             for k, v in state.items():
                 try:
                     pickle.dumps(v)
-                except pickle.PicklingError:
+                except:
                     failed_attrs.append(k)
             self.fail('Minion instance attrs are not picklable: {0}'.format(failed_attrs))
 
@@ -1088,9 +1093,10 @@ class MultiprocessingTest(ShellCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
         )
         minion = salt.minion.Minion(minion_opts)
+        
         try:
             pickle.dumps(minion.schedule)
-        except pickle.PicklingError as e:
+        except:
             if hasattr(minion.schedule, '__getstate__'):
                 state = minion.schedule.__getstate__()
             else:
@@ -1099,7 +1105,7 @@ class MultiprocessingTest(ShellCase):
             for k, v in state.items():
                 try:
                     pickle.dumps(v)
-                except pickle.PicklingError:
+                except:
                     failed_attrs.append(k)
             self.fail('Schedule instance attrs are not picklable: {0}'.format(failed_attrs))
 

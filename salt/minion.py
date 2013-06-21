@@ -468,9 +468,17 @@ class Minion(object):
         # Minion instance must be picklable for multiprocessing on windows
         # Strip the unpicklable attributes and recreate on the other side
         picklable_state = copy.copy(self.__dict__)
-        del picklable_state['functions']
-        del picklable_state['returners']
-        del picklable_state['schedule']
+        for attr in ['functions', 
+                     'returners',
+                     'schedule',
+                     'epoller', 
+                     'socket', 
+                     'epub_sock',
+                     'poller', 
+                     'epull_sock',
+                     'context']:
+            del picklable_state[attr]
+
         return picklable_state
 
     def __setstate__(self, state):
@@ -892,7 +900,8 @@ class Minion(object):
                 ),
                 exc_info=err
             )
-        signal.signal(signal.SIGTERM, self.clean_die)
+        if threading.current_thread() == 'MainThread':
+            signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         self.context = zmq.Context()
 
