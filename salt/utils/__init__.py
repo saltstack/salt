@@ -34,6 +34,12 @@ except ImportError:
     # fcntl is not available on windows
     HAS_FNCTL = False
 
+try:
+    import win32api
+    HAS_WIN32API = True
+except ImportError:
+    HAS_WIN32API = False
+
 # Import salt libs
 import salt.log
 import salt.minion
@@ -1186,3 +1192,13 @@ def parse_kwarg(string):
         return match.groups()
     else:
         return None, None
+
+def _win_console_event_handler(event):
+    if event == 5:
+        # Do nothing on CTRL_LOGOFF_EVENT
+        return True
+    return False
+
+def enable_ctrl_logoff_handler():
+    if HAS_WIN32API:
+        win32api.SetConsoleCtrlHandler(_win_console_event_handler, 1)

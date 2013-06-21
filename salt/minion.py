@@ -984,6 +984,10 @@ class Minion(object):
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
+
+        # Make sure to gracefully handle CTRL_LOGOFF_EVENT
+        salt.utils.enable_ctrl_logoff_handler()
+        
         # On first startup execute a state run if configured to do so
         self._state_run()
 
