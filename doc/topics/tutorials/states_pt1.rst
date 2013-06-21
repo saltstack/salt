@@ -57,6 +57,7 @@ The :term:`top file` is separated into environments (discussed later). The
 default environment is ``base``. Under the ``base`` environment a collection of
 minion matches is defined; for now simply specify all hosts (``*``).
 
+.. _targeting-minions:
 .. admonition:: Targeting minions
 
     The expressions can use any of the targeting mechanisms used by Salt —
@@ -128,6 +129,26 @@ compiled, and executed.
 
 Once completed, the minion will report back with a summary of all actions taken
 and all changes made.
+
+.. _sls-file-namespace:
+.. admonition:: SLS File Namespace
+
+    Note that in the :ref:`example <targeting-minions>` above, the SLS file
+    ``webserver.sls`` was referred to simply as ``webserver``. The namespace
+    for SLS files follows a few simple rules:
+
+    1. The ``.sls`` is discarded (i.e. ``webserver.sls`` becomes
+       ``webserver``).
+    2. Subdirectories can be used for better organization.
+        a. Each subdirectory is represented by a dot.
+        b. ``webserver/dev.sls`` is referred to as ``webserver.dev``.
+    3. A file called ``init.sls`` in a subdirectory is referred to by the path
+       of the directory. So, ``webserver/init.sls`` is referred to as
+       ``webserver``.
+    4. If both ``webserver.sls`` and ``webserver/init.sls`` happen to exist,
+       ``webserver/init.sls`` will be ignored and ``webserver.sls`` will be the
+       file referred to as ``webserver``.
+
 
 .. admonition:: Troubleshooting Salt
 
