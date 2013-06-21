@@ -28,6 +28,7 @@ class MultiprocessingTest(integration.ShellCase):
         process = threading.Thread(target=minion.tune_in_no_block)
         process.start()
         process.join()
+        self.run_key('-y -d test_minion_pickle')
         try:
             pickle.dumps(minion)
         except:
@@ -56,7 +57,7 @@ class MultiprocessingTest(integration.ShellCase):
         process = threading.Thread(target=minion.tune_in_no_block)
         process.start()
         process.join()
-        
+        self.run_key('-y -d test_minion_schedule_pickle')
         try:
             pickle.dumps(minion.schedule)
         except:
