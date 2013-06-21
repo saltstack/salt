@@ -44,6 +44,7 @@ import salt.utils.schedule
 from salt.state import _getargs
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
+from salt.utils import enable_ctrl_logoff_handler
 
 log = logging.getLogger(__name__)
 
@@ -984,6 +985,10 @@ class Minion(object):
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
+
+        # Make sure to gracefully handle CTRL_LOGOFF_EVENT
+        enable_ctrl_logoff_handler()
+        
         # On first startup execute a state run if configured to do so
         self._state_run()
 
