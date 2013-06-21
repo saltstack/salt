@@ -118,12 +118,12 @@ Most, unless not applicable, output is now done in an ``<provider-alias>``
 always better. For an ``ec2-config`` provider alias with an ``ec2`` driver 
 configured:
 
-.. code-block::
+.. code-block:: bash
 
     salt-cloud -f show_image ec2-config image=ami-35eb835c
 
 
-.. code-block::
+.. code-block:: yaml
 
     ec2-config:
         ----------
