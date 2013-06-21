@@ -14,7 +14,9 @@ Multi-Master
 This new capability allows for a minion to be actively connected to multiple
 salt masters at the same time. This allows for multiple masters to send out commands
 to minions and for minions to automatically reconnect to masters that have gone
-down. A tutorial is available to 
+down. A tutorial is available to help get started here:
+
+:doc:`Multi Master Tutorial <topics/tutorials/multimaster>`
 
 Prereq, the New Requisite
 -------------------------
