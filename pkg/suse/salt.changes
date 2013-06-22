@@ -1,4 +1,33 @@
 -------------------------------------------------------------------
+Sat Jun 22 05:31:10 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.16.0RC
+- New Feautures in 0.16.0:
+  - Multi-Master capability
+  - Prereq, the new requisite
+  - Peer system improvement
+  - Relative Includes
+  - More state Output Options
+  - Improved Windows Support
+  - Multi Targets for pkg.removed, pgk.purged States
+  - Random Times in cron states
+  - Confirmation Prompt on Key acceptance on master
+- full changelog details: http://docs.saltstack.com/topics/releases/0.16.0.html
+
+-------------------------------------------------------------------
+Wed Jun 12 20:48:36 UTC 2013 - aboe76@gmail.com
+
+- Updated init files from upstream, so init files are the same for
+  fedora/redhat/centos/debian/suse
+- Removed salt user and daemon.conf file, so package is in line
+  with upstream packages fedora/centos/debian.
+
+-------------------------------------------------------------------
+Sun Jun  2 07:39:03 UTC 2013 - aboe76@gmail.com
+
+- minor permission fix on salt config files to fix external auth
+
+-------------------------------------------------------------------
 Sat Jun  1 21:51:07 UTC 2013 - aboe76@gmail.com
 
 - Service release 0.15.3
