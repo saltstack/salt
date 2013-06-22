@@ -299,6 +299,8 @@ if with_setuptools:
                             'salt = salt.scripts:salt_main'
                             ],
     }
+    if os.name == 'nt':
+        setup_kwargs['entry_points']['console_scripts'].append('salt-minion.py = salt.scripts:salt_minion.py')
 else:
     setup_kwargs['scripts'] = ['scripts/salt-master',
                                'scripts/salt-minion',
@@ -308,6 +310,8 @@ else:
                                'scripts/salt-call',
                                'scripts/salt-run',
                                'scripts/salt']
+    if os.name == 'nt':
+        setup_kwargs['scripts'].append('scripts/salt-minion.py')
 
 if __name__ == '__main__':
     setup(**setup_kwargs)

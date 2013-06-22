@@ -1050,3 +1050,4 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
+

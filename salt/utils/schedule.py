@@ -25,6 +25,7 @@ import multiprocessing
 import threading
 import sys
 import logging
+import copy
 
 # Import Salt libs
 import salt.utils
@@ -49,6 +50,27 @@ class Schedule(object):
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint
+
+    def __getstate__(self):
+        # Schedule instance must be picklable for multiprocessing on windows
+        # Strip the unpicklable attributes and recreate on the other side
+        picklable_state = copy.copy(self.__dict__)
+        del picklable_state['functions']
+        del picklable_state['returners']
+        return picklable_state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.functions, self.returners = self.__load_modules()
+
+    def __load_modules(self):
+        '''
+        Return the functions and the returners loaded up from the loader
+        module
+        '''
+        functions = salt.loader.minion_mods(self.opts)
+        returners = salt.loader.returners(self.opts, functions)
+        return functions, returners
 
     def option(self, opt):
         '''

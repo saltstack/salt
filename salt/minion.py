@@ -464,6 +464,34 @@ class Minion(object):
             self.functions,
             self.returners)
 
+    def __getstate__(self):
+        # Minion instance must be picklable for multiprocessing on windows
+        # Strip the unpicklable attributes and recreate on the other side
+        picklable_state = copy.copy(self.__dict__)
+        for attr in ['functions', 
+                     'returners',
+                     'schedule',
+                     'epoller', 
+                     'socket', 
+                     'epub_sock',
+                     'poller', 
+                     'epull_sock',
+                     'context']:
+            try:
+                del picklable_state[attr]
+            except KeyError:
+                pass
+
+        return picklable_state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.functions, self.returners = self.__load_modules()
+        self.schedule = salt.utils.schedule.Schedule(
+            self.opts,
+            self.functions,
+            self.returners)
+
     def __prep_mod_opts(self):
         '''
         Returns a copy of the opts with key bits stripped out
@@ -574,53 +602,44 @@ class Minion(object):
                 self.functions, self.returners = self.__load_modules()
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
+        instance = self
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-            target = Minion._thread_multi_return
+            target = self._thread_multi_return
         else:
-            target = Minion._thread_return
+            target = self._thread_return
         # We stash an instance references to allow for the socket
         # communication in Windows. You can't pickle functions, and thus
         # python needs to be able to reconstruct the reference on the other
         # side.
-        instance = self
         if self.opts['multiprocessing']:
-            if sys.platform.startswith('win'):
-                # let python reconstruct the minion on the other side if we're
-                # running on windows
-                instance = None
             process = multiprocessing.Process(
-                target=target, args=(instance, self.opts, data)
+                target=target, args=(data,)
             )
         else:
             process = threading.Thread(
-                target=target, args=(instance, self.opts, data)
+                target=target, args=(data,)
             )
         process.start()
         process.join()
 
-    @classmethod
-    def _thread_return(cls, minion_instance, opts, data):
+    def _thread_return(self, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        # this seems awkward at first, but it's a workaround for Windows
-        # multiprocessing communication.
-        if not minion_instance:
-            minion_instance = cls(opts)
-        if opts['multiprocessing']:
-            fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
-            salt.utils.daemonize_if(opts)
+        if self.opts['multiprocessing']:
+            fn_ = os.path.join(self.proc_dir, data['jid'])
+            salt.utils.daemonize_if(self.opts)
             sdata = {'pid': os.getpid()}
             sdata.update(data)
             with salt.utils.fopen(fn_, 'w+') as fp_:
-                fp_.write(minion_instance.serial.dumps(sdata))
+                fp_.write(self.serial.dumps(sdata))
         ret = {}
         function_name = data['fun']
-        if function_name in minion_instance.functions:
+        if function_name in self.functions:
             ret['success'] = False
             try:
-                func = minion_instance.functions[data['fun']]
+                func = self.functions[data['fun']]
                 args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 ret['return'] = func(*args, **kwargs)
@@ -645,7 +664,7 @@ class Minion(object):
                 )
             except TypeError as exc:
                 trb = traceback.format_exc()
-                aspec = _getargs(minion_instance.functions[data['fun']])
+                aspec = _getargs(self.functions[data['fun']])
                 log.warning(('TypeError encountered executing {0}. See debug '
                              'log for more info.  Possibly a missing '
                              'arguments issue:  {1}').format(function_name,
@@ -669,12 +688,12 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
-        minion_instance._return_pub(ret)
+        self._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):
-                ret['id'] = opts['id']
+                ret['id'] = self.opts['id']
                 try:
-                    minion_instance.returners['{0}.returner'.format(
+                    self.returners['{0}.returner'.format(
                         returner
                     )](ret)
                 except Exception as exc:
@@ -685,16 +704,11 @@ class Minion(object):
                         )
                     )
 
-    @classmethod
-    def _thread_multi_return(cls, minion_instance, opts, data):
+    def _thread_multi_return(self, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        # this seems awkward at first, but it's a workaround for Windows
-        # multiprocessing communication.
-        if not minion_instance:
-            minion_instance = cls(opts)
         ret = {
             'return': {},
             'success': {},
@@ -702,7 +716,7 @@ class Minion(object):
         for ind in range(0, len(data['fun'])):
             ret['success'][data['fun'][ind]] = False
             try:
-                func = minion_instance.functions[data['fun'][ind]]
+                func = self.functions[data['fun'][ind]]
                 args, kwargs = parse_args_and_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
@@ -715,12 +729,12 @@ class Minion(object):
                 )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
-        minion_instance._return_pub(ret)
+        self._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):
-                ret['id'] = opts['id']
+                ret['id'] = self.opts['id']
                 try:
-                    minion_instance.returners['{0}.returner'.format(
+                    self.returners['{0}.returner'.format(
                         returner
                     )](ret)
                 except Exception as exc:
@@ -1304,6 +1318,17 @@ class Matcher(object):
         if functions is None:
             functions = salt.loader.minion_mods(self.opts)
         self.functions = functions
+
+    def __getstate__(self):
+        # Schedule instance must be picklable for multiprocessing on windows
+        # Strip the unpicklable attributes and recreate on the other side
+        picklable_state = copy.copy(self.__dict__)
+        del picklable_state['functions']
+        return picklable_state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.functions = salt.loader.minion_mods(self.opts)
 
     def confirm_top(self, match, data, nodegroups=None):
         '''

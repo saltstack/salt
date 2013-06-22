@@ -91,7 +91,7 @@ def run_integration_tests(opts):
     '''
     Execute the integration tests suite
     '''
-    if opts.unit and not (opts.runner or opts.states or opts.module or opts.client):
+    if opts.unit and not (opts.runner or opts.states or opts.module or opts.client, opts.wincompat):
         return [True]
     smax_open_files, hmax_open_files = resource.getrlimit(resource.RLIMIT_NOFILE)
     if smax_open_files < REQUIRED_OPEN_FILES:
@@ -116,13 +116,15 @@ def run_integration_tests(opts):
     print_header('Setting up Salt daemons to execute tests', top=False)
     status = []
     if not any([opts.client, opts.module, opts.runner,
-                opts.shell, opts.state, opts.name]):
+                opts.shell, opts.state, opts.name, opts.wincompat]):
         return status
     with TestDaemon(opts=opts):
         if opts.name:
             for name in opts.name:
                 results = run_suite(opts, '', name)
                 status.append(results)
+        if opts.wincompat:
+            status.append(run_integration_suite(opts, 'wincompat', 'Windows Compatibilty'))
         if opts.runner:
             status.append(run_integration_suite(opts, 'runners', 'Runner'))
         if opts.module:
@@ -214,6 +216,14 @@ def parse_opts():
         default=False,
         action='store_true',
         help='Run runner tests'
+    )
+    tests_select_group.add_option(
+        '-w',
+        '--wincompat',
+        dest='wincompat',
+        default=False,
+        action='store_true',
+        help='Run windows compatibility tests'
     )
     tests_select_group.add_option(
         '-u',
@@ -336,7 +346,7 @@ def parse_opts():
             )
 
         if any((options.module, options.client, options.shell, options.unit,
-                options.state, options.runner, options.name,
+                options.state, options.runner, options.name, options.wincompat,
                 os.geteuid() != 0, not options.run_destructive)):
             parser.error(
                 'No sense in generating the tests coverage report when not '
@@ -396,13 +406,14 @@ def parse_opts():
     if not any((options.module, options.client,
                 options.shell, options.unit,
                 options.state, options.runner,
-                options.name)):
+                options.name, options.wincompat)):
         options.module = True
         options.client = True
         options.shell = True
         options.unit = True
         options.runner = True
         options.state = True
+        options.wincompat = True
     return options
 
 

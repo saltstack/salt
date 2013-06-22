@@ -3,11 +3,17 @@
 This script is used to kick off a salt minion daemon
 '''
 
+import sys
 from salt.scripts import salt_minion
 from multiprocessing import freeze_support
 
 
 if __name__ == '__main__':
+    if sys.platform == 'win32' \
+       and not getattr(sys, 'frozen', False) \
+       and not __file__.endswith('.py'):
+        # If it's not a frozen build then the main module must have a .py ext on windows
+        raise RuntimeError('Run {0}.py on windows for multiprocessing support'.format(__file__))
     # This handles the bootstrapping code that is included with frozen
     # scripts. It is a no-op on unfrozen code.
     freeze_support()
