@@ -71,7 +71,7 @@ Require
 
 The most basic requisite statement is ``require``. The behavior of require is
 simple. Make sure that the dependent state is executed before the depending
-state, and it the dependent state fails, don't run the depending state. So in
+state, and if the dependent state fails, don't run the depending state. So in
 the above examples the file ``/etc/vimrc`` will only be applied after the vim
 package is installed and only if the vim package is installed successfully.
 
