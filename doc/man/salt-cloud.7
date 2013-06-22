@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "April 11, 2013" "0.8.8" "salt-cloud"
+.TH "SALT-CLOUD" "7" "June 22, 2013" "0.8.9" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -374,6 +374,20 @@ for academic purposes.
 If you want to be assured of always using the latest Salt Bootstrap script,
 there are a few generic templates available in the deploy directory of your
 saltcloud source tree:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+curl\-bootstrap
+curl\-bootstrap\-git
+python\-bootstrap
+wget\-bootstrap
+wget\-bootstrap\-git
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 These are example scripts which were designed to be customized, adapted, and
 refit to meet your needs. One important use of them is to pass options to
@@ -1154,6 +1168,7 @@ my\-digitalocean\-config:
   client_key: wFGEwgregeqw3435gDger
   api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
   provider: digital_ocean
+  location: New York 1
 .ft P
 .fi
 .UNINDENT
@@ -2600,6 +2615,20 @@ script: None
 If you want to be assured of always using the latest Salt Bootstrap script,
 there are now a few generic templates available in the deploy directory of
 your saltcloud source tree:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+curl\-bootstrap
+curl\-bootstrap\-git
+python\-bootstrap
+wget\-bootstrap
+wget\-bootstrap\-git
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 These are example scripts which were designed to be customized, adapted, and
 refit to meet your needs. One important use of them is to pass options to
@@ -2862,6 +2891,16 @@ time, the instance still retails a Name tag, which will cause a collision if the
 creation of an instance with the same name is attempted before the cleanup
 occurs. In order to avoid such collisions, Salt Cloud can be configured to
 rename instances when they are destroyed. The new name will look something like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+myinstance\-DEL20f5b8ad4eb64ed88f2c428df80a1a0c
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 In order to enable this, add AWS.rename_on_destroy line to the main
 configuration file:
@@ -3479,6 +3518,186 @@ my\-productions\-envs:
 .fi
 .UNINDENT
 .UNINDENT
+.SS Salt Cloud 0.8.9 Release Notes
+.sp
+Welcome to 0.8.9! It has been a long time since the last release, and we\(aqre
+excited to get this one out the door!
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.9.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS New Cloudstack Driver
+.sp
+One of the more impressive stories this release involves the Cloud Stack driver,
+written by Sebastien Goasguen. After meeting Thomas Hatch at the LinuxTag
+conference, Sebastien went out and wrote a Cloud Stack driver for Salt Cloud, in
+less time than it took to compile these release notes. His story is here:
+.sp
+\fI\%http://sebgoa.blogspot.com/2013/05/the-linuxtag-hack.html\fP
+.sp
+Several people have been asking for this driver, and we are very grateful to
+Sebastien for adding it for us!
+.SS Updated Joyent Support
+.sp
+Joyent has updated their API, and Salt Cloud has included the updates in this
+version. Bob Szabo did the bulk of this work, and we would like to extend a
+special thanks to him for his efforts. The Joyent driver has also been
+optimized to access the API directly, resulting in faster operations, and
+opening up more of Joyent\(aqs native API for future use. Some of the features
+that have already been added as a result of this pertain to SSH key management,
+directly from Salt Cloud. The following functions have been added:
+.INDENT 0.0
+.IP \(bu 2
+list_keys
+.IP \(bu 2
+show_key
+.IP \(bu 2
+import_key
+.IP \(bu 2
+delete_key
+.UNINDENT
+.SS Mapping Independent Hierarchies
+.sp
+Salt Cloud 0.8.5 introduced the ability to spin up an instance and install
+the salt\-master package on it. This functionality has been extended, so that
+a map file may now spin up a new master, and its minions, and pre\-seed the
+master with the minion keys so that they are immediately accepted by the time
+the new salt\-master starts up, and each minion is started up. A map file that
+can accomplish this might look like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+Ubuntu\-12.04\-64bit:
+  TT_Master:
+    minion:
+      retry_dns: 5
+    make_master: True
+  TT2:
+    minion:
+      retry_dns: 5
+  TT3:
+    minion:
+      retry_dns: 5
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This functionality was added by Pedro Algarvio, to spin up hierarchies for
+testing purposes, and then remove them when finished. This can be instrumental
+to organizations wishing to extend their testing and build environments. We
+would like to thank him for this, and the many other contributions that he has
+added to this and other releases!
+.SS Parallel Creation and Logging
+.sp
+There have been reports of issues in the past pertaining to screen issues when
+running salt\-cloud in parallel mode (\-P). This mode has been greatly stabilized
+in this release. Additionally, parallel logging capabilities have been added,
+allowing users to store parallel execution logs. Finally, keyboard interrupts
+(such as ^C) are now properly handled.
+.SS Internal Data Structure
+.sp
+On 0.8.7 we unleashed the power of multiple cloud provider profiles, it even
+allows multiple profiles for the same cloud provider.  That was a much asked
+feature and was adopted by users right away.  Unfortunately, all that power had
+a small point of failure when multiple profiles existed for the same cloud
+provider. Only the first was used in most operations.
+To fix this small issue, salt\-cloud\(aqs internal data structure changed quite a
+bit. Every action, function, virtual machine creation, etc, is now, \fBalways\fP
+"attached" to a provider alias and the(one of the) cloud drivers defined.
+Internally, when loading the configuration, all the defined profiles are
+matched to the available providers. If the provider does not exits, the profile
+gets removed. The same happens for the defined providers, they all know which
+profiles they can manage. This closes that small point of failure.
+.SS Data Presentation
+.sp
+With the internal data structure change also came a data presentation change.
+Most, unless not applicable, output is now done in an \fB<provider\-alias>\fP
+→ \fB<provider\-driver>\fP → \fB<detailed\-output>\fP. An example is
+always better. For an \fBec2\-config\fP provider alias with an \fBec2\fP driver
+configured:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-cloud \-f show_image ec2\-config image=ami\-35eb835c
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ec2\-config:
+    \-\-\-\-\-\-\-\-\-\-
+    ec2:
+        \-\-\-\-\-\-\-\-\-\-
+        \- architecture:
+            x86_64
+        \- blockDeviceMapping:
+            \-\-\-\-\-\-\-\-\-\-
+            item:
+                \-\-\-\-\-\-\-\-\-\-
+                deviceName:
+                    /dev/sda
+                ebs:
+                    \-\-\-\-\-\-\-\-\-\-
+                    deleteOnTermination:
+                        true
+                    snapshotId:
+                        snap\-59724004
+                    volumeSize:
+                        8
+                    volumeType:
+                        standard
+        \- description:
+            OmniOS r151006 Base (Stable)
+        \- hypervisor:
+            xen
+        \- imageId:
+            ami\-35eb835c
+        \- imageLocation:
+            182711560792/OmniOS r151006c
+        \- imageOwnerId:
+            182711560792
+        \- imageState:
+            available
+        \- imageType:
+            machine
+        \- isPublic:
+            true
+        \- kernelId:
+            aki\-b4aa75dd
+        \- name:
+            OmniOS r151006c
+        \- rootDeviceName:
+            /dev/sda
+        \- rootDeviceType:
+            ebs
+        \- virtualizationType:
+            paravirtual
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+We\(aqre now always aware of what was done using what.
 .SH SALT CLOUD 0.6.0 RELEASE NOTES
 .sp
 The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
