@@ -91,7 +91,7 @@ def run_integration_tests(opts):
     '''
     Execute the integration tests suite
     '''
-    if opts.unit and not (opts.runner or opts.states or opts.module or opts.client):
+    if opts.unit and not (opts.runner or opts.state or opts.module or opts.client):
         return [True]
     smax_open_files, hmax_open_files = resource.getrlimit(resource.RLIMIT_NOFILE)
     if smax_open_files < REQUIRED_OPEN_FILES:
