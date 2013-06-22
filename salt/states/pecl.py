@@ -34,9 +34,9 @@ def installed(
 
     if name in installed_pecls:
         # The package is only installed if version is absent or matches
-        if version is None or installed_pecls[name][0] == version:
+        if version is None or version in installed_pecls[name]:
             ret['result'] = True
-            ret['comment'] = 'Pecl is already installed.'
+            ret['comment'] = 'Pecl extension {0} is already installed.'.format(name)
             return ret
 
     if version is not None:
@@ -44,15 +44,15 @@ def installed(
         name = '{0}-{1}'.format(name, version)
 
     if __opts__['test']:
-        ret['comment'] = 'The pecl {0} would have been installed'.format(name)
+        ret['comment'] = 'Pecl extension {0} would have been installed'.format(name)
         return ret
     if __salt__['pecl.install'](name):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
-        ret['comment'] = 'Pecl was successfully installed'
+        ret['comment'] = 'Pecl extension {0} was successfully installed'.format(name)
     else:
         ret['result'] = False
-        ret['comment'] = 'Could not install pecl.'
+        ret['comment'] = 'Could not install pecl extension {0}.'.format(name)
 
     return ret
 
@@ -67,17 +67,17 @@ def removed(name):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     if name not in __salt__['pecl.list']():
         ret['result'] = True
-        ret['comment'] = 'Pecl is not installed.'
+        ret['comment'] = 'Pecl extension {0} is not installed.'.format(name)
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'The pecl {0} would have been removed'.format(name)
+        ret['comment'] = 'Pecl extension {0} would have been removed'.format(name)
         return ret
     if __salt__['pecl.uninstall'](name):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
-        ret['comment'] = 'Pecl was successfully removed.'
+        ret['comment'] = 'Pecl extension {0} was successfully removed.'.format(name)
     else:
         ret['result'] = False
-        ret['comment'] = 'Could not remove pecl.'
+        ret['comment'] = 'Could not remove pecl extension {0}.'.format(name)
     return ret
