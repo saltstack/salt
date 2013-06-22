@@ -438,19 +438,20 @@ class LogLevelMixIn(object):
             )
         )
 
-        cli_log_fmt = 'cli_{0}_log_file_fmt'.format(
+        cli_log_file_fmt = 'cli_{0}_log_file_fmt'.format(
             self.get_prog_name().replace('-', '_')
         )
-        if cli_log_fmt in self.config and not self.config.get(cli_log_fmt):
+        if cli_log_file_fmt in self.config and not \
+                self.config.get(cli_log_file_fmt):
             # Remove it from config so it inherits from log_fmt_logfile
-            self.config.pop(cli_log_fmt)
+            self.config.pop(cli_log_file_fmt)
 
         if self.config.get('log_fmt_logfile', None) is None:
             # Remove it from config so it inherits from log_fmt_console
             self.config.pop('log_fmt_logfile', None)
 
-        logfmt = self.config.get(
-            cli_log_fmt,
+        log_file_fmt = self.config.get(
+            cli_log_file_fmt,
             self.config.get(
                 'cli_{0}_log_fmt'.format(
                     self.get_prog_name().replace('-', '_')
@@ -468,13 +469,13 @@ class LogLevelMixIn(object):
             )
         )
 
-        cli_log_datefmt = 'cli_{0}_log_file_datefmt'.format(
+        cli_log_file_datefmt = 'cli_{0}_log_file_datefmt'.format(
             self.get_prog_name().replace('-', '_')
         )
-        if cli_log_datefmt in self.config and not \
-                self.config.get(cli_log_datefmt):
+        if cli_log_file_datefmt in self.config and not \
+                self.config.get(cli_log_file_datefmt):
             # Remove it from config so it inherits from log_datefmt_logfile
-            self.config.pop(cli_log_fmt)
+            self.config.pop(cli_log_file_datefmt)
 
         if self.config.get('log_datefmt_logfile', None) is None:
             # Remove it from config so it inherits from log_datefmt_console
@@ -484,8 +485,8 @@ class LogLevelMixIn(object):
             # Remove it from config so it inherits from log_datefmt
             self.config.pop('log_datefmt_console', None)
 
-        datefmt = self.config.get(
-            cli_log_datefmt,
+        log_file_datefmt = self.config.get(
+            cli_log_file_datefmt,
             self.config.get(
                 'cli_{0}_log_datefmt'.format(
                     self.get_prog_name().replace('-', '_')
@@ -506,8 +507,8 @@ class LogLevelMixIn(object):
         log.setup_logfile_logger(
             logfile,
             loglevel,
-            log_format=logfmt,
-            date_format=datefmt
+            log_format=log_file_fmt,
+            date_format=log_file_datefmt
         )
         for name, level in self.config['log_granular_levels'].items():
             log.set_logger_level(name, level)
