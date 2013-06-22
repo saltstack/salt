@@ -541,7 +541,7 @@ class LogLevelMixIn(object):
         if cli_log_datefmt in self.config and not \
                 self.config.get(cli_log_datefmt):
             # Remove it from config so it inherits from log_datefmt_console
-            self.config.pop(cli_log_fmt)
+            self.config.pop(cli_log_datefmt)
 
         if self.config.get('log_datefmt_console', None) is None:
             # Remove it from config so it inherits from log_datefmt
