@@ -560,6 +560,8 @@ class LogLevelMixIn(object):
         log.setup_console_logger(
             self.config['log_level'], log_format=logfmt, date_format=datefmt
         )
+        for name, level in self.config['log_granular_levels'].items():
+            log.set_logger_level(name, level)
 
 
 class RunUserMixin(object):
