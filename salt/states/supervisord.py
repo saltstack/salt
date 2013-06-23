@@ -40,7 +40,8 @@ def _check_error(result, success_message):
 
 def running(name,
             restart=False,
-            runas=None,
+            update=False,
+            runas=None,            
         ):
     '''
     Ensure the named service is running.
@@ -48,7 +49,9 @@ def running(name,
     name
         Service name as defined in the supervisor configuration file
     restart
-        Whether to force a restart e.g. when updating a service
+        Whether to force a restart (this does not update the task)
+    update
+        Whether to force to update defined tasks
     runas
         Name of the user to run the supervisorctl command
     '''
@@ -75,6 +78,14 @@ def running(name,
         ret['changes']['update'] = comment
         log.debug(comment)
 
+    elif update:
+        comment = 'Updating defined tasks'
+        result = __salt__['supervisord.update'](user=runas)
+
+        ret.update(_check_error(result, comment))
+        ret['changes']['update'] = comment
+        log.debug(comment)
+        
     elif restart:
         comment = 'Restarting service: {0}'.format(name)
         log.debug(comment)
