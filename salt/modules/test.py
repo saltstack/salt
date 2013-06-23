@@ -297,3 +297,34 @@ def not_loaded():
             if name not in prov:
                 ret.add(name)
     return sorted(ret)
+
+
+def tty(device, echo=None):
+    '''
+    Echo a string to a specific tty
+
+    CLI Example::
+
+        salt '*' test.tty tty0 'This is a test'
+        salt '*' test.tty pts3 'This is a test'
+    '''
+    if device.startswith('tty'):
+        tty = '/dev/{0}'.format(device)
+    elif device.startswith('pts'):
+        tty = '/dev/{0}'.format(device.replace('pts', 'pts/'))
+    else:
+        return {'Error': 'The specified device is not a valid TTY'}
+
+    cmd = 'echo {0} > {1}'.format(echo, tty)
+    ret = __salt__['cmd.run_all'](cmd)
+    if ret['retcode'] == 0:
+        return {
+            'Success': 'Message was successfully echoed to {0}'.format(tty)
+        }
+    else:
+        return {
+            'Error': 'Echoing to {0} returned error code {1}'.format(
+                tty,
+                ret['retcode'])
+        }
+
