@@ -245,7 +245,8 @@ def preferred_ip(vm_, ips):
             return ip
         except:
             continue
-    return False
+
+        return False
 
 
 def ignore_ip_addr(vm_, ip):
@@ -397,7 +398,6 @@ def create(vm_):
 
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
-
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
@@ -408,6 +408,10 @@ def create(vm_):
                 if saltcloud.utils.is_public_ip(private_ip):
                     log.warn('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
+                    log.warn(
+                        'Public IP address was not ready when we last checked.  Appending public IP address now.'
+                    )
+                    public=data.public_ips
                 else:
                     log.warn('{0} is a private IP'.format(private_ip))
                     ignore_ip = ignore_ip_addr(vm_, private_ip)
