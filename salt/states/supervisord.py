@@ -106,7 +106,7 @@ def running(name,
         changes.append(comment)
         log.debug(comment)
 
-        if '{0}: updated' in result['stdout']:
+        if result.find('{0}: updated'.format(name)) >= 0:
             just_updated = True
 
     if name in all_processes and not _is_stopped_state(all_processes[name]['state']):
