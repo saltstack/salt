@@ -783,6 +783,7 @@ class Cloud(object):
                     self.opts['providers'][alias].pop(driver)
                     if not self.opts['providers'][alias]:
                         self.opts['providers'].pop(alias)
+                    continue
 
                 with CloudProviderContext(self.clouds[fun], alias, driver):
                     if self.clouds[fun]() is False:
