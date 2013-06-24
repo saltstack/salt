@@ -14,6 +14,10 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 # Import upstart module if needed
 HAS_UPSTART = False
 if salt.utils.which('initctl'):
@@ -248,7 +252,7 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name, **kwargs):
+def reload_(name, **kwargs):
     '''
     Reload the named service
 
