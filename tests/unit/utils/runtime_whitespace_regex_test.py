@@ -12,25 +12,40 @@
 import re
 
 # Import salt libs
-from saltunittest import TestCase, TestLoader, TextTestRunner
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 from salt.utils import build_whitespace_split_regex
 
+# Import Salt Testing libs
+from salttesting import TestCase
 
-DOUBLE_TXT = """\
+DOUBLE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
-SINGLE_TXT = """\
+SINGLE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
-SINGLE_DOUBLE_TXT = """\
+SINGLE_DOUBLE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -40,16 +55,16 @@ fi
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
-SINGLE_DOUBLE_SAME_LINE_TXT = """\
+SINGLE_DOUBLE_SAME_LINE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
-MATCH = """\
+MATCH = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -78,7 +93,7 @@ fi
 if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
 
 class TestRuntimeWhitespaceRegex(TestCase):
@@ -100,7 +115,6 @@ class TestRuntimeWhitespaceRegex(TestCase):
         self.assertTrue(re.search(regex, MATCH))
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestRuntimeWhitespaceRegex)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestRuntimeWhitespaceRegex, needs_daemon=False)

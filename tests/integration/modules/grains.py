@@ -19,6 +19,8 @@ except ImportError:
             )
         )
     import integration
+
+# Import Salt Testing libs
 from salttesting import skipIf
 
 
@@ -103,7 +105,6 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.get',
                     ['level1:level2']),
                 'foo')
-
 
 
 if __name__ == '__main__':

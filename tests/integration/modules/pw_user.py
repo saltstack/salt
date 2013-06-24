@@ -17,7 +17,9 @@ except ImportError:
             )
         )
     import integration
-from salttesting import destructiveTest, skipIf
+
+# Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import destructiveTest
 
 

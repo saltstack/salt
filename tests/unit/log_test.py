@@ -11,9 +11,24 @@
 '''
 
 # Import salt libs
-from saltunittest import (
-    TestCase, TestLoader, TextTestRunner, TestsLoggingHandler
-)
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../'
+                )
+            )
+        )
+    import integration
+
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import TestsLoggingHandler
 
 
 class TestLog(TestCase):
@@ -64,7 +79,6 @@ class TestLog(TestCase):
             log.removeHandler(handler)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestLog)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestLog, needs_daemon=False)

@@ -13,9 +13,23 @@ import os
 import hashlib
 
 # Import salt libs
-import integration
-from saltunittest import TestCase, TestLoader, TextTestRunner
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 from salt.utils import event
+
+# Import Salt Testing libs
+from salttesting import TestCase
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
@@ -25,8 +39,7 @@ class TestSaltEvent(TestCase):
     def test_master_event(self):
         me = event.MasterEvent(SOCK_DIR)
         self.assertEqual(
-            me.puburi,
-            'ipc://{0}'.format(
+            me.puburi, 'ipc://{0}'.format(
                 os.path.join(SOCK_DIR, 'master_event_pub.ipc')
             )
         )
@@ -85,7 +98,6 @@ class TestSaltEvent(TestCase):
         )
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestSaltEvent)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestSaltEvent, needs_daemon=False)

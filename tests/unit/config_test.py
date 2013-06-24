@@ -14,9 +14,24 @@ import shutil
 import tempfile
 
 # Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../'
+                )
+            )
+        )
+    import integration
 import salt.utils
-from saltunittest import TestCase, TestLoader, TextTestRunner
 from salt import config as sconfig
+
+# Import Salt Testing libs
+from salttesting import TestCase
 
 
 class ConfigTestCase(TestCase):
@@ -46,7 +61,6 @@ class ConfigTestCase(TestCase):
         shutil.rmtree(tempdir)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(ConfigTestCase)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(ConfigTestCase, needs_daemon=False)

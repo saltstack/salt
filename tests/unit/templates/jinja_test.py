@@ -2,14 +2,29 @@
 import os
 import tempfile
 
-# Import 3rd party libs
-from jinja2 import Environment
-
 # Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 import salt.utils
 from salt.utils.jinja import SaltCacheLoader
 from salt.utils.templates import render_jinja_tmpl
-from saltunittest import TestCase
+
+# Import Salt Testing libs
+from salttesting import TestCase
+
+# Import 3rd party libs
+from jinja2 import Environment
 
 TEMPLATES_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -54,7 +69,7 @@ class TestSaltCacheLoader(TestCase):
         self.assertEqual(str(res[0]), 'world' + os.linesep)
         tmpl_dir = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
-        assert res[2](), "Template up to date?"
+        assert res[2](), 'Template up to date?'
         assert len(fc.requests)
         self.assertEqual(fc.requests[0]['path'], 'salt://hello_simple')
 
@@ -152,3 +167,8 @@ class TestGetTemplate(TestCase):
         self.assertEqual(out, 'Hey world !Hi Salt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests([TestSaltCacheLoader, TestGetTemplate], needs_daemon=False)

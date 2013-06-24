@@ -19,6 +19,8 @@ except ImportError:
             )
         )
     import integration
+
+# Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import destructiveTest
 
@@ -119,6 +121,7 @@ class UserTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('group.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

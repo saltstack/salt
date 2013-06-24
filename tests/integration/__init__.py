@@ -31,6 +31,7 @@ import salt.output
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
+# Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.parser import PNUM, print_header
 from salttesting.helpers import RedirectStdStreams
@@ -60,7 +61,7 @@ for dir_ in [CODE_DIR, SALT_LIBS]:
 log = logging.getLogger(__name__)
 
 
-def run_tests(TestCase):
+def run_tests(TestCase, needs_daemon=True):
     '''
     Run integration tests for a chosen test case.
 
@@ -92,15 +93,28 @@ def run_tests(TestCase):
 
         def run_suite(self, testcase):
             loader = TestLoader()
-            tests = loader.loadTestsFromTestCase(testcase)
+            if isinstance(testcase, list):
+                for case in testcase:
+                    tests = loader.loadTestsFromTestCase(case)
+            else:
+                tests = loader.loadTestsFromTestCase(testcase)
             print('Setting up Salt daemons to execute tests')
-            with TestDaemon(self):
-                header = '{0} Tests'.format(testcase.__name__)
-                print_header('Starting {0}'.format(header))
+            header = ''
+            if needs_daemon:
+                with TestDaemon(self):
+                    if not isinstance(testcase, list):
+                        header = '{0} Tests'.format(testcase.__name__)
+                        print_header('Starting {0}'.format(header))
+                    runner = TextTestRunner(
+                        verbosity=self.options.verbosity).run(tests)
+            else:
+                if not isinstance(testcase, list):
+                    header = '{0} Tests'.format(testcase.__name__)
+                    print_header('Starting {0}'.format(header))
                 runner = TextTestRunner(
                     verbosity=self.options.verbosity).run(tests)
-                self.testsuite_results.append((header, runner))
-                return runner.wasSuccessful()
+            self.testsuite_results.append((header, runner))
+            return runner.wasSuccessful()
 
     parser = TestcaseParser(INTEGRATION_TEST_DIR)
     parser.parse_args()

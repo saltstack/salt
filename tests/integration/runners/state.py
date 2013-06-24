@@ -2,13 +2,22 @@
 Tests for the salt-run command
 '''
 # Import python libs
-import sys
 import os
+import sys
 
 # Import Salt Modules
-from saltunittest import TestLoader, TextTestRunner
-import integration
-from integration import TestDaemon
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
 
 class ManageTest(integration.ShellCase):
@@ -32,10 +41,6 @@ class ManageTest(integration.ShellCase):
         self.assertIn('Requisite fail_stage failed for stage', ret)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(ManageTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(ManageTest)

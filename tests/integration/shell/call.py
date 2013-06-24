@@ -14,13 +14,22 @@ import sys
 import yaml
 from datetime import datetime
 
-# Import salt test libs
-import integration
-from saltunittest import (
-    TestLoader,
-    TextTestRunner,
-    skipIf,
-)
+# Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
+
+# Import Salt Testing libs
+from salttesting import skipIf
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -179,10 +188,6 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 os.unlink(this_minion_key)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(CallTest)
-    print('Setting up Salt daemons to execute tests')
-    with integration.TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(CallTest)

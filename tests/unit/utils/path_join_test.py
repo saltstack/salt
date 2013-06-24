@@ -16,14 +16,24 @@ import ntpath
 import platform
 import tempfile
 
-if __name__ == "__main__":
-    sys.path.insert(
-        0, os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    )
-
 # Import salt libs
-from saltunittest import TestCase, TextTestRunner
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 from salt.utils import path_join
+
+# Import Salt Testing libs
+from salttesting import TestCase
 
 
 class PathJoinTestCase(TestCase):
@@ -117,7 +127,7 @@ class PathJoinTestCase(TestCase):
         for module in (posixpath, os, os.path, tempfile, platform):
             reload(module)
 
-if __name__ == "__main__":
-    loader = PathJoinTestCase()
-    tests = loader.loadTestsFromTestCase(PathJoinTestCase)
-    TextTestRunner(verbosity=1).run(tests)
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PathJoinTestCase, needs_daemon=False)

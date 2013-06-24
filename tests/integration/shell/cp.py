@@ -15,9 +15,19 @@ import yaml
 import pipes
 
 # Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 import salt.utils
-import integration
-from saltunittest import TestLoader, TextTestRunner
 
 
 class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -104,10 +114,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             data = yaml.load('\n'.join(ret))
             self.assertTrue(data[minion])
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(CopyTest)
-    print('Setting up Salt daemons to execute tests')
-    with integration.TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(CopyTest)

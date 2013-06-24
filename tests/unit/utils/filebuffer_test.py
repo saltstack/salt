@@ -9,8 +9,24 @@
 '''
 
 # Import salt libs
-from saltunittest import TestCase, TestLoader, TextTestRunner
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 from salt.utils.filebuffer import BufferedReader, InvalidFileMode
+
+# Import Salt Testing libs
+from salttesting import TestCase
 
 
 class TestFileBuffer(TestCase):
@@ -28,7 +44,6 @@ class TestFileBuffer(TestCase):
             BufferedReader('/tmp/foo', mode='wb')
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestFileBuffer)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestFileBuffer, needs_daemon=False)

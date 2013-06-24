@@ -3,9 +3,19 @@ import sys
 import yaml
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
-import integration
-from integration import TestDaemon
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
 
 class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -53,7 +63,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
-
 
     def test_glob(self):
         '''
@@ -222,10 +231,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('user.add:', data)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(MatchTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MatchTest)

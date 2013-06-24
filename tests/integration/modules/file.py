@@ -20,6 +20,8 @@ except ImportError:
         )
     import integration
 import salt.utils
+
+# Import Salt Testing libs
 from salttesting import skipIf
 
 
@@ -162,6 +164,7 @@ class FileModuleTest(integration.ModuleCase):
         self.assertEqual(
             'ERROR executing file.remove: File path must be absolute.', ret
         )
+
 
 if __name__ == '__main__':
     from integration import run_tests

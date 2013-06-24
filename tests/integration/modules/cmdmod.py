@@ -15,6 +15,7 @@ except ImportError:
         )
     import integration
 
+# Import Salt Testing libs
 from salttesting import skipIf
 
 try:
@@ -196,13 +197,18 @@ sys.stdout.write('cheese')
         '''
         cmd.run trigger timeout
         '''
-        self.assertTrue('Timed out' in self.run_function('cmd.run', ['sleep 2 && echo hello', 'timeout=1']))
+        self.assertTrue(
+            'Timed out' in self.run_function(
+                'cmd.run', ['sleep 2 && echo hello', 'timeout=1']))
 
     def test_timeout_success(self):
         '''
         cmd.run sufficient timeout to succeed
         '''
-        self.assertTrue('hello' == self.run_function('cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
+        self.assertTrue(
+            'hello' == self.run_function(
+                'cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
+
 
 if __name__ == '__main__':
     from integration import run_tests

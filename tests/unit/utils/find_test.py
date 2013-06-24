@@ -6,9 +6,23 @@ import tempfile
 import stat
 
 # Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 import salt.utils
 import salt.utils.find
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
+
+# Import Salt Testing libs
+from salttesting import TestCase, skipIf
 
 
 class TestFind(TestCase):
@@ -554,10 +568,9 @@ class TestFinder(TestCase):
         )
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestFind)
-    tests.addTests(loader.loadTestsFromTestCase(TestGrepOption))
-    tests.addTests(loader.loadTestsFromTestCase(TestPrintOption))
-    tests.addTests(loader.loadTestsFromTestCase(TestFinder))
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(
+        [TestFind, TestGrepOption, TestPrintOption, TestFinder],
+        needs_daemon=False
+    )

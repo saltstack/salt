@@ -13,9 +13,23 @@ import os
 import shutil
 
 # Import salt libs
-import integration
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
-from saltunittest import skipIf, destructiveTest
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import destructiveTest
 
 
 class VirtualenvTest(integration.ModuleCase,
@@ -137,3 +151,8 @@ class VirtualenvTest(integration.ModuleCase,
             shutil.rmtree(venv_path)
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(VirtualenvTest)

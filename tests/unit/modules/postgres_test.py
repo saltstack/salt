@@ -9,7 +9,7 @@ except ImportError:
         return lambda y: None
     patch.multiple = patchmultiple
 
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
+from salttesting import TestCase, TestLoader, TextTestRunner, skipIf
 
 from salt.modules import postgres
 postgres.__grains__ = None  # in order to stub it w/patch below

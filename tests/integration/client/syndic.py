@@ -2,9 +2,19 @@
 import sys
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
-import integration
-from integration import TestDaemon
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
 
 class TestSyndic(integration.SyndicCase):
@@ -29,10 +39,7 @@ class TestSyndic(integration.SyndicCase):
                 34
                 )
 
+
 if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestSyndic)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+    from integration import run_tests
+    run_tests(TestSyndic)

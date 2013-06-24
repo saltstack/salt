@@ -17,6 +17,8 @@ except ImportError:
     import integration
 
 from salt.modules import djangomod as django
+
+# Import Salt Testing libs
 from salttesting import skipIf
 
 django.__salt__ = {}

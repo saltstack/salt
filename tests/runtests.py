@@ -11,9 +11,11 @@ import resource
 import tempfile
 
 # Import salt libs
+from integration import TestDaemon, TMP
+
+# Import Salt Testing libs
 from salttesting import *
 from salttesting.parser import PNUM, print_header, SaltTestingParser
-from integration import TestDaemon, TMP
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 SALT_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))

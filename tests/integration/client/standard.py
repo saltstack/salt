@@ -2,9 +2,19 @@
 import sys
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
-import integration
-from integration import TestDaemon
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
 
 class StdTest(integration.ModuleCase):
@@ -57,18 +67,18 @@ class StdTest(integration.ModuleCase):
                 )
         self.assertIn('minion', ret)
         self.assertEqual(ret['minion'], {'ret': True, 'success': True})
-        
+
         ret = self.client.cmd_full_return(
                 'minion',
                 'test.pong',
                 )
         self.assertIn('minion', ret)
-        self.assertEqual(ret['minion'], {'ret': '"test.pong" is not available.', 'success': False})
+        self.assertEqual(
+            ret['minion'],
+            {'ret': '"test.pong" is not available.', 'success': False}
+        )
+
 
 if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(StdTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+    from integration import run_tests
+    run_tests(StdTest)

@@ -14,8 +14,24 @@
 import re
 
 # Import salt libs
-from saltunittest import TestCase, TestLoader, TextTestRunner
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../'
+                )
+            )
+        )
+    import integration
 import salt.version
+
+# Import Salt Testing libs
+from salttesting import TestCase
 
 
 class VersionTestCase(TestCase):
@@ -33,7 +49,7 @@ class VersionTestCase(TestCase):
                 groups, re.search(salt.version.GIT_DESCRIBE_REGEX, vs).groups()
             )
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromVersionTestCase(VersionTestCase)
-    TextTestRunner(verbosity=1).run(tests)
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(VersionTestCase, needs_daemon=False)

@@ -5,7 +5,7 @@ except ImportError:
     has_mock = False
     patch = lambda x: lambda y: None
 
-from saltunittest import TestCase, skipIf
+from salttesting import TestCase, skipIf
 from salt.modules import pip
 
 pip.__salt__ = {"cmd.which_bin":lambda _:"pip"}

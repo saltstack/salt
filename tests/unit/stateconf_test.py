@@ -2,9 +2,26 @@
 from cStringIO import StringIO
 
 # Import Salt libs
-from saltunittest import TestCase
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../'
+                )
+            )
+        )
+    import integration
 import salt.loader
 import salt.config
+
+# Import Salt Testing libs
+from salttesting import TestCase
+
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
@@ -256,3 +273,8 @@ G:
             [i.itervalues().next() for i in goal_args[0]['require']],
             list('ABCDEFG')
         )
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(StateConfigRendererTestCase, needs_daemon=False)

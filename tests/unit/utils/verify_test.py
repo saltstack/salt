@@ -12,10 +12,20 @@ import resource
 import tempfile
 import socket
 
-# Import Salt libs
+# Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 import salt.utils
-from saltunittest import skipIf, TestCase, TestsLoggingHandler
-
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -23,6 +33,10 @@ from salt.utils.verify import (
     zmq_version,
     check_max_open_files
 )
+
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import TestsLoggingHandler
 
 
 class TestVerify(TestCase):
@@ -184,3 +198,8 @@ class TestVerify(TestCase):
             finally:
                 shutil.rmtree(tempdir)
                 resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestVerify, needs_daemon=False)

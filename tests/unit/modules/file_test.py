@@ -1,9 +1,25 @@
 import tempfile
 
-from saltunittest import TestCase, TestLoader, TextTestRunner
-
+# Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 from salt.modules import file as filemod
 from salt.modules import cmdmod
+
+# Import Salt Testing libs
+from salttesting import TestCase
 
 filemod.__salt__ = {
     'cmd.run': cmdmod.run,
@@ -38,7 +54,6 @@ class FileModuleTestCase(TestCase):
                 )
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(FileModuleTestCase)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(FileModuleTestCase, needs_daemon=False)

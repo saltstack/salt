@@ -5,14 +5,21 @@ import shutil
 import tempfile
 
 # Import salt libs
-from salt import version
-from saltunittest import TestLoader, TextTestRunner
-import integration
-from integration import TestDaemon
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
 
-class KeyTest(integration.ShellCase,
-              integration.ShellCaseCommonTestsMixIn):
+class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test salt-key script
     '''
@@ -133,16 +140,13 @@ class KeyTest(integration.ShellCase,
                 arg_str + ' --keysize=32769', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The maximum value for keysize is 32768', error
+                'salt-key: error: The maximum value for keysize is 32768',
+                error
             )
         finally:
             shutil.rmtree(tempdir)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(KeyTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(KeyTest)
