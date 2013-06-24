@@ -62,20 +62,6 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # Load the cloud configuration
     overrides = salt.config.load_config(path, env_var)
 
-    # Load salt-cloud includes
-    default_include = overrides.get(
-        'default_include', defaults['default_include']
-    )
-    #
-    overrides.update(
-        salt.config.include_config(default_include, path, verbose=False)
-    )
-    include = overrides.get('include', [])
-    overrides.update(
-        salt.config.include_config(include, path, verbose=True)
-    )
-
-
     # Grab data from the 4 sources
     # 1st - Master config
     if master_config_path is not None and master_config is not None:
