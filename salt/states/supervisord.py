@@ -35,6 +35,7 @@ def _is_stopped_state(state):
 
 def running(name,
             restart=False,
+            update=False,
             runas=None,
             conf_file=None,
             bin_env=None
@@ -45,7 +46,9 @@ def running(name,
     name
         Service name as defined in the supervisor configuration file
     restart
-        Whether to force a restart e.g. when updating a service
+        Whether to force a restart
+    update
+        Whether to update the supervisor configuration.
     runas
         Name of the user to run the supervisorctl command
     conf_file
@@ -73,6 +76,7 @@ def running(name,
         return
 
     changes = []
+    just_updated = False
     if needs_update:
         comment = 'Adding service: {0}'.format(name)
         __salt__['supervisord.reread'](
@@ -90,9 +94,23 @@ def running(name,
         ret.update(_check_error(result, comment))
         changes.append(comment)
         log.debug(comment)
+        
+    elif update:
+        comment = 'Updating supervisor'
+        result = __salt__['supervisord.update'](
+            user=runas,
+            conf_file=conf_file,
+            bin_env=bin_env
+        )
+        ret.update(_check_error(result, comment))
+        changes.append(comment)
+        log.debug(comment)
+
+        if result.find('{0}: updated'.format(name)) >= 0:
+            just_updated = True
 
     if name in all_processes and not _is_stopped_state(all_processes[name]['state']):
-        if restart:
+        if restart and not just_updated:
             comment = 'Restarting service: {0}'.format(name)
             log.debug(comment)
             result = __salt__['supervisord.restart'](
@@ -103,11 +121,15 @@ def running(name,
             )
             ret.update(_check_error(result, comment))
             changes.append(comment)
+        elif just_updated:
+            comment = 'Not starting updated service: {0}'.format(name)
+            result = comment
+            ret.update({'comment': comment})            
         else:
             comment = 'Not starting already running service: {0}'.format(name)
             result = comment
             ret.update({'comment': comment})
-    else:
+    elif not just_updated:
         comment = 'Starting service: {0}'.format(name)
         changes.append(comment)
         log.debug(comment)
