@@ -10,6 +10,10 @@ import logging
 # Set up logger
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'list_': 'list'
+}
+
 __opts__ = {
     'rbenv.root': None,
 }
@@ -202,7 +206,7 @@ def default(ruby=None, runas=None):
     else:
         return _rbenv_exec('global', runas=runas).strip()
 
-def list(runas=None):
+def list_(runas=None):
     '''
     List the installable versions of ruby.
 
