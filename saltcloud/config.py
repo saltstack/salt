@@ -61,60 +61,10 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     '''
     # Load the cloud configuration
     overrides = salt.config.load_config(path, env_var)
-
-    # Grab data from the 4 sources
-    # 1st - Master config
-    if master_config_path is not None and master_config is not None:
-        raise saltcloud.exceptions.SaltCloudConfigError(
-            'Only pass `master_config` or `master_config_path`, not both.'
-        )
-    elif master_config_path is None and master_config is None:
-        master_config = salt.config.master_config(
-            overrides.get(
-                # use the value from the cloud config file
-                'master_config',
-                # if not found, use the default path
-                '/etc/salt/master'
-            )
-        )
-    elif master_config_path is not None and master_config is None:
-        master_config = salt.config.master_config(master_config_path)
-
-    # Let's register our double-layer outputter into salt's outputters
-    master_config['outputter_dirs'].append(
-        os.path.dirname(saltcloud.output.__file__)
-    )
-
-    # 2nd - salt-cloud configuration
-    if providers_config_path is not None and providers_config is not None:
-        raise saltcloud.exceptions.SaltCloudConfigError(
-            'Only pass `providers_config` or `providers_config_path`, '
-            'not both.'
-        )
-    elif providers_config_path is None and providers_config is None:
-        providers_config_path = overrides.get(
-            # use the value from the cloud config file
-            'providers_config',
-            # if not found, use the default path
-            '/etc/salt/cloud.providers'
-        )
-
-    if vm_config_path is not None and vm_config is not None:
-        raise saltcloud.exceptions.SaltCloudConfigError(
-            'Only pass `vm_config` or `vm_config_path`, not both.'
-        )
-    elif vm_config_path is None and vm_config is None:
-        vm_config_path = overrides.get(
-            # use the value from the cloud config file
-            'vm_config',
-            # if not found, use the default path
-            '/etc/salt/cloud.profiles'
-        )
-
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
-    # Load configuration from any default or provided includes
+    # Load cloud configuration from any default or provided includes
     default_include = overrides.get(
         'default_include', defaults['default_include']
     )
@@ -161,10 +111,61 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         deploy_scripts_search_path=tuple(deploy_scripts_search_path)
     )
 
+    # Grab data from the 4 sources
+    # 1st - Master config
+    if master_config_path is not None and master_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `master_config` or `master_config_path`, not both.'
+        )
+    elif master_config_path is None and master_config is None:
+        master_config = salt.config.master_config(
+            overrides.get(
+                # use the value from the cloud config file
+                'master_config',
+                # if not found, use the default path
+                '/etc/salt/master'
+            )
+        )
+    elif master_config_path is not None and master_config is None:
+        master_config = salt.config.master_config(master_config_path)
+
+    # Let's register our double-layer outputter into salt's outputters
+    master_config['outputter_dirs'].append(
+        os.path.dirname(saltcloud.output.__file__)
+    )
+
+    # 2nd - salt-cloud configuration which was loaded before so we could
+    # extract the master configuration file if needed.
+
     # Override master configuration with the salt cloud(current overrides)
     master_config.update(overrides)
     # We now set the overridden master_config as the overrides
     overrides = master_config
+
+    if providers_config_path is not None and providers_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `providers_config` or `providers_config_path`, '
+            'not both.'
+        )
+    elif providers_config_path is None and providers_config is None:
+        providers_config_path = overrides.get(
+            # use the value from the cloud config file
+            'providers_config',
+            # if not found, use the default path
+            '/etc/salt/cloud.providers'
+        )
+
+    if vm_config_path is not None and vm_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `vm_config` or `vm_config_path`, not both.'
+        )
+    elif vm_config_path is None and vm_config is None:
+        vm_config_path = overrides.get(
+            # use the value from the cloud config file
+            'vm_config',
+            # if not found, use the default path
+            '/etc/salt/cloud.profiles'
+        )
 
     # Apply the salt-cloud configuration
     opts = apply_cloud_config(overrides, defaults)
@@ -593,7 +594,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             )
                         )
                     details['extends'] = '{0}:{1}'.format(alias, provider)
-                elif providers.get(extends) and len(providers.get(extends)) > 1:
+                elif providers.get(extends) and len(providers[extends]) > 1:
                     raise saltcloud.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend from {2!r} which has multiple entries '
