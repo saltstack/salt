@@ -57,9 +57,11 @@ class CustomLoader(yaml.SafeLoader):
         Build the mapping for YAML
         '''
         if not isinstance(node, MappingNode):
-            raise ConstructorError(None, None,
-                    'expected a mapping node, but found {0}'.format(node.id),
-                    node.start_mark)
+            raise ConstructorError(
+                None,
+                None,
+                'expected a mapping node, but found {0}'.format(node.id),
+                node.start_mark)
 
         self.flatten_mapping(node)
 
@@ -90,4 +92,8 @@ class CustomLoader(yaml.SafeLoader):
             elif node.value.startswith('0') \
                     and not node.value.startswith(('0b', '0x')):
                 node.value = node.value.lstrip('0')
+                # If value was all zeros, node.value would have been reduced to
+                # an empty string. Change it to '0'.
+                if node.value == '':
+                    node.value = '0'
         return yaml.constructor.SafeConstructor.construct_scalar(self, node)
