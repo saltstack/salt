@@ -62,6 +62,22 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # Load the cloud configuration
     overrides = salt.config.load_config(path, env_var)
 
+    # Load salt-cloud includes
+    default_include = overrides.get(
+        'default_include', defaults['default_include']
+    )
+    #
+    overrides.update(
+        salt.config.include_config(default_include, path, verbose=False)
+    )
+    include = overrides.get('include', [])
+    overrides.update(
+        salt.config.include_config(include, path, verbose=True)
+    )
+
+
+    # Grab data from the 4 sources
+    # 1st - Master config
     if master_config_path is not None and master_config is not None:
         raise saltcloud.exceptions.SaltCloudConfigError(
             'Only pass `master_config` or `master_config_path`, not both.'
@@ -83,6 +99,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         os.path.dirname(saltcloud.output.__file__)
     )
 
+    # 2nd - salt-cloud configuration
     if providers_config_path is not None and providers_config is not None:
         raise saltcloud.exceptions.SaltCloudConfigError(
             'Only pass `providers_config` or `providers_config_path`, '
@@ -111,14 +128,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
-    # Grab data from the 4 sources
-    # 1st - Master config
-    # 2nd Override master config with salt-cloud config
-    master_config.update(overrides)
-
-    # We now set the gathered data as the overrides
-    overrides = master_config
-
+    # Load configuration from any default or provided includes
     default_include = overrides.get(
         'default_include', defaults['default_include']
     )
@@ -165,6 +175,12 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         deploy_scripts_search_path=tuple(deploy_scripts_search_path)
     )
 
+    # Override master configuration with the salt cloud(current overrides)
+    master_config.update(overrides)
+    # We now set the overridden master_config as the overrides
+    overrides = master_config
+
+    # Apply the salt-cloud configuration
     opts = apply_cloud_config(overrides, defaults)
 
     # 3rd - Include Cloud Providers
