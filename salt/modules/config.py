@@ -69,13 +69,7 @@ def manage_mode(mode):
 
         salt '*' config.manage_mode
     '''
-    if mode:
-        mode = str(mode).lstrip('0')
-        if not mode:
-            return '0'
-        else:
-            return mode
-    return mode
+    return str(mode).lstrip('0').zfill(3)
 
 
 def valid_fileproto(uri):
