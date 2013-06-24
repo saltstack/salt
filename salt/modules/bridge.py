@@ -7,6 +7,10 @@ import re
 import salt.utils
 
 
+__func_alias__ = {
+    'list_': 'list'
+}
+
 def __virtual__():
     '''
     Confirm this module is supported by the OS and the system has
@@ -231,7 +235,7 @@ def show(br=None):
     return _os_dispatch('brshow', br)
 
 
-def list():
+def list_():
     '''
     Returns the machine's bridges list
 
