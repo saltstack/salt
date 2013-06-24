@@ -554,101 +554,78 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 providers[key][provider] = entry
 
     # Is any provider extending data!?
-    for provider_alias, entries in providers.copy().items():
+    while True:
+        keep_looping = False
+        for provider_alias, entries in providers.copy().items():
 
-        for driver, details in entries.iteritems():
-            # Set a holder for the defined profiles
-            providers[provider_alias][driver]['profiles'] = {}
+            for driver, details in entries.iteritems():
+                # Set a holder for the defined profiles
+                providers[provider_alias][driver]['profiles'] = {}
 
-            if 'extends' not in details:
-                continue
+                if 'extends' not in details:
+                    continue
 
-            extends = details.pop('extends')
+                extends = details.pop('extends')
 
-            if ':' in extends:
-                alias, provider = extends.split(':')
-                if alias not in providers:
-                    log.error(
+                if ':' in extends:
+                    alias, provider = extends.split(':')
+                    if alias not in providers:
+                        raise saltcloud.exceptions.SaltCloudConfigError(
+                            'The {0!r} cloud provider entry in {1!r} is '
+                            'trying to extend data from {2!r} though {2!r} '
+                            'is not defined in the salt cloud providers '
+                            'loaded data.'.format(
+                                details['provider'],
+                                provider_alias,
+                                alias
+                            )
+                        )
+
+                    if provider not in providers.get(alias):
+                        raise saltcloud.exceptions.SaltCloudConfigError(
+                            'The {0!r} cloud provider entry in {1!r} is '
+                            'trying to extend data from \'{2}:{3}\' though '
+                            '{3!r} is not defined in {1!r}'.format(
+                                details['provider'],
+                                provider_alias,
+                                alias,
+                                provider
+                            )
+                        )
+                    details['extends'] = '{0}:{1}'.format(alias, provider)
+                elif providers.get(extends) and len(providers.get(extends)) > 1:
+                    raise saltcloud.exceptions.SaltCloudConfigError(
+                        'The {0!r} cloud provider entry in {1!r} is trying '
+                        'to extend from {2!r} which has multiple entries '
+                        'and no provider is being specified. Not '
+                        'extending!'.format(
+                            details['provider'], provider_alias, extends
+                        )
+                    )
+                elif extends not in providers:
+                    raise saltcloud.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend data from {2!r} though {2!r} is not '
                         'defined in the salt cloud providers loaded '
                         'data.'.format(
-                            details['provider'],
-                            provider_alias,
-                            alias
+                            details['provider'], provider_alias, extends
                         )
                     )
-                    continue
-
-                if provider not in providers.get(alias):
-                    raise saltcloud.exceptions.SaltCloudConfigError(
-                        'The {0!r} cloud provider entry in {1!r} is trying '
-                        'to extend data from \'{2}:{3}\' though {3!r} is not '
-                        'defined in {1!r}'.format(
-                            details['provider'],
-                            provider_alias,
-                            alias,
-                            provider
-                        )
-                    )
-
-                details['extends'] = providers.get(alias).get(provider)
-            elif providers.get(extends) and len(providers.get(extends)) > 1:
-                log.error(
-                    'The {0!r} cloud provider entry in {1!r} is trying to '
-                    'extend from {2!r} which has multiple entries and no '
-                    'provider is being specified. Not extending!'.format(
-                        details['provider'], provider_alias, extends
-                    )
-                )
-                continue
-            elif extends not in providers:
-                log.error(
-                    'The {0!r} cloud provider entry in {1!r} is trying to '
-                    'extend data from {2!r} though {2!r} is not defined in '
-                    'the salt cloud providers loaded data.'.format(
-                        details['provider'], provider_alias, extends
-                    )
-                )
-                continue
-            else:
-                provider = providers.get(extends)
-                if driver in provider:
-                    details['extends'] = provider.get(driver)
-                elif '-only-extendable-' in provider:
-                    details['extends'] = provider.get('-only-extendable-')
                 else:
-                    # We're still not aware of what we're trying to extend from
-                    details['extends'] = extends
-
-    # Second iteration to resolve any remaining extends
-    for provider_alias, entries in providers.copy().items():
-        for driver, details in entries.iteritems():
-            if 'extends' not in details or \
-                    isinstance(details['extends'], dict):
-                continue
-
-            extends = details.pop('extends')
-            provider = providers.get(extends)
-            if driver in provider:
-                details['extends'] = provider.get(driver)
-            elif '-only-extendable-' in provider:
-                details['extends'] = provider.get('-only-extendable-')
-            elif len(provider) == 1:
-                details['extends'] = provider.get(provider.keys()[0])
-            else:
-                raise saltcloud.exceptions.SaltCloudConfigError(
-                    'Salt cloud has found a problem it cannot solve while '
-                    'resolving a provider which extends from another one. '
-                    'There\'s more than one driver defined under the {0!r} '
-                    'alias. It\'s not {1!r} and also not one which just '
-                    'exists to extend data from(handled internally). '
-                    'Please correct the provider configuration under the '
-                    '{0!r} alias or submit an issue if there\'s nothing '
-                    'apparently wrong with your configuration.'.format(
-                        alias, driver
-                    )
-                )
+                    provider = providers.get(extends)
+                    if driver in providers.get(extends):
+                        details['extends'] = '{0}:{1}'.format(extends, driver)
+                    elif '-only-extendable-' in providers.get(extends):
+                        details['extends'] = '{0}:{1}'.format(
+                            extends, '-only-extendable-'
+                        )
+                    else:
+                        # We're still not aware of what we're trying to extend
+                        # from. Let's try on next iteration
+                        details['extends'] = extends
+                        keep_looping = True
+        if not keep_looping:
+            break
 
     while True:
         # Merge provided extends
@@ -666,11 +643,14 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     keep_looping = True
                     continue
 
-                # Let's get a copy of what to extend from and remove it's
-                # extends reference
-                extended = details.pop('extends').copy()
+                # Let's get a reference to what we're supposed to extend
+                extends = details.pop('extends')
+                # Split the setting in (alias, driver)
+                ext_alias, ext_driver = extends.split(':')
+                # Grab a copy of what should be extended
+                extended = providers.get(ext_alias).get(ext_driver).copy()
                 # Merge the data to extend with the details
-                extended.update(details.copy())
+                extended.update(details)
                 # Update the providers dictionary with the merged data
                 providers[alias][driver] = extended
 
