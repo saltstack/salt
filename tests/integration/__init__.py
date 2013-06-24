@@ -3,7 +3,6 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-import optparse
 import multiprocessing
 import os
 import sys
@@ -31,15 +30,10 @@ import salt.runner
 import salt.output
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
-from saltunittest import TestCase, RedirectStdStreams
 
-try:
-    import console
-    width, height = console.getTerminalSize()
-    PNUM = width
-except:
-    PNUM = 70
-
+from salttesting import TestCase
+from salttesting.parser import PNUM, print_header
+from salttesting.helpers import RedirectStdStreams
 
 INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
@@ -61,69 +55,53 @@ TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 log = logging.getLogger(__name__)
 
 
-def print_header(header, sep='~', top=True, bottom=True, inline=False,
-                 centered=False):
-    '''
-    Allows some pretty printing of headers on the console, either with a
-    "ruler" on bottom and/or top, inline, centered, etc.
-    '''
-    if top and not inline:
-        print(sep * PNUM)
-
-    if centered and not inline:
-        fmt = u'{0:^{width}}'
-    elif inline and not centered:
-        fmt = u'{0:{sep}<{width}}'
-    elif inline and centered:
-        fmt = u'{0:{sep}^{width}}'
-    else:
-        fmt = u'{0}'
-    print(fmt.format(header, sep=sep, width=PNUM))
-
-    if bottom and not inline:
-        print(sep * PNUM)
-
-
 def run_tests(TestCase):
     '''
     Run integration tests for a chosen test case.
 
     Function uses optparse to set up test environment
     '''
-    from saltunittest import TestLoader, TextTestRunner
-    opts = parse_opts()
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestCase)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon(clean=opts.clean):
-        runner = TextTestRunner(verbosity=opts.verbosity).run(tests)
-        sys.exit(runner.wasSuccessful())
+    from salttesting import TestLoader, TextTestRunner
+    from salttesting.parser import SaltTestingParser
 
+    class TestcaseParser(SaltTestingParser):
+        def setup_additional_options(self):
+            self.option_groups.remove(self.test_selection_group)
+            if self.has_option('--xml-out'):
+                self.remove_option('--xml-out')
+            if self.has_option('--html-out'):
+                self.remove_option('--html-out')
+            self.add_option(
+                '--sysinfo',
+                default=False,
+                action='store_true',
+                help='Print some system information.'
+            )
+            self.output_options_group.add_option(
+                '--no-colors',
+                '--no-colours',
+                default=False,
+                action='store_true',
+                help='Disable colour printing.'
+            )
 
-def parse_opts():
-    '''
-    Parse command line options for running integration tests
-    '''
-    parser = optparse.OptionParser()
-    parser.add_option('-v',
-            '--verbose',
-            dest='verbosity',
-            default=1,
-            action='count',
-            help='Verbose test runner output')
-    parser.add_option('--clean',
-            dest='clean',
-            default=True,
-            action='store_true',
-            help=('Clean up test environment before and after '
-                  'integration testing (default behaviour)'))
-    parser.add_option('--no-clean',
-            dest='clean',
-            action='store_false',
-            help=('Don\'t clean up test environment before and after '
-                  'integration testing (speed up test process)'))
-    options, _ = parser.parse_args()
-    return options
+        def run_suite(self, testcase):
+            loader = TestLoader()
+            tests = loader.loadTestsFromTestCase(testcase)
+            print('Setting up Salt daemons to execute tests')
+            with TestDaemon(self):
+                header = '{0} Tests'.format(testcase.__name__)
+                print_header('Starting {0}'.format(header))
+                runner = TextTestRunner(
+                    verbosity=self.options.verbosity).run(tests)
+                self.testsuite_results.append((header, runner))
+                return runner.wasSuccessful()
+
+    parser = TestcaseParser(INTEGRATION_TEST_DIR)
+    parser.parse_args()
+    if parser.run_suite(TestCase) is False:
+        parser.finalize(1)
+    parser.finalize(0)
 
 
 class TestDaemon(object):
@@ -132,9 +110,9 @@ class TestDaemon(object):
     '''
     MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 120
 
-    def __init__(self, opts=None):
-        self.opts = opts
-        self.colors = get_colors(opts.no_colors is False)
+    def __init__(self, parser):
+        self.parser = parser
+        self.colors = get_colors(self.parser.options.no_colors is False)
 
     def __enter__(self):
         '''
@@ -270,7 +248,7 @@ class TestDaemon(object):
         self.pre_setup_minions()
         self.setup_minions()
 
-        if self.opts.sysinfo:
+        if self.parser.options.sysinfo:
             from salt import version
             print_header('~~~~~~~ Versions Report ', inline=True)
             print('\n'.join(version.versions_report()))
@@ -278,7 +256,6 @@ class TestDaemon(object):
             print_header(
                 '~~~~~~~ Minion Grains Information ', inline=True,
             )
-
 
         print_header('', sep='=', inline=True)
 
@@ -342,8 +319,8 @@ class TestDaemon(object):
 
         del wait_minion_connections
 
-        sync_needed = self.opts.clean
-        if self.opts.clean is False:
+        sync_needed = self.parser.options.clean
+        if self.parser.options.clean is False:
             def sumfile(fpath):
                 # Since we will be do'in this for small files, it should be ok
                 fobj = fopen(fpath)
@@ -413,7 +390,7 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
-        if not self.opts.clean:
+        if not self.parser.options.clean:
             return
         if os.path.isdir(self.sub_minion_opts['root_dir']):
             shutil.rmtree(self.sub_minion_opts['root_dir'])
