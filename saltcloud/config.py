@@ -61,64 +61,10 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     '''
     # Load the cloud configuration
     overrides = salt.config.load_config(path, env_var)
-
-    if master_config_path is not None and master_config is not None:
-        raise saltcloud.exceptions.SaltCloudConfigError(
-            'Only pass `master_config` or `master_config_path`, not both.'
-        )
-    elif master_config_path is None and master_config is None:
-        master_config = salt.config.master_config(
-            overrides.get(
-                # use the value from the cloud config file
-                'master_config',
-                # if not found, use the default path
-                '/etc/salt/master'
-            )
-        )
-    elif master_config_path is not None and master_config is None:
-        master_config = salt.config.master_config(master_config_path)
-
-    # Let's register our double-layer outputter into salt's outputters
-    master_config['outputter_dirs'].append(
-        os.path.dirname(saltcloud.output.__file__)
-    )
-
-    if providers_config_path is not None and providers_config is not None:
-        raise saltcloud.exceptions.SaltCloudConfigError(
-            'Only pass `providers_config` or `providers_config_path`, '
-            'not both.'
-        )
-    elif providers_config_path is None and providers_config is None:
-        providers_config_path = overrides.get(
-            # use the value from the cloud config file
-            'providers_config',
-            # if not found, use the default path
-            '/etc/salt/cloud.providers'
-        )
-
-    if vm_config_path is not None and vm_config is not None:
-        raise saltcloud.exceptions.SaltCloudConfigError(
-            'Only pass `vm_config` or `vm_config_path`, not both.'
-        )
-    elif vm_config_path is None and vm_config is None:
-        vm_config_path = overrides.get(
-            # use the value from the cloud config file
-            'vm_config',
-            # if not found, use the default path
-            '/etc/salt/cloud.profiles'
-        )
-
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
-    # Grab data from the 4 sources
-    # 1st - Master config
-    # 2nd Override master config with salt-cloud config
-    master_config.update(overrides)
-
-    # We now set the gathered data as the overrides
-    overrides = master_config
-
+    # Load cloud configuration from any default or provided includes
     default_include = overrides.get(
         'default_include', defaults['default_include']
     )
@@ -165,13 +111,70 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         deploy_scripts_search_path=tuple(deploy_scripts_search_path)
     )
 
+    # Grab data from the 4 sources
+    # 1st - Master config
+    if master_config_path is not None and master_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `master_config` or `master_config_path`, not both.'
+        )
+    elif master_config_path is None and master_config is None:
+        master_config = salt.config.master_config(
+            overrides.get(
+                # use the value from the cloud config file
+                'master_config',
+                # if not found, use the default path
+                '/etc/salt/master'
+            )
+        )
+    elif master_config_path is not None and master_config is None:
+        master_config = salt.config.master_config(master_config_path)
+
+    # Let's register our double-layer outputter into salt's outputters
+    master_config['outputter_dirs'].append(
+        os.path.dirname(saltcloud.output.__file__)
+    )
+
+    # 2nd - salt-cloud configuration which was loaded before so we could
+    # extract the master configuration file if needed.
+
+    # Override master configuration with the salt cloud(current overrides)
+    master_config.update(overrides)
+    # We now set the overridden master_config as the overrides
+    overrides = master_config
+
+    if providers_config_path is not None and providers_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `providers_config` or `providers_config_path`, '
+            'not both.'
+        )
+    elif providers_config_path is None and providers_config is None:
+        providers_config_path = overrides.get(
+            # use the value from the cloud config file
+            'providers_config',
+            # if not found, use the default path
+            '/etc/salt/cloud.providers'
+        )
+
+    if vm_config_path is not None and vm_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `vm_config` or `vm_config_path`, not both.'
+        )
+    elif vm_config_path is None and vm_config is None:
+        vm_config_path = overrides.get(
+            # use the value from the cloud config file
+            'vm_config',
+            # if not found, use the default path
+            '/etc/salt/cloud.profiles'
+        )
+
+    # Apply the salt-cloud configuration
     opts = apply_cloud_config(overrides, defaults)
 
     # 3rd - Include Cloud Providers
     if 'providers' in opts:
         if providers_config is not None:
             raise saltcloud.exceptions.SaltCloudConfigError(
-               'Do not mix the old cloud providers configuration with '
+                'Do not mix the old cloud providers configuration with '
                 'the passing a pre-configured providers configuration '
                 'dictionary.'
             )
@@ -534,82 +537,147 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
         for entry in val:
             if 'provider' not in entry:
-                raise saltcloud.exceptions.SaltCloudConfigError(
-                    'There\'s at least one cloud driver details under '
-                    'the {0!r} cloud provider alias which does not have '
-                    'the required \'provider\' setting'.format(key)
-                )
+                entry['provider'] = '-only-extendable-'
+
             if key not in providers:
                 providers[key] = {}
-            if entry['provider'] not in providers[key]:
-                providers[key][entry['provider']] = entry
+
+            provider = entry['provider']
+            if provider in providers[key] and provider == '-only-extendable-':
+                raise saltcloud.exceptions.SaltCloudConfigError(
+                    'There\'s multiple entries under {0!r} which do not set '
+                    'a provider setting. This is most likely just a holder '
+                    'for data to be extended from, however, there can be '
+                    'only one entry which does not define it\'s \'provider\' '
+                    'setting.'.format(key)
+                )
+            elif provider not in providers[key]:
+                providers[key][provider] = entry
 
     # Is any provider extending data!?
-    for provider_alias, entries in providers.copy().items():
+    while True:
+        keep_looping = False
+        for provider_alias, entries in providers.copy().items():
 
-        for driver, details in entries.iteritems():
-            # Set a holder for the defined profiles
-            providers[provider_alias][driver]['profiles'] = {}
+            for driver, details in entries.iteritems():
+                # Set a holder for the defined profiles
+                providers[provider_alias][driver]['profiles'] = {}
 
-            if 'extends' not in details:
-                continue
+                if 'extends' not in details:
+                    continue
 
-            extends = details.pop('extends')
+                extends = details.pop('extends')
 
-            if ':' in extends:
-                alias, provider = extends.split(':')
-                if alias not in providers:
-                    log.error(
+                if ':' in extends:
+                    alias, provider = extends.split(':')
+                    if alias not in providers:
+                        raise saltcloud.exceptions.SaltCloudConfigError(
+                            'The {0!r} cloud provider entry in {1!r} is '
+                            'trying to extend data from {2!r} though {2!r} '
+                            'is not defined in the salt cloud providers '
+                            'loaded data.'.format(
+                                details['provider'],
+                                provider_alias,
+                                alias
+                            )
+                        )
+
+                    if provider not in providers.get(alias):
+                        raise saltcloud.exceptions.SaltCloudConfigError(
+                            'The {0!r} cloud provider entry in {1!r} is '
+                            'trying to extend data from \'{2}:{3}\' though '
+                            '{3!r} is not defined in {1!r}'.format(
+                                details['provider'],
+                                provider_alias,
+                                alias,
+                                provider
+                            )
+                        )
+                    details['extends'] = '{0}:{1}'.format(alias, provider)
+                elif providers.get(extends) and len(providers[extends]) > 1:
+                    raise saltcloud.exceptions.SaltCloudConfigError(
+                        'The {0!r} cloud provider entry in {1!r} is trying '
+                        'to extend from {2!r} which has multiple entries '
+                        'and no provider is being specified. Not '
+                        'extending!'.format(
+                            details['provider'], provider_alias, extends
+                        )
+                    )
+                elif extends not in providers:
+                    raise saltcloud.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend data from {2!r} though {2!r} is not '
                         'defined in the salt cloud providers loaded '
                         'data.'.format(
-                            details['provider'],
-                            provider_alias,
-                            alias
+                            details['provider'], provider_alias, extends
                         )
                     )
+                else:
+                    provider = providers.get(extends)
+                    if driver in providers.get(extends):
+                        details['extends'] = '{0}:{1}'.format(extends, driver)
+                    elif '-only-extendable-' in providers.get(extends):
+                        details['extends'] = '{0}:{1}'.format(
+                            extends, '-only-extendable-'
+                        )
+                    else:
+                        # We're still not aware of what we're trying to extend
+                        # from. Let's try on next iteration
+                        details['extends'] = extends
+                        keep_looping = True
+        if not keep_looping:
+            break
+
+    while True:
+        # Merge provided extends
+        keep_looping = False
+        for alias, entries in providers.copy().items():
+            for driver, details in entries.iteritems():
+
+                if 'extends' not in details:
+                    # Extends resolved or non existing, continue!
                     continue
 
-                if provider not in providers.get(alias):
-                    raise saltcloud.exceptions.SaltCloudConfigError(
-                        'The {0!r} cloud provider entry in {1!r} is trying '
-                        'to extend data from \'{2}:{3}\' though {3!r} is not '
-                        'defined in {1!r}'.format(
-                            details['provider'],
-                            provider_alias,
-                            alias,
-                            provider
-                        )
-                    )
+                if 'extends' in details['extends']:
+                    # Since there's a nested extends, resolve this one in the
+                    # next iteration
+                    keep_looping = True
+                    continue
 
-                extended = providers.get(alias).get(provider).copy()
-            elif providers.get(extends) and len(providers.get(extends)) > 1:
-                log.error(
-                    'The {0!r} cloud provider entry in {1!r} is trying to '
-                    'extend from {2!r} which has multiple entries and no '
-                    'provider is being specified. Not extending!'.format(
-                        details['provider'], provider_alias, extends
-                    )
-                )
+                # Let's get a reference to what we're supposed to extend
+                extends = details.pop('extends')
+                # Split the setting in (alias, driver)
+                ext_alias, ext_driver = extends.split(':')
+                # Grab a copy of what should be extended
+                extended = providers.get(ext_alias).get(ext_driver).copy()
+                # Merge the data to extend with the details
+                extended.update(details)
+                # Update the providers dictionary with the merged data
+                providers[alias][driver] = extended
+
+        if not keep_looping:
+            break
+
+    # Now clean up any providers entry that was just used to be a data tree to
+    # extend from
+    for provider_alias, entries in providers.copy().items():
+        for driver, details in entries.copy().iteritems():
+            if driver != '-only-extendable-':
                 continue
-            elif extends not in providers:
-                log.error(
-                    'The {0!r} cloud provider entry in {1!r} is trying to '
-                    'extend data from {2!r} though {2!r} is not defined in '
-                    'the salt cloud providers loaded data.'.format(
-                        details['provider'], provider_alias, extends
-                    )
+
+            log.info(
+                'There\'s at least one cloud driver details under the {0!r} '
+                'cloud provider alias which does not have the required '
+                '\'provider\' setting. Was probably just used as a holder '
+                'for additional data. Removing it from the available '
+                'providers listing'.format(
+                    provider_alias
                 )
-                continue
-            else:
-                extended = providers.get(extends).get(driver).copy()
+            )
+            providers[provider_alias].pop(driver)
 
-            # Update the data to extend with the data to be extended
-            extended.update(details)
-
-            # Update the provider's entry with the extended data
-            providers[provider_alias][driver] = extended
+        if not providers[provider_alias]:
+            providers.pop(provider_alias)
 
     return providers
 

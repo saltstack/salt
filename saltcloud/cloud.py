@@ -770,6 +770,21 @@ class Cloud(object):
         for alias, drivers in self.opts['providers'].copy().iteritems():
             for driver in drivers.copy().keys():
                 fun = '{0}.get_configured_provider'.format(driver)
+                if fun not in self.clouds:
+                    # Mis-configured provider that got removed?
+                    log.warn(
+                        'The cloud driver, {0!r}, configured under the '
+                        '{1!r} cloud provider alias was not loaded since '
+                        '\'{2}()\' could not be found. Removing it from '
+                        'the available providers list'.format(
+                            driver, alias, fun
+                        )
+                    )
+                    self.opts['providers'][alias].pop(driver)
+                    if not self.opts['providers'][alias]:
+                        self.opts['providers'].pop(alias)
+                    continue
+
                 with CloudProviderContext(self.clouds[fun], alias, driver):
                     if self.clouds[fun]() is False:
                         log.warn(
