@@ -39,6 +39,7 @@ INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
+SALT_LIBS = os.path.dirname(CODE_DIR)
 SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 
 PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
@@ -50,6 +51,10 @@ TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
+
+for dir_ in [CODE_DIR, SALT_LIBS]:
+    if not dir_ in sys.path:
+        sys.path.insert(0, dir_)
 
 
 log = logging.getLogger(__name__)
