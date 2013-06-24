@@ -803,6 +803,12 @@ class OutputOptionsMixIn(object):
             action='store_true',
             help='Disable all colored output'
         )
+        group.add_option(
+            '--force-color', '--force-colour',
+        	  default=False,
+        	  action='store_true',
+        	  help='Force colored output'
+        )
 
         for option in self.output_options_group.option_list:
             def process(opt):
