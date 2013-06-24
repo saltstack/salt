@@ -35,7 +35,7 @@ def _is_stopped_state(state):
 
 def running(name,
             restart=False,
-            update=False
+            update=False,
             runas=None,
             conf_file=None,
             bin_env=None
