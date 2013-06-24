@@ -171,7 +171,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     if 'providers' in opts:
         if providers_config is not None:
             raise saltcloud.exceptions.SaltCloudConfigError(
-               'Do not mix the old cloud providers configuration with '
+                'Do not mix the old cloud providers configuration with '
                 'the passing a pre-configured providers configuration '
                 'dictionary.'
             )
