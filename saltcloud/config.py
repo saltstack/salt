@@ -677,7 +677,6 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     # Now clean up any providers entry that was just used to be a data tree to
     # extend from
-    # Second iteration to resolve any remaining extends
     for provider_alias, entries in providers.copy().items():
         for driver, details in entries.copy().iteritems():
             if driver != '-only-extendable-':
