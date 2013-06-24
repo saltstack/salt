@@ -21,6 +21,18 @@ try:
 except ImportError:
     pass
 
+
+INTEGRATION_TEST_DIR = os.path.dirname(
+    os.path.normpath(os.path.abspath(__file__))
+)
+CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
+SALT_LIBS = os.path.dirname(CODE_DIR)
+
+# Update sys.path
+for dir_ in [CODE_DIR, SALT_LIBS]:
+    if not dir_ in sys.path:
+        sys.path.insert(0, dir_)
+
 # Import Salt libs
 import salt
 import salt.config
