@@ -5,9 +5,22 @@ user present
 user present with custom homedir
 '''
 import os
-from saltunittest import skipIf, destructiveTest
-import integration
 import grp
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
+from salttesting import skipIf
+from salttesting.helpers import destructiveTest
 
 
 class UserTest(integration.ModuleCase,

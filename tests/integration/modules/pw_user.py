@@ -4,8 +4,21 @@ import string
 import random
 
 # Import salt libs
-import integration
-from saltunittest import destructiveTest, skipIf
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
+from salttesting import destructiveTest, skipIf
+from salttesting.helpers import destructiveTest
 
 
 class UseraddModuleTest(integration.ModuleCase):

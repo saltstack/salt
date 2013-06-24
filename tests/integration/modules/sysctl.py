@@ -2,8 +2,20 @@
 import sys
 
 # Import salt libs
-import integration
-from saltunittest import skipIf
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
+from salttesting import skipIf
 
 
 class SysctlModuleTest(integration.ModuleCase):

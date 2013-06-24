@@ -6,8 +6,20 @@ import os
 import shutil
 
 # Import Salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 import salt.utils
-import integration
 
 HFN = os.path.join(integration.TMP, 'hosts')
 

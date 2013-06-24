@@ -1,9 +1,23 @@
 '''
 Test the django module
 '''
-from saltunittest import skipIf
-import integration
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
+
 from salt.modules import djangomod as django
+from salttesting import skipIf
 
 django.__salt__ = {}
 

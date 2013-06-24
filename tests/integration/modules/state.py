@@ -3,8 +3,21 @@ import os
 import shutil
 
 # Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 import salt.utils
-import integration
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -222,7 +235,7 @@ fi
             for fname in list(fnames) + [to_include_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
-    
+
     def test_issue_2068_template_str(self):
         ret = self.run_function('cmd.has_exec', ['virtualenv'])
         if not ret:
