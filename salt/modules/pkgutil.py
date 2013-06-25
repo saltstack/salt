@@ -193,8 +193,8 @@ def latest_version(*names, **kwargs):
 
         if name in names:
             cver = pkgs.get(name, '')
-            version = version_rev.split(',')[0]
-            if not cver or compare(pkg1=cver, oper='<', pkg2=version):
+            nver = version_rev.split(',')[0]
+            if not cver or compare(pkg1=cver, oper='<', pkg2=nver):
                 # Remove revision for version comparison
                 ret[name] = version_rev
 
