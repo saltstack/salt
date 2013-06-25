@@ -4,9 +4,11 @@ The setup script for salt
 '''
 
 import os
+import sys
 import urllib2
 from distutils import log
 from distutils.core import setup
+from distutils.cmd import Command
 from distutils.command.sdist import sdist as original_sdist
 
 setup_kwargs = {}
@@ -115,6 +117,37 @@ class sdist(original_sdist):
         original_sdist.run(self)
 
 
+class TestCommand(Command):
+    description = 'Run tests'
+    user_options = [
+        ('runtests-opts=', 'R', 'Command line options to pass to runtests.py')
+    ]
+
+    def initialize_options(self):
+        self.runtests_opts = None
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        from subprocess import Popen
+        self.run_command('build')
+        build_cmd = self.get_finalized_command('build_ext')
+        runner = os.path.abspath('tests/runtests.py')
+        test_cmd = sys.executable + ' {0}'.format(runner)
+        if self.runtests_opts:
+            test_cmd += ' {0}'.format(self.runtests_opts)
+
+        print('running test')
+        test_process = Popen(
+            test_cmd, shell=True,
+            stdout=sys.stdout, stderr=sys.stderr,
+            cwd=build_cmd.build_lib
+        )
+        test_process.communicate()
+        sys.exit(test_process.returncode)
+
+
 NAME = 'salt-cloud'
 VER = __version__
 DESC = ('Generic cloud provisioning system with build in functions ')
@@ -151,7 +184,8 @@ setup(name=NAME,
                   ],
       scripts=['scripts/salt-cloud'],
       cmdclass={
-          'sdist': sdist
+          'sdist': sdist,
+          'test': TestCommand
       },
       **setup_kwargs
       )
