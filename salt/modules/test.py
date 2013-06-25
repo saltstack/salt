@@ -309,22 +309,22 @@ def tty(device, echo=None):
         salt '*' test.tty pts3 'This is a test'
     '''
     if device.startswith('tty'):
-        tty = '/dev/{0}'.format(device)
+        teletype = '/dev/{0}'.format(device)
     elif device.startswith('pts'):
-        tty = '/dev/{0}'.format(device.replace('pts', 'pts/'))
+        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
     else:
         return {'Error': 'The specified device is not a valid TTY'}
 
-    cmd = 'echo {0} > {1}'.format(echo, tty)
+    cmd = 'echo {0} > {1}'.format(echo, teletype)
     ret = __salt__['cmd.run_all'](cmd)
     if ret['retcode'] == 0:
         return {
-            'Success': 'Message was successfully echoed to {0}'.format(tty)
+            'Success': 'Message was successfully echoed to {0}'.format(teletype)
         }
     else:
         return {
             'Error': 'Echoing to {0} returned error code {1}'.format(
-                tty,
+                teletype,
                 ret['retcode'])
         }
 
