@@ -73,7 +73,7 @@ def install(pkg=None,
         cmd += ' --global'
 
     if pkg:
-        cmd += ' ' + pkg
+        cmd += ' "%s"' % pkg
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
@@ -134,7 +134,7 @@ def uninstall(pkg,
     if dir is None:
         cmd += ' --global'
 
-    cmd += ' ' + pkg
+    cmd += ' "%s"' % pkg
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
@@ -173,7 +173,7 @@ def list_(pkg=None,
         cmd += ' --global'
 
     if pkg:
-        cmd += ' ' + pkg
+        cmd += ' "%s"' % pkg
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir)
 
