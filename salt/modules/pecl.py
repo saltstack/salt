@@ -4,6 +4,7 @@ Manage PHP pecl extensions.
 
 # Import python libs
 import re
+import logging
 
 
 __opts__ = {}
@@ -12,6 +13,9 @@ __pillar__ = {}
 __func_alias__ = {
     'list_': 'list'
 }
+
+log = logging.getLogger(__name__)
+
 
 def _pecl(command):
     '''
