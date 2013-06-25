@@ -410,7 +410,7 @@ def run(cmd,
 
     Specify an alternate shell with the shell parameter::
 
-        salt '*' cmd.run "Get-ChildItem C:\ " shell='powershell'
+        salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
 
     '''
     out = _run(cmd,
@@ -625,7 +625,7 @@ def script(
 
         salt '*' cmd.script salt://scripts/runme.sh
         salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
-        salt '*' cmd.script salt://scripts/windows_task.ps1 args=' -Input c:\tmp\infile.txt' shell='powershell'
+        salt '*' cmd.script salt://scripts/windows_task.ps1 args=' -Input c:\\tmp\\infile.txt' shell='powershell'
     '''
     if not salt.utils.is_windows():
         path = salt.utils.mkstemp(dir=cwd)
