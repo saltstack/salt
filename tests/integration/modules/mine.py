@@ -1,7 +1,23 @@
 '''
 Test the salt mine system
 '''
-import integration
+
+# Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
+
 
 class MineTest(integration.ModuleCase):
     '''
@@ -60,3 +76,8 @@ class MineTest(integration.ModuleCase):
                     minion_tgt='sub_minion'
                     )
         self.assertEqual(ret['minion']['id'], 'minion')
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MineTest)

@@ -1,5 +1,19 @@
 import os
-import integration
+
+# Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
 
 class RabbitModuleTest(integration.ModuleCase):
@@ -23,3 +37,7 @@ class RabbitModuleTest(integration.ModuleCase):
         ret = self.run_function('rabbitmq.user_exists', ['null_user'])
         self.assertEqual(ret, False)
 
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(RabbitModuleTest)

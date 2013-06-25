@@ -15,7 +15,19 @@ import shutil
 import tempfile
 
 # Import salt libs
-import integration
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
 
 class PipModuleTest(integration.ModuleCase):
@@ -105,3 +117,8 @@ class PipModuleTest(integration.ModuleCase):
         super(PipModuleTest, self).tearDown()
         if os.path.isdir(self.venv_test_dir):
             shutil.rmtree(self.venv_test_dir)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PipModuleTest)
