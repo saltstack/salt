@@ -886,7 +886,7 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(load['id']):
             return False
-        if self.opts.get('minion_data_cache', False):
+        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
