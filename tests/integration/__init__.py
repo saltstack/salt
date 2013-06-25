@@ -46,9 +46,9 @@ from salt.utils.verify import verify_env
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.case import ShellTestCase
+from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
 from salttesting.helpers import RedirectStdStreams
-
 
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
@@ -715,15 +715,9 @@ class ShellCase(ShellTestCase):
         return self.run_script('salt-call', arg_str)
 
 
-class ShellCaseCommonTestsMixIn(object):
+class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
 
-    def test_version_includes_binary_name(self):
-        if getattr(self, '_call_binary_', None) is None:
-            self.skipTest('\'_call_binary_\' not defined.')
-
-        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(self._call_binary_, out)
-        self.assertIn(salt.__version__, out)
+    _call_binary_expected_version_ = salt.__version__
 
     def test_salt_with_git_version(self):
         if getattr(self, '_call_binary_', None) is None:
