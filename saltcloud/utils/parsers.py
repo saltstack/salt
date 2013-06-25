@@ -294,7 +294,7 @@ class CloudQueriesMixIn(object):
 
     def _mixin_after_parsed(self):
         group_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is True,
+            lambda option: getattr(self.options, option.dest) is not False,
             self.cloud_queries_group.option_list
         )
         if len(group_options_selected) > 1:
