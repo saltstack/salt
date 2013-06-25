@@ -40,7 +40,6 @@ except OSError as err:
     print 'Failed to change directory to salt-cloud\'s source: {0}'.format(err)
 
 
-
 class SaltCloudTestingParser(SaltCoverageTestingParser):
     def setup_additional_options(self):
         self.test_selection_group.add_option(
@@ -74,7 +73,7 @@ class SaltCloudTestingParser(SaltCoverageTestingParser):
 
         self.start_coverage(
             branch=True,
-            source=[os.path.join(os.getcwd(), 'saltcloud')],
+            source=[SALTCLOUD_ROOT],
             track_processes=True
         )
 
