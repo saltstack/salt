@@ -141,7 +141,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         self.start_coverage(
             branch=True,
-            source=[os.path.join(SALTC_ROOT, 'saltcloud')],
+            source=[os.path.join(SALTC_ROOT, 'salt')],
             track_processes=True
         )
 
