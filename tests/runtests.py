@@ -19,6 +19,8 @@ import tempfile
 from salttesting.parser.cover import SaltCoverageTestingParser
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
+SALTCLOUD_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+
 XML_OUTPUT_DIR = os.environ.get(
     'XML_TEST_REPORTS', os.path.join(
         tempfile.gettempdir(), 'xml-test-reports'
@@ -29,6 +31,14 @@ HTML_OUTPUT_DIR = os.environ.get(
         tempfile.gettempdir(), 'html-test-results'
     )
 )
+
+
+try:
+    if SALTCLOUD_ROOT:
+        os.chdir(SALTCLOUD_ROOT)
+except OSError as err:
+    print 'Failed to change directory to salt-cloud\'s source: {0}'.format(err)
+
 
 
 class SaltCloudTestingParser(SaltCoverageTestingParser):

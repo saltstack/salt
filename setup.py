@@ -35,6 +35,9 @@ if 'USE_SETUPTOOLS' in os.environ:
             requirements = f.read()
 
         setup_kwargs['install_requires'] = requirements
+        setup_kwargs['tests_require'] = [
+            'git+https://github.com/s0undt3ch/salt-testing.git#egg=SaltTesting'
+        ]
     except:
         USE_SETUPTOOLS = False
 
@@ -132,7 +135,7 @@ class TestCommand(Command):
     def run(self):
         from subprocess import Popen
         self.run_command('build')
-        self.get_finalized_command('build_ext')
+        build_cmd = self.get_finalized_command('build_ext')
         runner = os.path.abspath('tests/runtests.py')
         test_cmd = sys.executable + ' {0}'.format(runner)
         if self.runtests_opts:
@@ -142,7 +145,7 @@ class TestCommand(Command):
         test_process = Popen(
             test_cmd, shell=True,
             stdout=sys.stdout, stderr=sys.stderr,
-            cwd=os.path.abspath(os.path.dirname(__file__))
+            cwd=build_cmd.build_lib
         )
         test_process.communicate()
         sys.exit(test_process.returncode)
