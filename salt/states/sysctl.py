@@ -51,7 +51,6 @@ def present(name, value, config='/etc/sysctl.conf'):
             ret['comment'] = 'Invalid sysctl option {0} = {1}'.format(name,value)
             return ret
 
-
     update = __salt__['sysctl.persist'](name, value, config)
 
     if update == 'Updated':
