@@ -65,10 +65,6 @@ FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 
-for dir_ in [CODE_DIR, SALT_LIBS]:
-    if not dir_ in sys.path:
-        sys.path.insert(0, dir_)
-
 
 log = logging.getLogger(__name__)
 
