@@ -27,19 +27,21 @@ def installed(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    prefix = name.split('@')[0].split('<')[0].split('>')[0].strip()
+    prefix = name.split('@')[0].strip()
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](pkg=name, dir=dir)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if prefix.lower() in (p.lower() for p in installed_pkgs):
+    installed_pkgs = dict((p.lower(), info) for p, info in installed_pkgs.items())
+
+    if prefix.lower() in installed_pkgs:
         if force_reinstall is False:
             ret['result'] = True
-            ret['comment'] = 'Package already installed'
+            ret['comment'] = 'Package %s satisfied by %s@%s' % (name, prefix, installed_pkgs[prefix.lower()]['version'])
             return ret
 
     if __opts__['test']:
@@ -63,7 +65,7 @@ def installed(name,
         version = call[0]['version']
         pkg_name = call[0]['name']
         ret['changes']["{0}@{1}".format(pkg_name, version)] = 'Installed'
-        ret['comment'] = 'Package was successfully installed'
+        ret['comment'] = 'Package %s was successfully installed' % name
     else:
         ret['result'] = False
         ret['comment'] = 'Could not install package'
