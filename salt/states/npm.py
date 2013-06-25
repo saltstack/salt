@@ -41,7 +41,8 @@ def installed(name,
     if prefix.lower() in installed_pkgs:
         if force_reinstall is False:
             ret['result'] = True
-            ret['comment'] = 'Package %s satisfied by %s@%s' % (name, prefix, installed_pkgs[prefix.lower()]['version'])
+            ret['comment'] = 'Package {0} satisfied by {1}@{2}'.format(
+                    name, prefix, installed_pkgs[prefix.lower()]['version'])
             return ret
 
     if __opts__['test']:
@@ -64,8 +65,8 @@ def installed(name,
         ret['result'] = True
         version = call[0]['version']
         pkg_name = call[0]['name']
-        ret['changes']["{0}@{1}".format(pkg_name, version)] = 'Installed'
-        ret['comment'] = 'Package %s was successfully installed' % name
+        ret['changes']['{0}@{1}'.format(pkg_name, version)] = 'Installed'
+        ret['comment'] = 'Package {0} was successfully installed'.format(name)
     else:
         ret['result'] = False
         ret['comment'] = 'Could not install package'
@@ -97,8 +98,8 @@ def removed(name,
         return ret
 
     if name not in installed_pkgs:
-        ret["result"] = True
-        ret["comment"] = "Package is not installed."
+        ret['result'] = True
+        ret['comment'] = 'Package is not installed.'
         return ret
 
     if __opts__['test']:
@@ -106,15 +107,15 @@ def removed(name,
         ret['comment'] = 'Package {0} is set to be removed'.format(name)
         return ret
 
-    if __salt__["npm.uninstall"](pkg=name,
+    if __salt__['npm.uninstall'](pkg=name,
                                  dir=dir,
                                  runas=runas):
-        ret["result"] = True
-        ret["changes"][name] = 'Removed'
-        ret["comment"] = 'Package was successfully removed.'
+        ret['result'] = True
+        ret['changes'][name] = 'Removed'
+        ret['comment'] = 'Package was successfully removed.'
     else:
-        ret["result"] = False
-        ret["comment"] = 'Error removing package.'
+        ret['result'] = False
+        ret['comment'] = 'Error removing package.'
 
     return ret
 
