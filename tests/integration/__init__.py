@@ -25,6 +25,8 @@ INTEGRATION_TEST_DIR = os.path.dirname(
 )
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
 SALT_LIBS = os.path.dirname(CODE_DIR)
+SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
+PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
 # Update sys.path
 for dir_ in [CODE_DIR, SALT_LIBS]:
@@ -47,14 +49,6 @@ from salttesting.case import ShellTestCase
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
 from salttesting.helpers import RedirectStdStreams
 
-INTEGRATION_TEST_DIR = os.path.dirname(
-    os.path.normpath(os.path.abspath(__file__))
-)
-CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
-SALT_LIBS = os.path.dirname(CODE_DIR)
-SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
-
-PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
