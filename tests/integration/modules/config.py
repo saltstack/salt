@@ -1,8 +1,22 @@
 '''
 Validate the config system
 '''
+# Import salt libs
+try:
+    import integration
+except ImportError:
+    if __name__ == '__main__':
+        import os
+        import sys
+        sys.path.insert(
+            0, os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), '../../'
+                )
+            )
+        )
+    import integration
 
-import integration
 
 class ConfigTest(integration.ModuleCase):
     '''
@@ -12,27 +26,36 @@ class ConfigTest(integration.ModuleCase):
         '''
         test config.valid_file_proto
         '''
-        self.assertTrue(self.run_function('config.valid_fileproto', ['salt://']))
-        self.assertTrue(self.run_function('config.valid_fileproto', ['http://']))
-        self.assertTrue(self.run_function('config.valid_fileproto', ['https://']))
-        self.assertTrue(self.run_function('config.valid_fileproto', ['ftp://']))
-        self.assertFalse(self.run_function('config.valid_fileproto', ['cheese://']))
+        self.assertTrue(
+            self.run_function('config.valid_fileproto', ['salt://']))
+        self.assertTrue(
+            self.run_function('config.valid_fileproto', ['http://']))
+        self.assertTrue(
+            self.run_function('config.valid_fileproto', ['https://']))
+        self.assertTrue(
+            self.run_function('config.valid_fileproto', ['ftp://']))
+        self.assertFalse(
+            self.run_function('config.valid_fileproto', ['cheese://']))
 
     def test_backup_mode(self):
         '''
         test config.backup_mode
         '''
-        self.assertEqual(self.run_function('config.backup_mode', ['minion']), 'minion')
+        self.assertEqual(
+            self.run_function('config.backup_mode', ['minion']), 'minion')
 
     def test_manage_mode(self):
         '''
         test config.manage_mode
         '''
         # This function is generally only used with cross calls, the yaml
-        # interpereter is breaking it for remote calls
-        self.assertEqual(self.run_function('config.manage_mode', ['775']), '775')
-        self.assertEqual(self.run_function('config.manage_mode', ['1775']), '1775')
-        #self.assertEqual(self.run_function('config.manage_mode', ['0775']), '775')
+        # interpreter is breaking it for remote calls
+        self.assertEqual(
+            self.run_function('config.manage_mode', ['775']), '775')
+        self.assertEqual(
+            self.run_function('config.manage_mode', ['1775']), '1775')
+        #self.assertEqual(
+        #    self.run_function('config.manage_mode', ['0775']), '775')
 
     def test_option(self):
         '''
@@ -79,3 +102,8 @@ class ConfigTest(integration.ModuleCase):
                     'config.get',
                     ['config_test:spam']),
                 'eggs')
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(ConfigTest)
