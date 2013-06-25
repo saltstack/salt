@@ -984,9 +984,10 @@ class Minion(object):
 
         # Make sure to gracefully handle CTRL_LOGOFF_EVENT
         salt.utils.enable_ctrl_logoff_handler()
-        
+
         # On first startup execute a state run if configured to do so
         self._state_run()
+        time.sleep(.5)
 
         loop_interval = int(self.opts['loop_interval'])
         while True:
