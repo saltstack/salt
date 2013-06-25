@@ -283,6 +283,7 @@ DEFAULT_MASTER_OPTS = {
     'ext_job_cache': '',
     'master_ext_job_cache': '',
     'minion_data_cache': True,
+    'enforce_mine_cache': False,
     'ipv6': False,
     'log_file': '/var/log/salt/master',
     'log_level': None,
