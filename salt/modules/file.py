@@ -1274,9 +1274,9 @@ def check_perms(name, ret, user, group, mode):
     perms['lgroup'] = get_group(name)
     perms['lmode'] = __salt__['config.manage_mode'](get_mode(name))
 
-    mode = __salt__['config.manage_mode'](mode)
     # Mode changes if needed
-    if mode:
+    if mode is not None:
+        mode = __salt__['config.manage_mode'](mode)
         if mode != perms['lmode']:
             if __opts__['test'] is True:
                 ret['changes']['mode'] = mode
