@@ -114,6 +114,12 @@ Uninstall software using the pkg module:
 
     $ salt \* pkg.remove firefox
 
+    $ salt \* pkg.purge firefox
+
+``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
+future ``pkg.purge`` may direct the installer to remove all configs and
+settings for software packages that support that option.
+
 
 Git Hosted Repo
 ===============
