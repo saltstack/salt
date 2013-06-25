@@ -88,7 +88,11 @@ class SaltCloudTestingParser(SaltCoverageTestingParser):
                 results = self.run_suite('', name)
                 status.append(results)
         if self.options.shell:
-            status.append(self.run_integration_suite('shell', 'Shell'))
+            status.append(
+                self.run_suite(
+                    os.path.join(TEST_DIR, 'integration'), 'Shell', 'cli*.py'
+                )
+            )
         return status
 
     def run_unit_tests(self):

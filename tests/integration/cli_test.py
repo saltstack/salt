@@ -8,19 +8,19 @@ except ImportError:
         sys.path.insert(
             0, os.path.abspath(
                 os.path.join(
-                    os.path.dirname(__file__), '../../'
+                    os.path.dirname(__file__), '../'
                 )
             )
         )
     import integration
 
 
-class SaltCloudTest(integration.ShellCase,
-                    integration.ShellCaseCommonTestsMixIn):
+class SaltCloudCliTest(integration.ShellCase,
+                       integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-cloud'
 
 
 if __name__ == '__main__':
     from integration import run_testcase
-    run_testcase(SaltCloudTest)
+    run_testcase(SaltCloudCliTest)
