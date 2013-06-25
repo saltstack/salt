@@ -744,8 +744,7 @@ def managed(name,
         file of any kind.  Ignores hashes and does not use a templating engine.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
-    if mode is not None:
-        mode = __salt__['config.manage_mode'](mode)
+    mode = __salt__['config.manage_mode'](mode)
 
     user = _test_owner(kwargs, user=user)
     ret = {'changes': {},
