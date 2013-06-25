@@ -45,7 +45,7 @@ from salt.utils.verify import verify_env
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.parser import PNUM, print_header
+from salttesting.parser import PNUM, print_header, SaltTestcaseParser
 from salttesting.helpers import RedirectStdStreams
 
 INTEGRATION_TEST_DIR = os.path.dirname(
@@ -75,16 +75,8 @@ def run_tests(TestCase, needs_daemon=True):
 
     Function uses optparse to set up test environment
     '''
-    from salttesting import TestLoader, TextTestRunner
-    from salttesting.parser import SaltTestingParser
-
-    class TestcaseParser(SaltTestingParser):
+    class TestcaseParser(SaltTestcaseParser):
         def setup_additional_options(self):
-            self.option_groups.remove(self.test_selection_group)
-            if self.has_option('--xml-out'):
-                self.remove_option('--xml-out')
-            if self.has_option('--html-out'):
-                self.remove_option('--html-out')
             self.add_option(
                 '--sysinfo',
                 default=False,
@@ -99,34 +91,16 @@ def run_tests(TestCase, needs_daemon=True):
                 help='Disable colour printing.'
             )
 
-        def run_suite(self, testcase):
-            loader = TestLoader()
-            if isinstance(testcase, list):
-                for case in testcase:
-                    tests = loader.loadTestsFromTestCase(case)
-            else:
-                tests = loader.loadTestsFromTestCase(testcase)
-            print('Setting up Salt daemons to execute tests')
-            header = ''
+        def run_testcase(self, testcase, needs_daemon=True):
             if needs_daemon:
+                print('Setting up Salt daemons to execute tests')
                 with TestDaemon(self):
-                    if not isinstance(testcase, list):
-                        header = '{0} Tests'.format(testcase.__name__)
-                        print_header('Starting {0}'.format(header))
-                    runner = TextTestRunner(
-                        verbosity=self.options.verbosity).run(tests)
-            else:
-                if not isinstance(testcase, list):
-                    header = '{0} Tests'.format(testcase.__name__)
-                    print_header('Starting {0}'.format(header))
-                runner = TextTestRunner(
-                    verbosity=self.options.verbosity).run(tests)
-            self.testsuite_results.append((header, runner))
-            return runner.wasSuccessful()
+                    return SaltTestcaseParser.run_testcase(self, testcase)
+            return SaltTestcaseParser.run_testcase(self, testcase)
 
-    parser = TestcaseParser(INTEGRATION_TEST_DIR)
+    parser = TestcaseParser()
     parser.parse_args()
-    if parser.run_suite(TestCase) is False:
+    if parser.run_testcase(TestCase, needs_daemon=needs_daemon) is False:
         parser.finalize(1)
     parser.finalize(0)
 
