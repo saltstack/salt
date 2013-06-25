@@ -69,6 +69,8 @@ def manage_mode(mode):
 
         salt '*' config.manage_mode
     '''
+    if mode is None:
+        return None
     return str(mode).lstrip('0').zfill(3)
 
 
