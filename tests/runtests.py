@@ -116,7 +116,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
 
     def validate_options(self):
-        if False and self.options.coverage and any((
+        if self.options.coverage and any((
                 self.options.module, self.options.client, self.options.shell,
                 self.options.unit, self.options.state, self.options.runner,
                 self.options.name, os.geteuid() != 0,
