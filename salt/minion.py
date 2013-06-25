@@ -650,10 +650,6 @@ class Minion(object):
                              'log for more info.  Possibly a missing '
                              'arguments issue:  {1}').format(function_name,
                                                              aspec))
-                msg = 'Missing arguments executing "{0}": {1}'.format(
-                    function_name, aspec
-                )
-                log.warning(msg)
                 log.debug(
                     'TypeError intercepted: {0}\n{1}'.format(exc, trb),
                     exc_info=True
