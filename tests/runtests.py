@@ -4,9 +4,7 @@
 Discover all instances of unittest.TestCase in this directory.
 '''
 # Import python libs
-import sys
 import os
-import re
 import resource
 import tempfile
 
@@ -14,8 +12,8 @@ import tempfile
 from integration import TestDaemon, TMP
 
 # Import Salt Testing libs
-from salttesting import *
-from salttesting.parser import PNUM, print_header, SaltTestingParser
+from salttesting.parser import PNUM, print_header
+from salttesting.parser.cover import SaltCoverageTestingParser
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 SALT_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -35,23 +33,10 @@ try:
 except OSError as err:
     print 'Failed to change directory to salt\'s source: {0}'.format(err)
 
-try:
-    import coverage
-    # Cover any subprocess
-    coverage.process_startup()
-    # Setup coverage
-    code_coverage = coverage.coverage(
-        branch=True,
-        source=[os.path.join(os.getcwd(), 'salt')],
-    )
-except ImportError:
-    code_coverage = None
-
-
 REQUIRED_OPEN_FILES = 3072
 
 
-class SaltTestsuiteParser(SaltTestingParser):
+class SaltTestsuiteParser(SaltCoverageTestingParser):
 
     def setup_additional_options(self):
         self.add_option(
@@ -123,18 +108,6 @@ class SaltTestsuiteParser(SaltTestingParser):
         )
 
         self.output_options_group.add_option(
-            '--coverage',
-            default=False,
-            action='store_true',
-            help='Run tests and report code coverage'
-        )
-        self.output_options_group.add_option(
-            '--no-coverage-report',
-            default=False,
-            action='store_true',
-            help='Don\'t build the coverage HTML report'
-        )
-        self.output_options_group.add_option(
             '--no-colors',
             '--no-colours',
             default=False,
@@ -143,41 +116,17 @@ class SaltTestsuiteParser(SaltTestingParser):
         )
 
     def validate_options(self):
-        if self.options.coverage and code_coverage is None:
+        if False and self.options.coverage and any((
+                self.options.module, self.options.client, self.options.shell,
+                self.options.unit, self.options.state, self.options.runner,
+                self.options.name, os.geteuid() != 0,
+                not self.options.run_destructive)):
             self.error(
-                'Cannot run tests with coverage report. '
-                'Please install coverage>=3.5.3'
+                'No sense in generating the tests coverage report when '
+                'not running the full test suite, including the '
+                'destructive tests, as \'root\'. It would only produce '
+                'incorrect results.'
             )
-        elif self.options.coverage:
-            coverage_version = tuple([
-                int(part) for part in re.search(
-                    r'([0-9.]+)', coverage.__version__).group(0).split('.')
-            ])
-            if coverage_version < (3, 5, 3):
-                # Should we just print the error instead of exiting?
-                self.error(
-                    'Versions lower than 3.5.3 of the coverage library are '
-                    'know to produce incorrect results. Please consider '
-                    'upgrading...'
-                )
-            # Update environ so that any subprocess started on test are also
-            # included in the report
-            os.environ['COVERAGE_PROCESS_START'] = '1'
-
-            if any((self.options.module, self.options.client,
-                    self.options.shell, self.options.unit, self.options.state,
-                    self.options.runner, self.options.name, os.geteuid() != 0,
-                    not self.options.run_destructive)):
-                self.error(
-                    'No sense in generating the tests coverage report when '
-                    'not running the full test suite, including the '
-                    'destructive tests, as \'root\'. It would only produce '
-                    'incorrect results.'
-                )
-
-        # Set the required environment variable in order to know if destructive
-        # tests should be executed or not.
-        os.environ['DESTRUCTIVE_TESTS'] = str(self.options.run_destructive)
 
         # Set test suite defaults if no specific suite options are provided
         if not any((self.options.module, self.options.client,
@@ -190,8 +139,11 @@ class SaltTestsuiteParser(SaltTestingParser):
             self.options.runner = True
             self.options.state = True
 
-        if self.options.coverage:
-            code_coverage.start()
+        self.start_coverage(
+            branch=True,
+            source=[os.path.join(os.getcwd(), 'salt')],
+            track_processes=True
+        )
 
     def run_integration_suite(self, suite_folder, display_name):
         '''
@@ -280,46 +232,6 @@ class SaltTestsuiteParser(SaltTestingParser):
             )
             status.append(results)
         return status
-
-    def print_overall_testsuite_report(self):
-        SaltTestingParser.print_overall_testsuite_report(self)
-        if not self.options.coverage:
-            return
-
-        print('Stopping and saving coverage info')
-        code_coverage.stop()
-        code_coverage.save()
-        print('Current Directory: {0}'.format(os.getcwd()))
-        print(
-            'Coverage data file exists? {0}'.format(
-                os.path.isfile('.coverage')
-            )
-        )
-
-        if self.options.no_coverage_report is False:
-            report_dir = os.path.join(
-                os.path.dirname(__file__),
-                'coverage-report'
-            )
-            print(
-                '\nGenerating Coverage HTML Report Under {0!r} ...'.format(
-                    report_dir
-                )
-            ),
-            sys.stdout.flush()
-
-            if os.path.isdir(report_dir):
-                import shutil
-                shutil.rmtree(report_dir)
-            code_coverage.html_report(directory=report_dir)
-            print('Done.\n')
-
-    def finalize(self, exit_code):
-        if self.options.no_report:
-            if self.options.coverage:
-                code_coverage.stop()
-                code_coverage.save()
-        SaltTestingParser.finalize(self, exit_code)
 
 
 def main():
