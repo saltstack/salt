@@ -45,7 +45,7 @@ if with_setuptools is False:
     from distutils.core import setup
     warnings.filterwarnings(
         'ignore',
-        'Unknown distribution option: \'(install_requires|zip_safe)\'',
+        'Unknown distribution option: \'(tests_require|install_requires|zip_safe)\'',
         UserWarning,
         'distutils.dist'
     )
@@ -233,6 +233,10 @@ setup_kwargs = {'name': NAME,
                                ],
                 # Required for esky builds
                 'install_requires': requirements,
+                # Required for running the tests suite
+                'tests_require': [
+                    'git+https://github.com/s0undt3ch/salt-testing.git#egg=SaltTesting'
+                ],
                 # The dynamic module loading in salt.modules makes this
                 # package zip unsafe. Required for esky builds
                 'zip_safe': False
