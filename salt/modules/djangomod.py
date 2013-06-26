@@ -28,7 +28,8 @@ def command(settings_module,
             bin_env=None,
             pythonpath=None,
             env=None,
-            *args, **kwargs):
+            args=None,
+            *options, **kwargs):
     '''
     Run arbitrary django management command
 
@@ -42,12 +43,16 @@ def command(settings_module,
     if pythonpath:
         cmd = '{0} --pythonpath={1}'.format(cmd, pythonpath)
 
-    for arg in args:
-        cmd = '{0} --{1}'.format(cmd, arg)
+    for option in options:
+        cmd = '{0} --{1}'.format(cmd, option)
 
     for key, value in kwargs.items():
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
+
+    if args:
+        cmd = '{0} {1}'.format(cmd, " ".join(args))
+
     return __salt__['cmd.run'](cmd, env=env)
 
 
@@ -145,7 +150,7 @@ def loaddata(settings_module,
                    bin_env,
                    pythonpath,
                    env,
-                   *fixtures.split(','),
+                   args=fixtures.split(','),
                    **kwargs)
 
 def collectstatic(settings_module,
