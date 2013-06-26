@@ -13,3 +13,4 @@ Full list of builtin master tops modules
     ext_nodes
     cobbler
     mongo
+    reclass
