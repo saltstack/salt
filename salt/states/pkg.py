@@ -324,6 +324,18 @@ def installed(
     ``NOTE:`` When using comparison operators, the expression must be enclosed
     in quotes to avoid a YAML render error.
 
+    With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
+    flag list and/or if the given packages should be in package.accept_keywords
+    file and/or the overlay from which you want the package to be installed.
+    Example::
+
+        mypkgs:
+            pkg.installed:
+                - pkgs:
+                    - foo: '~'
+                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
+                    - baz
+
     sources
         A list of packages to install, along with the source URI or local path
         from which to install each package. In the example below, ``foo``,
@@ -763,6 +775,10 @@ def mod_init(low):
     It sets a flag for a number of reasons, primarily due to timeline logic.
     When originally setting up the mod_init for pkg a number of corner cases
     arose with different package managers and how they refresh package data.
+
+    It also runs the "ex_mod_init" from the package manager module that is
+    currently loaded. The "ex_mod_init" is expected to work as a normal
+    "mod_init" function.
     '''
     ret = True
     if 'pkg.ex_mod_init' in __salt__:

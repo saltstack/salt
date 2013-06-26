@@ -40,7 +40,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo') else False
+    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo' and 'portage_config.enforce_nice_config' in __salt__ ) else False
 
 
 def _vartree():
@@ -51,14 +51,24 @@ def _porttree():
     return portage.db[portage.root]['porttree']
 
 
-def _cpv_to_name(cpv):
-    if cpv == '':
-        return ''
-    return str(portage.cpv_getkey(cpv))
+def _p_to_cp(p):
+    ret = _porttree().dbapi.xmatch("match-all", p)
+    if ret:
+        return portage.cpv_getkey(ret[0])
+    return None
+
+
+def _cpv_to_cp(cpv):
+    ret = portage.cpv_getkey(cpv)
+    if ret:
+        return ret
+    else:
+        return cpv
 
 
 def _cpv_to_version(cpv):
     return portage.versions.cpv_getversion(cpv)
+
 
 def _process_emerge_err(stderr):
     '''
@@ -80,6 +90,18 @@ def _process_emerge_err(stderr):
             changes['mask'] = rexp.findall(section)
     ret['changes'] = changes
     return ret
+
+
+def ex_mod_init(low):
+    '''
+    Enforce a nice tree structure for /etc/portage/package.* configuration files.
+
+    CLI Example::
+
+        salt '*' ebuild.ex_mod_init
+    '''
+    __salt__['portage_config.enforce_nice_config']()
+    return True
 
 
 def latest_version(*names, **kwargs):
@@ -192,11 +214,11 @@ def porttree_matches(name):
     provided for packages that have several versions in the portage tree, but
     rather the name of the package (i.e. "dev-python/paramiko").
     '''
-    if not name:
-        return []
-    else:
-        return [x for x in _porttree().getallnodes()
-                if x.endswith('/' + str(name))]
+    matches=[]
+    for category in _porttree().dbapi.categories:
+        if _porttree().dbapi.cp_list(category+"/"+name):
+            matches.append(category+"/"+name)
+    return matches
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -226,7 +248,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     pkgs = _vartree().dbapi.cpv_all()
     for cpv in pkgs:
         __salt__['pkg_resource.add_pkg'](ret,
-                                         _cpv_to_name(cpv),
+                                         _cpv_to_cp(cpv),
                                          _cpv_to_version(cpv))
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
@@ -261,11 +283,14 @@ def refresh_db():
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd) == 0
 
+
 def install(name=None,
             refresh=False,
             pkgs=None,
             sources=None,
             slot=None,
+            fromrepo=None,
+            uses=None,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to sync the portage tree
@@ -296,6 +321,22 @@ def install(name=None,
         CLI Example::
             salt '*' pkg.install sys-devel/gcc slot='4.4'
 
+    fromrepo
+        Similar to slot, but specifies the overlay from the package will be
+        installed. It will install the latest available version in the
+        specified overlay.
+        Ignored if "pkgs" or "sources" or "version" is passed.
+
+        CLI Example::
+            salt '*' pkg.install salt fromrepo='gentoo'
+
+    uses
+        Similar to slot, but specifies a list of use flag.
+        Ignored if "pkgs" or "sources" or "version" is passed.
+
+        CLI Example::
+            salt '*' pkg.install sys-devel/gcc uses='["nptl","-nossp"]'
+
 
     Multiple Package Installation Options:
 
@@ -304,7 +345,7 @@ def install(name=None,
         a python list.
 
         CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+            salt '*' pkg.install pkgs='["foo","bar","~category/package:slot::overlay[\'use\']"]'
 
     sources
         A list of tbz2 packages to install. Must be passed as a list of dicts,
@@ -343,8 +384,15 @@ def install(name=None,
         version_num = kwargs.get('version')
         if version_num:
             pkg_params = {name: version_num}
-        elif slot is not None:
-            pkg_params = {name: ':{0}'.format(slot)}
+        else:
+            version_num=''
+            if slot is not None:
+                version_num+=':{0}'.format(slot)
+            if fromrepo is not None:
+                version_num+='::{0}'.format(fromrepo)
+            if uses is not None:
+                version_num+='["{0}"]'.format('","'.join(uses))
+            pkg_params = {name: version_num}
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
@@ -356,20 +404,39 @@ def install(name=None,
     if pkg_type == 'repository':
         targets = list()
         for param, version_num in pkg_params.iteritems():
+            original_param = param
+            param = _p_to_cp(param)
+            if param == None:
+                raise portage.dep.InvalidAtom(original_param)
+
             if version_num is None:
                 targets.append(param)
-            elif version_num.startswith(':'):
-                # Really this 'version' is a slot
-                targets.append('{0}{1}'.format(param, version_num))
             else:
+                keyword = False
+                if version_num[0] == '~':
+                    version_num = version_num[1:]
+                    keyword = True
+
                 match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
                     prefix += eq or ''
-                    # If no prefix characters were supplied, use '='
-                    prefix = prefix or '='
-                    targets.append('"{0}{1}-{2}"'.format(prefix, param, verstr))
+                    # If no prefix characters were supplied and verstr contains a version, use '='
+                    if verstr[0] != ':' and verstr[0] != '['
+                        prefix = prefix or '='
+                    target = '"{0}{1}-{2}"'.format(prefix, param, verstr)
+                else:
+                    target = '"{1}-{2}"'.format(param, version_num)
+
+                if target.find('[') != -1:
+                    __salt__['portage_config.append_use_flags'](target)
+                    target = target[:target.rfind('[')]
+
+                if keyword:
+                    __salt__['portage_config.append_to_package_conf']('accept_keywords', target, ['~ARCH'])
+
+                targets.append(target)
     else:
         targets = pkg_params
     cmd = 'emerge --quiet --ask n {0} {1}'.format(emerge_opts, ' '.join(targets))
@@ -382,13 +449,17 @@ def install(name=None,
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def update(pkg, slot=None, refresh=False):
+def update(pkg, slot=None, fromrepo=None, refresh=False):
     '''
     Updates the passed package (emerge --update package)
 
     slot
         Restrict the update to a particular slot. It will update to the
         latest version within the slot.
+
+    fromrepo
+        Restrict the update to a particular overlay. It will update to the
+        latest version within the overlay.
 
     Return a dict containing the new package names and versions::
 
@@ -402,10 +473,13 @@ def update(pkg, slot=None, refresh=False):
     if(refresh):
         refresh_db()
 
+    full_atom = pkg
+
     if slot is not None:
-        full_atom = '{0}:{1}'.format(pkg, slot)
-    else:
-        full_atom = pkg
+        full_atom = '{0}:{1}'.format(full_atom, slot)
+
+    if fromrepo is not None:
+        full_atom = '{0}::{1}'.format(full_atom, fromrepo)
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --oneshot --with-bdeps=y --ask n --quiet {0}'.format(full_atom)
@@ -443,7 +517,7 @@ def upgrade(refresh=True):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(name=None, slot=None, pkgs=None, **kwargs):
+def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     '''
     Remove packages via emerge --unmerge.
 
@@ -453,12 +527,14 @@ def remove(name=None, slot=None, pkgs=None, **kwargs):
     slot
         Restrict the remove to a specific slot. Ignored if ``name`` is None.
 
+    fromrepo
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
 
     Multiple Package Options:
 
     pkgs
-        Uninstall multiple packages. ``slot`` argument is ignored if this
-        argument is present. Must be passed as a python list.
+        Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are
+        ignored if this argument is present. Must be passed as a python list.
 
 
     Returns a dict containing the changes.
@@ -466,15 +542,20 @@ def remove(name=None, slot=None, pkgs=None, **kwargs):
     CLI Example::
 
         salt '*' pkg.remove <package name>
-        salt '*' pkg.remove <package name> slot=4.4
+        salt '*' pkg.remove <package name> slot=4.4 fromrepo=gentoo
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
     old = list_pkgs()
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
 
-    if name and not pkgs and slot is not None and len(pkg_params) == 1:
-        targets = ['{0}:{1}'.format(name, slot)]
+    if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
+        fullatom = name
+        if slot is not None:
+            targets = ['{0}:{1}'.format(fullatom, slot)]
+        if fromrepo is not None:
+            targets = ['{0}::{1}'.format(fullatom, fromrepo)]
+        targets = [ fullatom ]
     else:
         targets = [x for x in pkg_params if x in old]
 
@@ -488,7 +569,7 @@ def remove(name=None, slot=None, pkgs=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name=None, slot=None, pkgs=None, **kwargs):
+def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     '''
     Portage does not have a purge, this function calls remove followed
     by depclean to emulate a purge process
@@ -499,12 +580,14 @@ def purge(name=None, slot=None, pkgs=None, **kwargs):
     slot
         Restrict the remove to a specific slot. Ignored if name is None.
 
+    fromrepo
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
 
     Multiple Package Options:
 
     pkgs
-        Uninstall multiple packages. ``slot`` argument is ignored if this
-        argument is present. Must be passed as a python list.
+        Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are
+        ignored if this argument is present. Must be passed as a python list.
 
 
     Returns a dict containing the changes.
@@ -516,12 +599,12 @@ def purge(name=None, slot=None, pkgs=None, **kwargs):
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    ret = remove(name=name, slot=slot, pkgs=pkgs)
-    ret.update(depclean(name=name, slot=slot, pkgs=pkgs))
+    ret = remove(name=name, slot=slot, fromrepo=fromrepo, pkgs=pkgs)
+    ret.update(depclean(name=name, slot=slot, fromrepo=fromrepo, pkgs=pkgs))
     return ret
 
 
-def depclean(name=None, slot=None, pkgs=None):
+def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     '''
     Portage has a function to remove unused dependencies. If a package
     is provided, it will only removed the package if no other package
@@ -533,9 +616,12 @@ def depclean(name=None, slot=None, pkgs=None):
     slot
         Restrict the remove to a specific slot. Ignored if ``name`` is None.
 
+    fromrepo
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
+
     pkgs
-        Clean multiple packages. ``slot`` argument is ignored if this
-        argument is present. Must be passed as a python list.
+        Clean multiple packages. ``slot`` and ``fromrepo`` arguments are
+        ignored if this argument is present. Must be passed as a python list.
 
     Return a list containing the removed packages:
 
@@ -546,8 +632,13 @@ def depclean(name=None, slot=None, pkgs=None):
     old = list_pkgs()
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
 
-    if name and not pkgs and slot is not None and len(pkg_params) == 1:
-        targets = ['{0}:{1}'.format(name, slot)]
+    if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
+        fullatom = name
+        if slot is not None:
+            targets = ['{0}:{1}'.format(fullatom, slot)]
+        if fromrepo is not None:
+            targets = ['{0}::{1}'.format(fullatom, fromrepo)]
+        targets = [ fullatom ]
     else:
         targets = [x for x in pkg_params if x in old]
 
@@ -569,7 +660,7 @@ def perform_cmp(pkg1='', pkg2=''):
         salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
         salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
+    return portage.versions.vercmp(pkg1, pkg2)
 
 
 def compare(pkg1='', oper='==', pkg2=''):

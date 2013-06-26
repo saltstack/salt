@@ -38,7 +38,7 @@ def _p_to_cp(p):
     '''
     ret = _porttree().dbapi.xmatch("match-all", p)
     if ret:
-        return portage.dep_getkey('=' + ret[0])
+        return portage.cpv_getkey(ret[0])
     return None
 
 def enforce_nice_config():
@@ -219,15 +219,16 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                     return
 
         to_delete_if_empty = []
-        if '-~ARCH' in new_flags:
-            new_flags.remove('-~ARCH')
-            to_delete_if_empty.append(atom)
+        if conf=='accept_keywords':
+            if '-~ARCH' in new_flags:
+                new_flags.remove('-~ARCH')
+                to_delete_if_empty.append(atom)
 
-        if '~ARCH' in new_flags:
-            new_flags.remove('~ARCH')
-            append_to_package_conf(conf, string=atom, overwrite=overwrite)
-            if not new_flags:
-                return
+            if '~ARCH' in new_flags:
+                new_flags.remove('~ARCH')
+                append_to_package_conf(conf, string=atom, overwrite=overwrite)
+                if not new_flags:
+                    return
 
         new_flags.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
 
