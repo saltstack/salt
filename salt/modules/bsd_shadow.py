@@ -65,8 +65,7 @@ def set_password(name, password):
     more information on this, see the manpage for ``crpyt(3)``. On NetBSD,
     additional information is available in ``passwd.conf(5)``.
 
-    Keep in mind that the $6 represents a sha512 hash, if your OS is using a
-    different hashing algorithm this needs to be changed accordingly
+    It is important to make sure that a supported cipher is used.
 
     CLI Example::
 
