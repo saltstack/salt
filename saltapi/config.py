@@ -8,7 +8,7 @@ import salt.config
 DEFAULT_API_OPTS = {
     # ----- Salt master settings overridden by Salt-API --------------------->
     'pidfile': '/var/run/salt-api.pid',
-    'logfile': '/var/log/api',
+    'logfile': '/var/log/salt/api',
     # <---- Salt master settings overridden by Salt-API ----------------------
 }
 
