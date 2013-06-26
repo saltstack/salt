@@ -89,14 +89,29 @@ class PamConv(Structure):
             ]
 
 
-PAM_START = LIBPAM.pam_start
-PAM_START.restype = c_int
-PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
-        POINTER(PamHandle)]
+try:
+    PAM_START = LIBPAM.pam_start
+    PAM_START.restype = c_int
+    PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
+            POINTER(PamHandle)]
 
-PAM_AUTHENTICATE = LIBPAM.pam_authenticate
-PAM_AUTHENTICATE.restype = c_int
-PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
+    PAM_AUTHENTICATE = LIBPAM.pam_authenticate
+    PAM_AUTHENTICATE.restype = c_int
+    PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
+except Exception:
+    HAS_PAM = False
+else:
+    HAS_PAM = True
+
+
+def __virtual__():
+    '''
+    Only load on Linux systems
+    '''
+    if HAS_PAM:
+        return 'pam'
+    else:
+        return False
 
 
 def authenticate(username, password, service='login'):

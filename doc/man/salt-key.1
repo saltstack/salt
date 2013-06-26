@@ -1,4 +1,4 @@
-.TH "SALT-KEY" "1" "May 03, 2013" "0.15.0" "Salt"
+.TH "SALT-KEY" "1" "June 21, 2013" "0.15.90" "Salt"
 .SH NAME
 salt-key \- salt-key Documentation
 .
@@ -45,8 +45,11 @@ Print a usage message briefly summarizing these command\-line options.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-l, \-\-list
-List the unaccepted minion public keys.
+.B \-l ARG, \-\-list=ARG
+List the public keys. The args "pre", "un", and "unaccepted" will list
+unaccepted/unsigned keys. "acc" or "accepted" will list accepted/signed
+keys. "rej" or "rejected" will list rejected keys. Finally, "all" will list
+all keys.
 .UNINDENT
 .INDENT 0.0
 .TP

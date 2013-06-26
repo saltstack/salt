@@ -122,8 +122,8 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.retcode
         '''
-        self.assertEqual(self.run_function('cmd.retcode', ['true']), 0)
-        self.assertEqual(self.run_function('cmd.retcode', ['false']), 1)
+        self.assertEqual(self.run_function('cmd.retcode', ['exit 0']), 0)
+        self.assertEqual(self.run_function('cmd.retcode', ['exit 1']), 1)
 
     def test_which(self):
         '''

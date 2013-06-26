@@ -3,37 +3,66 @@ Package support for pkgin based systems, inspired from freebsdpkg.py
 '''
 
 # Import python libs
+import os
+import re
 import logging
 
 # Import salt libs
 import salt.utils
 
-
+VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
+
 
 @salt.utils.memoize
 def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system, return full path
     '''
-    return salt.utils.which('pkgin')
+    ppath = salt.utils.which('pkgin')
+    if ppath is None:
+        # pkgin was not found in $PATH, try to find it via LOCALBASE
+        localbase = __salt__['cmd.run']('pkg_info -Q LOCALBASE pkgin')
+        if localbase is not None:
+            ppath = '{0}/bin/pkgin'.format(localbase)
+            if not os.path.exists(ppath):
+                return None
+
+    return ppath
+
+
+@salt.utils.memoize
+def _supports_regex():
+    '''
+    Get the pkgin version
+    '''
+    ppath = _check_pkgin()
+    version_string = __salt__['cmd.run']('{0} -v'.format(ppath))
+    if version_string is None:
+        # Dunno why it would, but...
+        return False
+
+    version_match = VERSION_MATCH.search(version_string)
+    if not version_match:
+        return False
+
+    return tuple([int(i) for i in version_match.group(1).split('.')]) > (0, 5)
 
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is supported by pkgin
     '''
-    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin']
+    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin', 'SmartOS']
 
     if __grains__['os'] in supported and _check_pkgin():
         return 'pkg'
-
     return False
 
 
 def _splitpkg(name):
     # name is in the format foobar-1.0nb1, already space-splitted
-    if name[0].isalnum() and name != 'No': # avoid < > = and 'No result'
+    if name[0].isalnum() and name != 'No':  # avoid < > = and 'No result'
         return name.rsplit('-', 1)
 
 
@@ -48,16 +77,20 @@ def search(pkg_name):
 
     pkglist = {}
     pkgin = _check_pkgin()
-
-    if pkgin:
-        for p in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, pkg_name)
-                                     ).splitlines():
-            if p:
-                s = _splitpkg(p.split()[0])
-                if s:
-                    pkglist[s[0]] = s[1]
-
+    if not pkgin:
         return pkglist
+
+    if _supports_regex():
+        pkg_name = '^{0}$'.format(pkg_name)
+
+    for p in __salt__['cmd.run']('{0} se {1}'.format(pkgin, pkg_name)
+                                 ).splitlines():
+        if p:
+            s = _splitpkg(p.split()[0])
+            if s:
+                pkglist[s[0]] = s[1]
+
+    return pkglist
 
 
 def latest_version(*names, **kwargs):
@@ -76,19 +109,29 @@ def latest_version(*names, **kwargs):
 
     pkglist = {}
     pkgin = _check_pkgin()
+    if not pkgin:
+        return pkglist
+
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
 
     for name in names:
-        if pkgin:
-            for line in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, name)
-                                           ).splitlines():
-                p = line.split() # pkgname-version status
-                if p:
-                    s = _splitpkg(p[0])
-                    if s:
-                        if len(p) > 1 and p[1] == '<':
-                            pkglist[s[0]] = s[1]
-                        else:
-                            pkglist[s[0]] = ''
+        if _supports_regex():
+            name = '^{0}$'.format(name)
+        for line in __salt__['cmd.run']('{0} se {1}'.format(pkgin, name)
+                                        ).splitlines():
+            p = line.split()  # pkgname-version status
+            if p and p[0] in ('=:', '<:', '>:'):
+                # These are explanation comments
+                continue
+            elif p:
+                s = _splitpkg(p[0])
+                if s:
+                    if len(p) > 1 and p[1] == '<':
+                        pkglist[s[0]] = s[1]
+                    else:
+                        pkglist[s[0]] = ''
 
     if len(names) == 1 and pkglist:
         return pkglist[names[0]]
@@ -281,26 +324,28 @@ def upgrade():
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package.
-
-    name : None
+    name
         The name of the package to be deleted.
 
-    pkgs : None
-        A list of packages to delete. Must be passed as a python list.
 
-        CLI Example::
+    Multiple Package Options:
 
-            salt '*' pkg.remove pkgs='["foo","bar"]'
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
 
     Returns a list containing the removed packages.
 
     CLI Example::
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name, pkgs)
     if not pkg_params:
         return {}
 
@@ -334,17 +379,33 @@ def remove(name=None, pkgs=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with pkg_delete
+    Package purges are not supported, this function is identical to
+    ``remove()``.
 
-    Returns a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name)
+    return remove(name=name, pkgs=pkgs)
 
 
 def rehash():

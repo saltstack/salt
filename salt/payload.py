@@ -15,7 +15,11 @@ from salt._compat import pickle
 from salt.utils.odict import OrderedDict
 
 # Import third party libs
-import zmq
+try:
+    import zmq
+except:
+    # No need for zeromq in local mode
+    pass
 
 log = salt.log.logging.getLogger(__name__)
 

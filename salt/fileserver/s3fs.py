@@ -345,11 +345,11 @@ def _refresh_buckets_cache_file(cache_file):
 
             # pull out the environment dirs (eg. the root dirs)
             files = filter(lambda k: 'Key' in k, s3_meta)
-            envs = map(lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files)
-            envs = set(envs)
+            environments = map(lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files)
+            environments = set(environments)
 
             # pull out the files for the environment
-            for env in envs:
+            for env in environments:
                 # grab only files/dirs that match this env
                 env_files = filter(lambda k: k['Key'].startswith(env), files)
 

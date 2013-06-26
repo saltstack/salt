@@ -635,8 +635,10 @@ def set_known_host(user, hostname,
     try:
         with salt.utils.fopen(full, 'a') as ofile:
             ofile.write(line)
-    except (IOError, OSError):
-        raise CommandExecutionError("Couldn't append to known hosts file")
+    except (IOError, OSError) as exception:
+        raise CommandExecutionError(
+            "Couldn't append to known hosts file: '{0}'".format(exception)
+        )
 
     if os.geteuid() == 0:
         os.chown(full, uinfo['uid'], uinfo['gid'])

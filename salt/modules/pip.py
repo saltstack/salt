@@ -104,6 +104,7 @@ def install(pkgs=None,
             upgrade=False,
             force_reinstall=False,
             ignore_installed=False,
+            exists_action=None,
             no_deps=False,
             no_install=False,
             no_download=False,
@@ -172,6 +173,8 @@ def install(pkgs=None,
         up-to-date.
     ignore_installed
         Ignore the installed packages (reinstalling instead)
+    exists_action
+        Default action when a path already exists: (s)witch, (i)gnore, (w)wipe, (b)ackup
     no_deps
         Ignore package dependencies
     no_install
@@ -365,6 +368,10 @@ def install(pkgs=None,
     if ignore_installed:
         cmd = '{cmd} --ignore-installed '.format(cmd=cmd)
 
+    if exists_action:
+        cmd = '{cmd} --exists-action={action} '.format(
+            cmd=cmd, action=exists_action)
+
     if no_deps:
         cmd = '{cmd} --no-deps '.format(cmd=cmd)
 
@@ -555,15 +562,14 @@ def list_(prefix='',
     for line in result['stdout'].splitlines():
         if line.startswith('-e'):
             line = line.split('-e ')[1]
-            line, name = line.split('#egg=')
-            packages[name] = line
-
+            version, name = line.split('#egg=')
         elif len(line.split('==')) >= 2:
             name = line.split('==')[0]
             version = line.split('==')[1]
-            if prefix:
-                if line.lower().startswith(prefix.lower()):
-                    packages[name] = version
-            else:
+
+        if prefix:
+            if name.lower().startswith(prefix.lower()):
                 packages[name] = version
+        else:
+            packages[name] = version
     return packages

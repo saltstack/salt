@@ -19,6 +19,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+
 def __virtual__():
     '''
     Only work when npm is installed.
@@ -73,7 +74,7 @@ def install(pkg=None,
         cmd += ' --global'
 
     if pkg:
-        cmd += ' ' + pkg
+        cmd += ' "{0}"'.format(pkg)
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
@@ -92,7 +93,7 @@ def install(pkg=None,
     log.error(lines)
 
     # Strip all lines until JSON output starts
-    while not lines[0].startswith("{") and not lines[0].startswith("["):
+    while not lines[0].startswith('{') and not lines[0].startswith('['):
         lines = lines[1:]
 
     try:
@@ -134,7 +135,7 @@ def uninstall(pkg,
     if dir is None:
         cmd += ' --global'
 
-    cmd += ' ' + pkg
+    cmd += ' "{0}"'.format(pkg)
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
@@ -173,7 +174,7 @@ def list_(pkg=None,
         cmd += ' --global'
 
     if pkg:
-        cmd += ' ' + pkg
+        cmd += ' "{0}"'.format(pkg)
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir)
 

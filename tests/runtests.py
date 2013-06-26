@@ -91,6 +91,8 @@ def run_integration_tests(opts):
     '''
     Execute the integration tests suite
     '''
+    if opts.unit and not (opts.runner or opts.state or opts.module or opts.client):
+        return [True]
     smax_open_files, hmax_open_files = resource.getrlimit(resource.RLIMIT_NOFILE)
     if smax_open_files < REQUIRED_OPEN_FILES:
         print('~' * PNUM)
@@ -141,9 +143,14 @@ def run_unit_tests(opts):
     if not opts.unit:
         return [True]
     status = []
-    results = run_suite(
-        opts, os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py')
-    status.append(results)
+    if opts.name:
+        for name in opts.name:
+            results = run_suite(opts, os.path.join(TEST_DIR, 'unit'), name)
+            status.append(results)
+    else:
+        results = run_suite(
+            opts, os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py')
+        status.append(results)
     return status
 
 
@@ -421,7 +428,6 @@ if __name__ == '__main__':
         else:
             sys.exit(0)
 
-    print
     print_header(u'  Overall Tests Report  ', sep=u'=', centered=True, inline=True)
 
     no_problems_found = True

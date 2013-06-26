@@ -3,7 +3,7 @@ Requisites
 ==========
 
 The Salt requisite system is used to create relationships between states. The
-core idea being, that when one state it dependent somehow on another that
+core idea being that, when one state is dependent somehow on another, that
 inter-dependency can be easily defined.
 
 Requisites come in two types. Direct requisites, and requisite_ins. The
@@ -40,13 +40,13 @@ something", requisite_ins say "Someone depends on me":
 So here, with a requisite_in, the same thing is accomplished, but just from
 the other way around. The vim package is saying "/etc/vimrc depends on me".
 
-In the end a single dependency map is created and everything is executed in a
+In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
 
 .. note:: Requisite matching
 
     Requisites match on both the ID Declaration and the ``name`` parameter.
-    This means that in the example above, the ``require_in`` requisite would
+    This means that, in the example above, the ``require_in`` requisite would
     also have been matched if the ``/etc/vimrc`` state was written as follows:
 
     .. code-block:: yaml
@@ -71,7 +71,7 @@ Require
 
 The most basic requisite statement is ``require``. The behavior of require is
 simple. Make sure that the dependent state is executed before the depending
-state, and it the dependent state fails, don't run the depending state. So in
+state, and if the dependent state fails, don't run the depending state. So in
 the above examples the file ``/etc/vimrc`` will only be applied after the vim
 package is installed and only if the vim package is installed successfully.
 
@@ -88,6 +88,40 @@ it made any changes to the system, if it has, then ``mod_watch`` is called.
 Perhaps the best example of using watch is with a service, when a service
 watches other states, then when the other states make changes on the system
 the service is reloaded or restarted.
+
+Prereq
+------
+
+The ``prereq`` requisite is a powerful requisite added in 0.16.0. This
+requisite allows for actions to be taken based on the expected results of
+a state that has not yet been executed. In more practical terms, a service
+can be shut down because the ``prereq`` knows that underlying code is going to
+be updated and the service should be off-line while the update occurs.
+
+The motivation to add this requisite was to allow for routines to remove a
+system from a load balancer while code is being updated.
+
+The ``prereq`` checks if the required state expects to have any changes by
+running the single state with ``test=True``. If the pre-required state returns
+changes, then the state requiring it will execute.
+
+.. code-block:: yaml
+
+    graceful-down:
+      cmd.run:
+        - name: service apache graceful
+        - prereq:
+          - file: site-code
+
+    site-code:
+      file.recurse:
+        - name: /opt/site_code
+        - source: salt://site/code
+
+In this case the apache server will only be shutdown if the site-code state
+expects to deploy fresh code via the file.recurse call, and the site-code
+deployment will only be executed if the graceful-down run completes
+successfully.
 
 Use
 ---
@@ -183,3 +217,25 @@ Watch In
 
 Watch in functions the same was as require in, but applies a watch statement
 rather than a require statement to the external state declaration.
+
+Prereq In
+---------
+
+The ``prereq_in`` requisite in follows the same assignment logic as the
+``require_in`` requisite in. The ``prereq_in`` call simply assigns
+``prereq`` to the state referenced. The above example for ``prereq`` can
+be modified to function in the same way using ``prereq_in``:
+
+.. code-block:: yaml
+
+    graceful-down:
+      cmd.run:
+        - name: service apache graceful
+
+    site-code:
+      file.recurse:
+        - name: /opt/site_code
+        - source: salt://site/code
+        - prereq_in:
+          - cmd: graceful-down
+

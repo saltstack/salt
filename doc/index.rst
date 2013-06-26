@@ -12,6 +12,19 @@ and fast enough to communicate with them in *seconds*.
 Salt delivers a dynamic communication bus for infrastructures that can be used
 for orchestration, remote execution, configuration management and much more.
 
+.. seealso:: Offline documentation
+
+    Download a copy of the Salt documentation:
+
+    * `PDF`_
+    * `ePub`_
+    * Dash `Docset`_ (`feed`_)
+
+.. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
+.. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
+.. _`Docset`: https://media.readthedocs.org/dash/salt/latest/Salt.tgz
+.. _`feed`: dash-feed://http%3A//media.readthedocs.org/dash/salt/latest/Salt.xml
+
 Download
 ========
 
@@ -124,6 +137,9 @@ simultaneous configuration of tens of thousands of hosts.
     :doc:`Full list of states <ref/states/all/index>`
         Install packages, create users, transfer files, start services, and
         much more.
+
+    :doc:`Pillar System <topics/pillar/index>`
+        Salt's Pillar system
 
     :doc:`States Overview<ref/states/index>`
         An overview of States and some of the core components.

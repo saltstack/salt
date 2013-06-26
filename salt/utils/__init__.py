@@ -23,9 +23,7 @@ import tempfile
 import subprocess
 import types
 import warnings
-import zmq
 from calendar import month_abbr as months
-import salt._compat
 
 try:
     import fcntl
@@ -34,7 +32,20 @@ except ImportError:
     # fcntl is not available on windows
     HAS_FNCTL = False
 
+try:
+    import win32api
+    HAS_WIN32API = True
+except ImportError:
+    HAS_WIN32API = False
+
+try:
+    import zmq
+except:
+    # Running as purely local
+    pass
+
 # Import salt libs
+import salt._compat
 import salt.log
 import salt.minion
 import salt.payload
@@ -140,12 +151,7 @@ def get_colors(use=True):
         'ENDC': '\033[0m',
     }
 
-    try:
-        fileno = sys.stdout.fileno()
-    except AttributeError:
-        fileno = -1  # sys.stdout is StringIO or fake
-
-    if not use or not os.isatty(fileno):
+    if not use: 
         for color in colors:
             colors[color] = ''
 
@@ -428,6 +434,7 @@ def jid_dir(jid, cachedir, sum_type):
     '''
     Return the jid_dir for the given job id
     '''
+    jid = str(jid)
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 
@@ -1185,3 +1192,13 @@ def parse_kwarg(string):
         return match.groups()
     else:
         return None, None
+
+def _win_console_event_handler(event):
+    if event == 5:
+        # Do nothing on CTRL_LOGOFF_EVENT
+        return True
+    return False
+
+def enable_ctrl_logoff_handler():
+    if HAS_WIN32API:
+        win32api.SetConsoleCtrlHandler(_win_console_event_handler, 1)

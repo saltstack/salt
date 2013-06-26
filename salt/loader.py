@@ -13,6 +13,7 @@ import tempfile
 # Import salt libs
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
+from salt.utils.decorators import Depends
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +100,9 @@ def minion_mods(opts, context=None, whitelist=None):
         pack,
         whitelist=whitelist
     )
+    # Enforce dependancies of module functions from "functions"
+    Depends.enforce_dependancies(functions)
+
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():

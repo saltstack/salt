@@ -15,6 +15,7 @@ import os
 import sys
 import logging
 import optparse
+import warnings
 import traceback
 from functools import partial
 
@@ -76,13 +77,15 @@ class OptionParserMeta(MixInMeta):
             for func in dir(base):
                 if not func.startswith('process_'):
                     continue
+
                 func = getattr(base, func)
                 if getattr(func, '_mixin_prio_', None) is not None:
                     # Function already has the attribute set, don't override it
                     continue
-                func.__func__._mixin_prio_ = getattr(base,
-                                                     '_mixin_prio_',
-                                                     1000)
+
+                func.__func__._mixin_prio_ = getattr(
+                    base, '_mixin_prio_', 1000
+                )
 
         return instance
 
@@ -140,6 +143,7 @@ class OptionParser(optparse.OptionParser):
             try:
                 process_option_func()
             except Exception as err:
+                logging.getLogger(__name__).exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
                         process_option_func, traceback.format_exc(err)
@@ -148,7 +152,15 @@ class OptionParser(optparse.OptionParser):
 
         # Run the functions on self._mixin_after_parsed_funcs
         for mixin_after_parsed_func in self._mixin_after_parsed_funcs:
-            mixin_after_parsed_func(self)
+            try:
+                mixin_after_parsed_func(self)
+            except Exception as err:
+                logging.getLogger(__name__).exception(err)
+                self.error(
+                    'Error while processing {0}: {1}'.format(
+                        mixin_after_parsed_func, traceback.format_exc(err)
+                    )
+                )
 
         if self.config.get('conf_file', None) is not None:
             logging.getLogger(__name__).info(
@@ -249,8 +261,11 @@ class ConfigDirMixIn(object):
     _config_filename_ = None
 
     def _mixin_setup(self):
+        default = '/etc/salt'
+        if utils.is_windows():
+            default = 'c:\\salt\\conf'
         self.add_option(
-            '-c', '--config-dir', default='/etc/salt',
+            '-c', '--config-dir', default=default,
             help=('Pass in an alternative configuration directory. Default: '
                   '%default')
         )
@@ -259,7 +274,7 @@ class ConfigDirMixIn(object):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                "WARNING: \"{0}\" directory does not exist.\n".format(
+                'WARNING: "{0}" directory does not exist.\n'.format(
                     self.options.config_dir
                 )
             )
@@ -280,77 +295,274 @@ class LogLevelMixIn(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = 10
     _default_logging_level_ = 'warning'
+    _default_logging_logfile_ = None
+    _logfile_config_setting_name_ = 'log_file'
+    _loglevel_config_setting_name_ = 'log_level_logfile'
     _skip_console_logging_config_ = False
 
     def _mixin_setup(self):
-        if getattr(self, '_skip_console_logging_config_', False):
-            return
+        if self._default_logging_logfile_ is None:
+            # This is an attribute available for programmers, so, raise a
+            # RuntimeError to let them know about the proper usage.
+            raise RuntimeError(
+                'Please set {0}._default_logging_logfile_'.format(
+                    self.__class__.__name__
+                )
+            )
+        group = self.logging_options_group = optparse.OptionGroup(
+            self, 'Logging Options',
+            'Logging options which override any settings defined on the '
+            'configuration files.'
+        )
+        self.add_option_group(group)
 
-        self.add_option(
-            '-l', '--log-level',
+        if not getattr(self, '_skip_console_logging_config_', False):
+            group.add_option(
+                '-l', '--log-level',
+                choices=list(log.LOG_LEVELS),
+                help='Console logging log level. One of {0}. '
+                     'Default: \'{1}\'.'.format(
+                         ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                         getattr(self, '_default_logging_level_', 'warning')
+                     )
+            )
+
+        group.add_option(
+            '--log-file',
+            default=None,
+            help='Log file path. Default: {0}.'.format(
+                self._default_logging_logfile_
+            )
+        )
+
+        group.add_option(
+            '--log-file-level',
+            dest=self._loglevel_config_setting_name_,
             choices=list(log.LOG_LEVELS),
-            help=('Console logging log level. One of {0}. For the log file '
-                  'setting see the configuration file. '
-                  'Default: \'{1}\'.').format(
-                      ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
-                      getattr(self, '_default_logging_level_', 'warning')
-                  )
+            help='Logfile logging log level. One of {0}. '
+                 'Default: \'{1}\'.'.format(
+                     ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                     getattr(self, '_default_logging_level_', 'warning')
+                 )
         )
 
     def process_log_level(self):
         if not self.options.log_level:
-            if self.config['log_level'] is not None:
-                self.options.log_level = self.config['log_level']
+            cli_log_level = 'cli_{0}_log_level'.format(
+                self.get_prog_name().replace('-', '_')
+            )
+            if self.config.get(cli_log_level, None) is not None:
+                self.options.log_level = self.config.get(cli_log_level)
+            elif self.config.get('log_level', None) is not None:
+                self.options.log_level = self.config.get('log_level')
             else:
-                self.options.log_level = getattr(
-                    self, '_default_logging_level_'
-                )
-
+                self.options.log_level = self._default_logging_level_
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
+    def process_log_file(self):
+        if not self.options.log_file:
+            cli_setting_name = 'cli_{0}_log_file'.format(
+                self.get_prog_name().replace('-', '_')
+            )
+            if self.config.get(cli_setting_name, None) is not None:
+                # There's a configuration setting defining this log file path,
+                # ie, `key_log_file` if the cli tool is `salt-key`
+                self.options.log_file = self.config.get(cli_setting_name)
+            elif self.config.get(self._logfile_config_setting_name_, None):
+                # Is the regular log file setting set?
+                self.options.log_file = self.config.get(
+                    self._logfile_config_setting_name_
+                )
+            else:
+                # Nothing is set on the configuration? Let's use the cli tool
+                # defined default
+                self.options.log_file = self._default_logging_logfile_
+
+    def process_log_file_level(self):
+        if not self.options.log_file_level:
+            cli_setting_name = 'cli_{0}_log_file_level'.format(
+                self.get_prog_name().replace('-', '_')
+            )
+            if self.config.get(cli_setting_name, None) is not None:
+                # There's a configuration setting defining this log file
+                # logging level, ie, `key_log_file_level` if the cli tool is
+                # `salt-key`
+                self.options.log_file_level = self.config.get(cli_setting_name)
+            elif self.config.get(self._loglevel_config_setting_name_, None):
+                # Is the regular log file level setting set?
+                self.options.log_file_level = self.config.get(
+                    self._loglevel_config_setting_name_
+                )
+            else:
+                # Nothing is set on the configuration? Let's use the cli tool
+                # defined default
+                self.options.log_level = self._default_logging_level_
+
     def setup_logfile_logger(self):
-        lfkey = 'key_logfile' if 'key' in self.get_prog_name() else 'log_file'
-        if self.config.get('log_level_logfile', None) is None:
+        if self._loglevel_config_setting_name_ in self.config and not \
+                self.config.get(self._loglevel_config_setting_name_):
             # Remove it from config so it inherits from log_level
-            self.config.pop('log_level_logfile', None)
+            self.config.pop(self._loglevel_config_setting_name_)
+
         loglevel = self.config.get(
-            'log_level_logfile', self.config['log_level']
+            self._loglevel_config_setting_name_,
+            self.config.get(
+                # From the config setting
+                'log_level_logfile',
+                # From the console setting
+                self.config['log_level']
+            )
         )
+
+        cli_log_path = 'cli_{0}_log_file'.format(
+            self.get_prog_name().replace('-', '_')
+        )
+        if cli_log_path in self.config and not self.config.get(cli_log_path):
+            # Remove it from config so it inherits from log_level_logfile
+            self.config.pop(cli_log_path)
+
+        if self._logfile_config_setting_name_ in self.config and not \
+                self.config.get(self._logfile_config_setting_name_):
+            # Remove it from config so it inherits from log_file
+            self.config.pop(self._logfile_config_setting_name_)
+
+        logfile = self.config.get(
+            # First from the config cli setting
+            cli_log_path,
+            self.config.get(
+                # From the config setting
+                self._logfile_config_setting_name_,
+                # From the default setting
+                self._default_logging_logfile_
+            )
+        )
+
+        cli_log_file_fmt = 'cli_{0}_log_file_fmt'.format(
+            self.get_prog_name().replace('-', '_')
+        )
+        if cli_log_file_fmt in self.config and not \
+                self.config.get(cli_log_file_fmt):
+            # Remove it from config so it inherits from log_fmt_logfile
+            self.config.pop(cli_log_file_fmt)
 
         if self.config.get('log_fmt_logfile', None) is None:
             # Remove it from config so it inherits from log_fmt_console
             self.config.pop('log_fmt_logfile', None)
-        logfmt = self.config.get(
-            'log_fmt_logfile', self.config['log_fmt_console']
+
+        log_file_fmt = self.config.get(
+            cli_log_file_fmt,
+            self.config.get(
+                'cli_{0}_log_fmt'.format(
+                    self.get_prog_name().replace('-', '_')
+                ),
+                self.config.get(
+                    'log_fmt_logfile',
+                    self.config.get(
+                        'log_fmt_console',
+                        self.config.get(
+                            'log_fmt',
+                            config._DFLT_LOG_FMT_CONSOLE
+                        )
+                    )
+                )
+            )
         )
 
-        if self.config.get('log_datefmt', None) is None:
-            # Remove it from config so it get's the default value bellow
-            self.config.pop('log_datefmt', None)
-
-        datefmt = self.config.get(
-            'log_datefmt_logfile',
-            self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        cli_log_file_datefmt = 'cli_{0}_log_file_datefmt'.format(
+            self.get_prog_name().replace('-', '_')
         )
+        if cli_log_file_datefmt in self.config and not \
+                self.config.get(cli_log_file_datefmt):
+            # Remove it from config so it inherits from log_datefmt_logfile
+            self.config.pop(cli_log_file_datefmt)
+
+        if self.config.get('log_datefmt_logfile', None) is None:
+            # Remove it from config so it inherits from log_datefmt_console
+            self.config.pop('log_datefmt_logfile', None)
+
+        if self.config.get('log_datefmt_console', None) is None:
+            # Remove it from config so it inherits from log_datefmt
+            self.config.pop('log_datefmt_console', None)
+
+        log_file_datefmt = self.config.get(
+            cli_log_file_datefmt,
+            self.config.get(
+                'cli_{0}_log_datefmt'.format(
+                    self.get_prog_name().replace('-', '_')
+                ),
+                self.config.get(
+                    'log_datefmt_logfile',
+                    self.config.get(
+                        'log_datefmt_console',
+                        self.config.get(
+                            'log_datefmt',
+                            '%Y-%m-%d %H:%M:%S'
+                        )
+                    )
+                )
+            )
+        )
+
         log.setup_logfile_logger(
-            self.config[lfkey],
+            logfile,
             loglevel,
-            log_format=logfmt,
-            date_format=datefmt
+            log_format=log_file_fmt,
+            date_format=log_file_datefmt
         )
         for name, level in self.config['log_granular_levels'].items():
             log.set_logger_level(name, level)
 
     def __setup_console_logger(self, *args):
         # If daemon is set force console logger to quiet
-        if getattr(self.options, 'daemon', False) is False:
-            # Since we're not going to be a daemon, setup the console logger
-            log.setup_console_logger(
-                self.config['log_level'],
-                log_format=self.config['log_fmt_console'],
-                date_format=self.config['log_datefmt']
+        if getattr(self.options, 'daemon', False) is True:
+            return
+
+        # Since we're not going to be a daemon, setup the console logger
+        cli_log_fmt = 'cli_{0}_log_fmt'.format(
+            self.get_prog_name().replace('-', '_')
+        )
+        if cli_log_fmt in self.config and not self.config.get(cli_log_fmt):
+            # Remove it from config so it inherits from log_fmt_console
+            self.config.pop(cli_log_fmt)
+
+        logfmt = self.config.get(
+            cli_log_fmt, self.config.get(
+                'log_fmt_console',
+                self.config.get(
+                    'log_fmt',
+                    config._DFLT_LOG_FMT_CONSOLE
+                )
             )
+        )
+
+        cli_log_datefmt = 'cli_{0}_log_datefmt'.format(
+            self.get_prog_name().replace('-', '_')
+        )
+        if cli_log_datefmt in self.config and not \
+                self.config.get(cli_log_datefmt):
+            # Remove it from config so it inherits from log_datefmt_console
+            self.config.pop(cli_log_datefmt)
+
+        if self.config.get('log_datefmt_console', None) is None:
+            # Remove it from config so it inherits from log_datefmt
+            self.config.pop('log_datefmt_console', None)
+
+        datefmt = self.config.get(
+            cli_log_datefmt,
+            self.config.get(
+                'log_datefmt_console',
+                self.config.get(
+                    'log_datefmt',
+                    '%Y-%m-%d %H:%M:%S'
+                )
+            )
+        )
+        log.setup_console_logger(
+            self.config['log_level'], log_format=logfmt, date_format=datefmt
+        )
+        for name, level in self.config['log_granular_levels'].items():
+            log.set_logger_level(name, level)
 
 
 class RunUserMixin(object):
@@ -408,7 +620,7 @@ class TargetOptionsMixIn(object):
 
     def _mixin_setup(self):
         group = self.target_options_group = optparse.OptionGroup(
-            self, "Target Options", "Target Selection Options"
+            self, 'Target Options', 'Target Selection Options'
         )
         self.add_option_group(group)
         group.add_option(
@@ -479,8 +691,8 @@ class TargetOptionsMixIn(object):
         )
         if len(group_options_selected) > 1:
             self.error(
-                "The options {0} are mutually exclusive. Please only choose "
-                "one of them".format('/'.join(
+                'The options {0} are mutually exclusive. Please only choose '
+                'one of them'.format('/'.join(
                     [option.get_opt_string()
                      for option in group_options_selected]))
             )
@@ -557,44 +769,9 @@ class OutputOptionsMixIn(object):
 
     def _mixin_setup(self):
         group = self.output_options_group = optparse.OptionGroup(
-            self, "Output Options", "Configure your preferred output format"
+            self, 'Output Options', 'Configure your preferred output format'
         )
         self.add_option_group(group)
-        group.add_option(
-            '--raw-out',
-            default=False,
-            action='store_true',
-            help=('DEPRECATED. Print the output from the \'{0}\' command in '
-                  'raw python form, this is suitable for re-reading the '
-                  'output into an executing python script with eval.'.format(
-                      self.get_prog_name()
-                  ))
-        )
-        group.add_option(
-            '--yaml-out',
-            default=False,
-            action='store_true',
-            help=('DEPRECATED. Print the output from the \'{0}\' command in '
-                  'yaml.'.format(self.get_prog_name()))
-        )
-        group.add_option(
-            '--json-out',
-            default=False,
-            action='store_true',
-            help=('DEPRECATED. Print the output from the \'{0}\' command in '
-                  'json.'.format(self.get_prog_name()))
-        )
-
-        if self._include_text_out_:
-            group.add_option(
-                '--text-out',
-                default=False,
-                action='store_true',
-                help=('DEPRECATED. Print the output from the \'{0}\' command '
-                      'in the same form the shell would.'.format(
-                          self.get_prog_name()
-                      ))
-            )
 
         outputters = loader.outputters(
             config.minion_config(None)
@@ -626,24 +803,18 @@ class OutputOptionsMixIn(object):
             action='store_true',
             help='Disable all colored output'
         )
+        group.add_option(
+            '--force-color', '--force-colour',
+        	  default=False,
+        	  action='store_true',
+        	  help='Force colored output'
+        )
 
         for option in self.output_options_group.option_list:
             def process(opt):
                 default = self.defaults.get(opt.dest)
                 if getattr(self.options, opt.dest, default) is False:
                     return
-
-                if opt.dest not in ('out', 'output_indent', 'no_color'):
-                    if version.__version_info__ >= (0, 12):
-                        # XXX: CLEAN THIS CODE WHEN 0.13 is about to come out
-                        self.error(
-                            'The option {0} was deprecated. Please use '
-                            '\'--out {1}\' instead.'.format(
-                                opt.get_opt_string(),
-                                opt.dest.split('_', 1)[0]
-                            )
-                        )
-
                 self.selected_output_option = opt.dest
 
             funcname = 'process_{0}'.format(option.dest)
@@ -673,7 +844,23 @@ class OutputOptionsMixIn(object):
 
 
 class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
+    # This should also be removed
     _include_text_out_ = True
+
+    def __new__(cls, *args, **kwargs):
+        instance = super(OutputOptionsMixIn, cls).__new__(cls, *args, **kwargs)
+        # Let the next warning show up at least once since DeprecationWarning's
+        # are, by default, ignored by python default filters
+        warnings.filterwarnings(
+            'once', '', DeprecationWarning, 'salt.utils.parsers'
+        )
+        warnings.warn(
+            '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
+            'start using \'OutputOptionsMixIn\', your code should not need '
+            'any more change.',
+            DeprecationWarning,
+        )
+        return instance
 
 
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -682,10 +869,12 @@ class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     __metaclass__ = OptionParserMeta
 
-    description = "The Salt master, used to control the Salt minions."
+    description = 'The Salt master, used to control the Salt minions.'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/master'
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
@@ -701,6 +890,8 @@ class MinionOptionParser(MasterOptionParser):
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'minion'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/minon'
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path())
@@ -719,6 +910,8 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/master'
 
     def setup_config(self):
         opts = config.master_config(self.get_config_file_path())
@@ -760,16 +953,18 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           TimeoutMixIn, ExtendedTargetOptionsMixIn,
-                          OutputOptionsWithTextMixIn):
+                          OutputOptionsMixIn):
 
     __metaclass__ = OptionParserMeta
 
     default_timeout = 5
 
-    usage = "%prog [options] '<target>' <function> [arguments]"
+    usage = '%prog [options] \'<target>\' <function> [arguments]'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/master'
 
     def _mixin_setup(self):
         self.add_option(
@@ -881,7 +1076,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = [[]]
             cmd_index = 0
             if (self.args[2:].count(self.options.args_separator) ==
-                len(self.config['fun']) - 1):
+                    len(self.config['fun']) - 1):
                 # new style parsing: standalone argument separator
                 for arg in self.args[2:]:
                     if arg == self.options.args_separator:
@@ -918,17 +1113,19 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     __metaclass__ = OptionParserMeta
 
     description = (
-        "salt-cp is NOT intended to broadcast large files, it is intended to "
-        "handle text files.\nsalt-cp can be used to distribute configuration "
-        "files."
+        'salt-cp is NOT intended to broadcast large files, it is intended to '
+        'handle text files.\nsalt-cp can be used to distribute configuration '
+        'files.'
     )
 
     default_timeout = 5
 
-    usage = "%prog [options] '<target>' SOURCE DEST"
+    usage = '%prog [options] \'<target>\' SOURCE DEST'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/master'
 
     def _mixin_after_parsed(self):
         # salt-cp needs arguments
@@ -951,7 +1148,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           LogLevelMixIn, OutputOptionsMixIn):
 
     __metaclass__ = OptionParserMeta
-    _skip_console_logging_config_ = True
 
     description = 'Salt key is used to manage Salt authentication keys'
 
@@ -960,9 +1156,22 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
 
-    def _mixin_setup(self):
+    # LogLevelMixIn attributes
+    _skip_console_logging_config_ = True
+    _logfile_config_setting_name_ = 'key_logfile'
+    _default_logging_logfile_ = '/var/log/salt/key'
 
-        actions_group = optparse.OptionGroup(self, "Actions")
+    def _mixin_setup(self):
+        # XXX: Remove '--key-logfile' support in 0.18.0
+        self.logging_options_group.add_option(
+            '--key-logfile',
+            default=None,
+            help='Send all output to a file. Default is {0!r}'.format(
+                self._default_logging_logfile_
+            )
+        )
+
+        actions_group = optparse.OptionGroup(self, 'Actions')
         actions_group.add_option(
             '-l', '--list',
             default='',
@@ -1049,12 +1258,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.add_option_group(actions_group)
 
         self.add_option(
-            '--key-logfile',
-            default='/var/log/salt/key',
-            help=('Send all output to a file. Default is %default')
-        )
-
-        self.add_option(
             '-q', '--quiet',
             default=False,
             action='store_true',
@@ -1068,8 +1271,9 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Answer Yes to all questions presented, defaults to False'
         )
 
-        key_options_group = optparse.OptionGroup(self,
-                                                 "Key Generation Options")
+        key_options_group = optparse.OptionGroup(
+            self, 'Key Generation Options'
+        )
         self.add_option_group(key_options_group)
         key_options_group.add_option(
             '--gen-keys',
@@ -1106,6 +1310,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                     os.makedirs(self.options.gen_keys_dir)
                 self.options.config_dir = self.options.gen_keys_dir
         super(SaltKeyOptionParser, self).process_config_dir()
+    # Don't change it's mixin priority!
+    process_config_dir._mixin_prio_ = ConfigDirMixIn._mixin_prio_
 
     def setup_config(self):
         keys_config = config.master_config(self.get_config_file_path())
@@ -1119,14 +1325,23 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def process_keysize(self):
         if self.options.keysize < 2048:
-            self.error("The minimum value for keysize is 2048")
+            self.error('The minimum value for keysize is 2048')
         elif self.options.keysize > 32768:
-            self.error("The maximum value for keysize is 32768")
+            self.error('The maximum value for keysize is 32768')
 
     def process_gen_keys_dir(self):
         # Schedule __create_keys_dir() to run if there's a value for
         # --create-keys-dir
         self._mixin_after_parsed_funcs.append(self.__create_keys_dir)
+
+    def process_key_logfile(self):
+        if self.options.key_logfile:
+            # XXX: Remove '--key-logfile' support in 0.18.0
+            # In < 0.18.0 error out
+            self.error(
+                'The \'--key-logfile\' option has been deprecated in favour '
+                'of \'--log-file\''
+            )
 
     def _mixin_after_parsed(self):
         # It was decided to always set this to info, since it really all is
@@ -1139,10 +1354,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                           LogLevelMixIn, OutputOptionsWithTextMixIn):
+                           LogLevelMixIn, OutputOptionsMixIn):
     __metaclass__ = OptionParserMeta
-
-    _default_logging_level_ = 'info'
 
     description = ('Salt call is used to execute module functions locally '
                    'on a minion')
@@ -1151,6 +1364,10 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'minion'
+
+    # LogLevelMixIn attributes
+    _default_logging_level_ = 'info'
+    _default_logging_logfile_ = '/var/log/salt/minon'
 
     def _mixin_setup(self):
         self.add_option(
@@ -1208,7 +1425,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
-                self.error("-g/--grains does not accept any arguments")
+                self.error('-g/--grains does not accept any arguments')
 
             self.config['fun'] = self.args[0]
             self.config['arg'] = self.args[1:]
@@ -1234,10 +1451,12 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     default_timeout = 1
 
-    usage = "%prog [options]"
+    usage = '%prog [options]'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/master'
 
     def _mixin_setup(self):
         self.add_option(

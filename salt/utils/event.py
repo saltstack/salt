@@ -24,7 +24,11 @@ import multiprocessing
 from multiprocessing import Process
 
 # Import third party libs
-import zmq
+try:
+    import zmq
+except ImportError:
+    # Local mode does not need zmq
+    pass
 import yaml
 
 # Import salt libs

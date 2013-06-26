@@ -125,7 +125,7 @@ class LocalClient(object):
         try:
             return range_.expand(tgt)
         except seco.range.RangeException as err:
-            print("Range server exception: {0}".format(err))
+            print('Range server exception: {0}'.format(err))
             return []
 
     def _get_timeout(self, timeout):
@@ -612,6 +612,7 @@ class LocalClient(object):
         if not os.path.isdir(jid_dir):
             yield {}
         # Wait for the hosts to check in
+        syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
             if raw is not None:
@@ -1079,7 +1080,9 @@ class LocalClient(object):
             payload_kwargs['to'] = timeout
 
         sreq = salt.payload.SREQ(
-            'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+            #'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+            'tcp://' + salt.utils.ip_bracket(self.opts['interface']) +
+            ':' + str(self.opts['ret_port']),
         )
         payload = sreq.send('clear', payload_kwargs)
 

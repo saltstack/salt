@@ -3,6 +3,9 @@ Used to manage the outputter system. This package is the modular system used
 for managing outputters.
 '''
 
+# Import python libs
+import os
+import sys
 import errno
 
 # Import salt libs
@@ -62,7 +65,21 @@ def get_printout(out, opts=None, **kwargs):
 
     opts.update(kwargs)
     if 'color' not in opts:
-        opts['color'] = not bool(opts.get('no_color', False))
+        
+        def is_pipe():
+            try:
+                fileno = sys.stdout.fileno()
+            except AttributeError:
+                fileno = -1  # sys.stdout is StringIO or fake
+            return not os.isatty(fileno)
+        
+        if opts.get('force_color', False):
+            opts['color'] = True
+        elif opts.get('no_color', False) or is_pipe():
+            opts['color'] = False
+        else:
+            opts['color'] = True
+
     outputters = salt.loader.outputters(opts)
     if out not in outputters:
         return outputters['nested']

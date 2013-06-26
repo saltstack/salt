@@ -19,7 +19,11 @@ import sys
 import signal
 
 # Import third party libs
-import zmq
+try:
+    import zmq
+except:
+    # Running in local, zmq not needed
+    pass
 import yaml
 
 HAS_RANGE = False
@@ -646,14 +650,11 @@ class Minion(object):
             except TypeError as exc:
                 trb = traceback.format_exc()
                 aspec = _getargs(minion_instance.functions[data['fun']])
-                log.warning(('TypeError encountered executing {0}. See debug '
-                             'log for more info.  Possibly a missing '
-                             'arguments issue:  {1}').format(function_name,
+                log.warning(('TypeError encountered executing {0}: {1}. See '
+                             'debug log for more info.  Possibly a missing '
+                             'arguments issue:  {2}').format(function_name,
+                                                             exc,
                                                              aspec))
-                msg = 'Missing arguments executing "{0}": {1}'.format(
-                    function_name, aspec
-                )
-                log.warning(msg)
                 log.debug(
                     'TypeError intercepted: {0}\n{1}'.format(exc, trb),
                     exc_info=True
@@ -984,8 +985,13 @@ class Minion(object):
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
+
+        # Make sure to gracefully handle CTRL_LOGOFF_EVENT
+        salt.utils.enable_ctrl_logoff_handler()
+
         # On first startup execute a state run if configured to do so
         self._state_run()
+        time.sleep(.5)
 
         loop_interval = int(self.opts['loop_interval'])
         while True:

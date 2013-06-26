@@ -14,6 +14,7 @@ import functools
 import sys
 import json
 import yaml
+import traceback
 
 # Import salt libs
 import salt.utils
@@ -157,6 +158,7 @@ def _render_cmd(cmd, cwd, template):
 
 def _run(cmd,
          cwd=None,
+         stdin=None,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
          quiet=False,
@@ -188,6 +190,20 @@ def _run(cmd,
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
+
+    if shell.lower().strip() == 'powershell':
+        # If we were called by script(), then fakeout the Windows
+        # shell to run a Powershell script.
+        # Else just run a Powershell command.
+        stack = traceback.extract_stack(limit=2)
+
+        # extract_stack() returns a list of tuples.
+        # The last item in the list [-1] is the currrent method.
+        # The third item[2] in each tuple is the name of that method.
+        if stack[-2][2] == 'script':
+            cmd = 'Powershell -File ' + cmd
+        else:
+            cmd = 'Powershell ' + cmd
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template)
@@ -248,7 +264,7 @@ def _run(cmd,
             msg = 'Environment could not be retrieved for User \'{0}\''.format(runas)
             raise CommandExecutionError(msg)
 
-    if not quiet:
+    if not salt.utils.is_true(quiet):
         # Put the most common case first
         log.info(
             'Executing command {0!r} {1}in directory {2!r}'.format(
@@ -270,6 +286,7 @@ def _run(cmd,
     kwargs = {'cwd': cwd,
               'shell': True,
               'env': run_env,
+              'stdin': str(stdin) if stdin is not None else stdin,
               'stdout': stdout,
               'stderr': stderr}
 
@@ -325,6 +342,7 @@ def _run(cmd,
 
 def _run_quiet(cmd,
                cwd=None,
+               stdin=None,
                runas=None,
                shell=DEFAULT_SHELL,
                env=(),
@@ -337,6 +355,7 @@ def _run_quiet(cmd,
     return _run(cmd,
                 runas=runas,
                 cwd=cwd,
+                stdin=stdin,
                 stderr=subprocess.STDOUT,
                 quiet=True,
                 shell=shell,
@@ -348,6 +367,7 @@ def _run_quiet(cmd,
 
 def _run_all_quiet(cmd,
                    cwd=None,
+                   stdin=None,
                    runas=None,
                    shell=DEFAULT_SHELL,
                    env=(),
@@ -361,6 +381,7 @@ def _run_all_quiet(cmd,
     return _run(cmd,
                 runas=runas,
                 cwd=cwd,
+                stdin=stdin,
                 shell=shell,
                 env=env,
                 quiet=True,
@@ -371,6 +392,7 @@ def _run_all_quiet(cmd,
 
 def run(cmd,
         cwd=None,
+        stdin=None,
         runas=None,
         shell=DEFAULT_SHELL,
         env=(),
@@ -385,19 +407,29 @@ def run(cmd,
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | awk '/foo/{print \$2}'"
+        salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \$2}'"
+        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
+    Specify an alternate shell with the shell parameter::
+
+        salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.::
+
+        salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     out = _run(cmd,
                runas=runas,
                shell=shell,
                cwd=cwd,
+               stdin=stdin,
                stderr=subprocess.STDOUT,
                env=env,
                template=template,
@@ -412,6 +444,7 @@ def run(cmd,
 
 def run_stdout(cmd,
                cwd=None,
+               stdin=None,
                runas=None,
                shell=DEFAULT_SHELL,
                env=(),
@@ -426,18 +459,24 @@ def run_stdout(cmd,
 
     CLI Example::
 
-        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.::
+
+        salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     stdout = _run(cmd,
                   runas=runas,
                   cwd=cwd,
+                  stdin=stdin,
                   shell=shell,
                   env=env,
                   template=template,
@@ -452,6 +491,7 @@ def run_stdout(cmd,
 
 def run_stderr(cmd,
                cwd=None,
+               stdin=None,
                runas=None,
                shell=DEFAULT_SHELL,
                env=(),
@@ -466,18 +506,24 @@ def run_stderr(cmd,
 
     CLI Example::
 
-        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.::
+
+        salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     stderr = _run(cmd,
                   runas=runas,
                   cwd=cwd,
+                  stdin=stdin,
                   shell=shell,
                   env=env,
                   template=template,
@@ -492,6 +538,7 @@ def run_stderr(cmd,
 
 def run_all(cmd,
             cwd=None,
+            stdin=None,
             runas=None,
             shell=DEFAULT_SHELL,
             env=(),
@@ -506,18 +553,24 @@ def run_all(cmd,
 
     CLI Example::
 
-        salt '*' cmd.run_all "ls -l | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_all "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.::
+
+        salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
+               stdin=stdin,
                shell=shell,
                env=env,
                template=template,
@@ -547,6 +600,7 @@ def run_all(cmd,
 
 def retcode(cmd,
             cwd=None,
+            stdin=None,
             runas=None,
             shell=DEFAULT_SHELL,
             env=(),
@@ -567,11 +621,17 @@ def retcode(cmd,
 
         salt '*' cmd.retcode template=jinja "file {{grains.pythonpath[0]}}/python"
 
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.::
+
+        salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     return _run(
             cmd,
             runas=runas,
             cwd=cwd,
+            stdin=stdin,
             shell=shell,
             env=env,
             template=template,
@@ -584,6 +644,7 @@ def script(
         source,
         args=None,
         cwd=None,
+        stdin=None,
         runas=None,
         shell=DEFAULT_SHELL,
         env='base',
@@ -606,6 +667,13 @@ def script(
 
         salt '*' cmd.script salt://scripts/runme.sh
         salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
+        salt '*' cmd.script salt://scripts/windows_task.ps1 args=' -Input c:\\tmp\\infile.txt' shell='powershell'
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.::
+
+        salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     if not salt.utils.is_windows():
         path = salt.utils.mkstemp(dir=cwd)
@@ -623,12 +691,12 @@ def script(
     ret = _run(
             path + ' ' + args if args else path,
             cwd=cwd,
+            stdin=stdin,
             quiet=kwargs.get('quiet', False),
             runas=runas,
             shell=shell,
             umask=umask,
-            timeout=timeout
-            )
+            timeout=timeout)
     os.remove(path)
     return ret
 
@@ -636,6 +704,7 @@ def script(
 def script_retcode(
         source,
         cwd=None,
+        stdin=None,
         runas=None,
         shell=DEFAULT_SHELL,
         env='base',
@@ -658,6 +727,12 @@ def script_retcode(
     CLI Example::
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.::
+
+        salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     return script(
             source,

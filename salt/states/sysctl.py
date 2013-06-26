@@ -43,11 +43,12 @@ def present(name, value, config='/etc/sysctl.conf'):
                         'Sysctl option {0} set to be changed to {1}'
                         ).format(name, value)
                 return ret
+            else:
+                ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(name,value)
+                return ret
         else:
-            ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(
-                    name,
-                    value
-                    )
+            ret['result'] = False
+            ret['comment'] = 'Invalid sysctl option {0} = {1}'.format(name,value)
             return ret
 
     update = __salt__['sysctl.persist'](name, value, config)

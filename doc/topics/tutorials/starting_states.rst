@@ -260,6 +260,10 @@ The include statement allows for states to be cross linked. When an SLS
 has an include statement it is literally extended to include the contents of
 the included SLS files.
 
+Note that some of the SLS files are called init.sls, while others are not. More
+info on what this means can be found in the :ref:`States Tutorial
+<sls-file-namespace>`.
+
 Extending Included SLS Data
 ===========================
 

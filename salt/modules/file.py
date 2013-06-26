@@ -528,11 +528,11 @@ def sed_contains(path, text, limit='', flags='g'):
         options = options.replace('-r', '-E')
 
     cmd = r"sed {options} '{limit}s/{before}/$/{flags}' {path}".format(
-            options=options,
-            limit='/{0}/ '.format(limit) if limit else '',
-            before=before,
-            flags='p{0}'.format(flags),
-            path=path)
+        options=options,
+        limit='/{0}/ '.format(limit) if limit else '',
+        before=before,
+        flags='p{0}'.format(flags),
+        path=path)
 
     result = __salt__['cmd.run'](cmd)
 
@@ -666,11 +666,11 @@ def uncomment(path, regex, char='#', backup='.bak'):
     '''
     # Largely inspired by Fabric's contrib.files.uncomment()
 
-    return __salt__['file.sed'](path,
-        before=r'^([[:space:]]*){0}'.format(char),
-        after=r'\1',
-        limit=regex.lstrip('^'),
-        backup=backup)
+    return sed(path,
+               before=r'^([[:space:]]*){0}'.format(char),
+               after=r'\1',
+               limit=regex.lstrip('^'),
+               backup=backup)
 
 
 def comment(path, regex, char='#', backup='.bak'):
@@ -709,11 +709,10 @@ def comment(path, regex, char='#', backup='.bak'):
             regex.lstrip('^').rstrip('$'),
             '$' if regex.endswith('$') else '')
 
-    return __salt__['file.sed'](
-        path,
-        before=regex,
-        after=r'{0}\1'.format(char),
-        backup=backup)
+    return sed(path,
+               before=regex,
+               after=r'{0}\1'.format(char),
+               backup=backup)
 
 
 def patch(originalfile, patchfile, options='', dry_run=False):
@@ -909,10 +908,13 @@ def touch(name, atime=None, mtime=None):
 
     return os.path.exists(name)
 
+
 def symlink(src, link):
     '''
     Create a symbolic link to a file
+
     CLI Example::
+
         salt '*' file.symlink /path/to/file /path/to/link
     '''
     if not os.path.isabs(src):
@@ -924,6 +926,26 @@ def symlink(src, link):
     except (OSError, IOError):
         raise CommandExecutionError('Could not create "{0}"'.format(link))
     return False
+
+
+def rename(src, dst):
+    '''
+    Rename a file or directory
+
+    CLI Example::
+
+        salt '*' file.rename /path/to/src /path/to/dst
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        os.rename(src, dst)
+        return True
+    except OSError:
+        raise CommandExecutionError('Could not rename "{0}" to "{1}"'.format(src, dst))
+    return False
+
 
 def stats(path, hash_type='md5', follow_symlink=False):
     '''
@@ -1144,23 +1166,22 @@ def get_managed(
             if context:
                 context_dict.update(context)
             data = salt.utils.templates.TEMPLATE_REGISTRY[template](
-                    sfn,
-                    name=name,
-                    source=source,
-                    user=user,
-                    group=group,
-                    mode=mode,
-                    env=env,
-                    context=context_dict,
-                    salt=__salt__,
-                    pillar=__pillar__,
-                    grains=__grains__,
-                    opts=__opts__,
-                    **kwargs
-                    )
+                sfn,
+                name=name,
+                source=source,
+                user=user,
+                group=group,
+                mode=mode,
+                env=env,
+                context=context_dict,
+                salt=__salt__,
+                pillar=__pillar__,
+                grains=__grains__,
+                opts=__opts__,
+                **kwargs)
         else:
             return sfn, {}, ('Specified template format {0} is not supported'
-                      ).format(template)
+                             ).format(template)
 
         if data['result']:
             sfn = data['data']
@@ -1184,7 +1205,7 @@ def get_managed(
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
-                             source_hash)
+                            source_hash)
                     hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
                     for line in hash_fn_fopen.read().splitlines():
                         line = line.strip()
@@ -1199,9 +1220,9 @@ def get_managed(
                     comps = hashstr.split('=')
                     if len(comps) < 2:
                         return '', {}, ('Source hash file {0} contains an '
-                                  'invalid hash format, it must be in '
-                                  'the format <hash type>=<hash>'
-                                  ).format(source_hash)
+                                        'invalid hash format, it must be in '
+                                        'the format <hash type>=<hash>'
+                                        ).format(source_hash)
                     source_sum['hsum'] = comps[1].strip()
                     source_sum['hash_type'] = comps[0].strip()
                 else:
@@ -1209,14 +1230,14 @@ def get_managed(
                     comps = source_hash.split('=')
                     if len(comps) < 2:
                         return '', {}, ('Source hash file {0} contains an '
-                                  'invalid hash format, it must be in '
-                                  'the format <hash type>=<hash>'
-                                  ).format(source_hash)
+                                        'invalid hash format, it must be in '
+                                        'the format <hash type>=<hash>'
+                                        ).format(source_hash)
                     source_sum['hsum'] = comps[1].strip()
                     source_sum['hash_type'] = comps[0].strip()
             else:
                 return '', {}, ('Unable to determine upstream hash of'
-                          ' source file {0}').format(source)
+                                ' source file {0}').format(source)
     return sfn, source_sum, ''
 
 
@@ -1249,22 +1270,25 @@ def check_perms(name, ret, user, group, mode):
 
     # Check permissions
     perms = {}
-    perms['luser'] = __salt__['file.get_user'](name)
-    perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = str(__salt__['file.get_mode'](name)).lstrip('0')
+    perms['luser'] = get_user(name)
+    perms['lgroup'] = get_group(name)
+    perms['lmode'] = __salt__['config.manage_mode'](get_mode(name))
 
     # Mode changes if needed
-    if mode:
-        if str(mode) != perms['lmode']:
-            if not __opts__['test']:
-                __salt__['file.set_mode'](name, mode)
-            if str(mode) != str(__salt__['file.get_mode'](name)).lstrip('0'):
-                ret['result'] = False
-                ret['comment'].append(
-                    'Failed to change mode to {0}'.format(mode)
-                )
-            else:
+    if mode is not None:
+        mode = __salt__['config.manage_mode'](mode)
+        if mode != perms['lmode']:
+            if __opts__['test'] is True:
                 ret['changes']['mode'] = mode
+            else:
+                set_mode(name, mode)
+                if mode != __salt__['config.manage_mode'](get_mode(name)):
+                    ret['result'] = False
+                    ret['comment'].append(
+                        'Failed to change mode to {0}'.format(mode)
+                    )
+                else:
+                    ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
     if user:
         if user != perms['luser']:
@@ -1279,21 +1303,28 @@ def check_perms(name, ret, user, group, mode):
             if group is None:
                 group = perms['lgroup']
             try:
-                __salt__['file.chown'](name, user, group)
+                chown(name, user, group)
             except OSError:
                 ret['result'] = False
 
     if user:
-        if user != __salt__['file.get_user'](name):
-            ret['result'] = False
-            ret['comment'].append('Failed to change user to {0}'.format(user))
+        if user != get_user(name):
+            if __opts__['test'] is True:
+                ret['changes']['user'] = user
+            else:
+                ret['result'] = False
+                ret['comment'].append('Failed to change user to {0}'
+                                      .format(user))
         elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
-        if group != __salt__['file.get_group'](name):
-            ret['result'] = False
-            ret['comment'].append('Failed to change group to {0}'
-                               .format(group))
+        if group != get_group(name):
+            if __opts__['test'] is True:
+                ret['changes']['group'] = group
+            else:
+                ret['result'] = False
+                ret['comment'].append('Failed to change group to {0}'
+                                      .format(group))
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
@@ -1301,6 +1332,8 @@ def check_perms(name, ret, user, group, mode):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
+    if __opts__['test'] is True and ret['changes']:
+        ret['result'] = None
     return ret, perms
 
 
@@ -1334,17 +1367,17 @@ def check_managed(
     if contents is None:
         # Gather the source file from the server
         sfn, source_sum, comments = get_managed(
-                name,
-                template,
-                source,
-                source_hash,
-                user,
-                group,
-                mode,
-                env,
-                context,
-                defaults,
-                **kwargs)
+            name,
+            template,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            env,
+            context,
+            defaults,
+            **kwargs)
         if comments:
             __clean_tmp(sfn)
             return False, comments
@@ -1352,6 +1385,7 @@ def check_managed(
                               group, mode, env, template, contents)
     __clean_tmp(sfn)
     if changes:
+        log.critical(changes)
         comments = ['The following values are set to be changed:\n']
         comments.extend('{0}: {1}\n'.format(key, val) for key, val in changes.iteritems())
         return None, ''.join(comments)
@@ -1379,14 +1413,12 @@ def check_file_meta(
     changes = {}
     if not source_sum:
         source_sum = dict()
-    stats = __salt__['file.stats'](
-            name,
-            source_sum.get('hash_type'), 'md5')
-    if not stats:
+    lstats = stats(name, source_sum.get('hash_type'), 'md5')
+    if not lstats:
         changes['newfile'] = name
         return changes
     if 'hsum' in source_sum:
-        if source_sum['hsum'] != stats['sum']:
+        if source_sum['hsum'] != lstats['sum']:
             if not sfn and source:
                 sfn = __salt__['cp.cache_file'](source, env)
             if sfn:
@@ -1398,8 +1430,8 @@ def check_file_meta(
                 if __salt__['config.option']('obfuscate_templates'):
                     changes['diff'] = '<Obfuscated Template>'
                 else:
-                    changes['diff'] = (
-                            ''.join(difflib.unified_diff(nlines, slines)))
+                    changes['diff'] = \
+                        ''.join(difflib.unified_diff(nlines, slines))
             else:
                 changes['sum'] = 'Checksum differs'
     if contents is not None:
@@ -1419,12 +1451,12 @@ def check_file_meta(
             else:
                 changes['diff'] = (''.join(difflib.unified_diff(nlines,
                                                                 slines)))
-    if user is not None and user != stats['user']:
+    if user is not None and user != lstats['user']:
         changes['user'] = user
-    if group is not None and group != stats['group']:
+    if group is not None and group != lstats['group']:
         changes['group'] = group
     # Normalize the file mode
-    smode = __salt__['config.manage_mode'](stats['mode'])
+    smode = __salt__['config.manage_mode'](lstats['mode'])
     mode = __salt__['config.manage_mode'](mode)
     if mode is not None and mode != smode:
         changes['mode'] = mode
@@ -1451,7 +1483,8 @@ def get_diff(
     sfn = __salt__['cp.cache_file'](masterfile, env)
     if sfn:
         with contextlib.nested(salt.utils.fopen(sfn, 'r'),
-                    salt.utils.fopen(minionfile, 'r')) as (src, name_):
+                               salt.utils.fopen(minionfile, 'r')) \
+                as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
         diff = difflib.unified_diff(nlines, slines, minionfile, masterfile)
@@ -1511,10 +1544,9 @@ def manage_file(name,
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
                                       'not match real sum of {2}'
-                                      ).format(
-                                              name,
-                                              source_sum['hsum'],
-                                              dl_sum)
+                                      ).format(name,
+                                               source_sum['hsum'],
+                                               dl_sum)
                     ret['result'] = False
                     return ret
 
@@ -1534,15 +1566,14 @@ def manage_file(name,
                     elif not show_diff:
                         ret['changes']['diff'] = '<show_diff=False>'
                     else:
-                        ret['changes']['diff'] = (
-                                ''.join(difflib.unified_diff(nlines, slines)))
+                        ret['changes']['diff'] = \
+                            ''.join(difflib.unified_diff(nlines, slines))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
-                salt.utils.copyfile(
-                        sfn,
-                        name,
-                        __salt__['config.backup_mode'](backup),
-                        __opts__['cachedir'])
+                salt.utils.copyfile(sfn,
+                                    name,
+                                    __salt__['config.backup_mode'](backup),
+                                    __opts__['cachedir'])
             except IOError:
                 __clean_tmp(sfn)
                 return _error(
@@ -1568,16 +1599,15 @@ def manage_file(name,
                 elif not show_diff:
                     ret['changes']['diff'] = '<show_diff=False>'
                 else:
-                    ret['changes']['diff'] = (
-                            ''.join(difflib.unified_diff(nlines, slines)))
+                    ret['changes']['diff'] = \
+                        ''.join(difflib.unified_diff(nlines, slines))
 
                 # Pre requisites are met, the file needs to be replaced, do it
                 try:
-                    salt.utils.copyfile(
-                            tmp,
-                            name,
-                            __salt__['config.backup_mode'](backup),
-                            __opts__['cachedir'])
+                    salt.utils.copyfile(tmp,
+                                        name,
+                                        __salt__['config.backup_mode'](backup),
+                                        __opts__['cachedir'])
                 except IOError:
                     __clean_tmp(tmp)
                     return _error(
@@ -1611,10 +1641,9 @@ def manage_file(name,
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
                                       'not match real sum of {2}'
-                                      ).format(
-                                              name,
-                                              source_sum['hsum'],
-                                              dl_sum)
+                                      ).format(name,
+                                               source_sum['hsum'],
+                                               dl_sum)
                     ret['result'] = False
                     return ret
 
@@ -1640,7 +1669,7 @@ def manage_file(name,
             # Create a new file when test is False and source is None
             if contents is None:
                 if not __opts__['test']:
-                    if __salt__['file.touch'](name):
+                    if touch(name):
                         ret['changes']['new'] = 'file {0} created'.format(name)
                         ret['comment'] = 'Empty file'
                     else:
@@ -1649,7 +1678,7 @@ def manage_file(name,
                         )
             else:
                 if not __opts__['test']:
-                    if __salt__['file.touch'](name):
+                    if touch(name):
                         ret['changes']['diff'] = 'New file'
                     else:
                         return _error(
@@ -1665,19 +1694,17 @@ def manage_file(name,
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
-            salt.utils.copyfile(
-                    tmp,
-                    name,
-                    __salt__['config.backup_mode'](backup),
-                    __opts__['cachedir'])
+            salt.utils.copyfile(tmp,
+                                name,
+                                __salt__['config.backup_mode'](backup),
+                                __opts__['cachedir'])
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
-            salt.utils.copyfile(
-                    sfn,
-                    name,
-                    __salt__['config.backup_mode'](backup),
-                    __opts__['cachedir'])
+            salt.utils.copyfile(sfn,
+                                name,
+                                __salt__['config.backup_mode'](backup),
+                                __opts__['cachedir'])
             __clean_tmp(sfn)
 
         # Check and set the permissions if necessary
@@ -1776,9 +1803,8 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
         if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
             return
     os.mkdir(name)
-    check_perms(
-            name,
-            None,
-            user,
-            group,
-            int('{0}'.format(mode)) if mode else None)
+    check_perms(name,
+                None,
+                user,
+                group,
+                int('{0}'.format(mode)) if mode else None)

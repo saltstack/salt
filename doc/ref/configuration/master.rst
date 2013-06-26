@@ -280,9 +280,10 @@ public keys from the minions
 
 Default ``not defined``
 
-If the autosign_file is specified incoming keys specified in
-the autosign_file will be automatically accepted. Regular expressions as
-well as globbing can be used. This is insecure!
+If the autosign_file is specified incoming keys specified in the autosign_file
+will be automatically accepted.  Matches will be searched for first by string
+comparison, then by globbing, then by full-string regex matching.  This is
+insecure!
 
 .. conf_master:: client_acl
 
@@ -358,6 +359,7 @@ The state_output setting changes if the output is the full multi line
 output for each changed state if set to 'full', but if set to 'terse'
 the output will be shortened to a single line.  If set to 'mixed', the output
 will be terse unless a state failed, in which case that output will be full.
+If set to 'changes', the output will be full unless the state didn't change.
 
 .. code-block:: yaml
 
