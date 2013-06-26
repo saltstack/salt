@@ -24,7 +24,7 @@ def mod_init(low):
     '''
     try:
         __salt__['portage_config.enforce_nice_config']()
-    except:
+    except Exception:
         return False
     return True
 
