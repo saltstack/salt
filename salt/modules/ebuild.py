@@ -350,7 +350,7 @@ def install(name=None,
         a python list.
 
         CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar","~category/package:slot::overlay[\'use\']"]'
+            salt '*' pkg.install pkgs='["foo","bar","~category/package:slot::overlay[use]"]'
 
     sources
         A list of tbz2 packages to install. Must be passed as a list of dicts,
@@ -543,6 +543,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
         Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are
         ignored if this argument is present. Must be passed as a python list.
 
+    .. versionadded:: 0.16.0
 
     Returns a dict containing the changes.
 
@@ -595,6 +596,8 @@ def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     pkgs
         Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are
         ignored if this argument is present. Must be passed as a python list.
+
+    .. versionadded:: 0.16.0
 
 
     Returns a dict containing the changes.

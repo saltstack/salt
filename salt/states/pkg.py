@@ -43,8 +43,8 @@ import salt.utils
 if salt.utils.is_windows():
     from salt.utils import namespaced_function
     from salt.modules.win_pkg import _get_package_info
-    from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import get_repo_data
+    from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
     _get_package_info = namespaced_function(_get_package_info, globals())
     get_repo_data = namespaced_function(get_repo_data, globals())
@@ -756,7 +756,7 @@ def purged(name, pkgs=None, **kwargs):
         A list of packages to purge. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
-    .. versionadded:: 0.16.0 
+    .. versionadded:: 0.16.0
     '''
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
