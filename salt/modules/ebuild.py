@@ -40,7 +40,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo' ) else False
+    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo') else False
 
 
 def _vartree():
@@ -120,6 +120,11 @@ def latest_version(*names, **kwargs):
     '''
     if len(names) == 0:
         return ''
+
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
@@ -472,7 +477,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False):
 
         salt '*' pkg.update <package name>
     '''
-    if(refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     full_atom = pkg
