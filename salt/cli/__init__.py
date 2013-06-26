@@ -36,14 +36,15 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         self.parse_args()
 
-        if (not self.config['log_file'].startswith('tcp://') or
-                not self.config['log_file'].startswith('udp://') or
-                not self.config['log_file'].startswith('file://')):
-            # Logfile is not using Syslog, verify
-            verify_files(
-                [self.config['log_file']],
-                self.config['user']
-            )
+        if self.config['verify_env']:
+            if (not self.config['log_file'].startswith('tcp://') or
+                    not self.config['log_file'].startswith('udp://') or
+                    not self.config['log_file'].startswith('file://')):
+                # Logfile is not using Syslog, verify
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user']
+                )
 
         # Setup file logging!
         self.setup_logfile_logger()
@@ -189,14 +190,15 @@ class SaltCP(parsers.SaltCPOptionParser):
         '''
         self.parse_args()
 
-        if (not self.config['log_file'].startswith('tcp://') or
-                not self.config['log_file'].startswith('udp://') or
-                not self.config['log_file'].startswith('file://')):
-            # Logfile is not using Syslog, verify
-            verify_files(
-                [self.config['log_file']],
-                self.config['user']
-            )
+        if self.config['verify_env']:
+            if (not self.config['log_file'].startswith('tcp://') or
+                    not self.config['log_file'].startswith('udp://') or
+                    not self.config['log_file'].startswith('file://')):
+                # Logfile is not using Syslog, verify
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user']
+                )
 
         # Setup file logging!
         self.setup_logfile_logger()
