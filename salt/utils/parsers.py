@@ -1469,6 +1469,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     # LogLevelMixIn attributes
     _default_logging_level_ = 'warning'
     _default_logging_logfile_ = '/var/log/salt/master'
+    _loglevel_config_setting_name_ = 'cli_salt_run_log_file'
 
     def _mixin_setup(self):
         self.add_option(

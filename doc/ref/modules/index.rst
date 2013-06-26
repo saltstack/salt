@@ -255,7 +255,7 @@ Objects NOT Loaded into the Salt Minion
     cheese = {} # Not a callable Python object
 
 Useful Decorators for Modules
-==========================
+=============================
 Sometimes when writing modules for large scale deployments you run into some small
 things that end up severely complicating the code. To alleviate some of this pain
 Salt has some useful decorators for use within modules!
