@@ -31,7 +31,11 @@ def zmq_version():
     '''
     ZeroMQ python bindings >= 2.1.9 are required
     '''
-    import zmq
+    try:
+        import zmq
+    except:
+        # Return True for local mode
+        return True
     ver = zmq.__version__
     # The last matched group can be None if the version
     # is something like 3.1 and that will work properly
