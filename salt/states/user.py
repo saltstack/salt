@@ -185,6 +185,9 @@ def present(name,
         A password hash to set for the user. This field is only supported on
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris
 
+    .. versionchanged:: 0.16.0
+       BSD support added.
+
     enforce_password
         Set to False to keep the password from being changed if it has already
         been set and the password hash differs from what is specified in the
