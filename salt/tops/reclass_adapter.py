@@ -46,13 +46,29 @@ from salt.exceptions import SaltInvocationError
 
 def top(**kwargs):
     try:
-        return reclass_top(__opts__, __salt__, __grains__, **kwargs)
+        # Salt's top interface is inconsistent with ext_pillar (see #5786) and
+        # one is expected to extract the arguments to the master_tops plugin
+        # by parsing the configuration file data. I therefore use this adapter
+        # to hide this internality.
+        reclass_opts = __opts__['master_tops']['reclass']
+
+        # I purposely do not pass any of __opts__ or __salt__ or __grains__
+        # to reclass, as I consider those to be Salt-internal and reclass
+        # should not make any assumptions about it. Reclass only needs to know
+        # how it's configured, so:
+        return reclass_top(**reclass_opts)
 
     except TypeError, e:
         if e.message.find('unexpected keyword argument') > -1:
             arg = e.message.split()[-1]
             raise SaltInvocationError('master_tops.reclass: unexpected option: ' + arg)
+        else:
+            raise
 
+    except KeyError, e:
+        if e.message.find('reclass') > -1:
+            raise SaltInvocationError('master_tops.reclass: no configuration '\
+                                      'found in master config')
         else:
             raise
 
