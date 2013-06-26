@@ -40,7 +40,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo' and 'portage_config.enforce_nice_config' in __salt__ ) else False
+    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo' ) else False
 
 
 def _vartree():
@@ -120,11 +120,6 @@ def latest_version(*names, **kwargs):
     '''
     if len(names) == 0:
         return ''
-
-    # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
-        refresh_db()
-
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
@@ -417,34 +412,36 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
-                keyword = False
-                if version_num[0] == '~':
-                    version_num = version_num[1:]
-                    keyword = True
+                keyword = None
 
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
+                match = re.match('^(~)?([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
-                    gt_lt, eq, verstr = match.groups()
+                    keyword, gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
                     prefix += eq or ''
+                    # We need to delete quotes around use flag list elements
+                    verstr=verstr.replace("'","")
                     # If no prefix characters were supplied and verstr contains a version, use '='
-                    if verstr[0] != ':' and verstr[0] != '['
+                    if verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
-                    target = '"{0}{1}-{2}"'.format(prefix, param, verstr)
+                        target = '"{0}{1}-{2}"'.format(prefix, param, verstr)
+                    else:
+                        target = '"{0}{1}"'.format(param, verstr)
                 else:
                     target = '"{1}-{2}"'.format(param, version_num)
 
                 if target.find('[') != -1:
-                    __salt__['portage_config.append_use_flags'](target)
-                    target = target[:target.rfind('[')]
+                    __salt__['portage_config.append_use_flags'](target[1:-1])
+                    target = target[:target.rfind('[')] + '"'
 
-                if keyword:
+                if keyword != None:
                     __salt__['portage_config.append_to_package_conf']('accept_keywords', target, ['~ARCH'])
 
                 targets.append(target)
     else:
         targets = pkg_params
     cmd = 'emerge --quiet --ask n {0} {1}'.format(emerge_opts, ' '.join(targets))
+
     old = list_pkgs()
     call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
@@ -475,7 +472,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False):
 
         salt '*' pkg.update <package name>
     '''
-    if salt.utils.is_true(refresh):
+    if(refresh):
         refresh_db()
 
     full_atom = pkg
@@ -541,8 +538,6 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
         Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are
         ignored if this argument is present. Must be passed as a python list.
 
-    .. versionadded:: 0.16.0
-
 
     Returns a dict containing the changes.
 
@@ -595,8 +590,6 @@ def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     pkgs
         Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are
         ignored if this argument is present. Must be passed as a python list.
-
-    .. versionadded:: 0.16.0
 
 
     Returns a dict containing the changes.
@@ -669,7 +662,12 @@ def perform_cmp(pkg1='', pkg2=''):
         salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
         salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    return portage.versions.vercmp(pkg1, pkg2)
+    m1 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg1)
+    m2 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg2)
+
+    if m1 and m2:
+        return portage.versions.vercmp(m1.group(0), m2.group(0))
+    return 0
 
 
 def compare(pkg1='', oper='==', pkg2=''):

@@ -208,7 +208,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                 if not atom:
                     return
             string = '{0} {1}'.format(atom, ' '.join(flags))
-            new_flags = flags
+            new_flags = list(flags)
         else:
             atom = string.strip().split()[0]
             new_flags = portage.dep.strip_empty(string.strip().split(' '))[1:]
@@ -271,18 +271,22 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                     added = True
                 else:
                     old_flags = portage.dep.strip_empty(l_strip.split(' '))[1:]
-                    if conf == 'accept_keywords' and not old_flags:
-                        new_contents += l
-                        if not new_flags:
-                            added = True
-                            break
-                        continue
+                    if conf == 'accept_keywords':
+                        if not old_flags:
+                            new_contents += l
+                            if not new_flags:
+                                added = True
+                            continue
+                        elif not new_flags:
+                            continue
                     merged_flags = _merge_flags(new_flags, old_flags)
                     if merged_flags:
                         new_contents += '{0} {1}\n'.format(atom, ' '.join(merged_flags))
                     else:
                         new_contents += '{0}\n'.format(atom)
                     added = True
+            else:
+                new_contents += l
         if not added:
             new_contents += string.strip() + '\n'
         file_handler.seek(0)
@@ -301,7 +305,7 @@ def append_use_flags(atom, uses=None, overwrite=False):
     CLI Example::
 
         salt '*' portage_config.append_use_flags "app-admin/salt[ldap, -libvirt]"
-        salt '*' portage_config.append_use_flags "> = app-admin/salt-0.14.1" "['ldap', '-libvirt']"
+        salt '*' portage_config.append_use_flags ">=app-admin/salt-0.14.1" "['ldap', '-libvirt']"
     '''
     if not uses:
         uses = portage.dep.dep_getusedeps(atom)
