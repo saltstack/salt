@@ -17,7 +17,7 @@ import logging
 try:
     from M2Crypto import RSA
     from Crypto.Cipher import AES
-except:
+except ImportError:
     # No need for crypt in local mode
     pass
 
