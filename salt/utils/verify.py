@@ -33,7 +33,7 @@ def zmq_version():
     '''
     try:
         import zmq
-    except:
+    except Exception:
         # Return True for local mode
         return True
     ver = zmq.__version__
