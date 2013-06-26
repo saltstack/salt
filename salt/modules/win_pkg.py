@@ -60,11 +60,15 @@ def latest_version(*names, **kwargs):
     if len(names) == 0:
         return ''
 
+    # Initialize the return dict with empty strings
+    ret = {}
+    for name in names:
+        ret[name] = ''
+
     # Refresh before looking for the latest version available
     if salt.utils.is_true(kwargs.get('refresh', True)):
         refresh_db()
 
-    ret = {}
     pkgs = list_pkgs()
     for name in names:
         candidate = '0'
