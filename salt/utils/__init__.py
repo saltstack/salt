@@ -40,7 +40,7 @@ except ImportError:
 
 try:
     import zmq
-except:
+except ImportError:
     # Running as purely local
     pass
 
