@@ -36,6 +36,18 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         self.parse_args()
 
+        if (not self.config['log_file'].startswith('tcp://') or
+                not self.config['log_file'].startswith('udp://') or
+                not self.config['log_file'].startswith('file://')):
+            # Logfile is not using Syslog, verify
+            verify_files(
+                [self.config['log_file']],
+                self.config['user']
+            )
+
+        # Setup file logging!
+        self.setup_logfile_logger()
+
         try:
             local = salt.client.LocalClient(self.get_config_file_path())
         except SaltClientError as exc:

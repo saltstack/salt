@@ -953,7 +953,7 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           TimeoutMixIn, ExtendedTargetOptionsMixIn,
-                          OutputOptionsMixIn):
+                          OutputOptionsMixIn, LogLevelMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -963,7 +963,9 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+
     # LogLevelMixIn attributes
+    _default_logging_level_ = 'warning'
     _default_logging_logfile_ = '/var/log/salt/master'
 
     def _mixin_setup(self):
