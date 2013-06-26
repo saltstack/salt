@@ -29,10 +29,10 @@ def mod_init(low):
     return True
 
 def _flags_helper(conf, atom, new_flags, test=False):
-    import traceback
     try:
         new_flags = __salt__['portage_config.get_missing_flags'](conf, atom, new_flags)
-    except:
+    except Exception:
+        import traceback
         return {'result': False, 'comment': traceback.format_exc()}
     if new_flags:
         old_flags = __salt__['portage_config.get_flags_from_package_conf'](conf, atom)
@@ -42,10 +42,10 @@ def _flags_helper(conf, atom, new_flags, test=False):
     return {'result': None}
 
 def _mask_helper(conf, atom, test=False):
-    import traceback
     try:
         is_present = __salt__['portage_config.is_present'](conf, atom)
-    except:
+    except Exception:
+        import traceback
         return {'result': False, 'comment': traceback.format_exc()}
     if not is_present:
         if not test:
@@ -68,19 +68,26 @@ def flags(name,
 
     name
         The name of the package or his DEPEND atom
+
     use
         A list of use flags
+
     accept_keywords
         A list of keywords to accept. "~ARCH" means current host arch, and will
         be translated in a line without keywords
+
     env
         A list of environment files
+
     license
         A list of accepted licenses
+
     properties
         A list of additional properties
+
     unmask
         A boolean to unmask the package
+
     mask
         A boolean to mask the package
     '''
@@ -92,7 +99,7 @@ def flags(name,
     if use:
         result = _flags_helper('use', name, use, __opts__['test'])
         if result['result']:
-            ret['changes']['use'] = c
+            ret['changes']['use'] = result['changes']
         elif result['result'] == False:
             ret['result'] = False
             ret['comment'] = result['comment']
