@@ -3,7 +3,6 @@ Manage the password database on FreeBSD systems
 '''
 
 # Import python libs
-import os
 try:
     import pwd
 except ImportError:
