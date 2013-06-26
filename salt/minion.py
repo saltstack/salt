@@ -19,7 +19,11 @@ import sys
 import signal
 
 # Import third party libs
-import zmq
+try:
+    import zmq
+except:
+    # Running in local, zmq not needed
+    pass
 import yaml
 
 HAS_RANGE = False
