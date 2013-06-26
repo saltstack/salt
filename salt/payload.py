@@ -17,7 +17,7 @@ from salt.utils.odict import OrderedDict
 # Import third party libs
 try:
     import zmq
-except:
+except ImportError:
     # No need for zeromq in local mode
     pass
 
