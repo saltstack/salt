@@ -233,11 +233,6 @@ setup_kwargs = {'name': NAME,
                                ],
                 # Required for esky builds
                 'install_requires': requirements,
-                # Required for running the tests suite
-                'dependency_links': [
-                    'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
-                ],
-                'tests_require': ['SaltTesting'],
                 # The dynamic module loading in salt.modules makes this
                 # package zip unsafe. Required for esky builds
                 'zip_safe': False
@@ -304,6 +299,12 @@ if with_setuptools:
                             'salt = salt.scripts:salt_main'
                             ],
     }
+
+    # Required for running the tests suite
+    setup_kwargs['dependency_links'] = [
+        'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
+    ]
+    setup_kwargs['tests_require'] = ['SaltTesting']
 else:
     setup_kwargs['scripts'] = ['scripts/salt-master',
                                'scripts/salt-minion',
