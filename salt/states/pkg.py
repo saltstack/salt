@@ -373,7 +373,7 @@ def installed(
                 'comment': comment}
 
     comment = []
-    if salt.utils.is_true(refresh) and os.path.isfile(rtag):
+    if salt.utils.is_true(refresh) or os.path.isfile(rtag):
         pkg_ret = __salt__['pkg.install'](name,
                                           refresh=True,
                                           version=version,
@@ -568,7 +568,7 @@ def latest(
         # Build updated list of pkgs to exclude non-targeted ones
         targeted_pkgs = targets.keys() if pkgs else None
 
-        if salt.utils.is_true(refresh) and os.path.isfile(rtag):
+        if salt.utils.is_true(refresh) or os.path.isfile(rtag):
             changes = __salt__['pkg.install'](name,
                                               refresh=True,
                                               fromrepo=fromrepo,
