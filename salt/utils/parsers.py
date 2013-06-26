@@ -297,7 +297,8 @@ class LogLevelMixIn(object):
     _default_logging_level_ = 'warning'
     _default_logging_logfile_ = None
     _logfile_config_setting_name_ = 'log_file'
-    _loglevel_config_setting_name_ = 'log_level_logfile'
+    _loglevel_config_setting_name_ = 'log_level'
+    _logfile_loglevel_config_setting_name_ = 'log_level_logfile'
     _skip_console_logging_config_ = False
 
     def _mixin_setup(self):
@@ -337,7 +338,7 @@ class LogLevelMixIn(object):
 
         group.add_option(
             '--log-file-level',
-            dest=self._loglevel_config_setting_name_,
+            dest=self._logfile_loglevel_config_setting_name_,
             choices=list(log.LOG_LEVELS),
             help='Logfile logging log level. One of {0}. '
                  'Default: \'{1}\'.'.format(
@@ -353,8 +354,10 @@ class LogLevelMixIn(object):
             )
             if self.config.get(cli_log_level, None) is not None:
                 self.options.log_level = self.config.get(cli_log_level)
-            elif self.config.get('log_level', None) is not None:
-                self.options.log_level = self.config.get('log_level')
+            elif self.config.get(self._loglevel_config_setting_name_, None):
+                self.options.log_level = self.config.get(
+                    self._loglevel_config_setting_name_
+                )
             else:
                 self.options.log_level = self._default_logging_level_
         # Setup the console as the last _mixin_after_parsed_func to run
@@ -389,10 +392,11 @@ class LogLevelMixIn(object):
                 # logging level, ie, `key_log_file_level` if the cli tool is
                 # `salt-key`
                 self.options.log_file_level = self.config.get(cli_setting_name)
-            elif self.config.get(self._loglevel_config_setting_name_, None):
+            elif self.config.get(
+                    self._logfile_loglevel_config_setting_name_, None):
                 # Is the regular log file level setting set?
                 self.options.log_file_level = self.config.get(
-                    self._loglevel_config_setting_name_
+                    self._logfile_loglevel_config_setting_name_
                 )
             else:
                 # Nothing is set on the configuration? Let's use the cli tool
@@ -400,16 +404,16 @@ class LogLevelMixIn(object):
                 self.options.log_level = self._default_logging_level_
 
     def setup_logfile_logger(self):
-        if self._loglevel_config_setting_name_ in self.config and not \
-                self.config.get(self._loglevel_config_setting_name_):
+        if self._logfile_loglevel_config_setting_name_ in self.config and not \
+                self.config.get(self._logfile_loglevel_config_setting_name_):
             # Remove it from config so it inherits from log_level
-            self.config.pop(self._loglevel_config_setting_name_)
+            self.config.pop(self._logfile_loglevel_config_setting_name_)
 
         loglevel = self.config.get(
-            self._loglevel_config_setting_name_,
+            self._logfile_loglevel_config_setting_name_,
             self.config.get(
                 # From the config setting
-                'log_level_logfile',
+                self._loglevel_config_setting_name_,
                 # From the console setting
                 self.config['log_level']
             )
@@ -953,7 +957,7 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           TimeoutMixIn, ExtendedTargetOptionsMixIn,
-                          OutputOptionsMixIn):
+                          OutputOptionsMixIn, LogLevelMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -963,8 +967,11 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+
     # LogLevelMixIn attributes
+    _default_logging_level_ = 'warning'
     _default_logging_logfile_ = '/var/log/salt/master'
+    _loglevel_config_setting_name_ = 'cli_salt_log_file'
 
     def _mixin_setup(self):
         self.add_option(
@@ -1109,7 +1116,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                         TimeoutMixIn, TargetOptionsMixIn):
+                         TimeoutMixIn, TargetOptionsMixIn, LogLevelMixIn):
     __metaclass__ = OptionParserMeta
 
     description = (
@@ -1124,8 +1131,11 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+
     # LogLevelMixIn attributes
+    _default_logging_level_ = 'warning'
     _default_logging_logfile_ = '/var/log/salt/master'
+    _loglevel_config_setting_name_ = 'cli_salt_cp_log_file'
 
     def _mixin_after_parsed(self):
         # salt-cp needs arguments
