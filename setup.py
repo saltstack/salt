@@ -36,7 +36,7 @@ if 'USE_SETUPTOOLS' in os.environ:
 
         setup_kwargs['install_requires'] = requirements
         setup_kwargs['tests_require'] = [
-            'git+https://github.com/s0undt3ch/salt-testing.git#egg=SaltTesting'
+            'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
         ]
     except:
         USE_SETUPTOOLS = False
