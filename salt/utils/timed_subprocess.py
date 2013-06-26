@@ -4,6 +4,7 @@ import subprocess
 import threading
 import salt.exceptions
 
+
 class TimedProc(object):
     '''
     Create a TimedProc object, calls subprocess.Popen with passed args and **kwargs
@@ -11,7 +12,12 @@ class TimedProc(object):
     def __init__(self, args, **kwargs):
 
         self.command = args
-        self.process = subprocess.Popen(args, **kwargs)
+        self.stdin = kwargs.pop('stdin', None)
+        if self.stdin is not None:
+            # Translate a newline submitted as '\n' on the CLI to an actual
+            # newline character.
+            self.stdin = self.stdin.replace('\\n', '\n')
+        self.process = subprocess.Popen(args, stdin=subprocess.PIPE, **kwargs)
 
     def wait(self, timeout=None):
         '''
@@ -19,7 +25,8 @@ class TimedProc(object):
         If timeout is reached, throw TimedProcTimeoutError
         '''
         def receive():
-            (self.stdout, self.stderr) = self.process.communicate()
+            (self.stdout, self.stderr) = \
+                self.process.communicate(input=self.stdin)
 
         if timeout:
             if not isinstance(timeout, (int, float)):
