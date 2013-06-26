@@ -24,7 +24,7 @@ def mod_init(low):
     '''
     try:
         __salt__['portage_config.enforce_nice_config']()
-    except:
+    except Exception:
         return False
     return True
 
@@ -68,26 +68,19 @@ def flags(name,
 
     name
         The name of the package or his DEPEND atom
-
     use
         A list of use flags
-
     accept_keywords
         A list of keywords to accept. "~ARCH" means current host arch, and will
         be translated in a line without keywords
-
     env
         A list of environment files
-
     license
         A list of accepted licenses
-
     properties
         A list of additional properties
-
     unmask
         A boolean to unmask the package
-
     mask
         A boolean to mask the package
     '''
