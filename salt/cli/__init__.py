@@ -188,6 +188,19 @@ class SaltCP(parsers.SaltCPOptionParser):
         Execute salt-cp
         '''
         self.parse_args()
+
+        if (not self.config['log_file'].startswith('tcp://') or
+                not self.config['log_file'].startswith('udp://') or
+                not self.config['log_file'].startswith('file://')):
+            # Logfile is not using Syslog, verify
+            verify_files(
+                [self.config['log_file']],
+                self.config['user']
+            )
+
+        # Setup file logging!
+        self.setup_logfile_logger()
+
         cp_ = salt.cli.cp.SaltCP(self.config)
         cp_.run()
 

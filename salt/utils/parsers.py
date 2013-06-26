@@ -1111,7 +1111,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                         TimeoutMixIn, TargetOptionsMixIn):
+                         TimeoutMixIn, TargetOptionsMixIn, LogLevelMixIn):
     __metaclass__ = OptionParserMeta
 
     description = (
@@ -1126,8 +1126,11 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+
     # LogLevelMixIn attributes
+    _default_logging_level_ = 'warning'
     _default_logging_logfile_ = '/var/log/salt/master'
+
 
     def _mixin_after_parsed(self):
         # salt-cp needs arguments
