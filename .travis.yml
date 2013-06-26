@@ -12,7 +12,7 @@ before_install:
   - pip install http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
   - pip install coveralls
   - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install --use-mirrors --mirrors=http://testpypi.python.org/pypi unittest2 ordereddict; fi"
-  - pip install git+https://github.com/s0undt3ch/salt-testing.git#egg=SaltTesting
+  - pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
 
 install: pip install -r requirements.txt --use-mirrors --mirrors=http://testpypi.python.org/pypi
 

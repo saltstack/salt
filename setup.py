@@ -235,7 +235,7 @@ setup_kwargs = {'name': NAME,
                 'install_requires': requirements,
                 # Required for running the tests suite
                 'tests_require': [
-                    'git+https://github.com/s0undt3ch/salt-testing.git#egg=SaltTesting'
+                    'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
                 ],
                 # The dynamic module loading in salt.modules makes this
                 # package zip unsafe. Required for esky builds
