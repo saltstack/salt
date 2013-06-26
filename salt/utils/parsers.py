@@ -891,7 +891,7 @@ class MinionOptionParser(MasterOptionParser):
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'minion'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = '/var/log/salt/minon'
+    _default_logging_logfile_ = '/var/log/salt/minion'
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path())
@@ -1367,7 +1367,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     # LogLevelMixIn attributes
     _default_logging_level_ = 'info'
-    _default_logging_logfile_ = '/var/log/salt/minon'
+    _default_logging_logfile_ = '/var/log/salt/minion'
 
     def _mixin_setup(self):
         self.add_option(
