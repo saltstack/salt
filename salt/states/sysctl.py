@@ -47,7 +47,7 @@ def present(name, value, config='/etc/sysctl.conf'):
                 ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(name,value)
                 return ret
         else:
-            ret['result'] = None
+            ret['result'] = False
             ret['comment'] = 'Invalid sysctl option {0} = {1}'.format(name,value)
             return ret
 
