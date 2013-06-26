@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 
 
 def _shadow_supported():
-    supported_os = ('FreeBSD', 'NetBSD')
+    supported_os = ('FreeBSD', 'NetBSD', 'OpenBSD')
     supported_kernel = ('Linux', 'SunOS')
     return True if __grains__.get('os', '') in supported_os \
         or __grains__.get('kernel', '') in supported_kernel \
