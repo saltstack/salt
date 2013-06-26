@@ -273,13 +273,35 @@ class SaltRun(parsers.SaltRunOptionParser):
         '''
         self.parse_args()
 
+        if self.config['verify_env']:
+            verify_env([
+                    self.config['pki_dir'],
+                    self.config['cachedir'],
+                ],
+                self.config['user'],
+                permissive=self.config['permissive_pki_access'],
+                pki_dir=self.config['pki_dir'],
+            )
+            if (not self.config['log_file'].startswith('tcp://') or
+                not self.config['log_file'].startswith('udp://') or
+                not self.config['log_file'].startswith('file://')):
+                # Logfile is not using Syslog, verify
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user']
+                )
+
+        # Setup file logging!
+        self.setup_logfile_logger()
+
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
             runner._print_docs()
-        else:
-            # Run this here so SystemExit isn't raised anywhere else when
-            # someone tries to use the runners via the python API
-            try:
-                runner.run()
-            except SaltClientError as exc:
-                raise SystemExit(str(exc))
+            self.exit(0)
+
+        # Run this here so SystemExit isn't raised anywhere else when
+        # someone tries to use the runners via the python API
+        try:
+            runner.run()
+        except SaltClientError as exc:
+            raise SystemExit(str(exc))
