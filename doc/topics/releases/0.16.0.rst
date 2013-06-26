@@ -125,3 +125,9 @@ When accepting new keys with ``salt-key -a minion-id`` or ``salt-key -A``,
 there is now a prompt that will show the affected keys and ask for confirmation
 before proceeding. This prompt can be bypassed using the ``-y`` or ``--yes``
 command line argument, as with other ``salt-key`` commands.
+
+Support for Setting Password Hashes on BSD Minions
+--------------------------------------------------
+
+FreeBSD, NetBSD, and OpenBSD all now support setting passwords in
+:mod:`user.present <salt.states.user.present>` states. 
