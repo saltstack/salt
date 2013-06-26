@@ -982,7 +982,10 @@ def directory(name,
     ret, perms = __salt__['file.check_perms'](name, ret, user, group, dir_mode)
 
     if recurse:
-        if not set(['user', 'group', 'mode']) >= set(recurse):
+        if not isinstance(recurse, list):
+            ret['result'] = False
+            ret['comment'] = '"recurse" must be formed as a list of strings'
+        elif not set(['user', 'group', 'mode']) >= set(recurse):
             ret['result'] = False
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
                              '"group" and "mode"'
