@@ -21,7 +21,7 @@ import signal
 # Import third party libs
 try:
     import zmq
-except:
+except ImportError:
     # Running in local, zmq not needed
     pass
 import yaml
