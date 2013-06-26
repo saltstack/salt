@@ -182,7 +182,8 @@ def present(name,
         will NOT be created.
 
     password
-        A password hash to set for the user
+        A password hash to set for the user. This field is only supported on
+        Linux, FreeBSD, NetBSD, and Solaris
 
     enforce_password
         Set to False to keep the password from being changed if it has already
