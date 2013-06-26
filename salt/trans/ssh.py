@@ -90,7 +90,6 @@ def exec_cmd(
     '''
     Execute a remote command
     '''
-
     cmd = _cmd_str(
             cmd,
             user=user,
