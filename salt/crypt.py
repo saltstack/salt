@@ -14,8 +14,12 @@ import hashlib
 import logging
 
 # Import third party libs
-from M2Crypto import RSA
-from Crypto.Cipher import AES
+try:
+    from M2Crypto import RSA
+    from Crypto.Cipher import AES
+except:
+    # No need for crypt in local mode
+    pass
 
 # Import salt libs
 import salt.utils
