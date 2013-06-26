@@ -22,7 +22,7 @@ class RunnerClient(object):
         Check that the function passed really exists
         '''
         if fun not in self.functions:
-            err = "Function '{0}' is unavailable".format(fun)
+            err = 'Function {0!r} is unavailable'.format(fun)
             raise salt.exceptions.CommandExecutionError(err)
 
     def get_docs(self):
@@ -68,7 +68,7 @@ class Runner(RunnerClient):
         ret = super(Runner, self).get_docs()
 
         for fun in sorted(ret):
-            print("{0}:\n{1}\n".format(fun, ret[fun]))
+            print('{0}:\n{1}\n'.format(fun, ret[fun]))
 
     def run(self):
         '''
