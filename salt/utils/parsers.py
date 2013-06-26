@@ -805,9 +805,9 @@ class OutputOptionsMixIn(object):
         )
         group.add_option(
             '--force-color', '--force-colour',
-        	  default=False,
-        	  action='store_true',
-        	  help='Force colored output'
+            default=False,
+            action='store_true',
+            help='Force colored output'
         )
 
         for option in self.output_options_group.option_list:
