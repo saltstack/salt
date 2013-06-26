@@ -35,9 +35,10 @@ if 'USE_SETUPTOOLS' in os.environ:
             requirements = f.read()
 
         setup_kwargs['install_requires'] = requirements
-        setup_kwargs['tests_require'] = [
-            'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
+        setup_kwargs['dependency_links'] = [
+            'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
         ]
+        setup_kwargs['tests_require'] = ['SaltTesting']
     except:
         USE_SETUPTOOLS = False
 
