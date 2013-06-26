@@ -3,12 +3,12 @@ Manage transport commands via ssh
 '''
 
 # Import python libs
-import os
+import time
 import subprocess
 
 # Import salt libs
 import salt.utils
-
+import salt.utils.nb_popen
 
 def _key_opts(user=None, port=None, priv=None, timeout=None):
     '''
@@ -57,7 +57,8 @@ def _cmd_str(
         port=None,
         passwd=None,
         priv=None,
-        timeout=None):
+        timeout=None,
+        tty=False):
     '''
     Return the cmd string to execute
     '''
@@ -67,17 +68,26 @@ def _cmd_str(
                 port,
                 priv,
                 timeout)
-        return 'ssh -o {0} -c {1}'.format(','.join(opts), cmd)
+        return '{0} {1} -o {2} -c {3}'.format(
+                ssh,
+                '-t -t' if tty else '',
+                ','.join(opts),
+                cmd)
     elif passwd:
+        if not salt.utils.which('sshpass'):
+            return None
         opts = _key_opts(
                 user,
                 port,
                 priv,
                 timeout)
-        return 'sshpass -p {0} ssh -o {1} -c {2}'.format(
+        return 'sshpass -p {0} {1} {2} -o {3} -c {4}'.format(
                 passwd,
+                ssh,
+                '-t -t' if tty else '',
                 ','.join(opts),
                 cmd)
+    return None
 
 
 def exec_cmd(
@@ -86,14 +96,37 @@ def exec_cmd(
         port=None,
         passwd=None,
         priv=None,
-        timeout=None):
+        timeout=None,
+        sudo=False):
     '''
     Execute a remote command
     '''
+    if sudo:
+        cmd = 'sudo {0}'.format(cmd)
+        tty = True
+    else:
+        tty = False
     cmd = _cmd_str(
             cmd,
             user=user,
             port=port,
             passwd=passwd,
             priv=priv,
-            timeout=timeout)
+            timeout=timeout,
+            tty=tty)
+    try:
+        proc = salt.utils.nb_open.NonBlockingPopen(
+            cmd,
+            shell=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        while proc.poll() is None:
+            time.sleep(0.25)
+
+        data = proc.communicate()
+        return data[0]
+    except Exception:
+        pass
+    # Signal an error
+    return ()
