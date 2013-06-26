@@ -227,6 +227,21 @@ determine what minions are expected to reply from executions.
 
     minion_cache_dir: True
 
+.. conf_master:: minion_data_cache
+
+``enforce_mine_cache``
+---------------------
+
+Default: False
+
+By-default when disabling the minion_data_cache mine will stop working since
+it is based on cached data, by enabling this option we explicitly enabling
+only the cache for the mine system.
+
+.. code-block:: yaml
+
+    enforce_mine_cache: False
+
 .. conf_master:: sock_dir
 
 ``sock_dir``
