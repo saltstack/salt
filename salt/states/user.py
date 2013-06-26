@@ -30,6 +30,14 @@ import sys
 log = logging.getLogger(__name__)
 
 
+def _shadow_supported():
+    supported_os = ('FreeBSD', 'NetBSD', 'SunOS')
+    supported_kernel = ('Linux',)
+    return True if __grains__.get('os', '') in supported_os \
+        or __grains__.get('kernel', '') in supported_kernel \
+        else False
+
+
 def _changes(name,
              uid=None,
              gid=None,
@@ -49,7 +57,7 @@ def _changes(name,
     otherwise return False.
     '''
 
-    if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    if _shadow_supported():
         lshad = __salt__['shadow.info'](name)
 
     lusr = __salt__['user.info'](name)
@@ -95,19 +103,18 @@ def _changes(name,
         if lusr['shell'] != shell:
             change['shell'] = shell
     if password:
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
-            if lshad['pwd'] == '!' or \
-                    lshad['pwd'] != '!' and enforce_password:
-                if lshad['pwd'] != password:
+        if _shadow_supported():
+            if not lshad['passwd'] or lshad['passwd'] and enforce_password:
+                if lshad['passwd'] != password:
                     change['passwd'] = password
     # GECOS fields
-    if fullname and lusr['fullname'] != fullname:
+    if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
-    if roomnumber and lusr['roomnumber'] != roomnumber:
+    if roomnumber is not None and lusr['roomnumber'] != roomnumber:
         change['roomnumber'] = roomnumber
-    if workphone and lusr['workphone'] != workphone:
+    if workphone is not None and lusr['workphone'] != workphone:
         change['workphone'] = workphone
-    if homephone and lusr['homephone'] != homephone:
+    if homephone is not None and lusr['homephone'] != homephone:
         change['homephone'] = homephone
 
     return change
@@ -211,6 +218,10 @@ def present(name,
     homephone
         The user's home phone number
     '''
+    roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
+    workphone = str(workphone) if workphone is not None else workphone
+    homephone = str(homephone) if homephone is not None else homephone
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -268,7 +279,7 @@ def present(name,
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
-        if not __grains__['os'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        if _shadow_supported():
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
@@ -276,7 +287,9 @@ def present(name,
                 __salt__['shadow.set_password'](name, password)
                 continue
             if key == 'groups':
-                __salt__['user.ch{0}'.format(key)](name, val, not remove_groups)
+                __salt__['user.ch{0}'.format(key)](name,
+                                                   val,
+                                                   not remove_groups)
             else:
                 __salt__['user.ch{0}'.format(key)](name, val)
 
@@ -287,14 +300,14 @@ def present(name,
 
         post = __salt__['user.info'](name)
         spost = {}
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
-            if lshad['pwd'] != password:
+        if _shadow_supported():
+            if lshad['passwd'] != password:
                 spost = __salt__['shadow.info'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
                 ret['changes'][key] = post[key]
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        if _shadow_supported():
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
@@ -350,7 +363,7 @@ def present(name,
             if password:
                 __salt__['shadow.set_password'](name, password)
                 spost = __salt__['shadow.info'](name)
-                if spost['pwd'] != password:
+                if spost['passwd'] != password:
                     ret['comment'] = 'User {0} created but failed to set' \
                                      ' password to {1}'.format(name, password)
                     ret['result'] = False
