@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 
 
 def _shadow_supported():
-    supported_os = ('FreeBSD', 'NetBSD')
+    supported_os = ('FreeBSD', 'NetBSD', 'OpenBSD')
     supported_kernel = ('Linux', 'SunOS')
     return True if __grains__.get('os', '') in supported_os \
         or __grains__.get('kernel', '') in supported_kernel \
@@ -183,7 +183,7 @@ def present(name,
 
     password
         A password hash to set for the user. This field is only supported on
-        Linux, FreeBSD, NetBSD, and Solaris
+        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris
 
     enforce_password
         Set to False to keep the password from being changed if it has already
