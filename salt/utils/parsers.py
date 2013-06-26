@@ -1446,7 +1446,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          TimeoutMixIn):
+                          TimeoutMixIn, LogLevelMixIn):
     __metaclass__ = OptionParserMeta
 
     default_timeout = 1
@@ -1455,7 +1455,9 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
+
     # LogLevelMixIn attributes
+    _default_logging_level_ = 'warning'
     _default_logging_logfile_ = '/var/log/salt/master'
 
     def _mixin_setup(self):
