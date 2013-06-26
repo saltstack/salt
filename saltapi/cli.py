@@ -33,8 +33,13 @@ class SaltAPI(OptionParser, ConfigDirMixIn, LogLevelMixIn, PidfileMixin,
 
     VERSION = saltapi.version.__version__
 
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/api'
+
     def setup_config(self):
-        return saltapi.config.api_config(self.get_config_file_path('master'))
+        return saltapi.config.api_config(self.get_config_file_path())
 
     def run(self):
         '''
