@@ -342,8 +342,6 @@ def installed(
               - baz: ftp://someothersite.org/baz.rpm
               - qux: /minion/path/to/qux.rpm
     '''
-    rtag = __gen_rtag()
-
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
 
@@ -375,7 +373,7 @@ def installed(
                 'comment': comment}
 
     comment = []
-    if refresh or os.path.isfile(rtag):
+    if salt.utils.is_true(refresh) or os.path.isfile(rtag):
         pkg_ret = __salt__['pkg.install'](name,
                                           refresh=True,
                                           version=version,
@@ -494,8 +492,6 @@ def latest(
               - bar
               - baz
     '''
-    rtag = __gen_rtag()
-
     if kwargs.get('sources'):
         return {'name': name,
                 'changes': {},
@@ -572,7 +568,7 @@ def latest(
         # Build updated list of pkgs to exclude non-targeted ones
         targeted_pkgs = targets.keys() if pkgs else None
 
-        if refresh or os.path.isfile(rtag):
+        if salt.utils.is_true(refresh) or os.path.isfile(rtag):
             changes = __salt__['pkg.install'](name,
                                               refresh=True,
                                               fromrepo=fromrepo,
