@@ -23,9 +23,7 @@ import tempfile
 import subprocess
 import types
 import warnings
-import zmq
 from calendar import month_abbr as months
-import salt._compat
 
 try:
     import fcntl
@@ -40,7 +38,14 @@ try:
 except ImportError:
     HAS_WIN32API = False
 
+try:
+    import zmq
+except:
+    # Running as purely local
+    pass
+
 # Import salt libs
+import salt._compat
 import salt.log
 import salt.minion
 import salt.payload
