@@ -4,7 +4,6 @@ Manage the password database on NetBSD systems
 
 # Import python libs
 import logging
-import os
 try:
     import pwd
 except ImportError:
