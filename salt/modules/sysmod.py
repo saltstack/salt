@@ -66,6 +66,11 @@ def list_functions(*args, **kwargs):
     '''
     ### NOTE: **kwargs is used here to prevent a traceback when garbage
     ###       arguments are tacked on to the end.
+
+    if not args:
+        # We're being asked for all functions
+        return sorted(__salt__)
+
     names = set()
     for module in args:
         if module:
