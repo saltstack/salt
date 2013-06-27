@@ -1,0 +1,6 @@
+include AUTHORS
+include HACKING.rst
+include LICENSE
+include README.rst
+include requirements.txt
+recursive-include salt *.jinja
