@@ -2,21 +2,13 @@
 import os
 import hashlib
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
+import integration
 import salt.utils
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
 
 
 class CPModuleTest(integration.ModuleCase):
@@ -152,7 +144,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.get_url
         '''
-        # We should add a "if the internet works download some files"
+        # We should add a 'if the internet works download some files'
         tgt = os.path.join(integration.TMP, 'scene33')
         self.run_function(
                 'cp.get_url',
