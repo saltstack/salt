@@ -1,27 +1,14 @@
 '''
 Test the django module
 '''
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import os
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
-
-from salt.modules import djangomod as django
-
 # Import Salt Testing libs
 from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
-django.__salt__ = {}
+# Import salt libs
+import integration
+from salt.modules import djangomod as django
 
 try:
     from mock import MagicMock, patch
@@ -30,7 +17,10 @@ except ImportError:
     has_mock = False
 
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+django.__salt__ = {}
+
+
+@skipIf(has_mock is False, 'mock python module is unavailable')
 class DjangoModuleTest(integration.ModuleCase):
     '''
     Test the django module
