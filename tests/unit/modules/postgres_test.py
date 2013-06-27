@@ -1,18 +1,7 @@
-# Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import os
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 try:
     from mock import Mock, patch
@@ -25,8 +14,7 @@ except ImportError:
         return lambda y: None
     patch.multiple = patchmultiple
 
-from salttesting import TestCase, skipIf
-
+# Import salt libs
 from salt.modules import postgres
 postgres.__grains__ = None  # in order to stub it w/patch below
 postgres.__salt__ = None  # in order to stub it w/patch below
@@ -42,7 +30,7 @@ else:
     SALT_STUB = {}
 
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+@skipIf(has_mock is False, 'mock python module is unavailable')
 class PostgresTestCase(TestCase):
     @patch.multiple(postgres,
                     __grains__={'os_family': 'Linux'},
