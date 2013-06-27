@@ -405,6 +405,9 @@ def run(cmd,
     '''
     Execute the passed command and return the output as a string
 
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
     CLI Example::
 
         salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
@@ -457,6 +460,9 @@ def run_stdout(cmd,
     '''
     Execute a command, and only return the standard out
 
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
     CLI Example::
 
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print \\$2}'"
@@ -504,6 +510,9 @@ def run_stderr(cmd,
     '''
     Execute a command and only return the standard error
 
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
     CLI Example::
 
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print \\$2}'"
@@ -550,6 +559,9 @@ def run_all(cmd,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
+
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
 
     CLI Example::
 
@@ -610,6 +622,9 @@ def retcode(cmd,
             timeout=None):
     '''
     Execute a shell command and return the command's return code.
+
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
 
     CLI Example::
 
