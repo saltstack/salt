@@ -4,26 +4,14 @@ from os.path import join
 from shutil import rmtree
 from tempfile import mkdtemp
 
-# Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
+# Import salt libs
 import salt.utils
 import salt.utils.find
-
-# Import Salt Testing libs
-from salttesting import TestCase, skipIf
 
 
 class TestUtils(TestCase):
