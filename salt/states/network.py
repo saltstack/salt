@@ -31,7 +31,10 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
         - dns:
           - 8.8.8.8
           - 8.8.4.4
+
+    routes:
       network.routes:
+        - name: eth0
         - routes:
           - name: secure_network
             ipaddr: 10.2.0.0
