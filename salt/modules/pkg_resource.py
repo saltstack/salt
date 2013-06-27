@@ -456,6 +456,11 @@ def compare(pkg1='', oper='==', pkg2=''):
 
 def check_extra_requirements(pkgname, pkgver):
     '''
+    Check if the installed package already has the given requirements.
+
+    CLI Example::
+
+        salt '*' pkg_resource.check_extra_requirements <pkgname> <extra_requirement>
     '''
     if __grains__['os'] == 'Gentoo':
         return __salt__['pkg.check_extra_requirements'](pkgname, pkgver)

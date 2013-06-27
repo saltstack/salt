@@ -691,6 +691,11 @@ def compare(pkg1='', oper='==', pkg2=''):
 
 def check_extra_requirements(pkgname, pkgver):
     '''
+    Check if the installed package already has the given requirements.
+
+    CLI Example::
+
+        salt '*' pkg.check_extra_requirements 'sys-devel/gcc' '~>4.1.2:4.1::gentoo[nls,fortran]'
     '''
     keyword = None
 
