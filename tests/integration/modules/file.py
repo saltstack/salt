@@ -6,23 +6,14 @@ import os
 import shutil
 import sys
 
-# Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
-import salt.utils
-
 # Import Salt Testing libs
 from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
+import integration
+import salt.utils
 
 
 class FileModuleTest(integration.ModuleCase):
@@ -32,7 +23,7 @@ class FileModuleTest(integration.ModuleCase):
     def setUp(self):
         self.myfile = os.path.join(integration.TMP, 'myfile')
         with salt.utils.fopen(self.myfile, 'w+') as fp:
-            fp.write("Hello\n")
+            fp.write('Hello\n')
         self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
@@ -130,7 +121,7 @@ class FileModuleTest(integration.ModuleCase):
             integration.FILES, 'file', 'base', 'hello.patch')
         src_file = os.path.join(integration.TMP, 'src.txt')
         with salt.utils.fopen(src_file, 'w+') as fp:
-            fp.write("Hello\n")
+            fp.write('Hello\n')
 
         # dry-run should not modify src_file
         ret = self.minion_run('file.patch', src_file, src_patch, dry_run=True)
