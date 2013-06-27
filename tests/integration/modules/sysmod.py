@@ -20,6 +20,16 @@ class SysModuleTest(integration.ModuleCase):
         self.assertNotIn('sys.doc', funcs)
         self.assertIn('sysctl.get', funcs)
 
+        # Just sys
+        funcs = self.run_function('sys.list_functions', ('sys.',))
+        self.assertNotIn('sysctl.get', funcs)
+        self.assertIn('sys.doc', funcs)
+
+        # Staring with sys
+        funcs = self.run_function('sys.list_functions', ('sys',))
+        self.assertNotIn('sysctl.get', funcs)
+        self.assertIn('sys.doc', funcs)
+
     def test_list_modules(self):
         '''
         sys.list_moduels
