@@ -4,25 +4,18 @@ user absent
 user present
 user present with custom homedir
 '''
+
+# Import python libs
 import os
 import grp
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+from salttesting.helpers import destructiveTest, ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
+import integration
 
 
 class UserTest(integration.ModuleCase,
@@ -44,7 +37,9 @@ class UserTest(integration.ModuleCase,
         elif self.run_function('group.info', ['nogroup']):
             ret = self.run_state('user.present', name='nobody', gid='nogroup')
         else:
-            self.skipTest('Neither \'nobody\' nor \'nogroup\' are valid groups')
+            self.skipTest(
+                'Neither \'nobody\' nor \'nogroup\' are valid groups'
+            )
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest
