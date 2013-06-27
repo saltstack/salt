@@ -210,6 +210,17 @@ def load(mod, persist=False):
         return 'Module {0} not found'.format(mod)
 
 
+def is_loaded(mod):
+    '''
+    Check to see if the specified kernel module is loaded
+
+    CLI Example::
+
+        salt '*' kmod.is_loaded kvm
+    '''
+    return mod in mod_list()
+
+
 def remove(mod, persist=False, comment=True):
     '''
     Remove the specified kernel module
