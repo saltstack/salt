@@ -2,26 +2,15 @@
 import os
 import tempfile
 
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
 import salt.utils
 from salt.utils.jinja import SaltCacheLoader
 from salt.utils.templates import render_jinja_tmpl
-
-# Import Salt Testing libs
-from salttesting import TestCase
 
 # Import 3rd party libs
 from jinja2 import Environment
