@@ -259,6 +259,7 @@ def managed(name, type, enabled=True, **kwargs):
     load = _create_loader(__opts__, 'grains', 'grain', ext_dirs=False)
     grains_info = load.gen_grains()
     __grains__.update(grains_info)
+    __salt__['saltutil.reload_modules']()
     return ret
 
 
