@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-The setup script for salt
+Deploy salt-thin, salt deployed to be as small as possible
 '''
 
 # For Python 2.5.  A no-op on 2.6 and above.
