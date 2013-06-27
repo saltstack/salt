@@ -5,24 +5,14 @@ import shutil
 import tempfile
 import stat
 
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
 import salt.utils
 import salt.utils.find
-
-# Import Salt Testing libs
-from salttesting import TestCase, skipIf
 
 
 class TestFind(TestCase):
