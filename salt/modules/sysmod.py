@@ -40,6 +40,11 @@ def doc(*args, **kwargs):
     ### NOTE: **kwargs is used here to prevent a traceback when garbage
     ###       arguments are tacked on to the end.
     docs = {}
+    if not args:
+        for fun in __salt__:
+            docs[fun] = __salt__[fun].__doc__
+        return docs
+
     for module in args:
         if module:
             # allow both "sys" and "sys." to match sys, without also matching
@@ -66,6 +71,11 @@ def list_functions(*args, **kwargs):
     '''
     ### NOTE: **kwargs is used here to prevent a traceback when garbage
     ###       arguments are tacked on to the end.
+
+    if not args:
+        # We're being asked for all functions
+        return sorted(__salt__)
+
     names = set()
     for module in args:
         if module:
