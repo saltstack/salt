@@ -1,23 +1,9 @@
-# Import python libs
-import sys
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import os
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
-
-# Import Salt Testing libs
-from salttesting import TestLoader, TextTestRunner
+import integration
 
 
 class StdTest(integration.ModuleCase):
@@ -101,6 +87,7 @@ class StdTest(integration.ModuleCase):
         self.assertEqual(data['ret']['baz'], 'quo')
         self.assertEqual(data['ret']['qux'], 'quux')
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     from integration import run_tests
     run_tests(StdTest)
