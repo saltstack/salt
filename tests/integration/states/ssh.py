@@ -1,22 +1,17 @@
 '''
 Test the ssh_known_hosts state
 '''
+
+# Import python libs
 import os
 import shutil
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import os
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
+import integration
 
 KNOWN_HOSTS = os.path.join(integration.TMP, 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
