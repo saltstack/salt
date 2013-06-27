@@ -433,7 +433,7 @@ def install(name=None,
                     else:
                         target = '"{0}{1}"'.format(param, verstr)
                 else:
-                    target = '"{1}-{2}"'.format(param, version_num)
+                    target = '"{0}"'.format(param)
 
                 if target.find('[') != -1:
                     __salt__['portage_config.append_use_flags'](target[1:-1])
@@ -674,8 +674,8 @@ def perform_cmp(pkg1='', pkg2=''):
     m2 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg2)
 
     if m1 and m2:
-        return portage.versions.vercmp(m1.group(0), m2.group(0))
-    return 0
+        return portage.versions.vercmp(m1.group(1), m2.group(1))
+    return None
 
 
 def compare(pkg1='', oper='==', pkg2=''):
@@ -688,3 +688,49 @@ def compare(pkg1='', oper='==', pkg2=''):
         salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
     '''
     return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+
+def check_extra_requirements(pkgname, pkgver):
+    '''
+    '''
+    keyword = None
+
+    match = re.match('^(~)?([<>])?(=)?([^<>=]+)$', pkgver)
+    if match:
+        keyword, gt_lt, eq, verstr = match.groups()
+        prefix = gt_lt or ''
+        prefix += eq or ''
+        # We need to delete quotes around use flag list elements
+        verstr=verstr.replace("'","")
+        # If no prefix characters were supplied and verstr contains a version, use '='
+        if verstr[0] != ':' and verstr[0] != '[':
+            prefix = prefix or '='
+            atom = '{0}{1}-{2}'.format(prefix, pkgname, verstr)
+        else:
+            atom = '{0}{1}'.format(pkgname, verstr)
+    else:
+        return True
+
+    cpv = _porttree().dbapi.xmatch('bestmatch-visible', atom)
+
+    if cpv == '':
+        return False
+
+    try:
+        cur_repo, cur_use = _vartree().dbapi.aux_get(cpv, ['repository', 'USE'])
+    except KeyError:
+        return False
+
+    des_repo = re.match('^.+::([^\[]+).*$', atom)
+    if des_repo and des_repo.group(1) != cur_repo:
+        return False
+
+    des_uses = set(portage.dep.dep_getusedeps(atom))
+    cur_use = cur_use.split()
+    if len(des_uses.difference(cur_use)) > 0:
+        return False
+
+    if keyword:
+        if not __salt__['portage_config.has_flag']('accept_keywords', atom, '~ARCH'):
+            return False
+
+    return True

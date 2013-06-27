@@ -452,3 +452,11 @@ def compare(pkg1='', oper='==', pkg2=''):
         return cmp_result not in cmp_map['==']
     else:
         return cmp_result in cmp_map[oper]
+
+
+def check_extra_requirements(pkgname, pkgver):
+    '''
+    '''
+    if __grains__['os'] == 'Gentoo':
+        return __salt__['pkg.check_extra_requirements'](pkgname, pkgver)
+    return True
