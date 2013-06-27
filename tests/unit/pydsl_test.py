@@ -4,27 +4,17 @@ import shutil
 import tempfile
 from cStringIO import StringIO
 
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../')
+
 # Import Salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../'
-                )
-            )
-        )
-    import integration
 import salt.loader
 import salt.config
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
-
-# Import Salt Testing libs
-from salttesting import TestCase
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 

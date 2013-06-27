@@ -1,26 +1,16 @@
 # Import Python libs
 from cStringIO import StringIO
 
-# Import Salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import os
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../'
-                )
-            )
-        )
-    import integration
-import salt.loader
-import salt.config
 
 # Import Salt Testing libs
 from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../')
+
+# Import Salt libs
+import salt.loader
+import salt.config
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
