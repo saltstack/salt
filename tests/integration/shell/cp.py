@@ -10,7 +10,6 @@
 
 # Import python libs
 import os
-import sys
 import yaml
 import pipes
 
