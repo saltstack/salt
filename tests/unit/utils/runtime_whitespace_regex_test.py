@@ -11,25 +11,13 @@
 # Import python libs
 import re
 
-# Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import os
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
-from salt.utils import build_whitespace_split_regex
-
 # Import Salt Testing libs
 from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
+from salt.utils import build_whitespace_split_regex
 
 DOUBLE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
