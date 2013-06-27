@@ -342,6 +342,8 @@ def installed(
               - baz: ftp://someothersite.org/baz.rpm
               - qux: /minion/path/to/qux.rpm
     '''
+    rtag = __gen_rtag()
+
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
 
@@ -492,6 +494,8 @@ def latest(
               - bar
               - baz
     '''
+    rtag = __gen_rtag()
+
     if kwargs.get('sources'):
         return {'name': name,
                 'changes': {},
