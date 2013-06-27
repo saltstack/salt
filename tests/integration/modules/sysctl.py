@@ -1,23 +1,13 @@
 # Import python libs
 import sys
 
-# Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import os
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
-
 # Import Salt Testing libs
 from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
+import integration
 
 
 class SysctlModuleTest(integration.ModuleCase):
