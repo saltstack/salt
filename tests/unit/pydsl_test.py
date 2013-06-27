@@ -4,8 +4,13 @@ import shutil
 import tempfile
 from cStringIO import StringIO
 
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../')
+
 # Import Salt libs
-from saltunittest import TestCase
 import salt.loader
 import salt.config
 from salt.state import HighState
@@ -440,3 +445,8 @@ def state_highstate(matches, dirpath):
         # pprint.pprint(out)
     finally:
         HIGHSTATE.pop_active()
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PyDSLRendererTestCase, needs_daemon=False)

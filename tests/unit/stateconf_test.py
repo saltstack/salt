@@ -1,10 +1,17 @@
 # Import Python libs
 from cStringIO import StringIO
 
+
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../')
+
 # Import Salt libs
-from saltunittest import TestCase
 import salt.loader
 import salt.config
+
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
@@ -256,3 +263,8 @@ G:
             [i.itervalues().next() for i in goal_args[0]['require']],
             list('ABCDEFG')
         )
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(StateConfigRendererTestCase, needs_daemon=False)

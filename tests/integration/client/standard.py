@@ -1,10 +1,9 @@
-# Import python libs
-import sys
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class StdTest(integration.ModuleCase):
@@ -57,18 +56,18 @@ class StdTest(integration.ModuleCase):
                 )
         self.assertIn('minion', ret)
         self.assertEqual(ret['minion'], {'ret': True, 'success': True})
-        
+
         ret = self.client.cmd_full_return(
                 'minion',
                 'test.pong',
                 )
         self.assertIn('minion', ret)
-        self.assertEqual(ret['minion'], {'ret': '"test.pong" is not available.', 'success': False})
+        self.assertEqual(
+            ret['minion'],
+            {'ret': '"test.pong" is not available.', 'success': False}
+        )
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(StdTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(StdTest)

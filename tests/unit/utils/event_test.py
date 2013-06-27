@@ -4,7 +4,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
@@ -12,9 +12,13 @@
 import os
 import hashlib
 
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
-from saltunittest import TestCase, TestLoader, TextTestRunner
 from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
@@ -25,8 +29,7 @@ class TestSaltEvent(TestCase):
     def test_master_event(self):
         me = event.MasterEvent(SOCK_DIR)
         self.assertEqual(
-            me.puburi,
-            'ipc://{0}'.format(
+            me.puburi, 'ipc://{0}'.format(
                 os.path.join(SOCK_DIR, 'master_event_pub.ipc')
             )
         )
@@ -85,7 +88,6 @@ class TestSaltEvent(TestCase):
         )
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestSaltEvent)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestSaltEvent, needs_daemon=False)

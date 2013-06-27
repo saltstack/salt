@@ -1,9 +1,15 @@
+# Import python libs
 import os
-import integration
-import tempfile
 import sys
+import tempfile
 
-from saltunittest import skipIf
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
+import integration
 
 try:
     from mock import Mock, patch
@@ -13,7 +19,7 @@ except ImportError:
     patch = lambda x: lambda y: None
 
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+@skipIf(has_mock is False, 'mock python module is unavailable')
 class CMDModuleTest(integration.ModuleCase):
     '''
     Validate the cmd module
@@ -184,13 +190,18 @@ sys.stdout.write('cheese')
         '''
         cmd.run trigger timeout
         '''
-        self.assertTrue('Timed out' in self.run_function('cmd.run', ['sleep 2 && echo hello', 'timeout=1']))
+        self.assertTrue(
+            'Timed out' in self.run_function(
+                'cmd.run', ['sleep 2 && echo hello', 'timeout=1']))
 
     def test_timeout_success(self):
         '''
         cmd.run sufficient timeout to succeed
         '''
-        self.assertTrue('hello' == self.run_function('cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
+        self.assertTrue(
+            'hello' == self.run_function(
+                'cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
+
 
 if __name__ == '__main__':
     from integration import run_tests

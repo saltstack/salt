@@ -2,12 +2,16 @@
 Test the grains module
 '''
 # Import python libs
-import time
 import os
+import time
+
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from saltunittest import skipIf
 
 
 class TestModulesGrains(integration.ModuleCase):
@@ -91,7 +95,6 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.get',
                     ['level1:level2']),
                 'foo')
-
 
 
 if __name__ == '__main__':

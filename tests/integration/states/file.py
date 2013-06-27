@@ -6,6 +6,10 @@ Tests for the file state
 import os
 import shutil
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
 import salt.utils
@@ -529,7 +533,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 # left behind... Don't fail because of this!
                 os.makedirs(name)
         except OSError:
-            self.skipTest("Failed to create directory {0}".format(name))
+            self.skipTest('Failed to create directory {0}'.format(name))
 
         self.assertTrue(os.path.isdir(name))
         ret = self.run_state('file.touch', name=name)
@@ -579,7 +583,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isfile(tmp_file_append):
                 os.remove(tmp_file_append)
 
-    def do_patch(self, patch_name='hello', src="Hello\n"):
+    def do_patch(self, patch_name='hello', src='Hello\n'):
         if not self.run_function('cmd.has_exec', ['patch']):
             self.skipTest('patch is not installed')
         src_file = os.path.join(integration.TMP, 'src.txt')
@@ -620,9 +624,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         salt.utils.fopen(tmp_file, 'w').write('hello\nworld\n')
         # create the sls template
         template_lines = [
-            "{0}:".format(tmp_file),
-            "  file.comment:",
-            "    - regex: ^world"
+            '{0}:'.format(tmp_file),
+            '  file.comment:',
+            '    - regex: ^world'
         ]
         template = '\n'.join(template_lines)
         try:
@@ -658,9 +662,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         # create the sls template
         template_lines = [
-            "{0}:".format(tmp_file),
-            "  file.append:",
-            "    - text: PermitRootLogin yes"
+            '{0}:'.format(tmp_file),
+            '  file.append:',
+            '    - text: PermitRootLogin yes'
         ]
         template = '\n'.join(template_lines)
         try:

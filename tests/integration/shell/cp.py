@@ -4,20 +4,22 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
 import os
-import sys
 import yaml
 import pipes
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-import salt.utils
 import integration
-from saltunittest import TestLoader, TextTestRunner
+import salt.utils
 
 
 class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -104,10 +106,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             data = yaml.load('\n'.join(ret))
             self.assertTrue(data[minion])
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(CopyTest)
-    print('Setting up Salt daemons to execute tests')
-    with integration.TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(CopyTest)

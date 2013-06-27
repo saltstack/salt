@@ -4,7 +4,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
@@ -12,10 +12,13 @@
 import os
 import shutil
 
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import destructiveTest, ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
-
-from saltunittest import skipIf, destructiveTest
 
 
 class VirtualenvTest(integration.ModuleCase,
@@ -137,3 +140,8 @@ class VirtualenvTest(integration.ModuleCase,
             shutil.rmtree(venv_path)
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(VirtualenvTest)
