@@ -12,19 +12,12 @@ import resource
 import tempfile
 import socket
 
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+ensure_in_syspath('../../')
+
 # Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../../'
-                )
-            )
-        )
-    import integration
 import salt.utils
 from salt.utils.verify import (
     check_user,
@@ -33,10 +26,6 @@ from salt.utils.verify import (
     zmq_version,
     check_max_open_files
 )
-
-# Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import TestsLoggingHandler
 
 
 class TestVerify(TestCase):
