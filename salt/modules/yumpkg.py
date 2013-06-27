@@ -3,6 +3,14 @@ Support for YUM
 
 :depends:   - yum Python module
             - rpmUtils Python module
+
+This module uses the python interface to YUM. Note that with a default
+/etc/yum.conf, this will cause messages to be sent to sent to syslog on
+/dev/log, with a log facility of :strong:`LOG_USER`. This is in addition to
+whatever is logged to /var/log/yum.log. See the manpage for ``yum.conf(5)`` for
+information on how to use the ``syslog_facility`` and ``syslog_device`` config
+parameters to configure how syslog is handled, or take the above defaults into
+account when configuring your syslog daemon.
 '''
 
 # Import python libs
