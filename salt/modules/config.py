@@ -143,7 +143,7 @@ def get(key, default=''):
 
     CLI Example::
 
-        salt '*' pillar.get pkg:apache
+        salt '*' config.get pkg:apache
     '''
     ret = salt.utils.traverse_dict(__opts__, key, '_|-')
     if ret != '_|-':
