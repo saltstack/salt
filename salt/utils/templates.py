@@ -52,7 +52,7 @@ def wrap_tmpl_func(render_str):
                 try:
                     with codecs.open(tmplsrc, 'r', SLS_ENCODING) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
-                except Exception as exc:
+                except (UnicodeDecodeError, ValueError) as exc:
                     log.error('Exception ocurred while reading file {0}: {1}'
                               .format(tmplsrc, exc))
                     raise exc
