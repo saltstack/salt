@@ -98,7 +98,7 @@ def ex_mod_init(low):
 
     CLI Example::
 
-        salt '*' ebuild.ex_mod_init
+        salt '*' pkg.ex_mod_init
     '''
     __salt__['portage_config.enforce_nice_config']()
     return True
