@@ -25,7 +25,7 @@ example):
    numbers.  (e.g. ``0.16``)
 #. On this new branch, create an annotated tag for the first revision release,
    which is generally a release candidate.  It should be preceded by the letter
-   ``v``.  (e.g. ``v0.16.0-RC``)
+   ``v``.  (e.g. ``v0.16.0RC``)
 #. The release should be packaged from this annotated tag and uploaded to PyPI.
 #. The packagers should be notified on the ``salt-packagers`` mailing list so
    they can create packages for all the major operating systems.  (note that
