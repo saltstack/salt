@@ -6,13 +6,25 @@ import multiprocessing
 
 # Import salt libs
 import salt.ssh.shell
+import salt.roster
 
 class SSH(object):
     '''
     Create an ssh execution system
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, tgt, expr_form='glob'):
         self.opts = opts
+        self.roster = salt.roster.Roster(opts)
+        self.targets = self.roster.targets(tgt, expr_form)
+
+    def run(self):
+        '''
+        Execute the desired routine on the specified systems
+        '''
+        # TODO, this is just the code to test the chain, this is where the
+        # parallel stuff needs to go once the chain is proven valid
+        
+
 
 
 class Single(multiprocessing.Process):
