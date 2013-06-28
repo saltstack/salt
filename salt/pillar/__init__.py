@@ -295,6 +295,9 @@ class Pillar(object):
                             if isinstance(sub_sls, dict):
                                 sub_sls, v = sub_sls.iteritems().next()
                                 defaults = v.get('defaults', {})
+                                key = v.get('key', None)
+                            else:
+                                key = None
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
@@ -303,7 +306,10 @@ class Pillar(object):
                                         defaults
                                         )
                             if nstate:
-                                state.update(nstate)
+                                if key:
+                                    state[key] = nstate
+                                else:
+                                    state.update(nstate)
                             if err:
                                 errors += err
         return state, mods, errors
