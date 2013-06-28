@@ -45,13 +45,11 @@ except ImportError:
 
 from salt.exceptions import SaltInvocationError
 
-def ext_pillar(pillar, **kwargs):
+def ext_pillar(minion_id, pillar, **kwargs):
     try:
         # I purposely do not pass any of __opts__ or __salt__ or __grains__
         # to reclass, as I consider those to be Salt-internal and reclass
-        # should not make any assumptions about it. Reclass only needs to know
-        # what minion we are talking about, so:
-        minion_id = __opts__['id']
+        # should not make any assumptions about it.
         return reclass_ext_pillar(minion_id, pillar, **kwargs)
 
     except TypeError, e:
