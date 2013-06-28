@@ -65,7 +65,7 @@ start() {
             RETVAL=0
         fi
     else
-        daemon --check $SERVICE $SALTAPI $CONFIG_ARGS
+        daemon --check $SERVICE $SALTAPI -d $CONFIG_ARGS
     fi
     RETVAL=$?
     echo
