@@ -1,9 +1,17 @@
 '''
 Tests for the SVN state
 '''
+
+# Import python libs
 import os
 import shutil
 import socket
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 import integration
 
 
@@ -29,7 +37,9 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.skipTest(msg.format(self.__domain))
 
         self.target = os.path.join(integration.TMP, 'apache_http_test_repo')
-        self.name = 'http://{0}/repos/asf/httpd/httpd/trunk/test/'.format(self.__domain)
+        self.name = 'http://{0}/repos/asf/httpd/httpd/trunk/test/'.format(
+            self.__domain
+        )
         self.new_rev = '1456987'
 
     def tearDown(self):
@@ -60,7 +70,7 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         ret = self.run_state(
             'svn.latest',
-            name='https://youSpelledApacheWrong.com/repos/asf/httpd/httpd/trunk/test/',
+            name='https://youSpelledApacheWrong.com/repo/asf/httpd/trunk/',
             rev=self.new_rev,
             target=self.target,
         )
@@ -127,6 +137,7 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertTrue(os.path.isdir(os.path.join(self.target, '.svn')))
+
 
 if __name__ == '__main__':
     from integration import run_tests

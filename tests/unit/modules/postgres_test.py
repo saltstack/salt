@@ -1,3 +1,7 @@
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 try:
     from mock import Mock, patch
@@ -5,12 +9,12 @@ try:
 except ImportError:
     has_mock = False
     patch = lambda x: lambda y: None
+
     def patchmultiple(x, __grains__, __salt__=None):
         return lambda y: None
     patch.multiple = patchmultiple
 
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
-
+# Import salt libs
 from salt.modules import postgres
 postgres.__grains__ = None  # in order to stub it w/patch below
 postgres.__salt__ = None  # in order to stub it w/patch below
@@ -26,7 +30,7 @@ else:
     SALT_STUB = {}
 
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+@skipIf(has_mock is False, 'mock python module is unavailable')
 class PostgresTestCase(TestCase):
     @patch.multiple(postgres,
                     __grains__={'os_family': 'Linux'},
@@ -37,7 +41,7 @@ class PostgresTestCase(TestCase):
 
         self.assertEquals('postgres', cmd.call_args[1]['runas'])
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(PostgresTestCase)
-    TextTestRunner(verbosity=1).run(tests)
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PostgresTestCase, needs_daemon=False)

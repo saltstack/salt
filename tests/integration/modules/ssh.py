@@ -5,9 +5,13 @@ Test the ssh module
 import os
 import shutil
 
-# Import Salt libs
-import salt.utils
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 import integration
+import salt.utils
 
 AUTHORIZED_KEYS = os.path.join('/tmp/subsalttest', 'authorized_keys')
 KNOWN_HOSTS = os.path.join('/tmp/subsalttest', 'known_hosts')

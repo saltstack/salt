@@ -3,9 +3,13 @@ import os
 import string
 import random
 
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import destructiveTest, ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
-from saltunittest import destructiveTest, skipIf
 
 
 class UseraddModuleTest(integration.ModuleCase):

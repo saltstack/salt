@@ -45,7 +45,7 @@ if with_setuptools is False:
     from distutils.core import setup
     warnings.filterwarnings(
         'ignore',
-        'Unknown distribution option: \'(install_requires|zip_safe)\'',
+        'Unknown distribution option: \'(tests_require|install_requires|zip_safe)\'',
         UserWarning,
         'distutils.dist'
     )
@@ -299,6 +299,12 @@ if with_setuptools:
                             'salt = salt.scripts:salt_main'
                             ],
     }
+
+    # Required for running the tests suite
+    setup_kwargs['dependency_links'] = [
+        'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
+    ]
+    setup_kwargs['tests_require'] = ['SaltTesting']
 else:
     setup_kwargs['scripts'] = ['scripts/salt-master',
                                'scripts/salt-minion',

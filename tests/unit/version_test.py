@@ -13,8 +13,13 @@
 # Import python libs
 import re
 
-# Import salt libs
-from saltunittest import TestCase, TestLoader, TextTestRunner
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../')
+
+# Import Salt libs
 import salt.version
 
 
@@ -23,7 +28,8 @@ class VersionTestCase(TestCase):
         expect = (
             ('v0.12.0-19-g767d4f9', ('0', '12', '0', '19', 'g767d4f9')),
             ('v0.12.0-85-g2880105', ('0', '12', '0', '85', 'g2880105')),
-            ('debian/0.11.1+ds-1-3-ga0afcbd', ('0', '11', '1', '3', 'ga0afcbd')),
+            ('debian/0.11.1+ds-1-3-ga0afcbd', ('0', '11', '1', '3',
+                                               'ga0afcbd')),
             ('0.12.1', ('0', '12', '1', None, None)),
             ('0.12.1', ('0', '12', '1', None, None)),
         )
@@ -33,7 +39,7 @@ class VersionTestCase(TestCase):
                 groups, re.search(salt.version.GIT_DESCRIBE_REGEX, vs).groups()
             )
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromVersionTestCase(VersionTestCase)
-    TextTestRunner(verbosity=1).run(tests)
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(VersionTestCase, needs_daemon=False)
