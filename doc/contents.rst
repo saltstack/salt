@@ -26,7 +26,7 @@ Full Table of Contents
     topics/virt/*
     topics/tests/*
     topics/reactor/*
-    topics/style
+    topics/conventions/*
     topics/git/*
     topics/development/index
 
