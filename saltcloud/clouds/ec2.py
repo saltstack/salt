@@ -947,14 +947,17 @@ def create_attach_volumes(name, kwargs, call=None):
     ret = []
     for volume in volumes:
         volume_name = '{0} on {1}'.format(volume['device'], name)
-        created_volume = create_volume(
-            {
-                'size': volume['size'],
-                'volume_name': volume_name,
-                'zone': kwargs['zone']
-            },
-            call='function'
-        )
+
+        volume_dict = {
+            'volume_name': volume_name,
+            'zone': kwargs['zone']
+        }
+        if 'snapshot' in volume:
+            volume_dict['snapshot'] = volume['snapshot']
+        else:
+            volume_dict['size'] = volume['size']
+
+        created_volume = create_volume(volume_dict, call='function')
         for item in created_volume:
             if 'volumeId' in item:
                 volume_id = item['volumeId']
