@@ -295,7 +295,7 @@ class Pillar(object):
                             if isinstance(sub_sls, dict):
                                 sub_sls, v = sub_sls.iteritems().next()
                                 defaults = v.get('defaults', {})
-                                key = v.get('key', {})
+                                key = v.get('key', None)
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
