@@ -23,12 +23,23 @@ log = logging.getLogger(__name__)
 
 class NonBlockingPopen(subprocess.Popen):
 
+    _stdout_logger_name_ = 'salt.utils.nb_popen.STDOUT.PID-{pid}'
+    _stderr_logger_name_ = 'salt.utils.nb_popen.STDERR.PID-{pid}'
+
     def __init__(self, *args, **kwargs):
         self.stream_stds = kwargs.pop('stream_stds', False)
 
         # Half a megabyte in memory is more than enough to start writing to
         # a temporary file.
         self.max_size_in_mem = kwargs.pop('max_size_in_mem', 512000)
+
+        # Let's configure the std{out,err} logging handler names
+        self._stdout_logger_name_ = kwargs.pop(
+            'stdout_logger_name', self._stdout_logger_name_
+        )
+        self._stderr_logger_name_ = kwargs.pop(
+            'stderr_logger_name', self._stderr_logger_name_
+        )
 
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
 
@@ -37,12 +48,18 @@ class NonBlockingPopen(subprocess.Popen):
             fol = fcntl.fcntl(fod, fcntl.F_GETFL)
             fcntl.fcntl(fod, fcntl.F_SETFL, fol | os.O_NONBLOCK)
         self.obuff = tempfile.SpooledTemporaryFile(self.max_size_in_mem)
+        self._stdout_logger = logging.getLogger(
+            self._stdout_logger_name_.format(pid=self.pid)
+        )
 
         if self.stderr is not None:
             fed = self.stderr.fileno()
             fel = fcntl.fcntl(fed, fcntl.F_GETFL)
             fcntl.fcntl(fed, fcntl.F_SETFL, fel | os.O_NONBLOCK)
         self.ebuff = tempfile.SpooledTemporaryFile(self.max_size_in_mem)
+        self._stderr_logger = logging.getLogger(
+            self._stderr_logger_name_.format(pid=self.pid)
+        )
 
         log.info(
             'Running command under pid {0}: {1!r}'.format(self.pid, *args)
@@ -56,9 +73,7 @@ class NonBlockingPopen(subprocess.Popen):
                 obuff = self.stdout.read()
                 if obuff:
                     self.obuff.write(obuff)
-                    logging.getLogger(
-                        'salt.utils.nb_popen.STDOUT.PID-{0}'.format(self.pid)
-                    ).debug(obuff.rstrip())
+                    self._stdout_logger.debug(obuff.rstrip())
                     if self.stream_stds:
                         sys.stdout.write(obuff)
             except IOError, err:
@@ -72,9 +87,7 @@ class NonBlockingPopen(subprocess.Popen):
                 ebuff = self.stderr.read()
                 if ebuff:
                     self.ebuff.write(ebuff)
-                    logging.getLogger(
-                        'salt.utils.nb_popen.STDERR.PID-{0}'.format(self.pid)
-                    ).debug(ebuff.rstrip())
+                    self._stderr_logger.debug(ebuff.rstrip())
                     if self.stream_stds:
                         sys.stderr.write(ebuff)
             except IOError, err:
