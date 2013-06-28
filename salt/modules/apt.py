@@ -936,7 +936,10 @@ def mod_repo(repo, **kwargs):
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
             if ppa_format_support and 'ppa_auth' not in kwargs:
-                cmd = 'apt-add-repository -y {0}'.format(repo)
+                if float(__grains__['osrelease']) < 12.04:
+                    cmd = 'apt-add-repository {0}'.format(repo)
+                else:
+                    cmd = 'apt-add-repository -y {0}'.format(repo)
                 out = __salt__['cmd.run_stdout'](cmd, **kwargs)
                 # explicit refresh when a repo is modified.
                 refresh_db()
