@@ -11,7 +11,6 @@
 '''
 
 # Import python libs
-import io
 import os
 import sys
 import fcntl
