@@ -48,11 +48,11 @@ class Shell(object):
                    'PasswordAuthentication=no',
                    ]
         options.append('ConnectTimeout={0}'.format(self.timeout))
-        if port:
+        if self.port:
             options.append('Port={0}'.format(self.port))
-        if priv:
+        if self.priv:
             options.append('IdentityFile={0}'.format(self.priv))
-        if user:
+        if self.user:
             options.append('User={0}'.format(self.user))
 
         return options
@@ -67,9 +67,9 @@ class Shell(object):
                    'GSSAPIAuthentication=no',
                    ]
         options.append('ConnectTimeout={0}'.format(self.timeout))
-        if port:
+        if self.port:
             options.append('Port={0}'.format(self.port))
-        if user:
+        if self.user:
             options.append('User={0}'.format(self.user))
 
         return options
@@ -79,22 +79,22 @@ class Shell(object):
         '''
         Return the cmd string to execute
         '''
-        if priv:
-            opts = _key_opts(
+        if self.priv:
+            opts = self._key_opts(
                     self.user,
                     self.port,
                     self.priv,
                     self.timeout)
             return '{0} {1} {2} -o {3} -c {4}'.format(
                     ssh,
-                    host,
+                    self.host,
                     '-t -t' if self.tty else '',
                     ','.join(opts),
                     cmd)
-        elif passwd:
+        elif self.passwd:
             if not salt.utils.which('sshpass'):
                 return None
-            opts = _key_opts(
+            opts = self._key_opts(
                     self.user,
                     self.port,
                     self.priv,
@@ -135,13 +135,13 @@ class Shell(object):
         '''
         Execute a remote command
         '''
-        if sudo:
+        if self.sudo:
             cmd = 'sudo {0}'.format(cmd)
             tty = True
         else:
             tty = False
-        cmd = _cmd_str(cmd, tty=tty)
-        return _run_cmd(cmd)
+        cmd = self._cmd_str(cmd, tty=tty)
+        return self._run_cmd(cmd)
 
 
     def send(self, local, remote):
@@ -149,10 +149,10 @@ class Shell(object):
         scp a file or files to a remote system
         '''
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
-        if sudo:
+        if self.sudo:
             cmd = 'sudo {0}'.format(cmd)
             tty = True
         else:
             tty = False
-        cmd = _cmd_str(cmd, ssh='scp', tty=tty)
-        return _run_cmd(cmd)
+        cmd = self._cmd_str(cmd, ssh='scp', tty=tty)
+        return self._run_cmd(cmd)
