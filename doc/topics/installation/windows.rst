@@ -71,8 +71,8 @@ The `salt-minion` service will appear in the Windows Service Manager and can be
 started and stopped there or with the command line program `sc` like any other
 Windows service.
 
-If the minion won't start, try installing the Microsoft Visual C++ 2008 x64
-redistributable.
+If the minion won't start, try installing the Microsoft Visual C++ 2008 x64 SP1
+redistributable. Allow all Windows updates to run salt-minion smoothly.
 
 Make sure that the minion config file has the line `ipc_mode: tcp`
 
