@@ -17,11 +17,10 @@ import fcntl
 import logging
 import subprocess
 
-
 log = logging.getLogger(__name__)
 
 
-class NonBlockingPopen(subprocess.Popen):
+class CloudNonBlockingPopen(subprocess.Popen):
 
     def __init__(self, *args, **kwargs):
         self.stream_stds = kwargs.pop('stream_stds', False)
@@ -98,3 +97,14 @@ class NonBlockingPopen(subprocess.Popen):
                 pass
 
         super(NonBlockingPopen, self).__del__()
+
+
+try:
+    from salt.utils.nb_popen import NonBlockingPopen as SaltNonBlockingPopen
+
+    class NonBlockingPopen(SaltNonBlockingPopen):
+        _stdout_logger_name_ = 'saltcloud.utils.nb_popen.STDOUT.PID-{pid}'
+        _stderr_logger_name_ = 'saltcloud.utils.nb_popen.STDERR.PID-{pid}'
+
+except ImportError:
+    NonBlockingPopen = CloudNonBlockingPopen
