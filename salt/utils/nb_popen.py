@@ -26,19 +26,24 @@ class NonBlockingPopen(subprocess.Popen):
 
     def __init__(self, *args, **kwargs):
         self.stream_stds = kwargs.pop('stream_stds', False)
+
+        # Half a megabyte in memory is more than enough to start writing to
+        # a temporary file.
+        self.max_size_in_mem = kwargs.pop('max_size_in_mem', 512000)
+
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
 
         if self.stdout is not None:
             fod = self.stdout.fileno()
             fol = fcntl.fcntl(fod, fcntl.F_GETFL)
             fcntl.fcntl(fod, fcntl.F_SETFL, fol | os.O_NONBLOCK)
-        self.obuff = SubprocessBuffer()
+        self.obuff = tempfile.SpooledTemporaryFile(self.max_size_in_mem)
 
         if self.stderr is not None:
             fed = self.stderr.fileno()
             fel = fcntl.fcntl(fed, fcntl.F_GETFL)
             fcntl.fcntl(fed, fcntl.F_SETFL, fel | os.O_NONBLOCK)
-        self.ebuff = SubprocessBuffer()
+        self.ebuff = tempfile.SpooledTemporaryFile(self.max_size_in_mem)
 
         log.info(
             'Running command under pid {0}: {1!r}'.format(self.pid, *args)
@@ -101,34 +106,3 @@ class NonBlockingPopen(subprocess.Popen):
                 pass
 
         super(NonBlockingPopen, self).__del__()
-
-
-class SubprocessBuffer(object):
-    '''
-    Simple buffer which holds data in memory up to a specific size. If more
-    than the allowed needs to be written, the internal buffer is switched for
-    a temporary file used for the remaining of the write operations.
-    '''
-
-    # Half a megabyte in memory is more than enough to start writing to
-    # a temporary file.
-    max_size_in_mem = 512000
-
-    def __init__(self, initial_contents=''):
-        self.__buffer = io.BytesIO(initial_contents)
-        if initial_contents:
-            self.__buffer.write(initial_contents)
-
-    def write(self, bytes):
-        if isinstance(self.__buffer, io.BytesIO) and \
-                self.__buffer.tell() + len(bytes) >= self.max_size_in_mem:
-            filebuffer = tempfile.TemporaryFile('wb+')
-            self.__buffer.seek(0)
-            filebuffer.write(self.__buffer.read())
-            self.__buffer.close()
-            self.__buffer = filebuffer
-        self.__buffer.write(bytes)
-
-    def read(self):
-        self.__buffer.seek(0)
-        return self.__buffer.read()
