@@ -16,7 +16,7 @@ salt masters at the same time. This allows for multiple masters to send out comm
 to minions and for minions to automatically reconnect to masters that have gone
 down. A tutorial is available to help get started here:
 
-:doc:`Multi Master Tutorial <topics/tutorials/multimaster>`
+:doc:`Multi Master Tutorial </topics/tutorials/multimaster>`
 
 Prereq, the New Requisite
 -------------------------
