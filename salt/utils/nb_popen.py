@@ -33,6 +33,14 @@ class NonBlockingPopen(subprocess.Popen):
         # a temporary file.
         self.max_size_in_mem = kwargs.pop('max_size_in_mem', 512000)
 
+        # Let's configure the std{out,err} logging handler names
+        self._stdout_logger_name_ = kwargs.pop(
+            'stdout_logger_name', self._stdout_logger_name_
+        )
+        self._stderr_logger_name_ = kwargs.pop(
+            'stderr_logger_name', self._stderr_logger_name_
+        )
+
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
 
         if self.stdout is not None:
