@@ -157,7 +157,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
             elif pkgver is None:
                 continue
             version_spec = True
-            match = re.match('^~?([<>])?(=)?([^<>=]+)$', pkgver)
+            match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
             if not match:
                 msg = 'Invalid version specification "{0}" for package ' \
                       '"{1}".'.format(pkgver, pkgname)
@@ -208,7 +208,7 @@ def _verify_install(desired, new_pkgs):
         elif not pkgver:
             ok.append(pkgname)
             continue
-        match = re.match('^~?([<>])?(=)?([^<>=]+)$', pkgver)
+        match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
         gt_lt, eq, verstr = match.groups()
         comparison = gt_lt or ''
         comparison += eq or ''

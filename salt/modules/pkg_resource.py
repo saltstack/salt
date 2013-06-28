@@ -457,11 +457,13 @@ def compare(pkg1='', oper='==', pkg2=''):
 def check_extra_requirements(pkgname, pkgver):
     '''
     Check if the installed package already has the given requirements.
+    This function will simply try to call "pkg.check_extra_requirements".
 
     CLI Example::
 
-        salt '*' pkg_resource.check_extra_requirements <pkgname> <extra_requirement>
+        salt '*' pkg_resource.check_extra_requirements <pkgname> <extra_requirements>
     '''
-    if __grains__['os'] == 'Gentoo':
+    if 'pkg.check_extra_requirements' in __salt__:
         return __salt__['pkg.check_extra_requirements'](pkgname, pkgver)
+
     return True

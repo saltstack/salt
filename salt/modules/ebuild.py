@@ -406,6 +406,8 @@ def install(name=None,
     else:
         emerge_opts = ''
 
+    changes = {}
+
     if pkg_type == 'repository':
         targets = list()
         for param, version_num in pkg_params.iteritems():
@@ -436,11 +438,16 @@ def install(name=None,
                     target = '"{0}"'.format(param)
 
                 if target.find('[') != -1:
+                    old = __salt__['portage_config.get_flags_from_package_conf']('use',target[1:-1])
                     __salt__['portage_config.append_use_flags'](target[1:-1])
+                    new = __salt__['portage_config.get_flags_from_package_conf']('use',target[1:-1])
+                    if old != new:
+                        changes[param+'-USE']={'old':old,'new':new}
                     target = target[:target.rfind('[')] + '"'
 
                 if keyword != None:
                     __salt__['portage_config.append_to_package_conf']('accept_keywords', target, ['~ARCH'])
+                    changes[param+'-ACCEPT_KEYWORD']={'old':'','new':'~ARCH'}
 
                 targets.append(target)
     else:
@@ -453,7 +460,8 @@ def install(name=None,
     if call['retcode'] != 0:
         return _process_emerge_err(call['stderr'])
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    changes.update(__salt__['pkg_resource.find_changes'](old, new))
+    return changes
 
 
 def update(pkg, slot=None, fromrepo=None, refresh=False):
@@ -670,11 +678,11 @@ def perform_cmp(pkg1='', pkg2=''):
         salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
         salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    m1 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg1)
-    m2 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg2)
+    ver1 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg1)
+    ver2 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg2)
 
-    if m1 and m2:
-        return portage.versions.vercmp(m1.group(1), m2.group(1))
+    if ver1 and ver2:
+        return portage.versions.vercmp(ver1.group(1), ver2.group(1))
     return None
 
 
