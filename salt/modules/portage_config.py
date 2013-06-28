@@ -279,7 +279,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                             continue
                         elif not new_flags:
                             continue
-                    merged_flags = _merge_flags(new_flags, old_flags)
+                    merged_flags = _merge_flags(old_flags, new_flags)
                     if merged_flags:
                         new_contents += '{0} {1}\n'.format(atom, ' '.join(merged_flags))
                     else:
@@ -294,7 +294,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         file_handler.write(new_contents)
         file_handler.close()
         try:
-            rmtree(complete_file_path + '.bak')
+            remove(complete_file_path + '.bak')
         except OSError:
             pass
 

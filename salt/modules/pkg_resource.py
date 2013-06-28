@@ -454,6 +454,20 @@ def compare(pkg1='', oper='==', pkg2=''):
         return cmp_result in cmp_map[oper]
 
 
+def version_clean(version):
+    '''
+    Clean the version string removing extra data.
+    This function will simply try to call "pkg.version_clean".
+
+    CLI Example::
+
+        salt '*' pkg_resource.version_clean <version_string>
+    '''
+    if version and 'pkg.version_clean' in __salt__:
+        return __salt__['pkg.version_clean'](version)
+
+    return version
+
 def check_extra_requirements(pkgname, pkgver):
     '''
     Check if the installed package already has the given requirements.
@@ -463,7 +477,7 @@ def check_extra_requirements(pkgname, pkgver):
 
         salt '*' pkg_resource.check_extra_requirements <pkgname> <extra_requirements>
     '''
-    if 'pkg.check_extra_requirements' in __salt__:
+    if pkgver and 'pkg.check_extra_requirements' in __salt__:
         return __salt__['pkg.check_extra_requirements'](pkgname, pkgver)
 
     return True

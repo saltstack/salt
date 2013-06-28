@@ -153,8 +153,11 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
             if not cver:
                 targets[pkgname] = pkgver
                 continue
+            elif not __salt__['pkg_resource.check_extra_requirements'](pkgname, pkgver):
+                targets[pkgname] = pkgver
+                continue
             # No version specified and pkg is installed, do not add to targets
-            elif pkgver is None:
+            elif __salt__['pkg_resource.version_clean'](pkgver) is None:
                 continue
             version_spec = True
             match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
@@ -170,8 +173,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
                 # Change it to "==" so that it works in pkg.compare.
                 if comparison in ['=', '']:
                     comparison = '=='
-                if not _fulfills_version_spec(cver, comparison, verstr) or \
-                   not __salt__['pkg_resource.check_extra_requirements'](pkgname, pkgver):
+                if not _fulfills_version_spec(cver, comparison, verstr):
                     # Current version did not match desired, add to targets
                     targets[pkgname] = pkgver
 
@@ -205,7 +207,7 @@ def _verify_install(desired, new_pkgs):
         if not cver:
             failed.append(pkgname)
             continue
-        elif not pkgver:
+        elif not __salt__['pkg_resource.version_clean'](pkgver):
             ok.append(pkgname)
             continue
         match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)

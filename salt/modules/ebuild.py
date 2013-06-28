@@ -421,7 +421,7 @@ def install(name=None,
             else:
                 keyword = None
 
-                match = re.match('^(~)?([<>])?(=)?([^<>=]+)$', version_num)
+                match = re.match('^(~)?([<>])?(=)?([^<>=]*)$', version_num)
                 if match:
                     keyword, gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
@@ -429,7 +429,7 @@ def install(name=None,
                     # We need to delete quotes around use flag list elements
                     verstr=verstr.replace("'","")
                     # If no prefix characters were supplied and verstr contains a version, use '='
-                    if verstr[0] != ':' and verstr[0] != '[':
+                    if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
                         target = '"{0}{1}-{2}"'.format(prefix, param, verstr)
                     else:
@@ -446,7 +446,7 @@ def install(name=None,
                     target = target[:target.rfind('[')] + '"'
 
                 if keyword != None:
-                    __salt__['portage_config.append_to_package_conf']('accept_keywords', target, ['~ARCH'])
+                    __salt__['portage_config.append_to_package_conf']('accept_keywords', target[1:-1], ['~ARCH'])
                     changes[param+'-ACCEPT_KEYWORD']={'old':'','new':'~ARCH'}
 
                 targets.append(target)
@@ -697,6 +697,18 @@ def compare(pkg1='', oper='==', pkg2=''):
     '''
     return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
 
+
+def version_clean(version):
+    '''
+    Clean the version string removing extra data.
+
+    CLI Example::
+
+        salt '*' pkg.version_clean <version_string>
+    '''
+    return re.match('^~?[<>]?=?([^<>=:\[]+).*$', version)
+
+
 def check_extra_requirements(pkgname, pkgver):
     '''
     Check if the installed package already has the given requirements.
@@ -707,7 +719,7 @@ def check_extra_requirements(pkgname, pkgver):
     '''
     keyword = None
 
-    match = re.match('^(~)?([<>])?(=)?([^<>=]+)$', pkgver)
+    match = re.match('^(~)?([<>])?(=)?([^<>=]*)$', pkgver)
     if match:
         keyword, gt_lt, eq, verstr = match.groups()
         prefix = gt_lt or ''
@@ -739,7 +751,7 @@ def check_extra_requirements(pkgname, pkgver):
 
     des_uses = set(portage.dep.dep_getusedeps(atom))
     cur_use = cur_use.split()
-    if len(des_uses.difference(cur_use)) > 0:
+    if len([ x for x in des_uses.difference(cur_use) if x[0]!='-' or x[1:] in cur_use ]) > 0:
         return False
 
     if keyword:
