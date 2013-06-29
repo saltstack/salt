@@ -3,15 +3,16 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-import multiprocessing
+
 import os
 import sys
+import time
 import shutil
 import pprint
-import tempfile
 import logging
-import time
+import tempfile
 import subprocess
+import multiprocessing
 from hashlib import md5
 from datetime import datetime, timedelta
 try:
@@ -25,13 +26,16 @@ INTEGRATION_TEST_DIR = os.path.dirname(
 )
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
 SALT_LIBS = os.path.dirname(CODE_DIR)
-SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
-PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
+
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.case import ShellTestCase
+from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
+from salttesting.parser import PNUM, print_header, SaltTestcaseParser
+from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
 
 # Update sys.path
-for dir_ in [CODE_DIR, SALT_LIBS]:
-    if not dir_ in sys.path:
-        sys.path.insert(0, dir_)
+ensure_in_syspath(CODE_DIR, SALT_LIBS)
 
 # Import Salt libs
 import salt
@@ -43,21 +47,14 @@ import salt.output
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
-# Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.case import ShellTestCase
-from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
-from salttesting.parser import PNUM, print_header, SaltTestcaseParser
-from salttesting.helpers import RedirectStdStreams
-
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
-
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
+PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
+SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
-
 
 log = logging.getLogger(__name__)
 
