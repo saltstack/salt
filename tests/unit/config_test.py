@@ -33,7 +33,7 @@ class CloudConfigTestCase(TestCase):
     def test_load_cloud_config_from_environ_var(self):
         if salt.version.__version_info__ < (0, 16, 0):
             self.skipTest(
-                'This test will always fail in salt >= 0.16.0 is not available'
+                'This test will always fail if salt >= 0.16.0 is not available'
             )
 
         original_environ = os.environ.copy()
