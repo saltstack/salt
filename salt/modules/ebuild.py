@@ -130,7 +130,7 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'emerge --pretend --update --newuse --deep --ask n --with-bdeps=y world'
+    cmd = 'emerge --pretend --update --newuse --deep --ask n world'
     out = __salt__['cmd.run_stdout'](cmd)
 
     rexp = re.compile(r'(?m)^\[.+\] '
@@ -413,7 +413,7 @@ def update(pkg, slot=None, refresh=False):
         full_atom = pkg
 
     old = list_pkgs()
-    cmd = 'emerge --update --newuse --oneshot --with-bdeps=y --ask n --quiet {0}'.format(full_atom)
+    cmd = 'emerge --update --newuse --oneshot --ask n --quiet {0}'.format(full_atom)
     call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
@@ -439,7 +439,7 @@ def upgrade(refresh=True):
         refresh_db()
 
     old = list_pkgs()
-    cmd = 'emerge --update --newuse --deep --with-bdeps=y --ask n --quiet world'
+    cmd = 'emerge --update --newuse --deep --ask n --quiet world'
     call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
