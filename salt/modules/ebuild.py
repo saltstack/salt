@@ -327,9 +327,9 @@ def install(name=None,
             salt '*' pkg.install sys-devel/gcc slot='4.4'
 
     fromrepo
-        Similar to slot, but specifies the overlay from the package will be
+        Similar to slot, but specifies the repository from the package will be
         installed. It will install the latest available version in the
-        specified overlay.
+        specified repository.
         Ignored if "pkgs" or "sources" or "version" is passed.
 
         CLI Example::
@@ -350,7 +350,7 @@ def install(name=None,
         a python list.
 
         CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar","~category/package:slot::overlay[use]"]'
+            salt '*' pkg.install pkgs='["foo","bar","~category/package:slot::repository[use]"]'
 
     sources
         A list of tbz2 packages to install. Must be passed as a list of dicts,
@@ -473,8 +473,8 @@ def update(pkg, slot=None, fromrepo=None, refresh=False):
         latest version within the slot.
 
     fromrepo
-        Restrict the update to a particular overlay. It will update to the
-        latest version within the overlay.
+        Restrict the update to a particular repository. It will update to the
+        latest version within the repository.
 
     Return a dict containing the new package names and versions::
 
