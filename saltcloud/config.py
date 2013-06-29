@@ -48,7 +48,6 @@ PROVIDER_CONFIG_DEFAULTS = {
     'default_include': 'cloud.providers.d/*.conf',
 }
 
-
 log = logging.getLogger(__name__)
 
 
@@ -60,7 +59,16 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     Read in the salt cloud config and return the dict
     '''
     # Load the cloud configuration
-    overrides = salt.config.load_config(path, env_var)
+    try:
+        overrides = salt.config.load_config(path, env_var, '/etc/salt/cloud')
+    except TypeError:
+        log.warning(
+            'Salt version is lower than 0.16.0, as such, loading '
+            'configuration from the {0!r} environment variable will '
+            'fail'.format(env_var)
+        )
+        overrides = salt.config.load_config(path, env_var)
+
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
@@ -323,7 +331,18 @@ def vm_profiles_config(path,
     if defaults is None:
         defaults = VM_CONFIG_DEFAULTS
 
-    overrides = salt.config.load_config(path, env_var)
+    try:
+        overrides = salt.config.load_config(
+            path, env_var, '/etc/salt/cloud.profiles'
+        )
+    except TypeError:
+        log.warning(
+            'Salt version is lower than 0.16.0, as such, loading '
+            'configuration from the {0!r} environment variable will '
+            'fail'.format(env_var)
+        )
+        overrides = salt.config.load_config(path, env_var)
+
     default_include = overrides.get(
         'default_include', defaults['default_include']
     )
@@ -459,7 +478,18 @@ def cloud_providers_config(path,
     if defaults is None:
         defaults = PROVIDER_CONFIG_DEFAULTS
 
-    overrides = salt.config.load_config(path, env_var)
+    try:
+        overrides = salt.config.load_config(
+            path, env_var, '/etc/salt/cloud.providers'
+        )
+    except TypeError:
+        log.warning(
+            'Salt version is lower than 0.16.0, as such, loading '
+            'configuration from the {0!r} environment variable will '
+            'fail'.format(env_var)
+        )
+        overrides = salt.config.load_config(path, env_var)
+
     default_include = overrides.get(
         'default_include', defaults['default_include']
     )

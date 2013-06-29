@@ -1,18 +1,22 @@
+# -*- coding: utf-8 -*-
+'''
+    integration.cli_test
+    ~~~~~~~~~~~~~~~~~~~~
+
+    CLI related unit testing
+
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+'''
+
+
+# Import salt testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../')
+
 # Import salt libs
-try:
-    import integration
-except ImportError:
-    if __name__ == '__main__':
-        import os
-        import sys
-        sys.path.insert(
-            0, os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '../'
-                )
-            )
-        )
-    import integration
+import integration
 
 
 class SaltCloudCliTest(integration.ShellCase,
@@ -83,5 +87,4 @@ class SaltCloudCliTest(integration.ShellCase,
 
 
 if __name__ == '__main__':
-    from integration import run_testcase
-    run_testcase(SaltCloudCliTest)
+    integration.run_testcase(SaltCloudCliTest)
