@@ -29,7 +29,7 @@ GRAINMAP = {
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only work on systems which exclusively use sysvinit
     '''
     # Disable on these platforms, specific service modules exist:
     disable = set((
@@ -46,14 +46,20 @@ def __virtual__():
                'Arch ARM',
                'ALT',
                'SUSE  Enterprise Server',
-               'openSUSE',
                'OEL',
               ))
-    if __grains__['os'] in disable:
+    if __grains__.get('os', '') in disable:
         return False
     # Disable on all non-Linux OSes as well
     if __grains__['kernel'] != 'Linux':
         return False
+    # Suse >=12.0 uses systemd
+    if __grains__.get('os', '') == 'openSUSE':
+        try:
+            if int(__grains__.get('os', '').split('.')[0]) >= 12:
+                return False
+        except ValueError:
+            return False
     return 'service'
 
 
