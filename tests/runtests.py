@@ -16,10 +16,12 @@ import os
 import tempfile
 
 # Import salt testing libs
+from salttesting.helpers import ensure_in_syspath
 from salttesting.parser.cover import SaltCoverageTestingParser
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
 SALTCLOUD_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+ensure_in_syspath(SALTCLOUD_ROOT)
 
 XML_OUTPUT_DIR = os.environ.get(
     'XML_TEST_REPORTS', os.path.join(
