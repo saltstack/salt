@@ -120,7 +120,7 @@ Install on Windows XP 32bit
 
         git clone git://github.com/saltstack/salt.git
 
-2.  Install `Microsoft Visual Studio 2008 Express`_.
+2.  Install Microsoft Visual Studio 2008 Express.
     You must use Visual Studio 2008 Express, **not** Visual Studio 2010 Express.
 
 3.  Install `Python 2.7.x`_
