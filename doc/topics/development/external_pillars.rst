@@ -9,11 +9,11 @@ module.
 Location
 --------
 
-Salt expects to find your ext_pillar module in the same location where it
+Salt expects to find your ``ext_pillar`` module in the same location where it
 looks for other python modules. If the ``extension_modules`` option in your
-Salt master configuration is set, Salt will look for a ``pillars`` directory
+Salt master configuration is set, Salt will look for a ``pillar`` directory
 under there and load all the modules it finds. Otherwise, it will look in
-your Python site-packages ``salt/pillars`` directory.
+your Python site-packages ``salt/pillar`` directory.
 
 Configuration
 -------------
