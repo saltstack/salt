@@ -38,15 +38,20 @@ def connect(image):
     '''
     if not os.path.isfile(image):
         return ''
+
+    if salt.utils.which('cfdisk'):
+        fdisk = 'cfdisk -P t'
+    else:
+        fdisk = 'fdisk -l'
     __salt__['cmd.run']('modprobe nbd max_part=63')
     for nbd in glob.glob('/dev/nbd?'):
-        if __salt__['cmd.retcode']('fdisk -l {0}'.format(nbd)):
+        if __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
             while True:
                 # Sometimes nbd does not "take hold", loop until we can verify
                 __salt__['cmd.run'](
                         'qemu-nbd -c {0} {1}'.format(nbd, image)
                         )
-                if not __salt__['cmd.retcode']('fdisk -l {0}'.format(nbd)):
+                if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
                     break
             return nbd
     return ''
@@ -61,6 +66,9 @@ def mount(nbd):
 
         salt '*' qemu_nbd.mount /dev/nbd0
     '''
+    __salt__['cmd.run'](
+            'partprobe {0}'.format(nbd)
+            )
     ret = {}
     for part in glob.glob('{0}p*'.format(nbd)):
         root = os.path.join(
