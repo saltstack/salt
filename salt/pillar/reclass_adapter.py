@@ -28,7 +28,8 @@ able to define the `__virtual__` function. You will hence either have to
 install reclass to `PYTHONPATH`, or extend `PYTHONPATH` when running the
 master, e.g.:
 
-    PYTHONPATH=~/code/reclass:$PYTHONPATH salt-master …
+    PYTHONPATH=~/code/reclass:$PYTHONPATH salt-master <args>
+
 '''
 # This file cannot be called reclass.py, because then the module import would
 # not work. Thanks to the __virtual__ function, however, the plugin still
