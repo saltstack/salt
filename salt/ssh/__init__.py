@@ -17,7 +17,7 @@ class SSH(object):
         self.roster = salt.roster.Roster(opts)
         self.targets = self.roster.targets(
                 self.opts['tgt'],
-                self.opts['expr_form'])
+                self.opts['selected_target_option'])
         self.defaults = {
                 'user': self.opts.get('ssh_user', 'root'),
                 'port': self.opts.get('ssh_port', '22'),
