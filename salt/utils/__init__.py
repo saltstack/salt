@@ -4,23 +4,24 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
-import os
-import re
+import datetime
+import fnmatch
+import hashlib
 import imp
-import sys
-import stat
-import time
+import inspect
+import logging
+import os
+import platform
+import random
+import re
 import shlex
 import shutil
-import random
 import socket
-import logging
-import inspect
-import hashlib
-import datetime
-import platform
-import tempfile
+import stat
 import subprocess
+import sys
+import tempfile
+import time
 import types
 import warnings
 from calendar import month_abbr as months
@@ -151,7 +152,7 @@ def get_colors(use=True):
         'ENDC': '\033[0m',
     }
 
-    if not use: 
+    if not use:
         for color in colors:
             colors[color] = ''
 
@@ -831,7 +832,50 @@ def fopen(*args, **kwargs):
     return fhandle
 
 
-def traverse_dict(data, target, default, delim=':'):
+def subdict_match(data, expr, delim=':', regex_match=False):
+    '''
+    Check for a match in a dictionary using a delimiter character to denote
+    levels of subdicts, and also allowing the delimiter character to be
+    matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
+    data['foo']['bar'] == 'baz'. The former would take priority over the
+    latter.
+    '''
+    def _match(target, pattern, regex_match=False):
+        if regex_match:
+            try:
+                return re.match(pattern.lower(), str(target).lower())
+            except Exception:
+                log.error('Invalid regex \'{0}\' in match'.format(pattern))
+                return False
+        else:
+            return fnmatch.fnmatch(str(target).lower(), pattern.lower())
+
+    for idx in range(1, expr.count(delim) + 1):
+        splits = expr.split(delim)
+        key = delim.join(splits[:idx])
+        matchstr = delim.join(splits[idx:])
+        log.debug('Attempting to match \'{0}\' in '
+                    '\'{1}\''.format(matchstr, key))
+        match = traverse_dict(data, key, {}, delim=delim)
+        if match == {}:
+            continue
+        if isinstance(match, dict):
+            if matchstr == '*':
+                # We are just checking that the key exists
+                return True
+            continue
+        if isinstance(match, list):
+            # We are matching a single component to a single list member
+            for member in match:
+                if _match(member, matchstr, regex_match=regex_match):
+                    return True
+            continue
+        if _match(match, matchstr, regex_match=regex_match):
+            return True
+    return False
+
+
+def traverse_dict(data, key, default, delim=':'):
     '''
     Traverse a dict using a colon-delimited (or otherwise delimited, using
     the "delim" param) target string. The target 'foo:bar:baz' will return
@@ -839,7 +883,7 @@ def traverse_dict(data, target, default, delim=':'):
     return an empty dict.
     '''
     try:
-        for each in target.split(delim):
+        for each in key.split(delim):
             data = data[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
@@ -1174,6 +1218,7 @@ def namespaced_function(function, global_dict, defaults=None):
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
 
+
 def parse_kwarg(string):
     '''
     Parses the string and looks for the kwarg format:
@@ -1193,11 +1238,13 @@ def parse_kwarg(string):
     else:
         return None, None
 
+
 def _win_console_event_handler(event):
     if event == 5:
         # Do nothing on CTRL_LOGOFF_EVENT
         return True
     return False
+
 
 def enable_ctrl_logoff_handler():
     if HAS_WIN32API:
