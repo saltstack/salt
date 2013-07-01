@@ -331,6 +331,31 @@ class Key(object):
         keys.update(self.local_keys())
         return keys
 
+    def list_status(self, match):
+        '''
+        Return a dict of managed keys under a named status
+        '''
+        acc, pre, rej = self._check_minions_directories()
+        ret = {}
+        if match.startswith('acc'):
+            ret[os.path.basename(acc)] = []
+            for fn_ in salt.utils.isorted(os.listdir(acc)):
+                if os.path.isfile(os.path.join(acc, fn_)):
+                    ret[os.path.basename(acc)].append(fn_)
+        elif match.startswith('pre') or match.startswith('un'):
+            ret[os.path.basename(pre)] = []
+            for fn_ in salt.utils.isorted(os.listdir(pre)):
+                if os.path.isfile(os.path.join(pre, fn_)):
+                    ret[os.path.basename(pre)].append(fn_)
+        elif match.startswith('rej'):
+            ret[os.path.basename(rej)] = []
+            for fn_ in salt.utils.isorted(os.listdir(rej)):
+                if os.path.isfile(os.path.join(rej, fn_)):
+                    ret[os.path.basename(rej)].append(fn_)
+        elif match.startswith('all'):
+            return self.all_keys()
+        return ret
+
     def key_str(self, match):
         '''
         Return the specified public key or keys based on a glob
