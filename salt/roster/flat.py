@@ -64,14 +64,13 @@ class RosterMatcher(object):
                 if ip:
                     minions[minion] = ip
 
-    def get_ip(self, minion):
+    def get_data(self, minion):
         '''
         Return the configured ip
         '''
         if isinstance(self.raw[minion], basestring):
-            return self.raw[minion]
+            return {'host': self.raw[minion]}
         if isinstance(self.raw[minion], dict):
-            if self.ipv in self.raw[minion]:
-                return self.raw[minion][self.ipv]
+            return self.raw[minion]
         return False
 
