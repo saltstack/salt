@@ -56,7 +56,7 @@ def __virtual__():
     # Suse >=12.0 uses systemd
     if __grains__.get('os', '') == 'openSUSE':
         try:
-            if int(__grains__.get('os', '').split('.')[0]) >= 12:
+            if int(__grains__.get('osrelease', '').split('.')[0]) >= 12:
                 return False
         except ValueError:
             return False
