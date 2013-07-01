@@ -871,11 +871,35 @@ def ip4():
     return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
 
 
+def fqdn_ip4():
+    '''
+    Return the fqdn ipv4 address.
+    '''
+    try:
+        info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET)
+        addr = info[0][4][0]
+    except (socket.error, IndexError):
+        addr = None
+    return {'fqdn_ip4': addr}
+
+
 def ip6():
     '''
     Return a list of ipv6 addrs
     '''
     return {'ipv6': salt.utils.network.ip_addrs6(include_loopback=True)}
+
+
+def fqdn_ip6():
+    '''
+    Return the fqdn ipv6 address.
+    '''
+    try:
+        info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET6)
+        addr = info[0][4][0]
+    except (socket.error, IndexError):
+        addr = None
+    return {'fqdn_ip6': addr}
 
 
 def ip_interfaces():
