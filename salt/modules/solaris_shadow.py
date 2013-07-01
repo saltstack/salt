@@ -10,7 +10,10 @@ try:
 except ImportError:
     # SmartOS joyent_20130322T181205Z does not have spwd
     HAS_SPWD = False
-    import pwd
+    try:
+        import pwd
+    except ImportError:
+        pass # We're most likely on a Windows machine.
 
 # Import salt libs
 import salt.utils
