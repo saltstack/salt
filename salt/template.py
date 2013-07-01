@@ -59,7 +59,7 @@ def compile_template(template, renderers, default, env='', sls='', **kwargs):
     for render, argline in render_pipe:
         try:
             input_data.seek(0)
-        except Exception as e:
+        except Exception:
             pass
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)

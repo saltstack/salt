@@ -227,10 +227,10 @@ determine what minions are expected to reply from executions.
 
     minion_cache_dir: True
 
-.. conf_master:: minion_data_cache
+.. conf_master:: enforce_mine_cache
 
 ``enforce_mine_cache``
----------------------
+----------------------
 
 Default: False
 

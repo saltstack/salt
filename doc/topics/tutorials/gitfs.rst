@@ -81,10 +81,10 @@ Assuming that the ``gitfs_remotes`` option specifies three remotes:
 
 .. note::
 
-    The file:// prefix denotes a git repository in a local directory.  However,
-    it will still use the given file:// URL as a remote, rather than copying
-    the git repo to the salt cache.  This means that any refs you want
-    accessible must exist as *local* refs in the specified repo.
+    The ``file://`` prefix denotes a git repository in a local directory.
+    However, it will still use the given ``file://`` URL as a remote, rather
+    than copying the git repo to the salt cache.  This means that any refs you
+    want accessible must exist as *local* refs in the specified repo.
 
 Assume that each repository contains some files:
 
