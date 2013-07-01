@@ -15,6 +15,7 @@ import salt.output
 import salt.runner
 import salt.auth
 import salt.key
+import salt.ssh
 
 from salt.utils import parsers
 from salt.utils.verify import verify_env, verify_files
