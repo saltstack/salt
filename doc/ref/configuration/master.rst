@@ -565,6 +565,8 @@ Default:: ``None``
     ext_pillar:
       - hiera: /etc/hiera.yaml
       - cmd_yaml: cat /etc/salt/yaml
+      - reclass:
+          inventory_base_uri: /etc/reclass
 
 There are additional details at :ref:`salt-pillars`
 

@@ -18,3 +18,12 @@ Using the new `master_tops` option is simple:
 
     master_tops:
       ext_nodes: cobbler-external-nodes
+
+or:
+
+.. code-block:: yaml
+
+    master_tops:
+      reclass:
+        inventory_base_uri: /etc/reclass
+        classes_uri: roles
