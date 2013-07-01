@@ -1496,7 +1496,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          LogLevelMixIn):
+                          LogLevelMixIn, TargetOptionsMixIn):
     __metaclass__ = OptionParserMeta
 
     usage = '%prog [options]'
@@ -1520,7 +1520,12 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
     def _mixin_after_parsed(self):
-        self.config['arg_str'] = self.args[0:]
+        if self.options.list:
+            self.config['tgt'] = self.args[0].split(',')
+        else:
+            self.config['tgt'] = self.args[0]
+        if len(self.args) > 0:
+            self.config['arg_str'] = self.args[1:]
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
