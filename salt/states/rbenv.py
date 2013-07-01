@@ -21,7 +21,7 @@ This is how a state configuration could look like:
 
     rbenv-deps:
       pkg.installed:
-        - names:
+        - pkgs:
           - bash
           - git
           - openssl
@@ -34,10 +34,12 @@ This is how a state configuration could look like:
           - pkg: rbenv-deps
 
     ruby-1.9.3-p429:
-      rvm.installed:
+      rbenv.installed:
         - default: True
         - require:
           - pkg: rbenv-deps
+
+    .. versionadded:: 0.16.0
 '''
 
 # Import python libs
