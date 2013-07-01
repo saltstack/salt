@@ -79,28 +79,20 @@ class Shell(object):
         '''
         Return the cmd string to execute
         '''
-        if self.priv:
-            opts = self._key_opts(
-                    self.user,
-                    self.port,
-                    self.priv,
-                    self.timeout)
-            return '{0} {1} {2} -o {3} -c {4}'.format(
+        if self.passwd:
+            if not salt.utils.which('sshpass'):
+                return None
+            opts = self._passwd_opts()
+            return 'sshpass -p {0} {1} {2} {3} -o {4} -c {5}'.format(
+                    self.passwd,
                     ssh,
                     self.host,
                     '-t -t' if self.tty else '',
                     ','.join(opts),
                     cmd)
-        elif self.passwd:
-            if not salt.utils.which('sshpass'):
-                return None
-            opts = self._key_opts(
-                    self.user,
-                    self.port,
-                    self.priv,
-                    self.timeout)
-            return 'sshpass -p {0} {1} {2} {3} -o {4} -c {5}'.format(
-                    self.passwd,
+        elif self.priv:
+            opts = self._key_opts()
+            return '{0} {1} {2} -o {3} -c {4}'.format(
                     ssh,
                     self.host,
                     '-t -t' if self.tty else '',
@@ -140,7 +132,7 @@ class Shell(object):
             tty = True
         else:
             tty = False
-        cmd = self._cmd_str(cmd, tty=tty)
+        cmd = self._cmd_str(cmd)
         return self._run_cmd(cmd)
 
 
