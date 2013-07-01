@@ -46,13 +46,25 @@ from salt.exceptions import SaltInvocationError
 
 def ext_pillar(pillar, **kwargs):
     try:
-        return reclass_ext_pillar(__opts__, __salt__, __grains__, pillar, **kwargs)
+        # I purposely do not pass any of __opts__ or __salt__ or __grains__
+        # to reclass, as I consider those to be Salt-internal and reclass
+        # should not make any assumptions about it. Reclass only needs to know
+        # what minion we are talking about, so:
+        minion_id = __opts__['id']
+        return reclass_ext_pillar(minion_id, pillar, **kwargs)
 
     except TypeError, e:
         if e.message.find('unexpected keyword argument') > -1:
             arg = e.message.split()[-1]
-            raise SaltInvocationError('pillar.reclass: unexpected option: ' + arg)
+            raise SaltInvocationError('pillar.reclass: unexpected option: '\
+                                      + arg)
+        else:
+            raise
 
+    except KeyError, e:
+        if e.message.find('id') > -1:
+            raise SaltInvocationError('pillar.reclass: __opts__ does not '\
+                                      'define minion ID')
         else:
             raise
 
