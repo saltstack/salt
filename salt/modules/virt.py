@@ -212,6 +212,8 @@ def init(name, cpu, mem, image, nic='default', emulator='kvm', **kwargs):
     define_xml_str(xml)
     if kwargs.get('seed'):
         __salt__['img.seed'](img_dest, name, kwargs.get('config'))
+    elif kwargs.get('seed_cmd'):
+        __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
     create(name)
 
 
