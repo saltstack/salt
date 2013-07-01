@@ -877,10 +877,10 @@ def fqdn_ip4():
     '''
     try:
         info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET)
-        addr = info[0][4][0]
-    except (socket.error, IndexError):
-        addr = None
-    return {'fqdn_ip4': addr}
+        addrs = list(set(item[4][0] for item in info))
+    except socket.error:
+        addrs = []
+    return {'fqdn_ip4': addrs}
 
 
 def ip6():
@@ -896,10 +896,10 @@ def fqdn_ip6():
     '''
     try:
         info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET6)
-        addr = info[0][4][0]
-    except (socket.error, IndexError):
-        addr = None
-    return {'fqdn_ip6': addr}
+        addrs = list(set(item[4][0] for item in info))
+    except socket.error:
+        addrs = []
+    return {'fqdn_ip6': addrs}
 
 
 def ip_interfaces():
