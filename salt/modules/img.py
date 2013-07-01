@@ -11,7 +11,7 @@ import yaml
 # Import salt libs
 import salt.crypt
 
-def mnt_image(location):
+def mount_image(location):
     '''
     Mount the named image and return the mount point
 
@@ -21,7 +21,7 @@ def mnt_image(location):
     '''
     if 'guestfs.mount' in __salt__:
         return __salt__['guestfs.mount'](location)
-    elif 'qemu_nbd' in __salt__:
+    elif 'qemu_nbd.mount' in __salt__:
         mnt = __salt__['qemu_nbd.init'](location)
         __context__['img.mnt_{0}'.format(location)] = mnt
         return mnt.keys()[0]
@@ -43,6 +43,32 @@ def umount_image(mnt):
     __salt__['mount.umount'](mnt)
 
 
+def seed_config(location, id_='', config=None):
+    '''
+    Generate keys for a minion and seed an image with the provided 
+    id and/or minion configuration. Assumes salt-minion is pre-installed
+    on the image.
+    
+    CLI Example::
+
+        salt '*' img.seed_config /tmp/image.qcow2 id_=minion1
+    '''
+    if config is None:
+        config = {}
+    mpt = mount_image(location)
+    if not mpt:
+        return False
+    salt.crypt.gen_keys('{0}/etc/salt/pki/'.format(mpt), 'minion', 2048)
+
+    if not 'master' in config:
+        config['master'] = __opts__['master']
+    if id_:
+        config['id'] = id_
+    with open(os.path.join(mpt, 'etc/salt', 'minion'), 'w+') as fp_:
+        fp_.write(yaml.dump(config, default_flow_style=False))
+    umount_image(mpt)
+    return 'success'
+
 def seed(location, id_='', config=None):
     '''
     Make sure that the image at the given location is mounted, salt is
@@ -54,7 +80,7 @@ def seed(location, id_='', config=None):
     '''
     if config is None:
         config = {}
-    mpt = mnt_image(location)
+    mpt = mount_image(location)
     mpt_tmp = os.path.join(mpt, 'tmp')
     __salt__['mount.mount'](
             os.path.join(mpt, 'dev'),
