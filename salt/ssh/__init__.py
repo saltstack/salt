@@ -27,7 +27,7 @@ class SSH(object):
                 'sudo': self.opts.get('ssh_sudo', False),
                 }
 
-    def run(self):
+    def process(self):
         '''
         Execute the desired routine on the specified systems
         '''
@@ -43,6 +43,13 @@ class SSH(object):
                     target['host'],
                     **target)
             yield single.cmd()
+
+    def run(self):
+        '''
+        Execute the overall routine
+        '''
+        for ret in self.process():
+            salt.output.display_output(ret, salt.opts['out'], self.opts)
 
 
 class Single(multiprocessing.Process):
