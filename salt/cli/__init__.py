@@ -300,7 +300,9 @@ class SaltCall(parsers.SaltCallOptionParser):
 
 
 class SaltRun(parsers.SaltRunOptionParser):
-
+    '''
+    Used to execute Salt runners
+    '''
     def run(self):
         '''
         Execute salt-run
@@ -339,3 +341,14 @@ class SaltRun(parsers.SaltRunOptionParser):
             runner.run()
         except SaltClientError as exc:
             raise SystemExit(str(exc))
+
+
+class SaltSSH(parsers.SaltSSHOptionParser):
+    '''
+    Used to Execute the salt ssh routine
+    '''
+    def run(self):
+        self.parse_args()
+
+        ssh = salt.ssh.SSH(self.config)
+        ssh.run()
