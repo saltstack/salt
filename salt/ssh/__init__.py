@@ -16,6 +16,14 @@ class SSH(object):
         self.opts = opts
         self.roster = salt.roster.Roster(opts)
         self.targets = self.roster.targets(tgt, expr_form)
+        self.defaults = {
+                'user': self.opts.get('ssh_user', 'root'),
+                'port': self.opts.get('ssh_port', '22'),
+                'passwd': self.opts.get('ssh_passwd', 'passwd'),
+                'priv': self.opts.get('ssh_priv'),
+                'timeout': self.opts.get('ssh_timeout', 60),
+                'sudo': self.opts.get('ssh_sudo', False),
+                }
 
     def run(self):
         '''
@@ -24,6 +32,9 @@ class SSH(object):
         # TODO, this is just the code to test the chain, this is where the
         # parallel stuff needs to go once the chain is proven valid
         for target in self.targets.items():
+            for default in self.defaults:
+                if not default in target:
+                    target[default] = self.defaults[default]
             single = Single(
                     self.opts,
                     self.arg_str,
