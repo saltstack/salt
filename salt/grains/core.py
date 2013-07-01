@@ -873,7 +873,7 @@ def ip4():
 
 def fqdn_ip4():
     '''
-    Return the fqdn ipv4 address.
+    Return a list of ipv4 addrs of fqdn
     '''
     try:
         info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET)
@@ -892,7 +892,7 @@ def ip6():
 
 def fqdn_ip6():
     '''
-    Return the fqdn ipv6 address.
+    Return a list of ipv6 addrs of fqdn
     '''
     try:
         info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET6)
