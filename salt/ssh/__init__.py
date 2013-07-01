@@ -23,8 +23,13 @@ class SSH(object):
         '''
         # TODO, this is just the code to test the chain, this is where the
         # parallel stuff needs to go once the chain is proven valid
-        
-
+        for target in self.targets.items():
+            single = Single(
+                    self.opts,
+                    self.arg_str,
+                    target['host'],
+                    **target)
+            yield single.cmd()
 
 
 class Single(multiprocessing.Process):
