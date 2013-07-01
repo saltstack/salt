@@ -1493,3 +1493,34 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
+
+
+class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
+                          LogLevelMixIn):
+    __metaclass__ = OptionParserMeta
+
+    usage = '%prog [options]'
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+
+    # LogLevelMixIn attributes
+    _default_logging_level_ = 'warning'
+    _default_logging_logfile_ = '/var/log/salt/ssh'
+    _loglevel_config_setting_name_ = 'cli_salt_run_log_file'
+
+    def _mixin_setup(self):
+        self.add_option(
+            '-d', '--doc', '--documentation',
+            dest='doc',
+            default=False,
+            action='store_true',
+            help=('Display documentation for runners, pass a module or a '
+                  'runner to see documentation on only that module/runner.')
+        )
+
+    def _mixin_after_parsed(self):
+        self.config['arg_str'] = self.args[0:]
+
+    def setup_config(self):
+        return config.master_config(self.get_config_file_path())
