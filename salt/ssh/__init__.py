@@ -71,6 +71,7 @@ class Single(multiprocessing.Process):
             priv=None,
             timeout=None,
             sudo=False):
+        super(Single, self).__init__()
         self.opts = opts
         self.arg_str = arg_str
         self.shell = salt.ssh.shell.Shell(
