@@ -6,7 +6,6 @@ expected to return
 # Import python libs
 import os
 import glob
-import fnmatch
 import re
 import logging
 
@@ -14,6 +13,7 @@ import logging
 import salt.payload
 
 log = logging.getLogger(__name__)
+
 
 def nodegroup_comp(group, nodegroups, skip=None):
     '''
@@ -97,39 +97,8 @@ class CkMinions(object):
                 grains = self.serial.load(
                     salt.utils.fopen(datap)
                 ).get('grains')
-                comps = expr.rsplit(':', 1)
-                match = salt.utils.traverse_dict(grains, comps[0], {})
-                if len(comps) < 2:
-                    continue
-                if not match:
+                if not salt.utils.subdict_match(grains, expr):
                     minions.remove(id_)
-                    continue
-                if isinstance(match, dict):
-                    if comps[1] == '*':
-                        # We are just checking that the key exists
-                        continue
-                    minions.remove(id_)
-                    continue
-                if isinstance(match, list):
-                    # We are matching a single component to a single list
-                    # member
-                    for member in match:
-                        if fnmatch.fnmatch(
-                                str(member).lower(), comps[1].lower()):
-                            break
-                    else:
-                        # Walked through ALL the members in the list and no
-                        # match?
-                        # Remove the minion id from the list of minions!
-                        minions.remove(id_)
-                    continue
-
-                if fnmatch.fnmatch(str(match.lower()), comps[1].lower()):
-                    continue
-
-                # Still no match!? Remove the minion id from the list
-                minions.remove(id_)
-
         return list(minions)
 
     def _check_grain_pcre_minions(self, expr):
@@ -150,36 +119,8 @@ class CkMinions(object):
                 grains = self.serial.load(
                     salt.utils.fopen(datap)
                 ).get('grains')
-                comps = expr.split(':')
-                if len(comps) < 2:
-                    continue
-                if comps[0] not in grains:
-                    minions.remove(id_)
-                if isinstance(grains[comps[0]], dict) and comps[1] == '*':
-                    # We are just checking that the key exists
-                    continue
-                if isinstance(grains[comps[0]], list):
-                    # We are matching a single component to a single list member
-                    found = False
-                    for member in grains[comps[0]]:
-                        try:
-                            if re.match(comps[1].lower(), str(member).lower()):
-                                found = True
-                        except Exception:
-                            log.error('Invalid Regex in grain match')
-                    if found:
-                        continue
-                    minions.remove(id_)
-                    continue
-                try:
-                    if re.match(
-                        comps[1].lower(),
-                        str(grains[comps[0]]).lower()
-                        ):
-                        continue
-                    else:
-                        minions.remove(id_)
-                except Exception:
+                if not salt.utils.subdict_match(grains, expr,
+                                                delim=':', regex_match=True):
                     minions.remove(id_)
         return list(minions)
 
@@ -229,8 +170,7 @@ class CkMinions(object):
                 'node',
                 'ipcidr',
                 'exsel',
-                'pillar',
-                ]
+                'pillar']
         if not self.opts.get('minion_data_cache', False):
             infinite.append('grain')
             infinite.append('grain_pcre')

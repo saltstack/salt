@@ -161,7 +161,7 @@ def yamlify_arg(arg):
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
             if (isinstance(original_arg, string_types) and
-                not original_arg.startswith("{")):
+                    not original_arg.startswith("{")):
                 return original_arg
             else:
                 return arg
@@ -650,10 +650,10 @@ class Minion(object):
             except TypeError as exc:
                 trb = traceback.format_exc()
                 aspec = _getargs(minion_instance.functions[data['fun']])
-                msg =('TypeError encountered executing {0}: {1}. See '
-                      'debug log for more info.  Possibly a missing '
-                      'arguments issue:  {2}').format(function_name, exc,
-                                                      aspec)
+                msg = ('TypeError encountered executing {0}: {1}. See '
+                       'debug log for more info.  Possibly a missing '
+                       'arguments issue:  {2}').format(function_name, exc,
+                                                       aspec)
                 log.warning(msg)
                 log.debug(
                     'TypeError intercepted: {0}\n{1}'.format(exc, trb),
@@ -1357,56 +1357,23 @@ class Matcher(object):
         Reads in the grains glob match
         '''
         log.debug('grains target: {0}'.format(tgt))
-        comps = tgt.rsplit(':', 1)
-        if len(comps) != 2:
+        if ':' not in tgt:
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        match = salt.utils.traverse_dict(self.opts['grains'], comps[0], {})
-        if match == {}:
-            log.error('Targeted grain "{0}" not found'.format(comps[0]))
-            return False
-        if isinstance(match, dict):
-            if comps[1] == '*':
-                # We are just checking that the key exists
-                return True
-            log.error('Targeted grain "{0}" must correspond to a list, '
-                      'string, or numeric value'.format(comps[0]))
-            return False
-        if isinstance(match, list):
-            # We are matching a single component to a single list member
-            for member in match:
-                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
-                    return True
-            return False
-        return bool(fnmatch.fnmatch(str(match).lower(), comps[1].lower()))
+        return salt.utils.subdict_match(self.opts['grains'], tgt, delim=':')
 
     def grain_pcre_match(self, tgt):
         '''
         Matches a grain based on regex
         '''
-        comps = tgt.split(':')
-        if len(comps) < 2:
-            log.error('Got insufficient arguments for grains from master')
+        log.debug('grains pcre target: {0}'.format(tgt))
+        if ':' not in tgt:
+            log.error('Got insufficient arguments for grains pcre match '
+                      'statement from master')
             return False
-        if comps[0] not in self.opts['grains']:
-            log.error('Got unknown grain from master: {0}'.format(comps[0]))
-            return False
-        if isinstance(self.opts['grains'][comps[0]], dict) and comps[1] == '*':
-            # We are just checking that the key exists
-            return True
-        if isinstance(self.opts['grains'][comps[0]], list):
-            # We are matching a single component to a single list member
-            for member in self.opts['grains'][comps[0]]:
-                if re.match(comps[1].lower(), str(member).lower()):
-                    return True
-            return False
-        return bool(
-            re.match(
-                comps[1].lower(),
-                str(self.opts['grains'][comps[0]]).lower()
-            )
-        )
+        return salt.utils.subdict_match(self.opts['grains'], tgt,
+                                        delim=':', regex_match=True)
 
     def data_match(self, tgt):
         '''
@@ -1447,29 +1414,11 @@ class Matcher(object):
         Reads in the pillar glob match
         '''
         log.debug('pillar target: {0}'.format(tgt))
-        comps = tgt.rsplit(':', 1)
-        if len(comps) != 2:
+        if ':' not in tgt:
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        match = salt.utils.traverse_dict(self.opts['pillar'], comps[0], {})
-        if match == {}:
-            log.error('Targeted pillar "{0}" not found'.format(comps[0]))
-            return False
-        if isinstance(match, dict):
-            if comps[1] == '*':
-                # We are just checking that the key exists
-                return True
-            log.error('Targeted pillar "{0}" must correspond to a list, '
-                      'string, or numeric value'.format(comps[0]))
-            return False
-        if isinstance(match, list):
-            # We are matching a single component to a single list member
-            for member in match:
-                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
-                    return True
-            return False
-        return bool(fnmatch.fnmatch(str(match).lower(), comps[1].lower()))
+        return salt.utils.subdict_match(self.opts['pillar'], tgt, delim=':')
 
     def ipcidr_match(self, tgt):
         '''
