@@ -190,6 +190,15 @@ def fileserver(opts, backends):
     return ret
 
 
+def roster(opts, whitelist=None):
+    '''
+    Returns the file server modules
+    '''
+    load = _create_loader(opts, 'roster', 'roster')
+    ret = load.gen_functions(whitelist=whitelist)
+    return ret
+
+
 def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
