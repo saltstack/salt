@@ -12,10 +12,12 @@ class SSH(object):
     '''
     Create an ssh execution system
     '''
-    def __init__(self, opts, tgt, expr_form='glob'):
+    def __init__(self, opts):
         self.opts = opts
         self.roster = salt.roster.Roster(opts)
-        self.targets = self.roster.targets(tgt, expr_form)
+        self.targets = self.roster.targets(
+                self.opts['tgt'],
+                self.opts['expr_form'])
         self.defaults = {
                 'user': self.opts.get('ssh_user', 'root'),
                 'port': self.opts.get('ssh_port', '22'),
