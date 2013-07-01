@@ -9,15 +9,11 @@ ext_pillar:
 '''
 
 # Import python libs
-import logging
-
-import os
-
-# Import third party libs
-import yaml
-
 from copy import deepcopy
-from salt.pillar import Pillar
+import glob
+import logging
+import os
+import time
 
 # Import third party libs
 HAS_GIT = False
@@ -27,6 +23,8 @@ try:
 except ImportError:
     pass
 
+# Import salt libs
+from salt.pillar import Pillar
 
 
 # Set up logging
@@ -267,9 +265,9 @@ def ext_pillar(pillar, repo_string):
         return {}
 
     update(branch, repo_location)
-    git = repo.git
+    git_ = repo.git
 
-    git.checkout(branch)
+    git_.checkout(branch)
 
     opts = deepcopy(__opts__)
 
