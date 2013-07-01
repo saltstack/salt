@@ -6,6 +6,8 @@ import os
 import shutil
 import sys
 
+from mock import patch, MagicMock
+
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -14,6 +16,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+from salt.modules import file as filemod
 
 
 class FileModuleTest(integration.ModuleCase):
@@ -155,6 +158,60 @@ class FileModuleTest(integration.ModuleCase):
         self.assertEqual(
             'ERROR executing file.remove: File path must be absolute.', ret
         )
+
+    def test_source_list_for_single_file_returns_unchanged(self):
+        ret = self.run_function('file.source_list', ['salt://http/httpd.conf',
+                                                     'filehash', 'base'])
+        self.assertItemsEqual(ret, ['salt://http/httpd.conf', 'filehash'])
+
+    def test_source_list_for_list_returns_existing_file(self):
+        filemod.__salt__ = {
+            'cp.list_master': MagicMock(
+                return_value=['http/httpd.conf.fallback']),
+            'cp.list_master_dirs': MagicMock(return_value=[]),
+        }
+
+        ret = filemod.source_list(['salt://http/httpd.conf',
+                                   'salt://http/httpd.conf.fallback'],
+                                  'filehash', 'base')
+        self.assertItemsEqual(ret, ['salt://http/httpd.conf.fallback',
+                                    'filehash'])
+
+    def test_source_list_for_list_returns_file_from_other_env(self):
+        def list_master(env):
+            dct = {'base': [], 'dev': ['http/httpd.conf']}
+            return dct[env]
+        filemod.__salt__ = {
+            'cp.list_master': MagicMock(side_effect=list_master),
+            'cp.list_master_dirs': MagicMock(return_value=[]),
+        }
+        ret = filemod.source_list(['salt://http/httpd.conf?env=dev',
+                                   'salt://http/httpd.conf.fallback'],
+                                  'filehash', 'base')
+        self.assertItemsEqual(ret, ['salt://http/httpd.conf?env=dev',
+                                    'filehash'])
+
+    def test_source_list_for_list_returns_file_from_dict(self):
+        filemod.__salt__ = {
+            'cp.list_master': MagicMock(return_value=['http/httpd.conf']),
+            'cp.list_master_dirs': MagicMock(return_value=[]),
+        }
+        ret = filemod.source_list(
+            [{'salt://http/httpd.conf': ''}], 'filehash', 'base')
+        self.assertItemsEqual(ret, ['salt://http/httpd.conf', 'filehash'])
+
+    @patch('salt.modules.file.os.remove')
+    def test_source_list_for_list_returns_file_from_dict_via_http(self, remove):
+        remove.return_value = None
+        filemod.__salt__ = {
+            'cp.list_master': MagicMock(return_value=[]),
+            'cp.list_master_dirs': MagicMock(return_value=[]),
+            'cp.get_url': MagicMock(return_value='/tmp/http.conf'),
+        }
+        ret = filemod.source_list(
+            [{'http://t.est.com/http/httpd.conf': 'filehash'}], '', 'base')
+        self.assertItemsEqual(ret, ['http://t.est.com/http/httpd.conf',
+                                    'filehash'])
 
 
 if __name__ == '__main__':
