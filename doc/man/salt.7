@@ -1,4 +1,4 @@
-.TH "SALT" "7" "June 21, 2013" "0.15.90" "Salt"
+.TH "SALT" "7" "July 01, 2013" "0.16.0" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -844,14 +844,19 @@ sudo add\-apt\-repository ppa:saltstack/salt
 .fi
 .IP "add\-apt\-repository: command not found?"
 .sp
-The add\-apt\-repository command is not always present on Ubuntu systems.
-This can be fixed by installing \fIsoftware\-properties\-common\fP:
+The \fBadd\-apt\-repository\fP command is not always present on Ubuntu systems.
+This can be fixed by installing \fIpython\-software\-properties\fP:
 .sp
 .nf
 .ft C
-sudo apt\-get install software\-properties\-common
+sudo apt\-get install python\-software\-properties
 .ft P
 .fi
+.sp
+Note that since Ubuntu 12.10 (Raring Ringtail), \fBadd\-apt\-repository\fP is
+found in the \fIsoftware\-properties\-common\fP package, and is part of the base
+install. Thus, \fBadd\-apt\-repository\fP should be able to be used
+out\-of\-the\-box to add the PPA.
 .RE
 .sp
 Alternately, manually add the repository and import the PPA key with these commands:
@@ -987,8 +992,8 @@ The \fIsalt\-minion\fP service will appear in the Windows Service Manager and ca
 started and stopped there or with the command line program \fIsc\fP like any other
 Windows service.
 .sp
-If the minion won\(aqt start, try installing the Microsoft Visual C++ 2008 x64
-redistributable.
+If the minion won\(aqt start, try installing the Microsoft Visual C++ 2008 x64 SP1
+redistributable. Allow all Windows updates to run salt\-minion smoothly.
 .sp
 Make sure that the minion config file has the line \fIipc_mode: tcp\fP
 .SS Silent Installer option
@@ -1036,7 +1041,7 @@ git clone git://github.com/saltstack/salt.git
 .fi
 .INDENT 0.0
 .IP 2. 4
-Install \fI\%Microsoft Visual Studio 2008 Express\fP.
+Install Microsoft Visual Studio 2008 Express.
 You must use Visual Studio 2008 Express, \fBnot\fP Visual Studio 2010 Express.
 .IP 3. 4
 Install \fI\%Python 2.7.x\fP
@@ -2815,10 +2820,10 @@ gitfs backend. This example should not be read as a recommended way to lay
 out files and git repos.
 .RE
 .IP Note
-The \fI\%file://\fP prefix denotes a git repository in a local directory.  However,
-it will still use the given \fI\%file://\fP URL as a remote, rather than copying
-the git repo to the salt cache.  This means that any refs you want
-accessible must exist as \fIlocal\fP refs in the specified repo.
+The \fBfile://\fP prefix denotes a git repository in a local directory.
+However, it will still use the given \fBfile://\fP URL as a remote, rather
+than copying the git repo to the salt cache.  This means that any refs you
+want accessible must exist as \fIlocal\fP refs in the specified repo.
 .RE
 .sp
 Assume that each repository contains some files:
@@ -5450,6 +5455,36 @@ git:
 .fi
 .sp
 Note that you cannot just list key/value\-information in \fBtop.sls\fP.
+.SS Including Other Pillars
+.sp
+Pillar SLS files may include other pillar files, similar to State files.
+Two syntaxes are available for this purpose. The simple form simply includes
+the additional pillar as if it were part of the same file:
+.sp
+.nf
+.ft C
+include:
+  \- users
+.ft P
+.fi
+.sp
+The full include form allows two additional options \-\- passing default values
+to the templating engine for the included pillar file as well as an optional
+key under which to nest the results of the included pillar:
+.sp
+.nf
+.ft C
+include:
+  \- users:
+      defaults:
+        \- sudo: [\(aqbob\(aq, \(aqpaul\(aq]
+      key: users
+.ft P
+.fi
+.sp
+With this form, the included file (users.sls) will be nested within the \(aqusers\(aq
+key of the compiled pillar. Additionally, the \(aqsudo\(aq value will be available
+as a template variable to users.sls.
 .SS Viewing Minion Pillar
 .sp
 Once the pillar is set up the data can be viewed on the minion via the
@@ -5568,6 +5603,17 @@ Using the new \fImaster_tops\fP option is simple:
 .ft C
 master_tops:
   ext_nodes: cobbler\-external\-nodes
+.ft P
+.fi
+.sp
+or:
+.sp
+.nf
+.ft C
+master_tops:
+  reclass:
+    inventory_base_uri: /etc/reclass
+    classes_uri: roles
 .ft P
 .fi
 .SH JOB MANAGEMENT
@@ -7347,6 +7393,353 @@ command:
 salt \e* cmd.run \(aqrm \-rf /tmp/*\(aq
 .ft P
 .fi
+.SH SALT CONVENTIONS
+.SS Salt Release Process
+.sp
+The goal for Salt projects is to cut a new feature release every four to six
+weeks.  This document outlines the process for these releases, and the
+subsequent bug fix releases which follow.
+.SS Feature Release Process
+.sp
+When a new release is ready to be cut, the person responsible for cutting the
+release will follow the following steps (written using the 0.16 release as an
+example):
+.INDENT 0.0
+.IP 1. 3
+All open issues on the release milestone should be moved to the next release
+milestone. (e.g. from the \fB0.16\fP milestone to the \fB0.17\fP milestone)
+.IP 2. 3
+Release notes should be created documenting the major new features and
+bugfixes in the release.
+.IP 3. 3
+Create an annotated tag with only the major and minor version numbers,
+preceded by the letter \fBv\fP.  (e.g. \fBv0.16\fP)  This tag will reside on the
+\fBdevelop\fP branch.
+.IP 4. 3
+Create a branch for the new release, using only the major and minor version
+numbers.  (e.g. \fB0.16\fP)
+.IP 5. 3
+On this new branch, create an annotated tag for the first revision release,
+which is generally a release candidate.  It should be preceded by the letter
+\fBv\fP.  (e.g. \fBv0.16.0RC\fP)
+.IP 6. 3
+The release should be packaged from this annotated tag and uploaded to PyPI.
+.IP 7. 3
+The packagers should be notified on the \fBsalt\-packagers\fP mailing list so
+they can create packages for all the major operating systems.  (note that
+release candidates should go in the testing repositories)
+.IP 8. 3
+After the packagers have been given a few days to compile the packages, the
+release is announced on the \fBsalt\-users\fP mailing list.
+.UNINDENT
+.SS Maintenance and Bugfix Releases
+.sp
+Once a release has been cut, regular cherry\-picking sessions should begin to
+cherry\-pick any bugfixes from the \fBdevelop\fP branch to the release branch
+(e.g. \fB0.16\fP).  Once major bugs have been fixes and cherry\-picked, a bugfix
+release can be cut:
+.INDENT 0.0
+.IP 1. 3
+On the release branch (i.e. \fB0.16\fP), create an annotated tag for the
+revision release.  It should be preceded by the letter \fBv\fP.  (e.g.
+\fBv0.16.1\fP)  Release candidates are unnecessary for bugfix releases.
+.IP 2. 3
+The release should be packaged from this annotated tag and uploaded to PyPI.
+.IP 3. 3
+The packagers should be notified on the \fBsalt\-packagers\fP mailing list so
+they can create packages for all the major operating systems.
+.IP 4. 3
+After the packagers have been given a few days to compile the packages, the
+release is announced on the \fBsalt\-users\fP mailing list.
+.UNINDENT
+.SS Salt Coding Style
+.sp
+Salt is developed with a certain coding style, while the style is dominantly
+PEP 8 it is not completely PEP 8. It is also noteworthy that a few
+development techniques are also employed which should be adhered to. In the
+end, the code is made to be "Salty".
+.sp
+Most importantly though, we will accept code that violates the coding style and
+KINDLY ask the contributor to fix it, or go ahead and fix the code on behalf of
+the contributor. Coding style is NEVER grounds to reject code contributions,
+and is never grounds to talk down to another member of the community (There are
+no grounds to treat others without respect, especially people working to
+improve Salt)!!
+.SS Strings
+.sp
+Salt follows a few rules when formatting strings:
+.SS Single Quotes
+.sp
+In Salt, all strings use single quotes unless there is a good reason not to.
+This means that docstrings use single quotes, standard strings use single
+quotes etc.:
+.sp
+.nf
+.ft C
+def foo():
+    \(aq\(aq\(aq
+    A function that does things
+    \(aq\(aq\(aq
+    name = \(aqA name\(aq
+    return name
+.ft P
+.fi
+.SS Formatting Strings
+.sp
+All strings which require formatting should use the \fI.format\fP string method:
+.sp
+.nf
+.ft C
+data = \(aqsome text\(aq
+more = \(aq{0} and then some\(aq.format(data)
+.ft P
+.fi
+.sp
+Make sure to use indices or identifiers in the format brackets, since empty
+brackets are not supported by python 2.6.
+.sp
+Please do NOT use printf formatting.
+.SS Docstring Conventions
+.sp
+Docstrings should always add a newline, docutils takes care of the new line and
+it makes the code cleaner and more vertical:
+.sp
+\fIGOOD\fP:
+.sp
+.nf
+.ft C
+def bar():
+    \(aq\(aq\(aq
+    Here lies a docstring with a newline after the quotes and is the salty
+    way to handle it! Vertical code is the way to go!
+    \(aq\(aq\(aq
+    return
+.ft P
+.fi
+.sp
+\fIBAD\fP:
+.sp
+.nf
+.ft C
+def baz():
+    \(aq\(aq\(aqThis is not ok!\(aq\(aq\(aq
+    return
+.ft P
+.fi
+.SS Imports
+.sp
+Salt code prefers importing modules and not explicit functions. This is both a
+style and functional preference. The functional preference originates around
+the fact that the module import system used by pluggable modules will include
+callable objects (functions) that exist in the direct module namespace. This
+is not only messy, but may unintentionally expose code python libs to the Salt
+interface and pose a security problem.
+.sp
+To say this more directly with an example, this is \fIGOOD\fP:
+.sp
+.nf
+.ft C
+import os
+
+def minion_path():
+    path = os.path.join(self.opts[\(aqcachedir\(aq], \(aqminions\(aq)
+    return path
+.ft P
+.fi
+.sp
+This on the other hand is \fIDISCOURAGED\fP:
+.sp
+.nf
+.ft C
+from os.path import join
+
+def minion_path():
+path = join(self.opts[\(aqcachedir\(aq], \(aqminions\(aq)
+return path
+.ft P
+.fi
+.sp
+The time when this is changed is for importing exceptions, generally directly
+importing exceptions is preferred:
+.sp
+This is a good way to import exceptions:
+.sp
+.nf
+.ft C
+from salt.exceptions import CommandExecutionError
+.ft P
+.fi
+.SS Vertical is Better
+.sp
+When writing Salt code, vertical code is generally preferred. This is not a hard
+rule but more of a guideline. As PEP 8 specifies, Salt code should not exceed 79
+characters on a line, but it is preferred to separate code out into more
+newlines in some cases for better readability:
+.sp
+.nf
+.ft C
+import os
+
+os.chmod(
+        os.path.join(self.opts[\(aqsock_dir\(aq],
+            \(aqminion_event_pub.ipc\(aq),
+        448
+        )
+.ft P
+.fi
+.sp
+Where there are more line breaks, this is also apparent when constructing a
+function with many arguments, something very common in state functions for
+instance:
+.sp
+.nf
+.ft C
+def managed(name,
+        source=None,
+        source_hash=\(aq\(aq,
+        user=None,
+        group=None,
+        mode=None,
+        template=None,
+        makedirs=False,
+        context=None,
+        replace=True,
+        defaults=None,
+        env=None,
+        backup=\(aq\(aq,
+        **kwargs):
+.ft P
+.fi
+.SS Indenting
+.sp
+Some confusion exists in the python world about indenting things like function
+calls, the above examples use 8 spaces when indenting comma\-delimited
+constructs.
+.sp
+The confusion arises because the pep8 program INCORRECTLY flags this as wrong,
+where PEP 8, the document, cites only using 4 spaces here as wrong, as it
+doesn\(aqt differentiate from a new indent level.
+.sp
+Right:
+.sp
+.nf
+.ft C
+def managed(name,
+        source=None,
+        source_hash=\(aq\(aq,
+        user=None)
+.ft P
+.fi
+.sp
+WRONG:
+.sp
+.nf
+.ft C
+def managed(name,
+    source=None,
+    source_hash=\(aq\(aq,
+    user=None)
+.ft P
+.fi
+.sp
+Lining up the indent is also correct:
+.sp
+.nf
+.ft C
+def managed(name,
+            source=None,
+            source_hash=\(aq\(aq,
+            user=None)
+.ft P
+.fi
+.sp
+This also applies to function calls and other hanging indents.
+.sp
+pep8 and Flake8 (and, by extension, the vim plugin Syntastic) will complain
+about the double indent for hanging indents.  This is a \fI\%known conflict\fP between
+pep8 (the script) and the actual PEP 8 standard.  It is recommended that this
+particular warning be ignored with the following lines in
+\fB~/.config/flake8\fP:
+.sp
+.nf
+.ft C
+[flake8]
+ignore = E226,E241,E242,E126
+.ft P
+.fi
+.sp
+Make sure your Flake8/pep8 are up to date.  The first three errors are ignored
+by default and are present here to keep the behavior the same.  This will also
+work for pep8 without the Flake8 wrapper \-\- just replace all instances of
+\(aqflake8\(aq with \(aqpep8\(aq, including the filename.
+.SS Code Churn
+.sp
+Many pull requests have been submitted that only churn code in the name of
+PEP 8. Code churn is a leading source of bugs and is strongly discouraged.
+While style fixes are encouraged they should be isolated to a single file per
+commit, and the changes should be legitimate, if there are any questions about
+whether a style change is legitimate please reference this document and the
+official PEP 8 (\fI\%http://www.python.org/dev/peps/pep-0008/\fP) document before
+changing code. Many claims that a change is PEP 8 have been invalid, please
+double check before committing fixes.
+.SH SALT RELEASE PROCESS
+.sp
+The goal for Salt projects is to cut a new feature release every four to six
+weeks.  This document outlines the process for these releases, and the
+subsequent bug fix releases which follow.
+.SS Feature Release Process
+.sp
+When a new release is ready to be cut, the person responsible for cutting the
+release will follow the following steps (written using the 0.16 release as an
+example):
+.INDENT 0.0
+.IP 1. 3
+All open issues on the release milestone should be moved to the next release
+milestone. (e.g. from the \fB0.16\fP milestone to the \fB0.17\fP milestone)
+.IP 2. 3
+Release notes should be created documenting the major new features and
+bugfixes in the release.
+.IP 3. 3
+Create an annotated tag with only the major and minor version numbers,
+preceded by the letter \fBv\fP.  (e.g. \fBv0.16\fP)  This tag will reside on the
+\fBdevelop\fP branch.
+.IP 4. 3
+Create a branch for the new release, using only the major and minor version
+numbers.  (e.g. \fB0.16\fP)
+.IP 5. 3
+On this new branch, create an annotated tag for the first revision release,
+which is generally a release candidate.  It should be preceded by the letter
+\fBv\fP.  (e.g. \fBv0.16.0RC\fP)
+.IP 6. 3
+The release should be packaged from this annotated tag and uploaded to PyPI.
+.IP 7. 3
+The packagers should be notified on the \fBsalt\-packagers\fP mailing list so
+they can create packages for all the major operating systems.  (note that
+release candidates should go in the testing repositories)
+.IP 8. 3
+After the packagers have been given a few days to compile the packages, the
+release is announced on the \fBsalt\-users\fP mailing list.
+.UNINDENT
+.SS Maintenance and Bugfix Releases
+.sp
+Once a release has been cut, regular cherry\-picking sessions should begin to
+cherry\-pick any bugfixes from the \fBdevelop\fP branch to the release branch
+(e.g. \fB0.16\fP).  Once major bugs have been fixes and cherry\-picked, a bugfix
+release can be cut:
+.INDENT 0.0
+.IP 1. 3
+On the release branch (i.e. \fB0.16\fP), create an annotated tag for the
+revision release.  It should be preceded by the letter \fBv\fP.  (e.g.
+\fBv0.16.1\fP)  Release candidates are unnecessary for bugfix releases.
+.IP 2. 3
+The release should be packaged from this annotated tag and uploaded to PyPI.
+.IP 3. 3
+The packagers should be notified on the \fBsalt\-packagers\fP mailing list so
+they can create packages for all the major operating systems.
+.IP 4. 3
+After the packagers have been given a few days to compile the packages, the
+release is announced on the \fBsalt\-users\fP mailing list.
+.UNINDENT
 .SH SALT CODING STYLE
 .sp
 Salt is developed with a certain coding style, while the style is dominantly
@@ -7694,7 +8087,7 @@ pillar interfaces. This document will describe an outline of an ext_pillar
 module.
 .SS Location
 .sp
-Salt expects to find your ext_pillar module in the same location where it
+Salt expects to find your \fBext_pillar\fP module in the same location where it
 looks for other python modules. If the \fBextension_modules\fP option in your
 Salt master configuration is set, Salt will look for a \fBpillar\fP directory
 under there and load all the modules it finds. Otherwise, it will look in
@@ -9500,7 +9893,7 @@ _
 T{
 \fBsolaris_shadow\fP
 T}	T{
-Manage the shadow file
+Manage the password database on Solaris systems
 T}
 _
 T{
@@ -11217,7 +11610,7 @@ salt \(aq*\(aq bridge.interfaces br0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.bridge.list()
+.B salt.modules.bridge.list_()
 Returns the machine\(aqs bridges list
 .sp
 CLI Example:
@@ -11449,8 +11842,11 @@ salt \(aq*\(aq cmd.has_exec cat
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.retcode(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, umask=None, quiet=False, timeout=None)
+.B salt.modules.cmdmod.retcode(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, umask=None, quiet=False, timeout=None)
 Execute a shell command and return the command\(aqs return code.
+.sp
+Note that \fBenv\fP represents the environment variables for the command, and
+should be formatted as a dict, or a YAML string which resolves to a dict.
 .sp
 CLI Example:
 .sp
@@ -11469,11 +11865,24 @@ For example:
 salt \(aq*\(aq cmd.retcode template=jinja "file {{grains.pythonpath[0]}}/python"
 .ft P
 .fi
+.sp
+A string of standard input can be specified for the command to be run using
+the \fBstdin\fP parameter. This can be useful in cases where sensitive
+information must be read from standard input.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.retcode "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive\en\(aq
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True, umask=None, quiet=False, timeout=None, **kwargs)
+.B salt.modules.cmdmod.run(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True, umask=None, quiet=False, timeout=None, **kwargs)
 Execute the passed command and return the output as a string
+.sp
+Note that \fBenv\fP represents the environment variables for the command, and
+should be formatted as a dict, or a YAML string which resolves to a dict.
 .sp
 CLI Example:
 .sp
@@ -11492,11 +11901,32 @@ For example:
 salt \(aq*\(aq cmd.run template=jinja "ls \-l /tmp/{{grains.id}} | awk \(aq/foo/{print \e$2}\(aq"
 .ft P
 .fi
+.sp
+Specify an alternate shell with the shell parameter:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.run "Get\-ChildItem C:\e " shell=\(aqpowershell\(aq
+.ft P
+.fi
+.sp
+A string of standard input can be specified for the command to be run using
+the \fBstdin\fP parameter. This can be useful in cases where sensitive
+information must be read from standard input.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.run "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive\en\(aq
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_all(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True, umask=None, quiet=False, timeout=None, **kwargs)
+.B salt.modules.cmdmod.run_all(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True, umask=None, quiet=False, timeout=None, **kwargs)
 Execute the passed command and return a dict of return data
+.sp
+Note that \fBenv\fP represents the environment variables for the command, and
+should be formatted as a dict, or a YAML string which resolves to a dict.
 .sp
 CLI Example:
 .sp
@@ -11515,11 +11945,24 @@ For example:
 salt \(aq*\(aq cmd.run_all template=jinja "ls \-l /tmp/{{grains.id}} | awk \(aq/foo/{print \e$2}\(aq"
 .ft P
 .fi
+.sp
+A string of standard input can be specified for the command to be run using
+the \fBstdin\fP parameter. This can be useful in cases where sensitive
+information must be read from standard input.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.run_all "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive\en\(aq
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_stderr(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True, umask=None, quiet=False, timeout=None, **kwargs)
+.B salt.modules.cmdmod.run_stderr(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True, umask=None, quiet=False, timeout=None, **kwargs)
 Execute a command and only return the standard error
+.sp
+Note that \fBenv\fP represents the environment variables for the command, and
+should be formatted as a dict, or a YAML string which resolves to a dict.
 .sp
 CLI Example:
 .sp
@@ -11538,11 +11981,24 @@ For example:
 salt \(aq*\(aq cmd.run_stderr template=jinja "ls \-l /tmp/{{grains.id}} | awk \(aq/foo/{print \e$2}\(aq"
 .ft P
 .fi
+.sp
+A string of standard input can be specified for the command to be run using
+the \fBstdin\fP parameter. This can be useful in cases where sensitive
+information must be read from standard input.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.run_stderr "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive\en\(aq
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_stdout(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True, umask=None, quiet=False, timeout=None, **kwargs)
+.B salt.modules.cmdmod.run_stdout(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True, umask=None, quiet=False, timeout=None, **kwargs)
 Execute a command, and only return the standard out
+.sp
+Note that \fBenv\fP represents the environment variables for the command, and
+should be formatted as a dict, or a YAML string which resolves to a dict.
 .sp
 CLI Example:
 .sp
@@ -11561,10 +12017,20 @@ For example:
 salt \(aq*\(aq cmd.run_stdout template=jinja "ls \-l /tmp/{{grains.id}} | awk \(aq/foo/{print \e$2}\(aq"
 .ft P
 .fi
+.sp
+A string of standard input can be specified for the command to be run using
+the \fBstdin\fP parameter. This can be useful in cases where sensitive
+information must be read from standard input.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.run_stdout "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive\en\(aq
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.script(source, args=None, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=\(aqbase\(aq, template=\(aqjinja\(aq, umask=None, timeout=None, **kwargs)
+.B salt.modules.cmdmod.script(source, args=None, cwd=None, stdin=None, runas=None, shell=\(aq/bin/bash\(aq, env=\(aqbase\(aq, template=\(aqjinja\(aq, umask=None, timeout=None, **kwargs)
 Download a script from a remote location and execute the script locally.
 The script can be located on the salt master file server or on an HTTP/FTP
 server.
@@ -11581,12 +12047,23 @@ CLI Example:
 .ft C
 salt \(aq*\(aq cmd.script salt://scripts/runme.sh
 salt \(aq*\(aq cmd.script salt://scripts/runme.sh \(aqarg1 arg2 "arg 3"\(aq
+salt \(aq*\(aq cmd.script salt://scripts/windows_task.ps1 args=\(aq \-Input c:\etmp\einfile.txt\(aq shell=\(aqpowershell\(aq
+.ft P
+.fi
+.sp
+A string of standard input can be specified for the command to be run using
+the \fBstdin\fP parameter. This can be useful in cases where sensitive
+information must be read from standard input.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.script salt://scripts/runme.sh stdin=\(aqone\entwo\enthree\enfour\enfive\en\(aq
 .ft P
 .fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.script_retcode(source, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=\(aqbase\(aq, template=\(aqjinja\(aq, umask=None, timeout=None, **kwargs)
+.B salt.modules.cmdmod.script_retcode(source, cwd=None, stdin=None, runas=None, shell=\(aq/bin/bash\(aq, env=\(aqbase\(aq, template=\(aqjinja\(aq, umask=None, timeout=None, **kwargs)
 Download a script from a remote location and execute the script locally.
 The script can be located on the salt master file server or on an HTTP/FTP
 server.
@@ -11603,6 +12080,16 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq cmd.script_retcode salt://scripts/runme.sh
+.ft P
+.fi
+.sp
+A string of standard input can be specified for the command to be run using
+the \fBstdin\fP parameter. This can be useful in cases where sensitive
+information must be read from standard input.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.script_retcode salt://scripts/runme.sh stdin=\(aqone\entwo\enthree\enfour\enfive\en\(aq
 .ft P
 .fi
 .UNINDENT
@@ -11707,7 +12194,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq pillar.get pkg:apache
+salt \(aq*\(aq config.get pkg:apache
 .ft P
 .fi
 .UNINDENT
@@ -14464,10 +14951,10 @@ overwrite this backup
 .B Flags to modify the search. Valid values are :
 \fBg\fP: Replace all occurrences of the pattern, not just the first.
 \fBI\fP: Ignore case.
-\fBL\fP: Make w, W, , B, s and S dependent on the locale.
+\fBL\fP: Make \fB\ew\fP, \fB\eW\fP, \fB\eb\fP, \fB\eB\fP, \fB\es\fP and \fB\eS\fP dependent on the locale.
 \fBM\fP: Treat multiple lines as a single line.
 \fBS\fP: Make \fI.\fP match all characters, including newlines.
-\fBU\fP: Make w, W, b, B, d, D, s and S dependent on Unicode.
+\fBU\fP: Make \fB\ew\fP, \fB\eW\fP, \fB\eb\fP, \fB\eB\fP, \fB\ed\fP, \fB\eD\fP, \fB\es\fP and \fB\eS\fP dependent on Unicode.
 \fBX\fP: Verbose (whitespace is ignored).
 .UNINDENT
 .TP
@@ -14629,11 +15116,14 @@ salt \(aq*\(aq file.set_selinux_context path <role> <type> <range>
 .TP
 .B salt.modules.file.source_list(source, source_hash, env)
 Check the source list and return the source to use
-.INDENT 7.0
-.TP
-.B CLI Example::
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
 salt \(aq*\(aq file.source_list salt://http/httpd.conf \(aq{hash_type: \(aqmd5\(aq, \(aqhsum\(aq: <md5sum>}\(aq base
-.UNINDENT
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -16671,7 +17161,7 @@ salt \(aq*\(aq git.status /path/to/git/repo
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.git.submodule(cwd, init=True, opts=None, user=None)
+.B salt.modules.git.submodule(cwd, init=True, opts=None, user=None, identity=None)
 Initialize git submodules
 .INDENT 7.0
 .TP
@@ -16689,6 +17179,10 @@ Any additional options to add to the command line
 .B user
 None
 Run git as a user other than what the minion runs as
+.TP
+.B identity
+None
+A path to a private key to use over SSH
 .UNINDENT
 .sp
 CLI Example:
@@ -17332,6 +17826,19 @@ salt \(aq*\(aq img.mount_image /tmp/foo
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.modules.img.mount_image(location)
+Mount the named image and return the mount point
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq img.mount_image /tmp/foo
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.modules.img.seed(location, id_=\(aq\(aq, config=None)
 Make sure that the image at the given location is mounted, salt is
 installed, keys are seeded, and execute a state run
@@ -17917,6 +18424,19 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq kmod.check_available kvm
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.kmod.is_loaded(mod)
+Check to see if the specified kernel module is loaded
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq kmod.is_loaded kvm
 .ft P
 .fi
 .UNINDENT
@@ -19693,11 +20213,24 @@ can be easily read by other minions
 .B salt.modules.mine.get(tgt, fun, expr_form=\(aqglob\(aq)
 Get data from the mine based on the target, function and expr_form
 .sp
+Targets can be matched based on any standard matching system that can be
+matched on the master via these keywords:
+.INDENT 7.0
+.INDENT 3.5
+glob
+pcre
+grain
+grain_pcre
+pillar
+.UNINDENT
+.UNINDENT
+.sp
 CLI Example:
 .sp
 .nf
 .ft C
 salt \(aq*\(aq mine.get \(aq*\(aq network.interfaces
+salt \(aq*\(aq mine.get \(aqos:Fedora\(aq network.interfaces grain
 .ft P
 .fi
 .UNINDENT
@@ -25774,7 +26307,7 @@ salt \(aq*\(aq rbenv.is_installed
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.rbenv.list(runas=None)
+.B salt.modules.rbenv.list_(runas=None)
 List the installable versions of ruby.
 .sp
 CLI Example:
@@ -26210,7 +26743,7 @@ salt \(aq*\(aq service.get_enabled limit=sysvinit
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.rh_service.reload(name, **kwargs)
+.B salt.modules.rh_service.reload_(name, **kwargs)
 Reload the named service
 .sp
 CLI Example:
@@ -27394,8 +27927,14 @@ salt \(aq*\(aq shadow.set_mindays username 7
 .TP
 .B salt.modules.shadow.set_password(name, password, use_usermod=False)
 Set the password for a named user. The password must be a properly defined
-hash, the password hash can be generated with this command:
-\fBpython \-c "import crypt, getpass, pwd; print crypt.crypt(\(aqpassword\(aq, \(aq\e$6\e$SALTsalt\e$\(aq)"\fP
+hash. The password hash can be generated with this command:
+.sp
+\fBpython \-c "import crypt; print crypt.crypt(\(aqpassword\(aq,
+\(aq$6$SALTsalt\(aq)"\fP
+.sp
+\fBSALTsalt\fP is the 8\-character crpytographic salt. Valid characters in the
+salt are \fB.\fP, \fB/\fP, and any alphanumeric character.
+.sp
 Keep in mind that the $6 represents a sha512 hash, if your OS is using a
 different hashing algorithm this needs to be changed accordingly
 .sp
@@ -27403,7 +27942,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq shadow.set_password root $1$UYCIxa628.9qXjpQCjM4a..
+salt \(aq*\(aq shadow.set_password root \(aq$1$UYCIxa628.9qXjpQCjM4a..\(aq
 .ft P
 .fi
 .UNINDENT
@@ -28259,7 +28798,7 @@ salt \(aq*\(aq pkg.version <package1> <package2> <package3> ...
 .UNINDENT
 .SS salt.modules.solaris_shadow
 .sp
-Manage the shadow file
+Manage the password database on Solaris systems
 .INDENT 0.0
 .TP
 .B salt.modules.solaris_shadow.info(name)
@@ -30576,12 +31115,14 @@ salt \(aq*\(aq sys.argspec
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.sysmod.doc(module=\(aq\(aq)
+.B salt.modules.sysmod.doc(*args, **kwargs)
 Return the docstrings for all modules. Optionally, specify a module or a
 function to narrow the selection.
 .sp
 The strings are aggregated into a single document on the master for easy
 reading.
+.sp
+Multiple modules/functions can be specified.
 .sp
 CLI Example:
 .sp
@@ -30590,14 +31131,15 @@ CLI Example:
 salt \(aq*\(aq sys.doc
 salt \(aq*\(aq sys.doc sys
 salt \(aq*\(aq sys.doc sys.doc
+salt \(aq*\(aq sys.doc network.traceroute user.info
 .ft P
 .fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.sysmod.list_functions(module=\(aq\(aq)
-List the functions for all modules. Optionally, specify a module to list
-from.
+.B salt.modules.sysmod.list_functions(*args, **kwargs)
+List the functions for all modules. Optionally, specify a module or modules
+from which to list.
 .sp
 CLI Example:
 .sp
@@ -30605,6 +31147,7 @@ CLI Example:
 .ft C
 salt \(aq*\(aq sys.list_functions
 salt \(aq*\(aq sys.list_functions sys
+salt \(aq*\(aq sys.list_functions sys user
 .ft P
 .fi
 .UNINDENT
@@ -31140,6 +31683,20 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq test.sleep 20
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.test.tty(device, echo=None)
+Echo a string to a specific tty
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq test.tty tty0 \(aqThis is a test\(aq
+salt \(aq*\(aq test.tty pts3 \(aqThis is a test\(aq
 .ft P
 .fi
 .UNINDENT
@@ -35025,6 +35582,14 @@ yum Python module
 rpmUtils Python module
 .UNINDENT
 .UNINDENT
+.sp
+This module uses the python interface to YUM. Note that with a default
+/etc/yum.conf, this will cause messages to be sent to sent to syslog on
+/dev/log, with a log facility of \fBLOG_USER\fP. This is in addition to
+whatever is logged to /var/log/yum.log. See the manpage for \fByum.conf(5)\fP for
+information on how to use the \fBsyslog_facility\fP and \fBsyslog_device\fP config
+parameters to configure how syslog is handled, or take the above defaults into
+account when configuring your syslog daemon.
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.clean_metadata()
@@ -38038,7 +38603,7 @@ logic defined above.
 .sp
 The most basic requisite statement is \fBrequire\fP. The behavior of require is
 simple. Make sure that the dependent state is executed before the depending
-state, and it the dependent state fails, don\(aqt run the depending state. So in
+state, and if the dependent state fails, don\(aqt run the depending state. So in
 the above examples the file \fB/etc/vimrc\fP will only be applied after the vim
 package is installed and only if the vim package is installed successfully.
 .SS Watch
@@ -40525,7 +41090,28 @@ create the parent directory
 .TP
 .B salt.states.file.touch(name, atime=None, mtime=None, makedirs=False)
 Replicate the \(aqnix "touch" command to create a new empty
-file or update the atime and mtime of an existing  file.
+file or update the atime and mtime of an existing file.
+.sp
+Note that if you just want to create a file and don\(aqt care about atime or
+mtime, you should use \fBfile.managed\fP instead, as it is more
+feature\-complete.  (Just leave out the \fBsource\fP/\fBtemplate\fP/\fBcontents\fP
+arguments, and it will just create the file and/or check its permissions,
+without messing with contents)
+.INDENT 7.0
+.TP
+.B name
+name of the file
+.TP
+.B atime
+atime of the file
+.TP
+.B mtime
+mtime of the file
+.TP
+.B makedirs
+whether we should create the parent directory/directories in order to
+touch the file
+.UNINDENT
 .sp
 Usage:
 .sp
@@ -41695,7 +42281,10 @@ eth0:
     \- dns:
       \- 8.8.8.8
       \- 8.8.4.4
+
+routes:
   network.routes:
+    \- name: eth0
     \- routes:
       \- name: secure_network
         ipaddr: 10.2.0.0
@@ -43304,7 +43893,7 @@ path to supervisorctl bin or path to virtualenv with supervisor installed
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.supervisord.running(name, restart=False, runas=None, conf_file=None, bin_env=None)
+.B salt.states.supervisord.running(name, restart=False, update=False, runas=None, conf_file=None, bin_env=None)
 Ensure the named service is running.
 .INDENT 7.0
 .TP
@@ -43312,7 +43901,10 @@ Ensure the named service is running.
 Service name as defined in the supervisor configuration file
 .TP
 .B restart
-Whether to force a restart e.g. when updating a service
+Whether to force a restart
+.TP
+.B update
+Whether to update the supervisor configuration.
 .TP
 .B runas
 Name of the user to run the supervisorctl command
@@ -43670,7 +44262,12 @@ Please note that directories leading up to the home directory
 will NOT be created.
 .TP
 .B password
-A password hash to set for the user
+A password hash to set for the user. This field is only supported on
+Linux, FreeBSD, NetBSD, OpenBSD, and Solaris
+.UNINDENT
+.sp
+Changed in version 0.16.0: BSD support added.
+.INDENT 7.0
 .TP
 .B enforce_password
 Set to False to keep the password from being changed if it has already
@@ -44901,6 +45498,11 @@ T}	T{
 Execute an unmodified puppet_node_classifier and read the output as YAML.
 T}
 _
+T{
+\fBreclass\fP
+T}	T{
+T}
+_
 .TE
 .SS salt.pillar.cmd_json
 .sp
@@ -45112,6 +45714,11 @@ T{
 \fBmongo\fP
 T}	T{
 Read tops data from a mongodb collection.
+T}
+_
+T{
+\fBreclass\fP
+T}	T{
 T}
 _
 .TE
@@ -45710,8 +46317,13 @@ Return the key strings
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.wheel.key.list_(match)
+List all the keys under a named status
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.wheel.key.list_all()
-List the keys under a named status
+List all the keys
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -47944,6 +48556,19 @@ determine what minions are expected to reply from executions.
 minion_cache_dir: True
 .ft P
 .fi
+.SS \fBenforce_mine_cache\fP
+.sp
+Default: False
+.sp
+By\-default when disabling the minion_data_cache mine will stop working since
+it is based on cached data, by enabling this option we explicitly enabling
+only the cache for the mine system.
+.sp
+.nf
+.ft C
+enforce_mine_cache: False
+.ft P
+.fi
 .SS \fBsock_dir\fP
 .sp
 Default:: \fB/tmp/salt\-unix\fP
@@ -48213,6 +48838,8 @@ Default:: \fBNone\fP
 ext_pillar:
   \- hiera: /etc/hiera.yaml
   \- cmd_yaml: cat /etc/salt/yaml
+  \- reclass:
+      inventory_base_uri: /etc/reclass
 .ft P
 .fi
 .sp
@@ -49399,8 +50026,14 @@ Uninstall software using the pkg module:
 .nf
 .ft C
 $ salt \e* pkg.remove firefox
+
+$ salt \e* pkg.purge firefox
 .ft P
 .fi
+.sp
+\fBpkg.purge\fP just executes \fBpkg.remove\fP on Windows. At some point in the
+future \fBpkg.purge\fP may direct the installer to remove all configs and
+settings for software packages that support that option.
 .SS Git Hosted Repo
 .sp
 Windows software package definitions can also be hosted in one or more git
@@ -51593,7 +52226,9 @@ and a new, powerful requisite.
 This new capability allows for a minion to be actively connected to multiple
 salt masters at the same time. This allows for multiple masters to send out commands
 to minions and for minions to automatically reconnect to masters that have gone
-down. A tutorial is available to
+down. A tutorial is available to help get started here:
+.sp
+\fBMulti Master Tutorial\fP
 .SS Prereq, the New Requisite
 .sp
 The new \fIprereq\fP requisite is very powerful! It allows for states to execute
@@ -51687,6 +52322,10 @@ When accepting new keys with \fBsalt\-key \-a minion\-id\fP or \fBsalt\-key \-A\
 there is now a prompt that will show the affected keys and ask for confirmation
 before proceeding. This prompt can be bypassed using the \fB\-y\fP or \fB\-\-yes\fP
 command line argument, as with other \fBsalt\-key\fP commands.
+.SS Support for Setting Password Hashes on BSD Minions
+.sp
+FreeBSD, NetBSD, and OpenBSD all now support setting passwords in
+\fBuser.present\fP states.
 .SS Salt 0.6.0 release notes
 .sp
 The Salt remote execution manager has reached initial functionality! Salt is a
