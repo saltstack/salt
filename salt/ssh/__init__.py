@@ -34,15 +34,14 @@ class SSH(object):
         '''
         # TODO, this is just the code to test the chain, this is where the
         # parallel stuff needs to go once the chain is proven valid
-        for target in self.targets.items():
+        for target in self.targets:
             for default in self.defaults:
-                if not default in target:
-                    target[default] = self.defaults[default]
+                if not default in self.targets[target]:
+                    self.targets[target][default] = self.defaults[default]
             single = Single(
                     self.opts,
-                    self.arg_str,
-                    target['host'],
-                    **target)
+                    self.opts['arg_str'],
+                    **self.targets[target])
             yield single.cmd()
 
     def run(self):
@@ -121,7 +120,8 @@ class Single(multiprocessing.Process):
                '    echo "deploy"\n'
                '    exit 1\n'
                '$PYTHON $SALT --local -l quiet {0}\n'
-               'EOF').format(self.arg_std)
+               'EOF').format(self.arg_str)
+        print 'Ran command'
         ret = self.shell.exec_cmd(cmd)
         if ret.startswith('deploy'):
             self.deploy()
