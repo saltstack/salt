@@ -14,6 +14,7 @@ Pillar was added to Salt in version 0.9.8
     minion specified by the matcher type.  This makes it useful for
     storing sensitive data specific to a particular minion.
 
+
 Declaring the Master Pillar
 ===========================
 
@@ -54,7 +55,7 @@ with different 'os' grains:
 
     dev:
       'os:Debian':
-        - match: grain  
+        - match: grain
         - servers
 
 ``/srv/pillar/packages.sls``
@@ -90,6 +91,35 @@ more via the shared pillar `dict`_:
 
 
 Note that you cannot just list key/value-information in ``top.sls``.
+
+
+Including Other Pillars
+=======================
+
+Pillar SLS files may include other pillar files, similar to State files.
+Two syntaxes are available for this purpose. The simple form simply includes
+the additional pillar as if it were part of the same file:
+
+.. code-block:: yaml
+
+    include:
+      - users
+
+The full include form allows two additional options -- passing default values
+to the templating engine for the included pillar file as well as an optional
+key under which to nest the results of the included pillar:
+
+.. code-block:: yaml
+
+    include:
+      - users:
+          defaults:
+            - sudo: ['bob', 'paul']
+          key: users
+
+With this form, the included file (users.sls) will be nested within the 'users'
+key of the compiled pillar. Additionally, the 'sudo' value will be available
+as a template variable to users.sls.
 
 
 Viewing Minion Pillar
