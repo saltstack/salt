@@ -54,9 +54,10 @@ class RosterMatcher(object):
         minions = {}
         for minion in self.raw:
             if fnmatch.fnmatch(minion, self.tgt):
-                ip = self.get_ip(minion)
-                if ip:
-                    minions[minion] = ip
+                data = self.get_data(minion)
+                if data:
+                    minions[minion] = data
+        return minions
 
     def ret_pcre_minions(self):
         '''
@@ -65,9 +66,10 @@ class RosterMatcher(object):
         minions = {}
         for minion in self.raw:
             if re.match(self.tgt, minion):
-                ip = self.get_ip(minion)
-                if ip:
-                    minions[minion] = ip
+                data = self.get_data(minion)
+                if data:
+                    minions[minion] = data
+        return minions
 
     def get_data(self, minion):
         '''
