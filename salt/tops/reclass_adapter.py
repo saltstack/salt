@@ -58,19 +58,19 @@ def top(**kwargs):
         # how it's configured, so:
         return reclass_top(**reclass_opts)
 
-    except TypeError, e:
+    except TypeError as e:
         if e.message.find('unexpected keyword argument') > -1:
             arg = e.message.split()[-1]
             raise SaltInvocationError('master_tops.reclass: unexpected option: ' + arg)
         else:
             raise
 
-    except KeyError, e:
+    except KeyError as e:
         if e.message.find('reclass') > -1:
             raise SaltInvocationError('master_tops.reclass: no configuration '\
                                       'found in master config')
         else:
             raise
 
-    except ReclassException, e:
+    except ReclassException as e:
         raise SaltInvocationError('master_tops.reclass: ' + e.message)
