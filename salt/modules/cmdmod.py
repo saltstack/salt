@@ -750,12 +750,13 @@ def script_retcode(
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     return script(
-            source,
-            cwd,
-            runas,
-            shell,
-            env,
-            template,
+            source=source,
+            cwd=cwd,
+            stdin=stdin,
+            runas=runas,
+            shell=shell,
+            env=env,
+            template=template,
             umask=umask,
             timeout=timeout,
             **kwargs)['retcode']
