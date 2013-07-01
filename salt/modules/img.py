@@ -11,7 +11,7 @@ import yaml
 # Import salt libs
 import salt.crypt
 
-def mnt_image(location):
+def mount_image(location):
     '''
     Mount the named image and return the mount point
 
@@ -26,6 +26,9 @@ def mnt_image(location):
         __context__['img.mnt_{0}'.format(location)] = mnt
         return mnt.keys()[0]
     return ''
+
+#compatibility for api change
+mnt_image = mount_image
 
 
 def umount_image(mnt):
@@ -54,7 +57,7 @@ def seed(location, id_='', config=None):
     '''
     if config is None:
         config = {}
-    mpt = mnt_image(location)
+    mpt = mount_image(location)
     mpt_tmp = os.path.join(mpt, 'tmp')
     __salt__['mount.mount'](
             os.path.join(mpt, 'dev'),
