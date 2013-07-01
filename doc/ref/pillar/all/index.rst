@@ -18,3 +18,4 @@ Full list of builtin pillar modules
     mongo
     pillar_ldap
     puppet
+    reclass
