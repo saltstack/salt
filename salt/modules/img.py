@@ -58,6 +58,8 @@ def seed(location, id_='', config=None):
     if config is None:
         config = {}
     mpt = mount_image(location)
+    if not mpt:
+        return False
     mpt_tmp = os.path.join(mpt, 'tmp')
     __salt__['mount.mount'](
             os.path.join(mpt, 'dev'),
