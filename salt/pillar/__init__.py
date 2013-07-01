@@ -261,10 +261,12 @@ class Pillar(object):
                             matches[env].append(item)
         return matches
 
-    def render_pstate(self, sls, env, mods, defaults={}):
+    def render_pstate(self, sls, env, mods, defaults=None):
         '''
         Collect a single pillar sls file and render it
         '''
+        if defaults is None:
+            defaults = {}
         err = ''
         errors = []
         fn_ = self.client.get_state(sls, env).get('dest', False)
