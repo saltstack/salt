@@ -217,6 +217,8 @@ setup_kwargs = {'name': NAME,
                              'salt.search',
                              'salt.output',
                              'salt.utils',
+                             'salt.ssh',
+                             'salt.roster',
                              ],
                 'package_data': {'salt.modules': ['rh_ip/*.jinja']},
                 'data_files': [('share/man/man1',
@@ -296,6 +298,7 @@ if with_setuptools:
                             'salt-cp = salt.scripts:salt_cp',
                             'salt-call = salt.scripts:salt_call',
                             'salt-run = salt.scripts:salt_run',
+                            'salt-ssh = salt.scripts:salt_ssh',
                             'salt = salt.scripts:salt_main'
                             ],
     }
@@ -313,6 +316,7 @@ else:
                                'scripts/salt-cp',
                                'scripts/salt-call',
                                'scripts/salt-run',
+                               'scripts/salt-ssh',
                                'scripts/salt']
 
 if __name__ == '__main__':
