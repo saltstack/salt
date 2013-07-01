@@ -411,7 +411,7 @@ def init(cwd, opts=None, user=None):
     return _git_run(cmd, runas=user)
 
 
-def submodule(cwd, init=True, opts=None, user=None):
+def submodule(cwd, init=True, opts=None, user=None, identity=None):
     '''
     Initialize git submodules
 
@@ -427,6 +427,9 @@ def submodule(cwd, init=True, opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
+    identity : None
+        A path to a private key to use over SSH
+
     CLI Example::
 
         salt '*' git.submodule /path/to/repo.git/sub/repo
@@ -436,7 +439,7 @@ def submodule(cwd, init=True, opts=None, user=None):
     if not opts:
         opts = ''
     cmd = 'git submodule update {0} {1}'.format('--init' if init else '', opts)
-    return _git_run(cmd, cwd=cwd, runas=user)
+    return _git_run(cmd, cwd=cwd, runas=user, identity=identity)
 
 
 def status(cwd, user=None):

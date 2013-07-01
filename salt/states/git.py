@@ -157,7 +157,9 @@ def latest(name,
                                                                   identity=identity)
 
                 if submodules:
-                    __salt__['git.submodule'](target, user=runas,
+                    __salt__['git.submodule'](target,
+                                              user=runas,
+                                              identity=identity,
                                               opts='--recursive')
 
                 new_rev = __salt__['git.revision'](cwd=target, user=runas)
@@ -215,6 +217,7 @@ def latest(name,
             if submodules:
                 __salt__['git.submodule'](target,
                                           user=runas,
+                                          identity=identity,
                                           opts='--recursive')
 
             new_rev = None if bare else (
