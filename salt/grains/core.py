@@ -871,6 +871,13 @@ def ip4():
     return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
 
 
+def ip6():
+    '''
+    Return a list of ipv6 addrs
+    '''
+    return {'ipv6': salt.utils.network.ip_addrs6(include_loopback=True)}
+
+
 def ip_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip addresses
