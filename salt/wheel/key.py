@@ -5,10 +5,16 @@ Wheel system wrapper for key system
 # Import salt libs
 import salt.key
 
+def list(match):
+    '''
+    List all the keys under a named status
+    '''
+    skey = salt.key.Key(__opts__)
+    return skey.list_status(match)
 
 def list_all():
     '''
-    List the keys under a named status
+    List all the keys
     '''
     skey = salt.key.Key(__opts__)
     return skey.all_keys()
