@@ -630,7 +630,7 @@ class MWorker(multiprocessing.Process):
             return
         if stats.st_mtime > self.k_mtime:
             # new key, refresh crypticle
-            with open(dfn) as fp_:
+            with salt.utils.fopen(dfn) as fp_:
                 aes = fp_.read()
             if len(aes) != 76:
                 return
@@ -1088,7 +1088,7 @@ class AESFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
             if 'load' in load:
-                with open(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
+                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
                     self.serial.dump(load['load'], fp_)
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
@@ -1178,7 +1178,7 @@ class AESFuncs(object):
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, load['jid'])
-        with open(jid_fn, 'r') as fp_:
+        with salt.utils.fopen(jid_fn, 'r') as fp_:
             if not load['id'] == fp_.read():
                 return {}
         # Grab the latest and return
@@ -1234,7 +1234,7 @@ class AESFuncs(object):
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, ret['jid'])
-        with open(jid_fn, 'w+') as fp_:
+        with salt.utils.fopen(jid_fn, 'w+') as fp_:
             fp_.write(clear_load['id'])
         return ret
 
