@@ -466,10 +466,13 @@ def script(vm_):
     '''
     Return the script deployment object
     '''
-    minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     return saltcloud.utils.os_script(
         config.get_config_value('script', vm_, __opts__),
-        vm_, __opts__, minion
+        vm_,
+        __opts__,
+        saltcloud.utils.salt_config_to_yaml(
+            saltcloud.utils.minion_config(__opts__, vm_)
+        )
     )
 
 
@@ -860,9 +863,7 @@ def create(vm_=None, call=None):
             'keep_tmp': __opts__['keep_tmp'],
             'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
             'display_ssh_output': display_ssh_output,
-            'minion_conf': saltcloud.utils.minion_conf_string(
-                __opts__, vm_
-            ),
+            'minion_conf': saltcloud.utils.minion_config(__opts__, vm_),
             'script_args': config.get_config_value(
                 'script_args', vm_, __opts__
             ),
@@ -877,9 +878,7 @@ def create(vm_=None, call=None):
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
             master_conf = saltcloud.utils.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = saltcloud.utils.salt_config_to_yaml(
-                master_conf
-            )
+            deploy_kwargs['master_conf'] = master_conf
 
             if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True

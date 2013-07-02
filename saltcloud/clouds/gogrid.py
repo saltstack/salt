@@ -163,7 +163,7 @@ def create(vm_):
                 'script_args', vm_, __opts__
             ),
             'script_env': config.get_config_value('script_env', vm_, __opts__),
-            'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_)
+            'minion_conf': saltcloud.utils.minion_config(__opts__, vm_)
         }
 
         # Deploy salt-master files, if necessary
@@ -172,9 +172,7 @@ def create(vm_):
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
             master_conf = saltcloud.utils.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = saltcloud.utils.salt_config_to_yaml(
-                master_conf
-            )
+            deploy_kwargs['master_conf'] = master_conf
 
             if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True

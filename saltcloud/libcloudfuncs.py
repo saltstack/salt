@@ -197,11 +197,14 @@ def script(vm_):
     '''
     Return the script deployment object
     '''
-    minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     return ScriptDeployment(
         saltcloud.utils.os_script(
             config.get_config_value('os', vm_, __opts__),
-            vm_, __opts__, minion
+            vm_,
+            __opts__,
+            saltcloud.utils.salt_config_to_yaml(
+                saltcloud.utils.minion_config(__opts__, vm_)
+            )
         )
     )
 

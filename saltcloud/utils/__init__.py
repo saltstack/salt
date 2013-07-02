@@ -226,14 +226,6 @@ def minion_config(opts, vm_):
     return minion
 
 
-def minion_conf_string(opts, vm_):
-    '''
-    Return a string to be passed into the deployment script for the minion
-    configuration file
-    '''
-    return salt_config_to_yaml(minion_config(opts, vm_))
-
-
 def master_config(opts, vm_):
     '''
     Return a master's configuration for the provided options and VM
@@ -256,14 +248,6 @@ def master_config(opts, vm_):
         )
     )
     return master
-
-
-def master_conf_string(opts, vm_):
-    '''
-    Return a string to be passed into the deployment script for the master
-    configuration file
-    '''
-    return salt_config_to_yaml(master_config(opts, vm_))
 
 
 def salt_config_to_yaml(configuration):
@@ -432,19 +416,57 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if minion_pem:
                 scp_file('/tmp/minion.pem', minion_pem, kwargs)
                 root_cmd('chmod 600 /tmp/minion.pem', tty, sudo, **kwargs)
+
             if minion_pub:
                 scp_file('/tmp/minion.pub', minion_pub, kwargs)
+
             if minion_conf:
-                scp_file('/tmp/minion', minion_conf, kwargs)
+                if not isinstance(minion_conf, dict):
+                    # Let's not just fail regarding this change, specially
+                    # since we can handle it
+                    raise DeprecationWarning(
+                        '`saltcloud.utils.deploy_script now only accepts '
+                        'dictionaries for it\'s `minion_conf` parameter. '
+                        'Loading YAML...'
+                    )
+                    minion_conf = yaml.load(minion_conf)
+                minion_grains = minion_conf.pop('grains', {})
+                if minion_grains:
+                    scp_file(
+                        '/tmp/grains',
+                        salt_config_to_yaml(minion_conf),
+                        kwargs
+                    )
+                scp_file(
+                    '/tmp/minion',
+                    salt_config_to_yaml(minion_conf),
+                    kwargs
+                )
 
             # Master configuration
             if master_pem:
                 scp_file('/tmp/master.pem', master_pem, kwargs)
                 root_cmd('chmod 600 /tmp/master.pem', tty, sudo, **kwargs)
+
             if master_pub:
                 scp_file('/tmp/master.pub', master_pub, kwargs)
+
             if master_conf:
-                scp_file('/tmp/master', master_conf, kwargs)
+                if not isinstance(master_conf, dict):
+                    # Let's not just fail regarding this change, specially
+                    # since we can handle it
+                    raise DeprecationWarning(
+                        '`saltcloud.utils.deploy_script now only accepts '
+                        'dictionaries for it\'s `master_conf` parameter. '
+                        'Loading from YAML ...'
+                    )
+                    master_conf = yaml.load(master_conf)
+
+                scp_file(
+                    '/tmp/master',
+                    salt_config_to_yaml(master_conf),
+                    kwargs
+                )
 
             # XXX: We need to make these paths configurable
             preseed_minion_keys_tempdir = '/tmp/preseed-minion-keys'
@@ -579,6 +601,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     root_cmd('rm /tmp/minion.pem', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion.pem')
                 if minion_conf:
+                    root_cmd('rm /tmp/grains', tty, sudo, **kwargs)
+                    log.debug('Removed /tmp/grains')
                     root_cmd('rm /tmp/minion', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion')
 
