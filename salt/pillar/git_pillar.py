@@ -124,15 +124,15 @@ def init(branch, repo_location):
 
 def update(branch, repo_location):
     '''
-    Execute a git pull on all of the repos
+    Enxure you are on the right branch, and execute a git pull
     '''
     pid = os.getpid()
     repo = init(branch, repo_location)
-    origin = repo.remotes[0]
+    repo.git.checkout(branch)
     lk_fn = os.path.join(repo.working_dir, 'update.lk')
     with open(lk_fn, 'w+') as fp_:
         fp_.write(str(pid))
-    origin.fetch()
+    repo.git.pull()
     try:
         os.remove(lk_fn)
     except (OSError, IOError):
@@ -187,10 +187,6 @@ def ext_pillar(pillar, repo_string):
     # Don't recurse forever-- the Pillar object will re-call the ext_pillar function
     if __opts__['pillar_roots'][branch_env] == [repo.working_dir]:
         return {}
-
-    git_ = repo.git
-
-    git_.checkout(branch)
 
     opts = deepcopy(__opts__)
 
