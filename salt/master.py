@@ -193,7 +193,7 @@ class Master(SMaster):
                                     self.opts['keep_jobs']:
                                 shutil.rmtree(f_path)
 
-            if self.opts.get('publish_sesion'):
+            if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session'] * 60:
                     salt.crypt.dropfile(self.opts['cachedir'])
                     rotate = now
