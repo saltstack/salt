@@ -3,6 +3,16 @@ Monit service module. This module will create a monit type
 service watcher.
 '''
 
+# Import salt libs
+import salt.utils
+
+
+def __virtual__():
+    if salt.utils.which('monit') is not None:
+        # The monit binary exists, let the module load
+        return True
+    return False
+
 
 def start(name):
     '''
@@ -11,7 +21,7 @@ def start(name):
 
         salt '*' monit.start <service name>
     '''
-    cmd = "monit start {0}".format(name)
+    cmd = 'monit start {0}'.format(name)
 
     return not __salt__['cmd.retcode'](cmd)
 
@@ -24,7 +34,7 @@ def stop(name):
 
         salt '*' monit.stop <service name>
     '''
-    cmd = "monit stop {0}".format(name)
+    cmd = 'monit stop {0}'.format(name)
 
     return not __salt__['cmd.retcode'](cmd)
 
@@ -37,7 +47,7 @@ def restart(name):
 
         salt '*' monit.restart <service name>
     '''
-    cmd = "monit restart {0}".format(name)
+    cmd = 'monit restart {0}'.format(name)
 
     return not __salt__['cmd.retcode'](cmd)
 
@@ -50,7 +60,7 @@ def unmonitor(name):
 
         salt '*' monit.unmonitor <service name>
     '''
-    cmd = "monit unmonitor {0}".format(name)
+    cmd = 'monit unmonitor {0}'.format(name)
 
     return not __salt__['cmd.retcode'](cmd)
 
@@ -63,12 +73,12 @@ def monitor(name):
 
         salt '*' monit.monitor <service name>
     '''
-    cmd = "monit monitor {0}".format(name)
+    cmd = 'monit monitor {0}'.format(name)
 
     return not __salt__['cmd.retcode'](cmd)
 
 
-def summary(svc_name=' '):
+def summary(svc_name=''):
     '''
     Display a summary from monit
 
@@ -86,8 +96,10 @@ def summary(svc_name=' '):
         elif svc_name not in line or 'The Monit daemon' in line:
             continue
         else:
-            parts = line.split("'")
-            resource, name, status = parts[0].strip(), parts[1], parts[2].strip()
+            parts = line.split('\'')
+            resource, name, status = (
+                parts[0].strip(), parts[1], parts[2].strip()
+            )
             if resource not in ret:
                 ret[resource] = {}
             ret[resource][name] = status
