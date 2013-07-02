@@ -116,9 +116,13 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     unicode_context = {}
     for key, value in context.iteritems():
+        if not isinstance(value, basestring):
+            unicode_context[key] = value
+            continue
+
         # Let's try UTF-8 and fail if this still fails, that's why this is not
         # wrapped in a try/except
-        unicode_context[unicode(key, 'utf-8')] = unicode(value, 'utf-8')
+        unicode_context[key] = unicode(value, 'utf-8')
 
     try:
         output = jinja_env.from_string(tmplstr).render(**unicode_context)
