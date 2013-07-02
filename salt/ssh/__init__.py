@@ -3,6 +3,7 @@ Create ssh executor system
 '''
 # Import python libs
 import multiprocessing
+import json
 
 # Import salt libs
 import salt.ssh.shell
@@ -128,5 +129,5 @@ class Single(multiprocessing.Process):
         ret = self.shell.exec_cmd(cmd)
         if ret.startswith('deploy'):
             self.deploy()
-            return self.cmd(arg_str)
-        return ret
+            return json.loads(self.cmd(arg_str))
+        return json.loads(ret)
