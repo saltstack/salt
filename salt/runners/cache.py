@@ -5,6 +5,7 @@ Return cached data from minions
 import os
 
 # Import salt libs
+import salt.utils
 import salt.output
 import salt.payload
 
@@ -20,7 +21,7 @@ def _cdata():
         for minion in os.listdir(mdir):
             path = os.path.join(mdir, minion, 'data.p')
             if os.path.isfile(path):
-                with open(path) as fp_:
+                with salt.utils.fopen(path) as fp_:
                     ret[minion] = serial.loads(fp_.read())
     except (OSError, IOError):
         return ret
