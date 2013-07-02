@@ -59,7 +59,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
 
         # test again, nothing is about to be changed
         ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
-        self.assertSaltNoneReturn(ret)
+        self.assertSaltTrueReturn(ret)
 
         # then add a record for IP address
         ret = self.run_state('ssh_known_hosts.present',
