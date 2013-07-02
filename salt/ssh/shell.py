@@ -120,7 +120,7 @@ class Shell(object):
         except Exception:
             pass
         # Signal an error
-        return ()
+        return ''
 
 
     def exec_cmd(self, cmd):
