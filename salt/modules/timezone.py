@@ -5,8 +5,10 @@ Module for managing timezone on POSIX-like systems.
 # Import python libs
 import os
 import hashlib
-import salt.utils
 import logging
+
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +39,11 @@ def get_zone():
     elif 'Suse' in __grains__['os_family']:
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
-        return open('/etc/timezone', 'r').read()
+        with salt.utils.fopen('/etc/timezone', 'r') as ofh:
+            return ofh.read()
     elif 'Gentoo' in __grains__['os_family']:
-        return open('/etc/timezone', 'r').read()
+        with salt.utils.fopen('/etc/timezone', 'r') as ofh:
+            return ofh.read()
     elif 'FreeBSD' in __grains__['os_family']:
         return ('FreeBSD does not store a human-readable timezone. Please'
                 'consider using timezone.get_zonecode or timezone.zonecompare')
@@ -99,20 +103,26 @@ def set_zone(timezone):
         os.unlink('/etc/localtime')
 
     if 'Solaris' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/default/init', '^TZ=.*', 'TZ={0}'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/default/init', '^TZ=.*', 'TZ={0}'.format(timezone))
     else:
         os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/rc.conf', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/rc.conf', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Suse' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
-        open('/etc/timezone', 'w').write(timezone)
+        with salt.utils.fopen('/etc/timezone', 'w') as ofh:
+            ofh.write(timezone)
     elif 'Gentoo' in __grains__['os_family']:
-        open('/etc/timezone', 'w').write(timezone)
+        with salt.utils.fopen('/etc/timezone', 'w') as ofh:
+            ofh.write(timezone)
 
     return True
 
@@ -226,17 +236,22 @@ def set_hwclock(clock):
         os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(clock))
+        __salt__['file.sed'](
+            '/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(
+                clock))
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Suse' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        __salt__['file.sed'](
+            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
         if clock == 'UTC':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=yes')
         elif clock == 'localtime':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=no')
     elif 'Gentoo' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
+        __salt__['file.sed'](
+            '/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
 
     return True
