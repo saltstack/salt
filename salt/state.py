@@ -2149,7 +2149,7 @@ class BaseHighState(object):
 
         if cache:
             if os.path.isfile(cfn):
-                with open(cfn, 'r') as fp_:
+                with salt.utils.fopen(cfn, 'r') as fp_:
                     high = self.serial.load(fp_)
                     return self.state.call_high(high)
         #File exists so continue
@@ -2180,7 +2180,7 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
-        with open(cfn, 'w+') as fp_:
+        with salt.utils.fopen(cfn, 'w+') as fp_:
             try:
                 self.serial.dump(high, fp_)
             except TypeError:

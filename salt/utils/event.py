@@ -353,7 +353,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         reactors = []
         if isinstance(self.opts['reactor'], basestring):
             try:
-                with open(self.opts['reactor']) as fp_:
+                with salt.utils.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
             except (OSError, IOError):
                 log.error(
