@@ -6,14 +6,11 @@ Control the state system on the minion
 import os
 import copy
 import logging
-import json
 
 # Import salt libs
 import salt.utils
 import salt.state
 import salt.payload
-from salt.utils.yamlloader import load as _yaml_load
-from salt.utils.yamlloader import CustomLoader as _YamlCustomLoader
 from salt._compat import string_types
 
 
@@ -31,7 +28,8 @@ def _filter_running(runnings):
     '''
     Filter out the result: True + no changes data
     '''
-    ret = dict((tag, value) for tag, value in runnings.iteritems() if not value['result'] or value['changes'])
+    ret = dict((tag, value) for tag, value in runnings.iteritems()
+               if not value['result'] or value['changes'])
     return ret
 
 
@@ -202,7 +200,9 @@ def highstate(test=None, **kwargs):
                 )
     finally:
         st_.pop_active()
-    if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
+
+    if __salt__['config.option']('state_data', '') == 'terse' or \
+            kwargs.get('terse'):
         ret = _filter_running(ret)
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
@@ -258,7 +258,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
 
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
-            with open(cfn, 'r') as fp_:
+            with salt.utils.fopen(cfn, 'r') as fp_:
                 high_ = serial.load(fp_)
                 return st_.state.call_high(high_)
 
@@ -293,7 +293,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
     _set_retcode(ret)
-    with open(cfn, 'w+') as fp_:
+    with salt.utils.fopen(cfn, 'w+') as fp_:
         try:
             serial.dump(high_, fp_)
         except TypeError:
