@@ -171,6 +171,10 @@ def ext_pillar(pillar, repo_string):
     if branch_env == 'master':
         branch_env = 'base'
 
+
+    # Update first
+    update(branch, repo_location)
+
     # make sure you have the branch
     if branch_env not in envs(branch, repo_location):
         # don't have that branch
@@ -184,7 +188,6 @@ def ext_pillar(pillar, repo_string):
     if __opts__['pillar_roots'][branch_env] == [repo.working_dir]:
         return {}
 
-    update(branch, repo_location)
     git_ = repo.git
 
     git_.checkout(branch)
