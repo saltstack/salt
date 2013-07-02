@@ -153,8 +153,11 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
             if not cver:
                 targets[pkgname] = pkgver
                 continue
+            elif not __salt__['pkg_resource.check_extra_requirements'](pkgname, pkgver):
+                targets[pkgname] = pkgver
+                continue
             # No version specified and pkg is installed, do not add to targets
-            elif pkgver is None:
+            elif __salt__['pkg_resource.version_clean'](pkgver) is None:
                 continue
             version_spec = True
             match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
@@ -204,7 +207,7 @@ def _verify_install(desired, new_pkgs):
         if not cver:
             failed.append(pkgname)
             continue
-        elif not pkgver:
+        elif not __salt__['pkg_resource.version_clean'](pkgver):
             ok.append(pkgname)
             continue
         match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
@@ -324,6 +327,18 @@ def installed(
 
     ``NOTE:`` When using comparison operators, the expression must be enclosed
     in quotes to avoid a YAML render error.
+
+    With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
+    flag list and/or if the given packages should be in package.accept_keywords
+    file and/or the overlay from which you want the package to be installed.
+    Example::
+
+        mypkgs:
+            pkg.installed:
+                - pkgs:
+                    - foo: '~'
+                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
+                    - baz
 
     sources
         A list of packages to install, along with the source URI or local path
@@ -759,6 +774,10 @@ def mod_init(low):
     It sets a flag for a number of reasons, primarily due to timeline logic.
     When originally setting up the mod_init for pkg a number of corner cases
     arose with different package managers and how they refresh package data.
+
+    It also runs the "ex_mod_init" from the package manager module that is
+    currently loaded. The "ex_mod_init" is expected to work as a normal
+    "mod_init" function.
     '''
     ret = True
     if 'pkg.ex_mod_init' in __salt__:
