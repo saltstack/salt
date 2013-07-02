@@ -28,6 +28,7 @@ def installed(name,
         Use default answers for extensions such as pecl_http which ask
         questions before installation. Without this option, the pecl.installed
         state will hang indefinitely when trying to install these extensions.
+        This option will be available in version 0.17.0.
     '''
     # Check to see if we have a designated version
     if not isinstance(version, basestring) and version is not None:
