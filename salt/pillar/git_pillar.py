@@ -127,19 +127,26 @@ def init(branch, repo_location):
 
 def update(branch, repo_location):
     '''
-    Execute a git pull on all of the repos
+    Ensure you are on the right branch, and execute a git pull
+
+    return boolean wether it worked
     '''
     pid = os.getpid()
     repo = init(branch, repo_location)
-    origin = repo.remotes[0]
+    try:
+        repo.git.checkout(branch)
+    except git.exc.GitCommandError as e:
+        logging.error('Unable to checkout branch {0}: {1}'.format(branch, e))
+        return False
     lk_fn = os.path.join(repo.working_dir, 'update.lk')
     with salt.utils.fopen(lk_fn, 'w+') as fp_:
         fp_.write(str(pid))
-    origin.fetch()
+    repo.git.pull()
     try:
         os.remove(lk_fn)
     except (OSError, IOError):
         pass
+    return True
 
 def envs(branch, repo_location):
     '''
@@ -174,11 +181,8 @@ def ext_pillar(pillar, repo_string):
     if branch_env == 'master':
         branch_env = 'base'
 
-    # make sure you have the branch
-    if branch_env not in envs(branch, repo_location):
-        # don't have that branch
-        log.warning('Unable to get branch {0} of git repo {1}, branch does '
-                    'not exit'.format(branch, repo_location))
+    # Update first
+    if not update(branch, repo_location):
         return {}
 
     # get the repo
@@ -188,11 +192,6 @@ def ext_pillar(pillar, repo_string):
     # function
     if __opts__['pillar_roots'][branch_env] == [repo.working_dir]:
         return {}
-
-    update(branch, repo_location)
-    git_ = repo.git
-
-    git_.checkout(branch)
 
     opts = deepcopy(__opts__)
 
