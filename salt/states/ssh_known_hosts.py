@@ -69,6 +69,7 @@ def present(
                                                   config=config)
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
+            ret['result'] = True
             return dict(ret, comment=comment)
         elif result == 'add':
             comment = 'Key for {0} is set to be added to {1}'.format(name,
