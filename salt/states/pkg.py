@@ -517,7 +517,7 @@ def latest(
                 'result': False,
                 'comment': 'The "sources" parameter is not supported.'}
     elif pkgs:
-        desired_pkgs = __salt__['pkg_resource.pack_pkgs'](pkgs)
+        desired_pkgs = __salt__['pkg_resource.pack_pkgs'](pkgs).keys()
         if not desired_pkgs:
             # Badly-formatted SLS
             return {'name': name,
