@@ -46,13 +46,13 @@ def __virtual__():
     return 'service'
 
 
-def _enable(name, started, **kwargs):
+def _enable(name, started, result=True, **kwargs):
     '''
     Enable the service
     '''
     ret = {'name': name,
            'changes': {},
-           'result': True,
+           'result': result,
            'comment': ''}
 
     # is service available?
@@ -135,13 +135,13 @@ def _enable(name, started, **kwargs):
         return ret
 
 
-def _disable(name, started, **kwargs):
+def _disable(name, started, result=True, **kwargs):
     '''
     Disable the service
     '''
     ret = {'name': name,
            'changes': {},
-           'result': True,
+           'result': result,
            'comment': ''}
 
     # is service available?
@@ -288,14 +288,13 @@ def running(name, enable=None, sig=None, **kwargs):
     changes = {name: __salt__['service.start'](name)}
 
     if not changes[name]:
-        ret['result'] = False
-        ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
-            ret = _enable(name, False, **kwargs)
-            ret['result'] = False
+            return _enable(name, False, result=False, **kwargs)
         elif enable is False:
-            return _disable(name, False, **kwargs)
+            return _disable(name, False, result=False, **kwargs)
         else:
+            ret['result'] = False
+            ret['comment'] = 'Service {0} failed to start'.format(name)
             return ret
 
     if enable is True:
@@ -359,10 +358,12 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable is True:
-            return _enable(name, True)
+            return _enable(name, True, result=False)
         elif enable is False:
-            return _disable(name, True)
+            return _disable(name, True, result=False)
         else:
+            ret['result'] = False
+            ret['comment'] = 'Service {0} failed to die'.format(name)
             return ret
 
     if enable is True:
