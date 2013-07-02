@@ -29,10 +29,10 @@ def mod_init(low):
     return True
 
 def _flags_helper(conf, atom, new_flags, test=False):
-    import traceback
     try:
         new_flags = __salt__['portage_config.get_missing_flags'](conf, atom, new_flags)
     except Exception:
+        import traceback
         return {'result': False, 'comment': traceback.format_exc()}
     if new_flags:
         old_flags = __salt__['portage_config.get_flags_from_package_conf'](conf, atom)
@@ -42,10 +42,10 @@ def _flags_helper(conf, atom, new_flags, test=False):
     return {'result': None}
 
 def _mask_helper(conf, atom, test=False):
-    import traceback
     try:
         is_present = __salt__['portage_config.is_present'](conf, atom)
     except Exception:
+        import traceback
         return {'result': False, 'comment': traceback.format_exc()}
     if not is_present:
         if not test:
