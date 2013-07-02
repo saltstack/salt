@@ -113,18 +113,18 @@ class Single(multiprocessing.Process):
                'then\n'
                '    PYTHON=python26\n'
                'fi\n'
-               'if [ `which salt-call` ]\n'
+               'if hash salt-call\n'
                'then\n'
-               '    SALT=salt-call\n'
+               '    SALT=$(type -p salt-call)\n'
                'elif [ -f /tmp/salt-thin/salt-call] \n'
                'then\n'
                '    SALT=/tmp/salt-thin/salt-call\n'
                'else\n'
                '    echo "deploy"\n'
                '    exit 1\n'
-               '$PYTHON $SALT --local -l quiet {0}\n'
+               'fi\n'
+               '$PYTHON $SALT --local --out json -l quiet {0}\n'
                'EOF').format(self.arg_str)
-        print 'Ran command'
         ret = self.shell.exec_cmd(cmd)
         if ret.startswith('deploy'):
             self.deploy()
