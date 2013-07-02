@@ -60,9 +60,11 @@ try:
                 yum.constants.TS_OBSOLETING: 'Installed',
                 yum.constants.TS_UPDATED: 'Cleanup'
             }
-            self.logger = logging.getLogger('yum.filelogging.RPMInstallCallback')
+            self.logger = logging.getLogger(
+                'yum.filelogging.RPMInstallCallback')
 
-        def event(self, package, action, te_current, te_total, ts_current, ts_total):
+        def event(self, package, action, te_current, te_total, ts_current,
+                  ts_total):
             # This would be used for a progress counter according to Yum docs
             pass
 
@@ -855,7 +857,8 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     repos = list_repos(basedir)
 
     if repo not in repos:
-        return 'Error: the {0} repo does not exist in {1}'.format(repo, basedir)
+        return 'Error: the {0} repo does not exist in {1}'.format(
+            repo, basedir)
 
     # Find out what file the repo lives in
     repofile = ''
@@ -891,9 +894,9 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
         for line in filerepos[stanza]:
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
-    fileout = open(repofile, 'w')
-    fileout.write(content)
-    fileout.close()
+
+    with salt.utils.fopen(repofile, 'w') as fileout:
+        fileout.write(content)
 
     return 'Repo {0} has been removed from {1}'.format(repo, repofile)
 
@@ -983,9 +986,9 @@ def mod_repo(repo, basedir=None, **kwargs):
         for line in filerepos[stanza].keys():
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
-    fileout = open(repofile, 'w')
-    fileout.write(content)
-    fileout.close()
+
+    with salt.utils.fopen(repofile, 'w') as fileout:
+        fileout.write(content)
 
     return {repofile: filerepos}
 
@@ -994,33 +997,33 @@ def _parse_repo_file(filename):
     '''
     Turn a single repo file into a dict
     '''
-    rfile = open(filename, 'r')
     repos = {}
     header = ''
     repo = ''
-    for line in rfile:
-        if line.startswith('['):
-            repo = line.strip().replace('[', '').replace(']', '')
-            repos[repo] = {}
+    with salt.utils.fopen(filename, 'r') as rfile:
+        for line in rfile:
+            if line.startswith('['):
+                repo = line.strip().replace('[', '').replace(']', '')
+                repos[repo] = {}
 
-        # Even though these are essentially uselss, I want to allow the user
-        # to maintain their own comments, etc
-        if not line:
-            if not repo:
-                header += line
-        if line.startswith('#'):
-            if not repo:
-                header += line
-            else:
-                if 'comments' not in repos[repo]:
-                    repos[repo]['comments'] = []
-                repos[repo]['comments'].append(line.strip())
-            continue
+            # Even though these are essentially uselss, I want to allow the
+            # user to maintain their own comments, etc
+            if not line:
+                if not repo:
+                    header += line
+            if line.startswith('#'):
+                if not repo:
+                    header += line
+                else:
+                    if 'comments' not in repos[repo]:
+                        repos[repo]['comments'] = []
+                    repos[repo]['comments'].append(line.strip())
+                continue
 
-        # These are the actual configuration lines that matter
-        if '=' in line:
-            comps = line.strip().split('=')
-            repos[repo][comps[0].strip()] = '='.join(comps[1:])
+            # These are the actual configuration lines that matter
+            if '=' in line:
+                comps = line.strip().split('=')
+                repos[repo][comps[0].strip()] = '='.join(comps[1:])
 
     return (header, repos)
 
