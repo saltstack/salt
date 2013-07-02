@@ -226,14 +226,6 @@ def minion_config(opts, vm_):
     return minion
 
 
-def minion_conf_string(opts, vm_):
-    '''
-    Return a string to be passed into the deployment script for the minion
-    configuration file
-    '''
-    return salt_config_to_yaml(minion_config(opts, vm_))
-
-
 def master_config(opts, vm_):
     '''
     Return a master's configuration for the provided options and VM
@@ -256,14 +248,6 @@ def master_config(opts, vm_):
         )
     )
     return master
-
-
-def master_conf_string(opts, vm_):
-    '''
-    Return a string to be passed into the deployment script for the master
-    configuration file
-    '''
-    return salt_config_to_yaml(master_config(opts, vm_))
 
 
 def salt_config_to_yaml(configuration):
