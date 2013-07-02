@@ -76,7 +76,7 @@ def part_list(device, unit=None):
             continue
         comps = line.replace(';', '').split(':')
         if mode == 'info':
-            if len(comps) == 8:
+            if 7 <= len(comps) <= 8:
                 ret['info'] = {
                     'disk': comps[0],
                     'size': comps[1],
@@ -84,8 +84,15 @@ def part_list(device, unit=None):
                     'logical sector': comps[3],
                     'physical sector': comps[4],
                     'partition table': comps[5],
-                    'model': comps[6],
-                    'disk flags': comps[7]}
+                    'model': comps[6]}
+                try:
+                    ret['info']['disk flags'] = comps[7]
+                except IndexError:
+                    # Older parted (2.x) doesn't show disk flags in the 'print'
+                    # output, and will return a 7-column output for the info
+                    # line. In these cases we just leave this field out of the
+                    # return dict.
+                    pass
                 mode = 'partitions'
         else:
             ret['partitions'][comps[0]] = {
