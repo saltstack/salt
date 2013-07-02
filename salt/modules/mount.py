@@ -13,7 +13,6 @@ from salt._compat import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
-
 # Set up logger
 log = logging.getLogger(__name__)
 
@@ -54,6 +53,7 @@ def _active_mounts(ret):
                              'opts': comps[3].split(',')}
     return ret
 
+
 def _active_mounts_freebsd(ret):
     for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
@@ -61,6 +61,7 @@ def _active_mounts_freebsd(ret):
                          'fstype': comps[2],
                          'opts': comps[3].split(',')}
     return ret
+
 
 def active():
     '''
@@ -374,7 +375,7 @@ def swaps():
         salt '*' mount.swaps
     '''
     ret = {}
-    with open('/proc/swaps') as fp_:
+    with salt.utils.fopen('/proc/swaps') as fp_:
         for line in fp_:
             if line.startswith('Filename'):
                 continue
