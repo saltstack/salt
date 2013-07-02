@@ -76,6 +76,10 @@ def part_list(device, unit=None):
             continue
         comps = line.replace(';', '').split(':')
         if mode == 'info':
+            # Older parted (2.x) doesn't support disk flags, and will return a
+            # 7-column output for the info line.
+            if len(comps) == 7:
+                comps.append('(not supported)')
             if len(comps) == 8:
                 ret['info'] = {
                     'disk': comps[0],
