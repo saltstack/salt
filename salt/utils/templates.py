@@ -95,7 +95,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if not env:
         if tmplpath:
             # ie, the template is from a file outside the state tree
-            loader = jinja2.FileSystemLoader(context, os.path.dirname(tmplpath))
+            loader = jinja2.FileSystemLoader(
+                context, os.path.dirname(tmplpath))
     else:
         loader = JinjaSaltCacheLoader(opts, context['env'])
     env_args = {'extensions': [], 'loader': loader}
@@ -112,8 +113,23 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     else:
         jinja_env = jinja2.Environment(
                         undefined=jinja2.StrictUndefined, **env_args)
+
+    unicode_context = {}
+    for key, value in context.iteritems():
+        if not isinstance(value, basestring):
+            unicode_context[key] = value
+            continue
+
+        # Let's try UTF-8 and fail if this still fails, that's why this is not
+        # wrapped in a try/except
+        unicode_context[key] = unicode(value, 'utf-8')
+
     try:
-        output = jinja_env.from_string(tmplstr).render(**context)
+        output = jinja_env.from_string(tmplstr).render(**unicode_context)
+        if isinstance(output, unicode):
+            # Let's encode the output back to utf-8 since that's what's assumed
+            # in salt
+            output = output.encode('utf-8')
     except jinja2.exceptions.TemplateSyntaxError as exc:
         error = '{0}; line {1} in template'.format(
                 exc,
