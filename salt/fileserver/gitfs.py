@@ -136,7 +136,7 @@ def update():
     for repo in repos:
         origin = repo.remotes[0]
         lk_fn = os.path.join(repo.working_dir, 'update.lk')
-        with open(lk_fn, 'w+') as fp_:
+        with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         origin.fetch()
         try:
@@ -220,22 +220,22 @@ def find_file(path, short='base', **kwargs):
             continue
         _wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
-            with open(blobshadest, 'r') as fp_:
+            with salt.utils.fopen(blobshadest, 'r') as fp_:
                 sha = fp_.read()
                 if sha == blob.hexsha:
                     fnd['rel'] = path
                     fnd['path'] = dest
                     return fnd
-        with open(lk_fn, 'w+') as fp_:
+        with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write('')
         for filename in glob.glob(hashes_glob):
             try:
                 os.remove(filename)
             except Exception:
                 pass
-        with open(dest, 'w+') as fp_:
+        with salt.utils.fopen(dest, 'w+') as fp_:
             blob.stream_data(fp_)
-        with open(blobshadest, 'w+') as fp_:
+        with salt.utils.fopen(blobshadest, 'w+') as fp_:
             fp_.write(blob.hexsha)
         try:
             os.remove(lk_fn)
