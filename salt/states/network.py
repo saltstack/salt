@@ -153,6 +153,8 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 import difflib
 from salt.loader import _create_loader
 
+# Import salt libs
+import salt.utils
 
 def managed(name, type, enabled=True, **kwargs):
     '''
@@ -383,3 +385,134 @@ def system(name, **kwargs):
             return ret
 
     return ret
+
+
+def fw_disabled(name):
+    '''
+    Disable all the firewall profiles (Windows only)
+    '''
+    
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+    
+    # Validate Windows
+    if not salt.utils.is_windows():
+        ret['result'] = False
+        ret['comment'] = 'This state is supported only on Windows'
+        return ret
+    
+    # Determine what to do
+    action = False
+    current_config = __salt__['network.get_fw_config']()
+    for key in current_config:
+        if current_config[key]:
+            action = True
+            ret['changes'] = {'fw': 'disabled'}
+            break
+    
+    if __opts__['test']:
+        return ret
+    
+    # Disable it
+    if action:
+        ret['result'] = __salt__['network.disable_fw']()
+        if not ret['result']:
+            ret['comment'] = 'could not disable the FW'
+    else:
+        ret['comment'] = 'all the firewall profiles are disabled'
+    
+    return ret
+
+
+def dns_exists(name, servers=None, interface='Local Area Connection'):
+    '''
+    Configure the dns server list in the specified interface (Windows only)
+    
+    Example::
+
+        config_dns_servers:
+          network_win.dns_exists:
+            - servers:
+              - 8.8.8.8
+              - 8.8.8.9
+    '''
+    
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+    
+    # Validate Windows
+    if not salt.utils.is_windows():
+        ret['result'] = False
+        ret['comment'] = 'This state is supported only on Windows'
+        return ret
+    
+    # Validate syntax
+    if type(servers) != list:
+        ret['result'] = False
+        ret['comment'] = 'servers entry is not a list !'
+        return ret
+    
+    # Do nothing is already configured
+    configured_list = __salt__['network.get_dns_servers'](interface)
+    if configured_list == servers:
+        ret['comment'] = '{0} are already configured'.format( servers )
+        return ret
+    else:
+        ret['changes'] = {'configure servers': servers}
+    
+    if __opts__['test']:
+        return ret
+    
+    # add the dns servers
+    for i in range(0, len(servers)):
+        if not __salt__['network.add_dns'](servers[i] ,interface, i+1):
+            ret['comment'] = 'failed to add {0} as dns server number {1}'.format(servers[i] ,i+1)
+            ret['result'] = False
+            if i != 0:
+                ret['changes'] = {'configure servers': servers[0,i]}
+            else:
+                ret['changes'] = {}
+            return ret
+    
+    return ret
+
+
+def dns_dhcp(name, interface='Local Area Connection'):
+    '''
+    Configure the dns server list from DHCP Server (Windows only)
+    '''
+    
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+    
+    # Validate Windows
+    if not salt.utils.is_windows():
+        ret['result'] = False
+        ret['comment'] = 'This state is supported only on Windows'
+        return ret
+    
+    # Check the config
+    config = __salt__['network.get_dns_config'](interface)
+    if config == 'dhcp':
+        ret['comment'] = '{0} already configured with dns from dhcp'.format( interface )
+        return ret
+    else:
+        ret['changes'] = {'dns': 'configured from dhcp'}
+    
+    if __opts__['test']:
+        return ret
+    
+    # change the configuration
+    ret['result'] = __salt__['network.dns_dhcp'](interface)
+    if not ret['result']:
+        ret['changes'] = {}
+        ret['comment'] = 'could not configure "{0}" dns servers from dhcp'.format( interface )
+    
+    return ret
+    
