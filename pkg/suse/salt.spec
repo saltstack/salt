@@ -17,7 +17,7 @@
 
 
 Name:           salt
-Version:        0.15.90
+Version:        0.16.0
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
