@@ -20,6 +20,7 @@ import salt.utils.xmlutil as xml
 
 log = logging.getLogger(__name__)
 
+
 def _retry_get_url(url, num_retries=10, timeout=5):
     '''
     Retry grabbing a URL.
@@ -48,6 +49,7 @@ def _retry_get_url(url, num_retries=10, timeout=5):
     log.error('Failed to read from URL for {0} times. Giving up.'.format(num_retries))
     return ''
 
+
 def _convert_key_to_str(key):
     '''
     Stolen completely from boto.providers
@@ -57,6 +59,7 @@ def _convert_key_to_str(key):
         #  properly with hmac.new (see http://bugs.python.org/issue5285)
         return str(key)
     return key
+
 
 def get_iam_metadata(version='latest', url='http://169.254.169.254',
         timeout=None, num_retries=5):
@@ -88,6 +91,7 @@ def get_iam_metadata(version='latest', url='http://169.254.169.254',
         credentials['security_token'] = meta['Token']
 
     return credentials
+
 
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
@@ -267,9 +271,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
     # This can be used to save a binary object to disk
     if local_file and method == 'GET':
         log.debug('Saving to local file: {0}'.format(local_file))
-        out = open(local_file, 'w')
-        out.write(response)
-        out.close()
+        with salt.utils.fopen(local_file, 'w') as out:
+            out.write(response)
         return 'Saved to local file: {0}'.format(local_file)
 
     # This can be used to return a binary object wholesale

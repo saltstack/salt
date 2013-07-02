@@ -6,6 +6,10 @@ Module to manage Linux kernel modules
 import os
 import re
 
+# Import salt libs
+import salt.utils
+
+
 def __virtual__():
     '''
     Only runs on Linux systems
@@ -171,7 +175,7 @@ def mod_list(only_persist=False):
     '''
     mods = set()
     if only_persist:
-        with open(_get_modules_conf(), 'r') as modules_file:
+        with salt.utils.fopen(_get_modules_conf(), 'r') as modules_file:
             for line in modules_file:
                 line = line.strip()
                 mod_name = _strip_module_name(line)

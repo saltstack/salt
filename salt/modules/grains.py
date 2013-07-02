@@ -147,7 +147,7 @@ def setval(key, val):
         )
 
     if os.path.isfile(gfn):
-        with open(gfn, 'rb') as fp_:
+        with salt.utils.fopen(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
             except Exception as e:
@@ -156,10 +156,10 @@ def setval(key, val):
             grains = {}
     grains[key] = val
     cstr = yaml.safe_dump(grains, default_flow_style=False)
-    with open(gfn, 'w+') as fp_:
+    with salt.utils.fopen(gfn, 'w+') as fp_:
         fp_.write(cstr)
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
-    with open(fn_, 'w+') as fp_:
+    with salt.utils.fopen(fn_, 'w+') as fp_:
         fp_.write('')
     # Sync the grains
     __salt__['saltutil.sync_grains']()

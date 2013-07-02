@@ -191,6 +191,6 @@ def gather_bootstrap_script(replace=False):
     fn_ = os.path.join(__opts__['cachedir'], 'bootstrap.sh')
     if not replace and os.path.isfile(fn_):
         return fn_
-    with open(fn_, 'w+') as fp_:
+    with salt.utils.fopen(fn_, 'w+') as fp_:
         fp_.write(urllib.urlopen('http://bootstrap.saltstack.org').read())
     return fn_

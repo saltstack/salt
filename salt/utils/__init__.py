@@ -449,7 +449,7 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
     if not os.path.isfile(load_fn):
         return {}
     serial = salt.payload.Serial(serial)
-    with open(load_fn) as fp_:
+    with fopen(load_fn) as fp_:
         return serial.load(fp_)
 
 
@@ -527,7 +527,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # If SELINUX is available run a restorecon on the file
     rcon = which('restorecon')
     if rcon:
-        with open(os.devnull, 'w') as dev_null:
+        with fopen(os.devnull, 'w') as dev_null:
             cmd = [rcon, dest]
             subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):
@@ -721,7 +721,7 @@ def istextfile(fp_, blocksize=512):
         # This wasn't an open filehandle, so treat it as a file path and try to
         # open the file
         try:
-            with open(fp_, 'rb') as fp2_:
+            with fopen(fp_, 'rb') as fp2_:
                 block = fp2_.read(blocksize)
         except IOError:
             # Unable to open file, bail out and return false

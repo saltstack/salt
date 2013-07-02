@@ -23,8 +23,8 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.utils
 from salt.pillar import Pillar
-
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ def __virtual__():
     if not git.__version__ > '0.3.0':
         return False
     return 'git'
+
 
 def _get_ref(repo, short):
     '''
@@ -96,6 +97,7 @@ def _wait_lock(lk_fn, dest):
             s_size = size
     return False
 
+
 def init(branch, repo_location):
     '''
     Return the git repo object for this session
@@ -122,6 +124,7 @@ def init(branch, repo_location):
             pass
     return repo
 
+
 def update(branch, repo_location):
     '''
     Execute a git pull on all of the repos
@@ -130,7 +133,7 @@ def update(branch, repo_location):
     repo = init(branch, repo_location)
     origin = repo.remotes[0]
     lk_fn = os.path.join(repo.working_dir, 'update.lk')
-    with open(lk_fn, 'w+') as fp_:
+    with salt.utils.fopen(lk_fn, 'w+') as fp_:
         fp_.write(str(pid))
     origin.fetch()
     try:
@@ -174,13 +177,15 @@ def ext_pillar(pillar, repo_string):
     # make sure you have the branch
     if branch_env not in envs(branch, repo_location):
         # don't have that branch
-        logging.warning('Unable to get branch {0} of git repo {1}, branch does not exit'.format(branch, repo_location))
+        log.warning('Unable to get branch {0} of git repo {1}, branch does '
+                    'not exit'.format(branch, repo_location))
         return {}
 
     # get the repo
     repo = init(branch, repo_location)
 
-    # Don't recurse forever-- the Pillar object will re-call the ext_pillar function
+    # Don't recurse forever-- the Pillar object will re-call the ext_pillar
+    # function
     if __opts__['pillar_roots'][branch_env] == [repo.working_dir]:
         return {}
 
@@ -196,4 +201,3 @@ def ext_pillar(pillar, repo_string):
     pil = Pillar(opts, __grains__, __grains__['id'], 'base')
 
     return pil.compile_pillar()
-

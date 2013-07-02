@@ -10,6 +10,8 @@ import yaml
 
 # Import salt libs
 import salt.crypt
+import salt.utils
+
 
 def mount_image(location):
     '''
@@ -85,7 +87,7 @@ def seed(location, id_='', config=None):
         config['master'] = __opts__['master']
     if id_:
         config['id'] = id_
-    with open(os.path.join(mpt_tmp, 'minion'), 'w+') as fp_:
+    with salt.utils.fopen(os.path.join(mpt_tmp, 'minion'), 'w+') as fp_:
         fp_.write(yaml.dump(config, default_flow_style=False))
     # Generate the chroot command
     c_cmd = 'sh /tmp/bootstrap.sh -c /tmp'
