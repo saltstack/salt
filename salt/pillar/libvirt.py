@@ -7,6 +7,9 @@ been generated using the libvirt key runner.
 import os
 import subprocess
 
+# Import salt libs
+import salt.utils
+
 
 def ext_pillar(pillar, command):
     '''
@@ -27,9 +30,9 @@ def ext_pillar(pillar, command):
         if not key.endswith('.pem'):
             continue
         fn_ = os.path.join(key_dir, key)
-        with open(fn_, 'r') as fp_:
+        with salt.utils.fopen(fn_, 'r') as fp_:
             ret['libvirt.{0}'.format(key)] = fp_.read()
-    with open(cacert, 'r') as fp_:
+    with salt.utils.fopen(cacert, 'r') as fp_:
         ret['libvirt.cacert.pem'] = fp_.read()
     return ret
 
@@ -52,7 +55,7 @@ def gen_hyper_keys(
     cacert = os.path.join(key_dir, 'cacert.pem')
     cainfo = os.path.join(key_dir, 'ca.info')
     if not os.path.isfile(cainfo):
-        with open(cainfo, 'w+') as fp_:
+        with salt.utils.fopen(cainfo, 'w+') as fp_:
             fp_.write('cn = salted\nca\ncert_signing_key')
     if not os.path.isfile(cakey):
         subprocess.call(
@@ -72,7 +75,7 @@ def gen_hyper_keys(
     ccert = os.path.join(sub_dir, 'clientcert.pem')
     clientinfo = os.path.join(sub_dir, 'client.info')
     if not os.path.isfile(srvinfo):
-        with open(srvinfo, 'w+') as fp_:
+        with salt.utils.fopen(srvinfo, 'w+') as fp_:
             infodat = ('organization = salted\ncn = {0}\ntls_www_server'
                        '\nencryption_key\nsigning_key'
                        '\ndigitalSignature').format(
@@ -89,7 +92,7 @@ def gen_hyper_keys(
                ).format(priv, cacert, cakey, srvinfo, cert)
         subprocess.call(cmd, shell=True)
     if not os.path.isfile(clientinfo):
-        with open(clientinfo, 'w+') as fp_:
+        with salt.utils.fopen(clientinfo, 'w+') as fp_:
             infodat = ('country = {0}\nstate = {1}\nlocality = '
                        '{2}\norganization = {3}\ncn = {4}\n'
                        'tls_www_client\nencryption_key\nsigning_key\n'
