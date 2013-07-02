@@ -6,6 +6,8 @@ Manage PHP pecl extensions.
 import re
 import logging
 
+# Import salt libs
+import salt.utils
 
 __opts__ = {}
 __pillar__ = {}
@@ -17,11 +19,13 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 
 
-def _pecl(command):
+def _pecl(command, defaults=False):
     '''
     Execute the command passed with pecl
     '''
     cmdline = 'pecl {0}'.format(command)
+    if salt.utils.is_true(defaults):
+        cmdline = "printf '\n' | " + cmdline
 
     ret = __salt__['cmd.run_all'](cmdline)
 
@@ -32,18 +36,24 @@ def _pecl(command):
         return ''
 
 
-def install(pecls):
+def install(pecls, defaults=False):
     '''
     Installs one or several pecl extensions.
 
     pecls
         The pecl extensions to install.
 
+    defaults
+        Use default answers for extensions such as pecl_http which ask
+        questions before installation. Without this option, the pecl.installed
+        state will hang indefinitely when trying to install these extensions.
+        This option will be available in version 0.17.0.
+
     CLI Example::
 
         salt '*' pecl.install fuse
     '''
-    return _pecl('install {0}'.format(pecls))
+    return _pecl('install {0}'.format(pecls), defaults=defaults)
 
 
 def uninstall(pecls):

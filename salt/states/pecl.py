@@ -11,9 +11,9 @@ A state module to manage php pecl extensions.
 '''
 
 
-def installed(
-        name,
-        version=None):
+def installed(name,
+              version=None,
+              defaults=False):
     '''
     Make sure that a pecl extension is installed.
 
@@ -23,12 +23,21 @@ def installed(
     version
         The pecl extension version to install. This option may be
         ignored to install the latest stable version.
+
+    defaults
+        Use default answers for extensions such as pecl_http which ask
+        questions before installation. Without this option, the pecl.installed
+        state will hang indefinitely when trying to install these extensions.
+        This option will be available in version 0.17.0.
     '''
     # Check to see if we have a designated version
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
 
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name,
+           'result': None,
+           'comment': '',
+           'changes': {}}
 
     installed_pecls = __salt__['pecl.list']()
 
@@ -46,7 +55,7 @@ def installed(
     if __opts__['test']:
         ret['comment'] = 'Pecl extension {0} would have been installed'.format(name)
         return ret
-    if __salt__['pecl.install'](name):
+    if __salt__['pecl.install'](name, defaults=defaults):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Pecl extension {0} was successfully installed'.format(name)
