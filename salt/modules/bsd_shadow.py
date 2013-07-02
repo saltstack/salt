@@ -8,9 +8,6 @@ try:
 except ImportError:
     pass
 
-# Import salt libs
-import salt.utils
-
 
 def __virtual__():
     return 'shadow' if 'BSD' in __grains__.get('os', '') else False
