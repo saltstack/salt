@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -154,6 +156,20 @@ class TestGetTemplate(TestCase):
                 dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
                      a='Hi', b='Salt', env='test'))
         self.assertEqual(out, 'Hey world !Hi Salt !\n')
+        self.assertEqual(fc.requests[0]['path'], 'salt://macro')
+        SaltCacheLoader.file_client = _fc
+
+    def test_non_ascii_encoding(self):
+        fc = MockFileClient()
+        # monkey patch file client
+        _fc = SaltCacheLoader.file_client
+        SaltCacheLoader.file_client = lambda loader: fc
+        filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
+        out = render_jinja_tmpl(
+                salt.utils.fopen(filename).read(),
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                     a='Hi', b='Sàlt', env='test'))
+        self.assertEqual(out, 'Hey world !Hi Sàlt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
 
