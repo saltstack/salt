@@ -1526,7 +1526,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         else:
             self.config['tgt'] = self.args[0]
         if len(self.args) > 0:
-            self.config['arg_str'] = self.args[1:]
+            self.config['arg_str'] = self.args[1:][0]
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
