@@ -41,7 +41,7 @@ def dropfile(cachedir, user=None):
     dfn = os.path.join(cachedir, '.dfn')
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
-    with open(dfnt, 'w+') as fp_:
+    with salt.utils.fopen(dfnt, 'w+') as fp_:
         fp_.write(aes)
     if user:
         try:
