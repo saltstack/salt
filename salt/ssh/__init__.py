@@ -49,7 +49,7 @@ class SSH(object):
         Execute the overall routine
         '''
         for ret in self.process():
-            salt.output.display_output(ret, salt.opts['out'], self.opts)
+            salt.output.display_output(ret, self.opts['out'], self.opts)
 
 
 class Single(multiprocessing.Process):
