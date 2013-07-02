@@ -704,7 +704,7 @@ def script(
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
-            path + ' ' + args if args else path,
+            path + ' ' + str(args) if args else path,
             cwd=cwd,
             stdin=stdin,
             quiet=kwargs.get('quiet', False),
