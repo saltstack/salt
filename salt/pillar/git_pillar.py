@@ -10,7 +10,6 @@ ext_pillar:
 
 # Import python libs
 from copy import deepcopy
-import glob
 import logging
 import os
 import time
