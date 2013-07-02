@@ -15,11 +15,13 @@ __opts__ = {
     'rvm.runas': None,
 }
 
+
 def _get_rvm_location(runas=None):
     if runas:
         rvmpath = '~{0}/.rvm/bin/rvm'.format(runas)
         return os.path.expanduser(rvmpath)
     return '/usr/local/rvm/bin/rvm'
+
 
 def _rvm(command, arguments='', runas=None):
     if not runas:
@@ -119,13 +121,14 @@ def list_(runas=None):
         salt '*' rvm.list
     '''
     rubies = []
-
-    for line in _rvm('list', '', runas=runas).splitlines():
-        match = re.match(r'^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]', line)
-        if match:
-            rubies.append([
-                match.group(2), match.group(3), match.group(1) == '*'
-            ])
+    output = _rvm('list', '', runas=runas)
+    if output:
+        for line in output.splitlines():
+            match = re.match(r'^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]', line)
+            if match:
+                rubies.append([
+                    match.group(2), match.group(3), match.group(1) == '*'
+                ])
     return rubies
 
 
@@ -234,10 +237,12 @@ def gemset_list(ruby='default', runas=None):
         salt '*' rvm.gemset_list
     '''
     gemsets = []
-    for line in _rvm_do(ruby, 'rvm gemset list', runas=runas).splitlines():
-        match = re.match('^   ([^ ]+)', line)
-        if match:
-            gemsets.append(match.group(1))
+    output = _rvm_do(ruby, 'rvm gemset list', runas=runas)
+    if output:
+        for line in output.splitlines():
+            match = re.match('^   ([^ ]+)', line)
+            if match:
+                gemsets.append(match.group(1))
     return gemsets
 
 
@@ -310,14 +315,16 @@ def gemset_list_all(runas=None):
     '''
     gemsets = {}
     current_ruby = None
-    for line in _rvm_do('default', 'rvm gemset list_all', runas=runas).splitlines():
-        match = re.match('^gemsets for ([^ ]+)', line)
-        if match:
-            current_ruby = match.group(1)
-            gemsets[current_ruby] = []
-        match = re.match('^   ([^ ]+)', line)
-        if match:
-            gemsets[current_ruby].append(match.group(1))
+    output = _rvm_do('default', 'rvm gemset list_all', runas=runas)
+    if output:
+        for line in output.splitlines():
+            match = re.match('^gemsets for ([^ ]+)', line)
+            if match:
+                current_ruby = match.group(1)
+                gemsets[current_ruby] = []
+            match = re.match('^   ([^ ]+)', line)
+            if match:
+                gemsets[current_ruby].append(match.group(1))
     return gemsets
 
 
