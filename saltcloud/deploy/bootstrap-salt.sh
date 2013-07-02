@@ -27,6 +27,7 @@ ScriptName="bootstrap-salt.sh"
 #   * BS_ECHO_DEBUG:      If 1 enable debug echo which can also be set by -D
 #   * BS_SALT_ETC_DIR:    Defaults to /etc/salt
 #   * BS_FORCE_OVERWRITE: Force overriding copied files(config, init.d, etc)
+#   * BS_GENTOO_USE_BINHOST: If 1 add `--getbinpkg` to gentoo's emerge
 #===============================================================================
 
 
@@ -225,9 +226,13 @@ ECHO_DEBUG=${BS_ECHO_DEBUG:-$BS_FALSE}
 CONFIG_ONLY=$BS_FALSE
 PIP_ALLOWED=${BS_PIP_ALLOWED:-$BS_FALSE}
 SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/etc/salt}
+PKI_DIR=${SALT_ETC_DIR}/pki
 FORCE_OVERWRITE=${BS_FORCE_OVERWRITE:-$BS_FALSE}
+BS_GENTOO_USE_BINHOST=${BS_GENTOO_USE_BINHOST:-$BS_FALSE}
+# __SIMPLIFY_VERSION is mostly used in Solaris based distributions
+__SIMPLIFY_VERSION=$BS_TRUE
 
-while getopts ":hvnDc:k:MSNCP" opt
+while getopts ":hvnDc:k:MSNCPF" opt
 do
   case "${opt}" in
 
@@ -353,7 +358,7 @@ if [ "${CALLER}x" = "${0}x" ]; then
     CALLER="PIPED THROUGH"
 fi
 echoinfo "${CALLER} ${0} -- Version ${ScriptVersion}"
-#echowarn "Running the unstable version of ${ScriptName}"
+echowarn "Running the unstable version of ${ScriptName}"
 
 
 #---  FUNCTION  ----------------------------------------------------------------
@@ -690,6 +695,12 @@ __gather_sunos_system_info() {
                     ;;
                 *Solaris*)
                     DISTRO_NAME="Solaris"
+                    # Let's make sure we not actually on a Joyent's SmartOS VM since some releases
+                    # don't have SmartOS in `/etc/release`, only `Solaris`
+                    $(uname -v | grep joyent >/dev/null 2>&1)
+                    if [ $? -eq 0 ]; then
+                        DISTRO_NAME="SmartOS"
+                    fi
                     break
                     ;;
                 *NexentaCore*)
@@ -698,6 +709,12 @@ __gather_sunos_system_info() {
                     ;;
                 *SmartOS*)
                     DISTRO_NAME="SmartOS"
+                    break
+                    ;;
+                *OmniOS*)
+                    DISTRO_NAME="OmniOS"
+                    DISTRO_VERSION=$(echo "$line" | awk '{print $3}')
+                    __SIMPLIFY_VERSION=$BS_FALSE
                     break
                     ;;
             esac
@@ -793,7 +810,7 @@ if [ $INSTALL_SYNDIC -eq $BS_TRUE ]; then
 fi
 
 # Simplify version naming on functions
-if [ "x${DISTRO_VERSION}" = "x" ]; then
+if [ "x${DISTRO_VERSION}" = "x" ] || [ $__SIMPLIFY_VERSION -eq $BS_FALSE ]; then
     DISTRO_MAJOR_VERSION=""
     DISTRO_MINOR_VERSION=""
     PREFIXED_DISTRO_MAJOR_VERSION=""
@@ -1945,6 +1962,12 @@ install_arch_linux_git_deps() {
 
 install_arch_linux_stable() {
     pacman -Sy --noconfirm pacman || return 1
+    # See https://mailman.archlinux.org/pipermail/arch-dev-public/2013-June/025043.html
+    # to know why we're ignoring below.
+    pacman -Syu --noconfirm --ignore filesystem,bash || return 1
+    pacman -S --noconfirm bash || return 1
+    pacman -Su --noconfirm || return 1
+    # We can now resume regular salt update
     pacman -Syu --noconfirm salt || return 1
     return 0
 }
@@ -1955,12 +1978,21 @@ install_arch_linux_git() {
 }
 
 install_arch_linux_post() {
+
     for fname in minion master syndic; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ $INSTALL_MINION -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ $INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+
+        # Since Arch's pacman renames configuration files
+        if [ "$TEMP_CONFIG_DIR" != "null" ] && [ -f $SALT_ETC_DIR/$fname.pacorig ]; then
+            # Since a configuration directory was provided, it also means that any
+            # configuration file copied was renamed by Arch, see:
+            #   https://wiki.archlinux.org/index.php/Pacnew_and_Pacsave_Files#.pacorig
+            copyfile $SALT_ETC_DIR/$fname.pacorig $SALT_ETC_DIR/$fname $BS_TRUE
+        fi
 
         if [ -f /usr/bin/systemctl ]; then
             # Using systemd
@@ -2092,6 +2124,10 @@ install_freebsd_git_deps() {
         CONFIG_SALT_FUNC="config_salt"
     fi
 
+    # Since we will be relying on the ports rc.d files, let's
+    # set SALT_ETC_DIR to ports default
+    SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/usr/local/etc/salt}
+
     return 0
 }
 
@@ -2102,9 +2138,24 @@ install_freebsd_9_stable() {
 
 install_freebsd_git() {
     /usr/local/sbin/pkg install -y sysutils/py-salt || return 1
+
+    # Let's keep the rc.d files before deleting the pacakge
+    mkdir /tmp/rc-scripts || return 1
+    cp /usr/local/etc/rc.d/salt* /tmp/rc-scripts || return 1
+
+    # Let's delete the package
     /usr/local/sbin/pkg delete -y sysutils/py-salt || return 1
 
+    # Install from git
     /usr/local/bin/python setup.py install || return 1
+
+    # Restore the rc.d scripts
+    cp /tmp/rc-scripts/salt* /usr/local/etc/rc.d/ || return 1
+
+    # Delete our temporary scripts directory
+    rm -rf /tmp/rc-scripts || return 1
+
+    # And we're good to go
     return 0
 }
 
@@ -2160,9 +2211,14 @@ install_smartos_deps() {
     check_pip_allowed
     echowarn "PyZMQ will be installed using pip"
 
-    ZEROMQ_VERSION='3.2.2'
-    pkgin -y in libtool-base autoconf automake libuuid gcc-compiler gmake \
-        python27 py27-pip py27-setuptools py27-yaml py27-crypto swig || return 1
+    # Use the distribution persistent /etc directory
+    SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/opt/local/etc/salt}
+
+    ZEROMQ_VERSION='3.2.3'
+    (pkg_info gcc-compiler > /dev/null 2>&1 && pkgin -y in gcc-compiler) || \
+        (pkg_info gcc47 > /dev/null 2>&1 && pkgin -y in gcc47) || return 1
+    pkgin -y in libtool-base autoconf automake libuuid gmake \
+        python27 py27-setuptools py27-crypto swig || return 1
     [ -d zeromq-${ZEROMQ_VERSION} ] || (
         wget http://download.zeromq.org/zeromq-${ZEROMQ_VERSION}.tar.gz &&
         tar -xvf zeromq-${ZEROMQ_VERSION}.tar.gz
@@ -2172,7 +2228,10 @@ install_smartos_deps() {
     make || return 1
     make install || return 1
 
-    pip-2.7 install pyzmq || return 1
+    # Install dependencies by hand. The were not getting pulled-in by the
+    # setup install functions below.
+    easy_install-2.7 pip
+    pip-2.7 install PyYaml Jinja2 M2Crypto msgpack-python pyzmq>=2.1.9 || return 1
 
     # Let's trigger config_salt()
     if [ "$TEMP_CONFIG_DIR" = "null" ]; then
@@ -2558,6 +2617,12 @@ install_suse_11_restart_daemons() {
 #
 #    Gentoo Install Functions.
 #
+__gentoo_use_binhost() {
+    if [ $BS_GENTOO_USE_BINHOST -eq $BS_TRUE ]; then
+        return "--getbinpkg"
+    fi
+    return ""
+}
 
 __gentoo_set_ackeys() {
     GENTOO_ACKEYS=""
@@ -2574,7 +2639,7 @@ __gentoo_set_ackeys() {
             GENTOO_ACKEYS="/etc/portage/package.accept_keywords/salt"
         else
             # We could use accept_keywords env, but this likely indicates a bigger problem.
-            echo "Error: /etc/portage/package.accept_keywords is neither directory nor file."
+            echoerror "/etc/portage/package.accept_keywords is neither directory nor file."
             return 1
         fi
     fi
@@ -2602,7 +2667,7 @@ __gentoo_post_dep() {
 # End of bootstrap-salt keywords.
 _EOT
     # the -o option asks it to emerge the deps but not the package.
-    emerge -vo salt
+    emerge ${__gentoo_use_binhost} -vo salt
 }
 
 install_gentoo_deps() {
@@ -2619,7 +2684,7 @@ install_gentoo_git_deps() {
 }
 
 install_gentoo_stable() {
-    emerge -v salt || return 1
+    emerge ${__gentoo_use_binhost} -v salt || return 1
 }
 
 install_gentoo_git() {
@@ -2669,11 +2734,16 @@ config_salt() {
 
     CONFIGURED_ANYTHING=$BS_FALSE
 
-    PKI_DIR=$SALT_ETC_DIR/pki
-
     # Let's create the necessary directories
     [ -d $SALT_ETC_DIR ] || mkdir $SALT_ETC_DIR || return 1
     [ -d $PKI_DIR ] || mkdir -p $PKI_DIR && chmod 700 $PKI_DIR || return 1
+
+    # Copy the grains file if found
+    if [ -f "$TEMP_CONFIG_DIR/grains" ]; then
+        echodebug "Moving provided grains file from $TEMP_CONFIG_DIR/grains to $SALT_ETC_DIR/grains"
+        movefile "$TEMP_CONFIG_DIR/grains" "$SALT_ETC_DIR/grains" || return 1
+        CONFIGURED_ANYTHING=$BS_TRUE
+    fi
 
     if [ $INSTALL_MINION -eq $BS_TRUE ]; then
         # Create the PKI directory
@@ -2818,7 +2888,7 @@ for DEP_FUNC_NAME in $(__strip_duplicates $DEP_FUNC_NAMES); do
         break
     fi
 done
-
+echodebug "DEPS_INSTALL_FUNC=${DEPS_INSTALL_FUNC}"
 
 # Let's get the minion config function
 CONFIG_SALT_FUNC="null"
@@ -2839,11 +2909,11 @@ if [ "$TEMP_CONFIG_DIR" != "null" ]; then
         fi
     done
 fi
-
+echodebug "CONFIG_SALT_FUNC=${CONFIG_SALT_FUNC}"
 
 # Let's get the pre-seed master function
 PRESEED_MASTER_FUNC="null"
-if [ "$TEMP_CONFIG_DIR" != "null" ]; then
+if [ "$TEMP_KEYS_DIR" != "null" ]; then
 
     PRESEED_FUNC_NAMES="preseed_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_master"
     PRESEED_FUNC_NAMES="$PRESEED_FUNC_NAMES preseed_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_${ITYPE}_master"
@@ -2860,7 +2930,7 @@ if [ "$TEMP_CONFIG_DIR" != "null" ]; then
         fi
     done
 fi
-
+echodebug "PRESEED_MASTER_FUNC=${PRESEED_MASTER_FUNC}"
 
 # Let's get the install function
 INSTALL_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}"
@@ -2874,7 +2944,7 @@ for FUNC_NAME in $(__strip_duplicates $INSTALL_FUNC_NAMES); do
         break
     fi
 done
-
+echodebug "INSTALL_FUNC=${INSTALL_FUNC}"
 
 # Let's get the post install function
 POST_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_post"
@@ -2892,7 +2962,7 @@ for FUNC_NAME in $(__strip_duplicates $POST_FUNC_NAMES); do
         break
     fi
 done
-
+echodebug "POST_INSTALL_FUNC=${POST_INSTALL_FUNC}"
 
 # Let's get the start daemons install function
 STARTDAEMONS_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_restart_daemons"
@@ -2909,7 +2979,7 @@ for FUNC_NAME in $(__strip_duplicates $STARTDAEMONS_FUNC_NAMES); do
         break
     fi
 done
-
+echodebug "STARTDAEMONS_INSTALL_FUNC=${STARTDAEMONS_INSTALL_FUNC}"
 
 # Let's get the daemons running check function.
 DAEMONS_RUNNING_FUNC="null"
@@ -2927,7 +2997,7 @@ for FUNC_NAME in $(__strip_duplicates $DAEMONS_RUNNING_FUNC_NAMES); do
         break
     fi
 done
-
+echodebug "DAEMONS_RUNNING_FUNC=${DAEMONS_RUNNING_FUNC}"
 
 
 if [ $DEPS_INSTALL_FUNC = "null" ]; then
