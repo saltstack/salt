@@ -17,7 +17,6 @@ class Shell(object):
     '''
     def __init__(
             self,
-            cmd,
             host,
             user=None,
             port=None,
@@ -26,7 +25,6 @@ class Shell(object):
             timeout=None,
             sudo=False,
             tty=False):
-        self.cmd = cmd
         self.host = host
         self.user = user
         self.port = port
@@ -87,7 +85,7 @@ class Shell(object):
             if not salt.utils.which('sshpass'):
                 return None
             opts = self._passwd_opts()
-            return 'sshpass -p {0} {1} {2} {3} {4} -c {5}'.format(
+            return 'sshpass -p {0} {1} {2} {3} {4} {5}'.format(
                     self.passwd,
                     ssh,
                     self.host,
@@ -96,7 +94,7 @@ class Shell(object):
                     cmd)
         elif self.priv:
             opts = self._key_opts()
-            return '{0} {1} {2} {3} -c {4}'.format(
+            return '{0} {1} {2} {3} {4}'.format(
                     ssh,
                     self.host,
                     '-t -t' if self.tty else '',
