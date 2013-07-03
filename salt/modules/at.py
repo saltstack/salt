@@ -169,7 +169,7 @@ def atrm(*args):
     return ret
 
 
-def at(*args, **kwargs):  # pylint: disable-msg=C0103
+def at(*args, **kwargs):  # pylint: disable=C0103
     '''
     Add a job to the queue.
 

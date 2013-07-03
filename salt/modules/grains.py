@@ -167,7 +167,7 @@ def setval(key, val):
     return {key: val}
 
 
-def ls():  # pylint: disable-msg=C0103
+def ls():  # pylint: disable=C0103
     '''
     Return a list of all available grains
 
