@@ -132,7 +132,7 @@ def check(device, minor):
     return out
 
 
-def cp(device, from_minor, to_minor):  # pylint: disable-msg=C0103
+def cp(device, from_minor, to_minor):  # pylint: disable=C0103
     '''
     partition.check device from_minor to_minor
 
@@ -323,7 +323,7 @@ def resize(device, minor, start, end):
     return out.splitlines()
 
 
-def rm(device, minor):  # pylint: disable-msg=C0103
+def rm(device, minor):  # pylint: disable=C0103
     '''
     partition.rm device minor
 

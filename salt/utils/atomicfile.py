@@ -14,15 +14,15 @@ import random
 
 CAN_RENAME_OPEN_FILE = False
 if os.name == 'nt':  # pragma: no cover
-    _rename = lambda src, dst: False            # pylint: disable-msg=C0103
-    _rename_atomic = lambda src, dst: False     # pylint: disable-msg=C0103
+    _rename = lambda src, dst: False            # pylint: disable=C0103
+    _rename_atomic = lambda src, dst: False     # pylint: disable=C0103
 
     try:
         import ctypes
 
         _MOVEFILE_REPLACE_EXISTING = 0x1
         _MOVEFILE_WRITE_THROUGH = 0x8
-        _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable-msg=C0103
+        _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable=C0103
 
         def _rename(src, dst):
             if not isinstance(src, unicode):
@@ -42,7 +42,7 @@ if os.name == 'nt':  # pragma: no cover
             return rval
 
         # new in Vista and Windows Server 2008
-        # pylint: disable-msg=C0103
+        # pylint: disable=C0103
         _CreateTransaction = ctypes.windll.ktmw32.CreateTransaction
         _CommitTransaction = ctypes.windll.ktmw32.CommitTransaction
         _MoveFileTransacted = ctypes.windll.kernel32.MoveFileTransactedW
@@ -91,7 +91,7 @@ if os.name == 'nt':  # pragma: no cover
             except Exception:
                 pass
 else:
-    atomic_rename = os.rename  # pylint: disable-msg=C0103
+    atomic_rename = os.rename  # pylint: disable=C0103
     CAN_RENAME_OPEN_FILE = True
 
 

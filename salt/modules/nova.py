@@ -81,8 +81,8 @@ def flavor_list():
     return ret
 
 
-def flavor_create(name,      # pylint: disable-msg=C0103
-                  id=0,      # pylint: disable-msg=C0103
+def flavor_create(name,      # pylint: disable=C0103
+                  id=0,      # pylint: disable=C0103
                   ram=0,
                   disk=0,
                   vcpus=1):
@@ -111,7 +111,7 @@ def flavor_create(name,      # pylint: disable-msg=C0103
             'vcpus': vcpus}
 
 
-def flavor_delete(id):  # pylint: disable-msg=C0103
+def flavor_delete(id):  # pylint: disable=C0103
     '''
     Delete a flavor from nova by id (nova flavor-delete)
 
@@ -209,7 +209,7 @@ def image_list(name=None):
     return ret
 
 
-def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable-msg=C0103
+def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable=C0103
     '''
     Sets a key=value pair in the metadata for an image (nova image-meta set)
 
@@ -222,14 +222,14 @@ def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable-msg=C0103
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id  # pylint: disable-msg=C0103
+                id = image.id  # pylint: disable=C0103
     if not id:
         return {'Error': 'A valid image name or id was not specified'}
     nt_ks.images.set_meta(id, kwargs)
     return {id: kwargs}
 
 
-def image_meta_delete(id=None,     # pylint: disable-msg=C0103
+def image_meta_delete(id=None,     # pylint: disable=C0103
                       name=None,
                       keys=None):
     '''
@@ -244,7 +244,7 @@ def image_meta_delete(id=None,     # pylint: disable-msg=C0103
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id  # pylint: disable-msg=C0103
+                id = image.id  # pylint: disable=C0103
     pairs = keys.split(',')
     if not id:
         return {'Error': 'A valid image name or id was not specified'}

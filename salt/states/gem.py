@@ -22,12 +22,12 @@ def __virtual__():
     return 'gem' if 'gem.list' in __salt__ else False
 
 
-def installed(name,          # pylint: disable-msg=C0103
+def installed(name,          # pylint: disable=C0103
               ruby=None,
               runas=None,
               version=None,
               rdoc=False,
-              ri=False):     # pylint: disable-msg=C0103
+              ri=False):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 

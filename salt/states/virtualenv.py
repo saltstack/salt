@@ -161,4 +161,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = managed  # pylint: disable-msg=C0103
+manage = managed  # pylint: disable=C0103

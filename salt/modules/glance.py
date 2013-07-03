@@ -76,7 +76,7 @@ def image_create(**kwargs):
     return {newimage['name']: newimage}
 
 
-def image_delete(id=None, name=None):  # pylint: disable-msg=C0103
+def image_delete(id=None, name=None):  # pylint: disable=C0103
     '''
     Delete an image (glance image-delete)
 
@@ -90,7 +90,7 @@ def image_delete(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id  # pylint: disable-msg=C0103
+                id = image.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve image id'}
@@ -101,7 +101,7 @@ def image_delete(id=None, name=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def image_show(id=None, name=None):  # pylint: disable-msg=C0103
+def image_show(id=None, name=None):  # pylint: disable=C0103
     '''
     Return details about a specific image (glance image-show)
 
@@ -114,7 +114,7 @@ def image_show(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id  # pylint: disable-msg=C0103
+                id = image.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve image id'}
@@ -139,7 +139,7 @@ def image_show(id=None, name=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def image_list(id=None):  # pylint: disable-msg=C0103
+def image_list(id=None):  # pylint: disable=C0103
     '''
     Return a list of available images (glance image-list)
 
