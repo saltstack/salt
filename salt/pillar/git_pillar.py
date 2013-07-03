@@ -169,7 +169,7 @@ def envs(branch, repo_location):
     return list(ret)
 
 
-def ext_pillar(pillar, repo_string):
+def ext_pillar(minion_id, pillar, repo_string):
     '''
     Execute a command and read the output as YAML
     '''
@@ -197,6 +197,6 @@ def ext_pillar(pillar, repo_string):
 
     opts['pillar_roots'][branch_env] = [repo.working_dir]
 
-    pil = Pillar(opts, __grains__, __grains__['id'], 'base')
+    pil = Pillar(opts, __grains__, minion_id, 'base')
 
     return pil.compile_pillar()
