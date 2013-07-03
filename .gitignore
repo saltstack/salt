@@ -1,4 +1,4 @@
-build
+/build
 *.py[co]
 pkg/arch/*.tar.xz
 *.swp
