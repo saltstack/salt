@@ -1,5 +1,7 @@
 '''
 Manage ruby installations with rbenv.
+
+.. versionadded:: 0.16.0
 '''
 
 # Import python libs
