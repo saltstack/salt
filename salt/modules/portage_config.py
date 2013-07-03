@@ -246,7 +246,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                     return
 
         to_delete_if_empty = []
-        if conf=='accept_keywords':
+        if conf == 'accept_keywords':
             if '-~ARCH' in new_flags:
                 new_flags.remove('-~ARCH')
                 to_delete_if_empty.append(atom)
