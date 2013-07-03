@@ -11,14 +11,14 @@ import subprocess
 import salt.utils
 
 
-def ext_pillar(pillar, command):
+def ext_pillar(minion_id, pillar, command):
     '''
     Read in the generated libvirt keys
     '''
     key_dir = os.path.join(
             __opts__['pki_dir'],
             'libvirt',
-            __grains__['id'])
+            minion_id)
     cacert = os.path.join(__opts__['pki_dir'],
             'libvirt',
             'cacert.pem')
@@ -65,7 +65,7 @@ def gen_hyper_keys(
         cmd = ('certtool --generate-self-signed --load-privkey {0} '
                '--template {1} --outfile {2}').format(cakey, cainfo, cacert)
         subprocess.call(cmd, shell=True)
-    sub_dir = os.path.join(key_dir, __grains__['id'])
+    sub_dir = os.path.join(key_dir, minion_id)
     if not os.path.isdir(sub_dir):
         os.makedirs(sub_dir)
     priv = os.path.join(sub_dir, 'serverkey.pem')
