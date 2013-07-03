@@ -64,7 +64,7 @@ A Salt Minion Windows installer can be found here:
 
 The 64bit installer has been tested on Windows 7 64bit and Windows Server
 2008R2 64bit. The 32bit installer has been tested on Windows 2003 Server 32bit.
-Please file a bug report on our github repo if issues for other platforms are
+Please file a bug report on our GitHub repo if issues for other platforms are
 found.
 
 The installer asks for 2 bits of information; the master hostname and the
@@ -111,14 +111,14 @@ To install Salt from source one must install each dependency separately and
 configure Salt to run on your Windows host.
 
 Rather than send you on a wild goose chase across the Internet, we've collected
-some of the more difficult to find installers in our github repo for you.
+some of the more difficult to find installers in our GitHub repo for you.
 
 
 Install on Windows XP 32bit
 ===========================
 1.  Install `msysgit`_
 
-    1. Clone the Salt git repository from github
+    1. Clone the Salt git repository from GitHub
 
 .. code-block:: bash
 

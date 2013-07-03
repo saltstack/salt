@@ -74,7 +74,7 @@ making debugging of minion modules MUCH easier.
 Salt is nearing the goal of 1.0, where the core feature set and capability is
 complete!
 
-Salt 0.8.7 can be downloaded from github here:
+Salt 0.8.7 can be downloaded from GitHub here:
 :download:`salt-0.8.7.tar.gz`
 
 -Thomas S Hatch
