@@ -38,8 +38,6 @@ This is how a state configuration could look like:
         - default: True
         - require:
           - pkg: rbenv-deps
-
-    .. versionadded:: 0.16.0
 '''
 
 # Import python libs
@@ -100,6 +98,8 @@ def installed(name, default=False, runas=None):
         Whether to make this ruby the default.
     runas : None
         The user to run rbenv as.
+
+    .. versionadded:: 0.16.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -153,6 +153,8 @@ def absent(name, runas=None):
         The version of ruby to uninstall
     runas : None
         The user to run rbenv as.
+
+    .. versionadded:: 0.16.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
