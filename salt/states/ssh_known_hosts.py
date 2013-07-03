@@ -35,7 +35,7 @@ def present(
     type.
 
     name
-        The name of the remote host (i.e. "github.com")
+        The name of the remote host (e.g. "github.com")
 
     user
         The user who owns the ssh authorized keys file to modify
