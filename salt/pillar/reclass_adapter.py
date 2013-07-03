@@ -52,7 +52,7 @@ def ext_pillar(minion_id, pillar, **kwargs):
         # should not make any assumptions about it.
         return reclass_ext_pillar(minion_id, pillar, **kwargs)
 
-    except TypeError, e:
+    except TypeError as e:
         if e.message.find('unexpected keyword argument') > -1:
             arg = e.message.split()[-1]
             raise SaltInvocationError('pillar.reclass: unexpected option: '\
@@ -60,12 +60,12 @@ def ext_pillar(minion_id, pillar, **kwargs):
         else:
             raise
 
-    except KeyError, e:
+    except KeyError as e:
         if e.message.find('id') > -1:
             raise SaltInvocationError('pillar.reclass: __opts__ does not '\
                                       'define minion ID')
         else:
             raise
 
-    except ReclassException, e:
+    except ReclassException as e:
         raise SaltInvocationError('pillar.reclass: ' + e.message)
