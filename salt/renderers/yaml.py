@@ -25,7 +25,7 @@ Options:
 ''')
         raise
     if ('-o', '') in opts:
-        def Loader(*args):  # pylint: disable-msg=C0103
+        def Loader(*args):  # pylint: disable=C0103
             return CustomLoader(*args, dictclass=OrderedDict)
         return Loader
     return CustomLoader

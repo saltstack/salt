@@ -242,7 +242,7 @@ def has_names_decls(data):
             return sid
 
 
-def rewrite_single_shorthand_state_decl(data):  # pylint: disable-msg=C0103
+def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
     '''
     Rewrite all state declarations that look like this::
 
@@ -401,7 +401,7 @@ from itertools import chain
 #   explicit require_in/watch_in can only contain states after it
 def add_implicit_requires(data):
 
-    def T(sid, state):  # pylint: disable-msg=C0103
+    def T(sid, state):  # pylint: disable=C0103
         return '{0}:{1}'.format(sid, state_name(state))
 
     states_before = set()
