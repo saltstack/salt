@@ -259,6 +259,11 @@ def running(name, enable=None, sig=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    # Clear cached service info
+    sys.modules[
+        __salt__['service.status'].__module__
+    ].__context__.pop('service.all', None)
+
     # Check if the service is available
     ret = _available(name, ret)
     if not ret.pop('available', True):
@@ -327,6 +332,11 @@ def dead(name, enable=None, sig=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    # Clear cached service info
+    sys.modules[
+        __salt__['service.status'].__module__
+    ].__context__.pop('service.all', None)
+
     # Check if the service is available
     ret = _available(name, ret)
     if not ret.pop('available', True):
@@ -384,6 +394,11 @@ def enabled(name, **kwargs):
     name
         The name of the init or rc script used to manage the service
     '''
+    # Clear cached service info
+    sys.modules[
+        __salt__['service.status'].__module__
+    ].__context__.pop('service.all', None)
+
     return _enable(name, None, **kwargs)
 
 
@@ -397,6 +412,11 @@ def disabled(name, **kwargs):
     name
         The name of the init or rc script used to manage the service
     '''
+    # Clear cached service info
+    sys.modules[
+        __salt__['service.status'].__module__
+    ].__context__.pop('service.all', None)
+
     return _disable(name, None, **kwargs)
 
 
