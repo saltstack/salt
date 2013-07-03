@@ -30,7 +30,7 @@ def _refine_mode(mode):
     if any([mode.startswith('p'),
             mode == '0',
             mode == 'off']):
-            return 'Permissive'
+        return 'Permissive'
     return 'unknown'
 
 
