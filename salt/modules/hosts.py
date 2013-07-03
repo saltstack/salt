@@ -10,7 +10,7 @@ import salt.utils
 import salt.utils.odict as odict
 
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 def __get_hosts_filename():
     '''
     Return the path to the appropriate hosts file

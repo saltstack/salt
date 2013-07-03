@@ -10,7 +10,7 @@ or use Self-Signed certificates.
         ca.cert_base_path: '/etc/pki'
 '''
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 # Import python libs
 import os

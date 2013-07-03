@@ -16,7 +16,7 @@ except Exception:
 # accepts a custom loader, and every time this function is used in Salt
 # the custom loader defined below is used. This should be altered though to
 # not require the custom loader to be explicitly added.
-load = yaml.load  # pylint: disable-msg=C0103
+load = yaml.load  # pylint: disable=C0103
 
 
 class DuplicateKeyWarning(RuntimeWarning):
