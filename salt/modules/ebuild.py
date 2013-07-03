@@ -219,7 +219,7 @@ def porttree_matches(name):
     provided for packages that have several versions in the portage tree, but
     rather the name of the package (i.e. "dev-python/paramiko").
     '''
-    matches=[]
+    matches = []
     for category in _porttree().dbapi.categories:
         if _porttree().dbapi.cp_list(category+"/"+name):
             matches.append(category+"/"+name)
@@ -390,13 +390,13 @@ def install(name=None,
         if version_num:
             pkg_params = {name: version_num}
         else:
-            version_num=''
+            version_num = ''
             if slot is not None:
-                version_num+=':{0}'.format(slot)
+                version_num += ':{0}'.format(slot)
             if fromrepo is not None:
-                version_num+='::{0}'.format(fromrepo)
+                version_num += '::{0}'.format(fromrepo)
             if uses is not None:
-                version_num+='["{0}"]'.format('","'.join(uses))
+                version_num += '["{0}"]'.format('","'.join(uses))
             pkg_params = {name: version_num}
 
     if pkg_params is None or len(pkg_params) == 0:
@@ -427,7 +427,7 @@ def install(name=None,
                     prefix = gt_lt or ''
                     prefix += eq or ''
                     # We need to delete quotes around use flag list elements
-                    verstr=verstr.replace("'","")
+                    verstr = verstr.replace("'", "")
                     # If no prefix characters were supplied and verstr contains a version, use '='
                     if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
@@ -438,16 +438,16 @@ def install(name=None,
                     target = '"{0}"'.format(param)
 
                 if target.find('[') != -1:
-                    old = __salt__['portage_config.get_flags_from_package_conf']('use',target[1:-1])
+                    old = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
                     __salt__['portage_config.append_use_flags'](target[1:-1])
-                    new = __salt__['portage_config.get_flags_from_package_conf']('use',target[1:-1])
+                    new = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
                     if old != new:
-                        changes[param+'-USE']={'old':old,'new':new}
+                        changes[param+'-USE'] = {'old': old, 'new': new}
                     target = target[:target.rfind('[')] + '"'
 
                 if keyword != None:
                     __salt__['portage_config.append_to_package_conf']('accept_keywords', target[1:-1], ['~ARCH'])
-                    changes[param+'-ACCEPT_KEYWORD']={'old':'','new':'~ARCH'}
+                    changes[param+'-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
 
                 targets.append(target)
     else:
@@ -678,8 +678,9 @@ def perform_cmp(pkg1='', pkg2=''):
         salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
         salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    ver1 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg1)
-    ver2 = re.match('^~?([^:\[]+):?[^\[]*\[?.*$', pkg2)
+    regex = r'^~?([^:\[]+):?[^\[]*\[?.*$'
+    ver1 = re.match(regex, pkg1)
+    ver2 = re.match(regex, pkg2)
 
     if ver1 and ver2:
         return portage.versions.vercmp(ver1.group(1), ver2.group(1))
@@ -706,7 +707,7 @@ def version_clean(version):
 
         salt '*' pkg.version_clean <version_string>
     '''
-    return re.match('^~?[<>]?=?([^<>=:\[]+).*$', version)
+    return re.match(r'^~?[<>]?=?([^<>=:\[]+).*$', version)
 
 
 def check_extra_requirements(pkgname, pkgver):
@@ -725,7 +726,7 @@ def check_extra_requirements(pkgname, pkgver):
         prefix = gt_lt or ''
         prefix += eq or ''
         # We need to delete quotes around use flag list elements
-        verstr=verstr.replace("'","")
+        verstr = verstr.replace("'", "")
         # If no prefix characters were supplied and verstr contains a version, use '='
         if verstr[0] != ':' and verstr[0] != '[':
             prefix = prefix or '='
@@ -745,7 +746,7 @@ def check_extra_requirements(pkgname, pkgver):
     except KeyError:
         return False
 
-    des_repo = re.match('^.+::([^\[]+).*$', atom)
+    des_repo = re.match(r'^.+::([^\[]+).*$', atom)
     if des_repo and des_repo.group(1) != cur_repo:
         return False
 
