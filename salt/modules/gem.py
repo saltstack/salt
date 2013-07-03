@@ -201,5 +201,5 @@ def sources_list(ruby=None, runas=None):
 
         salt '*' gem.sources_list
     '''
-    ret = _gem('sources', ruby, runas=runas).splitlines()[2:]
-    return '' if ret is False else ret
+    ret = _gem('sources', ruby, runas=runas)
+    return [] if ret is False else ret.splitlines()[2:]
