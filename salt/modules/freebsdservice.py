@@ -106,8 +106,8 @@ def get_disabled():
     return sorted(set(all_) - set(en_))
 
 
-def _switch(name,                   # pylint: disable-msg=C0103
-            on,                     # pylint: disable-msg=C0103
+def _switch(name,                   # pylint: disable=C0103
+            on,                     # pylint: disable=C0103
             **kwargs):
     '''
     Switch on/off service start at boot.

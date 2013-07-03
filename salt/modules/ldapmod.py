@@ -86,8 +86,8 @@ def _connect(**kwargs):
     return _LDAPConnection(**connargs).ldap
 
 
-def search(filter,      # pylint: disable-msg=C0103
-           dn=None,     # pylint: disable-msg=C0103
+def search(filter,      # pylint: disable=C0103
+           dn=None,     # pylint: disable=C0103
            scope=None,
            attrs=None,
            **kwargs):
@@ -114,7 +114,7 @@ def search(filter,      # pylint: disable-msg=C0103
 
     '''
     if not dn:
-        dn = _config('dn', 'basedn')  # pylint: disable-msg=C0103
+        dn = _config('dn', 'basedn')  # pylint: disable=C0103
     if not scope:
         scope = _config('scope')
     if attrs == '':  # Allow command line 'return all' attr override
