@@ -353,13 +353,33 @@ class Pillar(object):
                     log.critical(err)
                     continue
                 try:
-                    if isinstance(val, dict):
-                        ext = self.ext_pillars[key](pillar, **val)
-                    elif isinstance(val, list):
-                        ext = self.ext_pillars[key](pillar, *val)
-                    else:
-                        ext = self.ext_pillars[key](pillar, val)
-                    update(pillar, ext)
+                    try:
+                        # try the new interface, which includes the minion ID
+                        # as first argument
+                        if isinstance(val, dict):
+                            ext = self.ext_pillars[key](self.opts['id'], pillar, **val)
+                        elif isinstance(val, list):
+                            ext = self.ext_pillars[key](self.opts['id'], pillar, *val)
+                        else:
+                            ext = self.ext_pillars[key](self.opts['id'], pillar, val)
+                        update(pillar, ext)
+
+                    except TypeError, e:
+                        if e.message.startswith('ext_pillar() takes exactly '):
+                            log.warning('Deprecation warning: ext_pillar "{0}"'\
+                                        ' needs to accept minion_id as first'\
+                                        ' argument'.format(key))
+                        else:
+                            raise
+
+                        if isinstance(val, dict):
+                            ext = self.ext_pillars[key](pillar, **val)
+                        elif isinstance(val, list):
+                            ext = self.ext_pillars[key](pillar, *val)
+                        else:
+                            ext = self.ext_pillars[key](pillar, val)
+                        update(pillar, ext)
+
                 except Exception as exc:
                     log.exception(
                             'Failed to load ext_pillar {0}: {1}'.format(
