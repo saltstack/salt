@@ -190,7 +190,7 @@ def remove(path):
     return ret
 
 
-def ls(path):  # pylint: disable-msg=C0103
+def ls(path):  # pylint: disable=C0103
     '''
     List the direct children of a node
 

@@ -20,7 +20,7 @@ if PY3:
 else:
     MAX_SIZE = sys.maxint
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 if PY3:
     string_types = str,
     integer_types = int,

@@ -27,7 +27,7 @@ update to remove the old entry.
 '''
 
 
-def present(name, ip):  # pylint: disable-msg=C0103
+def present(name, ip):  # pylint: disable=C0103
     '''
     Ensures that the named host is present with the given ip
 
@@ -59,7 +59,7 @@ def present(name, ip):  # pylint: disable-msg=C0103
         return ret
 
 
-def absent(name, ip):  # pylint: disable-msg=C0103
+def absent(name, ip):  # pylint: disable=C0103
     '''
     Ensure that the named host is absent
 
