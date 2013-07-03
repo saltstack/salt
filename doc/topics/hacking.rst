@@ -8,17 +8,17 @@ has come from, and most importantly, to give credit where credit is due!
 There are a number of ways to contribute to salt development.
 
 
-Sending a Github pull request
+Sending a GitHub pull request
 -----------------------------
 
-This is the preferred method for contributions. Simply create a Github
+This is the preferred method for contributions. Simply create a GitHub
 fork, commit changes to the fork, and then open up a pull request.
 
 The following is an example (from `Open Comparison Contributing Docs`_ ) 
 of an efficient workflow for forking, cloning, branching, committing, and 
-sending a pull request for a github repository.
+sending a pull request for a GitHub repository.
 
-First, make a local clone of your github fork of the salt github repo and make
+First, make a local clone of your GitHub fork of the salt GitHub repo and make
 edits and changes locally.
 
 Then, create a new branch on your clone by entering the following commands::
@@ -81,9 +81,9 @@ Then to accept the changes and merge into the current branch::
 
     git merge upstream/develop
 
-For more info, see `Github Fork a Repo Guide`_ or `Open Comparison Contributing Docs`_
+For more info, see `GitHub Fork a Repo Guide`_ or `Open Comparison Contributing Docs`_
 
-.. _`Github Fork a Repo Guide`: http://help.github.com/fork-a-repo/
+.. _`GitHub Fork a Repo Guide`: http://help.github.com/fork-a-repo/
 .. _`Open Comparison Contributing Docs`: http://opencomparison.readthedocs.org/en/latest/contributing.html
 
 Posting patches to the mailing list

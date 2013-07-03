@@ -16,7 +16,7 @@ our new and existing contributors.
 Download!
 =========
 
-The Salt source can be downloaded from the salt github site:
+The Salt source can be downloaded from the salt GitHub site:
 
 :download:`salt-0.9.4.tar.gz`
 
