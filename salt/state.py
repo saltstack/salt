@@ -1829,6 +1829,8 @@ class BaseHighState(object):
                 if env != self.opts['environment']:
                     continue
             for match, data in body.items():
+                if isinstance(data, string_types):
+                    data = [data]
                 if self.matcher.confirm_top(
                         match,
                         data,
