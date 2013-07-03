@@ -24,7 +24,7 @@ def ext_pillar(minion_id, pillar, command):
             'cacert.pem')
     if not os.path.isdir(key_dir):
         # No keys have been generated
-        gen_hyper_keys()
+        gen_hyper_keys(minion_id)
     ret = {}
     for key in os.listdir(key_dir):
         if not key.endswith('.pem'):
@@ -37,7 +37,7 @@ def ext_pillar(minion_id, pillar, command):
     return ret
 
 
-def gen_hyper_keys(
+def gen_hyper_keys(minion_id,
         country='US',
         state='Utah',
         locality='Salt Lake City',
