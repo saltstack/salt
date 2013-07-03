@@ -27,6 +27,7 @@ Full list of builtin execution modules
     bluez
     brew
     bridge
+    bsd_shadow
     cassandra
     cmdmod
     config
@@ -111,6 +112,7 @@ Full list of builtin execution modules
     pkgng
     pkg_resource
     pkgutil
+    portage_config
     postgres
     poudriere
     ps
