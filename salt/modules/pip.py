@@ -176,7 +176,8 @@ def install(pkgs=None,
     ignore_installed
         Ignore the installed packages (reinstalling instead)
     exists_action
-        Default action when a path already exists: (s)witch, (i)gnore, (w)wipe, (b)ackup
+        Default action when a path already exists: (s)witch, (i)gnore, (w)wipe,
+        (b)ackup
     no_deps
         Ignore package dependencies
     no_install
@@ -263,7 +264,9 @@ def install(pkgs=None,
 
                 if not match or not match.group(1):
                     # Missing #egg=theEggName
-                    raise Exception('You must specify an egg for this editable')
+                    raise CommandExecutionError(
+                        'You must specify an egg for this editable'
+                    )
             cmd.append('--editable={0}'.format(entry))
 
     treq = None
@@ -317,23 +320,27 @@ def install(pkgs=None,
 
     if find_links:
         if not salt.utils.valid_url(find_links, VALID_PROTOS):
-            raise Exception('{0!r} must be a valid URL'.format(find_links))
+            raise CommandExecutionError(
+                '{0!r} must be a valid URL'.format(find_links)
+            )
         cmd.append('--find-links={0}'.format(find_links))
 
     if no_index and (index_url or extra_index_url):
-        raise Exception(
+        raise CommandExecutionError(
             '\'no_index\' and (\'index_url\' or \'extra_index_url\') are '
             'mutually exclusive.'
         )
 
     if index_url:
         if not salt.utils.valid_url(index_url, VALID_PROTOS):
-            raise Exception('{0!r} must be a valid URL'.format(index_url))
+            raise CommandExecutionError(
+                '{0!r} must be a valid URL'.format(index_url)
+            )
         cmd.append('--index-url={0!r}'.format(index_url))
 
     if extra_index_url:
         if not salt.utils.valid_url(extra_index_url, VALID_PROTOS):
-            raise Exception(
+            raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(extra_index_url)
             )
         cmd.append('--extra-index-url={0!r} '.format(extra_index_url))
@@ -351,7 +358,9 @@ def install(pkgs=None,
         cmd.append('--use-mirrors')
         for mirror in mirrors:
             if not mirror.startswith('http://'):
-                raise Exception('{0!r} must be a valid URL'.format(mirror))
+                raise CommandExecutionError(
+                    '{0!r} must be a valid URL'.format(mirror)
+                )
             cmd.append('--mirrors={0}'.format(mirror))
 
     if build:
@@ -489,7 +498,6 @@ def uninstall(pkgs=None,
     if proxy:
         cmd.append('--proxy={0}'.format(proxy))
 
-
     if timeout:
         try:
             int(timeout)
@@ -544,9 +552,9 @@ def freeze(bin_env=None,
 
 
 def list_(prefix='',
-         bin_env=None,
-         runas=None,
-         cwd=None):
+          bin_env=None,
+          runas=None,
+          cwd=None):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
