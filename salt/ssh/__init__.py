@@ -3,12 +3,14 @@ Create ssh executor system
 '''
 # Import python libs
 import os
+import getpass
 import multiprocessing
 import json
 
 # Import salt libs
 import salt.ssh.shell
 import salt.roster
+
 
 class SSH(object):
     '''
@@ -114,6 +116,12 @@ class Single(multiprocessing.Process):
                 'tar xvf /tmp/salt-thin.tgz -C /tmp && rm /tmp/salt-thin.tgz'
                 )
 
+    def copy_id(self):
+        '''
+        Execute ssh copy id
+        '''
+        pass
+
     def cmd(self):
         '''
         Prepare the precheck command to send to the subsystem
@@ -151,3 +159,29 @@ class Single(multiprocessing.Process):
             return {self.id: data['local']}
         except Exception:
             return {self.id: 'No valid data returned, is ssh key deployed?'}
+
+
+class SSHCopyID(SSH):
+    '''
+    Used to manage copying the public key out to ssh minions
+    '''
+    def __init__(self, opts):
+        super(SSH, self).__init__()
+
+    def process(self):
+        '''
+        Execute ssh-copy-id
+        '''
+        for target in self.targets:
+            for default in self.defaults:
+                if not default in self.targets[target]:
+                    self.targets[target][default] = self.defaults[default]
+            if 'passwd' not in self.targets[target]:
+                self.targets[target]['passwd'] = getpass.getpass(
+                        'Password for {0}:'.format(target))
+            single = Single(
+                    self.opts,
+                    self.opts['arg_str'],
+                    target,
+                    **self.targets[target])
+            yield single.copy_id()
