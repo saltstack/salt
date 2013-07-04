@@ -737,12 +737,18 @@ def list_(prefix=None,
         raise CommandExecutionError(result['stderr'])
 
     for line in result['stdout'].splitlines():
-        if line.startswith('-e'):
+        if not line.startswith('-f'):
+            # ignore -f line as it contains --find-links directory
+            continue
+        elif line.startswith('-e'):
             line = line.split('-e ')[1]
             version, name = line.split('#egg=')
         elif len(line.split('==')) >= 2:
             name = line.split('==')[0]
             version = line.split('==')[1]
+        else:
+            logger.error("Can't parse line '%s'", line)
+            continue
 
         if prefix:
             if name.lower().startswith(prefix.lower()):
