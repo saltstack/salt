@@ -29,12 +29,6 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
            'changes': {},
            'comment': ''}
     
-    # Validate Windows
-    if not salt.utils.is_windows():
-        ret['result'] = False
-        ret['comment'] = 'This state is supported only on Windows'
-        return ret
-    
     # Validate syntax
     if type(servers) != list:
         ret['result'] = False
@@ -75,12 +69,6 @@ def dns_dhcp(name, interface='Local Area Connection'):
            'result': True,
            'changes': {},
            'comment': ''}
-    
-    # Validate Windows
-    if not salt.utils.is_windows():
-        ret['result'] = False
-        ret['comment'] = 'This state is supported only on Windows'
-        return ret
     
     # Check the config
     config = __salt__['win_dns_client.get_dns_config'](interface)
