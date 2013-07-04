@@ -6,6 +6,13 @@ A state module to manage installed NPM packages.
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
+def __virtual__():
+    '''
+    Only load if the npm module is available in __salt__
+    '''
+    return 'npm' if 'npm.list' in __salt__ else False
+
+
 def installed(name,
               dir=None,
               runas=None,
