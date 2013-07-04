@@ -156,7 +156,7 @@ def install(pkgs=None,
     no_index
         Ignore package index
     mirrors
-        Specific mirror URLs to query (automatically adds --use-mirrors)
+        Specific mirror URL(s) to query (automatically adds --use-mirrors)
     build
         Unpack packages into ``build`` dir
     target
@@ -335,10 +335,19 @@ def install(pkgs=None,
         cmd = '{cmd} --no-index '.format(cmd=cmd)
 
     if mirrors:
-        if not mirrors.startswith('http://'):
-            raise Exception('\'{0}\' must be a valid URL'.format(mirrors))
-        cmd = '{cmd} --use-mirrors --mirrors={mirrors} '.format(
-            cmd=cmd, mirrors=mirrors)
+        _mirrors = []
+        if isinstance(mirrors, basestring):
+            if ',' in mirrors:
+                mirrors = [m.strip() for m in mirrors.split(',')]
+            else:
+                mirrors = [mirrors]
+
+        for mirror in mirrors:
+            if not mirror.startswith('http://'):
+                raise Exception('\'{0}\' must be a valid URL'.format(mirror))
+            _mirrors.append('--mirrors={0}'.format(mirror))
+
+        cmd = '{cmd} --use-mirrors {0} '.format(' '.join(_mirrors), cmd=cmd)
 
     if build:
         cmd = '{cmd} --build={build} '.format(
