@@ -12,6 +12,32 @@ import salt.ssh.shell
 import salt.roster
 
 
+class SSHCopyID(object):
+    '''
+    Used to manage copying the public key out to ssh minions
+    '''
+    def __init__(self, opts):
+        super(SSH, self).__init__()
+
+    def process(self):
+        '''
+        Execute ssh-copy-id
+        '''
+        for target in self.targets:
+            for default in self.defaults:
+                if not default in self.targets[target]:
+                    self.targets[target][default] = self.defaults[default]
+            if 'passwd' not in self.targets[target]:
+                self.targets[target]['passwd'] = getpass.getpass(
+                        'Password for {0}:'.format(target))
+            single = Single(
+                    self.opts,
+                    self.opts['arg_str'],
+                    target,
+                    **self.targets[target])
+            yield single.copy_id()
+
+
 class SSH(object):
     '''
     Create an ssh execution system
@@ -36,7 +62,7 @@ class SSH(object):
         self.defaults = {
                 'user': self.opts.get('ssh_user', 'root'),
                 'port': self.opts.get('ssh_port', '22'),
-                'passwd': self.opts.get('ssh_passwd', 'passwd'),
+                'passwd': self.opts.get('ssh_passwd', ''),
                 'priv': priv,
                 'timeout': self.opts.get('ssh_timeout', 60),
                 'sudo': self.opts.get('ssh_sudo', False),
@@ -159,29 +185,3 @@ class Single(multiprocessing.Process):
             return {self.id: data['local']}
         except Exception:
             return {self.id: 'No valid data returned, is ssh key deployed?'}
-
-
-class SSHCopyID(SSH):
-    '''
-    Used to manage copying the public key out to ssh minions
-    '''
-    def __init__(self, opts):
-        super(SSH, self).__init__()
-
-    def process(self):
-        '''
-        Execute ssh-copy-id
-        '''
-        for target in self.targets:
-            for default in self.defaults:
-                if not default in self.targets[target]:
-                    self.targets[target][default] = self.defaults[default]
-            if 'passwd' not in self.targets[target]:
-                self.targets[target]['passwd'] = getpass.getpass(
-                        'Password for {0}:'.format(target))
-            single = Single(
-                    self.opts,
-                    self.opts['arg_str'],
-                    target,
-                    **self.targets[target])
-            yield single.copy_id()
