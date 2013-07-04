@@ -2,6 +2,7 @@
 Create ssh executor system
 '''
 # Import python libs
+import os
 import multiprocessing
 import json
 
@@ -20,11 +21,17 @@ class SSH(object):
         self.targets = self.roster.targets(
                 self.opts['tgt'],
                 tgt_type)
+        priv_default = os.path.join(
+                self.opts['pki_dir'],
+                'ssh',
+                'salt-ssh.rsa')
+        if not os.path.isfile(priv_default):
+            priv_default = ''
         self.defaults = {
                 'user': self.opts.get('ssh_user', 'root'),
                 'port': self.opts.get('ssh_port', '22'),
                 'passwd': self.opts.get('ssh_passwd', 'passwd'),
-                'priv': self.opts.get('ssh_priv'),
+                'priv': self.opts.get('ssh_priv', priv_default),
                 'timeout': self.opts.get('ssh_timeout', 60),
                 'sudo': self.opts.get('ssh_sudo', False),
                 }
@@ -42,6 +49,7 @@ class SSH(object):
             single = Single(
                     self.opts,
                     self.opts['arg_str'],
+                    target,
                     **self.targets[target])
             yield single.cmd()
 
@@ -68,16 +76,20 @@ class Single(multiprocessing.Process):
             self,
             opts,
             arg_str,
+            id_,
             host,
             user=None,
             port=None,
             passwd=None,
             priv=None,
             timeout=None,
-            sudo=False):
+            sudo=False,
+            **kwargs):
         super(Single, self).__init__()
         self.opts = opts
         self.arg_str = arg_str
+        self.id = id_
+        self.extra = kwargs
         self.shell = salt.ssh.shell.Shell(
                 host,
                 user,
@@ -129,5 +141,9 @@ class Single(multiprocessing.Process):
         ret = self.shell.exec_cmd(cmd)
         if ret.startswith('deploy'):
             self.deploy()
-            return json.loads(self.cmd(arg_str))
-        return json.loads(ret)
+            return json.loads(self.cmd(self.arg_str))
+        try:
+            data = json.loads(ret)
+            return {self.id: data['local']}
+        except Exception:
+            return {self.id: 'No valid data returned'}
