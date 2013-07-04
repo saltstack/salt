@@ -21,17 +21,21 @@ class SSH(object):
         self.targets = self.roster.targets(
                 self.opts['tgt'],
                 tgt_type)
-        priv_default = os.path.join(
-                self.opts['pki_dir'],
-                'ssh',
-                'salt-ssh.rsa')
-        if not os.path.isfile(priv_default):
-            priv_default = ''
+        priv = self.opts.get(
+                'ssh_priv',
+                os.path.join(
+                    self.opts['pki_dir'],
+                    'ssh',
+                    'salt-ssh.rsa'
+                    )
+                )
+        if not os.path.isfile(priv):
+            salt.ssh.shell.gen_key(priv)
         self.defaults = {
                 'user': self.opts.get('ssh_user', 'root'),
                 'port': self.opts.get('ssh_port', '22'),
                 'passwd': self.opts.get('ssh_passwd', 'passwd'),
-                'priv': self.opts.get('ssh_priv', priv_default),
+                'priv': priv,
                 'timeout': self.opts.get('ssh_timeout', 60),
                 'sudo': self.opts.get('ssh_sudo', False),
                 }
@@ -146,4 +150,4 @@ class Single(multiprocessing.Process):
             data = json.loads(ret)
             return {self.id: data['local']}
         except Exception:
-            return {self.id: 'No valid data returned'}
+            return {self.id: 'No valid data returned, is ssh key deployed?'}
