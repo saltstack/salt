@@ -235,11 +235,18 @@ def install(pkgs=None,
             cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
     if pkgs:
-        pkg = pkgs.replace(',', ' ')
+        if isinstance(pkgs, basestring):
+            if ',' in pkgs:
+                pkgs = [p.strip() for p in pkgs.split(',')]
+            else:
+                pkgs = [pkgs]
+
         # It's possible we replaced version-range commas with semicolons so
         # they would survive the previous line (in the pip.installed state).
         # Put the commas back in
-        cmd.append(pkg.replace(';', ','))
+        cmd.extend(
+            [p.replace(';', ',') for p in pkgs]
+        )
 
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
