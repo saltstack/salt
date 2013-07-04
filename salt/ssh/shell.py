@@ -116,14 +116,12 @@ class Shell(object):
         Cleanly execute the command string
         '''
         try:
-            proc = salt.utils.nb_popen.NonBlockingPopen(
+            proc = subprocess.Popen(
                 cmd,
                 shell=True,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
             )
-            while proc.poll() is None:
-                time.sleep(0.25)
 
             data = proc.communicate()
             return data[0]
