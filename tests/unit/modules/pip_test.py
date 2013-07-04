@@ -27,6 +27,81 @@ class PipTestCase(TestCase):
             expected_cmd = 'pip install --requirement=\'requirements.txt\''
             mock.assert_called_once_with(expected_cmd, runas=None, cwd=None)
 
+    def test_install_editable_withough_egg_fails(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            mock.assertRaisesWithMessage(
+                Exception, 'You must specify an egg for this editable',
+                lambda: pip.install(
+                    editable='git+https://github.com/saltstack/salt-testing.git'
+                )
+            )
+
+    def test_install_multiple_editable(self):
+        editables = [
+            'git+https://github.com/jek/blinker.git#egg=Blinker',
+            'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
+        ]
+
+        # Passing editables as a list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(editable=editables)
+            mock.assert_called_once_with(
+                'pip install '
+                '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
+                '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing editables as a comma separated list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(editable=','.join(editables))
+            mock.assert_called_once_with(
+                'pip install '
+                '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
+                '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
+                runas=None,
+                cwd=None
+            )
+
+    def test_install_multiple_pkgs_and_editables(self):
+        pkgs = [
+            'pep8',
+            'salt'
+        ]
+
+        editables = [
+            'git+https://github.com/jek/blinker.git#egg=Blinker',
+            'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
+        ]
+
+        # Passing editables as a list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(pkgs=pkgs, editable=editables)
+            mock.assert_called_once_with(
+                'pip install pep8 salt '
+                '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
+                '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing editables as a comma separated list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(pkgs=','.join(pkgs), editable=','.join(editables))
+            mock.assert_called_once_with(
+                'pip install pep8 salt '
+                '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
+                '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
+                runas=None,
+                cwd=None
+            )
+
     def test_issue5940_multiple_pip_mirrors(self):
         mirrors = [
             'http://g.pypi.python.org',
