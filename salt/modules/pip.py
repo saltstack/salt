@@ -320,7 +320,6 @@ def install(pkgs=None,
             raise Exception('{0!r} must be a valid URL'.format(find_links))
         cmd.append('--find-links={0}'.format(find_links))
 
-
     if no_index and (index_url or extra_index_url):
         raise Exception(
             '\'no_index\' and (\'index_url\' or \'extra_index_url\') are '
@@ -460,12 +459,15 @@ def uninstall(pkgs=None,
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
 
     '''
-    cmd = '{0} uninstall -y '.format(_get_pip_bin(bin_env))
+    cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
 
     if pkgs:
-        pkg = pkgs.replace(',', ' ')
-        cmd = '{cmd} {pkg} '.format(
-            cmd=cmd, pkg=pkg)
+        if isinstance(pkgs, basestring):
+            if ',' in pkgs:
+                pkgs = [p.strip() for p in pkgs.split(',')]
+            else:
+                pkgs = [pkgs]
+        cmd.extend(pkgs)
 
     treq = None
     if requirements:
@@ -473,8 +475,7 @@ def uninstall(pkgs=None,
             req = __salt__['cp.cache_file'](requirements, __env__)
             treq = salt.utils.mkstemp()
             shutil.copyfile(req, treq)
-        cmd = '{cmd} --requirements {requirements!r} '.format(
-            cmd=cmd, requirements=treq or requirements)
+        cmd.append('--requirements={0!r}'.format(treq or requirements))
 
     if log:
         try:
@@ -482,24 +483,23 @@ def uninstall(pkgs=None,
             os.path.exists(log)
         except IOError:
             raise IOError('{0!r} is not writeable'.format(log))
-        cmd = '{cmd} --{log} '.format(
-            cmd=cmd, log=log)
+
+        cmd.append('--log={0}'.format(log))
 
     if proxy:
-        cmd = '{cmd} --proxy={proxy} '.format(
-            cmd=cmd, proxy=proxy)
+        cmd.append('--proxy={0}'.format(proxy))
+
 
     if timeout:
         try:
             int(timeout)
         except ValueError:
             raise ValueError(
-                '\'{0}\' is not a valid integer base 10.'.format(timeout)
+                '{0!r} is not a valid integer base 10.'.format(timeout)
             )
-        cmd = '{cmd} --timeout={timeout} '.format(
-            cmd=cmd, timeout=timeout)
+        cmd.append('--timeout={0}'.format(timeout))
 
-    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+    result = __salt__['cmd.run_all'](' '.join(cmd), runas=runas, cwd=cwd)
 
     if treq and requirements.startswith('salt://'):
         try:
