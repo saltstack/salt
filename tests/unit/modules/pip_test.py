@@ -27,6 +27,39 @@ class PipTestCase(TestCase):
             expected_cmd = 'pip install --requirement=\'requirements.txt\''
             mock.assert_called_once_with(expected_cmd, runas=None, cwd=None)
 
+    def test_issue5940_multiple_pip_mirrors(self):
+        mirrors = [
+            'http://g.pypi.python.org',
+            'http://c.pypi.python.org',
+            'http://pypi.crate.io'
+        ]
+
+        # Passing mirrors as a list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(mirrors=mirrors)
+            mock.assert_called_once_with(
+                'pip install --use-mirrors '
+                '--mirrors=http://g.pypi.python.org '
+                '--mirrors=http://c.pypi.python.org '
+                '--mirrors=http://pypi.crate.io',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing mirrors as a comma separated list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(mirrors=','.join(mirrors))
+            mock.assert_called_once_with(
+                'pip install --use-mirrors '
+                '--mirrors=http://g.pypi.python.org '
+                '--mirrors=http://c.pypi.python.org '
+                '--mirrors=http://pypi.crate.io',
+                runas=None,
+                cwd=None
+            )
+
     @patch('salt.modules.pip._get_cached_requirements')
     def test_failed_cached_requirements(self, get_cached_requirements):
         get_cached_requirements.return_value = False
