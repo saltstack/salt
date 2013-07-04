@@ -70,6 +70,9 @@ def install(feature, recurse=False):
     Note:
     Some features requires reboot after un/installation, if so until the server is restarted
     Other features can not be installed !
+    
+    Note:
+    Some features takes a long time to un/installation, set -t with a long timeout
     '''
     
     sub = ''
@@ -86,6 +89,9 @@ def remove(feature):
     Note:
     Some features requires reboot after un/installation, if so until the server is restarted
     Other features can not be installed !
+    
+    Note:
+    Some features takes a long time to un/installation, set -t with a long timeout
     '''
     
     out = _srvmgr( 'Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list'.format(feature) )
