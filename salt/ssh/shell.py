@@ -3,12 +3,23 @@ Manage transport commands via ssh
 '''
 
 # Import python libs
+import os
 import time
 import subprocess
 
 # Import salt libs
 import salt.utils
 import salt.utils.nb_popen
+
+
+def gen_key(path):
+    '''
+    Genrate a key for use with salt-ssh
+    '''
+    cmd = 'ssh-keygen -P "" -f {0} -t rsa -q'.format(path)
+    if not os.path.isdir(os.path.dirname(path)):
+        os.makedirs(os.path.dirname(path))
+    subprocess.call(cmd, shell=True)
 
 
 class Shell(object):
@@ -102,7 +113,6 @@ class Shell(object):
                     cmd)
         return None
 
-
     def _run_cmd(self, cmd):
         '''
         Cleanly execute the command string
@@ -124,19 +134,14 @@ class Shell(object):
         # Signal an error
         return ''
 
-
     def exec_cmd(self, cmd):
         '''
         Execute a remote command
         '''
         if self.sudo:
             cmd = 'sudo {0}'.format(cmd)
-            tty = True
-        else:
-            tty = False
         cmd = self._cmd_str(cmd)
         return self._run_cmd(cmd)
-
 
     def send(self, local, remote):
         '''
