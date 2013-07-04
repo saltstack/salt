@@ -737,7 +737,7 @@ def list_(prefix=None,
         raise CommandExecutionError(result['stderr'])
 
     for line in result['stdout'].splitlines():
-        if not line.startswith('-f'):
+        if line.startswith('-f'):
             # ignore -f line as it contains --find-links directory
             continue
         elif line.startswith('-e'):
