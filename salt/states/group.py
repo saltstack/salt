@@ -34,7 +34,8 @@ def present(name, gid=None, system=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    for lgrp in __salt__['group.getent']():
+    grps = __salt__['group.getent']()
+    for lgrp in grps:
         # Scan over the groups
         if lgrp['name'] == name:
             # The group is present, is the gid right?
@@ -63,6 +64,22 @@ def present(name, gid=None, system=False):
             else:
                 ret['comment'] = 'Group {0} is already present'.format(name)
                 return ret
+                
+    # Group is not present, test if gid is free
+    if gid != None:
+      gid_group = None
+      for lgrp in grps:
+        if lgrp['gid'] == gid:
+          gid_group = lgrp['name']
+          break
+
+      if gid_group != None:
+        ret['result'] = False
+        ret['comment'] = ('Group {0} is not present but gid {1}'
+                          ' is already taken by group {2}'
+                ).format(name,gid,gid_group)
+        return ret
+
     # Group is not present, make it!
     if __opts__['test']:
         ret['result'] = None
