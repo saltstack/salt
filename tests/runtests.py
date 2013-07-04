@@ -225,11 +225,18 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         '''
         Execute the unit tests
         '''
-        if not self.options.unit:
+        if not self.options.unit and not (self.options.name and any([
+                n.startswith('unit.') for n in self.options.name])):
+            # We are not explicitly running the unit tests and none of the
+            # names passed to --name is a unit test.
             return [True]
+
         status = []
         if self.options.name:
             for name in self.options.name:
+                if not name.startswith('unit.'):
+                    # Let's not run non unit tests
+                    continue
                 results = self.run_suite(os.path.join(TEST_DIR, 'unit'), name)
                 status.append(results)
         else:
