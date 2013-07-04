@@ -135,6 +135,39 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+    def test_install_with_multiple_find_links(self):
+        find_links = [
+            'http://g.pypi.python.org',
+            'http://c.pypi.python.org',
+            'http://pypi.crate.io'
+        ]
+
+        # Passing mirrors as a list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', find_links=find_links)
+            mock.assert_called_once_with(
+                'pip install pep8 '
+                '--find-links=http://g.pypi.python.org '
+                '--find-links=http://c.pypi.python.org '
+                '--find-links=http://pypi.crate.io',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing mirrors as a comma separated list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', find_links=','.join(find_links))
+            mock.assert_called_once_with(
+                'pip install pep8 1'
+                '--find-links=http://g.pypi.python.org '
+                '--find-links=http://c.pypi.python.org '
+                '--find-links=http://pypi.crate.io',
+                runas=None,
+                cwd=None
+            )
+
     @patch('salt.modules.pip._get_cached_requirements')
     def test_failed_cached_requirements(self, get_cached_requirements):
         get_cached_requirements.return_value = False

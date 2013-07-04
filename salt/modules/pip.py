@@ -319,11 +319,18 @@ def install(pkgs=None,
         cmd.append('--timeout={0}'.format(timeout))
 
     if find_links:
-        if not salt.utils.valid_url(find_links, VALID_PROTOS):
-            raise CommandExecutionError(
-                '{0!r} must be a valid URL'.format(find_links)
-            )
-        cmd.append('--find-links={0}'.format(find_links))
+        if isinstance(find_links, basestring):
+            if ',' in find_links:
+                find_links = [l.strip() for l in find_links.split(',')]
+            else:
+                find_links = [find_links]
+
+        for link in find_links:
+            if not salt.utils.valid_url(link, VALID_PROTOS):
+                raise CommandExecutionError(
+                    '{0!r} must be a valid URL'.format(link)
+                )
+            cmd.append('--find-links={0}'.format(link))
 
     if no_index and (index_url or extra_index_url):
         raise CommandExecutionError(
