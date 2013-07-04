@@ -11,7 +11,7 @@ def __virtual__():
     return 'firewall' if 'firewall.get_fw_config' in __salt__ else False
 
 
-def fw_disabled(name):
+def disabled(name):
     '''
     Disable all the firewall profiles (Windows only)
     '''
