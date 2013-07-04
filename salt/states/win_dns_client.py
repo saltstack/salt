@@ -42,7 +42,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
         return ret
     
     # Do nothing is already configured
-    configured_list = __salt__['network.get_dns_servers'](interface)
+    configured_list = __salt__['win_dns_client.get_dns_servers'](interface)
     if configured_list == servers:
         ret['comment'] = '{0} are already configured'.format( servers )
         return ret
@@ -54,7 +54,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
     
     # add the dns servers
     for i in range(0, len(servers)):
-        if not __salt__['network.add_dns'](servers[i] ,interface, i+1):
+        if not __salt__['win_dns_client.add_dns'](servers[i] ,interface, i+1):
             ret['comment'] = 'failed to add {0} as dns server number {1}'.format(servers[i] ,i+1)
             ret['result'] = False
             if i != 0:
@@ -83,7 +83,7 @@ def dns_dhcp(name, interface='Local Area Connection'):
         return ret
     
     # Check the config
-    config = __salt__['network.get_dns_config'](interface)
+    config = __salt__['win_dns_client.get_dns_config'](interface)
     if config == 'dhcp':
         ret['comment'] = '{0} already configured with dns from dhcp'.format( interface )
         return ret
@@ -94,7 +94,7 @@ def dns_dhcp(name, interface='Local Area Connection'):
         return ret
     
     # change the configuration
-    ret['result'] = __salt__['network.dns_dhcp'](interface)
+    ret['result'] = __salt__['win_dns_client.dns_dhcp'](interface)
     if not ret['result']:
         ret['changes'] = {}
         ret['comment'] = 'could not configure "{0}" dns servers from dhcp'.format( interface )
