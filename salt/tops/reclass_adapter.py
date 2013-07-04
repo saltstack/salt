@@ -41,7 +41,7 @@ setting the configuration option, like in the example above.
 # responds to the name 'reclass'.
 
 from salt.utils.reclass import prepend_reclass_source_path, \
-        filter_out_source_path_option
+        filter_out_source_path_option, set_inventory_base_uri_default
 
 def __virtual__(retry=False):
     try:
@@ -73,6 +73,10 @@ def top(**kwargs):
         # the source path we used above isn't something reclass needs to care
         # about, so filter it:
         filter_out_source_path_option(reclass_opts)
+
+        # if no inventory_base_uri was specified, initialise it to the first
+        # file_roots of class 'base' (if that exists):
+        set_inventory_base_uri_default(__opts__, kwargs)
 
         # I purposely do not pass any of __opts__ or __salt__ or __grains__
         # to reclass, as I consider those to be Salt-internal and reclass
