@@ -5,6 +5,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import pip
+from salt.exceptions import CommandExecutionError
 
 try:
     from mock import MagicMock, patch
@@ -31,7 +32,8 @@ class PipTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             mock.assertRaisesWithMessage(
-                Exception, 'You must specify an egg for this editable',
+                CommandExecutionError,
+                'You must specify an egg for this editable',
                 lambda: pip.install(
                     editable='git+https://github.com/saltstack/salt-testing.git'
                 )
@@ -160,7 +162,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', find_links=','.join(find_links))
             mock.assert_called_once_with(
-                'pip install pep8 1'
+                'pip install pep8 '
                 '--find-links=http://g.pypi.python.org '
                 '--find-links=http://c.pypi.python.org '
                 '--find-links=http://pypi.crate.io',
