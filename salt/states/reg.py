@@ -51,7 +51,7 @@ def value_exists(name, value):
         return ret
     
     # configure the key
-    ret['result'] = __salt__['reg.set_key'](hive, path, key, str(value))
+    ret['result'] = __salt__['reg.set_key'](hive, path, key, int(value))
     if not ret:
         ret['changes'] = {}
         ret['comment'] = 'could not configure the registry key'
