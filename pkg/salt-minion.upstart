@@ -13,5 +13,5 @@ stop on runlevel [!2345]
 #respawn limit 10 5
 
 script
-exec salt-minion
+exec su -c salt-minion
 end script

@@ -5,4 +5,4 @@ start on (net-device-up
           and runlevel [2345])
 stop on runlevel [!2345]
 
-exec salt-syndic
+exec su -c salt-syndic
