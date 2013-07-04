@@ -1399,7 +1399,7 @@ def check_managed(
                               group, mode, env, template, contents)
     __clean_tmp(sfn)
     if changes:
-        log.critical(changes)
+        log.info(changes)
         comments = ['The following values are set to be changed:\n']
         comments.extend('{0}: {1}\n'.format(key, val) for key, val in changes.iteritems())
         return None, ''.join(comments)
