@@ -156,10 +156,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         '''
         Execute the integration tests suite
         '''
-        if self.options.unit and not (self.options.runner or
-                                      self.options.state or
-                                      self.options.module or
-                                      self.options.client):
+        if (self.options.unit or (self.options.name and all([
+                n.startswith('unit.') for n in self.options.name]))) and not \
+                (self.options.runner or
+                 self.options.state or
+                 self.options.module or
+                 self.options.client):
+            # We're either not running any of runner, state, module and client
+            # tests, or, we're only running unittests by passing --unit or by
+            # passing only `unit.<whatever>` to --name.
+            # We don't need the tests daemon running
             return [True]
 
         smax_open_files, hmax_open_files = resource.getrlimit(
