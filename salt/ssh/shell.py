@@ -92,9 +92,7 @@ class Shell(object):
         '''
         Return the cmd string to execute
         '''
-        if self.passwd:
-            if not salt.utils.which('sshpass'):
-                return None
+        if self.passwd and salt.utils.which('sshpass'):
             opts = self._passwd_opts()
             return 'sshpass -p {0} {1} {2} {3} {4} {5}'.format(
                     self.passwd,
@@ -103,7 +101,7 @@ class Shell(object):
                     '-t -t' if self.tty else '',
                     opts,
                     cmd)
-        elif self.priv:
+        if self.priv:
             opts = self._key_opts()
             return '{0} {1} {2} {3} {4}'.format(
                     ssh,
