@@ -5,10 +5,10 @@ State for configuring Windows Firewall
 
 def __virtual__():
     '''
-    Load if the module win_firewall is loaded
+    Load if the module firewall is loaded
     '''
 
-    return 'win_firewall' if 'win_firewall.get_fw_config' in __salt__ else False
+    return 'firewall' if 'firewall.get_fw_config' in __salt__ else False
 
 
 def fw_disabled(name):
