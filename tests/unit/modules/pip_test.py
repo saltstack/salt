@@ -24,7 +24,7 @@ class PipTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(requirements='requirements.txt')
-            expected_cmd = 'pip install --requirement "requirements.txt" '
+            expected_cmd = 'pip install --requirement=\'requirements.txt\''
             mock.assert_called_once_with(expected_cmd, runas=None, cwd=None)
 
     @patch('salt.modules.pip._get_cached_requirements')
@@ -40,7 +40,7 @@ class PipTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(requirements='salt://requirements.txt')
-            expected_cmd = 'pip install --requirement "my_cached_reqs" '
+            expected_cmd = 'pip install --requirement=\'my_cached_reqs\''
             mock.assert_called_once_with(expected_cmd, runas=None, cwd=None)
 
     @patch('os.path')
@@ -55,7 +55,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('mock', bin_env='/test_env', activate=True)
             mock.assert_called_once_with(
-                '. /test_env/bin/activate && /test_env/bin/pip install mock ',
+                '. /test_env/bin/activate && /test_env/bin/pip install mock',
                 runas=None,
                 cwd=None)
 
