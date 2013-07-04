@@ -4,6 +4,7 @@ Install Python packages with pip to either the system or a virtualenv
 
 # Import python libs
 import os
+import re
 import logging
 import shutil
 
@@ -233,23 +234,30 @@ def install(pkgs=None,
         if not salt.utils.is_windows():
             cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
-    # XXX: Add test case to see if we support both pkgs and editable installs
     if pkgs:
         pkg = pkgs.replace(',', ' ')
         # It's possible we replaced version-range commas with semicolons so
         # they would survive the previous line (in the pip.installed state).
         # Put the commas back in
         cmd.append(pkg.replace(';', ','))
-    elif editable:
-        # Is the editable local?
-        if not editable.startswith(('file://', '/')):
-            import re
-            match = re.search(r'(?:#|#.*?&)egg=([^&]*)', editable)
 
-            if not match or not match.group(1):
-                # Missing #egg=theEggName
-                raise Exception('You must specify an egg for this editable')
-        cmd.append('--editable={0}'.format(editable))
+    if editable:
+        egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
+        if isinstance(editable, basestring):
+            if ',' in editable:
+                editable = [e.strip() for e in editable.split(',')]
+            else:
+                editable = [editable]
+
+        for entry in editable:
+            # Is the editable local?
+            if not entry.startswith(('file://', '/')):
+                match = egg_match.search(entry)
+
+                if not match or not match.group(1):
+                    # Missing #egg=theEggName
+                    raise Exception('You must specify an egg for this editable')
+            cmd.append('--editable={0}'.format(entry))
 
     treq = None
     if requirements:
