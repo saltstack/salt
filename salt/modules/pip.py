@@ -227,23 +227,29 @@ def install(pkgs=None,
     if env and not bin_env:
         bin_env = env
 
-    cmd = '{0} install'.format(_get_pip_bin(bin_env))
+    cmd = [_get_pip_bin(bin_env), 'install']
 
     if activate and bin_env:
-        if salt.utils.is_windows():
-            source_cmd = ''
-        else:
-            source_cmd = '. '
-        cmd = '{0}{1} && {2}'.format(source_cmd, _get_env_activate(bin_env), cmd)
+        if not salt.utils.is_windows():
+            cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
+    # XXX: Add test case to see if we support both pkgs and editable installs
     if pkgs:
         pkg = pkgs.replace(',', ' ')
         # It's possible we replaced version-range commas with semicolons so
         # they would survive the previous line (in the pip.installed state).
         # Put the commas back in
-        pkg = pkg.replace(';', ',')
-        cmd = '{cmd} {pkg} '.format(
-            cmd=cmd, pkg=pkg)
+        cmd.append(pkg.replace(';', ','))
+    elif editable:
+        # Is the editable local?
+        if not editable.startswith(('file://', '/')):
+            import re
+            match = re.search(r'(?:#|#.*?&)egg=([^&]*)', editable)
+
+            if not match or not match.group(1):
+                # Missing #egg=theEggName
+                raise Exception('You must specify an egg for this editable')
+        cmd.append('--editable={0}'.format(editable))
 
     treq = None
     if requirements:
@@ -253,7 +259,7 @@ def install(pkgs=None,
                 return {
                     'result': False,
                     'comment': (
-                        'pip requirements file \'{0}\' not found'.format(
+                        'pip requirements file {0!r} not found'.format(
                             requirements
                         )
                     )
@@ -266,144 +272,119 @@ def install(pkgs=None,
             treq = salt.utils.mkstemp()
             shutil.copyfile(requirements, treq)
             logger.debug(
-                'Changing ownership of requirements file \'{0}\' to '
-                'user \'{1}\''.format(treq, runas)
+                'Changing ownership of requirements file {0!r} to '
+                'user {1!r}'.format(treq, runas)
             )
             __salt__['file.chown'](treq, runas, None)
 
-        cmd = '{cmd} --requirement {requirements!r} '.format(
-            cmd=cmd,
-            requirements=treq or requirements
-        )
+        cmd.append('--requirement={0!r}'.format(treq or requirements))
 
     if log:
         try:
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError('\'{0}\' is not writeable'.format(log))
-        cmd = '{cmd} --log {log} '.format(
-            cmd=cmd, log=log)
+            raise IOError('{0!r} is not writeable'.format(log))
+
+        cmd.append('--log={0}'.format(log))
 
     if proxy:
-        cmd = '{cmd} --proxy={proxy} '.format(
-            cmd=cmd, proxy=proxy)
+        cmd.append('--proxy={0}'.format(proxy))
 
     if timeout:
         try:
             int(timeout)
         except ValueError:
             raise ValueError(
-                '\'{0}\' is not a valid integer base 10.'.format(timeout)
+                '{0!r} is not a valid integer base 10.'.format(timeout)
             )
-        cmd = '{cmd} --timeout={timeout} '.format(
-            cmd=cmd, timeout=timeout)
-
-    if editable:
-        # Is the editable local?
-        if not editable.startswith(('file://', '/')):
-            import re
-            match = re.search(r'(?:#|#.*?&)egg=([^&]*)', editable)
-
-            if not match or not match.group(1):
-                # Missing #egg=theEggName
-                raise Exception('You must specify an egg for this editable')
-        cmd = '{0} install --editable={editable}'.format(
-            _get_pip_bin(bin_env), editable=editable)
+        cmd.append('--timeout={0}'.format(timeout))
 
     if find_links:
         if not salt.utils.valid_url(find_links, VALID_PROTOS):
-            raise Exception('\'{0}\' must be a valid URL'.format(find_links))
-        cmd = '{cmd} --find-links={find_links}'.format(
-            cmd=cmd, find_links=find_links)
+            raise Exception('{0!r} must be a valid URL'.format(find_links))
+        cmd.append('--find-links={0}'.format(find_links))
+
+
+    if no_index and (index_url or extra_index_url):
+        raise Exception(
+            '\'no_index\' and (\'index_url\' or \'extra_index_url\') are '
+            'mutually exclusive.'
+        )
 
     if index_url:
         if not salt.utils.valid_url(index_url, VALID_PROTOS):
-            raise Exception('\'{0}\' must be a valid URL'.format(index_url))
-        cmd = '{cmd} --index-url={index_url!r} '.format(
-            cmd=cmd, index_url=index_url)
+            raise Exception('{0!r} must be a valid URL'.format(index_url))
+        cmd.append('--index-url={0!r}'.format(index_url))
 
     if extra_index_url:
         if not salt.utils.valid_url(extra_index_url, VALID_PROTOS):
             raise Exception(
-                '\'{0}\' must be a valid URL'.format(extra_index_url)
+                '{0!r} must be a valid URL'.format(extra_index_url)
             )
-        cmd = '{cmd} --extra-index-url={extra_index_url!r} '.format(
-            cmd=cmd, extra_index_url=extra_index_url)
+        cmd.append('--extra-index-url={0!r} '.format(extra_index_url))
 
     if no_index:
-        cmd = '{cmd} --no-index '.format(cmd=cmd)
+        cmd.append('--no-index')
 
     if mirrors:
-        _mirrors = []
         if isinstance(mirrors, basestring):
             if ',' in mirrors:
                 mirrors = [m.strip() for m in mirrors.split(',')]
             else:
                 mirrors = [mirrors]
 
+        cmd.append('--use-mirrors')
         for mirror in mirrors:
             if not mirror.startswith('http://'):
-                raise Exception('\'{0}\' must be a valid URL'.format(mirror))
-            _mirrors.append('--mirrors={0}'.format(mirror))
-
-        cmd = '{cmd} --use-mirrors {0} '.format(' '.join(_mirrors), cmd=cmd)
+                raise Exception('{0!r} must be a valid URL'.format(mirror))
+            cmd.append('--mirrors={0}'.format(mirror))
 
     if build:
-        cmd = '{cmd} --build={build} '.format(
-            cmd=cmd, build=build)
+        cmd.append('--build={0}'.format(build=build))
 
     if target:
-        cmd = '{cmd} --target={target} '.format(
-            cmd=cmd, target=target)
+        cmd.append('--target={0}'.format(target))
 
     if download:
-        cmd = '{cmd} --download={download} '.format(
-            cmd=cmd, download=download)
+        cmd.append('--download={0}'.format(download))
 
     if download_cache:
-        cmd = '{cmd} --download-cache={download_cache} '.format(
-            cmd=cmd, download_cache=download_cache)
+        cmd.append('--download-cache={0}'.format(download_cache))
 
     if source:
-        cmd = '{cmd} --source={source} '.format(
-            cmd=cmd, source=source)
+        cmd.append('--source={0}'.format(source))
 
     if upgrade:
-        cmd = '{cmd} --upgrade '.format(cmd=cmd)
+        cmd.append('--upgrade')
 
     if force_reinstall:
-        cmd = '{cmd} --force-reinstall '.format(cmd=cmd)
+        cmd.append('--force-reinstall')
 
     if ignore_installed:
-        cmd = '{cmd} --ignore-installed '.format(cmd=cmd)
+        cmd.append('--ignore-installed')
 
     if exists_action:
-        cmd = '{cmd} --exists-action={action} '.format(
-            cmd=cmd, action=exists_action)
+        cmd.append('--exists-action={0}'.format(exists_action))
 
     if no_deps:
-        cmd = '{cmd} --no-deps '.format(cmd=cmd)
+        cmd.append('--no-deps')
 
     if no_install:
-        cmd = '{cmd} --no-install '.format(cmd=cmd)
+        cmd.append('--no-install')
 
     if no_download:
-        cmd = '{cmd} --no-download '.format(cmd=cmd)
+        cmd.append('--no-download')
 
     if install_options:
-        opts = ''
-
         if isinstance(install_options, string_types):
             install_options = [install_options]
 
         for opt in install_options:
-            opts += '--install-option={opt} '.format(opt=opt)
-
-        cmd = '{cmd} {opts} '.format(cmd=cmd, opts=opts)
+            cmd.append('--install-option={0}'.format(opt))
 
     try:
-        return __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+        return __salt__['cmd.run_all'](' '.join(cmd), runas=runas, cwd=cwd)
     finally:
         if treq is not None:
             try:
