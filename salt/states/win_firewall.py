@@ -8,7 +8,7 @@ def __virtual__():
     Load if the module firewall is loaded
     '''
 
-    return 'firewall' if 'firewall.get_fw_config' in __salt__ else False
+    return 'win_firewall' if 'firewall.get_fw_config' in __salt__ else False
 
 
 def disabled(name):
@@ -20,12 +20,6 @@ def disabled(name):
            'result': True,
            'changes': {},
            'comment': ''}
-    
-    # Validate Windows
-    if not salt.utils.is_windows():
-        ret['result'] = False
-        ret['comment'] = 'This state is supported only on Windows'
-        return ret
     
     # Determine what to do
     action = False
