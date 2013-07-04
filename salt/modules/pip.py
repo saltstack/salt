@@ -51,7 +51,7 @@ def _get_pip_bin(bin_env):
 
 
 def _get_cached_requirements(requirements):
-    """Get the location of a cached requirements file; caching if necessary."""
+    '''Get the location of a cached requirements file; caching if necessary.'''
     cached_requirements = __salt__['cp.is_cached'](
         requirements, __env__
     )
@@ -76,12 +76,13 @@ def _get_env_activate(bin_env):
 
     if os.path.isdir(bin_env):
         if salt.utils.is_windows():
-            pip_bin = os.path.join(bin_env, 'Scripts', 'activate.bat')
+            activate_bin = os.path.join(bin_env, 'Scripts', 'activate.bat')
         else:
             activate_bin = os.path.join(bin_env, 'bin', 'activate')
         if os.path.isfile(activate_bin):
             return activate_bin
     raise CommandNotFoundError('Could not find a `activate` binary')
+
 
 def install(pkgs=None,
             requirements=None,
@@ -270,7 +271,7 @@ def install(pkgs=None,
             )
             __salt__['file.chown'](treq, runas, None)
 
-        cmd = '{cmd} --requirement "{requirements}" '.format(
+        cmd = '{cmd} --requirement {requirements!r} '.format(
             cmd=cmd,
             requirements=treq or requirements
         )
@@ -319,7 +320,7 @@ def install(pkgs=None,
     if index_url:
         if not salt.utils.valid_url(index_url, VALID_PROTOS):
             raise Exception('\'{0}\' must be a valid URL'.format(index_url))
-        cmd = '{cmd} --index-url="{index_url}" '.format(
+        cmd = '{cmd} --index-url={index_url!r} '.format(
             cmd=cmd, index_url=index_url)
 
     if extra_index_url:
@@ -327,7 +328,7 @@ def install(pkgs=None,
             raise Exception(
                 '\'{0}\' must be a valid URL'.format(extra_index_url)
             )
-        cmd = '{cmd} --extra-index-url="{extra_index_url}" '.format(
+        cmd = '{cmd} --extra-index-url={extra_index_url!r} '.format(
             cmd=cmd, extra_index_url=extra_index_url)
 
     if no_index:
@@ -467,7 +468,7 @@ def uninstall(pkgs=None,
             req = __salt__['cp.cache_file'](requirements, __env__)
             treq = salt.utils.mkstemp()
             shutil.copyfile(req, treq)
-        cmd = '{cmd} --requirements "{requirements}" '.format(
+        cmd = '{cmd} --requirements {requirements!r} '.format(
             cmd=cmd, requirements=treq or requirements)
 
     if log:
@@ -475,7 +476,7 @@ def uninstall(pkgs=None,
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError('\'{0}\' is not writeable'.format(log))
+            raise IOError('{0!r} is not writeable'.format(log))
         cmd = '{cmd} --{log} '.format(
             cmd=cmd, log=log)
 
@@ -526,8 +527,6 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
-
-    pip_bin = _get_pip_bin(bin_env)
 
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
 
