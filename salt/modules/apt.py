@@ -544,7 +544,7 @@ def list_pkgs(versions_as_list=False, removed=False):
                                                  version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
-    if __salt__['cmd.has_exec']('grep-available'):
+    if not removed and __salt__['cmd.has_exec']('grep-available'):
         cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
         out = __salt__['cmd.run_stdout'](cmd)
 
@@ -553,11 +553,11 @@ def list_pkgs(versions_as_list=False, removed=False):
         for realpkg, provides in virtpkg_re.findall(out):
             # grep-available returns info on all virtual packages. Ignore any
             # virtual packages that do not have the real package installed.
-            if realpkg in ret:
+            if realpkg in ret['installed']:
                 virtpkgs.update(provides.split(', '))
         for virtname in virtpkgs:
             # Set virtual package versions to '1'
-            __salt__['pkg_resource.add_pkg'](ret, virtname, '1')
+            __salt__['pkg_resource.add_pkg'](ret['installed'], virtname, '1')
 
     for pkglist_type in ('installed', 'removed'):
         __salt__['pkg_resource.sort_pkglist'](ret[pkglist_type])
