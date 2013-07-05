@@ -69,7 +69,8 @@ def _publish(
         return '{0!r} publish timed out'.format(fun)
     if not peer_data:
         return {}
-    time.sleep(timeout)
+    # CLI args are passed as strings, re-cast to keep time.sleep happy
+    time.sleep(float(timeout))
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
             'tok': tok,
