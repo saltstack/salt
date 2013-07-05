@@ -162,7 +162,7 @@ except ImportError:
                 for k in self:
                     yield (k, self[k])
 
-            def update(*args, **kwds):
+            def update(*args, **kwds):  # pylint: disable=E0211
                 '''od.update(E, **F) -> None.  Update od from dict/iterable E and F.
 
                 If E is a dict instance, does:           for k in E: od[k] = E[k]
