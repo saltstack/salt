@@ -47,7 +47,7 @@ if os.name == 'nt':  # pragma: no cover
         _CommitTransaction = ctypes.windll.ktmw32.CommitTransaction
         _MoveFileTransacted = ctypes.windll.kernel32.MoveFileTransactedW
         _CloseHandle = ctypes.windll.kernel32.CloseHandle
-        # pylint: enable-msg=C0103
+        # pylint: enable=C0103
         CAN_RENAME_OPEN_FILE = True
 
         def _rename_atomic(src, dst):
