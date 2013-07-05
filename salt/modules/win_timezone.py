@@ -453,7 +453,7 @@ def __virtual__():
     '''
     
     if salt.utils.is_windows():
-    	return 'timezone'
+        return 'timezone'
     return False
 
 
