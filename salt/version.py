@@ -132,7 +132,7 @@ del __get_version
 
 def versions_information():
     '''
-    Report on all of the versions for dependant software
+    Report on all of the versions for dependent software
     '''
     libs = (
         ('Salt', None, __version__),

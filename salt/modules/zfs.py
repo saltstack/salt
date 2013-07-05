@@ -41,7 +41,7 @@ def _available_commands():
     # Note that we append '|| :' as a unix hack to force return code to be 0.
     res = salt_cmd.run_all('{0} help || :'.format(zfs_path))
 
-    # This bit is dependant on specific output from `zfs help` - any major changes
+    # This bit is dependent on specific output from `zfs help` - any major changes
     # in how this works upstream will require a change.
     for line in res['stderr'].splitlines():
         if re.match('	[a-zA-Z]', line):
