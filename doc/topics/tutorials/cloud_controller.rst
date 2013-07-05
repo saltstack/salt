@@ -67,7 +67,7 @@ hypervisor and is bridged to an active network device.
     To use more advanced networking in Salt Virt read the `Salt Virt
     Networking` document:
 
-    `Salt Virt Networking <topics/virt/nic>`
+    :doc:`Salt Virt Networking <topics/virt/nic>`
 
 Libvirt State
 -------------
