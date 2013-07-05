@@ -134,7 +134,7 @@ case "$1" in
     reload)
         echo "can't reload configuration, you have to restart it"
         if [ -f $SUSE_RELEASE ]; then
-        	rc status -v
+        	rc_status -v
         else
         	RETVAL=$?
         fi
