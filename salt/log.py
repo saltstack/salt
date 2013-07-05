@@ -139,7 +139,7 @@ class LoggingMixInMeta(type):
 class SaltLoggingClass(LOGGING_LOGGER_CLASS):
     __metaclass__ = LoggingMixInMeta
 
-    def __new__(mcs, logger_name):
+    def __new__(cls, logger_name):
         '''
         We override `__new__` in our logging logger class in order to provide
         some additional features like expand the module name padding if length
@@ -151,7 +151,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS):
             logging.getLogger(__name__)
 
         '''
-        instance = super(SaltLoggingClass, mcs).__new__(mcs)
+        instance = super(SaltLoggingClass, cls).__new__(cls)
 
         try:
             max_logger_length = len(max(
