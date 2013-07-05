@@ -217,7 +217,7 @@ except ImportError:
                 self[key] = default
                 return default
 
-            def __repr__(self, _repr_running={}):
+            def __repr__(self, _repr_running={}):  # pylint: disable=W0102
                 'od.__repr__() <==> repr(od)'
                 call_key = id(self), _get_ident()
                 if call_key in _repr_running:
