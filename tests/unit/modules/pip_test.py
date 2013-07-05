@@ -31,13 +31,12 @@ class PipTestCase(TestCase):
     def test_install_editable_withough_egg_fails(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            mock.assertRaisesWithMessage(
+            self.assertRaises(
                 CommandExecutionError,
-                'You must specify an egg for this editable',
-                lambda: pip.install(
-                    editable='git+https://github.com/saltstack/salt-testing.git'
-                )
+                pip.install,
+                editable='git+https://github.com/saltstack/salt-testing.git'
             )
+            #mock.assert_called_once_with('', runas=None, cwd=None)
 
     def test_install_multiple_editable(self):
         editables = [
@@ -169,6 +168,23 @@ class PipTestCase(TestCase):
                 runas=None,
                 cwd=None
             )
+
+    def test_install_no_index_with_index_url_or_extra_index_url_raises(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.install, no_index=True, index_url='http://foo.tld'
+            )
+            #mock.assert_called_once_with('', runas=None, cwd=None)
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.install, no_index=True, extra_index_url='http://foo.tld'
+            )
+            #mock.assert_called_once_with('', runas=None, cwd=None)
 
     @patch('salt.modules.pip._get_cached_requirements')
     def test_failed_cached_requirements(self, get_cached_requirements):
