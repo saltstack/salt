@@ -111,6 +111,7 @@ Python 2: If ``s`` is an instance of ``text_type``, return
 '''
 
 if PY3:
+    # pylint: disable=E0611
     from urllib.parse import urlparse
     from urllib.parse import urlunparse
     from urllib.error import URLError
