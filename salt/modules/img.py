@@ -21,7 +21,7 @@ def mnt_image(location):
     '''
     if 'guestfs.mount' in __salt__:
         return __salt__['guestfs.mount'](location)
-    elif 'qemu_nbd' in __salt__:
+    elif 'qemu_nbd.init' in __salt__:
         mnt = __salt__['qemu_nbd.init'](location)
         __context__['img.mnt_{0}'.format(location)] = mnt
         return mnt.keys()[0]
