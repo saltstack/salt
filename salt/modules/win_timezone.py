@@ -496,7 +496,7 @@ def get_offset():
     if not string:
         return False
     
-    reg = re.search( "\(UTC(.\d\d:\d\d)\) .*", string, re.M)
+    reg = re.search(r"\(UTC(.\d\d:\d\d)\) .*", string, re.M)
     if not reg:
         ret = '0000'
     else:

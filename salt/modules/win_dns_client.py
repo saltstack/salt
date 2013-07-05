@@ -29,7 +29,7 @@ def get_dns_servers(interface='Local Area Connection'):
     '''
     out = __salt__['cmd.run'](
             'netsh interface ip show dns "{0}"'.format(interface))
-    return re.findall("(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", out)
+    return re.findall(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", out)
 
 
 def rm_dns(ip, interface='Local Area Connection'):
