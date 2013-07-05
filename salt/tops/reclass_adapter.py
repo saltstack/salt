@@ -40,6 +40,7 @@ setting the configuration option, like in the example above.
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
+import sys
 from salt.utils.reclass import prepend_reclass_source_path, \
         filter_out_source_path_option, set_inventory_base_uri_default
 
