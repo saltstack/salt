@@ -23,14 +23,14 @@ def _parse_key(key):
     return hive, path, key
 
 
-def value_exists(name, value):
+def present(name, value):
     '''
     Set a registry entry
     
     Example::
 
         'HKEY_CURRENT_USER\SOFTWARE\Salt\version':
-          reg.value_exists:
+          reg.present:
             - value: 0.15.3
     '''
     
