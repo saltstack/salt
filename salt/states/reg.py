@@ -29,7 +29,7 @@ def present(name, value):
     
     Example::
 
-        'HKEY_CURRENT_USER\SOFTWARE\Salt\version':
+        'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':
           reg.present:
             - value: 0.15.3
     '''
