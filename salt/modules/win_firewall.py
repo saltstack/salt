@@ -19,15 +19,19 @@ def __virtual__():
     return False
 
 
-def get_fw_config():
+def get_config():
     '''
     Get the status of all the firewall profiles
+
+    CLI Example::
+
+        salt '*' firewall.get_config
     '''
-    
     profiles = {}
     curr = None
-    
-    for line in __salt__['cmd.run']( 'netsh advfirewall show allprofiles' ).splitlines():
+
+    cmd = 'netsh advfirewall show allprofiles'
+    for line in __salt__['cmd.run'](cmd).splitlines():
         if not curr:
             tmp = re.search('(.*) Profile Settings:', line)
             if tmp:
@@ -39,11 +43,16 @@ def get_fw_config():
     return profiles
 
 
-def disable_fw():
+def disable():
     '''
     Disable all the firewall profiles
+
+    CLI Example::
+
+        salt '*' firewall.disable
     '''
-    
-    return __salt__['cmd.run']( 'netsh advfirewall set allprofiles state off' ) == 'Ok.'
+    return __salt__['cmd.run'](
+            'netsh advfirewall set allprofiles state off'
+            ) == 'Ok.'
 
 
