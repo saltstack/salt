@@ -8,14 +8,14 @@ import inspect
 
 class Depends(object):
     '''
-    This decorator will check the module when it is loaded and check that the dependancies passed in
+    This decorator will check the module when it is loaded and check that the dependencies passed in
         are in the globals of the module. If not, it will cause the function to be unloaded (or replaced)
     '''
-    # Dependancy -> list of things that depend on it
-    dependancy_dict = defaultdict(set)
-    def __init__(self, *dependancies, **kwargs):
+    # Dependency -> list of things that depend on it
+    dependency_dict = defaultdict(set)
+    def __init__(self, *dependencies, **kwargs):
         '''
-        The decorator is instantiated with a list of dependancies (string of global name)
+        The decorator is instantiated with a list of dependencies (string of global name)
 
             an example use of this would be:
 
@@ -29,8 +29,8 @@ class Depends(object):
             def test():
                 return 'foo'
         '''
-        logging.debug('Depends decorator instantiated with dep list of {0}'.format(dependancies))
-        self.depencancies = dependancies
+        logging.debug('Depends decorator instantiated with dep list of {0}'.format(dependencies))
+        self.depencancies = dependencies
         self.fallback_funcion = kwargs.get('fallback_funcion')
 
     def __call__(self, function):
@@ -41,24 +41,24 @@ class Depends(object):
         '''
         module = inspect.getmodule(inspect.stack()[1][0])
         for dep in self.depencancies:
-            self.dependancy_dict[dep].add((module, function, self.fallback_funcion))
+            self.dependency_dict[dep].add((module, function, self.fallback_funcion))
         return function
 
     @classmethod
-    def enforce_dependancies(self, functions):
+    def enforce_dependencies(self, functions):
         '''
-        This is a class global method to enforce the dependancies that you currently know about
+        This is a class global method to enforce the dependencies that you currently know about
 
-        It will modify the "functions" dict and remove/replace modules that are missing dependancies
+        It will modify the "functions" dict and remove/replace modules that are missing dependencies
         '''
-        for dependancy, dependant_set in self.dependancy_dict.iteritems():
-            # check if dependancy is loaded
+        for dependency, dependant_set in self.dependency_dict.iteritems():
+            # check if dependency is loaded
             for module, func, fallback_funcion in dependant_set:
-                # check if you have the dependancy
-                if dependancy in dir(module):
-                    logging.debug('Dependancy ({0}) already loaded inside {1}, skipping'.format(dependancy, module.__name__.split('.')[-1]))
+                # check if you have the dependency
+                if dependency in dir(module):
+                    logging.debug('Dependency ({0}) already loaded inside {1}, skipping'.format(dependency, module.__name__.split('.')[-1]))
                     continue
-                logging.debug('Unloading {0}.{1} because dependancy ({2}) is not imported'.format(module, func, dependancy))
+                logging.debug('Unloading {0}.{1} because dependency ({2}) is not imported'.format(module, func, dependency))
                 # if not, unload dependand_set
                 mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
                                            func.__name__)
