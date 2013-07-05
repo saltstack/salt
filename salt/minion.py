@@ -534,7 +534,8 @@ class Minion(object):
         # Verify that the publication applies to this minion
         if 'tgt_type' in data:
             if not getattr(self.matcher,
-                           '{0}_match'.format(data['tgt_type']))(data['tgt']):
+                           '{0}_match'.format(data['tgt_type']))(data['tgt'],
+                           False):
                 return
         else:
             if not self.matcher.glob_match(data['tgt']):
