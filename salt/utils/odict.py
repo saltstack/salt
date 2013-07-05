@@ -53,7 +53,7 @@ except ImportError:
                 because their insertion order is arbitrary.
 
                 '''
-                super(OrderedDict, self).__init__()
+                super(OrderedDict, self).__init__()  # pylint: disable=E1003
                 if len(args) > 1:
                     raise TypeError('expected at most 1 arguments, got %d' % len(args))
                 try:
