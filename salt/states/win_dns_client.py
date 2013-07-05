@@ -12,7 +12,7 @@ def __virtual__():
 
 def dns_exists(name, servers=None, interface='Local Area Connection'):
     '''
-    Configure the dns server list in the specified interface
+    Configure the DNS server list in the specified interface
     
     Example::
 
@@ -44,15 +44,15 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
     if __opts__['test']:
         return ret
     
-    # add the dns servers
-    for i in range(0, len(servers)):
-        if not __salt__['win_dns_client.add_dns'](servers[i] ,interface, i+1):
+    # add the DNS servers
+    for i, server in enumerate(servers):
+        if not __salt__['win_dns_client.add_dns'](server, interface, i+1):
             ret['comment'] = (
-                    'Failed to add {0} as dns server number {1}'
-                    ).format(servers[i] ,i+1)
+                    'Failed to add {0} as DNS server number {1}'
+                    ).format(server, i+1)
             ret['result'] = False
-            if i != 0:
-                ret['changes'] = {'configure servers': servers[0,i]}
+            if i > 0:
+                ret['changes'] = {'configure servers': servers[:i]}
             else:
                 ret['changes'] = {}
             return ret
@@ -62,7 +62,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
 
 def dns_dhcp(name, interface='Local Area Connection'):
     '''
-    Configure the dns server list from DHCP Server
+    Configure the DNS server list from DHCP Server
     '''
     
     ret = {'name': name,
@@ -73,11 +73,11 @@ def dns_dhcp(name, interface='Local Area Connection'):
     # Check the config
     config = __salt__['win_dns_client.get_dns_config'](interface)
     if config == 'dhcp':
-        ret['comment'] = '{0} already configured with dns from dhcp'.format(
+        ret['comment'] = '{0} already configured with DNS from DHCP'.format(
                 interface)
         return ret
     else:
-        ret['changes'] = {'dns': 'configured from dhcp'}
+        ret['changes'] = {'dns': 'configured from DHCP'}
     
     if __opts__['test']:
         return ret
@@ -87,7 +87,7 @@ def dns_dhcp(name, interface='Local Area Connection'):
     if not ret['result']:
         ret['changes'] = {}
         ret['comment'] = (
-                'Could not configure "{0}" dns servers from dhcp'
+                'Could not configure "{0}" DNS servers from DHCP'
                 ).format(interface)
     
     return ret
