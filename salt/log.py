@@ -222,7 +222,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS):
         return LOGGING_LOGGER_CLASS.makeRecord(
             self, name, level, fn, lno, msg, args, exc_info, func, extra
         )
-    # pylint: enable-msg=C0103
+    # pylint: enable=C0103
 
 
 # Override the python's logging logger class as soon as this module is imported

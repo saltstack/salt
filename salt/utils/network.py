@@ -82,7 +82,7 @@ def ip_to_host(ip):
         hostname = None
     return hostname
 
-# pylint: enable-msg=C0103
+# pylint: enable=C0103
 
 
 def _cidr_to_ipv4_netmask(cidr_bits):
@@ -124,7 +124,7 @@ def _number_of_set_bits(x):
     x += x >> 16
     return x & 0x0000003f
 
-# pylint: enable-msg=C0103
+# pylint: enable=C0103
 
 
 def _interfaces_ip(out):
