@@ -8,7 +8,7 @@ def __virtual__():
     Load if the module firewall is loaded
     '''
 
-    return 'win_firewall' if 'firewall.get_fw_config' in __salt__ else False
+    return 'win_firewall' if 'firewall.get_config' in __salt__ else False
 
 
 def disabled(name):
@@ -23,7 +23,7 @@ def disabled(name):
     
     # Determine what to do
     action = False
-    current_config = __salt__['firewall.get_fw_config']()
+    current_config = __salt__['firewall.get_config']()
     for key in current_config:
         if current_config[key]:
             action = True
@@ -35,11 +35,11 @@ def disabled(name):
     
     # Disable it
     if action:
-        ret['result'] = __salt__['firewall.disable_fw']()
+        ret['result'] = __salt__['firewall.disable']()
         if not ret['result']:
-            ret['comment'] = 'could not disable the FW'
+            ret['comment'] = 'Could not disable the FW'
     else:
-        ret['comment'] = 'all the firewall profiles are disabled'
+        ret['comment'] = 'All the firewall profiles are disabled'
     
     return ret
 
