@@ -100,8 +100,8 @@ def minion_mods(opts, context=None, whitelist=None):
         pack,
         whitelist=whitelist
     )
-    # Enforce dependancies of module functions from "functions"
-    Depends.enforce_dependancies(functions)
+    # Enforce dependencies of module functions from "functions"
+    Depends.enforce_dependencies(functions)
 
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
