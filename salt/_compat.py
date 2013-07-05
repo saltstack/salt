@@ -146,4 +146,4 @@ if PY3:
     from io import StringIO
 else:
     from StringIO import StringIO
-# pylint: enable-msg=C0103
+# pylint: enable=C0103
