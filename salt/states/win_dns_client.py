@@ -52,7 +52,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
                     ).format(servers[i] ,i+1)
             ret['result'] = False
             if i != 0:
-                ret['changes'] = {'configure servers': servers[0,i]}
+                ret['changes'] = {'configure servers': servers[:i]}
             else:
                 ret['changes'] = {}
             return ret
