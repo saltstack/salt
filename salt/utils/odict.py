@@ -16,7 +16,7 @@
 '''
 
 try:
-    from collections import OrderedDict
+    from collections import OrderedDict  # pylint: disable=E0611
 except ImportError:
     try:
         from ordereddict import OrderedDict
