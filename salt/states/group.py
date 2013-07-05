@@ -67,18 +67,18 @@ def present(name, gid=None, system=False):
                 
     # Group is not present, test if gid is free
     if gid != None:
-      gid_group = None
-      for lgrp in grps:
-        if lgrp['gid'] == gid:
-          gid_group = lgrp['name']
-          break
+        gid_group = None
+        for lgrp in grps:
+            if lgrp['gid'] == gid:
+                gid_group = lgrp['name']
+                break
 
-      if gid_group != None:
-        ret['result'] = False
-        ret['comment'] = ('Group {0} is not present but gid {1}'
-                          ' is already taken by group {2}'
-                ).format(name,gid,gid_group)
-        return ret
+        if gid_group != None:
+            ret['result'] = False
+            ret['comment'] = ('Group {0} is not present but gid {1}'
+                              ' is already taken by group {2}'
+                            ).format(name,gid,gid_group)
+            return ret
 
     # Group is not present, make it!
     if __opts__['test']:
