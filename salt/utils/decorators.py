@@ -45,13 +45,13 @@ class Depends(object):
         return function
 
     @classmethod
-    def enforce_dependencies(self, functions):
+    def enforce_dependencies(cls, functions):
         '''
         This is a class global method to enforce the dependencies that you currently know about
 
         It will modify the "functions" dict and remove/replace modules that are missing dependencies
         '''
-        for dependency, dependant_set in self.dependency_dict.iteritems():
+        for dependency, dependant_set in cls.dependency_dict.iteritems():
             # check if dependency is loaded
             for module, func, fallback_funcion in dependant_set:
                 # check if you have the dependency
