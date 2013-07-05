@@ -852,7 +852,7 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
     _include_text_out_ = True
 
     def __new__(cls, *args, **kwargs):
-        instance = super(OutputOptionsMixIn, cls).__new__(cls, *args, **kwargs)
+        instance = super(OutputOptionsWithTextMixIn, cls).__new__(cls, *args, **kwargs)
         # Let the next warning show up at least once since DeprecationWarning's
         # are, by default, ignored by python default filters
         warnings.filterwarnings(
