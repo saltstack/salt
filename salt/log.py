@@ -138,7 +138,16 @@ class LoggingMixInMeta(type):
         )
 
 
-class SaltLoggingClass(LOGGING_LOGGER_CLASS, object):
+class __NewStyleClassMixIn(object):
+    '''
+    Simple new style class to make pylint shut up!
+    This is required because SaltLoggingClass can't subclass object directly:
+
+        'Cannot create a consistent method resolution order (MRO) for bases'
+    '''
+
+
+class SaltLoggingClass(LOGGING_LOGGER_CLASS, __NewStyleClassMixIn):
     __metaclass__ = LoggingMixInMeta
 
     def __new__(cls, logger_name):
