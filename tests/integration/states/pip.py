@@ -146,6 +146,24 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
+    def test_issue_5940_multiple_pip_mirrors(self):
+        ret = self.run_function(
+            'state.sls', mods='issue-5940-multiple-pip-mirrors'
+        )
+
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, '5940-multiple-pip-mirrors'
+        )
+
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
 
 if __name__ == '__main__':
     from integration import run_tests
