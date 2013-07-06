@@ -195,6 +195,76 @@ class ConfigTestCase(TestCase):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    def test_issue_5970_minion_confd_inclusion(self):
+        try:
+            tempdir = tempfile.mkdtemp()
+            minion_config = os.path.join(tempdir, 'minion')
+            minion_confd = os.path.join(tempdir, 'minion.d')
+            os.makedirs(minion_confd)
+
+            # Let's populate a minion configuration file with some basic
+            # settings
+            salt.utils.fopen(minion_config, 'w').write(
+                'blah: false\n'
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(tempdir, minion_config)
+            )
+
+            # Now, let's populate an extra configuration file under minion.d
+            # Notice that above we've set blah as False and bellow as True.
+            # Since the minion.d files are loaded after the main configuration
+            # file so overrides can happen, the final value of blah should be
+            # True.
+            extra_config = os.path.join(minion_confd, 'extra.conf')
+            salt.utils.fopen(extra_config, 'w').write(
+                'blah: true\n'
+            )
+
+            # Let's load the configuration
+            config = sconfig.minion_config(minion_config)
+
+            self.assertEqual(config['log_file'], minion_config)
+            # As proven by the assertion below, blah is True
+            self.assertTrue(config['blah'])
+        finally:
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_master_confd_inclusion(self):
+        try:
+            tempdir = tempfile.mkdtemp()
+            master_config = os.path.join(tempdir, 'master')
+            master_confd = os.path.join(tempdir, 'master.d')
+            os.makedirs(master_confd)
+
+            # Let's populate a master configuration file with some basic
+            # settings
+            salt.utils.fopen(master_config, 'w').write(
+                'blah: false\n'
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(tempdir, master_config)
+            )
+
+            # Now, let's populate an extra configuration file under master.d
+            # Notice that above we've set blah as False and bellow as True.
+            # Since the master.d files are loaded after the main configuration
+            # file so overrides can happen, the final value of blah should be
+            # True.
+            extra_config = os.path.join(master_confd, 'extra.conf')
+            salt.utils.fopen(extra_config, 'w').write(
+                'blah: true\n'
+            )
+
+            # Let's load the configuration
+            config = sconfig.master_config(master_config)
+
+            self.assertEqual(config['log_file'], master_config)
+            # As proven by the assertion below, blah is True
+            self.assertTrue(config['blah'])
+        finally:
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
 
 if __name__ == '__main__':
     from integration import run_tests
