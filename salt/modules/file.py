@@ -63,6 +63,28 @@ def _error(ret, err_msg):
     return ret
 
 
+def _binary_replace(old, new):
+    '''
+    This function does NOT do any diffing, it just checks the old and new files
+    to see if either is binary, and provides an appropriate string noting the
+    difference between the two files. If neither file is binary, an empty
+    string is returned.
+
+    This function should only be run AFTER it has been determined that the
+    files differ.
+    '''
+    old_isbin = not salt.utils.istextfile(old)
+    new_isbin = not salt.utils.istextfile(new)
+    if any((old_isbin, new_isbin)):
+        if all((old_isbin, new_isbin)):
+            return 'Replace binary file'
+        elif old_isbin:
+            return 'Replace binary file with text file'
+        elif new_isbin:
+            return 'Replace text file with binary file'
+    return ''
+
+
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
@@ -1436,18 +1458,24 @@ def check_file_meta(
             if not sfn and source:
                 sfn = __salt__['cp.cache_file'](source, env)
             if sfn:
-                with contextlib.nested(
-                        salt.utils.fopen(sfn, 'rb'),
-                        salt.utils.fopen(name, 'rb')) as (src, name_):
-                    slines = src.readlines()
-                    nlines = name_.readlines()
                 if __salt__['config.option']('obfuscate_templates'):
                     changes['diff'] = '<Obfuscated Template>'
                 else:
-                    changes['diff'] = \
-                        ''.join(difflib.unified_diff(nlines, slines))
+                    # Check to see if the files are bins
+                    bdiff = _binary_replace(name, sfn)
+                    if bdiff:
+                        changes['diff'] = bdiff
+                    else:
+                        with contextlib.nested(
+                                salt.utils.fopen(sfn, 'rb'),
+                                salt.utils.fopen(name, 'rb')) as (src, name_):
+                            slines = src.readlines()
+                            nlines = name_.readlines()
+                        changes['diff'] = \
+                            ''.join(difflib.unified_diff(nlines, slines))
             else:
                 changes['sum'] = 'Checksum differs'
+
     if contents is not None:
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
@@ -1463,8 +1491,12 @@ def check_file_meta(
             if __salt__['config.option']('obfuscate_templates'):
                 changes['diff'] = '<Obfuscated Template>'
             else:
-                changes['diff'] = (''.join(difflib.unified_diff(nlines,
-                                                                slines)))
+                if salt.utils.istextfile(name):
+                    changes['diff'] = \
+                        ''.join(difflib.unified_diff(nlines, slines))
+                else:
+                    changes['diff'] = 'Replace binary file with text file'
+
     if user is not None and user != lstats['user']:
         changes['user'] = user
     if group is not None and group != lstats['group']:
@@ -1501,10 +1533,13 @@ def get_diff(
                 as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
-        diff = difflib.unified_diff(nlines, slines, minionfile, masterfile)
-        if diff:
-            for line in diff:
-                ret = ret + line
+        if ''.join(nlines) != ''.join(slines):
+            bdiff = _binary_replace(minionfile, sfn)
+            if bdiff:
+                ret += bdiff
+            else:
+                ret += ''.join(difflib.unified_diff(nlines, slines,
+                                                    minionfile, masterfile))
     else:
         ret = 'Failed to copy file from master'
 
@@ -1564,24 +1599,25 @@ def manage_file(name,
                     ret['result'] = False
                     return ret
 
-            # Check to see if the files are bins
-            if not salt.utils.istextfile(sfn) \
-                    or not salt.utils.istextfile(name):
-                ret['changes']['diff'] = 'Replace binary file'
+            # Print a diff equivalent to diff -u old new
+            if __salt__['config.option']('obfuscate_templates'):
+                ret['changes']['diff'] = '<Obfuscated Template>'
+            elif not show_diff:
+                ret['changes']['diff'] = '<show_diff=False>'
             else:
-                with contextlib.nested(
-                        salt.utils.fopen(sfn, 'rb'),
-                        salt.utils.fopen(name, 'rb')) as (src, name_):
-                    slines = src.readlines()
-                    nlines = name_.readlines()
-                    # Print a diff equivalent to diff -u old new
-                    if __salt__['config.option']('obfuscate_templates'):
-                        ret['changes']['diff'] = '<Obfuscated Template>'
-                    elif not show_diff:
-                        ret['changes']['diff'] = '<show_diff=False>'
-                    else:
-                        ret['changes']['diff'] = \
-                            ''.join(difflib.unified_diff(nlines, slines))
+                # Check to see if the files are bins
+                bdiff = _binary_replace(name, sfn)
+                if bdiff:
+                    ret['changes']['diff'] = bdiff
+                else:
+                    with contextlib.nested(
+                            salt.utils.fopen(sfn, 'rb'),
+                            salt.utils.fopen(name, 'rb')) as (src, name_):
+                        slines = src.readlines()
+                        nlines = name_.readlines()
+                    ret['changes']['diff'] = \
+                        ''.join(difflib.unified_diff(nlines, slines))
+
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(sfn,
@@ -1613,8 +1649,12 @@ def manage_file(name,
                 elif not show_diff:
                     ret['changes']['diff'] = '<show_diff=False>'
                 else:
-                    ret['changes']['diff'] = \
-                        ''.join(difflib.unified_diff(nlines, slines))
+                    if salt.utils.istextfile(name):
+                        ret['changes']['diff'] = \
+                            ''.join(difflib.unified_diff(nlines, slines))
+                    else:
+                        ret['changes']['diff'] = \
+                            'Replace binary file with text file'
 
                 # Pre requisites are met, the file needs to be replaced, do it
                 try:
