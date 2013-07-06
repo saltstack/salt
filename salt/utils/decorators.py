@@ -51,15 +51,15 @@ class Depends(object):
 
         It will modify the "functions" dict and remove/replace modules that are missing dependencies
         '''
-        for dependency, dependant_set in cls.dependency_dict.iteritems():
+        for dependency, dependent_set in cls.dependency_dict.iteritems():
             # check if dependency is loaded
-            for module, func, fallback_funcion in dependant_set:
+            for module, func, fallback_funcion in dependent_set:
                 # check if you have the dependency
                 if dependency in dir(module):
                     logging.debug('Dependency ({0}) already loaded inside {1}, skipping'.format(dependency, module.__name__.split('.')[-1]))
                     continue
                 logging.debug('Unloading {0}.{1} because dependency ({2}) is not imported'.format(module, func, dependency))
-                # if not, unload dependand_set
+                # if not, unload dependent_set
                 mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
                                            func.__name__)
 
