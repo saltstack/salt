@@ -52,8 +52,8 @@ log = logging.getLogger(__name__)
 # 2. Generate the function mapping dict
 # 3. Authenticate with the master
 # 4. Store the AES key
-# 5. connect to the publisher
-# 6. handle publications
+# 5. Connect to the publisher
+# 6. Handle publications
 
 
 def resolve_dns(opts):
