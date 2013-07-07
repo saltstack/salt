@@ -469,7 +469,7 @@ def vcpu_pin(vm_, vcpu, cpus):
             for c in cpulist.split(','):
                 if c == '':
                     continue
-                if c.find('-') != -1:
+                if '-' in c:
                     (x, y) = c.split('-')
                     for i in range(int(x), int(y) + 1):
                         cpus.append(int(i))
