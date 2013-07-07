@@ -40,19 +40,19 @@ class MixInMeta(type):
     # attribute on your own MixIn
     _mixin_prio_ = 0
 
-    def __new__(cls, name, bases, attrs):
-        instance = super(MixInMeta, cls).__new__(cls, name, bases, attrs)
+    def __new__(mcs, name, bases, attrs):
+        instance = super(MixInMeta, mcs).__new__(mcs, name, bases, attrs)
         if not hasattr(instance, '_mixin_setup'):
             raise RuntimeError(
                 'Don\'t subclass {0} in {1} if you\'re not going to use it '
-                'as a salt parser mix-in.'.format(cls.__name__, name)
+                'as a salt parser mix-in.'.format(mcs.__name__, name)
             )
         return instance
 
 
 class OptionParserMeta(MixInMeta):
-    def __new__(cls, name, bases, attrs):
-        instance = super(OptionParserMeta, cls).__new__(cls,
+    def __new__(mcs, name, bases, attrs):
+        instance = super(OptionParserMeta, mcs).__new__(mcs,
                                                         name,
                                                         bases,
                                                         attrs)
