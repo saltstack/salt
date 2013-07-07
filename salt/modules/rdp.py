@@ -32,6 +32,10 @@ def _parse_return_code_powershell(string):
 def enable():
     '''
     Enable RDP the service on the server
+    
+    CLI Example::
+
+        salt '*' rdp.enable
     '''
     
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(1,1) }"'
@@ -41,6 +45,10 @@ def enable():
 def disable():
     '''
     Disable RDP the service on the server
+    
+    CLI Example::
+
+        salt '*' rdp.disable
     '''
     
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(0,1) }"'
@@ -50,6 +58,10 @@ def disable():
 def status():
     '''
     Show if rdp is enabled on the server
+    
+    CLI Example::
+
+        salt '*' rdp.status
     '''
     
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; echo $RDP.AllowTSConnections }"'
