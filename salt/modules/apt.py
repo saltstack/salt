@@ -92,9 +92,7 @@ def _pkgname_without_arch(name):
     Check for ':arch' appended to pkg name (i.e. 32 bit installed on 64 bit
     machine is ':i386')
     '''
-    if name.find(':') >= 0:
-        return name.split(':')[0]
-    return name
+    return name.rpartition(':')[0]
 
 
 def _get_repo(**kwargs):

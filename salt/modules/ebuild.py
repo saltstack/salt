@@ -437,7 +437,7 @@ def install(name=None,
                 else:
                     target = '"{0}"'.format(param)
 
-                if target.find('[') != -1:
+                if '[' in target:
                     old = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
                     __salt__['portage_config.append_use_flags'](target[1:-1])
                     new = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
