@@ -41,6 +41,10 @@ def _parse_powershell_list(lst):
 def list_available():
     '''
     List available features to install
+    
+    CLI Example::
+
+        salt '*' win_servermanager.list_available
     '''
     
     return _srvmgr('Get-WindowsFeature -erroraction silentlycontinue')
@@ -49,6 +53,10 @@ def list_available():
 def list_installed():
     '''
     List available features to install
+    
+    CLI Example::
+
+        salt '*' win_servermanager.list_installed
     '''
     
     ret = {}
@@ -73,6 +81,11 @@ def install(feature, recurse=False):
     
     Note:
     Some features takes a long time to un/installation, set -t with a long timeout
+    
+    CLI Example::
+
+        salt '*' win_servermanager.install Telnet-Client
+        salt '*' win_servermanager.install SNMP-Services True
     '''
     
     sub = ''
@@ -92,6 +105,10 @@ def remove(feature):
     
     Note:
     Some features takes a long time to un/installation, set -t with a long timeout
+    
+    CLI Example::
+
+        salt '*' win_servermanager.remove Telnet-Client
     '''
     
     out = _srvmgr( 'Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list'.format(feature) )
