@@ -25,9 +25,6 @@ from salt.exceptions import (
     CommandExecutionError,
 )
 
-# Import third party libs
-import yaml
-
 
 class Caller(object):
     '''
