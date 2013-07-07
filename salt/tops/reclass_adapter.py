@@ -86,21 +86,21 @@ def top(**kwargs):
         return reclass_top(**reclass_opts)
 
     except ImportError as e:
-        if e.message.find('reclass') > -1:
+        if 'reclass' in e.message:
             raise SaltInvocationError('master_tops.reclass: cannot find reclass '\
                                       'module in ' + sys.path)
         else:
             raise
 
     except TypeError as e:
-        if e.message.find('unexpected keyword argument') > -1:
+        if 'unexpected keyword argument' in e.message:
             arg = e.message.split()[-1]
             raise SaltInvocationError('master_tops.reclass: unexpected option: ' + arg)
         else:
             raise
 
     except KeyError as e:
-        if e.message.find('reclass') > -1:
+        if 'reclass' in e.message:
             raise SaltInvocationError('master_tops.reclass: no configuration '\
                                       'found in master config')
         else:
