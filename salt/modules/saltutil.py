@@ -461,13 +461,13 @@ def regen_keys():
 
 def revoke_auth():
     '''
-    The minion sends a request to the master to revoke its own key, note that
-    the minion session will be revoked and the minion may not be able to return
-    the result o this command back to the master.
+    The minion sends a request to the master to revoke its own key.
+    Note that the minion session will be revoked and the minion may
+    not be able to return the result of this command back to the master.
 
     CLI Example::
 
-        salt '*' saltutil.revoke_key
+        salt '*' saltutil.revoke_auth
     '''
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
