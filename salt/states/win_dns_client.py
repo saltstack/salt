@@ -17,7 +17,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
     Example::
 
         config_dns_servers:
-          network_win.dns_exists:
+          win_dns_client.dns_exists:
             - servers:
               - 8.8.8.8
               - 8.8.8.9

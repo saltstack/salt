@@ -319,6 +319,7 @@ LINTOWIN = {
     'Australia/Melbourne': 'AUS Eastern Standard Time',
     'CST6CDT': 'Central Standard Time',
     'EST5EDT': 'Eastern Standard Time',
+    'Etc/UTC': 'UTC',
     'Etc/GMT': 'UTC',
     'Etc/GMT+1': 'Cape Verde Standard Time',
     'Etc/GMT+10': 'Hawaiian Standard Time',
