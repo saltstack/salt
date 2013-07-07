@@ -27,7 +27,7 @@ class DuplicateKeyWarning(RuntimeWarning):
 warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
-# with code integrated form https://gist.github.com/844388
+# with code integrated from https://gist.github.com/844388
 class CustomLoader(yaml.SafeLoader):
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
@@ -37,7 +37,7 @@ class CustomLoader(yaml.SafeLoader):
     def __init__(self, stream, dictclass=dict):
         yaml.SafeLoader.__init__(self, stream)
         if dictclass is not dict:
-            # then assume ordred dict and use it for both !map and !omap
+            # then assume ordered dict and use it for both !map and !omap
             self.add_constructor(
                 u'tag:yaml.org,2002:map',
                 type(self).construct_yaml_map)
