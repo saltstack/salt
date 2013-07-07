@@ -1118,8 +1118,6 @@ class Minion(object):
             self.socket.close()
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
-        if hasattr(self, 'local'):
-            del self.local
 
     def __del__(self):
         self.destroy()
@@ -1292,6 +1290,14 @@ class Syndic(Minion):
                     'An exception occurred while polling the syndic',
                     exc_info=True
                 )
+
+    def destroy(self):
+        '''
+        Tear down the syndic minion
+        '''
+        super(Syndic, self).destroy()
+        if hasattr(self, 'local'):
+            del self.local
 
 
 class Matcher(object):
