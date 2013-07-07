@@ -230,7 +230,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         flags = []
     if conf in SUPPORTED_CONFS:
         if not string:
-            if atom.find('/') == -1:
+            if '/' not in atom:
                 atom = _p_to_cp(atom)
                 if not atom:
                     return
@@ -239,7 +239,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         else:
             atom = string.strip().split()[0]
             new_flags = portage.dep.strip_empty(string.strip().split(' '))[1:]
-            if atom.find('/') == -1:
+            if '/' not in atom:
                 atom = _p_to_cp(atom)
                 string = '{0} {1}'.format(atom, ' '.join(new_flags))
                 if not atom:
@@ -358,7 +358,7 @@ def get_flags_from_package_conf(conf, atom):
     '''
     if conf in SUPPORTED_CONFS:
         package_file = '{0}/{1}'.format(BASE_PATH.format(conf), _p_to_cp(atom))
-        if atom.find('/') == -1:
+        if '/' not in atom:
             atom = _p_to_cp(atom)
         match_list = set(_porttree().dbapi.xmatch("match-all", atom))
         flags = []
