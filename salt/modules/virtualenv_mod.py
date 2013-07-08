@@ -89,8 +89,16 @@ def create(path,
             cmd.append('--no-site-packages')
         if system_site_packages:
             cmd.append('--system-site-packages')
-        if distribute and VIRTUALENV_VERSION_INFO < (1, 10):
-            cmd.append('--distribute')
+        if distribute:
+            if VIRTUALENV_VERSION_INFO >= (1, 10):
+                log.info(
+                    'The virtualenv \'--distribute\' option has been '
+                    'deprecated in virtualenv(>=1.10), as such, the '
+                    '\'distribute\' option to `virtualenv.create()` has '
+                    'also been deprecated and it\'s not necessary anymore.'
+                )
+            else:
+                cmd.append('--distribute')
         if python:
             cmd.append('--python={0}'.format(python))
         if extra_search_dir:
