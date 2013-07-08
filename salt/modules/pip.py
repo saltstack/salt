@@ -51,7 +51,7 @@ def _get_pip_bin(bin_env):
     return bin_env
 
 
-def _get_cached_requirements(requirements):
+def _get_cached_requirements(requirements, __env__):
     '''Get the location of a cached requirements file; caching if necessary.'''
     cached_requirements = __salt__['cp.is_cached'](
         requirements, __env__
@@ -272,7 +272,8 @@ def install(pkgs=None,
     treq = None
     if requirements:
         if requirements.startswith('salt://'):
-            cached_requirements = _get_cached_requirements(requirements)
+            cached_requirements = _get_cached_requirements(requirements,
+                                                           __env__)
             if not cached_requirements:
                 return {
                     'result': False,
