@@ -79,7 +79,7 @@ class VirtualenvTestCase(TestCase):
 
         virtualenv_mod.VIRTUALENV_VERSION_INFO = VIRTUALENV_VERSION_INFO
 
-    def test_deprecated_never_download(self):
+    def test_issue_6030_deprecated_never_download(self):
         VIRTUALENV_VERSION_INFO = virtualenv_mod.VIRTUALENV_VERSION_INFO
 
         virtualenv_mod.VIRTUALENV_VERSION_INFO = (1, 9, 1)
@@ -112,6 +112,43 @@ class VirtualenvTestCase(TestCase):
                 handler.messages
             )
         virtualenv_mod.VIRTUALENV_VERSION_INFO = VIRTUALENV_VERSION_INFO
+
+    def test_issue_6031_multiple_extra_search_dirs(self):
+        extra_search_dirs = [
+            '/tmp/bar-1',
+            '/tmp/bar-2',
+            '/tmp/bar-3'
+        ]
+
+        # Passing extra_search_dirs as a list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create(
+                '/tmp/foo', extra_search_dir=extra_search_dirs
+            )
+            mock.assert_called_once_with(
+                'virtualenv '
+                '--extra-search-dir=/tmp/bar-1 '
+                '--extra-search-dir=/tmp/bar-2 '
+                '--extra-search-dir=/tmp/bar-3 '
+                '/tmp/foo',
+                runas=None
+            )
+
+        # Passing extra_search_dirs as comma separated list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create(
+                '/tmp/foo', extra_search_dir=','.join(extra_search_dirs)
+            )
+            mock.assert_called_once_with(
+                'virtualenv '
+                '--extra-search-dir=/tmp/bar-1 '
+                '--extra-search-dir=/tmp/bar-2 '
+                '--extra-search-dir=/tmp/bar-3 '
+                '/tmp/foo',
+                runas=None
+            )
 
 
 if __name__ == '__main__':
