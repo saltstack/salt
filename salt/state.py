@@ -2294,7 +2294,7 @@ class MasterState(State):
         self.rend = salt.loader.render(self.opts, self.functions)
 
 
-class MasterHighState(BaseHighState):
+class MasterHighState(HighState):
     '''
     Execute highstate compilation from the master
     '''
@@ -2307,11 +2307,7 @@ class MasterHighState(BaseHighState):
         opts['state_top'] = master_opts['state_top']
         opts['id'] = id_
         opts['grains'] = grains
-        self.client = salt.fileclient.get_file_client(opts)
         BaseHighState.__init__(self, opts)
-        # Use the master state object
-        self.state = MasterState(self.opts, grains)
-        self.matcher = salt.minion.Matcher(self.opts)
 
 
 class RemoteHighState(object):
