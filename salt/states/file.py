@@ -132,6 +132,10 @@ import logging
 import copy
 import re
 import fnmatch
+import json
+
+# Import third party libs
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -2096,3 +2100,87 @@ def accumulated(name, filename, text, **kwargs):
             ret['comment'] = ('Accumulator {0} for file {1} '
                               'was charged by text'.format(name, filename))
     return ret
+
+
+def serialize(name,
+            dataset,
+            user=None,
+            group=None,
+            mode=None,
+            env=None,
+            backup='',
+            show_diff=True,
+            create=True,
+            **kwargs):
+    """
+    Manages files which contents is serialized dataset.
+
+    name
+        The location of the symlink to create
+
+    dataset
+        the dataset that will be serialized
+
+    formatter
+        the formatter, currently only yaml and json are supported
+
+    user
+        The user to own the directory, this defaults to the user salt is
+        running as on the minion
+
+    group
+        The group ownership set for the directory, this defaults to the group
+        salt is running as on the minion
+
+    mode
+        The permissions to set on this file, aka 644, 0775, 4664
+
+    backup
+        Overrides the default backup mode for this specific file.
+
+    show_diff
+        If set to False, the diff will not be shown.
+
+    create
+        Default is True, if create is set to False then the file will only be
+        managed if the file already exists on the system.
+
+    """
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+
+    if not create:
+        if not os.path.isfile(name):
+            # Don't create a file that is not already present
+            ret['comment'] = ('File {0} is not present and is not set for '
+                              'creation').format(name)
+            return ret
+
+    formatter = kwargs.pop('formatter', 'yaml').lower()
+    if formatter == 'yaml':
+        contents = yaml.dump(dataset, default_flow_style=False)
+    elif formatter == 'json':
+        contents = json.dumps(dataset, ent=4, separators=(',', ': '))
+    else:
+        return {'changes': {},
+                'comment': '{0} format is not supported'.format(
+                    formatter.capitalized()),
+                'name': name,
+                'result': False
+               }
+
+    return __salt__['file.manage_file'](name=name,
+                                        sfn='',
+                                        ret=ret,
+                                        source = None,
+                                        source_sum = {},
+                                        user=user,
+                                        group=group,
+                                        mode=mode,
+                                        env=env,
+                                        backup=backup,
+                                        template=None,
+                                        show_diff=show_diff,
+                                        contents=contents)
