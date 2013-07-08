@@ -192,6 +192,14 @@ def salt_auth_tool():
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
 
+# Be conservative in what you send
+# Maps Content-Type to serialization functions; this is a tuple of tuples to
+# preserve order of preference.
+ct_out_map = (
+    ('application/json', json.dumps),
+    ('application/x-yaml', functools.partial(
+        yaml.safe_dump, default_flow_style=False)),
+)
 
 def wants_html():
     '''
@@ -211,14 +219,6 @@ def wants_html():
     except (AttributeError, cherrypy.CherryPyException):
         return ''
 
-# Be conservative in what you send
-# Maps Content-Type to serialization functions; this is a tuple of tuples to
-# preserve order of preference.
-ct_out_map = (
-    ('application/json', json.dumps),
-    ('application/x-yaml', functools.partial(
-        yaml.safe_dump, default_flow_style=False)),
-)
 
 def hypermedia_handler(*args, **kwargs):
     '''
