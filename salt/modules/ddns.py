@@ -28,11 +28,11 @@ def __virtual__():
     return False
 
 
-
 def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False):
     '''
     Add, replace, or update a DNS record.
-    nameserver must be an IP address.
+    nameserver must be an IP address and the minion running this module
+    must have update priviledges on that server.
     If replace is true, first deletes all records for this name and type.
 
     CLI Example::
