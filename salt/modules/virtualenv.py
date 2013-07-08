@@ -23,6 +23,7 @@ def create(path,
         no_site_packages=False,
         system_site_packages=False,
         distribute=False,
+        pip=False,
         clear=False,
         python='',
         extra_search_dir='',
@@ -30,7 +31,6 @@ def create(path,
         prompt='',
         symlinks=False,
         upgrade=False,
-        pip=False,
         runas=None):
     '''
     Create a virtualenv
@@ -45,7 +45,9 @@ def create(path,
     system_site_packages : False
         Passthrough argument given to virtualenv or pyvenv
     distribute : False
-        Passthrough argument given to virtualenv. For pyvenv distribute package will be installed.
+        Install distribute after createing a virtual environment
+    pip : False
+        Install pip after createing a virtual environment, implies distribute=True
     clear : False
         Passthrough argument given to virtualenv or pyvenv
     python : (default)
@@ -60,8 +62,6 @@ def create(path,
         Passthrough argument given to pyvenv
     upgrade : False
         Passthrough argument given to pyvenv
-    pip : False
-        Install pip after pyvenv creates a virtual environment, implies distribute=True
     runas : None
         Set ownership for the virtualenv
 
@@ -75,14 +75,13 @@ def create(path,
     salt.utils.check_or_die(venv_bin)
 
     if 'pyvenv' not in venv_bin:
-        if symlinks or upgrade or pip:
-            raise CommandExecutionError('The following parameters are unsupported by virtualenv: symlinks, upgrade, pip')
+        if symlinks or upgrade:
+            raise CommandExecutionError('The following parameters are unsupported by virtualenv: symlinks, upgrade')
         cmd = '{venv_bin} {args} {path}'.format(
                 venv_bin=venv_bin,
                 args=''.join([
                     ' --no-site-packages' if no_site_packages else '',
                     ' --system-site-packages' if system_site_packages else '',
-                    ' --distribute' if distribute else '',
                     ' --clear' if clear else '',
                     ' --python {0}'.format(python) if python else '',
                     ' --extra-search-dir {0}'.format(extra_search_dir
@@ -90,7 +89,6 @@ def create(path,
                     ' --never-download' if never_download else '',
                     ' --prompt {0}'.format(prompt) if prompt else '']),
                 path=path)
-        return __salt__['cmd.run_all'](cmd, runas=runas)
     else:
         if no_site_packages or python or extra_search_dir or never_download or prompt:
             raise CommandExecutionError('The following parameters are unsupported by pyvenv: no_site_packages, python, extra_search_dir, never_download, prompt')
@@ -102,40 +100,40 @@ def create(path,
                     ' --clear' if clear else '',
                     ' --upgrade' if upgrade else '']),
                 path=path)
-        ret = __salt__['cmd.run_all'](cmd, runas=runas)
 
-        if ret['retcode'] > 0:
-            return ret
-
-        # check if distribute and pip are already installed
-        if salt.utils.is_windows():
-            venv_py = os.path.join(path, 'Scripts', 'python.exe')
-            venv_pip = os.path.join(path, 'Scripts', 'pip.exe')
-            venv_distribute = os.path.join(path, 'Scripts', 'easy_install.exe')
-        else:
-            venv_py = os.path.join(path, 'bin', 'python')
-            venv_pip = os.path.join(path, 'bin', 'pip')
-            venv_distribute = os.path.join(path, 'bin', 'easy_install')
-
-        # install setuptools
-        if (pip or distribute) and not os.path.exists(venv_distribute):
-            _install_script('http://python-distribute.org/distribute_setup.py', path, venv_py, runas, ret)
-
-            # clear up the distribute archive which gets downloaded
-            pred = lambda o: o.startswith('distribute-') and o.endswith('.tar.gz')
-            files = filter(pred, os.listdir(path))
-            for f in files:
-                f = os.path.join(path, f)
-                os.unlink(f)
-
-        if ret['retcode'] > 0:
-            return ret
-
-        # install pip
-        if pip and not os.path.exists(venv_pip):
-            _install_script('https://raw.github.com/pypa/pip/master/contrib/get-pip.py', path, venv_py, runas, ret)
-
+    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    if ret['retcode'] > 0:
         return ret
+
+    # check if distribute and pip are already installed
+    if salt.utils.is_windows():
+        venv_python = os.path.join(path, 'Scripts', 'python.exe')
+        venv_pip = os.path.join(path, 'Scripts', 'pip.exe')
+        venv_distribute = os.path.join(path, 'Scripts', 'easy_install.exe')
+    else:
+        venv_python = os.path.join(path, 'bin', 'python')
+        venv_pip = os.path.join(path, 'bin', 'pip')
+        venv_distribute = os.path.join(path, 'bin', 'easy_install')
+
+    # install setuptools
+    if (pip or distribute) and not os.path.exists(venv_distribute):
+        _install_script('http://python-distribute.org/distribute_setup.py', path, venv_python, runas, ret)
+
+        # clear up the distribute archive which gets downloaded
+        pred = lambda o: o.startswith('distribute-') and o.endswith('.tar.gz')
+        files = filter(pred, os.listdir(path))
+        for f in files:
+            f = os.path.join(path, f)
+            os.unlink(f)
+
+    if ret['retcode'] > 0:
+        return ret
+
+    # install pip
+    if pip and not os.path.exists(venv_pip):
+        _install_script('https://raw.github.com/pypa/pip/master/contrib/get-pip.py', path, venv_python, runas, ret)
+
+    return ret
 
 def _install_script(source, cwd, python, runas, ret):
     env = 'base'
