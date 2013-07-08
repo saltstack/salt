@@ -526,7 +526,7 @@ class Minion(object):
             # random seconds if set in config with random_reauth_delay
             if 'random_reauth_delay' in self.opts:
                 reauth_delay = randint(0, int(self.opts['random_reauth_delay']) )
-                log.debug("Waiting {0} seconds to re-authenticate".format(random_reauth_delay))
+                log.debug("Waiting {0} seconds to re-authenticate".format(reauth_delay))
                 time.sleep(reauth_delay)
 
             self.authenticate()
