@@ -1,9 +1,14 @@
-========================
-Getting Started With AWS
-========================
+============================
+Getting Started With AWS EC2
+============================
 
-Amazon AWS is a very widely used public cloud platform and one of the core
+Amazon EC2 is a very widely used public cloud platform and one of the core
 platforms Salt Cloud has been built to support.
+
+Previously, the suggested provider for AWS EC2 was the `aws` provider. This has
+been deprecated in favor of the `ec2` provider. Configuration using the old
+`aws` provider will still function, but that driver is no longer in active
+development.
 
 Set up the cloud config at ``/etc/salt/cloud``:
 
@@ -19,26 +24,26 @@ Set up the cloud config at ``/etc/salt/cloud``:
     # Specify whether to use public or private IP for deploy script.
     #
     # Valid options are:
-    #     private_ips - The salt-master is also hosted with AWS
-    #     public_ips - The salt-master is hosted outside of AWS
+    #     private_ips - The salt-master is also hosted with EC2
+    #     public_ips - The salt-master is hosted outside of EC2
     #
-    AWS.ssh_interface: public_ips
+    EC2.ssh_interface: public_ips
 
-    # Set the AWS access credentials (see below)
+    # Set the EC2 access credentials (see below)
     #
-    AWS.id: HJGRYCILJLKJYG
-    AWS.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+    EC2.id: HJGRYCILJLKJYG
+    EC2.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
 
     # Make sure this key is owned by root with permissions 0400.
     #
-    AWS.private_key: /etc/salt/my_test_key.pem
-    AWS.keyname: my_test_key
-    AWS.securitygroup: default
+    EC2.private_key: /etc/salt/my_test_key.pem
+    EC2.keyname: my_test_key
+    EC2.securitygroup: default
 
     # Optionally configure default region
     #
-    AWS.location: ap-southeast-1
-    AWS.availability_zone: ap-southeast-1b
+    EC2.location: ap-southeast-1
+    EC2.availability_zone: ap-southeast-1b
 
     # Configure which user to use to run the deploy script. This setting is
     # dependent upon the AMI that is used to deploy. It is usually safer to
@@ -50,7 +55,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
     # CentOS       -> ec2-user
     # Ubuntu       -> ubuntu
     #
-    AWS.ssh_username: ec2-user
+    EC2.ssh_username: ec2-user
 
 
 * Using the new configuration format:
@@ -60,7 +65,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
     # Note: This example is for /etc/salt/cloud
 
     providers:
-      my-aws-southeast-public-ips:
+      my-ec2-southeast-public-ips:
         # Set up the location of the salt master
         #
         minion:
@@ -69,12 +74,12 @@ Set up the cloud config at ``/etc/salt/cloud``:
         # Specify whether to use public or private IP for deploy script.
         #
         # Valid options are:
-        #     private_ips - The salt-master is also hosted with AWS
-        #     public_ips - The salt-master is hosted outside of AWS
+        #     private_ips - The salt-master is also hosted with EC2
+        #     public_ips - The salt-master is hosted outside of EC2
         #
         ssh_interface: public_ips
   
-        # Set the AWS access credentials (see below)
+        # Set the EC2 access credentials (see below)
         #
         id: HJGRYCILJLKJYG
         key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
@@ -102,10 +107,10 @@ Set up the cloud config at ``/etc/salt/cloud``:
         #
         ssh_username: ec2-user
   
-        provider: aws
+        provider: ec2
 
 
-      my-aws-southeast-private-ips:
+      my-ec2-southeast-private-ips:
         # Set up the location of the salt master
         #
         minion:
@@ -114,12 +119,12 @@ Set up the cloud config at ``/etc/salt/cloud``:
         # Specify whether to use public or private IP for deploy script.
         #
         # Valid options are:
-        #     private_ips - The salt-master is also hosted with AWS
-        #     public_ips - The salt-master is hosted outside of AWS
+        #     private_ips - The salt-master is also hosted with EC2
+        #     public_ips - The salt-master is hosted outside of EC2
         #
         ssh_interface: private_ips
   
-        # Set the AWS access credentials (see below)
+        # Set the EC2 access credentials (see below)
         #
         id: HJGRYCILJLKJYG
         key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
@@ -147,7 +152,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
         #
         ssh_username: ec2-user
   
-        provider: aws
+        provider: ec2
 
 
 Access Credentials
@@ -182,7 +187,7 @@ with permissions set to either 0400 or 0600.
 
 Security Groups
 ===============
-An instance on AWS needs to belong to a security group. Like key pairs, these 
+An instance on EC2 needs to belong to a security group. Like key pairs, these 
 are unique to a specific region. These are also configured in the EC2 
 Management Console. Security groups for the us-east-1 region can be configured 
 at:
@@ -192,7 +197,7 @@ https://console.aws.amazon.com/ec2/home?region=us-east-1#s=SecurityGroups
 ...and so on.
 
 A security group defines firewall rules which an instance will adhere to. If 
-the salt-master is configured outside of AWS, the security group must open the 
+the salt-master is configured outside of EC2, the security group must open the 
 SSH port (usually port 22) in order for Salt Cloud to install Salt.
 
 
@@ -204,11 +209,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
-    base_aws:
-      provider: aws
+    base_ec2:
+      provider: ec2
       image: ami-e565ba8c
       size: Micro Instance
-      ssh-user: ec2-user
+      ssh_username: ec2-user
 
 
 * Using the new cloud providers configuration format and the example 
@@ -216,26 +221,26 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
-    base_aws_private:
-      provider: my-aws-southeast-private-ips
+    base_ec2_private:
+      provider: my-ec2-southeast-private-ips
       image: ami-e565ba8c
       size: Micro Instance
-      ssh-user: ec2-user
+      ssh_username: ec2-user
 
-    base_aws_public:
-      provider: my-aws-southeast-public-ips
+    base_ec2_public:
+      provider: my-ec2-southeast-public-ips
       image: ami-e565ba8c
       size: Micro Instance
-      ssh-user: ec2-user
+      ssh_username: ec2-user
 
 
 The profile can be realized now with a salt command:
 
 .. code-block:: bash
 
-    # salt-cloud -p base_aws ami.example.com
-    # salt-cloud -p base_aws_public ami.example.com
-    # salt-cloud -p base_aws_private ami.example.com
+    # salt-cloud -p base_ec2 ami.example.com
+    # salt-cloud -p base_ec2_public ami.example.com
+    # salt-cloud -p base_ec2_private ami.example.com
 
 
 This will create an instance named ``ami.example.com`` in EC2. The minion that 
@@ -253,38 +258,38 @@ it can be verified with Salt:
 
 Required Settings
 =================
-The following settings are always required for AWS:
+The following settings are always required for EC2:
 
 * Using the old cloud configuration format:
 
 .. code-block:: yaml
 
-    # Set the AWS login data
-    AWS.id: HJGRYCILJLKJYG
-    AWS.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-    AWS.keyname: test
-    AWS.securitygroup: quick-start
-    AWS.private_key: /root/test.pem
+    # Set the EC2 login data
+    EC2.id: HJGRYCILJLKJYG
+    EC2.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+    EC2.keyname: test
+    EC2.securitygroup: quick-start
+    EC2.private_key: /root/test.pem
 
 
 * Using the new cloud configuration format:
 
 .. code-block:: yaml
 
-    # Set the AWS login data
-    my-aws-config:
+    # Set the EC2 login data
+    my-ec2-config:
       id: HJGRYCILJLKJYG
       key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      provider: aws
+      provider: ec2
 
 
 Optional Settings
 =================
 
-AWS allows a location to be set for servers to be deployed in. Availability 
+EC2 allows a location to be set for servers to be deployed in. Availability 
 zones exist inside regions, and may be added to increase specificity.
 
 * Using the old cloud configuration format:
@@ -292,24 +297,24 @@ zones exist inside regions, and may be added to increase specificity.
 .. code-block:: yaml
 
     # Optionally configure default region
-    AWS.location: ap-southeast-1
-    AWS.availability_zone: ap-southeast-1b
+    EC2.location: ap-southeast-1
+    EC2.availability_zone: ap-southeast-1b
 
 
 * Using the new cloud configuration format:
 
 .. code-block:: yaml
 
-    my-aws-config:
+    my-ec2-config:
       # Optionally configure default region
       location: ap-southeast-1
       availability_zone: ap-southeast-1b
 
 
-AWS instances can have a public or private IP, or both. When an instance is 
+EC2 instances can have a public or private IP, or both. When an instance is 
 deployed, Salt Cloud needs to log into it via SSH to run the deploy script.
 By default, the public IP will be used for this. If the salt-cloud command is 
-run from another AWS instance, the private IP should be used.
+run from another EC2 instance, the private IP should be used.
 
 * Using the old cloud configuration format:
 
@@ -317,20 +322,20 @@ run from another AWS instance, the private IP should be used.
 
     # Specify whether to use public or private IP for deploy script
     # private_ips or public_ips
-    AWS.ssh_interface: public_ips
+    EC2.ssh_interface: public_ips
 
 
 * Using the new cloud configuration format:
 
 .. code-block:: yaml
 
-    my-aws-config:
+    my-ec2-config:
       # Specify whether to use public or private IP for deploy script
       # private_ips or public_ips
       ssh_interface: public_ips
 
 
-Many AWS instances do not allow remote access to the root user by default.
+Many EC2 instances do not allow remote access to the root user by default.
 Instead, another user must be used to run the deploy script using sudo. Some 
 common usernames include ec2-user (for Amazon Linux), ubuntu (for Ubuntu 
 instances), admin (official Debian) and bitnami (for images provided by 
@@ -341,14 +346,14 @@ Bitnami).
 .. code-block:: yaml
 
     # Configure which user to use to run the deploy script
-    AWS.ssh_username: ec2-user
+    EC2.ssh_username: ec2-user
 
 
 * Using the new cloud configuration format:
 
 .. code-block:: yaml
 
-    my-aws-config:
+    my-ec2-config:
       # Configure which user to use to run the deploy script
       ssh_username: ec2-user
 
@@ -361,7 +366,7 @@ file:
 
 .. code-block:: yaml
 
-    AWS.ssh_username:
+    EC2.ssh_username:
       - ec2-user
       - ubuntu
       - admin
@@ -372,7 +377,7 @@ file:
 
 .. code-block:: yaml
 
-    my-aws-config:
+    my-ec2-config:
       ssh_username:
         - ec2-user
         - ubuntu
@@ -386,7 +391,7 @@ Multiple security groups can also be specified in the same fashion:
 
 .. code-block:: yaml
 
-    AWS.securitygroup:
+    EC2.securitygroup:
       - default
       - extra
 
@@ -395,7 +400,7 @@ Multiple security groups can also be specified in the same fashion:
 
 .. code-block:: yaml
 
-    my-aws-config:
+    my-ec2-config:
       securitygroup:
         - default
         - extra
@@ -407,7 +412,7 @@ each cloud profile. Using the old cloud configuration format:
 
 .. code-block:: yaml
 
-    AWS.block_device_mappings:
+    EC2.block_device_mappings:
       - DeviceName: /dev/sdb
         VirtualName: ephemeral0
       - DeviceName: /dev/sdc
@@ -418,7 +423,7 @@ Using the new cloud configuration syntax:
 
 .. code-block:: yaml
 
-    my-aws-config:
+    my-ec2-config:
       block_device_mappings:
         - DeviceName: /dev/sdb
           VirtualName: ephemeral0
@@ -426,9 +431,9 @@ Using the new cloud configuration syntax:
           VirtualName: ephemeral1
 
 
-Modify AWS Tags
+Modify EC2 Tags
 ===============
-One of the features of AWS is the ability to tag resources. In fact, under the 
+One of the features of EC2 is the ability to tag resources. In fact, under the 
 hood, the names given to EC2 instances by salt-cloud are actually just stored 
 as a tag called Name. Salt Cloud has the ability to manage these tags:
 
@@ -439,9 +444,9 @@ as a tag called Name. Salt Cloud has the ability to manage these tags:
     salt-cloud -a del_tags mymachine tag1,tag2,tag3
 
 
-Rename AWS Instances
+Rename EC2 Instances
 ====================
-As mentioned above, AWS instances are named via a tag. However, renaming an 
+As mentioned above, EC2 instances are named via a tag. However, renaming an 
 instance by renaming its tag will cause the salt keys to mismatch. A rename 
 function exists which renames both the instance, and the salt keys.
 
@@ -450,9 +455,9 @@ function exists which renames both the instance, and the salt keys.
     salt-cloud -a rename mymachine newname=yourmachine
 
 
-AWS Termination Protection
+EC2 Termination Protection
 ==========================
-AWS allows the user to enable and disable termination protection on a specific 
+EC2 allows the user to enable and disable termination protection on a specific 
 instance. An instance with this protection enabled cannot be destroyed.
 
 .. code-block:: bash
@@ -463,7 +468,7 @@ instance. An instance with this protection enabled cannot be destroyed.
 
 Rename on Destroy
 =================
-When instances on AWS are destroyed, there will be a lag between the time that 
+When instances on EC2 are destroyed, there will be a lag between the time that 
 the action is sent, and the time that Amazon cleans up the instance. During 
 this time, the instance still retails a Name tag, which will cause a collision 
 if the creation of an instance with the same name is attempted before the 
@@ -476,21 +481,21 @@ like:
     myinstance-DEL20f5b8ad4eb64ed88f2c428df80a1a0c
 
 
-In order to enable this, add AWS.rename_on_destroy line to the main 
+In order to enable this, add EC2.rename_on_destroy line to the main 
 configuration file:
 
 * Using the old cloud configuration format:
 
 .. code-block:: yaml
 
-    AWS.rename_on_destroy: True
+    EC2.rename_on_destroy: True
 
 
 * Using the new cloud configuration format:
 
 .. code-block:: yaml
 
-    my-aws-config:
+    my-ec2-config:
       rename_on_destroy: True
 
 
@@ -528,50 +533,6 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `All Images on Amazon`__
 .. __: https://aws.amazon.com/amis
-
-
-Experimental EC2 Driver
-=======================
-An experimental driver has been added to Salt Cloud called EC2. The 
-configuration for this driver is the same as for AWS, but with EC2 in the 
-argument names:
-
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    # Set the EC2 login data
-    EC2.id: HJGRYCILJLKJYG
-    EC2.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-    EC2.keyname: test
-    EC2.securitygroup: quick-start
-    EC2.private_key: /root/test.pem
-
-
-* Using the new cloud configuration format:
-
-.. code-block:: yaml
-
-    my-ec2-config:
-      # Set the EC2 login data
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-      keyname: test
-      securitygroup: quick-start
-      private_key: /root/test.pem
-      provider: ec2
-
-
-This driver contains optimizations over the old AWS driver, which increase 
-speed and functionality. However, because this is a new driver, it is currently 
-considered to be experimental, and as such, the old AWS driver may still be 
-used as before.
-
-IMPORTANT: Because this driver is in experimental status, its usage and 
-configuration should be expected to change.
-
-The remainder of this document describes settings which may be used with the 
-EC2 driver.
 
 
 show_image
@@ -640,9 +601,9 @@ following commands:
 EC2 Termination Protection
 ==========================
 
-AWS allows the user to enable and disable termination protection on a specific 
+EC2 allows the user to enable and disable termination protection on a specific 
 instance. An instance with this protection enabled cannot be destroyed. The EC2 
-driver adds a show_term_protect action to the regular AWS functionality.
+driver adds a show_term_protect action to the regular EC2 functionality.
 
 .. code-block:: bash
 
