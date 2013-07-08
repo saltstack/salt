@@ -290,11 +290,13 @@ def linux_interfaces():
         cmd1 = subprocess.Popen(
             'ip link show',
             shell=True,
+            close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         cmd2 = subprocess.Popen(
             'ip addr show',
             shell=True,
+            close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         ifaces = _interfaces_ip(cmd1 + '\n' + cmd2)
