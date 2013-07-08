@@ -30,8 +30,10 @@ def _check_error(result, success_message):
 
     return ret
 
+
 def _is_stopped_state(state):
     return state in ('STOPPED', 'STOPPING', 'EXITED', 'FATAL')
+
 
 def running(name,
             restart=False,
@@ -94,7 +96,7 @@ def running(name,
         ret.update(_check_error(result, comment))
         changes.append(comment)
         log.debug(comment)
-        
+
     elif update:
         comment = 'Updating supervisor'
         result = __salt__['supervisord.update'](
@@ -124,7 +126,7 @@ def running(name,
         elif just_updated:
             comment = 'Not starting updated service: {0}'.format(name)
             result = comment
-            ret.update({'comment': comment})            
+            ret.update({'comment': comment})
         else:
             comment = 'Not starting already running service: {0}'.format(name)
             result = comment
@@ -145,6 +147,7 @@ def running(name,
     if ret['result'] and len(changes):
         ret['changes'][name] = ' '.join(changes)
     return ret
+
 
 def dead(name,
          runas=None,
@@ -191,10 +194,12 @@ def dead(name,
             log.debug(unicode(result))
     return ret
 
+
 def mod_watch(name,
-              restart=None,
+              restart=False,
+              update=False,
               runas=None,
               conf_file=None,
               bin_env=None):
     # Always restart on watch
-    return running(name, True, runas, conf_file, bin_env)
+    return running(name, True, update, runas, conf_file, bin_env)
