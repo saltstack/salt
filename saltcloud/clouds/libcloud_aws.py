@@ -59,6 +59,7 @@ from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
 from saltcloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
+    SaltCloudConfigError,
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
