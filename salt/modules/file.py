@@ -1281,15 +1281,6 @@ def check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
 
-    Note: 'mode' here is expected to be either a string or an integer,
-          in which case it will be converted into a base-10 string.
-
-          What this means is that in your YAML salt file, you can specify
-          mode as an integer(eg, 644) or as a string(eg, '644'). But, to
-          specify mode 0777, for example, it must be specified as the string,
-          '0777' otherwise, 0777 will be parsed as an octal and you'd get 511
-          instead.
-
     CLI Example::
 
         salt '*' file.check_perms /etc/sudoers '{}' root root 400
@@ -1786,16 +1777,10 @@ def mkdir(dir_path, user=None, group=None, mode=None):
     directory = os.path.normpath(dir_path)
 
     if not os.path.isdir(directory):
-        # turn on the executable bits for user, group and others.
-        # Note: the special bits are set to 0.
-        if mode:
-            mode = int(str(mode)[-3:], 8) | 0111
-
+        # If a caller such as managed() is invoked  with makedirs=True, make
+        # sure that any created dirs are created with the same user and group
+        # to follow the principal of least surprise method.
         makedirs_perms(directory, user, group, mode)
-        # If a caller such as managed() is invoked  with
-        # makedirs=True, make sure that any created dirs
-        # are created with the same user  and  group  to
-        # follow the principal of least surprise method.
 
 
 def makedirs(path, user=None, group=None, mode=None):
