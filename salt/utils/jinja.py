@@ -133,7 +133,7 @@ class SerializerExtension(Extension):
 
     def format(self, value, formatter, *args, **kwargs):
         if formatter == "json":
-            return Markup(json.dumps(value))
+            return Markup(json.dumps(value, sort_keys=True))
         elif formatter == "yaml":
             return Markup(yaml.dump(value, default_flow_style=True))
         raise ValueError("Serializer {} is not implemented".format(formatter))

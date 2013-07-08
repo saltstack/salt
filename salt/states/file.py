@@ -1975,11 +1975,11 @@ def rename(name, source, force=False, makedirs=False):
     source
         The location of the file to move to the location specified with name
 
-    force:
+    force
         If the target location is present then the file will not be moved,
         specify "force: True" to overwrite the target file
 
-    makedirs:
+    makedirs
         If the target subdirectories don't exist create them
 
     '''
@@ -2113,7 +2113,8 @@ def serialize(name,
             create=True,
             **kwargs):
     """
-    Manages files which contents is serialized dataset.
+    Serializes dataset and store it into managed file. Useful for sharing
+    simple configuration files.
 
     name
         The location of the symlink to create
@@ -2145,7 +2146,35 @@ def serialize(name,
         Default is True, if create is set to False then the file will only be
         managed if the file already exists on the system.
 
+
+    For example, this state::
+
+        /etc/dummy/package.json:
+          file.serialize:
+            - dataset:
+                name: naive
+                description: A package using naive versioning
+                author: A confused individual <iam@confused.com>
+                dependencies:
+                    express: >= 1.2.0
+                    optimist: >= 0.1.0
+                engine: node 0.4.1
+            - formatter: json
+
+    will manages the file ``/etc/dummy/package.json``::
+
+        {
+          "author": "A confused individual <iam@confused.com>",
+          "dependencies": {
+            "express": ">= 1.2.0",
+            "optimist": ">= 0.1.0"
+          },
+          "description": "A package using naive versioning",
+          "engine": "node 0.4.1"
+          "name": "naive",
+        }
     """
+
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -2162,7 +2191,7 @@ def serialize(name,
     if formatter == 'yaml':
         contents = yaml.dump(dataset, default_flow_style=False)
     elif formatter == 'json':
-        contents = json.dumps(dataset, indent=4, separators=(',', ': '))
+        contents = json.dumps(dataset, indent=2, separators=(',', ': '), sort_keys=True)
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
