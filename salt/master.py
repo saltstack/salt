@@ -966,20 +966,18 @@ class AESFuncs(object):
                             )
         return data
 
-# This broken method makes the master die, pulling out until we can
-# finish the masterstate system
-#    def _master_state(self, load):
-#        '''
-#        Call the master to compile a master side highstate
-#        '''
-#        if 'opts' not in load or 'grains' not in load:
-#            return False
-#        return salt.state.master_compile(
-#                self.opts,
-#                load['opts'],
-#                load['grains'],
-#                load['opts']['id'],
-#                load['opts']['environment'])
+    def _master_state(self, load):
+        '''
+        Call the master to compile a master side highstate
+        '''
+        if 'opts' not in load or 'grains' not in load:
+            return False
+        return salt.state.master_compile(
+                self.opts,
+                load['opts'],
+                load['grains'],
+                load['opts']['id'],
+                load['opts']['environment'])
 
     def _minion_event(self, load):
         '''
