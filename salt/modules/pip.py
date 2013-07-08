@@ -26,6 +26,30 @@ __func_alias__ = {
 VALID_PROTOS = ['http', 'https', 'ftp']
 
 
+def _get_pip_bin(bin_env):
+    '''
+    Return the pip command to call, either from a virtualenv, an argument
+    passed in, or from the global modules options
+    '''
+    if not bin_env:
+        which_result = __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
+        if which_result is None:
+            raise CommandNotFoundError('Could not find a `pip` binary')
+        return which_result
+
+    # try to get pip bin from env
+    if os.path.isdir(bin_env):
+        if salt.utils.is_windows():
+            pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
+        else:
+            pip_bin = os.path.join(bin_env, 'bin', 'pip')
+        if os.path.isfile(pip_bin):
+            return pip_bin
+        raise CommandNotFoundError('Could not find a `pip` binary')
+
+    return bin_env
+
+
 def _get_cached_requirements(requirements, __env__):
     '''Get the location of a cached requirements file; caching if necessary.'''
     cached_requirements = __salt__['cp.is_cached'](
@@ -58,6 +82,7 @@ def _get_env_activate(bin_env):
         if os.path.isfile(activate_bin):
             return activate_bin
     raise CommandNotFoundError('Could not find a `activate` binary')
+
 
 def install(pkgs=None,
             requirements=None,
