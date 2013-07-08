@@ -108,7 +108,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.do')
     if hasattr(jinja2.ext, 'loopcontrols'):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
-    jinja_env.add_extension(JinjaSerializerExtension)
+    env_args['extensions'].append(JinjaSerializerExtension)
 
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
