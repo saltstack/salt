@@ -99,6 +99,33 @@ the context into the included file is required:
 
 .. _imports: http://jinja.pocoo.org/docs/templates/#import
 
+Variable Serializers
+====================
+
+Salt allows to serialize any variable into **json** or **yaml**. For example this
+variable::
+
+    data:
+      foo: True
+      bar: 42
+      baz:
+        - 1
+        - 2
+        - 3
+      qux: 2.0
+
+with this template::
+
+    yaml -> {{ data|yaml }}
+
+    json -> {{ data|json }}
+
+will be rendered has::
+
+    yaml -> {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
+
+    json -> {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
+
 Template Inheritance
 ====================
 
