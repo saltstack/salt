@@ -106,7 +106,6 @@
 # 0 and the defined value.
 #random_reauth_delay: 60
 
-
 # The loop_interval sets how long in seconds the minion will wait between
 # evaluating the scheduler and running cleanup tasks. This defaults to a
 # sane 60 seconds, but if the minion scheduler needs to be evaluated more
