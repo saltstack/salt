@@ -107,7 +107,15 @@ def create(path,
         if python:
             cmd.append('--python={0}'.format(python))
         if extra_search_dir:
-            cmd.append('--extra-search-dir={0}'.format(extra_search_dir))
+            if isinstance(extra_search_dir, basestring):
+                if ',' in extra_search_dir:
+                    extra_search_dir = [
+                        e.strip() for e in extra_search_dir.split(',')
+                    ]
+                else:
+                    extra_search_dir = [extra_search_dir]
+            for entry in extra_search_dir:
+                cmd.append('--extra-search-dir={0}'.format(entry))
         if never_download:
             if VIRTUALENV_VERSION_INFO >= (1, 10):
                 log.info(
