@@ -229,14 +229,6 @@ def hypermedia_handler(*args, **kwargs):
     :param args: Pass args through to the main handler
     :param kwargs: Pass kwargs through to the main handler
     '''
-    # If we're being asked for HTML, try to serve index.html from the 'static'
-    # directory; this is useful (as a random, non-specific example) for
-    # bootstrapping the salt-ui app
-    if 'static' in cherrypy.config and 'html' in wants_html():
-        index = os.path.join(cherrypy.config['static'], 'index.html')
-        if os.path.exists(index):
-            return cherrypy.lib.static.serve_file(index)
-
     # Execute the real handler. Handle or pass-through any errors we know how
     # to handle (auth & HTTP errors). Reformat any errors we don't know how to
     # handle as a data structure.
@@ -273,9 +265,21 @@ def hypermedia_handler(*args, **kwargs):
 
 def hypermedia_out():
     '''
-    Wrap the normal handler and transform the output from that handler into the
-    requested content type
+    Determine the best handler for the requested content type
+
+    If HTML is requested bypass the normal handler and try to serve index.html
+    from the 'static' directory; this is useful (as a random, non-specific
+    example) for serving a rich-client frontend application.
+
+    Otherwise wrap the normal handler and transform the output from that
+    handler into the requested content type
     '''
+    if 'static' in cherrypy.config and 'html' in wants_html():
+        index = os.path.join(cherrypy.config['static'], 'index.html')
+        if os.path.exists(index):
+            cherrypy.request.handler = None
+            return cherrypy.lib.static.serve_file(index)
+
     request = cherrypy.serving.request
     request._hypermedia_inner_handler = request.handler
     request.handler = hypermedia_handler
