@@ -3,6 +3,9 @@ Create virtualenv environments
 '''
 
 # Import python libs
+import logging
+
+# Import salt libs
 from salt import utils
 
 # Import 3rd party libs
@@ -14,6 +17,8 @@ try:
     )
 except ImportError:
     HAS_VIRTUALENV = False
+
+log = logging.getLogger(__name__)
 
 __opts__ = {
     'venv_bin': 'virtualenv'
