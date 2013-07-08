@@ -109,7 +109,15 @@ def create(path,
         if extra_search_dir:
             cmd.append('--extra-search-dir={0}'.format(extra_search_dir))
         if never_download:
-            cmd.append('--never-download')
+            if VIRTUALENV_VERSION_INFO >= (1, 10):
+                log.info(
+                    'The virtualenv \'--never-download\' option has been '
+                    'deprecated in virtualenv(>=1.10), as such, the '
+                    '\'never_download\' option to `virtualenv.create()` has '
+                    'also been deprecated and it\'s not necessary anymore.'
+                )
+            else:
+                cmd.append('--never-download')
         if prompt:
             cmd.append('--prompt={0}'.format(prompt))
     else:
