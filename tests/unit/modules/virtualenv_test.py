@@ -12,7 +12,7 @@ import sys
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
 ensure_in_syspath('../../')
 
 # Import 3rd party libs
@@ -57,14 +57,59 @@ class VirtualenvTestCase(TestCase):
                 runas=None
             )
 
-        virtualenv_mod.VIRTUALENV_VERSION_INFO = (1, 10)
+        with TestsLoggingHandler() as handler:
+            virtualenv_mod.VIRTUALENV_VERSION_INFO = (1, 10)
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+                virtualenv_mod.create(
+                    '/tmp/foo', no_site_packages=True, distribute=True
+                )
+                mock.assert_called_once_with(
+                    'virtualenv --no-site-packages /tmp/foo', runas=None
+                )
+
+            # Are we logging the deprecation information?
+            self.assertIn(
+                'INFO:The virtualenv \'--distribute\' option has been '
+                'deprecated in virtualenv(>=1.10), as such, the '
+                '\'distribute\' option to `virtualenv.create()` has '
+                'also been deprecated and it\'s not necessary anymore.',
+                handler.messages
+            )
+
+        virtualenv_mod.VIRTUALENV_VERSION_INFO = VIRTUALENV_VERSION_INFO
+
+    def test_deprecated_never_download(self):
+        VIRTUALENV_VERSION_INFO = virtualenv_mod.VIRTUALENV_VERSION_INFO
+
+        virtualenv_mod.VIRTUALENV_VERSION_INFO = (1, 9, 1)
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create(
-                '/tmp/foo', no_site_packages=True, distribute=True
+                '/tmp/foo', never_download=True
             )
             mock.assert_called_once_with(
-                'virtualenv --no-site-packages /tmp/foo', runas=None
+                'virtualenv --never-download /tmp/foo',
+                runas=None
+            )
+
+        with TestsLoggingHandler() as handler:
+            virtualenv_mod.VIRTUALENV_VERSION_INFO = (1, 10)
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+                virtualenv_mod.create(
+                    '/tmp/foo', never_download=True
+                )
+                mock.assert_called_once_with('virtualenv /tmp/foo', runas=None)
+
+            # Are we logging the deprecation information?
+            self.assertIn(
+                'INFO:The virtualenv \'--never-download\' option has been '
+                'deprecated in virtualenv(>=1.10), as such, the '
+                '\'never_download\' option to `virtualenv.create()` has '
+                'also been deprecated and it\'s not necessary anymore.',
+                handler.messages
             )
         virtualenv_mod.VIRTUALENV_VERSION_INFO = VIRTUALENV_VERSION_INFO
 
