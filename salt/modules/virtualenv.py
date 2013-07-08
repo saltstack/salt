@@ -23,6 +23,8 @@ def create(path,
         extra_search_dir='',
         never_download=False,
         prompt='',
+        symlinks=False,
+        upgrade=False,
         runas=None):
     '''
     Create a virtualenv
@@ -35,11 +37,11 @@ def create(path,
     no_site_packages : False
         Passthrough argument given to virtualenv
     system_site_packages : False
-        Passthrough argument given to virtualenv
+        Passthrough argument given to virtualenv or pyvenv
     distribute : False
         Passthrough argument given to virtualenv
     clear : False
-        Passthrough argument given to virtualenv
+        Passthrough argument given to virtualenv or pyvenv
     python : (default)
         Passthrough argument given to virtualenv
     extra_search_dir : (default)
@@ -48,6 +50,10 @@ def create(path,
         Passthrough argument given to virtualenv
     prompt : (default)
         Passthrough argument given to virtualenv
+    symlinks : False
+        Passthrough argument given to pyvenv
+    upgrade : False
+        Passthrough argument given to pyvenv
     runas : None
         Set ownership for the virtualenv
 
@@ -60,18 +66,28 @@ def create(path,
     # raise CommandNotFoundError if venv_bin is missing
     utils.check_or_die(venv_bin)
 
-    cmd = '{venv_bin} {args} {path}'.format(
-            venv_bin=venv_bin,
-            args=''.join([
-                ' --no-site-packages' if no_site_packages else '',
-                ' --system-site-packages' if system_site_packages else '',
-                ' --distribute' if distribute else '',
-                ' --clear' if clear else '',
-                ' --python {0}'.format(python) if python else '',
-                ' --extra-search-dir {0}'.format(extra_search_dir
-                    ) if extra_search_dir else '',
-                ' --never-download' if never_download else '',
-                ' --prompt {0}'.format(prompt) if prompt else '']),
-            path=path)
+    if 'pyvenv' not in venv_bin:
+        cmd = '{venv_bin} {args} {path}'.format(
+                venv_bin=venv_bin,
+                args=''.join([
+                    ' --no-site-packages' if no_site_packages else '',
+                    ' --system-site-packages' if system_site_packages else '',
+                    ' --distribute' if distribute else '',
+                    ' --clear' if clear else '',
+                    ' --python {0}'.format(python) if python else '',
+                    ' --extra-search-dir {0}'.format(extra_search_dir
+                        ) if extra_search_dir else '',
+                    ' --never-download' if never_download else '',
+                    ' --prompt {0}'.format(prompt) if prompt else '']),
+                path=path)
+    else:
+        cmd = '{venv_bin} {args} {path}'.format(
+                venv_bin=venv_bin,
+                args=''.join([
+                    ' --system-site-packages' if system_site_packages else '',
+                    ' --symlinks' if symlinks else '',
+                    ' --clear' if clear else '',
+                    ' --upgrade' if upgrade else '']),
+                path=path)
 
     return __salt__['cmd.run_all'](cmd, runas=runas)
