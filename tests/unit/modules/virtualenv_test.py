@@ -18,13 +18,12 @@ ensure_in_syspath('../../')
 # Import 3rd party libs
 try:
     import virtualenv
-    print 1, virtualenv, virtualenv.__version__
-    ovirtualenv = virtualenv
 except ImportError:
+    # Let's create a fake virtualenv with what we need to run these tests
     import new
-    ovirtualenv = virtualenv = new.module('virtualenv')
+    virtualenv = new.module('virtualenv')
+    virtualenv.__version__ = '1.9.1'
     sys.modules['virtualenv'] = virtualenv
-    sys.modules['virtualenv'].__version__ = '1.9.1'
 
 try:
     from mock import MagicMock, patch
@@ -68,6 +67,7 @@ class VirtualenvTestCase(TestCase):
                 'virtualenv --no-site-packages /tmp/foo', runas=None
             )
         virtualenv_mod.VIRTUALENV_VERSION_INFO = VIRTUALENV_VERSION_INFO
+
 
 if __name__ == '__main__':
     from integration import run_tests
