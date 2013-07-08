@@ -50,6 +50,7 @@ Grains data can be listed by using the 'grains.items' module::
 
     salt '*' grains.items
 
+
 Grains in the Minion Config
 ===========================
 
@@ -69,6 +70,31 @@ Just add the option ``grains`` and pass options to it:
 Then status data specific to your servers can be retrieved via Salt, or used
 inside of the State system for matching. It also makes targeting, in the case
 of the example above, simply based on specific data about your deployment.
+
+
+Grains in /etc/salt/grains
+==========================
+
+If you do not want to place your custom static grains in the minion config
+file, you can also put them in ``/etc/salt/grains``. They are configured in the
+same way as in the above example, only without a top-level ``grains:`` key:
+
+.. code-block:: yaml
+
+    roles:
+      - webserver
+      - memcache
+    deployment: datacenter4
+    cabinet: 13
+    cab_u: 14-15
+
+.. admonition:: Precedece of Custom Static Grains
+
+    Be careful when defining grains both in ``/etc/salt/grains`` and within the
+    minion config file. If a grain is defined in both places, the value in the
+    minion config file takes precedence, and will always be used over its
+    counterpart in ``/etc/salt/grains``.
+
 
 Writing Grains
 ==============
@@ -92,6 +118,7 @@ change, consider using :doc:`Pillar <../pillar/index>` instead.
 
 .. _`dict`: http://docs.python.org/library/stdtypes.html#typesmapping
 
+
 Examples of Grains
 ------------------
 
@@ -99,6 +126,7 @@ The core module in the grains package is where the main grains are loaded by
 the Salt minion and provides the principal example of how to write grains:
 
 :blob:`salt/grains/core.py`
+
 
 Syncing Grains
 --------------
