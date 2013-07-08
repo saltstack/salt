@@ -2162,7 +2162,7 @@ def serialize(name,
     if formatter == 'yaml':
         contents = yaml.dump(dataset, default_flow_style=False)
     elif formatter == 'json':
-        contents = json.dumps(dataset, ent=4, separators=(',', ': '))
+        contents = json.dumps(dataset, indent=4, separators=(',', ': '))
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(

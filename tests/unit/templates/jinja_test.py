@@ -3,6 +3,7 @@
 # Import python libs
 import os
 import tempfile
+import json
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -11,11 +12,12 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
-from salt.utils.jinja import SaltCacheLoader
+from salt.utils.jinja import SaltCacheLoader, SerializerExtension
 from salt.utils.templates import render_jinja_tmpl
 
 # Import 3rd party libs
 from jinja2 import Environment
+import yaml
 
 TEMPLATES_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -173,7 +175,21 @@ class TestGetTemplate(TestCase):
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
 
+class TestCustomExtensions(TestCase):
+    def test_serialize(self):
+        dataset = {
+            "foo": True,
+            "bar": 42,
+            "baz": [1, 2, 3],
+            "qux": 2.0
+        }
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
+        self.assertEquals(dataset, yaml.load(rendered))
+
+        rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
+        self.assertEquals(dataset, json.loads(rendered))
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests([TestSaltCacheLoader, TestGetTemplate], needs_daemon=False)
+    run_tests([TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions], needs_daemon=False)
