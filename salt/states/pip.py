@@ -53,7 +53,7 @@ def installed(name,
 
     name
         The name of the python package to install
-    pip_bin :  None
+    pip_bin : None
         Deprecated, use bin_env
     env : None
         Deprecated, use bin_env
@@ -107,8 +107,9 @@ def installed(name,
         name = repo
 
     # If a requirements file is specified, only install the contents of the
-    # requirements file
-    if requirements:
+    # requirements file. Similarly, using the --editable flag with pip should
+    # also ignore the "name" parameter.
+    if requirements or editable:
         name = ''
 
     pip_install_call = __salt__['pip.install'](
