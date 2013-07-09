@@ -8,7 +8,9 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import python libraries
 import sys
+import warnings
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -35,6 +37,7 @@ except ImportError:
 
 # Import salt libs
 from salt.modules import virtualenv_mod
+from salt.exceptions import CommandExecutionError
 
 virtualenv_mod.__salt__ = {'cmd.which_bin': lambda _: 'virtualenv'}
 
@@ -50,10 +53,10 @@ class VirtualenvTestCase(TestCase):
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create(
-                '/tmp/foo', no_site_packages=True, distribute=True
+                '/tmp/foo', system_site_packages=True, distribute=True
             )
             mock.assert_called_once_with(
-                'virtualenv --no-site-packages --distribute /tmp/foo',
+                'virtualenv --distribute --system-site-packages /tmp/foo',
                 runas=None
             )
 
@@ -62,10 +65,10 @@ class VirtualenvTestCase(TestCase):
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
                 virtualenv_mod.create(
-                    '/tmp/foo', no_site_packages=True, distribute=True
+                    '/tmp/foo', system_site_packages=True, distribute=True
                 )
                 mock.assert_called_once_with(
-                    'virtualenv --no-site-packages /tmp/foo', runas=None
+                    'virtualenv --system-site-packages /tmp/foo', runas=None
                 )
 
             # Are we logging the deprecation information?
@@ -149,6 +152,35 @@ class VirtualenvTestCase(TestCase):
                 '/tmp/foo',
                 runas=None
             )
+
+    def test_system_site_packages_and_no_site_packages_mutual_exclusion(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                virtualenv_mod.create,
+                '/tmp/foo',
+                no_site_packages=True,
+                system_site_packages=True
+            )
+
+    def test_no_site_packages_deprecation(self):
+        # NOTE: If this test starts failing it might be because the deprecation
+        # warning was removed, or because some other test in this module is
+        # passing 'no_site_packages' to 'virtualenv_mod.create'. The
+        # deprecation warning is shown only once.
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            with warnings.catch_warnings(record=True) as w:
+                virtualenv_mod.create(
+                    '/tmp/foo', no_site_packages=True
+                )
+                self.assertEqual(
+                    '\'no_site_packages\' has been deprecated. Please start '
+                    'using \'system_site_packages=False\' which means exactly '
+                    'the same as \'no_site_packages=True\'', str(w[-1].message)
+                )
 
 
 if __name__ == '__main__':

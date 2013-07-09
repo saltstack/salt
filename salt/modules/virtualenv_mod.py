@@ -4,9 +4,12 @@ Create virtualenv environments
 
 # Import python libs
 import logging
+import warnings
 
 # Import salt libs
-from salt import utils
+import salt.utils
+import salt.exceptions
+
 
 # Import 3rd party libs
 try:
@@ -55,7 +58,7 @@ def create(path,
         The name (and optionally path) of the virtualenv command. This can also
         be set globally in the minion config file as ``virtualenv.venv_bin``.
     no_site_packages : False
-        Passthrough argument given to virtualenv
+        Passthrough argument given to virtualenv (Deprecated since 0.17.0)
     system_site_packages : False
         Passthrough argument given to virtualenv or pyvenv
     distribute : False
@@ -84,7 +87,28 @@ def create(path,
     if venv_bin is None:
         venv_bin = __opts__.get('venv_bin') or __pillar__.get('venv_bin')
     # raise CommandNotFoundError if venv_bin is missing
-    utils.check_or_die(venv_bin)
+    salt.utils.check_or_die(venv_bin)
+
+    if no_site_packages:
+        # Show a deprecation warning
+        # XXX: Remove deprecation warning message on 0.18.0
+        warnings.filterwarnings(
+            'once', '', DeprecationWarning, __name__
+        )
+        warnings.warn(
+            '\'no_site_packages\' has been deprecated. Please start using '
+            '\'system_site_packages=False\' which means exactly the same '
+            'as \'no_site_packages=True\'',
+            DeprecationWarning
+        )
+
+    if no_site_packages and system_site_packages:
+        raise salt.exceptions.CommandExecutionError(
+            '\'no_site_packages\' and \'system_site_packages\' are mutually '
+            'exclusive options. Please use only one, and prefer '
+            '\'system_site_packages\' since \'no_site_packages\' has been '
+            'deprecated.'
+        )
 
     cmd = [venv_bin]
 
@@ -92,8 +116,6 @@ def create(path,
         # Virtualenv package
         if no_site_packages:
             cmd.append('--no-site-packages')
-        if system_site_packages:
-            cmd.append('--system-site-packages')
         if distribute:
             if VIRTUALENV_VERSION_INFO >= (1, 10):
                 log.info(
