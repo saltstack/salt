@@ -38,8 +38,8 @@ def __virtual__():
     if not any(['git' in x for x in ext_pillar_sources]):
         return False
     if not HAS_GIT:
-        log.error('Git fileserver backend is enabled in configuration but '
-                  'could not be loaded, is gitpython installed?')
+        log.error('Git-based ext_pillar is enabled in configuration but '
+                  'could not be loaded, is GitPython installed?')
         return False
     if not git.__version__ > '0.3.0':
         return False
