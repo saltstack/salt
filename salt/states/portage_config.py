@@ -152,7 +152,7 @@ def flags(name,
             ret['comment'] = result['comment']
             return ret
 
-    if __opts__['test']:
+    if __opts__['test'] and not ret['result']:
         ret['result'] = None
 
     return ret
