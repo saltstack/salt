@@ -1,7 +1,6 @@
 # Import python libs
-from os.path import isdir, exists
-from os import mkdir, rename, remove, walk
-from shutil import copy, rmtree
+import os
+import shutil
 
 # Import salt libs
 import salt.utils
@@ -13,7 +12,7 @@ try:
 except ImportError:
     HAS_PORTAGE = False
     import sys
-    if isdir('/usr/lib/portage/pym'):
+    if os.path.isdir('/usr/lib/portage/pym'):
         try:
             # In a virtualenv, the portage python path needs to be manually
             # added
@@ -90,9 +89,9 @@ def _unify_keywords():
     /etc/portage/package.accept_keywords.
     '''
     old_path = BASE_PATH.format('keywords')
-    if exists(old_path):
-        if isdir(old_path):
-            for triplet in walk(old_path):
+    if os.path.exists(old_path):
+        if os.path.isdir(old_path):
+            for triplet in os.walk(old_path):
                 for file_name in triplet[2]:
                     file_path = '{0}/{1}'.format(triplet[0], file_name)
                     with salt.utils.fopen(file_path) as fh_:
@@ -100,13 +99,13 @@ def _unify_keywords():
                             if line.strip():
                                 append_to_package_conf(
                                     'accept_keywords', string=line)
-            rmtree(old_path)
+            shutil.rmtree(old_path)
         else:
             with salt.utils.fopen(old_path) as fh_:
                 for line in fh_:
                     if line.strip():
                         append_to_package_conf('accept_keywords', string=line)
-            remove(old_path)
+            os.remove(old_path)
 
 
 def _package_conf_file_to_dir(file_name):
@@ -115,19 +114,19 @@ def _package_conf_file_to_dir(file_name):
     '''
     if file_name in SUPPORTED_CONFS:
         path = BASE_PATH.format(file_name)
-        if exists(path):
-            if isdir(path):
+        if os.path.exists(path):
+            if os.path.isdir(path):
                 return False
             else:
-                rename(path, path + '.tmpbak')
-                mkdir(path, 0755)
+                os.rename(path, path + '.tmpbak')
+                os.mkdir(path, 0755)
                 with salt.utils.fopen(path + '.tmpbak') as fh_:
                     for line in fh_:
                         append_to_package_conf(file_name, string=line.strip())
-                remove(path + '.tmpbak')
+                os.remove(path + '.tmpbak')
                 return True
         else:
-            mkdir(path, 0755)
+            os.mkdir(path, 0755)
             return True
 
 
@@ -141,17 +140,17 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         backup_files = []
 
-        for triplet in walk(path):
+        for triplet in os.walk(path):
             for file_name in triplet[2]:
                 file_path = '{0}/{1}'.format(triplet[0], file_name)
                 cp = triplet[0][len(path) + 1:] + '/' + file_name
 
-                copy(file_path, file_path + '.bak')
+                shutil.copy(file_path, file_path + '.bak')
                 backup_files.append(file_path + '.bak')
 
                 if cp[0] == '/' or cp.split('/') > 2:
                     rearrange.extend(list(salt.utils.fopen(file_path)))
-                    remove(file_path)
+                    os.remove(file_path)
                 else:
                     new_contents = ''
                     with salt.utils.fopen(file_path, 'r+') as file_handler:
@@ -172,7 +171,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                             file_handler.write(new_contents)
 
                     if len(new_contents) == 0:
-                        remove(file_path)
+                        os.remove(file_path)
 
         for line in rearrange:
             append_to_package_conf(conf, string=line)
@@ -180,15 +179,15 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
         if not keep_backup:
             for bfile in backup_files:
                 try:
-                    remove(bfile)
+                    os.remove(bfile)
                 except OSError:
                     pass
 
         if clean:
-            for triplet in walk(path):
+            for triplet in os.walk(path):
                 if len(triplet[1]) == 0 and len(triplet[2]) == 0 and \
                         triplet[0] != path:
-                    rmtree(triplet[0])
+                    shutil.rmtree(triplet[0])
 
 
 def _merge_flags(*args):
@@ -268,13 +267,13 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         psplit = package_file.split('/')
         if len(psplit) == 2:
             pdir = BASE_PATH.format(conf) + '/' + psplit[0]
-            if not exists(pdir):
-                mkdir(pdir, 0755)
+            if not os.path.exists(pdir):
+                os.mkdir(pdir, 0755)
 
         complete_file_path = BASE_PATH.format(conf) + '/' + package_file
 
         try:
-            copy(complete_file_path, complete_file_path + '.bak')
+            shutil.copy(complete_file_path, complete_file_path + '.bak')
         except IOError:
             pass
 
@@ -324,7 +323,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         file_handler.write(new_contents)
         file_handler.close()
         try:
-            remove(complete_file_path + '.bak')
+            os.remove(complete_file_path + '.bak')
         except OSError:
             pass
 
