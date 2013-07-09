@@ -4,7 +4,6 @@ overlaid onto the minion's pillar data. It allows user to define pillar
 dynamically in the python code.
 '''
 
-import json
 import logging
 
 
