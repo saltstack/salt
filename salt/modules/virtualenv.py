@@ -117,7 +117,7 @@ def create(path,
 
     # install setuptools
     if (pip or distribute) and not os.path.exists(venv_distribute):
-        _install_script('http://python-distribute.org/distribute_setup.py', path, venv_python, runas, ret)
+        _install_script('https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py', path, venv_python, runas, ret)
 
         # clear up the distribute archive which gets downloaded
         pred = lambda o: o.startswith('distribute-') and o.endswith('.tar.gz')
