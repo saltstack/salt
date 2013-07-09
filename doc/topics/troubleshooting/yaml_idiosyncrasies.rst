@@ -124,7 +124,7 @@ preceded by a 0 then it needs to be passed as a string:
         - user: root
         - group: root
         - mode: '0644'
-        
+
 .. _`integers`: http://docs.python.org/library/functions.html#int
 
 YAML does not like "Double Short Decs"
@@ -228,7 +228,7 @@ Examples:
     - Alef: "\u05d0"
 
 
-    
+
 List of usable `Unicode characters`_  will help you to identify correct numbers.
 
 .. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
@@ -246,3 +246,22 @@ This shell command can find wrong characters in your SLS files:
 
     find . -name '*.sls'  -exec  grep --color='auto' -P -n '[^\x00-\x7F]' \{} \;
 
+
+Underscores stripped in Integer Definitions
+===========================================
+
+If a definition only includes numbers and underscores, it is parsed by YAML as
+an integer and all underscores are stripped.  To ensure the object becomes a
+string, it should be surrounded by quotes.  `More information here.`_
+
+.. _`More information here.`: http://stackoverflow.com/questions/2723321/snakeyaml-how-to-disable-underscore-stripping-when-parsing
+
+Here's an example:
+
+.. code-block:: python
+
+    >>> import yaml
+    >>> yaml.safe_load('2013_05_10')
+    20130510
+    >>> yaml.safe_load('"2013_05_10"')
+    '2013_05_10'

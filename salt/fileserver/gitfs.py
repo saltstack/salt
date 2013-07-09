@@ -5,7 +5,7 @@ After enabling this backend, branches and tags in a remote git repository
 are exposed to salt as different environments. This feature is managed by
 the fileserver_backend option in the salt master config.
 
-:depends: git-python Python module
+:depends: gitpython Python module
 '''
 
 # Import python libs
@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if git-python is available
+    Only load if gitpython is available
     '''
     if not isinstance(__opts__['gitfs_remotes'], list):
         return False
@@ -40,7 +40,7 @@ def __virtual__():
         return False
     if not HAS_GIT:
         log.error('Git fileserver backend is enabled in configuration but '
-                  'could not be loaded, is git-python installed?')
+                  'could not be loaded, is GitPython installed?')
         return False
     if not git.__version__ > '0.3.0':
         return False
