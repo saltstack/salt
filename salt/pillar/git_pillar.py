@@ -32,11 +32,14 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if git-python is available
+    Only load if gitpython is available
     '''
+    ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
+    if not any(['git' in x for x in ext_pillar_sources]):
+        return False
     if not HAS_GIT:
-        log.error('Git fileserver backend is enabled in configuration but '
-                  'could not be loaded, is git-python installed?')
+        log.error('Git-based ext_pillar is enabled in configuration but '
+                  'could not be loaded, is GitPython installed?')
         return False
     if not git.__version__ > '0.3.0':
         return False
@@ -147,6 +150,7 @@ def update(branch, repo_location):
     except (OSError, IOError):
         pass
     return True
+
 
 def envs(branch, repo_location):
     '''
