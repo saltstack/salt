@@ -391,7 +391,8 @@ def absent(name, purge=False, force=False):
 
     force
         If the user is logged in the absent state will fail, set the force
-        option to True to remove the user even if they are logged in
+        option to True to remove the user even if they are logged in. Not
+        supported in FreeBSD and Solaris.
     '''
     ret = {'name': name,
            'changes': {},
