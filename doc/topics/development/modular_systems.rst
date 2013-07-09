@@ -26,11 +26,11 @@ object.
 
 For a list of all built in execution modules:
 
-:doc:`Full List of built in execution modules <ref/modules/all>`
+:doc:`Full List of built in execution modules </ref/modules/all/index>`
 
 For information on writing execution modules, see this document:
 
-:doc:`Execution module development <ref/modules/index>`
+:doc:`Execution module development </ref/modules/index>`
 
 State Modules
 =============
