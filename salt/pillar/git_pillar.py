@@ -37,6 +37,9 @@ def __virtual__():
     '''
     Only load if git-python is available
     '''
+    ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
+    if not any(['git' in x for x in ext_pillar_sources]):
+        return False
     if not HAS_GIT:
         log.error('Git fileserver backend is enabled in configuration but '
                   'could not be loaded, is git-python installed?')
@@ -140,6 +143,7 @@ def update(branch, repo_location):
         os.remove(lk_fn)
     except (OSError, IOError):
         pass
+
 
 def envs(branch, repo_location):
     '''
