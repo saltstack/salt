@@ -73,7 +73,7 @@ def running(name,
         ret['comment'] = (
             'Service {0} is set to be {1}{2}'.format(
                 name, _msg, _update))
-        return
+        return ret
 
     changes = []
     just_updated = False
