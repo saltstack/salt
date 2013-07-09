@@ -12,6 +12,7 @@ import logging
 from copy import deepcopy
 
 # Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -128,6 +129,9 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
+    if salt.utils.is_true(force):
+        log.error('userdel does not support force-deleting user while '
+                  'user is logged in')
     cmd = 'userdel '
     if remove:
         cmd += '-r '
