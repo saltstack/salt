@@ -2307,7 +2307,7 @@ class MasterHighState(HighState):
         opts['state_top'] = master_opts['state_top']
         opts['id'] = id_
         opts['grains'] = grains
-        BaseHighState.__init__(self, opts)
+        HighState.__init__(self, opts)
 
 
 class RemoteHighState(object):
