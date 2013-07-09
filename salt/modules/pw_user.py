@@ -12,7 +12,8 @@ import os
 import logging
 from copy import deepcopy
 
-# From salt libs
+# Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -76,8 +77,6 @@ def add(name,
     if isinstance(groups, string_types):
         groups = groups.split(',')
     cmd = 'pw useradd '
-    if shell:
-        cmd += '-s {0} '.format(shell)
     if uid:
         cmd += '-u {0} '.format(uid)
     if gid:
@@ -89,6 +88,10 @@ def add(name,
             cmd += '-m '
         else:
             cmd += '-m -b {0} '.format(os.path.dirname(home))
+    if shell:
+        cmd += '-s {0} '.format(shell)
+    if not salt.utils.is_true(unique):
+        cmd += '-o '
     gecos_field = '{0},{1},{2},{3}'.format(fullname,
                                            roomnumber,
                                            workphone,
@@ -108,6 +111,9 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
+    if salt.utils.is_true(force):
+        log.error('pw userdel does not support force-deleting user while '
+                  'user is logged in')
     cmd = 'pw userdel '
     if remove:
         cmd += '-r '
