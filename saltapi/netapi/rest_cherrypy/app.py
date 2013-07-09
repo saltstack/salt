@@ -405,13 +405,9 @@ class LowDataAdapter(object):
         'tools.hypermedia_in.on': True,
     }
 
-    def __init__(self, opts):
-        '''
-        :param opts: A dictionary of options from Salt's master config (e.g.
-            Salt's, ``__opts__``)
-        '''
-        self.opts = opts
-        self.api = saltapi.APIClient(opts)
+    def __init__(self):
+        self.opts = cherrypy.config['saltopts']
+        self.api = saltapi.APIClient(self.opts)
 
     def exec_lowstate(self):
         '''
@@ -961,21 +957,23 @@ class API(object):
         'jobs': Jobs,
     }
 
-    def __init__(self, opts):
-        self.opts = opts
-        for url, cls in self.url_map.items():
-            setattr(self, url, cls(self.opts))
+    def __init__(self):
+        self.opts = cherrypy.config['saltopts']
+        self.apiopts = cherrypy.config['apiopts']
 
-    def get_conf(self, apiopts):
+        for url, cls in self.url_map.items():
+            setattr(self, url, cls())
+
+    def get_conf(self):
         '''
         Combine the CherryPy configuration with the rest_cherrypy config values
         pulled from the master config and return the CherryPy configuration
         '''
         conf = {
             'global': {
-                'server.socket_host': apiopts.get('host', '0.0.0.0'),
-                'server.socket_port': apiopts.get('port', 8000),
-                'debug': apiopts.get('debug', False),
+                'server.socket_host': self.apiopts.get('host', '0.0.0.0'),
+                'server.socket_port': self.apiopts.get('port', 8000),
+                'debug': self.apiopts.get('debug', False),
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
@@ -983,12 +981,10 @@ class API(object):
                 'tools.trailing_slash.on': True,
                 'tools.gzip.on': True,
 
-                'tools.staticdir.on': True if 'static' in apiopts else False,
-                'tools.staticdir.dir': apiopts.get('static', ''),
+                'tools.staticdir.on': True if 'static' in self.apiopts else False,
+                'tools.staticdir.dir': self.apiopts.get('static', ''),
             },
         }
-
-        conf['global'].update(apiopts)
 
         # Add to global config
         cherrypy.config.update(conf['global'])
@@ -1000,11 +996,15 @@ def get_app(opts):
     '''
     Returns a WSGI app and a configuration dictionary
     '''
-    root = API(opts) # cherrypy app
     apiopts = opts.get(__name__.rsplit('.', 2)[-2], {}) # rest_cherrypy opts
 
-    cpyopts = root.get_conf(apiopts) # cherrypy app opts
-    gconf = cpyopts.get('global', {}) # 'global' section of cpyopts
+    # Add Salt and salt-api config options to the main CherryPy config dict
+    cherrypy.config['saltopts'] = opts
+    cherrypy.config['apiopts'] = apiopts
+
+    root = API() # cherrypy app
+
+    cpyopts = root.get_conf() # cherrypy app opts
 
     # Register salt-specific hooks
     cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
