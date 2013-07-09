@@ -1,7 +1,7 @@
 '''
-The OMAPI module interacts with an ISC DHCP Server via OMAPI.
-Requires pypureomapi module. server_ip and server_port params may
-be set in the minion config or pillar,  or passed as arguments:
+This module interacts with an ISC DHCP Server via OMAPI.
+Requires pypureomapi python module. server_ip and server_port params may
+be set in the minion config or pillar, or passed as arguments:
 
 .. code-block:: yaml
 
