@@ -43,6 +43,9 @@ def key_regen():
     After the master is restarted and minion keys are in the pending directory
     execute a salt-key -A command to accept the regenerated minion keys.
 
+    The master *must* be restarted within 60 seconds of running this command or
+    the minions will think there is something wrong with the keys and abort.
+
     Only Execute this runner after upgrading minions and master to 0.15.1 or
     higher!
     '''
