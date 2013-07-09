@@ -74,12 +74,14 @@ serializes the data as json and sets it in redis.
 
 You can place your custom returners in a ``_returners`` directory within the
 :conf_master:`file_roots` specified by the master config file. These custom
-returners are distributed when `state.highstate`_ is run, or by executing the
-`saltutil.sync_returners`_ or `saltutil.sync_all`_ functions.
+returners are distributed when :mod:`state.highstate
+<salt.modules.state.highstate>` is run, or by executing the
+:mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>` or
+:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
 
-.. _`state.highstate`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.state.html#salt.modules.state.highstate
-.. _`saltutil.sync_returners`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_returners
-.. _`saltutil.sync_all`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_all
+Any custom returners which have been synced to a minion, that are named the
+same as one of Salt's default set of returners, will take the place of the
+default returner with the same name.
 
 
 Examples
