@@ -40,7 +40,7 @@ def __virtual__():
         return False
     if not HAS_GIT:
         log.error('Git fileserver backend is enabled in configuration but '
-                  'could not be loaded, is git-python installed?')
+                  'could not be loaded, is GitPython installed?')
         return False
     if not git.__version__ > '0.3.0':
         return False
