@@ -124,7 +124,7 @@ preceded by a 0 then it needs to be passed as a string:
         - user: root
         - group: root
         - mode: '0644'
-        
+
 .. _`integers`: http://docs.python.org/library/functions.html#int
 
 YAML does not like "Double Short Decs"
@@ -228,7 +228,7 @@ Examples:
     - Alef: "\u05d0"
 
 
-    
+
 List of usable `Unicode characters`_  will help you to identify correct numbers.
 
 .. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
