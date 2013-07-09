@@ -14,7 +14,7 @@ import salt.utils.nb_popen
 
 def gen_key(path):
     '''
-    Genrate a key for use with salt-ssh
+    Generate a key for use with salt-ssh
     '''
     cmd = 'ssh-keygen -P "" -f {0} -t rsa -q'.format(path)
     if not os.path.isdir(os.path.dirname(path)):
@@ -24,7 +24,7 @@ def gen_key(path):
 
 class Shell(object):
     '''
-    Create a shell connection object to encapsulate sssh executions
+    Create a shell connection object to encapsulate ssh executions
     '''
     def __init__(
             self,
