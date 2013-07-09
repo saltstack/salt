@@ -284,13 +284,6 @@ def hypermedia_out():
     request._hypermedia_inner_handler = request.handler
     request.handler = hypermedia_handler
 
-    # cherrypy.response.headers['Alternates'] = self.ct_out_map.keys()
-    # TODO: add 'negotiate' to Vary header and 'list' to TCN header
-    # Alternates: {"paper.1" 0.9 {type text/html} {language en}},
-    #          {"paper.2" 0.7 {type text/html} {language fr}},
-    #          {"paper.3" 1.0 {type application/postscript} {language en}}
-
-
 
 @functools.wraps
 def process_request_body(fn):
