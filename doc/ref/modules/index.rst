@@ -20,6 +20,12 @@ synced to the minions when :mod:`state.highstate
 :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
 
+Any custom modules which have been synced to a minion, that are named the
+same as one of Salt's default set of modules, will take the place of the default
+module with the same name. Note that a module's default name is its filename
+(i.e. ``foo.py`` becomes module ``foo``), but that its name can be overridden
+by using a :ref:`__virtual__ function <virtual-modules>`.
+
 Since Salt modules are just Python/Cython modules, there are no restraints on
 what you can put inside of a Salt module. If a Salt module has errors and
 cannot be imported, the Salt minion will continue to load without issue and the
@@ -132,6 +138,9 @@ Outputter.
                     }
 
 This will ensure that the text outputter is used.
+
+
+.. _virtual-modules:
 
 Virtual Modules
 ===============
