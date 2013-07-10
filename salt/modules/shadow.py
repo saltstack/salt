@@ -17,6 +17,13 @@ def __virtual__():
     return 'shadow' if __grains__.get('kernel', '') == 'Linux' else False
 
 
+def empty_password():
+    '''
+    Returns the hash used for unset/empty passwords
+    '''
+    return '!'
+
+
 def info(name):
     '''
     Return information for the specified user
@@ -29,7 +36,7 @@ def info(name):
         data = spwd.getspnam(name)
         ret = {
             'name': data.sp_nam,
-            'passwd': data.sp_pwd if data.sp_pwd != '!' else '',
+            'passwd': data.sp_pwd,
             'lstchg': data.sp_lstchg,
             'min': data.sp_min,
             'max': data.sp_max,

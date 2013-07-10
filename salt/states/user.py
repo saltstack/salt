@@ -27,15 +27,16 @@ as either absent or present
 import logging
 import sys
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
 def _shadow_supported():
-    supported_os = ('FreeBSD', 'NetBSD', 'OpenBSD')
-    supported_kernel = ('Linux', 'SunOS')
-    return True if __grains__.get('os', '') in supported_os \
-        or __grains__.get('kernel', '') in supported_kernel \
-        else False
+    if salt.utils.is_windows():
+        return False
+    return 'shadow.info' in __salt__
 
 
 def _changes(name,
@@ -104,7 +105,9 @@ def _changes(name,
             change['shell'] = shell
     if password:
         if _shadow_supported():
-            if not lshad['passwd'] or lshad['passwd'] and enforce_password:
+            empty_password = __salt__['shadow.empty_password']()
+            if lshad['passwd'] == empty_password \
+                    or lshad['passwd'] != empty_password and enforce_password:
                 if lshad['passwd'] != password:
                     change['passwd'] = password
     # GECOS fields
@@ -183,7 +186,7 @@ def present(name,
 
     password
         A password hash to set for the user. This field is only supported on
-        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris
+        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris.
 
     .. versionchanged:: 0.16.0
        BSD support added.
