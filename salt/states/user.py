@@ -186,7 +186,7 @@ def present(name,
 
     password
         A password hash to set for the user. This field is only supported on
-        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris
+        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris.
 
     .. versionchanged:: 0.16.0
        BSD support added.
