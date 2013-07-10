@@ -26,9 +26,13 @@ def __virtual__():
     return 'shadow' if __grains__.get('kernel', '') == 'SunOS' else False
 
 
-def empty_password():
+def default_hash():
     '''
-    Returns the hash used in Solaris for an unset/empty passwords
+    Returns the default hash used for unset passwords
+
+    CLI Example::
+
+        salt '*' shadow.default_hash
     '''
     return '!'
 
