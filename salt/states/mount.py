@@ -87,11 +87,11 @@ def mounted(name,
             return ret
         out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
         if isinstance(out, string_types):
-            # Failed to remount, the state has failed!
+            # Failed to (re)mount, the state has failed!
             ret['comment'] = out
             ret['result'] = False
         elif out is True:
-            # Remount worked!
+            # (Re)mount worked!
             ret['comment'] = 'Target was successfully mounted'
             ret['changes']['mount'] = True
     else:
@@ -106,15 +106,17 @@ def mounted(name,
                                   'be set to be made persistent').format(name)
                 return ret
 
-        # present, new, change, bad config
-        # Make sure the entry is in the fstab
-        out = __salt__['mount.set_fstab'](name,
-                                          device,
-                                          fstype,
-                                          opts,
-                                          dump,
-                                          pass_num,
-                                          config)
+        if ret['changes']['mount']:
+            out = __salt__['mount.set_fstab'](name,
+                                              device,
+                                              fstype,
+                                              opts,
+                                              dump,
+                                              pass_num,
+                                              config)
+        else:
+            out == 'bad mount'
+
         if out == 'present':
             return ret
         if out == 'new':
@@ -129,6 +131,9 @@ def mounted(name,
             ret['result'] = False
             ret['comment'] += '. However, the fstab was not found.'
             return ret
+        if out == 'bad mount':
+            ret['result'] == False
+            ret['comment'] += '. Unfortunately the file system didn\'t exist.'
 
     return ret
 

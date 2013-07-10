@@ -5,6 +5,8 @@ pkg/arch/*.tar.xz
 doc/_build
 dist
 MANIFEST
+*~
+*#
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
