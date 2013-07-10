@@ -32,6 +32,9 @@ A REST API for Salt
         The path to the private key for your SSL certificate. (See below)
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
+    static_path : ``/static``
+        The URL prefix to use when serving static assets out of the directory
+        specified in the ``static`` setting.
 
     Example production configuration block:
 
@@ -944,11 +947,15 @@ class API(object):
 
                 'tools.trailing_slash.on': True,
                 'tools.gzip.on': True,
-
-                'tools.staticdir.on': True if 'static' in self.apiopts else False,
-                'tools.staticdir.dir': self.apiopts.get('static', ''),
             },
         }
+
+        # Serve static media if the directory has been set in the configuration
+        if 'static' in self.apiopts:
+            conf[self.apiopts.get('static_path', '/static')] = {
+                'tools.staticdir.on': True,
+                'tools.staticdir.dir': self.apiopts['static'],
+            }
 
         # Add to global config
         cherrypy.config.update(conf['global'])
