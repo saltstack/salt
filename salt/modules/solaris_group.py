@@ -16,7 +16,7 @@ def __virtual__():
     return 'group' if __grains__['kernel'] == 'SunOS' else False
 
 
-def add(name, gid=None, system=False):
+def add(name, gid=None, **kwargs):
     '''
     Add the specified group
 
@@ -24,6 +24,10 @@ def add(name, gid=None, system=False):
 
         salt '*' group.add foo 3456
     '''
+    if salt.utils.is_true(kwargs.get('system')):
+        log.warning('solaris_group module does not support the \'system\' '
+                    'argument')
+
     cmd = 'groupadd '
     if gid:
         cmd += '-g {0} '.format(gid)
