@@ -10,7 +10,7 @@ import salt.payload
 
 def fire_master(data, tag):
     '''
-    Fire an event off on the master server
+    Fire an event off up to the master server
 
     CLI Example::
 
