@@ -259,11 +259,6 @@ def running(name, enable=None, sig=None, **kwargs):
            'result': True,
            'comment': ''}
 
-    # Clear cached service info
-    sys.modules[
-        __salt__['service.status'].__module__
-    ].__context__.pop('service.all', None)
-
     # Check if the service is available
     ret = _available(name, ret)
     if not ret.pop('available', True):
@@ -284,11 +279,6 @@ def running(name, enable=None, sig=None, **kwargs):
         ret['result'] = None
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
-
-    # Clear cached service info
-    sys.modules[
-        __salt__['service.status'].__module__
-    ].__context__.pop('service.all', None)
 
     changes = {name: __salt__['service.start'](name)}
 
@@ -332,11 +322,6 @@ def dead(name, enable=None, sig=None, **kwargs):
            'result': True,
            'comment': ''}
 
-    # Clear cached service info
-    sys.modules[
-        __salt__['service.status'].__module__
-    ].__context__.pop('service.all', None)
-
     # Check if the service is available
     ret = _available(name, ret)
     if not ret.pop('available', True):
@@ -356,11 +341,6 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['result'] = None
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
-
-    # Clear cached service info
-    sys.modules[
-        __salt__['service.status'].__module__
-    ].__context__.pop('service.all', None)
 
     changes = {name: __salt__['service.stop'](name)}
 
@@ -394,11 +374,6 @@ def enabled(name, **kwargs):
     name
         The name of the init or rc script used to manage the service
     '''
-    # Clear cached service info
-    sys.modules[
-        __salt__['service.status'].__module__
-    ].__context__.pop('service.all', None)
-
     return _enable(name, None, **kwargs)
 
 
@@ -412,11 +387,6 @@ def disabled(name, **kwargs):
     name
         The name of the init or rc script used to manage the service
     '''
-    # Clear cached service info
-    sys.modules[
-        __salt__['service.status'].__module__
-    ].__context__.pop('service.all', None)
-
     return _disable(name, None, **kwargs)
 
 
