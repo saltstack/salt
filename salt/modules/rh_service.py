@@ -8,6 +8,7 @@ upstart module, as well as the ``start``, ``stop``, and ``status`` commands.
 import glob
 import logging
 import os
+import stat
 
 # Import salt libs
 import salt.utils
@@ -72,77 +73,131 @@ def _runlevel():
         return out.split()[1]
 
 
-def _add_custom_initscript(name):
+def _chkconfig_add(name):
     '''
-    If the passed service name is not in the output from get_all(), runs a
-    'chkconfig --add' so that it is available.
+    Run 'chkconfig --add' for a service whose script is installed in
+    /etc/init.d.  The service is initially configured to be disabled at all
+    run-levels.
     '''
-    initscript_path = os.path.join('/etc/init.d', name)
-    if name not in get_all() and os.access(initscript_path, os.X_OK):
-        cmd = '/sbin/chkconfig --add {0}'.format(name)
-        if __salt__['cmd.retcode'](cmd):
-            log.error('Unable to add initscript "{0}"'.format(name))
-        else:
-            log.info('Added initscript "{0}"'.format(name))
-            # Disable initscript by default. If a user wants it enabled, he/she
-            # can configure that in a state. Since we're adding the service
-            # automagically, we shouldn't also enable it, as the user may not
-            # be aware that the service was added to chkconfig and thus would
-            # not be expecting it to start on boot (which is the default).
-            cmd = '/sbin/chkconfig {0} off'.format(name)
-            __salt__['cmd.run'](cmd)
-
-
-def _sysv_is_enabled(chkconfig_line, rlevel):
-    '''
-    Given a list of columns from a line of 'chkconfig --list' output, and the
-    runlevel, return True if enabled. Otherwise, return False.
-    '''
-    if len(chkconfig_line) > 3 and '{0}:on'.format(rlevel) in chkconfig_line:
+    cmd = '/sbin/chkconfig --add {0}'.format(name)
+    if __salt__['cmd.retcode'](cmd) == 0:
+        log.info('Added initscript "{0}" to chkconfig'.format(name))
         return True
-    elif len(chkconfig_line) < 3 and chkconfig_line[1] \
-            and chkconfig_line[1] == 'on':
-        return True
-    return False
+    else:
+        log.error('Unable to add initscript "{0}" to chkconfig'.format(name))
+        return False
 
 
 def _service_is_upstart(name):
     '''
-    Return true if the service is an upstart service, otherwise return False.
+    Return True if the service is an upstart service, otherwise return False.
     '''
-    return name in get_all(limit='upstart')
+    return HAS_UPSTART and os.path.exists('/etc/init/{0}.conf'.format(name))
 
 
-def _services():
+def _service_is_sysv(name):
     '''
-    Return a dict of services and their types (sysv or upstart), as well
-    as whether or not the service is enabled.
+    Return True if the service is a System V service (includes those managed by
+    chkconfig); otherwise return False.
     '''
-    if 'service.all' in __context__:
-        return __context__['service.all']
+    try:
+        # Look for user-execute bit in file mode.
+        return bool(os.stat(
+            os.path.join('/etc/init.d', name)).st_mode & stat.S_IXUSR)
+    except OSError:
+        return False
 
-    # First, parse sysvinit services from chkconfig
-    rlevel = _runlevel()
-    ret = {}
-    for line in __salt__['cmd.run']('/sbin/chkconfig --list').splitlines():
-        cols = line.split()
+
+def _service_is_chkconfig(name):
+    '''
+    Return True if the service is managed by chkconfig.
+    '''
+    cmdline = '/sbin/chkconfig --list {0}'.format(name)
+    return (__salt__['cmd.retcode'](cmdline) == 0)
+
+
+def _sysv_is_enabled(name, runlevel=None):
+    '''
+    Return True if the sysv (or chkconfig) service is enabled for the specified
+    runlevel; otherwise return False.  If `runlevel` is None, then use the
+    current runlevel.
+    '''
+    # Try chkconfig first.
+    result = _chkconfig_is_enabled(name, runlevel)
+    if result:
+        return True
+
+    if runlevel is None:
+        runlevel = _runlevel()
+    return (
+        len(glob.glob('/etc/rc.d/rc{0}.d/S??{1}'.format(runlevel, name))) > 0)
+
+
+def _chkconfig_is_enabled(name, runlevel=None):
+    '''
+    Return True if the service is enabled according to chkconfig; otherwise
+    return False.  If `runlevel` is None, then use the current runlevel.
+    '''
+    cmdline = '/sbin/chkconfig --list {0}'.format(name)
+    result = __salt__['cmd.run_all'](cmdline)
+    if result['retcode'] == 0:
+        cols = result['stdout'].splitlines()[0].split()
         try:
-            name = cols[0].strip(':')
+            if cols[0].strip(':') == name:
+                if runlevel is None:
+                    runlevel = _runlevel()
+                if len(cols) > 3 and '{0}:on'.format(runlevel) in cols:
+                    return True
+                elif len(cols) < 3 and cols[1] and cols[1] == 'on':
+                    return True
         except IndexError:
-            continue
-        if name in ret:
-            continue
-        ret.setdefault(name, {})['type'] = 'sysvinit'
-        ret[name]['enabled'] = _sysv_is_enabled(cols, rlevel)
+            pass
+    return False
+
+
+def _sysv_enable(name):
+    '''
+    Enable the named sysv service to start at boot.  The service will be enabled
+    using chkconfig with default run-levels if the service is chkconfig
+    compatible.  If chkconfig is not available, then this will fail.
+    '''
+    if not _service_is_chkconfig(name) and not _chkconfig_add(name):
+        return False
+    cmd = '/sbin/chkconfig {0} on'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def _sysv_disable(name):
+    '''
+    Disable the named sysv service from starting at boot.  The service will be
+    disabled using chkconfig with default run-levels if the service is chkconfig
+    compatible; otherwise, the service will be disabled for the current
+    run-level only.
+    '''
+    if not _service_is_chkconfig(name) and not _chkconfig_add(name):
+        return False
+    cmd = '/sbin/chkconfig {0} off'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def _upstart_services():
+    '''
+    Return list of upstart services.
+    '''
     if HAS_UPSTART:
-        for line in glob.glob('/etc/init/*.conf'):
-            name = os.path.basename(line)[:-5]
-            if name in ret:
-                continue
-            ret.setdefault(name, {})['type'] = 'upstart'
-            ret[name]['enabled'] = _upstart_is_enabled(name)
-    __context__['service.all'] = ret
-    return ret
+        return [os.path.basename(name)[:-5]
+            for name in glob.glob('/etc/init/*.conf')]
+    else:
+        return []
+
+
+def _sysv_services():
+    '''
+    Return list of sysv services.
+    '''
+    ret = []
+    return [name for name in os.listdir('/etc/init.d')
+        if _service_is_sysv(name)]
 
 
 def get_enabled(limit=''):
@@ -157,12 +212,20 @@ def get_enabled(limit=''):
         salt '*' service.get_enabled limit=sysvinit
     '''
     limit = limit.lower()
-    if limit in ('upstart', 'sysvinit'):
-        return sorted([x for x, y in _services().iteritems()
-                       if y['enabled'] and y['type'] == limit])
+    if limit == 'upstart':
+        return sorted(name for name in _upstart_services()
+            if _upstart_is_enabled(name))
+    elif limit == 'sysvinit':
+        runlevel = _runlevel()
+        return sorted(name for name in _sysv_services()
+            if _sysv_is_enabled(name, runlevel))
     else:
-        return sorted([x for x, y in _services().iteritems()
-                       if y['enabled']])
+        runlevel = _runlevel()
+        return sorted(
+            [name for name in _upstart_services()
+                if _upstart_is_enabled(name)]
+            + [name for name in _sysv_services()
+            if _sysv_is_enabled(name, runlevel)])
 
 
 def get_disabled(limit=''):
@@ -177,12 +240,20 @@ def get_disabled(limit=''):
         salt '*' service.get_disabled limit=sysvinit
     '''
     limit = limit.lower()
-    if limit in ('upstart', 'sysvinit'):
-        return sorted([x for x, y in _services().iteritems()
-                       if not y['enabled'] and y['type'] == limit])
+    if limit == 'upstart':
+        return sorted(name for name in _upstart_services()
+            if not _upstart_is_enabled(name))
+    elif limit == 'sysvinit':
+        runlevel = _runlevel()
+        return sorted(name for name in _sysv_services()
+            if not _sysv_is_enabled(name, runlevel))
     else:
-        return sorted([x for x, y in _services().iteritems()
-                       if not y['enabled']])
+        runlevel = _runlevel()
+        return sorted(
+            [name for name in _upstart_services()
+                if not _upstart_is_enabled(name)]
+            + [name for name in _sysv_services()
+            if not _sysv_is_enabled(name, runlevel)])
 
 
 def get_all(limit=''):
@@ -197,11 +268,31 @@ def get_all(limit=''):
         salt '*' service.get_all limit=sysvinit
     '''
     limit = limit.lower()
-    if limit in ('upstart', 'sysvinit'):
-        return sorted([x for x, y in _services().iteritems()
-                       if y['type'] == limit])
+    if limit == 'upstart':
+        return sorted(_upstart_services())
+    elif limit == 'sysvinit':
+        return sorted(_sysv_services())
     else:
-        return sorted([x for x, y in _services().iteritems()])
+        return sorted(_sysv_services() + _upstart_services())
+
+
+def available(name, limit=''):
+    '''
+    Return True is the named service is available.  Use the ``limit`` param to
+    restrict results to services of that type.
+
+    CLI Examples::
+
+        salt '*' service.get_enabled
+        salt '*' service.get_enabled limit=upstart
+        salt '*' service.get_enabled limit=sysvinit
+    '''
+    if limit == 'upstart':
+        return _service_is_upstart(name)
+    elif limit == 'sysvinit':
+        return _service_is_sysv(name)
+    else:
+        return _service_is_upstart(name) or _service_is_sysv(name)
 
 
 def start(name):
@@ -212,10 +303,9 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    if _services().get(name, {}).get('type', '') == 'upstart':
+    if _service_is_upstart(name):
         cmd = 'start {0}'.format(name)
     else:
-        _add_custom_initscript(name)
         cmd = '/sbin/service {0} start'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -231,7 +321,6 @@ def stop(name):
     if _service_is_upstart(name):
         cmd = 'stop {0}'.format(name)
     else:
-        _add_custom_initscript(name)
         cmd = '/sbin/service {0} stop'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -247,7 +336,6 @@ def restart(name, **kwargs):
     if _service_is_upstart(name):
         cmd = 'restart {0}'.format(name)
     else:
-        _add_custom_initscript(name)
         cmd = '/sbin/service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -263,7 +351,6 @@ def reload_(name, **kwargs):
     if _service_is_upstart(name):
         cmd = 'reload {0}'.format(name)
     else:
-        _add_custom_initscript(name)
         cmd = '/sbin/service {0} reload'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -280,7 +367,6 @@ def status(name, sig=None):
     if _service_is_upstart(name):
         cmd = 'status {0}'.format(name)
         return 'start/running' in __salt__['cmd.run'](cmd)
-    _add_custom_initscript(name)
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/sbin/service {0} status'.format(name)
@@ -297,9 +383,8 @@ def enable(name, **kwargs):
     '''
     if _service_is_upstart(name):
         return _upstart_enable(name)
-    _add_custom_initscript(name)
-    cmd = '/sbin/chkconfig {0} on'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    else:
+        return _sysv_enable(name)
 
 
 def disable(name, **kwargs):
@@ -312,9 +397,8 @@ def disable(name, **kwargs):
     '''
     if _service_is_upstart(name):
         return _upstart_disable(name)
-    _add_custom_initscript(name)
-    cmd = '/sbin/chkconfig {0} off'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    else:
+        return _sysv_disable(name)
 
 
 def enabled(name):
@@ -327,8 +411,8 @@ def enabled(name):
     '''
     if _service_is_upstart(name):
         return _upstart_is_enabled(name)
-    _add_custom_initscript(name)
-    return name in get_enabled()
+    else:
+        return _sysv_is_enabled(name)
 
 
 def disabled(name):
@@ -341,5 +425,5 @@ def disabled(name):
     '''
     if _service_is_upstart(name):
         return not _upstart_is_enabled(name)
-    _add_custom_initscript(name)
-    return name in get_disabled()
+    else:
+        return not _sysv_is_enabled(name)
