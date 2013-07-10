@@ -13,7 +13,7 @@ except ImportError:
     try:
         import pwd
     except ImportError:
-        pass # We're most likely on a Windows machine.
+        pass  # We're most likely on a Windows machine.
 
 # Import salt libs
 import salt.utils
@@ -24,6 +24,13 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     return 'shadow' if __grains__.get('kernel', '') == 'SunOS' else False
+
+
+def empty_password():
+    '''
+    Returns the hash used in Solaris for an unset/empty passwords
+    '''
+    return '!'
 
 
 def info(name):
@@ -39,7 +46,7 @@ def info(name):
             data = spwd.getspnam(name)
             ret = {
                 'name': data.sp_nam,
-                'passwd': data.sp_pwd if data.sp_pwd != '!' else '',
+                'passwd': data.sp_pwd,
                 'lstchg': data.sp_lstchg,
                 'min': data.sp_min,
                 'max': data.sp_max,
