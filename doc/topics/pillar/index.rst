@@ -182,8 +182,8 @@ locally. This is done with the ``saltutil.refresh_pillar`` function.
 
     salt '*' saltutil.refresh_pillar
 
-This function triggers the minion to refresh the pillar and will always return
-``True``
+This function triggers the minion to asynchronously refresh the pillar and will always return
+``None``
 
 Targeting with Pillar
 =====================
