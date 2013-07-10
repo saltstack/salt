@@ -61,7 +61,6 @@ def add(name,
         home=True,
         shell=None,
         unique=True,
-        system=False,
         fullname='',
         roomnumber='',
         workphone='',
@@ -74,6 +73,9 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
+    if salt.utils.is_true(kwargs.get('system')):
+        log.warning('pw_user module does not support the \'system\' argument')
+
     if isinstance(groups, string_types):
         groups = groups.split(',')
     cmd = 'pw useradd '
