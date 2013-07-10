@@ -80,19 +80,12 @@ def _chkconfig_add(name):
     run-levels.
     '''
     cmd = '/sbin/chkconfig --add {0}'.format(name)
-    if __salt__['cmd.retcode'](cmd):
+    if __salt__['cmd.retcode'](cmd) == 0:
+        log.info('Added initscript "{0}" to chkconfig'.format(name))
+        return True
+    else:
         log.error('Unable to add initscript "{0}" to chkconfig'.format(name))
         return False
-    else:
-        log.info('Added initscript "{0}" to chkconfig'.format(name))
-        # Disable initscript by default. If a user wants it enabled, he/she
-        # can configure that in a state. Since we're adding the service
-        # automagically, we shouldn't also enable it, as the user may not
-        # be aware that the service was added to chkconfig and thus would
-        # not be expecting it to start on boot (which is the default).
-        cmd = '/sbin/chkconfig {0} off'.format(name)
-        __salt__['cmd.run'](cmd)
-        return True
 
 
 def _service_is_upstart(name):
@@ -285,7 +278,7 @@ def get_all(limit=''):
 
 def available(name, limit=''):
     '''
-    Return True is the named service is available.  Use the ``limit`` param to 
+    Return True is the named service is available.  Use the ``limit`` param to
     restrict results to services of that type.
 
     CLI Examples::
