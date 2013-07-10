@@ -138,6 +138,31 @@ def save(filename=None):
     return out
 
 
+def check(table='filter', chain=None, rule=None):
+    '''
+    Check for the existance of a rule in the table and chain
+
+    This function accepts a rule in a standard iptables command format,
+        starting with the chain. Trying to force users to adapt to a new
+        method of creating rules would be irritating at best, and we
+        already have a parser that can handle it.
+
+    CLI Example::
+
+        salt '*' iptables.check filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
+    '''
+    if not chain:
+        return 'Error: Chain needs to be specified'
+    if not rule:
+        return 'Error: Rule needs to be specified'
+
+    cmd = 'iptables -t {0} -C {1} {2}'.format(table, chain, rule)
+    out = __salt__['cmd.run'](cmd)
+    if not out:
+        return True
+    return out
+
+
 def append(table='filter', chain=None, rule=None):
     '''
     Append a rule to the specified table/chain.
