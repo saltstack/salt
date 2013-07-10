@@ -58,7 +58,8 @@ def create(path,
         The name (and optionally path) of the virtualenv command. This can also
         be set globally in the minion config file as ``virtualenv.venv_bin``.
     no_site_packages : False
-        Passthrough argument given to virtualenv (Deprecated since 0.17.0)
+        Passthrough argument given to virtualenv. Deprecated since salt>=0.17.0
+        Use ``system_site_packages=False`` instead.
     system_site_packages : False
         Passthrough argument given to virtualenv or pyvenv
     distribute : False
