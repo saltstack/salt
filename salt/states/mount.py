@@ -90,12 +90,10 @@ def mounted(name,
             # Failed to (re)mount, the state has failed!
             ret['comment'] = out
             ret['result'] = False
-            mounted = False
         elif out is True:
             # (Re)mount worked!
             ret['comment'] = 'Target was successfully mounted'
             ret['changes']['mount'] = True
-            mounted = True
     else:
         ret['comment'] = 'Target was already mounted'
 
@@ -108,8 +106,7 @@ def mounted(name,
                                   'be set to be made persistent').format(name)
                 return ret
 
-        if mounted:
-            # Make sure the entry is in the fstab
+        if ret['changes']['mount']:
             out = __salt__['mount.set_fstab'](name,
                                               device,
                                               fstype,
