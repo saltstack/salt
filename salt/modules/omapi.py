@@ -1,19 +1,19 @@
 '''
 This module interacts with an ISC DHCP Server via OMAPI.
-Requires pypureomapi python module. server_ip and server_port params may
-be set in the minion config or pillar, or passed as arguments:
+server_ip and server_port params may be set in the minion
+config or pillar:
 
 .. code-block:: yaml
 
   omapi.server_ip: 127.0.0.1
-  omapi.port: 7991
+  omapi.server_port: 7991
 
-Key authentication is not supported, but may
-be added in a later version.
+:depends: pypureomapi Python module 
 '''
 # Import python libs
 import logging
 import struct
+import base64
 
 # Import salt libs
 import salt.utils
@@ -23,8 +23,7 @@ log = logging.getLogger(__name__)
 
 
 try:
-    from pypureomapi import *
-    from pypureomapi import pack_ip, pack_mac
+    import pypureomapi as omapi
     omapi_support = True
 except ImportError as e:
     omapi_support = False
@@ -39,53 +38,80 @@ def __virtual__():
     return False
 
 
-def _conn(kwargs):
-    server_ip = kwargs.get('omapi.server_ip', __pillar__.get(
-        'omapi.server_ip', __opts__.get('server_ip', '127.0.0.1')))
-    server_port = kwargs.get('omapi.server_port', __pillar__.get(
-        'omapi.server_port', __opts__.get('serve_port', 7991)))
-    return Omapi(server_ip, server_port, debug=True)
+def _conn():
+    server_ip = __pillar__.get('omapi.server_ip', 
+            __opts__.get('omapi.server_ip', '127.0.0.1'))
+    server_port = __pillar__.get('omapi.server_port', 
+            __opts__.get('omapi.server_port', 7991))
+    key = __pillar__.get('omapi.key', 
+            __opts__.get('omapi.key', None))
+    username = __pillar__.get('omapi.user', 
+            __opts__.get('omapi.user', None))
+    return omapi.Omapi(server_ip, server_port, username=username, key=key)
 
 
-def add_host(ip, mac, name, **kwargs):
+def add_host(mac, name=None, ip=None, ddns=False, group=None,
+        supersede_host=False):
     '''
-    Add a host with a fixed-address and name.
-
+    Add a host object for the given mac.
+    
     CLI Example::
         
-        salt dhcp-server omapi.add_host 10.0.0.1 ab:ab:ab:ab:ab:ab host1
+        salt dhcp-server omapi.add_host ab:ab:ab:ab:ab:ab name=host1
+
+    Add ddns-hostname and a fixed-ip statements::
+
+        salt dhcp-server omapi.add_host ab:ab:ab:ab:ab:ab name=host1 ip=10.1.1.1 ddns=true
     '''
-    o = _conn(kwargs)
-    msg = OmapiMessage.open(b"host")
-    msg.message.append(("create", struct.pack("!I", 1)))
-    msg.message.append(("exclusive", struct.pack("!I", 1)))
-    msg.obj.append(("hardware-address", pack_mac(mac)))
-    msg.obj.append(("hardware-type", struct.pack("!I", 1)))
-    msg.obj.append(("ip-address", pack_ip(ip)))
-    msg.obj.append(("name", name))
+    statements = ''
+    o = _conn()
+    msg = omapi.OmapiMessage.open(b'host')
+    msg.message.append(('create', struct.pack('!I', 1)))
+    msg.message.append(('exclusive', struct.pack('!I', 1)))
+    msg.obj.append(('hardware-address', omapi.pack_mac(mac)))
+    msg.obj.append(('hardware-type', struct.pack('!I', 1)))
+    if ip:
+        msg.obj.append(('ip-address', omapi.pack_ip(ip)))
+    if name:
+        msg.obj.append(('name', name))
+    if group:
+        msg.obj.append(('group', group))
+    if supersede_host:
+        statements += 'option host-name {0}; '.format(name)
+    if ddns and name:
+        statements += 'ddns-hostname {0}; '.format(name)
+    if statements:
+        msg.obj.append(('statements', statements))
     response = o.query_server(msg)
-    if response.opcode != OMAPI_OP_UPDATE:
+    if response.opcode != omapi.OMAPI_OP_UPDATE:
         return False
     return True
 
 
-def delete_host(name, **kwargs):
+def delete_host(mac=None, name=None):
     '''
-    Delete the named host from a dhcp server.
+    Delete the host with the given mac or name.
 
-    CLI Example::
+    CLI Examples::
         
-        salt dhcp-server omapi.delete_host host1
+        salt dhcp-server omapi.delete_host name=host1
+        salt dhcp-server omapi.delete_host mac=ab:ab:ab:ab:ab:ab
     '''
-    o = _conn(kwargs)
-    msg = OmapiMessage.open(b"host")
-    msg.obj.append(("name", name))
+    if not (mac or name):
+        raise TypeError('At least one argument is required')
+    o = _conn()
+    msg = omapi.OmapiMessage.open(b'host')
+    if mac:
+        msg.obj.append(('hardware-address', omapi.pack_mac(mac)))
+        msg.obj.append(('hardware-type', struct.pack('!I', 1)))
+    if name:
+        msg.obj.append(('name', name))
     response = o.query_server(msg)
-    if response.opcode != OMAPI_OP_UPDATE:
+    if response.opcode != omapi.OMAPI_OP_UPDATE:
         return None
     if response.handle == 0:
         return False
-    response = o.query_server(OmapiMessage.delete(response.handle))
-    if response.opcode != OMAPI_OP_STATUS:
+    response = o.query_server(omapi.OmapiMessage.delete(response.handle))
+    if response.opcode != omapi.OMAPI_OP_STATUS:
         return False
     return True
