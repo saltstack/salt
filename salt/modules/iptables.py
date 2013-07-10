@@ -86,6 +86,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         rule = '-m {0} '.format(kwargs['match'])
         del kwargs['match']
 
+    if 'state' in kwargs:
+        del kwargs['state']
+
     if 'connstate' in kwargs:
         kwargs['state'] = kwargs['connstate']
         del kwargs['connstate']
