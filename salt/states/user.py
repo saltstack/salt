@@ -105,9 +105,9 @@ def _changes(name,
             change['shell'] = shell
     if password:
         if _shadow_supported():
-            empty_password = __salt__['shadow.empty_password']()
-            if lshad['passwd'] == empty_password \
-                    or lshad['passwd'] != empty_password and enforce_password:
+            default_hash = __salt__['shadow.default_hash']()
+            if lshad['passwd'] == default_hash \
+                    or lshad['passwd'] != default_hash and enforce_password:
                 if lshad['passwd'] != password:
                     change['passwd'] = password
     # GECOS fields
