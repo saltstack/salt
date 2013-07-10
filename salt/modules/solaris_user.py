@@ -61,12 +61,12 @@ def add(name,
         home=None,
         shell=None,
         unique=True,
-        system=False,
         fullname='',
         roomnumber='',
         workphone='',
         homephone='',
-        createhome=True):
+        createhome=True,
+        **kwargs):
     '''
     Add a user to the minion
 
@@ -74,6 +74,10 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
+    if salt.utils.is_true(kwargs.get('system')):
+        log.warning('solaris_user module does not support the \'system\' '
+                    'argument')
+
     if isinstance(groups, string_types):
         groups = groups.split(',')
     cmd = 'useradd '
