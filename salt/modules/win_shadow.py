@@ -25,7 +25,7 @@ def info(name):
     '''
     ret = {
             'name': name,
-            'pwd': '',
+            'passwd': '',
             'lstchg': '',
             'min': '',
             'max': '',
