@@ -63,9 +63,11 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
     If a position is required (as with `-I` or `-D`), it may be specified as
     `position`. This will only be useful if `full` is True.
 
+    If `connstate` is passed in, it will automatically be changed to `state`.
+
     CLI Examples::
 
-        salt '*' iptables.build_rule match=state state=RELATED,ESTABLISHED \ 
+        salt '*' iptables.build_rule match=state connstate=RELATED,ESTABLISHED \ 
             jump=ACCEPT
         salt '*' iptables.build_rule filter INPUT command=I position=3 \ 
             full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
@@ -79,6 +81,15 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
             del kwargs[ignore]
 
     rule = ''
+
+    if 'match' in kwargs:
+        rule = '-m {0} '.format(kwargs['match'])
+        del kwargs['match']
+
+    if 'connstate' in kwargs:
+        kwargs['state'] = kwargs['connstate']
+        del kwargs['connstate']
+
     for item in kwargs:
         rule += '--{0} {1} '.format(item, kwargs[item])
 
