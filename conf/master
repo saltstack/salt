@@ -326,6 +326,7 @@
 # ext_pillar:
 #   - hiera: /etc/hiera.yaml
 #   - cmd_yaml: cat /etc/salt/yaml
+#   - call: 'some.module.method'
 
 # The pillar_opts option adds the master configuration file data to a dict in
 # the pillar called "master". This is used to set simple configurations in the
