@@ -10,17 +10,6 @@ import warnings
 import salt.utils
 import salt.exceptions
 
-
-# Import 3rd party libs
-try:
-    import virtualenv
-    HAS_VIRTUALENV = True
-    VIRTUALENV_VERSION_INFO = tuple(
-        [int(i) for i in virtualenv.__version__.split('rc')[0].split('.')]
-    )
-except ImportError:
-    HAS_VIRTUALENV = False
-
 log = logging.getLogger(__name__)
 
 __opts__ = {
@@ -31,8 +20,6 @@ __pillar__ = {}
 
 
 def __virtual__():
-    if HAS_VIRTUALENV is False:
-        return False
     return 'virtualenv'
 
 
@@ -115,6 +102,25 @@ def create(path,
 
     if 'pyvenv' not in venv_bin:
         # Virtualenv package
+        try:
+            import virtualenv
+            VIRTUALENV_VERSION_INFO = tuple(
+                [int(i) for i in
+                 virtualenv.__version__.split('rc')[0].split('.')]
+            )
+        except ImportError:
+            # Unable to import?? Let's parse the version from the console
+            version_cmd = '{0} --version'.format(venv_bin)
+            ret = __salt__['cmd.run_all'](version_cmd, runas=runas)
+            if ret['retcode'] > 0:
+                raise salt.exceptions.CommandExecutionError(
+                    'Unable to get the virtualenv version output using {0!r}. '
+                    'Returned data: {1!r}'.format(version_cmd, ret)
+                )
+            VIRTUALENV_VERSION_INFO = tuple(
+                [int(i) for i in ret['stdout'].split('rc')[0].split('.')]
+            )
+
         if no_site_packages:
             cmd.append('--no-site-packages')
         if distribute:
