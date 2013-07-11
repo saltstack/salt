@@ -35,9 +35,6 @@ service, then set the reload value to True:
           - pkg: redis
 '''
 
-# Import python libs
-import sys
-
 
 def __virtual__():
     '''
