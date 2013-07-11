@@ -92,7 +92,7 @@ def _pkgname_without_arch(name):
     Check for ':arch' appended to pkg name (i.e. 32 bit installed on 64 bit
     machine is ':i386')
     '''
-    ret = name.split(':')[0]
+    ret = name.rsplit(':', 1)[0]
     if not ret:
         # Prevent any parsing weirdness from completely breaking list_pkgs()
         # in the future by bailing if the resultant string was empty.
