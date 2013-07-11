@@ -13,10 +13,6 @@ config or pillar:
 # Import python libs
 import logging
 import struct
-import base64
-
-# Import salt libs
-import salt.utils
 
 
 log = logging.getLogger(__name__)
