@@ -119,15 +119,16 @@ def uptime():
 def loadavg():
     '''
     Return the load averages for this minion
-
+    
     CLI Example::
-
+    
         salt '*' status.loadavg
     '''
     procf = '/proc/loadavg'
     if not os.path.isfile(procf):
-        return {}
-    comps = salt.utils.fopen(procf, 'r').read().strip()
+        comps = "%.2f %.2f %.2f" % os.getloadavg()
+    else:
+        comps = salt.utils.fopen(procf, 'r').read().strip()
     load_avg = comps.split()
     return {'1-min':  _number(load_avg[0]),
             '5-min':  _number(load_avg[1]),
