@@ -463,16 +463,17 @@ def upgrade(refresh=True, **kwargs):
 
 def _clean_pkglist(pkgs):
     '''
-    Go through package list and, if any packages have a mix of actual versions
-    and virtual package markers, remove the virtual package markers.
+    Go through package list and, if any packages have more than one virtual
+    package marker and no actual package versions, remove all virtual package
+    markers. If there is a mix of actual package versions and virtual package
+    markers, remove the virtual package markers.
     '''
-    for key in pkgs.keys():
-        if '1' in pkgs[key] and len(pkgs[key]) > 1:
-            while True:
-                try:
-                    pkgs[key].remove('1')
-                except ValueError:
-                    break
+    for name, versions in pkgs.iteritems():
+        stripped = filter(lambda x: x != '1', versions)
+        if not stripped:
+            pkgs[name] = ['1']
+        elif versions != stripped:
+            pkgs[name] = stripped
 
 
 def list_pkgs(versions_as_list=False, removed=False):
