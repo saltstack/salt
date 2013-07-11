@@ -33,9 +33,11 @@ def add(name, gid=None, **kwargs):
 
         salt '*' group.add foo 3456
     '''
-    if salt.utils.is_true(kwargs.get('system')):
+    if salt.utils.is_true(kwargs.pop('system', False)):
         log.warning('solaris_group module does not support the \'system\' '
                     'argument')
+    if kwargs:
+        raise TypeError('Invalid keyword argument(s): {}'.format(kwargs))
 
     cmd = 'groupadd '
     if gid:
