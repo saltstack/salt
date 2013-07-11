@@ -22,6 +22,14 @@ POLICY_MAP_DICT = {
 
 POLICY_RE = re.compile('.*policy=([^;]+)')
 
+
+def has_powerpath():
+    if os.path.exists('/sbin/emcpreg'):
+        return True
+
+    return False
+
+
 def __virtual__():
     '''
     Provide this only on Linux systems until proven to
@@ -32,22 +40,14 @@ def __virtual__():
     except Exception:
         return False
 
-    # We don't bother to check if powerpath is installed
-    # because it's possible that the package is about to
-    # be installed before a key is installed.  Checking
-    # for powerpath here would require two highstate runs
-    # for everything to happen.
+    if not has_powerpath():
+        return False
 
     if kernel_grain == 'Linux':
         return 'powerpath'
 
     return False
 
-def has_powerpath():
-    if os.path.exists('/sbin/emcpreg'):
-        return True
-
-    return False
 
 def list_licenses():
     '''
@@ -67,6 +67,7 @@ def list_licenses():
 
     return keys
 
+
 def add_license(key):
     '''
     Add a license
@@ -78,7 +79,7 @@ def add_license(key):
     }
 
     if not has_powerpath():
-        result['output'] = "PowerPath is not installed"
+        result['output'] = 'PowerPath is not installed'
         return result
 
     cmd = '/sbin/emcpreg -add {0}'.format(key)
@@ -94,6 +95,7 @@ def add_license(key):
 
     return result
 
+
 def remove_license(key):
     '''
     Remove a license
@@ -105,7 +107,7 @@ def remove_license(key):
     }
 
     if not has_powerpath():
-        result['output'] = "PowerPath is not installed"
+        result['output'] = 'PowerPath is not installed'
         return result
 
     cmd = '/sbin/emcpreg -remove {0}'.format(key)
