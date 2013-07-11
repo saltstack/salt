@@ -308,6 +308,8 @@ def _run(cmd,
     ret['stderr'] = err
     ret['pid'] = proc.pid
     ret['retcode'] = proc.returncode
+    if ret['retcode'] and (not ret['stderr']):
+        ret['stderr'] = False
     return ret
 
 
