@@ -11,7 +11,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.15.3
+Version: 0.16.0
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -61,7 +61,7 @@ BuildRequires: python-unittest2
 # this BR causes windows tests to happen
 # clearly, that's not desired
 # https://github.com/saltstack/salt/issues/3749
-#BuildRequires: python-mock
+BuildRequires: python-mock
 BuildRequires: git
 %endif
 
@@ -310,6 +310,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Tue Jul 9 2013 Clint Savage <herlo1@gmail.com> - 0.16.0-1
+- Update to feature release 0.16.0
+
 * Sat Jun 1 2013 Clint Savage <herlo1@gmail.com> - 0.15.3-1
 - Update to patch release 0.15.3
 - Removed OrderedDict patch
@@ -365,7 +368,7 @@ rm -rf $RPM_BUILD_ROOT
 - Moved to upstream release 0.10.5
 - Added pciutils as Requires
 
-* Tue Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
+* Wed Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
 - Moved to upstream release 0.10.4
 - Patched jcollie/systemd-service-status (SALT@GH#2335) (RHBZ#869669)
 
@@ -376,7 +379,7 @@ rm -rf $RPM_BUILD_ROOT
 * Thu Aug 2 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-2
 - Fix upstream bug #1730 per RHBZ#845295
 
-* Sat Jul 31 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-1
+* Tue Jul 31 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-1
 - Moved to upstream release 0.10.2
 - Removed PyXML as a dependency
 
@@ -419,7 +422,7 @@ rm -rf $RPM_BUILD_ROOT
 * Thu Dec 1 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-2
 - Removing requirement for Cython. Optional only for salt-minion
 
-* Thu Nov 30 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-1
+* Wed Nov 30 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-1
 - New upstream release with new features and bugfixes
 
 * Thu Nov 17 2011 Clint Savage <herlo1@gmail.com> - 0.9.3-1
