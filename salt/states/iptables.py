@@ -20,9 +20,6 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - sport: 1025:65535
 '''
 
-import sys
-import pprint
-
 
 def __virtual__():
     '''
