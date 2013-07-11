@@ -190,7 +190,7 @@ def _nic_profile(nic):
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
 
 
-def init(name, cpu, mem, image, nic='default', emulator='kvm', **kwargs):
+def init(name, cpu, mem, image, nic='default', emulator='kvm', start=True, **kwargs):
     '''
     Initialize a new vm
 
@@ -214,7 +214,8 @@ def init(name, cpu, mem, image, nic='default', emulator='kvm', **kwargs):
         __salt__['img.seed'](img_dest, name, kwargs.get('config'))
     elif kwargs.get('seed_cmd'):
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
-    create(name)
+    if start:
+        create(name)
 
 
 def list_vms():
