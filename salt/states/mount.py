@@ -115,7 +115,7 @@ def mounted(name,
                                               pass_num,
                                               config)
         else:
-            out == 'bad mount'
+            out = 'bad mount'
 
         if out == 'present':
             return ret
@@ -132,7 +132,7 @@ def mounted(name,
             ret['comment'] += '. However, the fstab was not found.'
             return ret
         if out == 'bad mount':
-            ret['result'] == False
+            ret['result'] = False
             ret['comment'] += '. Unfortunately the file system didn\'t exist.'
 
     return ret
