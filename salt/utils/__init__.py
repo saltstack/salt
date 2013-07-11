@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import datetime
+from decimal import Decimal
 import fnmatch
 import hashlib
 import imp
@@ -25,6 +26,13 @@ import time
 import types
 import warnings
 from calendar import month_abbr as months
+
+
+try:
+    import dateutil.parser
+    HAS_DATEUTIL = True
+except ImportError:
+    HAS_DATEUTIL = False
 
 try:
     import fcntl
@@ -1249,3 +1257,52 @@ def _win_console_event_handler(event):
 def enable_ctrl_logoff_handler():
     if HAS_WIN32API:
         win32api.SetConsoleCtrlHandler(_win_console_event_handler, 1)
+
+
+def format_strftime(date=None, format='%b %d, %Y'):
+    '''
+    Converts date into a timebased string
+
+    date
+      any datetime, time string representation...
+
+    format
+       :ref:`strftime<http://docs.python.org/2/library/datetime.html#datetime.datetime.strftime>` format
+
+    >>> src = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
+    >>> format_strftime(src)
+    'Dec 25, 2002'
+    >>> src = '2002/12/25'
+    >>> format_strftime(src)
+    'Dec 25, 2002'
+    >>> src = 1040814000
+    >>> format_strftime(src)
+    'Dec 25, 2002'
+    >>> src = '1040814000'
+    >>> format_strftime(src)
+    'Dec 25, 2002'
+    '''
+    def cast(date):
+        if date is None:
+            return datetime.datetime.now()
+        elif isinstance(date, datetime.datetime):
+            return date
+        elif isinstance(date, salt._compat.integer_types):
+            return datetime.datetime.fromtimestamp(date)
+        elif isinstance(date, (float, Decimal)):
+            return datetime.datetime.fromtimestamp(date)
+        try:
+            if date.isdigit():
+                date = int(date)
+            else:
+                date = float(date)
+            return datetime.datetime.fromtimestamp(date)
+        except ValueError:
+            # not a number
+            if HAS_DATEUTIL:
+                return dateutil.parser.parse(date).replace(tzinfo=None)
+            raise RuntimeError('dateutil is required')
+        except AttributeError:
+            # not a string
+            raise ValueError('Invalid type: {0}'.format(date))
+    return cast(date).strftime(format)
