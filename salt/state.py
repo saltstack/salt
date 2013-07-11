@@ -546,11 +546,7 @@ class State(object):
         Refresh all the modules
         '''
         self.load_modules()
-        module_refresh_path = os.path.join(
-            self.opts['cachedir'],
-            'module_refresh')
-        with salt.utils.fopen(module_refresh_path, 'w+') as ofile:
-            ofile.write('')
+        self.functions['saltutil.refresh_modules']()
 
     def check_refresh(self, data, ret):
         '''
