@@ -565,6 +565,9 @@ class State(object):
                     self.module_refresh()
             elif data['fun'] == 'recurse':
                 self.module_refresh()
+            elif data['fun'] == 'symlink':
+                if 'bin' in data['name']:
+                    self.module_refresh()
         elif data['state'] == 'pkg':
             self.module_refresh()
 
