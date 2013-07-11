@@ -74,9 +74,11 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if salt.utils.is_true(kwargs.get('system')):
+    if salt.utils.is_true(kwargs.pop('system', False)):
         log.warning('solaris_user module does not support the \'system\' '
                     'argument')
+    if kwargs:
+        raise TypeError('Invalid keyword argument(s): {}'.format(kwargs))
 
     if isinstance(groups, string_types):
         groups = groups.split(',')
