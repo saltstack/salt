@@ -33,7 +33,7 @@ from salt.modules.file import (check_hash, check_managed, check_perms, # pylint:
         contains_regex, contains_regex_multiline, contains_glob, patch,
         uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment,
         manage_file, file_exists, get_diff, get_managed, __clean_tmp,
-        check_managed, check_file_meta, contains_regex)
+        check_managed, check_file_meta, _binary_replace, contains_regex)
 
 from salt.utils import namespaced_function
 
