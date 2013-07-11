@@ -67,9 +67,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
 
     CLI Examples::
 
-        salt '*' iptables.build_rule match=state connstate=RELATED,ESTABLISHED \ 
+        salt '*' iptables.build_rule match=state connstate=RELATED,ESTABLISHED \\ 
             jump=ACCEPT
-        salt '*' iptables.build_rule filter INPUT command=I position=3 \ 
+        salt '*' iptables.build_rule filter INPUT command=I position=3 \\ 
             full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
     '''
     if 'target' in kwargs:
