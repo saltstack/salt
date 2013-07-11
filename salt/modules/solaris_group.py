@@ -3,6 +3,15 @@ Manage groups on Solaris
 '''
 
 # Import python libs
+import logging
+
+# Import salt libs
+import salt.utils
+
+
+log = logging.getLogger(__name__)
+
+
 try:
     import grp
 except ImportError:
