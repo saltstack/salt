@@ -29,13 +29,13 @@ except ImportError:
 from salt.modules import virtualenv_mod
 from salt.exceptions import CommandExecutionError
 
+virtualenv_mod.__salt__ = {}
+
 
 @skipIf(has_mock is False, 'mock python module is unavailable')
 class VirtualenvTestCase(TestCase):
 
-    def setUp(self):
-        virtualenv_mod.__salt__ = {'cmd.which_bin': lambda _: 'virtualenv'}
-
+    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_issue_6029_deprecated_distribute(self):
         virtualenv_mock = MagicMock()
         virtualenv_mock.__version__ = '1.9.1'
@@ -75,6 +75,7 @@ class VirtualenvTestCase(TestCase):
                     handler.messages
                 )
 
+    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_issue_6030_deprecated_never_download(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         virtualenv_mock = MagicMock()
@@ -112,6 +113,7 @@ class VirtualenvTestCase(TestCase):
                     handler.messages
                 )
 
+    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_issue_6031_multiple_extra_search_dirs(self):
         extra_search_dirs = [
             '/tmp/bar-1',
@@ -149,6 +151,7 @@ class VirtualenvTestCase(TestCase):
                 runas=None
             )
 
+    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_system_site_packages_and_no_site_packages_mutual_exclusion(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
@@ -160,6 +163,7 @@ class VirtualenvTestCase(TestCase):
                 system_site_packages=True
             )
 
+    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_no_site_packages_deprecation(self):
         # NOTE: If this test starts failing it might be because the deprecation
         # warning was removed, or because some other test in this module is
@@ -177,6 +181,80 @@ class VirtualenvTestCase(TestCase):
                     'using \'system_site_packages=False\' which means exactly '
                     'the same as \'no_site_packages=True\'', str(w[-1].message)
                 )
+
+    @patch('salt.utils.which', lambda bin_name: bin_name)
+    def test_unapplicable_options(self):
+        # ----- Virtualenv using pyvenv options ----------------------------->
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                virtualenv_mod.create,
+                '/tmp/foo',
+                venv_bin='virtualenv',
+                upgrade=True
+            )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                virtualenv_mod.create,
+                '/tmp/foo',
+                venv_bin='virtualenv',
+                symlinks=True
+            )
+        # <---- Virtualenv using pyvenv options ------------------------------
+
+        # ----- pyvenv using virtualenv options ----------------------------->
+        virtualenv_mod.__salt__ = {'cmd.which_bin': lambda _: 'pyvenv'}
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                virtualenv_mod.create,
+                '/tmp/foo',
+                venv_bin='pyvenv',
+                no_site_packages=True
+            )
+
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                virtualenv_mod.create,
+                '/tmp/foo',
+                venv_bin='pyvenv',
+                python='python2.7'
+            )
+
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                virtualenv_mod.create,
+                '/tmp/foo',
+                venv_bin='pyvenv',
+                prompt='PY Prompt'
+            )
+
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                virtualenv_mod.create,
+                '/tmp/foo',
+                venv_bin='pyvenv',
+                never_download=True
+            )
+
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                virtualenv_mod.create,
+                '/tmp/foo',
+                venv_bin='pyvenv',
+                extra_search_dir='/tmp/bar'
+            )
+        # <---- pyvenv using virtualenv options ------------------------------
 
 
 if __name__ == '__main__':
