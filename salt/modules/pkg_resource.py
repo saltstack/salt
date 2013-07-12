@@ -9,7 +9,7 @@ import re
 import yaml
 import pprint
 import logging
-import distutils.version
+import distutils.version  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils

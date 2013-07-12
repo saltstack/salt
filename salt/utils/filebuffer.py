@@ -105,7 +105,7 @@ def _main():
 
         breader = BufferedReader(fpath, max_size, chunk_size)
         for chunk in breader:
-            chunk
+            chunk  # pylint: disable=W0104
         return
 
     def sizeof_fmt(num):

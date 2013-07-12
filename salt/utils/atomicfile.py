@@ -24,7 +24,7 @@ if os.name == 'nt':  # pragma: no cover
         _MOVEFILE_WRITE_THROUGH = 0x8
         _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable=C0103
 
-        def _rename(src, dst):
+        def _rename(src, dst):  # pylint: disable=E0102
             if not isinstance(src, unicode):
                 src = unicode(src, sys.getfilesystemencoding())
             if not isinstance(dst, unicode):
@@ -50,7 +50,7 @@ if os.name == 'nt':  # pragma: no cover
         # pylint: enable=C0103
         CAN_RENAME_OPEN_FILE = True
 
-        def _rename_atomic(src, dst):
+        def _rename_atomic(src, dst):  # pylint: disable=E0102
             tra = _CreateTransaction(None, 0, 0, 0, 0, 1000, 'Atomic rename')
             if tra == -1:
                 return False

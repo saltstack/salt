@@ -22,7 +22,7 @@ def __get_version(version, version_info):
     '''
     try:
         # Try to import the version information provided at install time
-        from salt._version import __version__, __version_info__
+        from salt._version import __version__, __version_info__  # pylint: disable=E0611
         return __version__, __version_info__
     except ImportError:
         pass

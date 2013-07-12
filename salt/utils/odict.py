@@ -16,7 +16,7 @@
 '''
 
 try:
-    from collections import OrderedDict
+    from collections import OrderedDict  # pylint: disable=E0611
 except ImportError:
     try:
         from ordereddict import OrderedDict
@@ -47,13 +47,13 @@ except ImportError:
             # The sentinel element never gets deleted (this simplifies the algorithm).
             # Each link is stored as a list of length three:  [PREV, NEXT, KEY].
 
-            def __init__(self, *args, **kwds):
+            def __init__(self, *args, **kwds):  # pylint: disable=E1003
                 '''Initialize an ordered dictionary.  Signature is the same as for
                 regular dictionaries, but keyword arguments are not recommended
                 because their insertion order is arbitrary.
 
                 '''
-                super(OrderedDict, self).__init__()
+                super(OrderedDict, self).__init__()  # pylint: disable=E1003
                 if len(args) > 1:
                     raise TypeError('expected at most 1 arguments, got %d' % len(args))
                 try:
@@ -162,7 +162,7 @@ except ImportError:
                 for k in self:
                     yield (k, self[k])
 
-            def update(*args, **kwds):
+            def update(*args, **kwds):  # pylint: disable=E0211
                 '''od.update(E, **F) -> None.  Update od from dict/iterable E and F.
 
                 If E is a dict instance, does:           for k in E: od[k] = E[k]
@@ -217,7 +217,7 @@ except ImportError:
                 self[key] = default
                 return default
 
-            def __repr__(self, _repr_running={}):
+            def __repr__(self, _repr_running={}):  # pylint: disable=W0102
                 'od.__repr__() <==> repr(od)'
                 call_key = id(self), _get_ident()
                 if call_key in _repr_running:
