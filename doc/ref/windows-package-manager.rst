@@ -45,6 +45,12 @@ Add ``msiexec: True`` if using an MSI installer requiring the use of ``msiexec
 /i`` to install and ``msiexec /x`` to uninstall.
 ``/srv/salt/win/repo/7zip/init.sls``
 
+The ``install_flags`` and ``uninstall_flags`` are flags passed to the software
+installer to cause it to perform a silent install. These can often be found by
+adding ``/?`` or ``/h`` when running the installer from the command line. A
+great resource for finding these silent install flags can be found on the WPKG
+project's wiki_:
+
 .. code-block:: yaml
 
     7zip:
@@ -144,3 +150,6 @@ cache and then refresh each minion's package cache:
     $ salt-run winrepo.update_git_repos
     $ salt-run winrepo.genrepo
     $ salt \* pkg.refresh_db
+
+
+.. _wiki: http://wpkg.org/Category:Silent_Installers
