@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import datetime
-from decimal import Decimal
 import fnmatch
 import hashlib
 import imp
