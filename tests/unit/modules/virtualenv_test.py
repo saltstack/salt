@@ -10,6 +10,7 @@
 
 # Import python libraries
 import warnings
+import __builtin__
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -255,6 +256,73 @@ class VirtualenvTestCase(TestCase):
                 extra_search_dir='/tmp/bar'
             )
         # <---- pyvenv using virtualenv options ------------------------------
+
+    def test_get_virtualenv_version_from_shell(self):
+        real_import = __builtin__.__import__
+
+        def import_error_wrapper(name, *args, **kw):
+            if name == 'virtualenv':
+                raise ImportError('We faked the ImportError')
+            real_import(name, *args, **kw)
+
+        __builtin__.__import__ = import_error_wrapper
+
+        try:
+            # ----- virtualenv binary not available ------------------------->
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+                self.assertRaises(
+                    CommandExecutionError,
+                    virtualenv_mod.create,
+                    '/tmp/foo',
+                )
+            # <---- virtualenv binary not available --------------------------
+
+            # ----- virtualenv binary present but > 0 exit code ------------->
+            mock = MagicMock(side_effect=[
+                {'retcode': 1, 'stdout': '', 'stderr': 'This is an error'},
+                {'retcode': 0, 'stdout': ''}
+            ])
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+                self.assertRaises(
+                    CommandExecutionError,
+                    virtualenv_mod.create,
+                    '/tmp/foo',
+                    venv_bin='virtualenv',
+                )
+            # <---- virtualenv binary present but > 0 exit code --------------
+
+            # ----- virtualenv binary returns 1.9.1 as it's version --------->
+            mock = MagicMock(side_effect=[
+                {'retcode': 0, 'stdout': '1.9.1'},
+                {'retcode': 0, 'stdout': ''}
+            ])
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+                virtualenv_mod.create(
+                    '/tmp/foo', never_download=True
+                )
+                mock.assert_called_with(
+                    'virtualenv --never-download /tmp/foo',
+                    runas=None
+                )
+            # <---- virtualenv binary returns 1.9.1 as it's version ----------
+
+            # ----- virtualenv binary returns 1.10rc1 as it's version ------->
+            mock = MagicMock(side_effect=[
+                {'retcode': 0, 'stdout': '1.10rc1'},
+                {'retcode': 0, 'stdout': ''}
+            ])
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+                virtualenv_mod.create(
+                    '/tmp/foo', never_download=True
+                )
+                mock.assert_called_with(
+                    'virtualenv /tmp/foo',
+                    runas=None
+                )
+            # <---- virtualenv binary returns 1.10rc1 as it's version --------
+        finally:
+            __builtin__.__import__ = real_import
 
 
 if __name__ == '__main__':
