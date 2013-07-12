@@ -18,6 +18,10 @@ __opts__ = {
 __pillar__ = {}
 
 
+def __virtual__():
+    return 'virtualenv'
+
+
 def create(path,
         venv_bin=None,
         no_site_packages=False,
