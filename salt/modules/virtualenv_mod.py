@@ -151,8 +151,9 @@ def create(path,
                 cmd.append('--distribute')
         if python is not None and python.strip() != '':
             cmd.append('--python={0}'.format(python))
-        if extra_search_dir is not None and extra_search_dir.strip() != '':
-            if isinstance(extra_search_dir, basestring):
+        if extra_search_dir is not None:
+            if isinstance(extra_search_dir, basestring) and \
+                    extra_search_dir.strip() != '':
                 if ',' in extra_search_dir:
                     extra_search_dir = [
                         e.strip() for e in extra_search_dir.split(',')
