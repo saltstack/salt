@@ -162,7 +162,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, _NewStyleClassMixIn):
             logging.getLogger(__name__)
 
         '''
-        instance = super(SaltLoggingClass, cls).__new__(cls)
+        instance = super(SaltLoggingClass, cls).__new__(cls, logger_name)
 
         try:
             max_logger_length = len(max(
