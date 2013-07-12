@@ -25,7 +25,7 @@ import logging
 import msgpack
 import os
 import locale
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
