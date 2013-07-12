@@ -21,6 +21,7 @@ import jinja2.ext
 import salt.utils
 import salt.exceptions
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
+from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 
 log = logging.getLogger(__name__)
 
@@ -107,6 +108,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.do')
     if hasattr(jinja2.ext, 'loopcontrols'):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
+    env_args['extensions'].append(JinjaSerializerExtension)
 
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
