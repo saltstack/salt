@@ -2112,7 +2112,7 @@ def serialize(name,
             show_diff=True,
             create=True,
             **kwargs):
-    """
+    '''
     Serializes dataset and store it into managed file. Useful for sharing
     simple configuration files.
 
@@ -2173,7 +2173,7 @@ def serialize(name,
           "engine": "node 0.4.1"
           "name": "naive",
         }
-    """
+    '''
 
     ret = {'changes': {},
            'comment': '',
