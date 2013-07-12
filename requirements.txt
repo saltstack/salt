@@ -4,4 +4,4 @@ msgpack-python
 pycrypto
 PyYAML
 pyzmq >= 2.1.9
-dateutils >= 0.6.6
+timelib >= 0.2.4

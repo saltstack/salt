@@ -29,10 +29,17 @@ from calendar import month_abbr as months
 
 
 try:
-    import dateutil.parser
-    HAS_DATEUTIL = True
+    import timelib
+    HAS_TIMELIB = True
 except ImportError:
-    HAS_DATEUTIL = False
+    HAS_TIMELIB = False
+
+try:
+    import parsedatetime
+
+    HAS_PARSEDATETIME = True
+except ImportError:
+    HAS_PARSEDATETIME = False
 
 try:
     import fcntl
@@ -1259,7 +1266,43 @@ def enable_ctrl_logoff_handler():
         win32api.SetConsoleCtrlHandler(_win_console_event_handler, 1)
 
 
-def format_strftime(date=None, format='%b %d, %Y'):
+def date_cast(date):
+    '''
+    Casts any object into a datetime.datetime object
+
+    date
+      any datetime, time string representation...
+    '''
+    if date is None:
+        return datetime.now()
+    elif isinstance(date, datetime.datetime):
+        return date
+
+    # fuzzy date
+    try:
+        if isinstance(date, salt._compat.string_types):
+            try:
+                if HAS_TIMELIB:
+                    return timelib.strtodatetime(date)
+            except ValueError:
+                pass
+
+            # not parsed yet, obviously a timestamp?
+            if date.isdigit():
+                date = int(date)
+            else:
+                date = float(date)
+
+        return datetime.datetime.fromtimestamp(date)
+    except Exception as e:
+        if HAS_TIMELIB:
+            raise ValueError('Unable to parse {0}'.format(date))
+
+        raise RuntimeError('Unable to parse {0}.'
+            ' Consider to install timelib'.format(date))
+
+
+def date_format(date=None, format="%Y-%m-%d"):
     '''
     Converts date into a timebased string
 
@@ -1269,40 +1312,18 @@ def format_strftime(date=None, format='%b %d, %Y'):
     format
        :ref:`strftime<http://docs.python.org/2/library/datetime.html#datetime.datetime.strftime>` format
 
+    >>> import datetime
     >>> src = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
-    >>> format_strftime(src)
+    >>> date_format(src)
     'Dec 25, 2002'
     >>> src = '2002/12/25'
-    >>> format_strftime(src)
+    >>> date_format(src)
     'Dec 25, 2002'
     >>> src = 1040814000
-    >>> format_strftime(src)
+    >>> date_format(src)
     'Dec 25, 2002'
     >>> src = '1040814000'
-    >>> format_strftime(src)
+    >>> date_format(src)
     'Dec 25, 2002'
     '''
-    def cast(date):
-        if date is None:
-            return datetime.datetime.now()
-        elif isinstance(date, datetime.datetime):
-            return date
-        elif isinstance(date, salt._compat.integer_types):
-            return datetime.datetime.fromtimestamp(date)
-        elif isinstance(date, (float, Decimal)):
-            return datetime.datetime.fromtimestamp(date)
-        try:
-            if date.isdigit():
-                date = int(date)
-            else:
-                date = float(date)
-            return datetime.datetime.fromtimestamp(date)
-        except ValueError:
-            # not a number
-            if HAS_DATEUTIL:
-                return dateutil.parser.parse(date).replace(tzinfo=None)
-            raise RuntimeError('dateutil is required')
-        except AttributeError:
-            # not a string
-            raise ValueError('Invalid type: {0}'.format(date))
-    return cast(date).strftime(format)
+    return date_cast(date).strftime(format)
