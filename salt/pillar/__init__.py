@@ -110,7 +110,7 @@ class Pillar(object):
             if 'ext_pillar' in opts:
                 opts['ext_pillar'].append(ext)
             else:
-                opts['ext_pillar'].append(ext)
+                opts['ext_pillar'] = [ext]
         return opts
 
     def _get_envs(self):
@@ -391,7 +391,7 @@ class Pillar(object):
 
     def compile_pillar(self):
         '''
-        Render the pillar dta and return
+        Render the pillar data and return
         '''
         top, terrors = self.get_top()
         matches = self.top_matches(top)
