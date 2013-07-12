@@ -149,9 +149,9 @@ def create(path,
                 )
             else:
                 cmd.append('--distribute')
-        if python:
+        if python is not None and python.strip() != '':
             cmd.append('--python={0}'.format(python))
-        if extra_search_dir is not None:
+        if extra_search_dir is not None and extra_search_dir.strip() != '':
             if isinstance(extra_search_dir, basestring):
                 if ',' in extra_search_dir:
                     extra_search_dir = [
@@ -171,7 +171,7 @@ def create(path,
                 )
             else:
                 cmd.append('--never-download')
-        if prompt:
+        if prompt is not None and prompt.strip() != '':
             cmd.append('--prompt={0}'.format(prompt))
     else:
         # venv module from the Python >= 3.3 standard library
@@ -184,12 +184,12 @@ def create(path,
                 'The `no_site_packages`(`--no-site-packages`) option is not '
                 'supported by {0!r}'.format(venv_bin)
             )
-        elif python is not None:
+        elif python is not None and python.strip() != '':
             raise salt.exceptions.CommandExecutionError(
                 'The `python`(`--python`) option is not supported '
                 'by {0!r}'.format(venv_bin)
             )
-        elif extra_search_dir is not None:
+        elif extra_search_dir is not None and extra_search_dir.strip() != '':
             raise salt.exceptions.CommandExecutionError(
                 'The `extra_search_dir`(`--extra-search-dir`) option is not '
                 'supported by {0!r}'.format(venv_bin)
@@ -199,7 +199,7 @@ def create(path,
                 'The `never_download`(`--never-download`) option is not '
                 'supported by {0!r}'.format(venv_bin)
             )
-        elif prompt is not None:
+        elif prompt is not None and prompt.strip() != '':
             raise salt.exceptions.CommandExecutionError(
                 'The `prompt`(`--prompt`) option is not supported '
                 'by {0!r}'.format(venv_bin)
