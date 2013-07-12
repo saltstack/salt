@@ -12,6 +12,10 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    return 'virtualenv'
+
+
 def managed(name,
             venv_bin='virtualenv',
             requirements=None,
