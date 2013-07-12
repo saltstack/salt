@@ -79,7 +79,7 @@ def managed(name,
         if not cached_requirements:
             ret.update({
                 'result': False,
-                'comment': "pip requirements file '{0}' not found".format(
+                'comment': 'pip requirements file {0!r} not found'.format(
                     requirements
                 )
             })
@@ -127,12 +127,12 @@ def managed(name,
             '{0} -V'.format(venv_py)).strip('\n')
 
         if clear:
-            ret['comment'] = "Cleared existing virtualenv"
+            ret['comment'] = 'Cleared existing virtualenv'
         else:
-            ret['comment'] = "Created new virtualenv"
+            ret['comment'] = 'Created new virtualenv'
 
     elif venv_exists:
-        ret['comment'] = "virtualenv exists"
+        ret['comment'] = 'virtualenv exists'
 
     # Populate the venv via a requirements file
     if requirements:
