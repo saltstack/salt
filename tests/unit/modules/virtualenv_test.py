@@ -10,11 +10,14 @@
 
 # Import python libraries
 import warnings
-import __builtin__
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salttesting.helpers import (
+    ensure_in_syspath,
+    TestsLoggingHandler,
+    ForceImportErrorOn
+)
 ensure_in_syspath('../../')
 
 # Import 3rd party libs
@@ -258,16 +261,8 @@ class VirtualenvTestCase(TestCase):
         # <---- pyvenv using virtualenv options ------------------------------
 
     def test_get_virtualenv_version_from_shell(self):
-        real_import = __builtin__.__import__
+        with ForceImportErrorOn('virtualenv'):
 
-        def import_error_wrapper(name, *args, **kw):
-            if name == 'virtualenv':
-                raise ImportError('We faked the ImportError')
-            real_import(name, *args, **kw)
-
-        __builtin__.__import__ = import_error_wrapper
-
-        try:
             # ----- virtualenv binary not available ------------------------->
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
@@ -321,8 +316,6 @@ class VirtualenvTestCase(TestCase):
                     runas=None
                 )
             # <---- virtualenv binary returns 1.10rc1 as it's version --------
-        finally:
-            __builtin__.__import__ = real_import
 
 
 if __name__ == '__main__':
