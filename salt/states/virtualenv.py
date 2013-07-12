@@ -14,15 +14,15 @@ log = logging.getLogger(__name__)
 
 def managed(name,
             venv_bin='virtualenv',
-            requirements='',
+            requirements=None,
             no_site_packages=False,
             system_site_packages=False,
             distribute=False,
             clear=False,
-            python='',
-            extra_search_dir='',
+            python=None,
+            extra_search_dir=None,
             never_download=False,
-            prompt='',
+            prompt=None,
             __env__='base',
             runas=None,
             no_chown=False,
@@ -46,7 +46,7 @@ def managed(name,
 
         /var/www/myvirtualenv.com:
           virtualenv.managed:
-            - no_site_packages: True
+            - system_site_packages: False
             - requirements: salt://REQUIREMENTS.txt
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
