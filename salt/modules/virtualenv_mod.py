@@ -127,7 +127,7 @@ def create(path,
             # Unable to import?? Let's parse the version from the console
             version_cmd = '{0} --version'.format(venv_bin)
             ret = __salt__['cmd.run_all'](version_cmd, runas=runas)
-            if ret['retcode'] > 0:
+            if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise salt.exceptions.CommandExecutionError(
                     'Unable to get the virtualenv version output using {0!r}. '
                     'Returned data: {1!r}'.format(version_cmd, ret)
