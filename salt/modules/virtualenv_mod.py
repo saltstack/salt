@@ -36,6 +36,7 @@ def create(path,
            extra_search_dir=None,
            never_download=None,
            prompt=None,
+           pip=False,
            symlinks=None,
            upgrade=None,
            runas=None):
