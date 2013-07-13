@@ -2039,7 +2039,7 @@ class BaseHighState(object):
                         for arg in state[name][comps[0]]:
                             if isinstance(arg, dict):
                                 if len(arg) > 0:
-                                    if args.keys()[0] == 'order':
+                                    if arg.keys()[0] == 'order':
                                         found = True
                         if not found:
                             state[name][comps[0]].append(
