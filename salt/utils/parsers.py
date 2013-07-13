@@ -12,9 +12,11 @@
 
 # Import python libs
 import os
+import copy
 import sys
 import logging
 import optparse
+import urlparse
 import warnings
 import traceback
 from functools import partial
@@ -918,41 +920,9 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_logfile_ = '/var/log/salt/master'
 
     def setup_config(self):
-        opts = config.master_config(self.get_config_file_path())
-        user = opts.get('user', 'root')
-        opts['_minion_conf_file'] = opts['conf_file']
-        opts.update(config.minion_config(self.get_config_file_path('minion')))
-        # Override the user from the master config file
-        opts['user'] = user
-        # Override the name of the PID file.
-        opts['pidfile'] = '/var/run/salt-syndic.pid'
-
-        if not opts.get('syndic_master', None):
-            self.error(
-                'The syndic_master needs to be configured in the salt master '
-                'config, EXITING!'
-            )
-
-        # Some of the opts need to be changed to match the needed opts
-        # in the minion class.
-        opts['master'] = opts.get('syndic_master', opts['master'])
-        try:
-            opts['master_ip'] = utils.dns_check(
-                opts['master'],
-                ipv6=opts['ipv6']
-            )
-        except exceptions.SaltSystemExit as exc:
-            self.exit(
-                status=exc.code,
-                msg='{0}: {1}\n'.format(self.get_prog_name(), exc.message)
-            )
-
-        opts['master_uri'] = 'tcp://{0}:{1}'.format(
-            opts['master_ip'], str(opts['master_port'])
-        )
-        opts['_master_conf_file'] = opts['conf_file']
-        opts.pop('conf_file')
-        return opts
+        return config.syndic_config(
+            self.get_config_file_path(),
+            self.get_config_file_path('minion'))
 
 
 class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,

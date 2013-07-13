@@ -1145,8 +1145,6 @@ class Syndic(Minion):
         self._syndic = True
         opts['loop_interval'] = 1
         Minion.__init__(self, opts)
-        opts.update(self.opts)
-        self.opts = opts
 
     def _handle_aes(self, load):
         '''
@@ -1209,7 +1207,7 @@ class Syndic(Minion):
         Lock onto the publisher. This is the main event loop for the syndic
         '''
         # Instantiate the local client
-        self.local = salt.client.LocalClient(self.opts['_master_conf_file'])
+        self.local = salt.client.LocalClient(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
         self.local.opts['interface'] = self._syndic_interface
 
