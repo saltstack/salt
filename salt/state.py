@@ -2008,7 +2008,7 @@ class BaseHighState(object):
                     .format(name, sls)))
                 continue
             skeys = set()
-            for key in sorted(state[name]):
+            for key in state[name]:
                 if key.startswith('_'):
                     continue
                 if not isinstance(state[name][key], list):
@@ -2047,6 +2047,20 @@ class BaseHighState(object):
                                     )
                             self.iorder += 1
                     continue
+                else:
+                    if self.opts['state_auto_order']:
+                        for s_dec in state[name]:
+                            found = False
+                            for arg in state[name][s_dec]:
+                                if isinstance(arg, dict):
+                                    if len(arg) > 0:
+                                        if arg.keys()[0] == 'order':
+                                            found = True
+                            if not found:
+                                state[name][s_dec].append(
+                                        {'order': self.iorder}
+                                        )
+                                self.iorder += 1
                 skeys.add(key)
             if '__sls__' not in state[name]:
                 state[name]['__sls__'] = sls
