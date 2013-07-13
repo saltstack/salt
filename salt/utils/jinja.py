@@ -127,7 +127,7 @@ class SerializerExtension(Extension):
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
-        environment.filters.update({
+        self.environment.filters.update({
             'yaml': partial(self.format, formatter='yaml'),
             'json': partial(self.format, formatter='json')
         })
