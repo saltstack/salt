@@ -7,10 +7,16 @@ import os
 import urlparse
 import shutil
 import yaml
+import logging
 
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.config
+
+
+# Set up logging
+log = logging.getLogger(__name__)
 
 
 def mount_image(location):
@@ -48,7 +54,7 @@ def umount_image(mnt):
     __salt__['mount.umount'](mnt)
 
 
-def seed(location, id_='', config=None):
+def seed(location, id_, config=None, approve_key=True, install=True, run_highstate=False):
     '''
     Make sure that the image at the given location is mounted, salt is
     installed, keys are seeded, and execute a state run
@@ -59,46 +65,91 @@ def seed(location, id_='', config=None):
     '''
     if config is None:
         config = {}
+    if not 'master' in config:
+        config['master'] = __opts__['master']
+    config['id'] = id_
+
     mpt = mount_image(location)
     if not mpt:
         return False
+
     mpt_tmp = os.path.join(mpt, 'tmp')
-    __salt__['mount.mount'](
-            os.path.join(mpt, 'dev'),
-            'udev',
-            fstype='devtmpfs')
-    __salt__['mount.mount'](
-            os.path.join(mpt, 'proc'),
-            'proc',
-            fstype='proc')
+
+    # Write the new minion's config to a tmp file
+    tmp_config = os.path.join(mpt_tmp, 'minion')
+    with salt.utils.fopen(tmp_config, 'w+') as fp_:
+        fp_.write(yaml.dump(config, default_flow_style=False))
+
+    # Generate keys for the minion
+    salt.crypt.gen_keys(mpt_tmp, 'minion', 2048)
+    pubkeyfn = os.path.join(mpt_tmp, 'minion.pub')
+    privkeyfn = os.path.join(mpt_tmp, 'minion.pem')
+    with salt.utils.fopen(pubkeyfn) as fp_:
+        pubkey = fp_.read()
+    
+    if approve_key:
+        __salt__['pillar.ext']({'virtkey': {'name': id_, 'key': pubkey}})
+
+    installed = _install(mpt)
+    if installed:
+        # salt-minion was already installed, just move the config and keys into place
+        minion_config = salt.config.minion_config(tmp_config)
+        pki_dir = minion_config['pki_dir']
+        os.rename(privkeyfn, os.path.join(mpt, pki_dir.lstrip('/'), 'minion.pem'))
+        os.rename(pubkeyfn, os.path.join(mpt, pki_dir.lstrip('/'), 'minion.pub'))
+        os.rename(tmp_config, os.path.join(mpt, 'etc/salt/minion'))
+    if run_highstate:
+        raise NotImplementedError('run_highstate not implemented')
+    umount_image(mpt)
+    return True
+
+
+def _install(mpt):
+    '''
+    Determine whether salt-minion is installed and, if not, 
+    install it
+    Return True if already installed
+    '''
+
     # Verify that the boostrap script is downloaded
     bs_ = __salt__['config.gather_bootstrap_script']()
     # Apply the minion config
-    # Generate the minion's key
-    salt.crypt.gen_keys(mpt_tmp, 'minion', 2048)
     # TODO Send the key to the master for approval
-    # Execute chroot routine
-    sh_ = '/bin/sh'
-    if os.path.isfile(os.path.join(mpt, 'bin/bash')):
-        sh_ = '/bin/bash'
     # Copy script into tmp
     shutil.copy(bs_, os.path.join(mpt, 'tmp'))
-    if not 'master' in config:
-        config['master'] = __opts__['master']
-    if id_:
-        config['id'] = id_
-    with salt.utils.fopen(os.path.join(mpt_tmp, 'minion'), 'w+') as fp_:
-        fp_.write(yaml.dump(config, default_flow_style=False))
-    # Generate the chroot command
-    c_cmd = 'sh /tmp/bootstrap.sh -c /tmp'
+    # Exec the chroot command
+    cmd = 'sh /tmp/bootstrap.sh -c /tmp'
+    _chroot_exec(mpt, cmd)
+
+
+def _chroot_exec(root, cmd):
+    '''
+    chroot into a directory and run a cmd
+    '''
+    __salt__['mount.mount'](
+            os.path.join(root, 'dev'),
+            'udev',
+            fstype='devtmpfs')
+    __salt__['mount.mount'](
+            os.path.join(root, 'proc'),
+            'proc',
+            fstype='proc')
+
+    # Execute chroot routine
+    sh_ = '/bin/sh'
+    if os.path.isfile(os.path.join(root, 'bin/bash')):
+        sh_ = '/bin/bash'
+
     cmd = 'chroot {0} {1} -c \'{2}\''.format(
-            mpt,
+            root,
             sh_,
-            c_cmd)
-    __salt__['cmd.run'](cmd)
-    __salt__['mount.umount'](os.path.join(mpt, 'proc'))
-    __salt__['mount.umount'](os.path.join(mpt, 'dev'))
-    umount_image(mpt)
+            cmd)
+    log.warning(cmd)
+    res = __salt__['cmd.run'](cmd)
+    log.warning(res)
+    __salt__['mount.umount'](os.path.join(root, 'proc'))
+    __salt__['mount.umount'](os.path.join(root, 'dev'))
+    return False
 
 
 #def get_image(name):

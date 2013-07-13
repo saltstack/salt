@@ -84,7 +84,7 @@ class Pillar(object):
         '''
         if not isinstance(ext, dict):
             return {}
-        valid = set(('libvirt',))
+        valid = set(('libvirt', 'virtkey'))
         if any(key not in valid for key in ext):
             return {}
         return ext

@@ -5,6 +5,7 @@ Control virtual machines via Salt
 # Import Salt libs
 import salt.client
 import salt.output
+import salt.utils.virt
 
 
 def _determine_hyper(data, omit=''):
@@ -115,6 +116,11 @@ def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
             return 'fail'
     else:
         hyper = _determine_hyper(data)
+
+    if seed:
+        print('Minion will be preseeded.')
+        kv = salt.utils.virt.VirtKey(hyper, name, __opts__)
+        kv.authorize()
 
     client = salt.client.LocalClient(__opts__['conf_file'])
 
