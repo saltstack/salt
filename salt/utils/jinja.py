@@ -138,3 +138,10 @@ class SerializerExtension(Extension):
         elif formatter == 'yaml':
             return Markup(yaml.dump(value, default_flow_style=True))
         raise ValueError('Serializer {0} is not implemented'.format(formatter))
+
+    def parse(self, parser):
+        '''
+        If called this method would throw ``NotImplementedError``.
+        While we don't need to implement this method, we override it so pylint
+        does not complain about an abstract method not implemented
+        '''
