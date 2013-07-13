@@ -1657,6 +1657,9 @@ class BaseHighState(object):
             else:
                 opts['state_top'] = os.path.join('salt://', mopts['state_top'])
             opts['nodegroups'] = mopts.get('nodegroups', {})
+            opts['state_auto_order'] = mopts.get(
+                    'state_auto_order',
+                    opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
         return opts
 
