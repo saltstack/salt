@@ -215,6 +215,7 @@ class PipTestCase(TestCase):
             pip.install('mock', bin_env='/test_env', activate=True)
             mock.assert_called_once_with(
                 '. /test_env/bin/activate && /test_env/bin/pip install mock',
+                env={'VIRTUAL_ENV': '/test_env'},
                 runas=None,
                 cwd=None)
 
