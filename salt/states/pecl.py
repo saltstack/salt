@@ -11,9 +11,16 @@ A state module to manage php pecl extensions.
 '''
 
 
-def installed(
-        name,
-        version=None):
+def __virtual__():
+    '''
+    Only load if the pecl module is available in __salt__
+    '''
+    return 'pecl' if 'pecl.list' in __salt__ else False
+
+
+def installed(name,
+              version=None,
+              defaults=False):
     '''
     Make sure that a pecl extension is installed.
 

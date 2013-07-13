@@ -16,6 +16,13 @@ import urlparse
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
+def __virtual__():
+    '''
+    Only load if the pip module is available in __salt__
+    '''
+    return 'pip' if 'pip.list' in __salt__ else False
+
+
 def installed(name,
               pip_bin=None,
               requirements=None,
