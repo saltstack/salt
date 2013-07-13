@@ -1972,9 +1972,32 @@ class BaseHighState(object):
                         log.error(msg)
                         if self.opts['failhard']:
                             errors.append(msg)
+                self._handle_iorder(state)
         else:
             state = {}
         return state, errors
+
+    def _handle_iorder(self, state):
+        '''
+        Take a state and apply the iorder system
+        '''
+        if self.opts['state_auto_order']:
+            for name in state:
+                for s_dec in state[name]:
+                    found = False
+                    if s_dec.startswith('_'):
+                        continue
+                    for arg in state[name][s_dec]:
+                        if isinstance(arg, dict):
+                            if len(arg) > 0:
+                                if arg.keys()[0] == 'order':
+                                    found = True
+                    if not found:
+                        state[name][s_dec].append(
+                                {'order': self.iorder}
+                                )
+                        self.iorder += 1
+        return state
 
     def _handle_state_decls(self, state, sls, env, errors):
         '''
@@ -1994,14 +2017,6 @@ class BaseHighState(object):
                         state[name] = {'__sls__': sls,
                                        '__env__': env,
                                        comps[0]: [comps[1]]}
-                        if self.opts['state_auto_order']:
-                            for s_dec in state[name]:
-                                if s_dec.startswith('_'):
-                                    continue
-                                state[name][s_dec].append(
-                                        {'order': self.iorder}
-                                        )
-                                self.iorder += 1
                         continue
                 errors.append(
                     ('Name {0} in sls {1} is not a dictionary'
@@ -2034,33 +2049,7 @@ class BaseHighState(object):
                     state[name][comps[0]] = state[name].pop(key)
                     state[name][comps[0]].append(comps[1])
                     skeys.add(comps[0])
-                    if self.opts['state_auto_order']:
-                        found = False
-                        for arg in state[name][comps[0]]:
-                            if isinstance(arg, dict):
-                                if len(arg) > 0:
-                                    if arg.keys()[0] == 'order':
-                                        found = True
-                        if not found:
-                            state[name][comps[0]].append(
-                                    {'order': self.iorder}
-                                    )
-                            self.iorder += 1
                     continue
-                else:
-                    if self.opts['state_auto_order']:
-                        for s_dec in state[name]:
-                            found = False
-                            for arg in state[name][s_dec]:
-                                if isinstance(arg, dict):
-                                    if len(arg) > 0:
-                                        if arg.keys()[0] == 'order':
-                                            found = True
-                            if not found:
-                                state[name][s_dec].append(
-                                        {'order': self.iorder}
-                                        )
-                                self.iorder += 1
                 skeys.add(key)
             if '__sls__' not in state[name]:
                 state[name]['__sls__'] = sls
