@@ -46,6 +46,7 @@ import salt.runner
 import salt.output
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
+from salt.utils import parsers
 
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
@@ -103,7 +104,12 @@ class TestDaemon(object):
 
     def __init__(self, parser):
         self.parser = parser
+        # to access daemons in tests
         self.colors = get_colors(self.parser.options.no_colors is False)
+        # monkey patch some classes to make the config avalaible for selfcheck
+        # do the imports at runtime to avoid circular imports
+        from integration.client import syndic
+        syndic.TestSyndic._test_daemon = self
 
     def __enter__(self):
         '''
@@ -112,9 +118,9 @@ class TestDaemon(object):
         self.master_opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
-        self.minion_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
-        )
+        minion_config_path = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+        self.minion_opts = salt.config.minion_config(minion_config_path)
+
         #if sys.version_info < (2, 7):
         #    self.minion_opts['multiprocessing'] = False
         self.sub_minion_opts = salt.config.minion_config(
@@ -127,12 +133,7 @@ class TestDaemon(object):
                 INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'
             )
         )
-        self.syndic_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'))
-        self.syndic_opts['_master_conf_file'] = os.path.join(
-            INTEGRATION_TEST_DIR,
-            'files/conf/master'
-        )
+
         # Set up config options that require internal data
         self.master_opts['pillar_roots'] = {
             'base': [os.path.join(FILES, 'pillar', 'base')]
@@ -155,6 +156,30 @@ class TestDaemon(object):
         ]
         # clean up the old files
         self._clean()
+        os.makedirs(TMP)
+
+        # make a temporary configuration merging master and syndic bits
+        config_content = (
+            open(os.path.join(
+                INTEGRATION_TEST_DIR, 'files', 'conf', 'master')).read()
+            +
+            open(os.path.join(
+                INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic')).read()
+        )
+        syndic_conf_path = os.path.join( TMP, 'syndic.conf')
+        fic = open(syndic_conf_path, 'w')
+        fic.write(config_content)
+        fic.close()
+        class SyndicOptionParser(parsers.SyndicOptionParser):
+            def get_config_file_path(self, conf=None):
+                if conf == 'minion':
+                    return minion_config_path
+                else:
+                    return syndic_conf_path
+                return super(SyndicOptionParser, self).get_config_file_path(conf)
+        self.syndic_config = SyndicOptionParser()
+        self.syndic_config.parse_args(args=[])
+        self.syndic_opts = self.syndic_config.config
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
@@ -182,6 +207,7 @@ class TestDaemon(object):
                     self.smaster_opts['sock_dir'],
                     self.sub_minion_opts['sock_dir'],
                     self.minion_opts['sock_dir'],
+                    self.syndic_opts['sock_dir'],
                     TMP_STATE_TREE,
                     TMP
                     ],
@@ -208,8 +234,8 @@ class TestDaemon(object):
         self.smaster_process = multiprocessing.Process(target=smaster.start)
         self.smaster_process.start()
 
-        syndic = salt.minion.Syndic(self.syndic_opts)
-        self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
+        self.syndic = salt.minion.Syndic(self.syndic_opts)
+        self.syndic_process = multiprocessing.Process(target=self.syndic.tune_in)
         self.syndic_process.start()
 
         if os.environ.get('DUMP_SALT_CONFIG', None) is not None:

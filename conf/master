@@ -350,6 +350,14 @@
 # this master where to receive commands from.
 #syndic_master: masterofmaster
 
+# This is the 'ret_port' of the MasterOfMaster
+#syndic_master_port: 4506
+
+# PID file of the syndic daemon
+#syndic_pidfile: /var/run/salt-syndic.pid
+
+# LOG file of the syndic daemon
+#syndic_log_file: syndic.log
 
 #####      Peer Publish settings     #####
 ##########################################

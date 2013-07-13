@@ -31,6 +31,13 @@ the config on the higher level master is very important, to control a syndic
 extra information needs to be sent with the publications, the order_masters
 option makes sure that the extra data is sent out.
 
+To sum up, you have those configuration options available on the master side:
+
+    - **syndic_master**: MasterOfMaster ip/address
+    - **syndic_master_port**: MasterOfMaster ret_port
+    - **syndic_log_file**: path to the logfile (absolute or not)
+    - **syndic_pidfile**: path to the pidfile (absolute or not)
+
 Running the Syndic
 ==================
 

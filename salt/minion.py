@@ -16,6 +16,7 @@ import threading
 import time
 import traceback
 import sys
+import urlparse
 import signal
 from random import randint
 
@@ -49,6 +50,7 @@ import salt.utils.schedule
 from salt.state import _getargs
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
+from salt import config
 
 log = logging.getLogger(__name__)
 
@@ -1141,12 +1143,38 @@ class Syndic(Minion):
     master to authenticate with a higher level master.
     '''
     def __init__(self, opts):
+        user = opts.get('user', 'root')
         self._syndic_interface = opts.get('interface')
         self._syndic = True
         opts['loop_interval'] = 1
+        syndic_opts = {
+            'root_dir': opts.get('root_dir', '/'),
+            'pidfile': opts.get(
+                'syndic_pidfile',
+                'salt-syndic.pid'),
+            'log_file': opts.get( 'syndic_log_file', 'salt-syndic.log'), 
+            'user':  user,
+            'master': opts['syndic_master'],
+            'master_port': int(
+                opts.get(
+                    'syndic_master_port',
+                    opts.get('master_port', None))),
+        }
+        # Prepend root_dir to other paths
+        prepend_root_dirs = [
+            'pki_dir', 'cachedir', 'sock_dir', 'extension_modules', 'pidfile',
+        ]
+
+        # These can be set to syslog, so, not actual paths on the system
+        for config_key in ('log_file', 'key_logfile'):
+            if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+                prepend_root_dirs.append(config_key)
+        config.prepend_root_dir(syndic_opts, prepend_root_dirs) 
+        # opts targetting our local master
+        self.lopts = copy.deepcopy(opts)
+        # merge local opts to target MasterOfMaster
+        opts.update(syndic_opts)
         Minion.__init__(self, opts)
-        opts.update(self.opts)
-        self.opts = opts
 
     def _handle_aes(self, load):
         '''
@@ -1209,7 +1237,7 @@ class Syndic(Minion):
         Lock onto the publisher. This is the main event loop for the syndic
         '''
         # Instantiate the local client
-        self.local = salt.client.LocalClient(self.opts['_master_conf_file'])
+        self.local = salt.client.LocalClient(mopts=self.lopts)
         self.local.event.subscribe('')
         self.local.opts['interface'] = self._syndic_interface
 
