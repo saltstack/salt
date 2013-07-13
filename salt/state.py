@@ -1976,6 +1976,9 @@ class BaseHighState(object):
         return state, errors
 
     def _handle_state_decls(self, state, sls, env, errors):
+        '''
+        Add sls and env components to the state
+        '''
         for name in state:
             if not isinstance(state[name], dict):
                 if name == '__extend__':
@@ -2030,6 +2033,10 @@ class BaseHighState(object):
                 state[name]['__env__'] = env
 
     def _handle_extend(self, state, sls, env, errors):
+        '''
+        Take the extend dec out of state and apply to the highstate global
+        dec
+        '''
         if 'extend' in state:
             ext = state.pop('extend')
             if not isinstance(ext, dict):
@@ -2058,6 +2065,10 @@ class BaseHighState(object):
             state.setdefault('__extend__', []).append(ext)
 
     def _handle_exclude(self, state, sls, env, errors):
+        '''
+        Take the exclude dec out of the state and apply it to the highstate
+        global dec
+        '''
         if 'exclude' in state:
             exc = state.pop('exclude')
             if not isinstance(exc, list):
