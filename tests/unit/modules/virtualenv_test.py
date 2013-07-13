@@ -46,6 +46,13 @@ class VirtualenvTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod._install_script = MagicMock(
+                return_value={
+                    'retcode': 0,
+                    'stdout': 'Installed script!',
+                    'stderr': ''
+                }
+            )
             with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
                 virtualenv_mod.create(
                     '/tmp/foo', system_site_packages=True, distribute=True
