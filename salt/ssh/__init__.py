@@ -17,7 +17,8 @@ class SSHCopyID(object):
     Used to manage copying the public key out to ssh minions
     '''
     def __init__(self, opts):
-        super(SSH, self).__init__()
+        super(SSHCopyID, self).__init__()
+        self.opts = opts
 
     def process(self):
         '''
