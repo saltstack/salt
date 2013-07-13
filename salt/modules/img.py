@@ -144,9 +144,7 @@ def _chroot_exec(root, cmd):
             root,
             sh_,
             cmd)
-    log.warning(cmd)
     res = __salt__['cmd.run'](cmd)
-    log.warning(res)
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
     return False
