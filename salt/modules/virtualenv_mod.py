@@ -247,7 +247,7 @@ def create(path,
     if (pip or distribute) and not os.path.exists(venv_distribute):
         _install_script(
             'https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py',
-            path, venv_python, runas, ret
+            path, venv_python, runas
         )
 
         # clear up the distribute archive which gets downloaded
