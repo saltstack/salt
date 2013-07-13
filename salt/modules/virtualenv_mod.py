@@ -3,7 +3,10 @@ Create virtualenv environments
 '''
 
 # Import python libs
+import glob
+import shutil
 import logging
+import os.path
 import warnings
 
 # Import salt libs
@@ -41,7 +44,7 @@ def create(path,
 
     path
         The path to create the virtualenv
-    venv_bin : 'virtualenv'
+    venv_bin : None (default 'virtualenv')
         The name (and optionally path) of the virtualenv command. This can also
         be set globally in the minion config file as ``virtualenv.venv_bin``.
     no_site_packages : None
@@ -51,6 +54,8 @@ def create(path,
         Passthrough argument given to virtualenv or pyvenv
     distribute : False
         Passthrough argument given to virtualenv
+    pip : False
+        Install pip after createing a virtual environment, implies distribute=True
     clear : False
         Passthrough argument given to virtualenv or pyvenv
     python : None (default)
@@ -221,4 +226,72 @@ def create(path,
     # Finally the virtualenv path
     cmd.append(path)
 
-    return __salt__['cmd.run_all'](' '.join(cmd), runas=runas)
+    # Let's create the virtualenv
+    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=runas)
+    if ret['retcode'] > 0:
+        # Something went wrong. Let's bail out now!
+        return ret
+
+    # Check if distribute and pip are already installed
+    if salt.utils.is_windows():
+        venv_python = os.path.join(path, 'Scripts', 'python.exe')
+        venv_pip = os.path.join(path, 'Scripts', 'pip.exe')
+        venv_distribute = os.path.join(path, 'Scripts', 'easy_install.exe')
+    else:
+        venv_python = os.path.join(path, 'bin', 'python')
+        venv_pip = os.path.join(path, 'bin', 'pip')
+        venv_distribute = os.path.join(path, 'bin', 'easy_install')
+
+    # Install setuptools
+    if (pip or distribute) and not os.path.exists(venv_distribute):
+        _install_script(
+            'https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py',
+            path, venv_python, runas, ret
+        )
+
+        # clear up the distribute archive which gets downloaded
+        for fpath in glob.glob(os.path.join(path, 'distribute-*.tar.gz*')):
+            os.unlink(fpath)
+
+    if ret['retcode'] > 0:
+        # Something went wrong. Let's bail out now!
+        return ret
+
+    # Install pip
+    if pip and not os.path.exists(venv_pip):
+        _ret = _install_script(
+            'https://raw.github.com/pypa/pip/master/contrib/get-pip.py',
+            path, venv_python, runas
+        )
+        # Let's update the return dictionary with the details from the pip
+        # installation
+        ret.update(
+            retcode=_ret['retcode'],
+            stdout='{0}\n{1}'.format(ret['stdout'], _ret['stdout']).strip(),
+            stderr='{0}\n{1}'.format(ret['stderr'], _ret['stderr']).strip(),
+        )
+
+    return ret
+
+
+def _install_script(source, cwd, python, runas, ret):
+    env = 'base'
+    if not salt.utils.is_windows():
+        tmppath = salt.utils.mkstemp(dir=cwd)
+    else:
+        tmppath = __salt__['cp.cache_file'](source, env)
+
+    if not salt.utils.is_windows():
+        fn_ = __salt__['cp.cache_file'](source, env)
+        shutil.copyfile(fn_, tmppath)
+        os.chmod(tmppath, 320)
+        os.chown(tmppath, __salt__['file.user_to_uid'](runas), -1)
+    try:
+        return __salt__['cmd.run_all'](
+            '{0} {1}'.format(python, tmppath),
+            runas=runas,
+            cwd=cwd,
+            env={'VIRTUAL_ENV': cwd}
+        )
+    finally:
+        os.remove(tmppath)
