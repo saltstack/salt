@@ -103,8 +103,8 @@ This on the other hand is `DISCOURAGED`:
     from os.path import join
 
     def minion_path():
-    path = join(self.opts['cachedir'], 'minions')
-    return path
+        path = join(self.opts['cachedir'], 'minions')
+        return path
 
 The time when this is changed is for importing exceptions, generally directly
 importing exceptions is preferred:
