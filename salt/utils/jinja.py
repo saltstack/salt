@@ -24,6 +24,7 @@ __all__ = [
     'SerializerExtension'
 ]
 
+
 class SaltCacheLoader(BaseLoader):
     '''
     A special jinja Template Loader for salt.
@@ -98,7 +99,7 @@ class SaltCacheLoader(BaseLoader):
 
 
 class SerializerExtension(Extension):
-    """
+    '''
     Serializes variables.
 
     For example, this dataset:
@@ -106,10 +107,10 @@ class SerializerExtension(Extension):
     .. code-block:: python
 
         data = {
-            "foo": True,
-            "bar": 42,
-            "baz": [1, 2, 3],
-            "qux": 2.0
+            'foo': True,
+            'bar': 42,
+            'baz': [1, 2, 3],
+            'qux': 2.0
         }
 
     .. code-block:: jinja
@@ -122,7 +123,7 @@ class SerializerExtension(Extension):
         yaml = {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
 
-    """
+    '''
 
     def __init__(self, environment):
         self.environment = environment
@@ -132,8 +133,8 @@ class SerializerExtension(Extension):
         })
 
     def format(self, value, formatter, *args, **kwargs):
-        if formatter == "json":
+        if formatter == 'json':
             return Markup(json.dumps(value, sort_keys=True))
-        elif formatter == "yaml":
+        elif formatter == 'yaml':
             return Markup(yaml.dump(value, default_flow_style=True))
-        raise ValueError("Serializer {} is not implemented".format(formatter))
+        raise ValueError('Serializer {0} is not implemented'.format(formatter))
