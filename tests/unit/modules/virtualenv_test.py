@@ -190,15 +190,19 @@ class VirtualenvTestCase(TestCase):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            with warnings.catch_warnings(record=True) as w:
-                virtualenv_mod.create(
-                    '/tmp/foo', no_site_packages=True
-                )
-                self.assertEqual(
-                    '\'no_site_packages\' has been deprecated. Please start '
-                    'using \'system_site_packages=False\' which means exactly '
-                    'the same as \'no_site_packages=True\'', str(w[-1].message)
-                )
+            virtualenv_mock = MagicMock()
+            virtualenv_mock.__version__ = '1.9.1'
+            with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
+                with warnings.catch_warnings(record=True) as w:
+                    virtualenv_mod.create(
+                        '/tmp/foo', no_site_packages=True
+                    )
+                    self.assertEqual(
+                        '\'no_site_packages\' has been deprecated. Please '
+                        'start using \'system_site_packages=False\' which '
+                        'means exactly the same as \'no_site_packages=True\'',
+                        str(w[-1].message)
+                    )
 
     @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_unapplicable_options(self):
