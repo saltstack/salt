@@ -224,7 +224,7 @@ def rubygems(ruby, version, runas=None):
 
         salt '*' rvm.rubygems 2.0.0 1.8.24
     '''
-    return _rvm_do(ruby, 'rubygems', version, runas=runas)
+    return _rvm_do(ruby, 'rubygems {0}'.format(version), runas=runas)
 
 
 def gemset_create(ruby, gemset, runas=None):
@@ -326,7 +326,7 @@ def gemset_copy(source, destination, runas=None):
 
         salt '*' rvm.gemset_copy foobar bazquo
     '''
-    return _rvm('gemset copy', source, destination, runas=runas)
+    return _rvm('gemset copy {0} {1}'.format(source, destination), runas=runas)
 
 
 def gemset_list_all(runas=None):
