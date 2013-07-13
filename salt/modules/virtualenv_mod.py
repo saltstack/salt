@@ -274,7 +274,7 @@ def create(path,
     return ret
 
 
-def _install_script(source, cwd, python, runas, ret):
+def _install_script(source, cwd, python, runas):
     env = 'base'
     if not salt.utils.is_windows():
         tmppath = salt.utils.mkstemp(dir=cwd)
