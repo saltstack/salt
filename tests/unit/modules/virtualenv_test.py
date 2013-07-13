@@ -135,32 +135,39 @@ class VirtualenvTestCase(TestCase):
         # Passing extra_search_dirs as a list
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            virtualenv_mod.create(
-                '/tmp/foo', extra_search_dir=extra_search_dirs
-            )
-            mock.assert_called_once_with(
-                'virtualenv '
-                '--extra-search-dir=/tmp/bar-1 '
-                '--extra-search-dir=/tmp/bar-2 '
-                '--extra-search-dir=/tmp/bar-3 '
-                '/tmp/foo',
-                runas=None
-            )
+            virtualenv_mock = MagicMock()
+            virtualenv_mock.__version__ = '1.9.1'
+            with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
+                virtualenv_mod.create(
+                    '/tmp/foo', extra_search_dir=extra_search_dirs
+                )
+                mock.assert_called_once_with(
+                    'virtualenv '
+                    '--extra-search-dir=/tmp/bar-1 '
+                    '--extra-search-dir=/tmp/bar-2 '
+                    '--extra-search-dir=/tmp/bar-3 '
+                    '/tmp/foo',
+                    runas=None
+                )
 
         # Passing extra_search_dirs as comma separated list
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            virtualenv_mod.create(
-                '/tmp/foo', extra_search_dir=','.join(extra_search_dirs)
-            )
-            mock.assert_called_once_with(
-                'virtualenv '
-                '--extra-search-dir=/tmp/bar-1 '
-                '--extra-search-dir=/tmp/bar-2 '
-                '--extra-search-dir=/tmp/bar-3 '
-                '/tmp/foo',
-                runas=None
-            )
+            virtualenv_mock = MagicMock()
+            virtualenv_mock.__version__ = '1.9.1'
+            with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
+
+                virtualenv_mod.create(
+                    '/tmp/foo', extra_search_dir=','.join(extra_search_dirs)
+                )
+                mock.assert_called_once_with(
+                    'virtualenv '
+                    '--extra-search-dir=/tmp/bar-1 '
+                    '--extra-search-dir=/tmp/bar-2 '
+                    '--extra-search-dir=/tmp/bar-3 '
+                    '/tmp/foo',
+                    runas=None
+                )
 
     @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_system_site_packages_and_no_site_packages_mutual_exclusion(self):
