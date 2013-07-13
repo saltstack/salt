@@ -146,8 +146,5 @@ class Shell(object):
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
         if self.sudo:
             cmd = 'sudo {0}'.format(cmd)
-            tty = True
-        else:
-            tty = False
-        cmd = self._cmd_str(cmd, ssh='scp', tty=tty)
+        cmd = self._cmd_str(cmd, ssh='scp')
         return self._run_cmd(cmd)
