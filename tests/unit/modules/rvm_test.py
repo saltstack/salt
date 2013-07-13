@@ -36,8 +36,8 @@ class TestRvmModule(TestCase):
             mock.assert_called_once_with("1.9.3 do gemset list", runas=None)
 
     def test_install(self):
-        mock = MagicMock(return_value=0)
-        with patch.dict(rvm.__salt__, {'cmd.retcode': mock}):
+        mock = MagicMock(return_value={'retcode': 0})
+        with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm.install()
 
     def test_list(self):
