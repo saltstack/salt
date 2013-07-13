@@ -262,6 +262,7 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
 
         salt '*' ssh.check_key <user> <key> <enc> <comment> <options>
     '''
+    enc = _refine_enc(enc)
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
     if key in current:
