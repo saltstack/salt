@@ -1,13 +1,21 @@
 '''
-Installation of Python packages using pip.
-==========================================
+Installation of Python Packages Using pip
+=========================================
 
-A state module to manage system installed python packages
+These states manage system installed python packages. Note that pip must be
+installed for these states to be available, so pip states should include a
+requisite to a pkg.installed state for the package which provides pip
+(``python-pip`` in most cases). Example:
 
 .. code-block:: yaml
 
+    python-pip:
+      pkg.installed
+
     virtualenvwrapper:
-      pip.installed
+      pip.installed:
+        - require:
+          - pkg: python-pip
 '''
 
 import urlparse

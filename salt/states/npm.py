@@ -1,5 +1,21 @@
 '''
-A state module to manage installed NPM packages.
+Installation of NPM Packages
+============================
+
+These states manage the installed packages for node.js using the Node Package
+Manager (npm). Note that npm must be installed for these states to be
+available, so npm states should include a requisite to a pkg.installed state
+for the package which provides npm (simply ``npm`` in most cases). Example:
+
+.. code-block:: yaml
+
+    npm:
+      pkg.installed
+
+    yaml:
+      npm.installed:
+        - require:
+          - pkg: npm
 '''
 
 # Import salt libs
