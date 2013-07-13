@@ -1614,6 +1614,7 @@ class BaseHighState(object):
     '''
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
+        self.iorder = 10000
         self.avail = self.__gather_avail()
         self.serial = salt.payload.Serial(self.opts)
 
@@ -1993,6 +1994,14 @@ class BaseHighState(object):
                         state[name] = {'__sls__': sls,
                                        '__env__': env,
                                        comps[0]: [comps[1]]}
+                        if self.opts['state_auto_order']:
+                            for s_dec in state[name]:
+                                if s_dec.startswith('_'):
+                                    continue
+                                state[name][s_dec].append(
+                                        {'order': self.iorder}
+                                        )
+                                self.iorder += 1
                         continue
                 errors.append(
                     ('Name {0} in sls {1} is not a dictionary'
@@ -2025,6 +2034,18 @@ class BaseHighState(object):
                     state[name][comps[0]] = state[name].pop(key)
                     state[name][comps[0]].append(comps[1])
                     skeys.add(comps[0])
+                    if self.opts['state_auto_order']:
+                        found = False
+                        for arg in state[name][comps[0]]:
+                            if isinstance(arg, dict):
+                                if len(arg) > 0:
+                                    if args.keys()[0] == 'order':
+                                        found = True
+                        if not found:
+                            state[name][comps[0]].append(
+                                    {'order': self.iorder}
+                                    )
+                            self.iorder += 1
                     continue
                 skeys.add(key)
             if '__sls__' not in state[name]:
