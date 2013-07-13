@@ -51,7 +51,7 @@ def _get_pip_bin(bin_env):
     return bin_env
 
 
-def _get_cached_requirements(requirements):
+def _get_cached_requirements(requirements, __env__):
     '''Get the location of a cached requirements file; caching if necessary.'''
     cached_requirements = __salt__['cp.is_cached'](
         requirements, __env__
@@ -272,7 +272,9 @@ def install(pkgs=None,
     treq = None
     if requirements:
         if requirements.startswith('salt://'):
-            cached_requirements = _get_cached_requirements(requirements)
+            cached_requirements = _get_cached_requirements(
+                requirements, __env__
+            )
             if not cached_requirements:
                 return {
                     'result': False,
@@ -414,7 +416,10 @@ def install(pkgs=None,
             cmd.append('--install-option={0}'.format(opt))
 
     try:
-        return __salt__['cmd.run_all'](' '.join(cmd), runas=runas, cwd=cwd)
+        cmd_kwargs = dict(runas=runas, cwd=cwd)
+        if bin_env and os.path.isdir(bin_env):
+            cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+        return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
     finally:
         if treq is not None:
             try:
@@ -514,7 +519,10 @@ def uninstall(pkgs=None,
             )
         cmd.append('--timeout={0}'.format(timeout))
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), runas=runas, cwd=cwd)
+    cmd_kwargs = dict(runas=runas, cwd=cwd)
+    if bin_env and os.path.isdir(bin_env):
+        cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
 
     if treq and requirements.startswith('salt://'):
         try:
@@ -548,9 +556,11 @@ def freeze(bin_env=None,
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
 
-    cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
-
-    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+    cmd = [_get_pip_bin(bin_env), 'freeze']
+    cmd_kwargs = dict(runas=runas, cwd=cwd)
+    if bin_env and os.path.isdir(bin_env):
+        cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
 
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
@@ -558,7 +568,7 @@ def freeze(bin_env=None,
     return result['stdout'].splitlines()
 
 
-def list_(prefix='',
+def list_(prefix=None,
           bin_env=None,
           runas=None,
           cwd=None):
@@ -572,9 +582,12 @@ def list_(prefix='',
     '''
     packages = {}
 
-    cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
+    cmd = [_get_pip_bin(bin_env), 'freeze']
 
-    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+    cmd_kwargs = dict(runas=runas, cwd=cwd)
+    if bin_env and os.path.isdir(bin_env):
+        cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
 
