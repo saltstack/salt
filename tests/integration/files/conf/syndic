@@ -1,14 +1,11 @@
-# basic config
-master: localhost
-master_port: 54506
-root_dir: /tmp/salttest
-sock_dir: .salt-unix
-pki_dir: pki
-id: minion
-cachedir: cache
-acceptance_wait_time: 1
-open_mode: True
-log_file: minion
+# syndic basic config
+# same config as master ./except the syndic bits
+# in the test case we add add the top the content of ./master
 order_masters: True
-interface: 0.0.0.0
-ret_port: 64506
+acceptance_wait_time: 1
+syndic_sock_dir: .saltsyndic-unix
+syndic_log_file: osyndic.log
+syndic_pidfile: osyndic.pid
+syndic_master: localhost
+syndic_master_port: 54506
+
