@@ -538,7 +538,7 @@ def _ps(osdata):
     elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
     elif osdata.get('virtual', '') == 'openvzhn':
-        grains['ps'] = 'vzps -E 0 -efH|cut -b 6-'
+        grains['ps'] = 'ps -fH -p $(grep -l \"^envID:[[:space:]]*0\\$\" /proc/[0-9]*/status | sed -e \"s=/proc/\\([0-9]*\\)/.*=\\1=\")  | awk \'{ $7=\"\"; print }\''
     else:
         grains['ps'] = 'ps -efH'
     return grains
