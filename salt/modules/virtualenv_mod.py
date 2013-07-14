@@ -176,7 +176,7 @@ def create(path,
             else:
                 cmd.append('--never-download')
         if prompt is not None and prompt.strip() != '':
-            cmd.append('--prompt={0}'.format(prompt))
+            cmd.append('--prompt={0!r}'.format(prompt))
     else:
         # venv module from the Python >= 3.3 standard library
 
