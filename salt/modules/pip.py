@@ -237,10 +237,7 @@ def install(pkgs=None,
 
     if pkgs:
         if isinstance(pkgs, basestring):
-            if ',' in pkgs:
-                pkgs = [p.strip() for p in pkgs.split(',')]
-            else:
-                pkgs = [pkgs]
+            pkgs = [p.strip() for p in pkgs.split(',')]
 
         # It's possible we replaced version-range commas with semicolons so
         # they would survive the previous line (in the pip.installed state).
@@ -252,10 +249,7 @@ def install(pkgs=None,
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
         if isinstance(editable, basestring):
-            if ',' in editable:
-                editable = [e.strip() for e in editable.split(',')]
-            else:
-                editable = [editable]
+            editable = [e.strip() for e in editable.split(',')]
 
         for entry in editable:
             # Is the editable local?
@@ -322,10 +316,7 @@ def install(pkgs=None,
 
     if find_links:
         if isinstance(find_links, basestring):
-            if ',' in find_links:
-                find_links = [l.strip() for l in find_links.split(',')]
-            else:
-                find_links = [find_links]
+            find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
             if not salt.utils.valid_url(link, VALID_PROTOS):
@@ -359,10 +350,7 @@ def install(pkgs=None,
 
     if mirrors:
         if isinstance(mirrors, basestring):
-            if ',' in mirrors:
-                mirrors = [m.strip() for m in mirrors.split(',')]
-            else:
-                mirrors = [mirrors]
+            mirrors = [m.strip() for m in mirrors.split(',')]
 
         cmd.append('--use-mirrors')
         for mirror in mirrors:
@@ -484,10 +472,7 @@ def uninstall(pkgs=None,
 
     if pkgs:
         if isinstance(pkgs, basestring):
-            if ',' in pkgs:
-                pkgs = [p.strip() for p in pkgs.split(',')]
-            else:
-                pkgs = [pkgs]
+            pkgs = [p.strip() for p in pkgs.split(',')]
         cmd.extend(pkgs)
 
     treq = None
