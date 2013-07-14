@@ -357,6 +357,34 @@ class VirtualenvTestCase(TestCase):
                 runas=None
             )
 
+    def test_clear_argument(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', clear=True)
+            mock.assert_called_once_with(
+                'virtualenv --clear /tmp/foo', runas=None
+            )
+
+    def test_upgrade_argument(self):
+        # We test for pyvenv only because with virtualenv this is un
+        # unsupported option.
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', venv_bin='pyvenv', upgrade=True)
+            mock.assert_called_once_with(
+                'pyvenv --upgrade /tmp/foo', runas=None
+            )
+
+    def test_symlinks_argument(self):
+        # We test for pyvenv only because with virtualenv this is un
+        # unsupported option.
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', venv_bin='pyvenv', symlinks=True)
+            mock.assert_called_once_with(
+                'pyvenv --symlinks /tmp/foo', runas=None
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
