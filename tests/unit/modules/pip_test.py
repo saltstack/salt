@@ -574,6 +574,53 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+    @patch('salt.modules.pip._get_cached_requirements')
+    def test_install_multiple_requirements_arguments_in_resulting_command(self, get_cached_requirements):
+        get_cached_requirements.side_effect = [
+            'my_cached_reqs-1', 'my_cached_reqs-2'
+        ]
+        requirements = [
+            'salt://requirements-1.txt', 'salt://requirements-2.txt'
+        ]
+
+        # Passing option as a list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(requirements=requirements)
+            mock.assert_called_once_with(
+                'pip install '
+                '--requirement=\'my_cached_reqs-1\' '
+                '--requirement=\'my_cached_reqs-2\'',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing option as a comma separated list
+        get_cached_requirements.side_effect = [
+            'my_cached_reqs-1', 'my_cached_reqs-2'
+        ]
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(requirements=','.join(requirements))
+            mock.assert_called_once_with(
+                'pip install '
+                '--requirement=\'my_cached_reqs-1\' '
+                '--requirement=\'my_cached_reqs-2\'',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing option as a single string entry
+        get_cached_requirements.side_effect = ['my_cached_reqs-1']
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(requirements=requirements[0])
+            mock.assert_called_once_with(
+                'pip install --requirement=\'my_cached_reqs-1\'',
+                runas=None,
+                cwd=None
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
