@@ -235,34 +235,6 @@ def install(pkgs=None,
         if not salt.utils.is_windows():
             cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
-    if pkgs:
-        if isinstance(pkgs, basestring):
-            pkgs = [p.strip() for p in pkgs.split(',')]
-
-        # It's possible we replaced version-range commas with semicolons so
-        # they would survive the previous line (in the pip.installed state).
-        # Put the commas back in
-        cmd.extend(
-            [p.replace(';', ',') for p in pkgs]
-        )
-
-    if editable:
-        egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
-        if isinstance(editable, basestring):
-            editable = [e.strip() for e in editable.split(',')]
-
-        for entry in editable:
-            # Is the editable local?
-            if not entry.startswith(('file://', '/')):
-                match = egg_match.search(entry)
-
-                if not match or not match.group(1):
-                    # Missing #egg=theEggName
-                    raise CommandExecutionError(
-                        'You must specify an egg for this editable'
-                    )
-            cmd.append('--editable={0}'.format(entry))
-
     treq = None
     if requirements:
         if requirements.startswith('salt://'):
@@ -402,6 +374,34 @@ def install(pkgs=None,
 
         for opt in install_options:
             cmd.append('--install-option={0}'.format(opt))
+
+    if pkgs:
+        if isinstance(pkgs, basestring):
+            pkgs = [p.strip() for p in pkgs.split(',')]
+
+        # It's possible we replaced version-range commas with semicolons so
+        # they would survive the previous line (in the pip.installed state).
+        # Put the commas back in
+        cmd.extend(
+            [p.replace(';', ',') for p in pkgs]
+        )
+
+    if editable:
+        egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
+        if isinstance(editable, basestring):
+            editable = [e.strip() for e in editable.split(',')]
+
+        for entry in editable:
+            # Is the editable local?
+            if not entry.startswith(('file://', '/')):
+                match = egg_match.search(entry)
+
+                if not match or not match.group(1):
+                    # Missing #egg=theEggName
+                    raise CommandExecutionError(
+                        'You must specify an egg for this editable'
+                    )
+            cmd.append('--editable={0}'.format(entry))
 
     try:
         cmd_kwargs = dict(runas=runas, cwd=cwd)
