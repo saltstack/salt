@@ -395,6 +395,16 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+    def test_no_download_argument_in_resulting_command(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', no_download=True)
+            mock.assert_called_once_with(
+                'pip install --no-download pep8',
+                runas=None,
+                cwd=None
+            )
+
     def test_download_cache_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
