@@ -265,7 +265,7 @@ def install(pkgs=None,
                 # Need to make a temporary copy since the runas user will, most
                 # likely, not have the right permissions to read the file
                 treq = salt.utils.mkstemp()
-                shutil.copyfile(requirements, treq)
+                shutil.copyfile(requirement, treq)
                 logger.debug(
                     'Changing ownership of requirements file {0!r} to '
                     'user {1!r}'.format(treq, runas)
@@ -445,6 +445,7 @@ def uninstall(pkgs=None,
               proxy=None,
               timeout=None,
               runas=None,
+              no_chown=False,
               cwd=None,
               __env__='base'):
     '''
@@ -476,6 +477,9 @@ def uninstall(pkgs=None,
         Set the socket timeout (default 15 seconds)
     runas
         User to run pip as
+    no_chown
+        When runas is given, do not attempt to copy and chown
+        a requirements file
     cwd
         Current working directory to run pip from
 
@@ -505,11 +509,32 @@ def uninstall(pkgs=None,
         for requirement in requirements:
             treq = None
             if requirement.startswith('salt://'):
-                req = __salt__['cp.cache_file'](requirement, __env__)
+                cached_requirements = _get_cached_requirements(
+                    requirement, __env__
+                )
+                if not cached_requirements:
+                    return {
+                        'result': False,
+                        'comment': (
+                            'pip requirements file {0!r} not found'.format(
+                                requirement
+                            )
+                        )
+                    }
+                requirement = cached_requirements
+
+            if runas and not no_chown:
+                # Need to make a temporary copy since the runas user will, most
+                # likely, not have the right permissions to read the file
                 treq = salt.utils.mkstemp()
-                shutil.copyfile(req, treq)
+                shutil.copyfile(requirement, treq)
+                logger.debug(
+                    'Changing ownership of requirements file {0!r} to '
+                    'user {1!r}'.format(treq, runas)
+                )
+                __salt__['file.chown'](treq, runas, None)
                 cleanup_requirements.append(treq)
-            cmd.append('--requirements={0!r}'.format(treq or requirement))
+            cmd.append('--requirement={0!r}'.format(treq or requirement))
 
     if log:
         try:
