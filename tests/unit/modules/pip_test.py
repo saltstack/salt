@@ -815,6 +815,35 @@ class PipTestCase(TestCase):
                 pip.list_,
             )
 
+    def test_list_command_with_prefix(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pycrypto==2.6'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            ret = pip.list_(prefix='bb')
+            mock.assert_called_once_with(
+                'pip freeze',
+                runas=None,
+                cwd=None
+            )
+            self.assertEqual(
+                ret, {
+                    'bbfreeze-loader': '1.1.0',
+                    'bbfreeze': '1.1.0',
+                }
+            )
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
