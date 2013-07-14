@@ -331,6 +331,32 @@ class VirtualenvTestCase(TestCase):
                 runas=None
             )
 
+    def test_prompt_argument(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', prompt='PY Prompt')
+            mock.assert_called_once_with(
+                'virtualenv --prompt=\'PY Prompt\' /tmp/foo',
+                runas=None
+            )
+
+        # Now with some quotes on the mix
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', prompt='\'PY\' Prompt')
+            mock.assert_called_once_with(
+                'virtualenv --prompt="\'PY\' Prompt" /tmp/foo',
+                runas=None
+            )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', prompt='"PY" Prompt')
+            mock.assert_called_once_with(
+                'virtualenv --prompt=\'"PY" Prompt\' /tmp/foo',
+                runas=None
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
