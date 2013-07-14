@@ -375,6 +375,16 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+    def test_target_argument_in_resulting_command(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', target='/tmp/foo')
+            mock.assert_called_once_with(
+                'pip install --target=/tmp/foo pep8',
+                runas=None,
+                cwd=None
+            )
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PipTestCase, needs_daemon=False)
