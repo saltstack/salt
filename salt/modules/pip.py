@@ -315,7 +315,7 @@ def install(pkgs=None,
             raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(extra_index_url)
             )
-        cmd.append('--extra-index-url={0!r} '.format(extra_index_url))
+        cmd.append('--extra-index-url={0!r}'.format(extra_index_url))
 
     if no_index:
         cmd.append('--no-index')
