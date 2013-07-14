@@ -234,14 +234,14 @@ def create(path,
     if salt.utils.is_windows():
         venv_python = os.path.join(path, 'Scripts', 'python.exe')
         venv_pip = os.path.join(path, 'Scripts', 'pip.exe')
-        venv_distribute = os.path.join(path, 'Scripts', 'easy_install.exe')
+        venv_setuptools = os.path.join(path, 'Scripts', 'easy_install.exe')
     else:
         venv_python = os.path.join(path, 'bin', 'python')
         venv_pip = os.path.join(path, 'bin', 'pip')
-        venv_distribute = os.path.join(path, 'bin', 'easy_install')
+        venv_setuptools = os.path.join(path, 'bin', 'easy_install')
 
     # Install setuptools
-    if (pip or distribute) and not os.path.exists(venv_distribute):
+    if (pip or distribute) and not os.path.exists(venv_setuptools):
         _install_script(
             'https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py',
             path, venv_python, runas
