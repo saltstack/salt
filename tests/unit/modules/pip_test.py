@@ -148,10 +148,10 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', find_links=find_links)
             mock.assert_called_once_with(
-                'pip install pep8 '
+                'pip install '
                 '--find-links=http://g.pypi.python.org '
                 '--find-links=http://c.pypi.python.org '
-                '--find-links=http://pypi.crate.io',
+                '--find-links=http://pypi.crate.io pep8',
                 runas=None,
                 cwd=None
             )
@@ -161,10 +161,10 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', find_links=','.join(find_links))
             mock.assert_called_once_with(
-                'pip install pep8 '
+                'pip install '
                 '--find-links=http://g.pypi.python.org '
                 '--find-links=http://c.pypi.python.org '
-                '--find-links=http://pypi.crate.io',
+                '--find-links=http://pypi.crate.io pep8',
                 runas=None,
                 cwd=None
             )
