@@ -110,6 +110,7 @@ def install(pkgs=None,
             no_deps=False,
             no_install=False,
             no_download=False,
+            global_options=None,
             install_options=None,
             runas=None,
             no_chown=False,
@@ -193,6 +194,9 @@ def install(pkgs=None,
         option options to pass multiple options to setup.py
         install.  If you are using an option with a directory
         path, be sure to use absolute path.
+    global_options
+        Extra global options to be supplied to the setup.py call before the
+        install command.
     runas
         User to run pip as
     no_chown
@@ -235,69 +239,40 @@ def install(pkgs=None,
         if not salt.utils.is_windows():
             cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
-    if pkgs:
-        if isinstance(pkgs, basestring):
-            if ',' in pkgs:
-                pkgs = [p.strip() for p in pkgs.split(',')]
-            else:
-                pkgs = [pkgs]
+    cleanup_requirements = []
+    if requirements is not None:
+        if isinstance(requirements, string_types):
+            requirements = [r.strip() for r in requirements.split(',')]
 
-        # It's possible we replaced version-range commas with semicolons so
-        # they would survive the previous line (in the pip.installed state).
-        # Put the commas back in
-        cmd.extend(
-            [p.replace(';', ',') for p in pkgs]
-        )
-
-    if editable:
-        egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
-        if isinstance(editable, basestring):
-            if ',' in editable:
-                editable = [e.strip() for e in editable.split(',')]
-            else:
-                editable = [editable]
-
-        for entry in editable:
-            # Is the editable local?
-            if not entry.startswith(('file://', '/')):
-                match = egg_match.search(entry)
-
-                if not match or not match.group(1):
-                    # Missing #egg=theEggName
-                    raise CommandExecutionError(
-                        'You must specify an egg for this editable'
-                    )
-            cmd.append('--editable={0}'.format(entry))
-
-    treq = None
-    if requirements:
-        if requirements.startswith('salt://'):
-            cached_requirements = _get_cached_requirements(
-                requirements, __env__
-            )
-            if not cached_requirements:
-                return {
-                    'result': False,
-                    'comment': (
-                        'pip requirements file {0!r} not found'.format(
-                            requirements
+        for requirement in requirements:
+            treq = None
+            if requirement.startswith('salt://'):
+                cached_requirements = _get_cached_requirements(
+                    requirement, __env__
+                )
+                if not cached_requirements:
+                    return {
+                        'result': False,
+                        'comment': (
+                            'pip requirements file {0!r} not found'.format(
+                                requirement
+                            )
                         )
-                    )
-                }
-            requirements = cached_requirements
+                    }
+                requirement = cached_requirements
 
-        if runas and not no_chown:
-            # Need to make a temporary copy since the runas user will, most
-            # likely, not have the right permissions to read the file
-            treq = salt.utils.mkstemp()
-            shutil.copyfile(requirements, treq)
-            logger.debug(
-                'Changing ownership of requirements file {0!r} to '
-                'user {1!r}'.format(treq, runas)
-            )
-            __salt__['file.chown'](treq, runas, None)
-
-        cmd.append('--requirement={0!r}'.format(treq or requirements))
+            if runas and not no_chown:
+                # Need to make a temporary copy since the runas user will, most
+                # likely, not have the right permissions to read the file
+                treq = salt.utils.mkstemp()
+                shutil.copyfile(requirement, treq)
+                logger.debug(
+                    'Changing ownership of requirements file {0!r} to '
+                    'user {1!r}'.format(treq, runas)
+                )
+                __salt__['file.chown'](treq, runas, None)
+                cleanup_requirements.append(treq)
+            cmd.append('--requirement={0!r}'.format(treq or requirement))
 
     if log:
         try:
@@ -309,7 +284,7 @@ def install(pkgs=None,
         cmd.append('--log={0}'.format(log))
 
     if proxy:
-        cmd.append('--proxy={0}'.format(proxy))
+        cmd.append('--proxy={0!r}'.format(proxy))
 
     if timeout:
         try:
@@ -321,11 +296,8 @@ def install(pkgs=None,
         cmd.append('--timeout={0}'.format(timeout))
 
     if find_links:
-        if isinstance(find_links, basestring):
-            if ',' in find_links:
-                find_links = [l.strip() for l in find_links.split(',')]
-            else:
-                find_links = [find_links]
+        if isinstance(find_links, string_types):
+            find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
             if not salt.utils.valid_url(link, VALID_PROTOS):
@@ -352,17 +324,14 @@ def install(pkgs=None,
             raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(extra_index_url)
             )
-        cmd.append('--extra-index-url={0!r} '.format(extra_index_url))
+        cmd.append('--extra-index-url={0!r}'.format(extra_index_url))
 
     if no_index:
         cmd.append('--no-index')
 
     if mirrors:
-        if isinstance(mirrors, basestring):
-            if ',' in mirrors:
-                mirrors = [m.strip() for m in mirrors.split(',')]
-            else:
-                mirrors = [mirrors]
+        if isinstance(mirrors, string_types):
+            mirrors = [m.strip() for m in mirrors.split(',')]
 
         cmd.append('--use-mirrors')
         for mirror in mirrors:
@@ -373,7 +342,7 @@ def install(pkgs=None,
             cmd.append('--mirrors={0}'.format(mirror))
 
     if build:
-        cmd.append('--build={0}'.format(build=build))
+        cmd.append('--build={0}'.format(build))
 
     if target:
         cmd.append('--target={0}'.format(target))
@@ -397,6 +366,12 @@ def install(pkgs=None,
         cmd.append('--ignore-installed')
 
     if exists_action:
+        if exists_action.lower() not in ('s', 'i', 'w', 'b'):
+            raise CommandExecutionError(
+                'The `exists_action`(`--exists-action`) pip option only '
+                'allows one of (s, i, w, b) to be passed. The {0!r} value '
+                'is not valid.'.format(exists_action)
+            )
         cmd.append('--exists-action={0}'.format(exists_action))
 
     if no_deps:
@@ -408,12 +383,47 @@ def install(pkgs=None,
     if no_download:
         cmd.append('--no-download')
 
+    if global_options:
+        if isinstance(global_options, string_types):
+            global_options = [go.strip() for go in global_options.split(',')]
+
+        for opt in global_options:
+            cmd.append('--global-option={0!r}'.format(opt))
+
     if install_options:
         if isinstance(install_options, string_types):
-            install_options = [install_options]
+            install_options = [io.strip() for io in install_options.split(',')]
 
         for opt in install_options:
-            cmd.append('--install-option={0}'.format(opt))
+            cmd.append('--install-option={0!r}'.format(opt))
+
+    if pkgs:
+        if isinstance(pkgs, string_types):
+            pkgs = [p.strip() for p in pkgs.split(',')]
+
+        # It's possible we replaced version-range commas with semicolons so
+        # they would survive the previous line (in the pip.installed state).
+        # Put the commas back in
+        cmd.extend(
+            [p.replace(';', ',') for p in pkgs]
+        )
+
+    if editable:
+        egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
+        if isinstance(editable, string_types):
+            editable = [e.strip() for e in editable.split(',')]
+
+        for entry in editable:
+            # Is the editable local?
+            if not entry.startswith(('file://', '/')):
+                match = egg_match.search(entry)
+
+                if not match or not match.group(1):
+                    # Missing #egg=theEggName
+                    raise CommandExecutionError(
+                        'You must specify an egg for this editable'
+                    )
+            cmd.append('--editable={0}'.format(entry))
 
     try:
         cmd_kwargs = dict(runas=runas, cwd=cwd)
@@ -421,9 +431,9 @@ def install(pkgs=None,
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
         return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
     finally:
-        if treq is not None:
+        for requirement in cleanup_requirements:
             try:
-                os.remove(treq)
+                os.remove(requirement)
             except Exception:
                 pass
 
@@ -435,6 +445,7 @@ def uninstall(pkgs=None,
               proxy=None,
               timeout=None,
               runas=None,
+              no_chown=False,
               cwd=None,
               __env__='base'):
     '''
@@ -466,6 +477,9 @@ def uninstall(pkgs=None,
         Set the socket timeout (default 15 seconds)
     runas
         User to run pip as
+    no_chown
+        When runas is given, do not attempt to copy and chown
+        a requirements file
     cwd
         Current working directory to run pip from
 
@@ -482,21 +496,40 @@ def uninstall(pkgs=None,
     '''
     cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
 
-    if pkgs:
-        if isinstance(pkgs, basestring):
-            if ',' in pkgs:
-                pkgs = [p.strip() for p in pkgs.split(',')]
-            else:
-                pkgs = [pkgs]
-        cmd.extend(pkgs)
+    cleanup_requirements = []
+    if requirements is not None:
+        if isinstance(requirements, string_types):
+            requirements = [r.strip() for r in requirements.split(',')]
 
-    treq = None
-    if requirements:
-        if requirements.startswith('salt://'):
-            req = __salt__['cp.cache_file'](requirements, __env__)
-            treq = salt.utils.mkstemp()
-            shutil.copyfile(req, treq)
-        cmd.append('--requirements={0!r}'.format(treq or requirements))
+        for requirement in requirements:
+            treq = None
+            if requirement.startswith('salt://'):
+                cached_requirements = _get_cached_requirements(
+                    requirement, __env__
+                )
+                if not cached_requirements:
+                    return {
+                        'result': False,
+                        'comment': (
+                            'pip requirements file {0!r} not found'.format(
+                                requirement
+                            )
+                        )
+                    }
+                requirement = cached_requirements
+
+            if runas and not no_chown:
+                # Need to make a temporary copy since the runas user will, most
+                # likely, not have the right permissions to read the file
+                treq = salt.utils.mkstemp()
+                shutil.copyfile(requirement, treq)
+                logger.debug(
+                    'Changing ownership of requirements file {0!r} to '
+                    'user {1!r}'.format(treq, runas)
+                )
+                __salt__['file.chown'](treq, runas, None)
+                cleanup_requirements.append(treq)
+            cmd.append('--requirement={0!r}'.format(treq or requirement))
 
     if log:
         try:
@@ -508,7 +541,7 @@ def uninstall(pkgs=None,
         cmd.append('--log={0}'.format(log))
 
     if proxy:
-        cmd.append('--proxy={0}'.format(proxy))
+        cmd.append('--proxy={0!r}'.format(proxy))
 
     if timeout:
         try:
@@ -519,18 +552,23 @@ def uninstall(pkgs=None,
             )
         cmd.append('--timeout={0}'.format(timeout))
 
+    if pkgs:
+        if isinstance(pkgs, string_types):
+            pkgs = [p.strip() for p in pkgs.split(',')]
+        cmd.extend(pkgs)
+
     cmd_kwargs = dict(runas=runas, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
 
-    if treq and requirements.startswith('salt://'):
-        try:
-            os.remove(treq)
-        except Exception:
-            pass
-
-    return result
+    try:
+        return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+    finally:
+        for requirement in cleanup_requirements:
+            try:
+                os.remove(requirement)
+            except Exception:
+                pass
 
 
 def freeze(bin_env=None,
