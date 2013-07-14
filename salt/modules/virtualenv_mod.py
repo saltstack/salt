@@ -160,12 +160,9 @@ def create(path,
         if extra_search_dir is not None:
             if isinstance(extra_search_dir, basestring) and \
                     extra_search_dir.strip() != '':
-                if ',' in extra_search_dir:
-                    extra_search_dir = [
-                        e.strip() for e in extra_search_dir.split(',')
-                    ]
-                else:
-                    extra_search_dir = [extra_search_dir]
+                extra_search_dir = [
+                    e.strip() for e in extra_search_dir.split(',')
+                ]
             for entry in extra_search_dir:
                 cmd.append('--extra-search-dir={0}'.format(entry))
         if never_download is True:
