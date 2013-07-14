@@ -287,7 +287,7 @@ def install(pkgs=None,
         cmd.append('--timeout={0}'.format(timeout))
 
     if find_links:
-        if isinstance(find_links, basestring):
+        if isinstance(find_links, string_types):
             find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
@@ -321,7 +321,7 @@ def install(pkgs=None,
         cmd.append('--no-index')
 
     if mirrors:
-        if isinstance(mirrors, basestring):
+        if isinstance(mirrors, string_types):
             mirrors = [m.strip() for m in mirrors.split(',')]
 
         cmd.append('--use-mirrors')
@@ -376,13 +376,13 @@ def install(pkgs=None,
 
     if install_options:
         if isinstance(install_options, string_types):
-            install_options = [install_options]
+            install_options = [io.strip() for io in install_options.split(',')]
 
         for opt in install_options:
-            cmd.append('--install-option={0}'.format(opt))
+            cmd.append('--install-option={0!r}'.format(opt))
 
     if pkgs:
-        if isinstance(pkgs, basestring):
+        if isinstance(pkgs, string_types):
             pkgs = [p.strip() for p in pkgs.split(',')]
 
         # It's possible we replaced version-range commas with semicolons so
@@ -394,7 +394,7 @@ def install(pkgs=None,
 
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
-        if isinstance(editable, basestring):
+        if isinstance(editable, string_types):
             editable = [e.strip() for e in editable.split(',')]
 
         for entry in editable:
@@ -477,7 +477,7 @@ def uninstall(pkgs=None,
     cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
 
     if pkgs:
-        if isinstance(pkgs, basestring):
+        if isinstance(pkgs, string_types):
             pkgs = [p.strip() for p in pkgs.split(',')]
         cmd.extend(pkgs)
 

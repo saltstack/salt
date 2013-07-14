@@ -446,6 +446,47 @@ class PipTestCase(TestCase):
                 exists_action='d'
             )
 
+
+    def test_install_options_argument_in_resulting_command(self):
+        install_options = [
+            '--exec-prefix=/foo/bar',
+            '--install-scripts=/foo/bar/bin'
+        ]
+
+        # Passing options as a list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', install_options=install_options)
+            mock.assert_called_once_with(
+                'pip install '
+                '--install-option=\'--exec-prefix=/foo/bar\' '
+                '--install-option=\'--install-scripts=/foo/bar/bin\' pep8',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing mirrors as a comma separated list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', install_options=','.join(install_options))
+            mock.assert_called_once_with(
+                'pip install '
+                '--install-option=\'--exec-prefix=/foo/bar\' '
+                '--install-option=\'--install-scripts=/foo/bar/bin\' pep8',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing mirrors as a single string entry
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', install_options=install_options[0])
+            mock.assert_called_once_with(
+                'pip install --install-option=\'--exec-prefix=/foo/bar\' pep8',
+                runas=None,
+                cwd=None
+            )
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PipTestCase, needs_daemon=False)
