@@ -81,8 +81,26 @@ returners are distributed when :mod:`state.highstate
 
 Any custom returners which have been synced to a minion, that are named the
 same as one of Salt's default set of returners, will take the place of the
-default returner with the same name.
+default returner with the same name. Note that a returner's default name is its
+filename (i.e. ``foo.py`` becomes returner ``foo``), but that its name can be
+overridden by using a :ref:`__virtual__ function <virtual-modules>`. A good
+example of this can be found in the `redis`_ returner, which is named
+``redis_return.py`` but is loaded as simply ``redis``:
 
+.. code-block:: python
+
+    try:
+        import redis
+        HAS_REDIS = True
+    except ImportError:
+        HAS_REDIS = False
+
+    def __virtual__():
+        if not HAS_REDIS:
+            return False
+        return 'redis'
+
+.. _`redis`: https://github.com/saltstack/salt/blob/develop/salt/returners/redis_return.py
 
 Examples
 --------
