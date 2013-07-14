@@ -357,6 +357,12 @@ def install(pkgs=None,
         cmd.append('--ignore-installed')
 
     if exists_action:
+        if exists_action.lower() not in ('s', 'i', 'w', 'b'):
+            raise CommandExecutionError(
+                'The `exists_action`(`--exists-action`) pip option only '
+                'allows one of (s, i, w, b) to be passed. The {0!r} value '
+                'is not valid.'.format(exists_action)
+            )
         cmd.append('--exists-action={0}'.format(exists_action))
 
     if no_deps:

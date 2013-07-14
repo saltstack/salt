@@ -425,6 +425,27 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+    def test_exists_action_argument_in_resulting_command(self):
+        for action in ('s', 'i', 'w', 'b'):
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install('pep8', exists_action=action)
+                mock.assert_called_once_with(
+                    'pip install --exists-action={0} pep8'.format(action),
+                    runas=None,
+                    cwd=None
+                )
+
+        # Test for invalid action
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.install,
+                'pep8',
+                exists_action='d'
+            )
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PipTestCase, needs_daemon=False)
