@@ -776,7 +776,44 @@ class PipTestCase(TestCase):
                 pip.freeze,
             )
 
+    def test_list_command(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pycrypto==2.6'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            ret = pip.list_()
+            mock.assert_called_once_with(
+                'pip freeze',
+                runas=None,
+                cwd=None
+            )
+            self.assertEqual(
+                ret, {
+                    'SaltTesting-dev': 'git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8',
+                    'M2Crypto': '0.21.1',
+                    'bbfreeze-loader': '1.1.0',
+                    'bbfreeze': '1.1.0',
+                    'pycrypto': '2.6'
+                }
+            )
 
+        # Non zero returncode raises exception?
+        mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.list_,
+            )
 
 
 if __name__ == '__main__':
