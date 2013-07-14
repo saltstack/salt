@@ -104,7 +104,7 @@ suits your deployment:
 
 In this setup all systems will pull the global SLS from the base environment,
 as well as pull from their respective environments. If you assign only one SLS
-to a system, as in this example, a shorthand is also available::
+to a system, as in this example, a shorthand is also available:
 
 .. code-block:: yaml
 
