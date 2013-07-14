@@ -26,18 +26,6 @@ A Salt Minion Windows installer can be found here:
     * http://saltstack.com/downloads/Salt-Minion-0.15.3-win32-Setup.exe
     * http://saltstack.com/downloads/Salt-Minion-0.15.3-AMD64-Setup.exe
 
-    * 0.15.2
-    * http://saltstack.com/downloads/Salt-Minion-0.15.2-win32-Setup.exe
-    * http://saltstack.com/downloads/Salt-Minion-0.15.2-AMD64-Setup.exe
-
-    * 0.15.1
-    * http://saltstack.com/downloads/Salt-Minion-0.15.1-win32-Setup.exe
-    * http://saltstack.com/downloads/Salt-Minion-0.15.1-AMD64-Setup.exe
-
-    * 0.15.0
-    * http://saltstack.com/downloads/Salt-Minion-0.15.0-win32-Setup.exe
-    * http://saltstack.com/downloads/Salt-Minion-0.15.0-AMD64-Setup.exe
-
     * 0.14.1
     * http://saltstack.com/downloads/Salt-Minion-0.14.1-win32-Setup.exe
     * http://saltstack.com/downloads/Salt-Minion-0.14.1-AMD64-Setup.exe
@@ -46,21 +34,6 @@ A Salt Minion Windows installer can be found here:
     * http://saltstack.com/downloads/Salt-Minion-0.14.0-win32-Setup.exe
     * http://saltstack.com/downloads/Salt-Minion-0.14.0-AMD64-Setup.exe
 
-    * 0.13.3
-    * http://saltstack.com/downloads/Salt-Minion-0.13.3-x86-Setup.exe
-    * http://saltstack.com/downloads/Salt-Minion-0.13.3-AMD64-Setup.exe
-
-    * 0.13.2
-    * http://saltstack.com/downloads/Salt-Minion-0.13.2-x86-Setup.exe
-    * http://saltstack.com/downloads/Salt-Minion-0.13.2-AMD64-Setup.exe
-
-    * 0.13.1
-    * http://saltstack.com/downloads/Salt-Minion-0.13.1-Setup-amd64.exe
-    * http://saltstack.com/downloads/Salt-Minion-0.13.1-Setup-win32.exe
-
-    * 0.12.1  
-    * http://saltstack.com/downloads/Salt-Minion-0.12.1-Setup-amd64.exe
-    * http://saltstack.com/downloads/Salt-Minion-0.12.1-Setup-win32.exe
 
 The 64bit installer has been tested on Windows 7 64bit and Windows Server
 2008R2 64bit. The 32bit installer has been tested on Windows 2003 Server 32bit.
@@ -235,6 +208,10 @@ Single command bootstrap script
 ===============================
 
 On a 64 bit Windows host the following script makes an unattended install of salt, including all dependencies:
+
+.. admonition:: Not up to date.
+
+      This script is not up to date. Please use the installer found above
 
 .. code-block:: bash
 
