@@ -714,6 +714,37 @@ class PipTestCase(TestCase):
                 log='/tmp/pip-install.log'
             )
 
+    def test_uninstall_timeout_argument_in_resulting_command(self):
+        # Passing an int
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.uninstall('pep8', timeout=10)
+            mock.assert_called_once_with(
+                'pip uninstall -y --timeout=10 pep8',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing an int as a string
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.uninstall('pep8', timeout='10')
+            mock.assert_called_once_with(
+                'pip uninstall -y --timeout=10 pep8',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing a non-int to timeout
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                ValueError,
+                pip.uninstall,
+                'pep8',
+                timeout='a'
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
