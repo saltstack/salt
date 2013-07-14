@@ -1,14 +1,29 @@
 '''
-Installation of PHP pecl extensions.
-==============================================
+Installation of PHP Extensions Using pecl
+=========================================
 
-A state module to manage php pecl extensions.
+These states manage the installed pecl extensions. Note that php-pear must be
+installed for these states to be available, so pecl states should include a
+requisite to a pkg.installed state for the package which provides pecl
+(``php-pear`` in most cases). Example:
 
 .. code-block:: yaml
 
+    php-pear:
+      pkg.installed
+
     mongo:
-      pecl.installed
+      pecl.installed:
+        - require:
+          - pkg: php-pear
 '''
+
+
+def __virtual__():
+    '''
+    Only load if the pecl module is available in __salt__
+    '''
+    return 'pecl' if 'pecl.list' in __salt__ else False
 
 
 def installed(name,
