@@ -126,7 +126,9 @@ class Serial(object):
                 # This means iterating through all elements of a dictionary or
                 # list/tuple
                 def odict_encoder(obj):
-                    if isinstance(obj, OrderedDict):
+                    if isinstance(obj, dict):
+                        for key, value in obj.copy().iteritems():
+                            obj[key] = odict_encoder(value)
                         return dict(obj)
                     return obj
 
@@ -137,6 +139,7 @@ class Serial(object):
                     msg = list(msg)
                     for idx, entry in enumerate(msg):
                         msg[idx] = odict_encoder(entry)
+
                 return msgpack.dumps(msg)
 
     def dump(self, msg, fn_):
