@@ -692,6 +692,28 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+    @patch('os.path')
+    def test_uninstall_log_argument_in_resulting_command(self, mock_path):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.uninstall('pep8', log='/tmp/pip-install.log')
+            mock.assert_called_once_with(
+                'pip uninstall -y --log=/tmp/pip-install.log pep8',
+                runas=None,
+                cwd=None
+            )
+
+        # Let's fake a non-writable log file
+        mock_path.exists.side_effect = IOError('Fooo!')
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                IOError,
+                pip.uninstall,
+                'pep8',
+                log='/tmp/pip-install.log'
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
