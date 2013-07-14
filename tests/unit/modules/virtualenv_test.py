@@ -35,14 +35,16 @@ from salt.exceptions import CommandExecutionError
 
 virtualenv_mod.__salt__ = {}
 
+base_virtualenv_mock = MagicMock()
+base_virtualenv_mock.__version__ = '1.9.1'
+
 
 @skipIf(has_mock is False, 'mock python module is unavailable')
+@patch('salt.utils.which', lambda bin_name: bin_name)
+@patch.dict('sys.modules', {'virtualenv': base_virtualenv_mock})
 class VirtualenvTestCase(TestCase):
 
-    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_issue_6029_deprecated_distribute(self):
-        virtualenv_mock = MagicMock()
-        virtualenv_mock.__version__ = '1.9.1'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
@@ -53,16 +55,16 @@ class VirtualenvTestCase(TestCase):
                     'stderr': ''
                 }
             )
-            with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
-                virtualenv_mod.create(
-                    '/tmp/foo', system_site_packages=True, distribute=True
-                )
-                mock.assert_called_once_with(
-                    'virtualenv --distribute --system-site-packages /tmp/foo',
-                    runas=None
-                )
+            virtualenv_mod.create(
+                '/tmp/foo', system_site_packages=True, distribute=True
+            )
+            mock.assert_called_once_with(
+                'virtualenv --distribute --system-site-packages /tmp/foo',
+                runas=None
+            )
 
         with TestsLoggingHandler() as handler:
+            # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()
             virtualenv_mock.__version__ = '1.10rc1'
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -86,24 +88,21 @@ class VirtualenvTestCase(TestCase):
                     handler.messages
                 )
 
-    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_issue_6030_deprecated_never_download(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        virtualenv_mock = MagicMock()
-        virtualenv_mock.__version__ = '1.9.1'
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
-                virtualenv_mod.create(
-                    '/tmp/foo', never_download=True
-                )
-                mock.assert_called_once_with(
-                    'virtualenv --never-download /tmp/foo',
-                    runas=None
-                )
+            virtualenv_mod.create(
+                '/tmp/foo', never_download=True
+            )
+            mock.assert_called_once_with(
+                'virtualenv --never-download /tmp/foo',
+                runas=None
+            )
 
         with TestsLoggingHandler() as handler:
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()
             virtualenv_mock.__version__ = '1.10rc1'
             with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
@@ -124,7 +123,6 @@ class VirtualenvTestCase(TestCase):
                     handler.messages
                 )
 
-    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_issue_6031_multiple_extra_search_dirs(self):
         extra_search_dirs = [
             '/tmp/bar-1',
@@ -135,41 +133,33 @@ class VirtualenvTestCase(TestCase):
         # Passing extra_search_dirs as a list
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            virtualenv_mock = MagicMock()
-            virtualenv_mock.__version__ = '1.9.1'
-            with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
-                virtualenv_mod.create(
-                    '/tmp/foo', extra_search_dir=extra_search_dirs
-                )
-                mock.assert_called_once_with(
-                    'virtualenv '
-                    '--extra-search-dir=/tmp/bar-1 '
-                    '--extra-search-dir=/tmp/bar-2 '
-                    '--extra-search-dir=/tmp/bar-3 '
-                    '/tmp/foo',
-                    runas=None
-                )
+            virtualenv_mod.create(
+                '/tmp/foo', extra_search_dir=extra_search_dirs
+            )
+            mock.assert_called_once_with(
+                'virtualenv '
+                '--extra-search-dir=/tmp/bar-1 '
+                '--extra-search-dir=/tmp/bar-2 '
+                '--extra-search-dir=/tmp/bar-3 '
+                '/tmp/foo',
+                runas=None
+            )
 
         # Passing extra_search_dirs as comma separated list
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            virtualenv_mock = MagicMock()
-            virtualenv_mock.__version__ = '1.9.1'
-            with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
+            virtualenv_mod.create(
+                '/tmp/foo', extra_search_dir=','.join(extra_search_dirs)
+            )
+            mock.assert_called_once_with(
+                'virtualenv '
+                '--extra-search-dir=/tmp/bar-1 '
+                '--extra-search-dir=/tmp/bar-2 '
+                '--extra-search-dir=/tmp/bar-3 '
+                '/tmp/foo',
+                runas=None
+            )
 
-                virtualenv_mod.create(
-                    '/tmp/foo', extra_search_dir=','.join(extra_search_dirs)
-                )
-                mock.assert_called_once_with(
-                    'virtualenv '
-                    '--extra-search-dir=/tmp/bar-1 '
-                    '--extra-search-dir=/tmp/bar-2 '
-                    '--extra-search-dir=/tmp/bar-3 '
-                    '/tmp/foo',
-                    runas=None
-                )
-
-    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_system_site_packages_and_no_site_packages_mutual_exclusion(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
@@ -181,7 +171,6 @@ class VirtualenvTestCase(TestCase):
                 system_site_packages=True
             )
 
-    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_no_site_packages_deprecation(self):
         # NOTE: If this test starts failing it might be because the deprecation
         # warning was removed, or because some other test in this module is
@@ -190,21 +179,17 @@ class VirtualenvTestCase(TestCase):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            virtualenv_mock = MagicMock()
-            virtualenv_mock.__version__ = '1.9.1'
-            with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
-                with warnings.catch_warnings(record=True) as w:
-                    virtualenv_mod.create(
-                        '/tmp/foo', no_site_packages=True
-                    )
-                    self.assertEqual(
-                        '\'no_site_packages\' has been deprecated. Please '
-                        'start using \'system_site_packages=False\' which '
-                        'means exactly the same as \'no_site_packages=True\'',
-                        str(w[-1].message)
-                    )
+            with warnings.catch_warnings(record=True) as w:
+                virtualenv_mod.create(
+                    '/tmp/foo', no_site_packages=True
+                )
+                self.assertEqual(
+                    '\'no_site_packages\' has been deprecated. Please '
+                    'start using \'system_site_packages=False\' which '
+                    'means exactly the same as \'no_site_packages=True\'',
+                    str(w[-1].message)
+                )
 
-    @patch('salt.utils.which', lambda bin_name: bin_name)
     def test_unapplicable_options(self):
         # ----- Virtualenv using pyvenv options ----------------------------->
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -334,6 +319,17 @@ class VirtualenvTestCase(TestCase):
                     runas=None
                 )
             # <---- virtualenv binary returns 1.10rc1 as it's version --------
+
+    def test_python_argument(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create(
+                '/tmp/foo', python='/usr/bin/python2.7',
+            )
+            mock.assert_called_once_with(
+                'virtualenv --python=/usr/bin/python2.7 /tmp/foo',
+                runas=None
+            )
 
 
 if __name__ == '__main__':
