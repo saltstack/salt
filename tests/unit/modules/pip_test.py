@@ -574,6 +574,17 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+    def test_install_proxy_argument_in_resulting_command(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', proxy='salt-user:salt-passwd@salt-proxy:3128')
+            mock.assert_called_once_with(
+                'pip install '
+                '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' pep8',
+                runas=None,
+                cwd=None
+            )
+
     @patch('salt.modules.pip._get_cached_requirements')
     def test_install_multiple_requirements_arguments_in_resulting_command(self, get_cached_requirements):
         get_cached_requirements.side_effect = [

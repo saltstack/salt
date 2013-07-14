@@ -284,7 +284,7 @@ def install(pkgs=None,
         cmd.append('--log={0}'.format(log))
 
     if proxy:
-        cmd.append('--proxy={0}'.format(proxy))
+        cmd.append('--proxy={0!r}'.format(proxy))
 
     if timeout:
         try:
@@ -546,7 +546,7 @@ def uninstall(pkgs=None,
         cmd.append('--log={0}'.format(log))
 
     if proxy:
-        cmd.append('--proxy={0}'.format(proxy))
+        cmd.append('--proxy={0!r}'.format(proxy))
 
     if timeout:
         try:
