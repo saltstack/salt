@@ -18,7 +18,7 @@ def __virtual__():
 
 def _srvmgr(func):
     '''
-    execture a function from the ServerManager PS module and return the STDOUT
+    Execute a function from the ServerManager PS module and return the STDOUT
     '''
     
     return __salt__['cmd.run']( 'powershell -InputFormat None -Command "& {{ Import-Module ServerManager ; {0} }}"'.format( func ) )
@@ -26,7 +26,7 @@ def _srvmgr(func):
 
 def _parse_powershell_list(lst):
     '''
-    Parse a command output when piped to format-list
+    Parse command output when piped to format-list
     '''
     
     ret = {}
@@ -52,7 +52,7 @@ def list_available():
 
 def list_installed():
     '''
-    List available features to install
+    List installed features
     
     CLI Example::
 
@@ -73,14 +73,14 @@ def list_installed():
 
 def install(feature, recurse=False):
     '''
-    Install the feature
+    Install a feature
     
     Note:
     Some features requires reboot after un/installation, if so until the server is restarted
     Other features can not be installed !
     
     Note:
-    Some features takes a long time to un/installation, set -t with a long timeout
+    Some features takes a long time to complete un/installation, set -t with a long timeout
     
     CLI Example::
 
@@ -104,7 +104,7 @@ def remove(feature):
     Other features can not be installed !
     
     Note:
-    Some features takes a long time to un/installation, set -t with a long timeout
+    Some features takes a long time to complete un/installation, set -t with a long timeout
     
     CLI Example::
 
