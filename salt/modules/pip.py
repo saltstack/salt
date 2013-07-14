@@ -110,6 +110,7 @@ def install(pkgs=None,
             no_deps=False,
             no_install=False,
             no_download=False,
+            global_options=None,
             install_options=None,
             runas=None,
             no_chown=False,
@@ -193,6 +194,9 @@ def install(pkgs=None,
         option options to pass multiple options to setup.py
         install.  If you are using an option with a directory
         path, be sure to use absolute path.
+    global_options
+        Extra global options to be supplied to the setup.py call before the
+        install command.
     runas
         User to run pip as
     no_chown
@@ -373,6 +377,13 @@ def install(pkgs=None,
 
     if no_download:
         cmd.append('--no-download')
+
+    if global_options:
+        if isinstance(global_options, string_types):
+            global_options = [go.strip() for go in global_options.split(',')]
+
+        for opt in global_options:
+            cmd.append('--global-option={0!r}'.format(opt))
 
     if install_options:
         if isinstance(install_options, string_types):

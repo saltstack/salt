@@ -446,7 +446,6 @@ class PipTestCase(TestCase):
                 exists_action='d'
             )
 
-
     def test_install_options_argument_in_resulting_command(self):
         install_options = [
             '--exec-prefix=/foo/bar',
@@ -483,6 +482,46 @@ class PipTestCase(TestCase):
             pip.install('pep8', install_options=install_options[0])
             mock.assert_called_once_with(
                 'pip install --install-option=\'--exec-prefix=/foo/bar\' pep8',
+                runas=None,
+                cwd=None
+            )
+
+    def test_global_options_argument_in_resulting_command(self):
+        global_options = [
+            '--quiet',
+            '--no-user-cfg'
+        ]
+
+        # Passing options as a list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', global_options=global_options)
+            mock.assert_called_once_with(
+                'pip install '
+                '--global-option=\'--quiet\' '
+                '--global-option=\'--no-user-cfg\' pep8',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing mirrors as a comma separated list
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', global_options=','.join(global_options))
+            mock.assert_called_once_with(
+                'pip install '
+                '--global-option=\'--quiet\' '
+                '--global-option=\'--no-user-cfg\' pep8',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing mirrors as a single string entry
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', global_options=global_options[0])
+            mock.assert_called_once_with(
+                'pip install --global-option=\'--quiet\' pep8',
                 runas=None,
                 cwd=None
             )
