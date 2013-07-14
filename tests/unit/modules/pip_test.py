@@ -114,9 +114,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-
-
-    def test_issue5940_multiple_pip_mirrors(self):
+    def test_issue5940_install_multiple_pip_mirrors(self):
         mirrors = [
             'http://g.pypi.python.org',
             'http://c.pypi.python.org',
@@ -250,14 +248,14 @@ class PipTestCase(TestCase):
             #mock.assert_called_once_with('', runas=None, cwd=None)
 
     @patch('salt.modules.pip._get_cached_requirements')
-    def test_failed_cached_requirements(self, get_cached_requirements):
+    def test_install_failed_cached_requirements(self, get_cached_requirements):
         get_cached_requirements.return_value = False
         ret = pip.install(requirements='salt://my_test_reqs')
         self.assertEqual(False, ret['result'])
         self.assertIn('my_test_reqs', ret['comment'])
 
     @patch('salt.modules.pip._get_cached_requirements')
-    def test_cached_requirements_used(self, get_cached_requirements):
+    def test_install_cached_requirements_used(self, get_cached_requirements):
         get_cached_requirements.return_value = 'my_cached_reqs'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
@@ -266,7 +264,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(expected_cmd, runas=None, cwd=None)
 
     @patch('os.path')
-    def test_fix_activate_env(self, mock_path):
+    def test_install_fix_activate_env(self, mock_path):
         mock_path.is_file.return_value = True
         mock_path.isdir.return_value = True
 
@@ -283,7 +281,7 @@ class PipTestCase(TestCase):
                 cwd=None)
 
     @patch('os.path')
-    def test_log_argument_in_resulting_command(self, mock_path):
+    def test_install_log_argument_in_resulting_command(self, mock_path):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', log='/tmp/pip-install.log')
@@ -304,7 +302,7 @@ class PipTestCase(TestCase):
                 log='/tmp/pip-install.log'
             )
 
-    def test_timeout_argument_in_resulting_command(self):
+    def test_install_timeout_argument_in_resulting_command(self):
         # Passing an int
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
@@ -335,7 +333,7 @@ class PipTestCase(TestCase):
                 timeout='a'
             )
 
-    def test_index_url_argument_in_resulting_command(self):
+    def test_install_index_url_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', index_url='http://foo.tld')
@@ -345,7 +343,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_extra_index_url_argument_in_resulting_command(self):
+    def test_install_extra_index_url_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', extra_index_url='http://foo.tld')
@@ -355,7 +353,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_no_index_argument_in_resulting_command(self):
+    def test_install_no_index_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', no_index=True)
@@ -365,7 +363,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_build_argument_in_resulting_command(self):
+    def test_install_build_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', build='/tmp/foo')
@@ -375,7 +373,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_target_argument_in_resulting_command(self):
+    def test_install_target_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', target='/tmp/foo')
@@ -385,7 +383,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_download_argument_in_resulting_command(self):
+    def test_install_download_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', download='/tmp/foo')
@@ -395,7 +393,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_no_download_argument_in_resulting_command(self):
+    def test_install_no_download_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', no_download=True)
@@ -405,7 +403,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_download_cache_argument_in_resulting_command(self):
+    def test_install_download_cache_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', download_cache='/tmp/foo')
@@ -415,7 +413,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_source_argument_in_resulting_command(self):
+    def test_install_source_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', source='/tmp/foo')
@@ -425,7 +423,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_exists_action_argument_in_resulting_command(self):
+    def test_install_exists_action_argument_in_resulting_command(self):
         for action in ('s', 'i', 'w', 'b'):
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
@@ -446,7 +444,7 @@ class PipTestCase(TestCase):
                 exists_action='d'
             )
 
-    def test_install_options_argument_in_resulting_command(self):
+    def test_install_install_options_argument_in_resulting_command(self):
         install_options = [
             '--exec-prefix=/foo/bar',
             '--install-scripts=/foo/bar/bin'
@@ -486,7 +484,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_global_options_argument_in_resulting_command(self):
+    def test_install_global_options_argument_in_resulting_command(self):
         global_options = [
             '--quiet',
             '--no-user-cfg'
@@ -526,7 +524,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_upgrade_argument_in_resulting_command(self):
+    def test_install_upgrade_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', upgrade=True)
@@ -536,7 +534,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_force_reinstall_argument_in_resulting_command(self):
+    def test_install_force_reinstall_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', force_reinstall=True)
@@ -546,7 +544,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_ignore_installed_argument_in_resulting_command(self):
+    def test_install_ignore_installed_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', ignore_installed=True)
@@ -556,7 +554,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_no_deps_argument_in_resulting_command(self):
+    def test_install_no_deps_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', no_deps=True)
@@ -566,7 +564,7 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
-    def test_no_install_argument_in_resulting_command(self):
+    def test_install_no_install_argument_in_resulting_command(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', no_install=True)
@@ -575,7 +573,6 @@ class PipTestCase(TestCase):
                 runas=None,
                 cwd=None
             )
-
 
 
 if __name__ == '__main__':
