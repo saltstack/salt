@@ -236,6 +236,10 @@ Single command bootstrap script
 
 On a 64 bit Windows host the following script makes an unattended install of salt, including all dependencies:
 
+.. admonition:: Not up to date.
+
+      This script is not up to date. Please use the installer found above
+
 .. code-block:: bash
 
         "PowerShell (New-Object System.Net.WebClient).DownloadFile('http://csa-net.dk/salt/bootstrap64.bat','C:\bootstrap.bat');(New-Object -com Shell.Application).ShellExecute('C:\bootstrap.bat');"
