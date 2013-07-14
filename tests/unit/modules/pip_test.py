@@ -679,6 +679,19 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+    def test_uninstall_proxy_argument_in_resulting_command(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.uninstall(
+                'pep8', proxy='salt-user:salt-passwd@salt-proxy:3128'
+            )
+            mock.assert_called_once_with(
+                'pip uninstall -y '
+                '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' pep8',
+                runas=None,
+                cwd=None
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
