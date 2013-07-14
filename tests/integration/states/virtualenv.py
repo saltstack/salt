@@ -75,7 +75,7 @@ class VirtualenvTest(integration.ModuleCase,
         template = [
             '{0}:'.format(venv_path),
             '  virtualenv.managed:',
-            '    - no_site_packages: True',
+            '    - system_site_packages: False',
             '    - clear: false',
             '    - mirrors: http://testpypi.python.org/pypi',
             '    - requirements: salt://issue-2594-requirements.txt',

@@ -1,6 +1,6 @@
 {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('5940-multiple-pip-mirrors') }}:
   virtualenv.managed:
-    - no_site_packages: True
+    - system_site_packages: False
     - distribute: True
 
 pep8:
