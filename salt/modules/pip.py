@@ -496,11 +496,6 @@ def uninstall(pkgs=None,
     '''
     cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
 
-    if pkgs:
-        if isinstance(pkgs, string_types):
-            pkgs = [p.strip() for p in pkgs.split(',')]
-        cmd.extend(pkgs)
-
     cleanup_requirements = []
     if requirements is not None:
         if isinstance(requirements, string_types):
@@ -556,6 +551,11 @@ def uninstall(pkgs=None,
                 '{0!r} is not a valid integer base 10.'.format(timeout)
             )
         cmd.append('--timeout={0}'.format(timeout))
+
+    if pkgs:
+        if isinstance(pkgs, string_types):
+            pkgs = [p.strip() for p in pkgs.split(',')]
+        cmd.extend(pkgs)
 
     cmd_kwargs = dict(runas=runas, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
