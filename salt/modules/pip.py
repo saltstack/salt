@@ -239,35 +239,40 @@ def install(pkgs=None,
         if not salt.utils.is_windows():
             cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
-    treq = None
-    if requirements:
-        if requirements.startswith('salt://'):
-            cached_requirements = _get_cached_requirements(
-                requirements, __env__
-            )
-            if not cached_requirements:
-                return {
-                    'result': False,
-                    'comment': (
-                        'pip requirements file {0!r} not found'.format(
-                            requirements
+    cleanup_requirements = []
+    if requirements is not None:
+        if isinstance(requirements, string_types):
+            requirements = [r.strip() for r in requirements.split(',')]
+
+        for requirement in requirements:
+            treq = None
+            if requirement.startswith('salt://'):
+                cached_requirements = _get_cached_requirements(
+                    requirement, __env__
+                )
+                if not cached_requirements:
+                    return {
+                        'result': False,
+                        'comment': (
+                            'pip requirements file {0!r} not found'.format(
+                                requirement
+                            )
                         )
-                    )
-                }
-            requirements = cached_requirements
+                    }
+                requirement = cached_requirements
 
-        if runas and not no_chown:
-            # Need to make a temporary copy since the runas user will, most
-            # likely, not have the right permissions to read the file
-            treq = salt.utils.mkstemp()
-            shutil.copyfile(requirements, treq)
-            logger.debug(
-                'Changing ownership of requirements file {0!r} to '
-                'user {1!r}'.format(treq, runas)
-            )
-            __salt__['file.chown'](treq, runas, None)
-
-        cmd.append('--requirement={0!r}'.format(treq or requirements))
+            if runas and not no_chown:
+                # Need to make a temporary copy since the runas user will, most
+                # likely, not have the right permissions to read the file
+                treq = salt.utils.mkstemp()
+                shutil.copyfile(requirements, treq)
+                logger.debug(
+                    'Changing ownership of requirements file {0!r} to '
+                    'user {1!r}'.format(treq, runas)
+                )
+                __salt__['file.chown'](treq, runas, None)
+                cleanup_requirements.append(treq)
+            cmd.append('--requirement={0!r}'.format(treq or requirement))
 
     if log:
         try:
@@ -426,9 +431,9 @@ def install(pkgs=None,
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
         return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
     finally:
-        if treq is not None:
+        for requirement in cleanup_requirements:
             try:
-                os.remove(treq)
+                os.remove(requirement)
             except Exception:
                 pass
 
@@ -492,13 +497,19 @@ def uninstall(pkgs=None,
             pkgs = [p.strip() for p in pkgs.split(',')]
         cmd.extend(pkgs)
 
-    treq = None
-    if requirements:
-        if requirements.startswith('salt://'):
-            req = __salt__['cp.cache_file'](requirements, __env__)
-            treq = salt.utils.mkstemp()
-            shutil.copyfile(req, treq)
-        cmd.append('--requirements={0!r}'.format(treq or requirements))
+    cleanup_requirements = []
+    if requirements is not None:
+        if isinstance(requirements, string_types):
+            requirements = [r.strip() for r in requirements.split(',')]
+
+        for requirement in requirements:
+            treq = None
+            if requirement.startswith('salt://'):
+                req = __salt__['cp.cache_file'](requirement, __env__)
+                treq = salt.utils.mkstemp()
+                shutil.copyfile(req, treq)
+                cleanup_requirements.append(treq)
+            cmd.append('--requirements={0!r}'.format(treq or requirement))
 
     if log:
         try:
@@ -524,15 +535,15 @@ def uninstall(pkgs=None,
     cmd_kwargs = dict(runas=runas, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
 
-    if treq and requirements.startswith('salt://'):
-        try:
-            os.remove(treq)
-        except Exception:
-            pass
-
-    return result
+    try:
+        return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+    finally:
+        for requirement in cleanup_requirements:
+            try:
+                os.remove(requirement)
+            except Exception:
+                pass
 
 
 def freeze(bin_env=None,
