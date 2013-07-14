@@ -203,6 +203,35 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+        # Invalid proto raises exception
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.install,
+                'pep8',
+                find_links='sftp://pypi.crate.io'
+            )
+
+        # Valid protos work?
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(
+                'pep8', find_links=[
+                    'ftp://g.pypi.python.org',
+                    'http://c.pypi.python.org',
+                    'https://pypi.crate.io'
+                ]
+            )
+            mock.assert_called_once_with(
+                'pip install '
+                '--find-links=ftp://g.pypi.python.org '
+                '--find-links=http://c.pypi.python.org '
+                '--find-links=https://pypi.crate.io pep8',
+                runas=None,
+                cwd=None
+            )
+
     def test_install_no_index_with_index_url_or_extra_index_url_raises(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
