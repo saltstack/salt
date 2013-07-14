@@ -333,7 +333,7 @@ def install(pkgs=None,
             cmd.append('--mirrors={0}'.format(mirror))
 
     if build:
-        cmd.append('--build={0}'.format(build=build))
+        cmd.append('--build={0}'.format(build))
 
     if target:
         cmd.append('--target={0}'.format(target))
