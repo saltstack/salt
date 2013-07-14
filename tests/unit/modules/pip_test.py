@@ -103,6 +103,19 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+        # As a single string
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(pkgs=pkgs[0], editable=editables[0])
+            mock.assert_called_once_with(
+                'pip install pep8 '
+                '--editable=git+https://github.com/jek/blinker.git#egg=Blinker',
+                runas=None,
+                cwd=None
+            )
+
+
+
     def test_issue5940_multiple_pip_mirrors(self):
         mirrors = [
             'http://g.pypi.python.org',
@@ -136,6 +149,17 @@ class PipTestCase(TestCase):
                 cwd=None
             )
 
+        # As a single string
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(mirrors=mirrors[0])
+            mock.assert_called_once_with(
+                'pip install --use-mirrors '
+                '--mirrors=http://g.pypi.python.org',
+                runas=None,
+                cwd=None
+            )
+
     def test_install_with_multiple_find_links(self):
         find_links = [
             'http://g.pypi.python.org',
@@ -165,6 +189,16 @@ class PipTestCase(TestCase):
                 '--find-links=http://g.pypi.python.org '
                 '--find-links=http://c.pypi.python.org '
                 '--find-links=http://pypi.crate.io pep8',
+                runas=None,
+                cwd=None
+            )
+
+        # Passing mirrors as a single string entry
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('pep8', find_links=find_links[0])
+            mock.assert_called_once_with(
+                'pip install --find-links=http://g.pypi.python.org pep8',
                 runas=None,
                 cwd=None
             )
