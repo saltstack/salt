@@ -56,7 +56,7 @@ def create(path,
     distribute : False
         Passthrough argument given to virtualenv
     pip : False
-        Install pip after createing a virtual environment, implies distribute=True
+        Install pip after creating a virtual environment, implies distribute=True
     clear : False
         Passthrough argument given to virtualenv or pyvenv
     python : None (default)
