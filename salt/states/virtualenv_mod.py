@@ -12,17 +12,21 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    return 'virtualenv'
+
+
 def managed(name,
             venv_bin='virtualenv',
-            requirements='',
-            no_site_packages=False,
+            requirements=None,
+            no_site_packages=None,
             system_site_packages=False,
             distribute=False,
             clear=False,
-            python='',
-            extra_search_dir='',
-            never_download=False,
-            prompt='',
+            python=None,
+            extra_search_dir=None,
+            never_download=None,
+            prompt=None,
             __env__='base',
             runas=None,
             no_chown=False,
@@ -46,7 +50,7 @@ def managed(name,
 
         /var/www/myvirtualenv.com:
           virtualenv.managed:
-            - no_site_packages: True
+            - system_site_packages: False
             - requirements: salt://REQUIREMENTS.txt
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -79,7 +83,7 @@ def managed(name,
         if not cached_requirements:
             ret.update({
                 'result': False,
-                'comment': "pip requirements file '{0}' not found".format(
+                'comment': 'pip requirements file {0!r} not found'.format(
                     requirements
                 )
             })
@@ -127,12 +131,12 @@ def managed(name,
             '{0} -V'.format(venv_py)).strip('\n')
 
         if clear:
-            ret['comment'] = "Cleared existing virtualenv"
+            ret['comment'] = 'Cleared existing virtualenv'
         else:
-            ret['comment'] = "Created new virtualenv"
+            ret['comment'] = 'Created new virtualenv'
 
     elif venv_exists:
-        ret['comment'] = "virtualenv exists"
+        ret['comment'] = 'virtualenv exists'
 
     # Populate the venv via a requirements file
     if requirements:
