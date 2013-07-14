@@ -8,14 +8,13 @@ state can tell a command to run under certain circumstances.
 
 A simple example to execute a command:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        date > /tmp/salt-run:
-        cmd:
-            - run
+    date > /tmp/salt-run:
+      cmd.run
 
-Only run if another execution failed, in this case truncate
-syslog if there is no disk space:
+Only run if another execution failed, in this case truncate syslog if there is
+no disk space:
 
 .. code-block:: yaml
 
@@ -36,55 +35,55 @@ If ``stateful`` is specified to be true then it is assumed that the command
 or script will determine its own state and communicate it back by following
 a simple protocol described below:
 
-    If there's nothing in the stdout of the command, then assume no changes.
-    Otherwise, the stdout must be either in JSON or its `last` non-empty line
-    must be a string of key=value pairs delimited by spaces(no spaces on the
-    sides of ``=``).
+1. :strong:`If there's nothing in the stdout of the command, then assume no
+   changes.` Otherwise, the stdout must be either in JSON or its `last`
+   non-empty line must be a string of key=value pairs delimited by spaces (no
+   spaces on either side of ``=``).
 
-    If it's JSON then it must be a JSON object (e.g., {}).
-    If it's key=value pairs then quoting may be used to include spaces.
-    (Python's shlex module is used to parse the key=value string)
+2. :strong:`If it's JSON then it must be a JSON object (e.g., {}).` If it's
+   key=value pairs then quoting may be used to include spaces.  (Python's shlex
+   module is used to parse the key=value string)
 
-    Two special keys or attributes are recognized in the output::
+   Two special keys or attributes are recognized in the output::
 
-      changed: bool (i.e., 'yes', 'no', 'true', 'false', case-insensitive)
-      comment: str  (i.e., any string)
+    changed: bool (i.e., 'yes', 'no', 'true', 'false', case-insensitive)
+    comment: str  (i.e., any string)
 
-    So, only if 'changed' is true then assume the command execution has changed
-    the state, and any other key values or attributes in the output will be set
-    as part of the changes.
+   So, only if ``changed`` is ``True`` then assume the command execution has
+   changed the state, and any other key values or attributes in the output will
+   be set as part of the changes.
 
-    If there's a comment then it will be used as the comment of the state.
+3. :strong:`If there's a comment then it will be used as the comment of the
+   state.`
 
-    Here's an example of how one might write a shell script for use with a
-    stateful command::
+   Here's an example of how one might write a shell script for use with a
+   stateful command::
 
-      #!/bin/bash
-      #
-      echo "Working hard..."
+    #!/bin/bash
+    #
+    echo "Working hard..."
 
-      # writing the state line
-      echo  # an empty line here so the next line will be the last.
-      echo "changed=yes comment='something has changed' whatever=123"
+    # writing the state line
+    echo  # an empty line here so the next line will be the last.
+    echo "changed=yes comment='something has changed' whatever=123"
 
+   And an example SLS file using this module::
 
-    And an example salt file using this module::
+    Run myscript:
+      cmd.run:
+        - name: /path/to/myscript
+        - cwd: /
+        - stateful: True
 
-        Run myscript:
-          cmd.run:
-            - name: /path/to/myscript
-            - cwd: /
-            - stateful: true
+    Run only if myscript changed something:
+      cmd.wait:
+        - name: echo hello
+        - cwd: /
+        - watch:
+            - cmd: Run myscript
 
-        Run only if myscript changed something:
-          cmd.wait:
-            - name: echo hello
-            - cwd: /
-            - watch:
-              - cmd: Run myscript
-
-    Note that if the ``cmd.wait`` state also specifies ``stateful: true``
-    it can then be watched by some other states as well.
+   Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
+   then be watched by some other states as well.
 
 ``cmd.wait`` is not restricted to watching only cmd states. For example
 it can also watch a git state for changes
