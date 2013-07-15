@@ -56,7 +56,8 @@ def present(name,
             user=None,
             host='localhost',
             grant_option=False,
-            escape=True):
+            escape=True,
+            **connection_args):
     '''
     Ensure that the grant is present with the specified properties
 
@@ -89,7 +90,7 @@ def present(name,
            }
     # check if grant exists
     if __salt__['mysql.grant_exists'](
-        grant, database, user, host, grant_option, escape
+        grant, database, user, host, grant_option, escape, **connection_args
     ):
         return ret
 
@@ -99,7 +100,7 @@ def present(name,
         ret['comment'] = 'MySQL grant {0} is set to be created'.format(name)
         return ret
     if __salt__['mysql.grant_add'](
-        grant, database, user, host, grant_option, escape
+        grant, database, user, host, grant_option, escape, **connection_args
     ):
         ret['comment'] = 'Grant {0} on {1} to {2}@{3} has been added'
         ret['comment'] = ret['comment'].format(grant, database, user, host)
@@ -117,7 +118,8 @@ def absent(name,
            user=None,
            host='localhost',
            grant_option=False,
-           escape=True):
+           escape=True,
+           **connection_args):
     '''
     Ensure that the grant is absent
 
@@ -147,7 +149,8 @@ def absent(name,
             database,
             user, host,
             grant_option,
-            escape):
+            escape,
+            **connection_args):
 
         if __opts__['test']:
             ret['result'] = None
@@ -159,7 +162,8 @@ def absent(name,
                 database,
                 user,
                 host,
-                grant_option):
+                grant_option,
+                **connection_args):
             ret['comment'] = 'Grant {0} on {1} for {2}@{3} has been revoked'
             ret['comment'].format(grant, database, user, host)
             ret['changes'][name] = 'Absent'
