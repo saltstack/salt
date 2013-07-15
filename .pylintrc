@@ -226,16 +226,19 @@ max-args=35
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-max-locals=15
+# Let's have max-args + 5
+max-locals=40
 
 # Maximum number of return / yield for function / method body
 max-returns=6
 
 # Maximum number of branch for function / method body
-max-branchs=12
+# We create a lot of branches in salt, 4x the default value
+max-branchs=48
 
 # Maximum number of statements in function / method body
-max-statements=50
+# Again, we have LOTS in salt. Double default
+max-statements=100
 
 # Maximum number of parents for a class (see R0901).
 max-parents=7
