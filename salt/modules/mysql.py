@@ -471,7 +471,7 @@ def user_exists(user,
     ``password_hash``, and using ``passwordless=True``.
 
     .. note::
-        The ``passwordless`` option will be available in version 0.16.1
+        The ``passwordless`` option will be available in version 0.16.1.
 
     CLI Example::
 
@@ -568,7 +568,7 @@ def user_create(user,
         set to ``None``) to permit a passwordless login.
 
     .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.1
+        The ``allow_passwordless`` option will be available in version 0.16.1.
 
     CLI Examples::
 
@@ -649,7 +649,7 @@ def user_chpass(user,
         set to ``None``) to permit a passwordless login.
 
     .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.1
+        The ``allow_passwordless`` option will be available in version 0.16.1.
 
     CLI Examples::
 
