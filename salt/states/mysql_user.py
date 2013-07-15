@@ -63,7 +63,8 @@ def present(name,
                               'to be changed'.format(name, host))
             return ret
 
-        if __salt__['mysql.user_chpass'](name, host, password, password_hash, **connection_args):
+        if __salt__['mysql.user_chpass'](
+                name, host, password, password_hash, **connection_args):
             ret['comment'] = ('Password for user {0}@{1} has '
                               'been changed'.format(name, host))
             ret['changes'][name] = 'Updated'
@@ -79,7 +80,8 @@ def present(name,
             ret['comment'] = 'User {0}@{1} is set to be added'.format(name, host)
             return ret
 
-        if __salt__['mysql.user_create'](name, host, password, password_hash, **connection_args):
+        if __salt__['mysql.user_create'](
+                name, host, password, password_hash, **connection_args):
             ret['comment'] = 'The user {0}@{1} has been added'.format(name, host)
             ret['changes'][name] = 'Present'
         else:
