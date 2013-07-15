@@ -6,16 +6,21 @@ Module to provide MySQL compatibility to salt.
     in /etc/salt/minion on the relevant minions. Some sample configs might look
     like::
 
-        mysql.connection_host: 'localhost'
-        mysql.connection_port: 3306
-        mysql.connection_user: 'root'
-        mysql.connection_pass: ''
-        mysql.connection_db: 'mysql'
-        mysql.connection_unix_socket: '/tmp/mysql.sock'
+        mysql.host: 'localhost'
+        mysql.port: 3306
+        mysql.user: 'root'
+        mysql.pass: ''
+        mysql.db: 'mysql'
+        mysql.unix_socket: '/tmp/mysql.sock'
 
     You can also use a defaults file::
 
-        mysql.connection_default_file: '/etc/mysql/debian.cnf'
+        mysql.default_file: '/etc/mysql/debian.cnf'
+
+    .. note::
+        Version 0.16.1 will add the option to set passwordless logins, as well
+        as supply the connection arguments directly from the CLI or in an SLS
+        file.
 '''
 
 # Import python libs
@@ -23,6 +28,9 @@ import time
 import logging
 import re
 import sys
+
+# Import salt libs
+import salt.utils
 
 # Import third party libs
 try:
@@ -89,15 +97,23 @@ def _connect(**kwargs):
 
     def _connarg(name, key=None):
         '''
-        Add key to connargs, only if name exists in our
-        kwargs or as mysql.<name> in __opts__ or __pillar__
-        Evaluate in said order - kwargs, opts then pillar
+        Add key to connargs, only if name exists in our kwargs or as
+        mysql.<name> in __opts__ or __pillar__ Evaluate in said order - kwargs,
+        opts then pillar. To avoid collision with other functions, kwargs-based
+        connection arguments are prefixed with 'connection_' (i.e.
+        'connection_host', 'connection_user', etc.).
         '''
         if key is None:
             key = name
         if name in kwargs:
             connargs[key] = kwargs[name]
         else:
+            prefix = 'connection_'
+            if name.startswith(prefix):
+                try:
+                    name = name[len(prefix):]
+                except IndexError:
+                    return
             val = __salt__['config.option']('mysql.{0}'.format(name), None)
             if val is not None:
                 connargs[key] = val
@@ -112,7 +128,14 @@ def _connect(**kwargs):
     _connarg('connection_default_file', 'read_default_file')
     _connarg('connection_default_group', 'read_default_group')
 
-    dbc = MySQLdb.connect(**connargs)
+    try:
+        dbc = MySQLdb.connect(**connargs)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return None
+
     dbc.autocommit(True)
     return dbc
 
@@ -421,35 +444,65 @@ def user_list(**connection_args):
         salt '*' mysql.user_list
     '''
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute('SELECT User,Host FROM mysql.user')
+    try:
+        cur.execute('SELECT User,Host FROM mysql.user')
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return []
     results = cur.fetchall()
     log.debug(results)
     return results
 
 
-def user_exists(user, host='localhost', password=None, password_hash=None, **connection_args):
+def user_exists(user,
+                host='localhost',
+                password=None,
+                password_hash=None,
+                passwordless=False,
+                **connection_args):
     '''
-    Checks if a user exists on the  MySQL server.
+    Checks if a user exists on the MySQL server. A login can be checked to see
+    if passwordless login is permitted by omitting ``password`` and
+    ``password_hash``, and using ``passwordless=True``.
+
+    .. note::
+        The ``passwordless`` option will be available in version 0.16.1
 
     CLI Example::
 
         salt '*' mysql.user_exists 'username' 'hostname' 'password'
-
         salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
+        salt '*' mysql.user_exists 'username' passwordless=True
     '''
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+
     cur = dbc.cursor()
     qry = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
            'Host = \'{1}\''.format(user, host))
 
-    if password:
-        qry += ' AND password = PASSWORD(\'{0}\')'.format(password)
+    if salt.utils.is_true(passwordless):
+        qry += ' AND Password = \'\''
+    elif password:
+        qry += ' AND Password = PASSWORD(\'{0}\')'.format(password)
     elif password_hash:
-        qry += ' AND password = \'{0}\''.format(password_hash)
+        qry += ' AND Password = \'{0}\''.format(password_hash)
 
     log.debug('Doing query: {0}'.format(qry))
-    cur.execute(qry)
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
     return cur.rowcount == 1
 
 
@@ -462,11 +515,20 @@ def user_info(user, host='localhost', **connection_args):
         salt '*' mysql.user_info root localhost
     '''
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = ('SELECT * FROM mysql.user WHERE User = \'{0}\' AND '
            'Host = \'{1}\''.format(user, host))
     log.debug('Query: {0}'.format(qry))
-    cur.execute(qry)
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
     result = cur.fetchone()
     log.debug(result)
     return result
@@ -476,36 +538,80 @@ def user_create(user,
                 host='localhost',
                 password=None,
                 password_hash=None,
+                allow_passwordless=False,
                 **connection_args):
     '''
-    Creates a MySQL user.
+    Creates a MySQL user
+
+    host
+        Host for which this user/password combo applies
+
+    password
+        The password to use for the new user. Will take precedence over the
+        ``password_hash`` option if both are specified.
+
+    password_hash
+        The password in hashed form. Be sure to quote the password because YAML
+        doesn't like the ``*``. A password hash can be obtained from the mysql
+        command-line client like so::
+
+            mysql> SELECT PASSWORD('mypass');
+            +-------------------------------------------+
+            | PASSWORD('mypass')                        |
+            +-------------------------------------------+
+            | *6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4 |
+            +-------------------------------------------+
+            1 row in set (0.00 sec)
+
+    allow_passwordless
+        If ``True``, then ``password`` and ``password_hash`` can be omitted (or
+        set to ``None``) to permit a passwordless login.
+
+    .. note::
+        The ``allow_passwordless`` option will be available in version 0.16.1
 
     CLI Examples::
 
         salt '*' mysql.user_create 'username' 'hostname' 'password'
-
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
+        salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
     if user_exists(user, host, **connection_args):
         log.info('User \'{0}\'@\'{1}\' already exists'.format(user, host))
         return False
 
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+
     cur = dbc.cursor()
     qry = 'CREATE USER \'{0}\'@\'{1}\''.format(user, host)
     if password is not None:
         qry += ' IDENTIFIED BY \'{0}\''.format(password)
     elif password_hash is not None:
         qry += ' IDENTIFIED BY PASSWORD \'{0}\''.format(password_hash)
+    elif not salt.utils.is_true(allow_passwordless):
+        log.error('password or password_hash must be specified, unless '
+                  'allow_passwordless=True')
+        return False
 
     log.debug('Query: {0}'.format(qry))
-    cur.execute(qry)
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
 
     if user_exists(user, host, password, password_hash, **connection_args):
-        log.info('User \'{0}\'@\'{1}\' has been created'.format(user, host))
+        msg = 'User \'{0}\'@\'{1}\' has been created'.format(user, host)
+        if not any((password, password_hash)):
+            msg += ' with passwordless login'
+        log.info(msg)
         return True
 
-    log.info('User \'{0}\'@\'{1}\' is not created'.format(user, host))
+    log.info('User \'{0}\'@\'{1}\' was not created'.format(user, host))
     return False
 
 
@@ -513,40 +619,86 @@ def user_chpass(user,
                 host='localhost',
                 password=None,
                 password_hash=None,
+                allow_passwordless=False,
                 **connection_args):
     '''
-    Change password for MySQL user
+    Change password for a MySQL user
+
+    host
+        Host for which this user/password combo applies
+
+    password
+        The password to set for the new user. Will take precedence over the
+        ``password_hash`` option if both are specified.
+
+    password_hash
+        The password in hashed form. Be sure to quote the password because YAML
+        doesn't like the ``*``. A password hash can be obtained from the mysql
+        command-line client like so::
+
+            mysql> SELECT PASSWORD('mypass');
+            +-------------------------------------------+
+            | PASSWORD('mypass')                        |
+            +-------------------------------------------+
+            | *6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4 |
+            +-------------------------------------------+
+            1 row in set (0.00 sec)
+
+    allow_passwordless
+        If ``True``, then ``password`` and ``password_hash`` can be omitted (or
+        set to ``None``) to permit a passwordless login.
+
+    .. note::
+        The ``allow_passwordless`` option will be available in version 0.16.1
 
     CLI Examples::
 
         salt '*' mysql.user_chpass frank localhost newpassword
-
         salt '*' mysql.user_chpass frank localhost password_hash='hash'
+        salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
-    if password is None and password_hash is None:
-        log.error('No password provided')
-        return False
-    elif password is not None:
-        password_sql = 'PASSWORD("{0}")'.format(password)
+    if password is not None:
+        password_sql = 'PASSWORD(\'{0}\')'.format(password)
     elif password_hash is not None:
-        password_sql = '"{0}"'.format(password_hash)
+        password_sql = '\'{0}\''.format(password_hash)
+    elif not salt.utils.is_true(allow_passwordless):
+        log.error('password or password_hash must be specified, unless '
+                  'allow_passwordless=True')
+        return False
+    else:
+        password_sql = '\'\''
 
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+
     cur = dbc.cursor()
     qry = ('UPDATE mysql.user SET password={0} WHERE User=\'{1}\' AND '
            'Host = \'{2}\';'.format(password_sql, user, host))
     log.debug('Query: {0}'.format(qry))
-    if cur.execute(qry):
+    try:
+        result = cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
+    if result:
         cur.execute('FLUSH PRIVILEGES;')
         log.info(
-            'Password for user \'{0}\'@\'{1}\' has been changed'.format(
-                user, host
+            'Password for user \'{0}\'@\'{1}\' has been {2}'.format(
+                user, host,
+                'changed' if any((password, password_hash)) else 'cleared'
             )
         )
         return True
 
     log.info(
-        'Password for user \'{0}\'@\'{1}\' is not changed'.format(user, host)
+        'Password for user \'{0}\'@\'{1}\' was not {2}'.format(
+            user, host,
+            'changed' if any((password, password_hash)) else 'cleared'
+        )
     )
     return False
 
@@ -562,10 +714,20 @@ def user_remove(user,
         salt '*' mysql.user_remove frank localhost
     '''
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+
     cur = dbc.cursor()
     qry = 'DROP USER \'{0}\'@\'{1}\''.format(user, host)
     log.debug('Query: {0}'.format(qry))
-    cur.execute(qry)
+    try:
+        result = cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
     if not user_exists(user, host):
         log.info('User \'{0}\'@\'{1}\' has been removed'.format(user, host))
         return True
