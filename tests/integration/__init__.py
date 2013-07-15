@@ -95,6 +95,7 @@ def run_tests(TestCase, needs_daemon=True):
     parser.finalize(0)
 
 
+SYNDIC = None
 class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
@@ -112,9 +113,9 @@ class TestDaemon(object):
         self.master_opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
-        self.minion_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
-        )
+        minion_config_path = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+        self.minion_opts = salt.config.minion_config(minion_config_path)
+
         #if sys.version_info < (2, 7):
         #    self.minion_opts['multiprocessing'] = False
         self.sub_minion_opts = salt.config.minion_config(
@@ -127,12 +128,8 @@ class TestDaemon(object):
                 INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'
             )
         )
-        self.syndic_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'))
-        self.syndic_opts['_master_conf_file'] = os.path.join(
-            INTEGRATION_TEST_DIR,
-            'files/conf/master'
-        )
+
+
         # Set up config options that require internal data
         self.master_opts['pillar_roots'] = {
             'base': [os.path.join(FILES, 'pillar', 'base')]
@@ -155,6 +152,22 @@ class TestDaemon(object):
         ]
         # clean up the old files
         self._clean()
+        os.makedirs(TMP)
+
+        # make a temporary configuration merging master and syndic bits
+        config_content = (
+            open(os.path.join(
+                INTEGRATION_TEST_DIR, 'files', 'conf', 'master')).read()
+            +
+            open(os.path.join(
+                INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic')).read()
+        )
+        syndic_conf_path = os.path.join( TMP, 'syndic.conf')
+        fic = open(syndic_conf_path, 'w')
+        fic.write(config_content)
+        fic.close()
+        self.syndic_opts = salt.config.syndic_config(
+            syndic_conf_path, minion_config_path)
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
@@ -239,6 +252,11 @@ class TestDaemon(object):
         self.pre_setup_minions()
         self.setup_minions()
 
+        # make global module vars to be accessible from
+        # testcases
+        import integration
+        integration.SYNDIC = syndic
+
         if self.parser.options.sysinfo:
             from salt import version
             print_header('~~~~~~~ Versions Report ', inline=True)
@@ -273,6 +291,8 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
+        import integration
+        integration.SYNDIC = None
         self.sub_minion_process.terminate()
         self.sub_minion_process.join()
         self.minion_process.terminate()
