@@ -77,3 +77,13 @@ def cluster_commit():
     '''
     return __salt__['cmd.retcode']('riak-admin cluster commit')
 
+
+def member_status():
+    '''
+    Get cluster member status
+
+    CLI Example::
+
+        salt '*' riak.member_status
+    '''
+    return __salt__['cmd.run']('riak-admin member-status')
