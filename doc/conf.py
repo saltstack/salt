@@ -90,7 +90,7 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # -- General configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2013, Thomas S. Hatch'
+copyright = '2013 SaltStack, Inc.'
 
 version = version.__version__
 release = '.'.join(map(str, version.__version_info__))
@@ -176,7 +176,7 @@ html_show_copyright = True
 
 ### Latex options
 latex_documents = [
-  ('contents', 'Salt.tex', 'Salt Documentation', 'Thomas Hatch', 'manual'),
+  ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
 latex_logo = '_static/saltstack_logo.png'
@@ -204,9 +204,9 @@ man_pages = [
 
 ### epub options
 epub_title = 'Salt Documentation'
-epub_author = 'Thomas S. Hatch'
+epub_author = 'SaltStack, Inc.'
 epub_publisher = epub_author
-epub_copyright = '2013, Thomas S. Hatch'
+epub_copyright = copyright
 
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.org/'
