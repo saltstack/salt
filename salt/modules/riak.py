@@ -54,3 +54,15 @@ def cluster_join(riak_user=None, riak_host=None):
         return False
     return __salt__['cmd.retcode']('riak-admin cluster join {0}@{1}'.format(riak_user, riak_host))
 
+
+
+def cluster_commit():
+    '''
+    Commit Cluster Plan
+    
+    CLI Example::
+
+        salt '*' riak.cluster_commit
+    '''
+    return __salt__['cmd.retcode']('riak-admin cluster commit')
+
