@@ -284,6 +284,8 @@ def hypermedia_out():
     request._hypermedia_inner_handler = request.handler
     request.handler = hypermedia_handler
 
+    cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
+
 
 @functools.wraps
 def process_request_body(fn):
