@@ -579,6 +579,8 @@ will have syndic servers(s) below it, set the "order_masters" setting to True. I
 is a master that will be running a syndic daemon for passthrough the
 "syndic_master" setting needs to be set to the location of the master server
 
+Do not not forget that in other word it means that it shares with the local minion it's ID and PKI_DIR.
+
 .. conf_master:: order_masters
 
 ``order_masters``
@@ -607,6 +609,48 @@ master, specify the higher level master with this configuration value
 .. code-block:: yaml
 
     syndic_master: masterofmasters
+
+.. conf_master:: syndic_master_port
+
+``syndic_master_port``
+-----------------------
+
+Default: ``4506``
+
+If this master will be running a salt-syndic to connect to a higher level
+master, specify the higher level master port with this configuration value
+
+.. code-block:: yaml
+
+    syndic_master_port: 4506
+
+.. conf_master:: syndic_log_file
+
+``syndic_log_file``
+-------------------
+
+Default: ``syndic.log``
+
+If this master will be running a salt-syndic to connect to a higher level
+master, specify the log_file of the syndic daemon.
+
+.. code-block:: yaml
+
+    syndic_log_file: salt-syndic.log
+
+.. conf_master:: syndic_master_log_file
+
+``syndic_pidfile``
+------------------
+
+Default: ``salt-syndic.pid``
+
+If this master will be running a salt-syndic to connect to a higher level
+master, specify the pidfile of the syndic daemon.
+
+.. code-block:: yaml
+
+    syndic_pidfile: syndic.pid
 
 Peer Publish Settings
 ---------------------
@@ -802,7 +846,7 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 Default: ``{}``
 
 This can be used to control logging levels more specifically.  The
-example sets the main salt library at the 'warning' level, but sets 
+example sets the main salt library at the 'warning' level, but sets
 'salt.modules' to log at the 'debug' level:
 
 .. code-block:: yaml

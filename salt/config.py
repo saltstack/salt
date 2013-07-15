@@ -547,6 +547,51 @@ def minion_config(path,
     return opts
 
 
+def syndic_config(master_config_path,
+                  minion_config_path,
+                  master_env_var='SALT_MASTER_CONFIG',
+                  minion_env_var='SALT_MINION_CONFIG',
+                  defaults=None,
+                  **kwargs):
+    opts = {}
+    master_opts = master_config(master_config_path, master_env_var)
+    minion_opts = minion_config(minion_config_path, minion_env_var)
+    opts['_minion_conf_file'] = master_opts['conf_file']
+    opts['_master_conf_file'] = minion_opts['conf_file']
+    opts.update(master_opts)
+    opts.update(minion_opts)
+    syndic_opts = {
+        'root_dir': opts.get('root_dir', '/'),
+        'pidfile': opts.get(
+            'syndic_pidfile',
+            'salt-syndic.pid'),
+        'log_file': opts.get( 'syndic_log_file', 'salt-syndic.log'),
+        'id': minion_opts['id'],
+        'pki_dir': minion_opts['pki_dir'],
+        'master': opts['syndic_master'],
+        'master_port': int(
+            opts.get(
+                'syndic_master_port',
+                opts.get('master_port', None))),
+        'user': opts.get('syndic_user', opts['user']),
+        'sock_dir': os.path.join(
+            opts['cachedir'],
+            opts.get('syndic_sock_dir',
+                     opts['sock_dir'])),
+    }
+    opts.update(syndic_opts)
+    # Prepend root_dir to other paths
+    prepend_root_dirs = [
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir',
+        'extension_modules', 'autosign_file', 'token_dir'
+    ]
+    for config_key in ('log_file', 'key_logfile'):
+        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+            prepend_root_dirs.append(config_key)
+    prepend_root_dir(opts, prepend_root_dirs)
+    return opts
+
+
 def get_id():
     '''
     Guess the id of the minion.
