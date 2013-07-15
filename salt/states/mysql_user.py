@@ -96,7 +96,7 @@ def present(name,
         permit a passwordless login.
 
     .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.1
+        The ``allow_passwordless`` option will be available in version 0.16.1.
     '''
     ret = {'name': name,
            'changes': {},
