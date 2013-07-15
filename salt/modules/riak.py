@@ -21,7 +21,7 @@ def __virtual__():
 
 def start():
     '''
-    Start riak
+    Start Riak
 
     CLI Example::
 
