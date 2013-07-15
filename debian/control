@@ -19,7 +19,6 @@ Depends: ${python:Depends},
          ${shlibs:Depends},
          python,
          python-libcloud,
-         python-yaml,
          salt-common,
          sshpass
 Suggests: python-botocore
