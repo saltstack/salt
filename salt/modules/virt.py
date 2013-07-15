@@ -211,7 +211,9 @@ def init(name, cpu, mem, image, nic='default', emulator='kvm', start=True, **kwa
     xml = _gen_xml(name, cpu, mem, img_dest, nicp, emulator, **kwargs)
     define_xml_str(xml)
     if kwargs.get('seed'):
-        __salt__['img.seed'](img_dest, name, kwargs.get('config'))
+        install = kwargs.get('install', True)
+        __salt__['img.seed'](img_dest, name, kwargs.get('config'), 
+                install=install)
     elif kwargs.get('seed_cmd'):
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
     if start:
