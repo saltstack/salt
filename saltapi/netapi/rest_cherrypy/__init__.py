@@ -85,6 +85,12 @@ def start():
         from . import wsgi
         application = wsgi.get_application(root, apiopts, conf)
 
+        if not 'ssl_crt' in apiopts or not 'ssl_key' in apiopts:
+            logger.error("Not starting '%s'. Options 'ssl_crt' and 'ssl_key' "
+                    "are required in production mode." % __name__)
+
+            return None
+
         # Mount and start the WSGI app using the production CherryPy server
         verify_certs(apiopts['ssl_crt'], apiopts['ssl_key'])
 
