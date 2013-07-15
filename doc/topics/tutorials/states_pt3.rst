@@ -42,6 +42,21 @@ This templated sls file once generated will look like this:
     curly:
       user.present
 
+Here's a more complex example:
+
+.. code-blocK:: yaml
+
+    {% for usr in 'moe','larry','curly' %}
+    {{ usr }}:
+      group:
+        - present
+      user:
+        - present
+        - gid_from_name: True
+        - require:
+          - group: {{ usr }}
+    {% endfor %}
+
 Using Grains in SLS modules
 ===========================
 
@@ -72,16 +87,13 @@ The Salt module functions are also made available in the template context as
 
 .. code-block:: yaml
 
-    {% for usr in 'moe','larry','curly' %}
-    {{ usr }}:
-      group:
-        - present
+    basepi:
       user:
         - present
-        - gid: {{ salt['file.group_to_gid'](usr) }}
-        - require:
-          - group: {{ usr }}
-    {% endfor %}
+        - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
+
+Note that for the above example to work, ``some_group_that_exists`` must exist
+before the state file is processed by the templating engine.
 
 Below is an example that uses the ``network.hwaddr`` function to retrieve the
 MAC address for eth0::
