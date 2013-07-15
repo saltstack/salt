@@ -32,14 +32,6 @@ A REST API for Salt
         The path to the private key for your SSL certificate. (See below)
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
-        If this directory contains a ``index.html`` file, it will be served at
-        the root URL when HTML is requested by a client via the ``Accept``
-        header.
-
-        This directory may point to a clone of the `salt-ui`_ project to
-        bootstrap a graphical interface for interacting with Salt.
-
-    .. _`salt-ui`: https://github.com/saltstack/salt-ui
 
     Example production configuration block:
 
@@ -192,6 +184,7 @@ def salt_auth_tool():
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
 
+
 # Be conservative in what you send
 # Maps Content-Type to serialization functions; this is a tuple of tuples to
 # preserve order of preference.
@@ -200,25 +193,6 @@ ct_out_map = (
     ('application/x-yaml', functools.partial(
         yaml.safe_dump, default_flow_style=False)),
 )
-
-def wants_html():
-    '''
-    Determine if the request is asking for HTML specifically.
-
-    Returns an empty string or a string containing the output of the
-    cherrypy.lib.cptools.accept() function.
-    '''
-    # Short-circuit if the request is vague or overly broad
-    if (not 'Accept' in cherrypy.request.headers
-            or cherrypy.request.headers['Accept'] == '*/*'):
-        return ''
-
-    try:
-        return cherrypy.lib.cptools.accept(
-                ['text/html'] + [i for (i, _) in ct_out_map])
-    except (AttributeError, cherrypy.CherryPyException):
-        return ''
-
 
 def hypermedia_handler(*args, **kwargs):
     '''
@@ -267,19 +241,9 @@ def hypermedia_out():
     '''
     Determine the best handler for the requested content type
 
-    If HTML is requested bypass the normal handler and try to serve index.html
-    from the 'static' directory; this is useful (as a random, non-specific
-    example) for serving a rich-client frontend application.
-
-    Otherwise wrap the normal handler and transform the output from that
-    handler into the requested content type
+    Wrap the normal handler and transform the output from that handler into the
+    requested content type
     '''
-    if 'static' in cherrypy.config and 'html' in wants_html():
-        index = os.path.join(cherrypy.config['static'], 'index.html')
-        if os.path.exists(index):
-            cherrypy.request.handler = None
-            return cherrypy.lib.static.serve_file(index)
-
     request = cherrypy.serving.request
     request._hypermedia_inner_handler = request.handler
     request.handler = hypermedia_handler
