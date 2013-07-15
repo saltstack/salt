@@ -915,6 +915,9 @@ def ip_interfaces():
         for inet in ifaces[face].get('inet', []):
             if 'address' in inet:
                 iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
         ret[face] = iface_ips
     return {'ip_interfaces': ret}
 
