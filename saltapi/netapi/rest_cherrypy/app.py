@@ -35,6 +35,13 @@ A REST API for Salt
     static_path : ``/static``
         The URL prefix to use when serving static assets out of the directory
         specified in the ``static`` setting.
+    app
+        A filesystem path to an HTML file that will be served as a static file.
+        This is useful for bootstrapping a single-page JavaScript app.
+    app_path : ``/app``
+        The URL prefix to use for serving the HTML file specifed in the ``app``
+        setting. Any path information after the specified path is ignored; this
+        is useful for apps that utilize the HTML5 history API.
 
     Example production configuration block:
 
@@ -911,6 +918,13 @@ class Run(LowDataAdapter):
         }
 
 
+class App(object):
+    exposed = True
+    def GET(self, *args):
+        apiopts = cherrypy.config['apiopts']
+        return cherrypy.lib.static.serve_file(apiopts['app'])
+
+
 class API(object):
     '''
     Collect configuration and URL map for building the CherryPy app
@@ -930,6 +944,9 @@ class API(object):
 
         for url, cls in self.url_map.items():
             setattr(self, url, cls())
+
+        if 'app' in self.apiopts:
+            setattr(self, self.apiopts.get('app_path', 'app'), App())
 
     def get_conf(self):
         '''
