@@ -161,8 +161,8 @@ def query(database, query, **connection_args):
     conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
 
     ret = {}
-    dbc = _connect(**(connection_args.update(
-        {'connection_db': database, 'connection_conv': conv})))
+    dbc = _connect(**(connection_args.update({
+        'connection_db': database, 'connection_conv': conv})))
     cur = dbc.cursor()
     start = time.time()
     affected = cur.execute(query)
@@ -320,7 +320,7 @@ def db_tables(name, **connection_args):
 
         salt '*' mysql.db_tables 'database'
     '''
-    if not db_exists(name):
+    if not db_exists(name, **connection_args):
         log.info("Database '{0}' does not exist".format(name,))
         return False
 
@@ -364,7 +364,7 @@ def db_create(name, **connection_args):
         salt '*' mysql.db_create 'dbname'
     '''
     # check if db exists
-    if db_exists(name):
+    if db_exists(name, **connection_args):
         log.info('DB \'{0}\' already exists'.format(name))
         return False
 
@@ -388,7 +388,7 @@ def db_remove(name, **connection_args):
         salt '*' mysql.db_remove 'dbname'
     '''
     # check if db exists
-    if not db_exists(name):
+    if not db_exists(name, **connection_args):
         log.info('DB \'{0}\' does not exist'.format(name))
         return False
 
@@ -403,7 +403,7 @@ def db_remove(name, **connection_args):
     log.debug('Doing query: {0}'.format(qry))
     cur.execute(qry)
 
-    if not db_exists(name):
+    if not db_exists(name, **connection_args):
         log.info('Database \'{0}\' has been removed'.format(name))
         return True
 
@@ -486,7 +486,7 @@ def user_create(user,
 
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
     '''
-    if user_exists(user, host):
+    if user_exists(user, host, **connection_args):
         log.info('User \'{0}\'@\'{1}\' already exists'.format(user, host))
         return False
 
@@ -501,7 +501,7 @@ def user_create(user,
     log.debug('Query: {0}'.format(qry))
     cur.execute(qry)
 
-    if user_exists(user, host, password, password_hash):
+    if user_exists(user, host, password, password_hash, **connection_args):
         log.info('User \'{0}\'@\'{1}\' has been created'.format(user, host))
         return True
 
@@ -613,15 +613,15 @@ def db_repair(name,
     ret = []
     if table is None:
         # we need to repair all tables
-        tables = db_tables(name)
+        tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
                 'Repairing table \'{0}\' in db \'{1}..\''.format(name, table)
             )
-            ret.append(__repair_table(name, table))
+            ret.append(__repair_table(name, table, **connection_args))
     else:
         log.info('Repairing table \'{0}\' in db \'{1}\'..'.format(name, table))
-        ret = __repair_table(name, table)
+        ret = __repair_table(name, table, **connection_args)
     return ret
 
 
@@ -638,17 +638,17 @@ def db_optimize(name,
     ret = []
     if table is None:
         # we need to optimize all tables
-        tables = db_tables(name)
+        tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
                 'Optimizing table \'{0}\' in db \'{1}..\''.format(name, table)
             )
-            ret.append(__optimize_table(name, table))
+            ret.append(__optimize_table(name, table, **connection_args))
     else:
         log.info(
             'Optimizing table \'{0}\' in db \'{1}\'..'.format(name, table)
         )
-        ret = __optimize_table(name, table)
+        ret = __optimize_table(name, table, **connection_args)
     return ret
 
 
@@ -695,7 +695,7 @@ def user_grants(user,
 
         salt '*' mysql.user_grants 'frank' 'localhost'
     '''
-    if not user_exists(user, host):
+    if not user_exists(user, host, **connection_args):
         log.info('User \'{0}\'@\'{1}\' does not exist'.format(user, host))
         return False
 
@@ -718,7 +718,8 @@ def grant_exists(grant,
                 user,
                 host='localhost',
                 grant_option=False,
-                escape=True):
+                escape=True,
+                **connection_args):
     '''
     Checks to see if a grant exists in the database
 
@@ -733,7 +734,7 @@ def grant_exists(grant,
         grant, database, user, host, grant_option, escape
     )
 
-    grants = user_grants(user, host)
+    grants = user_grants(user, host, **connection_args)
     if grants is not False and target in grants:
         log.debug('Grant exists.')
         return True
@@ -765,7 +766,9 @@ def grant_add(grant,
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
     log.debug('Query: {0}'.format(qry))
     cur.execute(qry)
-    if grant_exists(grant, database, user, host, grant_option, escape):
+    if grant_exists(
+            grant, database, user, host, grant_option, escape,
+            **connection_args):
         log.info(
             'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been added'.format(
                 grant, database, user
@@ -806,7 +809,7 @@ def grant_revoke(grant,
     )
     log.debug('Query: {0}'.format(qry))
     cur.execute(qry)
-    if not grant_exists(grant, database, user, host, grant_option, escape):
+    if not grant_exists(grant, database, user, host, grant_option, escape, **connection_args):
         log.info(
             'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been '
             'revoked'.format(grant, database, user)
@@ -847,7 +850,7 @@ def processlist(**connection_args):
     hdr = ('Id', 'User', 'Host', 'db', 'Command', 'Time', 'State',
            'Info', 'Rows_sent', 'Rows_examined', 'Rows_read')
 
-    log.debug('MySQL Process List:\n{0}'.format(processlist()))
+    log.debug('MySQL Process List:\n{0}'.format(processlist(**connection_args)))
     dbc = _connect(**connection_args)
     cur = dbc.cursor()
     cur.execute("SHOW FULL PROCESSLIST")
