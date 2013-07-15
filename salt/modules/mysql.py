@@ -6,16 +6,16 @@ Module to provide MySQL compatibility to salt.
     in /etc/salt/minion on the relevant minions. Some sample configs might look
     like::
 
-        mysql.host: 'localhost'
-        mysql.port: 3306
-        mysql.user: 'root'
-        mysql.pass: ''
-        mysql.db: 'mysql'
-        mysql.unix_socket: '/tmp/mysql.sock'
+        mysql.connection_host: 'localhost'
+        mysql.connection_port: 3306
+        mysql.connection_user: 'root'
+        mysql.connection_pass: ''
+        mysql.connection_db: 'mysql'
+        mysql.connection_unix_socket: '/tmp/mysql.sock'
 
     You can also use a defaults file::
 
-        mysql.default_file: '/etc/mysql/debian.cnf'
+        mysql.connection_default_file: '/etc/mysql/debian.cnf'
 '''
 
 # Import python libs
@@ -48,8 +48,8 @@ def __virtual__():
     return False
 
 
-def __check_table(name, table):
-    dbc = _connect()
+def __check_table(name, table, **connection_args):
+    dbc = _connect(**connection_args)
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = 'CHECK TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(qry))
@@ -59,8 +59,8 @@ def __check_table(name, table):
     return results
 
 
-def __repair_table(name, table):
-    dbc = _connect()
+def __repair_table(name, table, **connection_args):
+    dbc = _connect(**connection_args)
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = 'REPAIR TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(qry))
@@ -70,8 +70,8 @@ def __repair_table(name, table):
     return results
 
 
-def __optimize_table(name, table):
-    dbc = _connect()
+def __optimize_table(name, table, **connection_args):
+    dbc = _connect(**connection_args)
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = 'OPTIMIZE TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(qry))
@@ -102,22 +102,22 @@ def _connect(**kwargs):
             if val is not None:
                 connargs[key] = val
 
-    _connarg('host')
-    _connarg('user')
-    _connarg('pass', 'passwd')
-    _connarg('port')
-    _connarg('db')
-    _connarg('conv')
-    _connarg('unix_socket')
-    _connarg('default_file', 'read_default_file')
-    _connarg('default_group', 'read_default_group')
+    _connarg('connection_host', 'host')
+    _connarg('connection_user', 'user')
+    _connarg('connection_pass', 'passwd')
+    _connarg('connection_port', 'port')
+    _connarg('connection_db', 'db')
+    _connarg('connection_conv', 'conv')
+    _connarg('connection_unix_socket', 'unix_socket')
+    _connarg('connection_default_file', 'read_default_file')
+    _connarg('connection_default_group', 'read_default_group')
 
     dbc = MySQLdb.connect(**connargs)
     dbc.autocommit(True)
     return dbc
 
 
-def query(database, query):
+def query(database, query, **connection_args):
     '''
     Run an arbitrary SQL query and return the results or
     the number of affected rows.
@@ -161,7 +161,8 @@ def query(database, query):
     conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
 
     ret = {}
-    dbc = _connect(**{'db': database, 'conv': conv})
+    dbc = _connect(**(connection_args.update(
+        {'connection_db': database, 'connection_conv': conv})))
     cur = dbc.cursor()
     start = time.time()
     affected = cur.execute(query)
@@ -186,7 +187,7 @@ def query(database, query):
         return ret
 
 
-def status():
+def status(**connection_args):
     '''
     Return the status of a MySQL server using the output
     from the ``SHOW STATUS`` query.
@@ -196,7 +197,7 @@ def status():
         salt '*' mysql.status
     '''
     ret = {}
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     cur.execute('SHOW STATUS')
     for _ in range(cur.rowcount):
@@ -205,7 +206,7 @@ def status():
     return ret
 
 
-def version():
+def version(**connection_args):
     '''
     Return the version of a MySQL server using the output
     from the ``SELECT VERSION()`` query.
@@ -214,14 +215,14 @@ def version():
 
         salt '*' mysql.version
     '''
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     cur.execute('SELECT VERSION()')
     row = cur.fetchone()
     return row
 
 
-def slave_lag():
+def slave_lag(**connection_args):
     '''
     Return the number of seconds that a slave SQL server is lagging behind the
     master, if the host is not a slave it will return -1.  If the server is
@@ -232,7 +233,7 @@ def slave_lag():
 
         salt '*' mysql.slave_lag
     '''
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     cur.execute('show slave status')
     results = cur.fetchone()
@@ -250,7 +251,7 @@ def slave_lag():
             return -2
 
 
-def free_slave():
+def free_slave(**connection_args):
     '''
     Frees a slave from its master.  This is a WIP, do not use.
 
@@ -258,7 +259,7 @@ def free_slave():
 
         salt '*' mysql.free_slave
     '''
-    slave_db = _connect()
+    slave_db = _connect(**connection_args)
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
     slave_cur.execute("show slave status")
     slave_status = slave_cur.fetchone()
@@ -290,7 +291,7 @@ def free_slave():
 
 
 #Database related actions
-def db_list():
+def db_list(**connection_args):
     '''
     Return a list of databases of a MySQL server using the output
     from the ``SHOW DATABASES`` query.
@@ -300,7 +301,7 @@ def db_list():
         salt '*' mysql.db_list
     '''
     ret = []
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     cur.execute('SHOW DATABASES')
     results = cur.fetchall()
@@ -311,7 +312,7 @@ def db_list():
     return ret
 
 
-def db_tables(name):
+def db_tables(name, **connection_args):
     '''
     Shows the tables in the given MySQL database (if exists)
 
@@ -324,7 +325,7 @@ def db_tables(name):
         return False
 
     ret = []
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = 'SHOW TABLES IN {0}'.format(name)
     log.debug('Doing query: {0}'.format(qry))
@@ -337,7 +338,7 @@ def db_tables(name):
     return ret
 
 
-def db_exists(name):
+def db_exists(name, **connection_args):
     '''
     Checks if a database exists on the MySQL server.
 
@@ -345,7 +346,7 @@ def db_exists(name):
 
         salt '*' mysql.db_exists 'dbname'
     '''
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = 'SHOW DATABASES LIKE \'{0}\''.format(name)
     log.debug('Doing query: {0}'.format(qry))
@@ -354,7 +355,7 @@ def db_exists(name):
     return cur.rowcount == 1
 
 
-def db_create(name):
+def db_create(name, **connection_args):
     '''
     Adds a databases to the MySQL server.
 
@@ -368,7 +369,7 @@ def db_create(name):
         return False
 
     # db doesn't exist, proceed
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = 'CREATE DATABASE `{0}`;'.format(name)
     log.debug('Query: {0}'.format(qry))
@@ -378,7 +379,7 @@ def db_create(name):
     return False
 
 
-def db_remove(name):
+def db_remove(name, **connection_args):
     '''
     Removes a databases from the MySQL server.
 
@@ -396,7 +397,7 @@ def db_remove(name):
         return False
 
     # db doesn't exist, proceed
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = 'DROP DATABASE `{0}`;'.format(name)
     log.debug('Doing query: {0}'.format(qry))
@@ -411,7 +412,7 @@ def db_remove(name):
 
 
 # User related actions
-def user_list():
+def user_list(**connection_args):
     '''
     Return a list of users on a MySQL server
 
@@ -419,7 +420,7 @@ def user_list():
 
         salt '*' mysql.user_list
     '''
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     cur.execute('SELECT User,Host FROM mysql.user')
     results = cur.fetchall()
@@ -427,7 +428,7 @@ def user_list():
     return results
 
 
-def user_exists(user, host='localhost', password=None, password_hash=None):
+def user_exists(user, host='localhost', password=None, password_hash=None, **connection_args):
     '''
     Checks if a user exists on the  MySQL server.
 
@@ -437,7 +438,7 @@ def user_exists(user, host='localhost', password=None, password_hash=None):
 
         salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
     '''
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
            'Host = \'{1}\''.format(user, host))
@@ -452,7 +453,7 @@ def user_exists(user, host='localhost', password=None, password_hash=None):
     return cur.rowcount == 1
 
 
-def user_info(user, host='localhost'):
+def user_info(user, host='localhost', **connection_args):
     '''
     Get full info on a MySQL user
 
@@ -460,7 +461,7 @@ def user_info(user, host='localhost'):
 
         salt '*' mysql.user_info root localhost
     '''
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = ('SELECT * FROM mysql.user WHERE User = \'{0}\' AND '
            'Host = \'{1}\''.format(user, host))
@@ -474,7 +475,8 @@ def user_info(user, host='localhost'):
 def user_create(user,
                 host='localhost',
                 password=None,
-                password_hash=None):
+                password_hash=None,
+                **connection_args):
     '''
     Creates a MySQL user.
 
@@ -488,7 +490,7 @@ def user_create(user,
         log.info('User \'{0}\'@\'{1}\' already exists'.format(user, host))
         return False
 
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = 'CREATE USER \'{0}\'@\'{1}\''.format(user, host)
     if password is not None:
@@ -510,7 +512,8 @@ def user_create(user,
 def user_chpass(user,
                 host='localhost',
                 password=None,
-                password_hash=None):
+                password_hash=None,
+                **connection_args):
     '''
     Change password for MySQL user
 
@@ -528,7 +531,7 @@ def user_chpass(user,
     elif password_hash is not None:
         password_sql = '"{0}"'.format(password_hash)
 
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = ('UPDATE mysql.user SET password={0} WHERE User=\'{1}\' AND '
            'Host = \'{2}\';'.format(password_sql, user, host))
@@ -549,7 +552,8 @@ def user_chpass(user,
 
 
 def user_remove(user,
-                host='localhost'):
+                host='localhost',
+                **connection_args):
     '''
     Delete MySQL user
 
@@ -557,7 +561,7 @@ def user_remove(user,
 
         salt '*' mysql.user_remove frank localhost
     '''
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = 'DROP USER \'{0}\'@\'{1}\''.format(user, host)
     log.debug('Query: {0}'.format(qry))
@@ -572,7 +576,8 @@ def user_remove(user,
 
 # Maintenance
 def db_check(name,
-             table=None):
+             table=None,
+             **connection_args):
     '''
     Repairs the full database or just a given table
 
@@ -596,7 +601,8 @@ def db_check(name,
 
 
 def db_repair(name,
-              table=None):
+              table=None,
+              **connection_args):
     '''
     Repairs the full database or just a given table
 
@@ -620,7 +626,8 @@ def db_repair(name,
 
 
 def db_optimize(name,
-              table=None):
+              table=None,
+              **connection_args):
     '''
     Optimizes the full database or just a given table
 
@@ -680,7 +687,7 @@ def __grant_generate(grant,
 
 
 def user_grants(user,
-                host='localhost'):
+                host='localhost', **connection_args):
     '''
     Shows the grants for the given MySQL user (if it exists)
 
@@ -693,7 +700,7 @@ def user_grants(user,
         return False
 
     ret = []
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     qry = 'SHOW GRANTS FOR \'{0}\'@\'{1}\''.format(user, host)
     log.debug('Doing query: {0}'.format(qry))
@@ -740,7 +747,8 @@ def grant_add(grant,
               user,
               host='localhost',
               grant_option=False,
-              escape=True):
+              escape=True,
+              **connection_args):
     '''
     Adds a grant to the MySQL server.
 
@@ -751,7 +759,7 @@ def grant_add(grant,
         salt '*' mysql.grant_add 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
 
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
@@ -778,7 +786,8 @@ def grant_revoke(grant,
                  user,
                  host='localhost',
                  grant_option=False,
-                 escape=True):
+                 escape=True,
+                 **connection_args):
     '''
     Removes a grant from the MySQL server.
 
@@ -787,7 +796,7 @@ def grant_revoke(grant,
         salt '*' mysql.grant_revoke 'SELECT,INSERT,UPDATE' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
 
     if grant_option:
@@ -811,7 +820,7 @@ def grant_revoke(grant,
     return False
 
 
-def processlist():
+def processlist(**connection_args):
     '''
     Retrieves the processlist from the MySQL server via
     "SHOW FULL PROCESSLIST".
@@ -839,7 +848,7 @@ def processlist():
            'Info', 'Rows_sent', 'Rows_examined', 'Rows_read')
 
     log.debug('MySQL Process List:\n{0}'.format(processlist()))
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     cur.execute("SHOW FULL PROCESSLIST")
     for _ in range(cur.rowcount):
@@ -901,7 +910,7 @@ def __do_query_into_hash(conn, sql_str):
     return rtn_results
 
 
-def get_master_status():
+def get_master_status(**connection_args):
     '''
     Retrieves the master status from the minion.
 
@@ -918,7 +927,7 @@ def get_master_status():
     '''
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
-    conn = _connect()
+    conn = _connect(**connection_args)
     rtnv = __do_query_into_hash(conn, "SHOW MASTER STATUS")
     conn.close()
 
@@ -930,7 +939,7 @@ def get_master_status():
     return rtnv[0]
 
 
-def get_slave_status():
+def get_slave_status(**connection_args):
     '''
     Retrieves the slave status from the minion.
 
@@ -984,7 +993,7 @@ def get_slave_status():
     '''
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
-    conn = _connect()
+    conn = _connect(**connection_args)
     rtnv = __do_query_into_hash(conn, "SHOW SLAVE STATUS")
     conn.close()
 
