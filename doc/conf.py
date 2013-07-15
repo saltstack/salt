@@ -82,7 +82,7 @@ addtl_paths = (
 for path in addtl_paths:
     sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))
 
-from salt.version import __version__
+from salt import version
 
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
@@ -92,8 +92,8 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 project = 'Salt'
 copyright = '2013, Thomas S. Hatch'
 
-version = __version__
-release = version
+version = version.__version__
+release = '.'.join(map(str, version.__version_info__))
 
 master_doc = 'contents'
 templates_path = ['_templates']
