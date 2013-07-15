@@ -4,6 +4,7 @@ Virtual machine image management tools
 
 # Import python libs
 import os
+import glob
 import urlparse
 import shutil
 import yaml
@@ -31,8 +32,11 @@ def mount_image(location):
         return __salt__['guestfs.mount'](location)
     elif 'qemu_nbd.init' in __salt__:
         mnt = __salt__['qemu_nbd.init'](location)
-        __context__['img.mnt_{0}'.format(location)] = mnt
-        return mnt.keys()[0]
+        if not mnt:
+            return ''
+        first = mnt.keys()[0]
+        __context__['img.mnt_{0}'.format(first)] = mnt
+        return first
     return ''
 
 #compatibility for api change
@@ -54,14 +58,14 @@ def umount_image(mnt):
     __salt__['mount.umount'](mnt)
 
 
-def seed(location, id_, config=None, approve_key=True, install=True, run_highstate=False):
+def seed(location, id_, config=None, approve_key=True, install=True):
     '''
     Make sure that the image at the given location is mounted, salt is
     installed, keys are seeded, and execute a state run
 
     CLI Example::
 
-        salt '*' img.seed /tmp/image.qcow2
+        salt '*' img.seed /tmp/image.qcow2 host1
     '''
     if config is None:
         config = {}
@@ -89,26 +93,33 @@ def seed(location, id_, config=None, approve_key=True, install=True, run_highsta
     
     if approve_key:
         __salt__['pillar.ext']({'virtkey': {'name': id_, 'key': pubkey}})
-
-    installed = _install(mpt)
-    if installed:
-        # salt-minion was already installed, just move the config and keys into place
+    res = _check_install(mpt)
+    if res:
+        # salt-minion is already installed, just move the config and keys into place
+        log.info('salt-minion pre-installed on image, '
+                 'configuring as {0}'.format(id_))
         minion_config = salt.config.minion_config(tmp_config)
         pki_dir = minion_config['pki_dir']
         os.rename(privkeyfn, os.path.join(mpt, pki_dir.lstrip('/'), 'minion.pem'))
         os.rename(pubkeyfn, os.path.join(mpt, pki_dir.lstrip('/'), 'minion.pub'))
         os.rename(tmp_config, os.path.join(mpt, 'etc/salt/minion'))
-    if run_highstate:
-        raise NotImplementedError('run_highstate not implemented')
+    elif install:
+        log.info('attempting to install salt-minion on image: '
+                 '{0}'.format(location))
+        res = _install(mpt)
+    else:
+        log.error('failed to configure salt-minion on image: '
+                 '{0}'.format(location))
+        res = False
     umount_image(mpt)
-    return True
+    return res
 
 
 def _install(mpt):
     '''
     Determine whether salt-minion is installed and, if not, 
     install it
-    Return True if already installed
+    Return True if install is successful or already installed
     '''
 
     # Verify that the boostrap script is downloaded
@@ -118,8 +129,14 @@ def _install(mpt):
     # Copy script into tmp
     shutil.copy(bs_, os.path.join(mpt, 'tmp'))
     # Exec the chroot command
-    cmd = 'sh /tmp/bootstrap.sh -c /tmp'
-    _chroot_exec(mpt, cmd)
+    cmd = 'if type salt-minion; then exit 0; '
+    cmd += 'else sh /tmp/bootstrap.sh -c /tmp; fi'
+    return (not _chroot_exec(mpt, cmd))
+
+
+def _check_install(root):
+    cmd = 'if ! type salt-minion; then exit 1; fi'
+    return (not _chroot_exec(root, cmd))
 
 
 def _chroot_exec(root, cmd):
@@ -144,10 +161,37 @@ def _chroot_exec(root, cmd):
             root,
             sh_,
             cmd)
-    res = __salt__['cmd.run'](cmd)
+    res = __salt__['cmd.run_all'](cmd, quiet=True)
+
+    # Kill processes running in the chroot
+    for i in range(6):
+        pids = _chroot_pids(root)
+        if not pids:
+            break
+        for pid in pids:
+            # use sig 15 (TERM) for first 3 attempts, then 9 (KILL)
+            sig = 15 if i < 3 else 9
+            os.kill(pid, sig)
+
+    if _chroot_pids(root):
+        log.error('Processes running in chroot could not be killed, '
+                  'filesystem will remain mounted')
+
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
-    return False
+    log.info(res)
+    return res['retcode']
+
+
+def _chroot_pids(chroot):
+    pids = []
+    for root in glob.glob('/proc/[0-9]*/root'):
+        link = os.path.realpath(root)
+        if link.startswith(chroot):
+            pids.append(int(os.path.basename(
+                os.path.dirname(root)
+            )))
+    return pids
 
 
 #def get_image(name):
