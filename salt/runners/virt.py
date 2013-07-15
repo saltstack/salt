@@ -98,7 +98,7 @@ def hyper_info(hyper=None):
     return data
 
 
-def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
+def init(name, cpu, mem, image, hyper=None, seed=True, nic='default', install=True):
     '''
     Initialize a new vm
     '''
@@ -118,7 +118,7 @@ def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
         hyper = _determine_hyper(data)
 
     if seed:
-        print('Minion will be preseeded.')
+        print('Minion will be preseeded')
         kv = salt.utils.virt.VirtKey(hyper, name, __opts__)
         kv.authorize()
 
@@ -134,7 +134,8 @@ def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
                 mem,
                 image,
                 'seed={0}'.format(seed),
-                'nic={0}'.format(nic)
+                'nic={0}'.format(nic),
+                'install={0}'.format(install)
             ],
             timeout=600)
 
