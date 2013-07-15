@@ -6,18 +6,17 @@ Author: David Boucha <boucha@gmail.com>
 
 '''
 
-# Import python Libs
-import os
-
 # Import salt libs
 import salt.utils
 
 def __virtual__():
     '''
+    Only available on systems with Riak installed.
     '''
     if salt.utils.which('riak'):
         return 'riak'
     return False
+
 
 def start():
     '''
