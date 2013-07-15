@@ -27,7 +27,7 @@ def start():
 
         salt '*' riak.start
     '''
-    return __salt__['cmd.run']('riak start')
+    return __salt__['cmd.retcode']('riak start')
 
 
 
@@ -39,4 +39,4 @@ def stop():
 
         salt '*' riak.stop
     '''
-    return __salt__['cmd.run']('riak stop')
+    return __salt__['cmd.retcode']('riak stop')
