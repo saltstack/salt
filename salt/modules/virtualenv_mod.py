@@ -125,7 +125,7 @@ def create(path,
         # Virtualenv package
         try:
             import virtualenv
-            VIRTUALENV_VERSION_INFO = tuple(
+            virtualenv_version_info = tuple(
                 [int(i) for i in
                  virtualenv.__version__.split('rc')[0].split('.')]
             )
@@ -138,7 +138,7 @@ def create(path,
                     'Unable to get the virtualenv version output using {0!r}. '
                     'Returned data: {1!r}'.format(version_cmd, ret)
                 )
-            VIRTUALENV_VERSION_INFO = tuple(
+            virtualenv_version_info = tuple(
                 [int(i) for i in
                  ret['stdout'].strip().split('rc')[0].split('.')]
             )
@@ -146,7 +146,7 @@ def create(path,
         if no_site_packages is True:
             cmd.append('--no-site-packages')
         if distribute:
-            if VIRTUALENV_VERSION_INFO >= (1, 10):
+            if virtualenv_version_info >= (1, 10):
                 log.info(
                     'The virtualenv \'--distribute\' option has been '
                     'deprecated in virtualenv(>=1.10), as such, the '
@@ -166,7 +166,7 @@ def create(path,
             for entry in extra_search_dir:
                 cmd.append('--extra-search-dir={0}'.format(entry))
         if never_download is True:
-            if VIRTUALENV_VERSION_INFO >= (1, 10):
+            if virtualenv_version_info >= (1, 10):
                 log.info(
                     'The virtualenv \'--never-download\' option has been '
                     'deprecated in virtualenv(>=1.10), as such, the '
