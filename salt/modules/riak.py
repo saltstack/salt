@@ -30,7 +30,6 @@ def start():
     return __salt__['cmd.retcode']('riak start')
 
 
-
 def stop():
     '''
     Stop Riak
@@ -64,7 +63,6 @@ def cluster_plan():
         salt '*' riak.cluster_plan
     '''
     return __salt__['cmd.run']('riak-admin cluster plan')
-
 
 
 def cluster_commit():
