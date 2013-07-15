@@ -55,6 +55,8 @@
     <div>
         {%- block sidebarlogo %}{%- endblock %}
 
+        <p>Current Salt release: {{ release }}</p>
+
         {%- for sidebartemplate in sidebars|default(html_default_sidebars, true) %}
             {%- include sidebartemplate %}
         {%- endfor %}

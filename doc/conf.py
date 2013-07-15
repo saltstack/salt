@@ -82,7 +82,7 @@ addtl_paths = (
 for path in addtl_paths:
     sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))
 
-from salt import version
+import salt.version
 
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
@@ -92,8 +92,8 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 project = 'Salt'
 copyright = '2013 SaltStack, Inc.'
 
-version = version.__version__
-release = '.'.join(map(str, version.__version_info__))
+version = salt.version.__version__
+release = '.'.join(map(str, salt.version.__version_info__))
 
 master_doc = 'contents'
 templates_path = ['_templates']
@@ -114,7 +114,7 @@ autosummary_generate = True
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
 .. |latest| replace:: https://github.com/downloads/saltstack/salt/salt-%s.tar.gz
-""" % __version__
+""" % salt.version.__version__
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
