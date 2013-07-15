@@ -11,6 +11,7 @@ import os
 import glob
 import tempfile
 import time
+import logging
 
 # Import third party tools
 import yaml
@@ -18,6 +19,11 @@ import yaml
 # Import salt libs
 import salt.utils
 import salt.crypt
+
+
+# Set up logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -37,6 +43,8 @@ def connect(image):
         salt '*' qemu_nbd.connect /tmp/image.raw
     '''
     if not os.path.isfile(image):
+        log.warning('Could not connect image: '
+                    '{0} does not exist'.format(image))
         return ''
 
     if salt.utils.which('cfdisk'):
@@ -54,6 +62,8 @@ def connect(image):
                 if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
                     break
             return nbd
+    log.warning('Could not connect image: '
+                '{0}'.format(image))
     return ''
 
 
