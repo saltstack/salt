@@ -24,7 +24,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
-VALID_PROTOS = ['http', 'https', 'ftp']
+VALID_PROTOS = ['http', 'https', 'ftp', 'file']
 
 
 def _get_pip_bin(bin_env):
@@ -300,9 +300,9 @@ def install(pkgs=None,
             find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
-            if not salt.utils.valid_url(link, VALID_PROTOS):
+            if not salt.utils.valid_url(link, VALID_PROTOS) or os.path.exists(link):
                 raise CommandExecutionError(
-                    '{0!r} must be a valid URL'.format(link)
+                    '{0!r} must be a valid URL or path'.format(link)
                 )
             cmd.append('--find-links={0}'.format(link))
 
