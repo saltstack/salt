@@ -52,8 +52,14 @@ def __clean_tmp(sfn):
     Clean out a template temp file
     '''
     if sfn.startswith(tempfile.gettempdir()):
+        # Don't remove if it exists in file_roots (any env)
+        in_roots = False
+        for root in env for env in __opts__['file_roots']:
+            if sfn.startswith(root):
+                in_roots=True
+                break
         # Only clean up files that exist
-        if os.path.exists(sfn):
+        if os.path.exists(sfn) and not in_roots:
             os.remove(sfn)
 
 
