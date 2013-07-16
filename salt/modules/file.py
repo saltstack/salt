@@ -54,7 +54,7 @@ def __clean_tmp(sfn):
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any env)
         in_roots = False
-        for root in [root for root in [env for env in __opts__['file_roots']]]:
+        for root in [env for env in __opts__['file_roots'].itervalues()]:
             if sfn.startswith(root):
                 in_roots = True
                 break
