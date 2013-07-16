@@ -21,6 +21,7 @@ import difflib
 import fnmatch
 import errno
 import logging
+import itertools
 try:
     import grp
     import pwd
@@ -53,11 +54,8 @@ def __clean_tmp(sfn):
     '''
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any env)
-        in_roots = False
-        for root in [env for env in __opts__['file_roots'].itervalues()]:
-            if sfn.startswith(root):
-                in_roots = True
-                break
+        all_roots = itertools.chain.from_iterable(__opts__['file_roots'].itervalues())
+        in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
         if os.path.exists(sfn) and not in_roots:
             os.remove(sfn)
