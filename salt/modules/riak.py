@@ -26,7 +26,7 @@ def start():
 
         salt '*' riak.start
     '''
-    return __salt__['cmd.retcode']('riak start')
+    return not bool(__salt__['cmd.retcode']('riak start'))
 
 
 def stop():
@@ -37,7 +37,7 @@ def stop():
 
         salt '*' riak.stop
     '''
-    return __salt__['cmd.retcode']('riak stop')
+    return not bool(__salt__['cmd.retcode']('riak stop'))
 
 
 def cluster_join(riak_user=None, riak_host=None):
@@ -50,7 +50,8 @@ def cluster_join(riak_user=None, riak_host=None):
     '''
     if not all((riak_user, riak_host)):
         return False
-    return __salt__['cmd.retcode']('riak-admin cluster join {0}@{1}'.format(riak_user, riak_host))
+    return not bool(__salt__['cmd.retcode']('riak-admin cluster join {0}@{1}'.format(riak_user, riak_host)))
+
 
 
 def cluster_plan():
@@ -61,7 +62,7 @@ def cluster_plan():
 
         salt '*' riak.cluster_plan
     '''
-    return __salt__['cmd.run']('riak-admin cluster plan')
+    return not bool( __salt__['cmd.run']('riak-admin cluster plan'))
 
 
 def cluster_commit():
@@ -72,7 +73,7 @@ def cluster_commit():
 
         salt '*' riak.cluster_commit
     '''
-    return __salt__['cmd.retcode']('riak-admin cluster commit')
+    return not bool(__salt__['cmd.retcode']('riak-admin cluster commit'))
 
 
 def member_status():
