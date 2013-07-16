@@ -434,7 +434,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 if minion_grains:
                     scp_file(
                         '/tmp/grains',
-                        salt_config_to_yaml(minion_conf),
+                        salt_config_to_yaml(minion_grains),
                         kwargs
                     )
                 scp_file(
