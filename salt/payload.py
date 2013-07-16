@@ -12,7 +12,6 @@ import salt.log
 import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import pickle
-from salt.utils.odict import OrderedDict
 
 # Import third party libs
 try:
