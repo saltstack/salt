@@ -12,11 +12,9 @@
 
 # Import python libs
 import os
-import copy
 import sys
 import logging
 import optparse
-import urlparse
 import warnings
 import traceback
 from functools import partial
@@ -27,7 +25,6 @@ import salt.config as config
 import salt.loader as loader
 import salt.utils as utils
 import salt.version as version
-import salt.exceptions as exceptions
 
 
 def _sorted(mixins_or_funcs):
