@@ -26,6 +26,7 @@ ScriptName="bootstrap-salt.sh"
 #   * BS_PIP_ALLOWED:     If 1 enable pip based installations(if needed)
 #   * BS_ECHO_DEBUG:      If 1 enable debug echo which can also be set by -D
 #   * BS_SALT_ETC_DIR:    Defaults to /etc/salt
+#   * BS_KEEP_TEMP_FILES: If 1, don't move temporary files, instead copy them
 #   * BS_FORCE_OVERWRITE: Force overriding copied files(config, init.d, etc)
 #   * BS_GENTOO_USE_BINHOST: If 1 add `--getbinpkg` to gentoo's emerge
 #===============================================================================
@@ -143,7 +144,7 @@ usage() {
   -M  Also install salt-master
   -S  Also install salt-syndic
   -N  Do not install salt-minion
-  -C  Only run the configuration function. This option automaticaly
+  -C  Only run the configuration function. This option automatically
       bypasses any installation.
   -P  Allow pip based installations. On some distributions the required salt
       packages or its dependencies are not available as a package for that
@@ -217,6 +218,7 @@ __check_config_dir() {
 #-----------------------------------------------------------------------
 #  Handle command line arguments
 #-----------------------------------------------------------------------
+KEEP_TEMP_FILES=${BS_KEEP_TEMP_FILES:-$BS_FALSE}
 TEMP_CONFIG_DIR="null"
 TEMP_KEYS_DIR="null"
 INSTALL_MASTER=$BS_FALSE
@@ -571,6 +573,10 @@ __gather_linux_system_info() {
         if [ "${DISTRO_NAME}" = "openSUSE project" ]; then
             # lsb_release -si returns "openSUSE project" on openSUSE 12.3
             DISTRO_NAME="opensuse"
+        fi
+        if [ "${DISTRO_NAME}" = "SUSE LINUX" ]; then
+            # lsb_release -si returns "SUSE LINUX" on SLES 11 SP3
+            DISTRO_NAME="suse"
         fi
         rv=$(lsb_release -sr)
         [ "${rv}x" != "x" ] && DISTRO_VERSION=$(__parse_version_string "$rv")
@@ -955,6 +961,13 @@ movefile() {
         echoerror "Wrong number of arguments for movefile()"
         echoinfo "USAGE: movefile <source> <dest>  OR  movefile <source> <dest> <overwrite>"
         exit 1
+    fi
+
+    if [ $KEEP_TEMP_FILES -eq $BS_TRUE ]; then
+        # We're being told not to move files, instead copy them so we can keep
+        # them around
+        echodebug "Since BS_KEEP_TEMP_FILES=1 we're copying files instead of moving them"
+        return copyfile "$sfile" "$dfile" $overwrite
     fi
 
     # Does the source file exist?
@@ -2100,6 +2113,8 @@ install_freebsd_9_stable_deps() {
 
     # Lets set SALT_ETC_DIR to ports default
     SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/usr/local/etc/salt}
+    # We also need to redefine the PKI directory
+    PKI_DIR=${SALT_ETC_DIR}/pki
 
     return 0
 }
@@ -2127,6 +2142,8 @@ install_freebsd_git_deps() {
     # Since we will be relying on the ports rc.d files, let's
     # set SALT_ETC_DIR to ports default
     SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/usr/local/etc/salt}
+    # We also need to redefine the PKI directory
+    PKI_DIR=${SALT_ETC_DIR}/pki
 
     return 0
 }
