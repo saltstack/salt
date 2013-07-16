@@ -98,12 +98,14 @@ def member_status():
         if line.startswith(('=', '-', 'Status')):
             continue
         if '/' in line:
+            # We're in the summary line
             comps = line.split('/')
             for item in comps:
                 key, val = item.split(':')
                 ret['summary'][key.strip()] = val.strip()
         vals = line.split()
         if len(vals) == 4:
+            # We're on a node status line
             ret['membership'][vals[3]] = {'Status': vals[0],
                                           'Ring': vals[1],
                                           'Pending': vals[2],
