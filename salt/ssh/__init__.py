@@ -10,6 +10,8 @@ import json
 # Import salt libs
 import salt.ssh.shell
 import salt.roster
+import salt.state
+import salt.loader
 
 
 class SSHCopyID(object):
@@ -226,3 +228,49 @@ class FunctionWrapper(dict):
             ret = single.cmd()
             return ret[single.id]
         return caller
+
+
+class SSHState(salt.state.State):
+    '''
+    Create a State object which wraps the ssh functions for state operations
+    '''
+    def __init__(self, opts, pillar=None, wrapper=None):
+        opts['grains'] = wrapper['grains.items']()
+        self.wrapper = wrapper
+        super(opts, pillar)
+
+    def load_modules(self, data=None):
+        '''
+        Load up the modules for remote compilation via ssh
+        '''
+        self.functions = self.wrapper
+        self.states = salt.loader.states(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions)
+
+    def check_refresh(self, data, ret):
+        '''
+        Stub out check_refresh
+        '''
+        return
+
+    def module_refresh(self):
+        '''
+        Module refresh is not needed, stub it out
+        '''
+        return
+
+
+class SSHHighState(salt.state.BaseHighState):
+    '''
+    Used to compile the highstate on the master
+    '''
+    stack = []
+
+    def __init__(self, opts, pillar=None):
+        self.client = salt.fileclient.LocalClient(opts)
+        salt.state.BaseHighState.__init__(self, opts)
+        self.state = SSHState(opts, pillar)
+        self.matcher = salt.minion.Matcher(self.opts)
+
+
+
