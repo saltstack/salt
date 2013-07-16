@@ -26,7 +26,7 @@ def _parser(result):
 
     # regexes to match
     _total_time = re.compile(r'total time:\s*(\d*.\d*s)')
-    _total_execution = re.compile(r'event execution:\s*(\d*.\d*s)')
+    _total_execution = re.compile(r'event execution:\s*(\d*.\d*s?)')
     _min_response_time = re.compile(r'min:\s*(\d*.\d*ms)')
     _max_response_time = re.compile(r'max:\s*(\d*.\d*ms)')
     _avg_response_time = re.compile(r'avg:\s*(\d*.\d*ms)')
@@ -44,13 +44,13 @@ def _parser(result):
 
     # returning the data as dictionary
     return {
-           'total time            ': total_time,
-           'total execution time  ': total_execution,
-           'minimum response time ': min_response_time,
-           'maximum response time ': max_response_time,
-           'average response time ': avg_response_time,
-           '95 percentile         ': per_response_time
-           }
+        'total time': total_time,
+        'total execution time': total_execution,
+        'minimum response time': min_response_time,
+        'maximum response time': max_response_time,
+        'average response time': avg_response_time,
+        '95 percentile': per_response_time
+    }
 
 
 def cpu():
@@ -72,7 +72,7 @@ def cpu():
 
     # Test beings!
     for primes in max_primes:
-        key = 'Primer numbers limit: {0}'.format(primes)
+        key = 'Prime numbers limit: {0}'.format(primes)
         run_command = test_command.format(primes)
         result = __salt__['cmd.run'](run_command)
         ret_val[key] = _parser(result)
