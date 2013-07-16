@@ -122,8 +122,11 @@ class SMaster(object):
             )
             cumask = os.umask(191)
             if user not in users:
-                log.error('ACL user {0} is not available'.format(user))
-                continue
+                try:
+                    founduser = pwd.getpwnam(user)
+                except KeyError:
+                    log.error('ACL user {0} is not available'.format(user))
+                    continue
             keyfile = os.path.join(
                 self.opts['cachedir'], '.{0}_key'.format(user)
             )
