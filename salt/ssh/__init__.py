@@ -191,3 +191,38 @@ class Single(multiprocessing.Process):
             return {self.id: data['local']}
         except Exception:
             return {self.id: 'No valid data returned, is ssh key deployed?'}
+
+
+class FunctionWrapper(dict):
+    '''
+    Create an object that acts like the salt function dict and makes function
+    calls remotely via the ssh shell system
+    '''
+    def __init__(
+            self,
+            opts,
+            id_,
+            host,
+            **kwargs):
+        self.opts = opts
+        self.kwargs = {'id_', id_,
+                       'host', host}
+        self.kwargs.update(kwargs)
+
+    def __getitem__(self, cmd):
+        '''
+        Return the function call to simulate the salt local lookup system
+        '''
+        def caller(args, kwargs):
+            '''
+            The remote execution function
+            '''
+            arg_str = '{0} '.format(cmd)
+            for arg in args:
+                arg_str += '{0} '.format(arg)
+            for key, val in kwargs.items():
+                arg_str += '{0}={1} '.format(key, val)
+            single = Single(self.opts, arg_str, **kwargs)
+            ret = single.cmd()
+            return ret[single.id]
+        return caller
