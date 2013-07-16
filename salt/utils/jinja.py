@@ -98,7 +98,7 @@ class SaltCacheLoader(BaseLoader):
         raise TemplateNotFound(template)
 
 
-class SerializerExtension(Extension):
+class SerializerExtension(Extension, object):
     '''
     Serializes variables.
 
@@ -126,7 +126,7 @@ class SerializerExtension(Extension):
     '''
 
     def __init__(self, environment):
-        Extension.__init__(self, environment)
+        super(SerializerExtension, self).__init__(environment)
         self.environment.filters.update({
             'yaml': partial(self.format, formatter='yaml'),
             'json': partial(self.format, formatter='json')
