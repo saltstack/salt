@@ -47,7 +47,9 @@ def install(pecls, defaults=False):
         Use default answers for extensions such as pecl_http which ask
         questions before installation. Without this option, the pecl.installed
         state will hang indefinitely when trying to install these extensions.
-        This option will be available in version 0.17.0.
+
+    .. note::
+        The ``defaults`` option will be available in version 0.17.0.
 
     CLI Example::
 
