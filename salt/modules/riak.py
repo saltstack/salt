@@ -84,4 +84,28 @@ def member_status():
 
         salt '*' riak.member_status
     '''
-    return __salt__['cmd.run']('riak-admin member-status')
+    ret = {'membership': {},
+            'summary': {'Valid': 0,
+                        'Leaving': 0,
+                        'Exiting': 0,
+                        'Joining': 0,
+                        'Down': 0,
+                        }
+            }
+    cmd = 'riak-admin member-status'
+    out = __salt__['cmd.run'](cmd).splitlines()
+    for line in out:
+        if line.startswith(('=', '-', 'Status')):
+            continue
+        if '/' in line:
+            comps = line.split('/')
+            for item in comps:
+                key, val = item.split(':')
+                ret['summary'][key.strip()] = val.strip()
+        vals = line.split()
+        if len(vals) == 4:
+            ret['membership'][vals[3]] = {'Status': vals[0],
+                                          'Ring': vals[1],
+                                          'Pending': vals[2],
+                                          }
+    return ret 
