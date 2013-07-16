@@ -541,6 +541,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
 
+                if keep_tmp:
+                    # Pass the proper environment variable to the bootstrap
+                    # script to keep temporary files around
+                    if not script_env:
+                        script_env = {'BS_KEEP_TEMP_FILES': '1'}
+                    else:
+                        script_env['BS_KEEP_TEMP_FILES'] = '1'
+
                 if script_env:
                     if not isinstance(script_env, dict):
                         raise SaltCloudSystemExit(
