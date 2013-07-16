@@ -4,7 +4,6 @@ Manage transport commands via ssh
 
 # Import python libs
 import os
-import time
 import subprocess
 
 # Import salt libs
