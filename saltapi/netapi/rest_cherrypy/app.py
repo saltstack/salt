@@ -40,8 +40,10 @@ A REST API for Salt
         This is useful for bootstrapping a single-page JavaScript app.
     app_path : ``/app``
         The URL prefix to use for serving the HTML file specifed in the ``app``
-        setting. Any path information after the specified path is ignored; this
-        is useful for apps that utilize the HTML5 history API.
+        setting. This should be a simple name containing no slashes.
+
+        Any path information after the specified path is ignored; this is
+        useful for apps that utilize the HTML5 history API.
 
     Example production configuration block:
 
@@ -946,7 +948,7 @@ class API(object):
             setattr(self, url, cls())
 
         if 'app' in self.apiopts:
-            setattr(self, self.apiopts.get('app_path', 'app'), App())
+            setattr(self, self.apiopts.get('app_path', 'app').lstrip('/'), App())
 
     def get_conf(self):
         '''
