@@ -32,6 +32,7 @@ example):
    release candidates should go in the testing repositories)
 #. After the packagers have been given a few days to compile the packages, the
    release is announced on the ``salt-users`` mailing list.
+#. Log into RTD and add the new release there.  (Have to do it manually)
 
 
 Maintenance and Bugfix Releases
