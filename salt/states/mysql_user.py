@@ -27,7 +27,8 @@ def __virtual__():
 def present(name,
             host='localhost',
             password=None,
-            password_hash=None):
+            password_hash=None,
+            **connection_args):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -49,11 +50,11 @@ def present(name,
            'comment': 'User {0}@{1} is already present'.format(name, host)}
 
     # check if user exists with the same password
-    if __salt__['mysql.user_exists'](name, host, password, password_hash):
+    if __salt__['mysql.user_exists'](name, host, password, password_hash, **connection_args):
         return ret
 
     # check if user exists with a different password
-    if __salt__['mysql.user_exists'](name, host):
+    if __salt__['mysql.user_exists'](name, host, **connection_args):
 
         # The user is present, change the password
         if __opts__['test']:
@@ -62,7 +63,8 @@ def present(name,
                               'to be changed'.format(name, host))
             return ret
 
-        if __salt__['mysql.user_chpass'](name, host, password, password_hash):
+        if __salt__['mysql.user_chpass'](
+                name, host, password, password_hash, **connection_args):
             ret['comment'] = ('Password for user {0}@{1} has '
                               'been changed'.format(name, host))
             ret['changes'][name] = 'Updated'
@@ -78,7 +80,8 @@ def present(name,
             ret['comment'] = 'User {0}@{1} is set to be added'.format(name, host)
             return ret
 
-        if __salt__['mysql.user_create'](name, host, password, password_hash):
+        if __salt__['mysql.user_create'](
+                name, host, password, password_hash, **connection_args):
             ret['comment'] = 'The user {0}@{1} has been added'.format(name, host)
             ret['changes'][name] = 'Present'
         else:
@@ -89,7 +92,8 @@ def present(name,
 
 
 def absent(name,
-           host='localhost'):
+           host='localhost',
+           **connection_args):
     '''
     Ensure that the named user is absent
 
@@ -102,14 +106,14 @@ def absent(name,
            'comment': ''}
 
     #check if db exists and remove it
-    if __salt__['mysql.user_exists'](name, host):
+    if __salt__['mysql.user_exists'](name, host, **connection_args):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'User {0}@{1} is set to be removed'.format(
                     name,
                     host)
             return ret
-        if __salt__['mysql.user_remove'](name, host):
+        if __salt__['mysql.user_remove'](name, host, **connection_args):
             ret['comment'] = 'User {0}@{1} has been removed'.format(name, host)
             ret['changes'][name] = 'Absent'
             return ret
