@@ -98,6 +98,16 @@ class SSH(object):
                     self.opts.get('output', 'nested'),
                     self.opts)
 
+    def highstate_blob(self, target):
+        '''
+        Generate an archive file which contains the instructions and files
+        to execute a state run on a remote system
+        '''
+        wrapper = FunctionWrapper(self.opts, target['id'], **target)
+        st_ = SSHHighState(self.opts, None, wrapper)
+        lowstate = st_.compile_low_chunks()
+        #file_refs = salt.utils.lowstate_file_refs(lowstate)
+
 
 class Single(multiprocessing.Process):
     '''
@@ -266,11 +276,8 @@ class SSHHighState(salt.state.BaseHighState):
     '''
     stack = []
 
-    def __init__(self, opts, pillar=None):
+    def __init__(self, opts, pillar=None, wrapper=None):
         self.client = salt.fileclient.LocalClient(opts)
         salt.state.BaseHighState.__init__(self, opts)
-        self.state = SSHState(opts, pillar)
+        self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
-
-
-
