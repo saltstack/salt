@@ -434,6 +434,10 @@ def prep_jid(cachedir, sum_type, user='root', nocache=False):
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
+        if os.path.exists(jid_dir_):
+            # Somehow we ended up with a file at our jid destination.
+            # Delete it.
+            os.remove(jid_dir_)
         os.makedirs(jid_dir_)
         with fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
             fn_.write(jid)
