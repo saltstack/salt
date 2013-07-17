@@ -23,7 +23,7 @@ def __virtual__():
     return 'mysql_database' if 'mysql.db_exists' in __salt__ else False
 
 
-def present(name):
+def present(name, **connection_args):
     '''
     Ensure that the named database is present with the specified properties
 
@@ -35,7 +35,7 @@ def present(name):
            'result': True,
            'comment': 'Database {0} is already present'.format(name)}
     # check if database exists
-    if __salt__['mysql.db_exists'](name):
+    if __salt__['mysql.db_exists'](name, **connection_args):
         return ret
 
     if __opts__['test']:
@@ -44,7 +44,7 @@ def present(name):
                 ).format(name)
         return ret
     # The database is not present, make it!
-    if __salt__['mysql.db_create'](name):
+    if __salt__['mysql.db_create'](name, **connection_args):
         ret['comment'] = 'The database {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     else:
@@ -54,7 +54,7 @@ def present(name):
     return ret
 
 
-def absent(name):
+def absent(name, **connection_args):
     '''
     Ensure that the named database is absent
 
@@ -67,13 +67,13 @@ def absent(name):
            'comment': ''}
 
     #check if db exists and remove it
-    if __salt__['mysql.db_exists'](name):
+    if __salt__['mysql.db_exists'](name, **connection_args):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ('Database {0} is present and needs to be removed'
                     ).format(name)
             return ret
-        if __salt__['mysql.db_remove'](name):
+        if __salt__['mysql.db_remove'](name, **connection_args):
             ret['comment'] = 'Database {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret
