@@ -54,11 +54,8 @@ def __clean_tmp(sfn):
     '''
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any env)
-        for env in __opts__['file_roots'].itervalues():
-            for root in env:
-                if sfn.startswith(root):
-                    in_roots = True
-                    break
+        all_roots = itertools.chain.from_iterable(__opts__['file_roots'].itervalues())
+        in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
         if os.path.exists(sfn) and not in_roots:
             os.remove(sfn)
