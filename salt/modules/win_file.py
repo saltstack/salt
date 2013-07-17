@@ -16,6 +16,7 @@ import logging
 import contextlib
 import difflib
 import tempfile # do no remove. Used in import of salt.modules.file.__clean_tmp
+import itertools # same as above, do not remove, it's used in __clean_tmp
 
 # Import third party libs
 try:
