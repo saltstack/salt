@@ -115,6 +115,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     else:
         jinja_env = jinja2.Environment(
                         undefined=jinja2.StrictUndefined, **env_args)
+    jinja_env.filters['strftime'] = salt.utils.date_format
 
     unicode_context = {}
     for key, value in context.iteritems():

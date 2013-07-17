@@ -4,6 +4,7 @@
 import os
 import tempfile
 import json
+import datetime
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -175,6 +176,33 @@ class TestGetTemplate(TestCase):
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
 
+
+    def test_strftime(self):
+        response = render_jinja_tmpl('{{ "2002/12/25"|strftime }}',
+                dict(opts=self.local_opts, env='other'))
+        self.assertEqual(response, '2002-12-25')
+
+        objects = (
+            datetime.datetime(2002, 12, 25, 12, 00, 00, 00),
+            '2002/12/25',
+            1040814000,
+            '1040814000'
+        )
+
+        for object in objects:
+            response = render_jinja_tmpl('{{ object|strftime }}',
+                    dict(object=object, opts=self.local_opts, env='other'))
+            self.assertEqual(response, '2002-12-25')
+
+            response = render_jinja_tmpl('{{ object|strftime("%b %d, %Y") }}',
+                    dict(object=object, opts=self.local_opts, env='other'))
+            self.assertEqual(response, 'Dec 25, 2002')
+
+            response = render_jinja_tmpl('{{ object|strftime("%y") }}',
+                    dict(object=object, opts=self.local_opts, env='other'))
+            self.assertEqual(response, '02')
+
+
 class TestCustomExtensions(TestCase):
     def test_serialize(self):
         dataset = {
@@ -189,6 +217,7 @@ class TestCustomExtensions(TestCase):
 
         rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
         self.assertEquals(dataset, json.loads(rendered))
+
 
 if __name__ == '__main__':
     from integration import run_tests
