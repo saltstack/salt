@@ -26,6 +26,20 @@ import types
 import warnings
 from calendar import month_abbr as months
 
+
+try:
+    import timelib
+    HAS_TIMELIB = True
+except ImportError:
+    HAS_TIMELIB = False
+
+try:
+    import parsedatetime
+
+    HAS_PARSEDATETIME = True
+except ImportError:
+    HAS_PARSEDATETIME = False
+
 try:
     import fcntl
     HAS_FNCTL = True
@@ -1249,3 +1263,66 @@ def _win_console_event_handler(event):
 def enable_ctrl_logoff_handler():
     if HAS_WIN32API:
         win32api.SetConsoleCtrlHandler(_win_console_event_handler, 1)
+
+
+def date_cast(date):
+    '''
+    Casts any object into a datetime.datetime object
+
+    date
+      any datetime, time string representation...
+    '''
+    if date is None:
+        return datetime.now()
+    elif isinstance(date, datetime.datetime):
+        return date
+
+    # fuzzy date
+    try:
+        if isinstance(date, salt._compat.string_types):
+            try:
+                if HAS_TIMELIB:
+                    return timelib.strtodatetime(date)
+            except ValueError:
+                pass
+
+            # not parsed yet, obviously a timestamp?
+            if date.isdigit():
+                date = int(date)
+            else:
+                date = float(date)
+
+        return datetime.datetime.fromtimestamp(date)
+    except Exception as e:
+        if HAS_TIMELIB:
+            raise ValueError('Unable to parse {0}'.format(date))
+
+        raise RuntimeError('Unable to parse {0}.'
+            ' Consider to install timelib'.format(date))
+
+
+def date_format(date=None, format="%Y-%m-%d"):
+    '''
+    Converts date into a timebased string
+
+    date
+      any datetime, time string representation...
+
+    format
+       :ref:`strftime<http://docs.python.org/2/library/datetime.html#datetime.datetime.strftime>` format
+
+    >>> import datetime
+    >>> src = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
+    >>> date_format(src)
+    'Dec 25, 2002'
+    >>> src = '2002/12/25'
+    >>> date_format(src)
+    'Dec 25, 2002'
+    >>> src = 1040814000
+    >>> date_format(src)
+    'Dec 25, 2002'
+    >>> src = '1040814000'
+    >>> date_format(src)
+    'Dec 25, 2002'
+    '''
+    return date_cast(date).strftime(format)

@@ -173,6 +173,29 @@ breaks, using `whitespace control`_.
 .. _`macro`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`whitespace control`: http://jinja.pocoo.org/docs/templates/#whitespace-control
 
+Filters
+=======
+
+Saltstack extends `builtin filters`_ with his custom filters:
+
+strftime
+  Converts any time related object into a time based string. It requires a
+  valid `strftime directives`_. An `exhaustive list`_ can be found in the
+  official Python documentation. Fuzzy dates are parsed by `timelib`_ python
+  module. Some exemples are available on this pages.
+
+  .. code-block:: yaml
+
+      {{ "2002/12/25"|strftime("%y") }}
+      {{ "1040814000"|strftime("%Y-%m-%d") }}
+      {{ datetime|strftime("%u") }}
+      {{ "now"|strftime }}
+
+.. _`builtin filters`: http://jinja.pocoo.org/docs/templates/##builtin-filters
+.. _`strftime directives`: http://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
+.. _`exhaustive list`: http://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
+.. _`timelib`: https://github.com/pediapress/timelib/
+
 Jinja in Files
 ==============
 
