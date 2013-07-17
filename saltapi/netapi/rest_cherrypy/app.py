@@ -19,6 +19,8 @@ A REST API for Salt
         The port for the webserver to listen on.
     host : ``0.0.0.0``
         The socket interface for the HTTP server to listen on.
+
+        .. versionadded:: 0.8.2
     debug : ``False``
         Starts a for-development web server instead of the production-ready web
         server.
@@ -37,15 +39,21 @@ A REST API for Salt
     static_path : ``/static``
         The URL prefix to use when serving static assets out of the directory
         specified in the ``static`` setting.
+
+        .. versionadded:: 0.8.2
     app
         A filesystem path to an HTML file that will be served as a static file.
         This is useful for bootstrapping a single-page JavaScript app.
+
+        .. versionadded:: 0.8.2
     app_path : ``/app``
         The URL prefix to use for serving the HTML file specifed in the ``app``
         setting. This should be a simple name containing no slashes.
 
         Any path information after the specified path is ignored; this is
         useful for apps that utilize the HTML5 history API.
+
+        .. versionadded:: 0.8.2
 
     Example production configuration block:
 
