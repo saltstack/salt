@@ -7,7 +7,7 @@ import json
 import datetime
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -17,8 +17,13 @@ from salt.utils.jinja import SaltCacheLoader, SerializerExtension
 from salt.utils.templates import render_jinja_tmpl
 
 # Import 3rd party libs
-from jinja2 import Environment
 import yaml
+from jinja2 import Environment
+try:
+    import timelib
+    HAS_TIMELIB = True
+except ImportError:
+    HAS_TIMELIB = False
 
 TEMPLATES_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -176,7 +181,7 @@ class TestGetTemplate(TestCase):
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
 
-
+    @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
     def test_strftime(self):
         response = render_jinja_tmpl('{{ "2002/12/25"|strftime }}',
                 dict(opts=self.local_opts, env='other'))
