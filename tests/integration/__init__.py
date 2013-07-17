@@ -152,7 +152,8 @@ class TestDaemon(object):
         ]
         # clean up the old files
         self._clean()
-        os.makedirs(TMP)
+        if not os.path.isdir(TMP):
+            os.makedirs(TMP)
 
         # make a temporary configuration merging master and syndic bits
         config_content = (
