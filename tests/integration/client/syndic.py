@@ -1,11 +1,8 @@
 # Import Salt Testing libs
-import os
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
-import salt.config
-import salt.minion
 import integration
 
 
@@ -13,34 +10,6 @@ class TestSyndic(integration.SyndicCase):
     '''
     Validate the syndic interface by testing the test module
     '''
-    def test_config(self):
-        syndic_conf_path = os.path.join(
-            integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'
-        )
-        minion_config_path = os.path.join(
-            integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'
-        )
-        syndic_opts = salt.config.syndic_config(
-            syndic_conf_path, minion_config_path
-        )
-        syndic = salt.minion.Syndic(syndic_opts)
-        # id & pki dir are shared & so configured on the minion side
-        self.assertEquals(syndic.opts['id'], 'minion')
-        self.assertEquals(syndic.opts['pki_dir'], '/tmp/salttest/pki')
-        # the rest is configured master side
-        self.assertEquals(syndic.opts['master_uri'], 'tcp://127.0.0.1:54506')
-        self.assertEquals(syndic.opts['master_port'], 54506)
-        self.assertEquals(syndic.opts['master_ip'], '127.0.0.1')
-        self.assertEquals(syndic.opts['master'], 'localhost')
-        self.assertEquals(syndic.opts['sock_dir'], '/tmp/salttest/minion_sock')
-        self.assertEquals(syndic.opts['cachedir'], '/tmp/salttest/cachedir')
-        self.assertEquals(syndic.opts['log_file'], '/tmp/salttest/osyndic.log')
-        self.assertEquals(syndic.opts['pidfile'], '/tmp/salttest/osyndic.pid')
-        # Show that the options of localclient that repub to local master
-        # are not merged with syndic ones
-        self.assertEquals(syndic.opts['_master_conf_file'], minion_config_path)
-        self.assertEquals(syndic.opts['_minion_conf_file'], syndic_conf_path)
-
     def test_ping(self):
         '''
         test.ping
