@@ -791,6 +791,12 @@ def is_provider_configured(opts, provider, required_keys=()):
             if opts['providers'][alias][driver].get(key, None) is None:
                 # There's at least one require configuration key which is not
                 # set.
+                log.warn(
+                    'The required {0!r} configuration setting is missing on '
+                    'the {1!r} driver(under the {2!r} alias)'.format(
+                        key, provider, alias
+                    )
+                )
                 return False
         # If we reached this far, there's a properly configured provider,
         # return it!
@@ -808,6 +814,12 @@ def is_provider_configured(opts, provider, required_keys=()):
                 if provider_details.get(key, None) is None:
                     # This provider does not include all necessary keys,
                     # continue to next one
+                    log.warn(
+                        'The required {0!r} configuration setting is missing '
+                        'on the {1!r} driver(under the {2!r} alias)'.format(
+                            key, provider, alias
+                        )
+                    )
                     skip_provider = True
                     break
 
