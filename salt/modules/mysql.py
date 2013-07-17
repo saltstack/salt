@@ -588,15 +588,15 @@ def db_check(name,
     ret = []
     if table is None:
         # we need to check all tables
-        tables = db_tables(name)
+        tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
                 'Checking table \'{0}\' in db \'{1}..\''.format(name, table)
             )
-            ret.append(__check_table(name, table))
+            ret.append(__check_table(name, table, **connection_args))
     else:
         log.info('Checking table \'{0}\' in db \'{1}\'..'.format(name, table))
-        ret = __check_table(name, table)
+        ret = __check_table(name, table, **connection_args)
     return ret
 
 
