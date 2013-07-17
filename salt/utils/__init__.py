@@ -1273,7 +1273,7 @@ def date_cast(date):
       any datetime, time string representation...
     '''
     if date is None:
-        return datetime.now()
+        return datetime.datetime.now()
     elif isinstance(date, datetime.datetime):
         return date
 
