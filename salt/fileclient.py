@@ -622,9 +622,8 @@ class RemoteClient(Client):
                     # This is a 0 byte file on the master
                     with self._cache_loc(data['dest'], env) as cache_dest:
                         dest = cache_dest
-                        if not os.path.exists(cache_dest):
-                            with salt.utils.fopen(cache_dest, 'wb+') as ofile:
-                                ofile.write(data['data'])
+                        with salt.utils.fopen(cache_dest, 'wb+') as ofile:
+                            ofile.write(data['data'])
                 if 'hsum' in data and d_tries < 3:
                     # Master has prompted a file verification, if the
                     # verification fails, redownload the file. Try 3 times
