@@ -17,6 +17,8 @@ A REST API for Salt
         **Required**
 
         The port for the webserver to listen on.
+    host : ``0.0.0.0``
+        The socket interface for the HTTP server to listen on.
     debug : ``False``
         Starts a for-development web server instead of the production-ready web
         server.
