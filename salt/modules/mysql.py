@@ -45,6 +45,8 @@ def __virtual__():
     '''
     if HAS_MYSQLDB:
         return 'mysql'
+    else:
+        log.error("No python module found for mysqldb connections.")
     return False
 
 
