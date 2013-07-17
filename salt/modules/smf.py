@@ -3,6 +3,10 @@ Service support for Solaris 10 and 11, should work with other systems
 that use SMF also. (e.g. SmartOS)
 '''
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 
 def __virtual__():
     '''
@@ -114,7 +118,7 @@ def restart(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name):
+def reload_(name):
     '''
     Reload the named service
 
