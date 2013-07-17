@@ -1298,12 +1298,12 @@ def date_cast(date):
             raise ValueError('Unable to parse {0}'.format(date))
 
         raise RuntimeError('Unable to parse {0}.'
-            ' Consider to install timelib'.format(date))
+            ' Consider installing timelib'.format(date))
 
 
 def date_format(date=None, format="%Y-%m-%d"):
     '''
-    Converts date into a timebased string
+    Converts date into a time-based string
 
     date
       any datetime, time string representation...
