@@ -216,9 +216,10 @@ class FunctionWrapper(dict):
             id_,
             host,
             **kwargs):
+        super(FunctionWrapper, self).__init__()
         self.opts = opts
-        self.kwargs = {'id_', id_,
-                       'host', host}
+        self.kwargs = {'id_': id_,
+                       'host': host}
         self.kwargs.update(kwargs)
 
     def __getitem__(self, cmd):
@@ -247,7 +248,7 @@ class SSHState(salt.state.State):
     def __init__(self, opts, pillar=None, wrapper=None):
         opts['grains'] = wrapper['grains.items']()
         self.wrapper = wrapper
-        super(opts, pillar)
+        super(SSHState, self).__init__(opts, pillar)
 
     def load_modules(self, data=None):
         '''
