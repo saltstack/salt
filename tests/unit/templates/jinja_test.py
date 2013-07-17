@@ -209,7 +209,18 @@ class TestGetTemplate(TestCase):
 
 
 class TestCustomExtensions(TestCase):
-    def test_serialize(self):
+    def test_serialize_json(self):
+        dataset = {
+            "foo": True,
+            "bar": 42,
+            "baz": [1, 2, 3],
+            "qux": 2.0
+        }
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
+        self.assertEquals(dataset, json.loads(rendered))
+
+    def test_serialize_yaml(self):
         dataset = {
             "foo": True,
             "bar": 42,
@@ -220,8 +231,20 @@ class TestCustomExtensions(TestCase):
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         self.assertEquals(dataset, yaml.load(rendered))
 
-        rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
-        self.assertEquals(dataset, json.loads(rendered))
+        rendered = env.from_string(
+                            '{{ dataset|yaml(anchored="foo") }}'
+                        ).render(dataset=dataset)
+        self.assertEquals(dataset, yaml.load(rendered))
+
+        rendered = env.from_string('source: {{ dataset|yaml(anchored="foo") }}\n'
+            'dest: *foo__baz').render(dataset=dataset)
+        self.assertEquals({
+            'source': dataset,
+            'dest': dataset['baz']
+        }, yaml.load(rendered))
+
+        rendered = env.from_string('{{ dataset|yaml(anchored="BAR") }}').render(dataset=dataset)
+        self.assertEquals(rendered, u"&BAR {bar: 42, baz: &BAR__baz [1, 2, 3], foo: true, qux: 2.0}")
 
 
 if __name__ == '__main__':
