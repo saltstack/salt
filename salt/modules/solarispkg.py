@@ -163,7 +163,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def install(name=None, refresh=False, sources=None, **kwargs):
+def install(name=None, sources=None, **kwargs):
     '''
     Install the passed package. Can install packages from the following
     sources::
@@ -263,6 +263,10 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     Note: the ID declaration is ignored, as the package name is read from the
     "sources" parameter.
     '''
+    if salt.utils.is_true(kwargs.get('refresh')):
+        log.warning('\'refresh\' argument not implemented for solarispkg '
+                    'module')
+
     pkg_params, pkg_type = \
         __salt__['pkg_resource.parse_targets'](name,
                                                kwargs.get('pkgs'),
