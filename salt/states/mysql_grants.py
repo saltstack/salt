@@ -50,6 +50,16 @@ def __virtual__():
     return 'mysql_grants' if 'mysql.grant_exists' in __salt__ else False
 
 
+def _get_mysql_error():
+    '''
+    Look in module context for a MySQL error. Eventually we should make a less
+    ugly way of doing this.
+    '''
+    return sys.modules[
+        __salt__['test.ping'].__module__
+    ].__context__.pop('mysql.error', None)
+
+
 def present(name,
             grant=None,
             database=None,
@@ -93,6 +103,12 @@ def present(name,
         grant, database, user, host, grant_option, escape, **connection_args
     ):
         return ret
+    else:
+        err = _get_mysql_error()
+        if err is not None:
+            ret['comment'] = err
+            ret['result'] = False
+            return ret
 
     # The grant is not present, make it!
     if __opts__['test']:
@@ -108,6 +124,9 @@ def present(name,
     else:
         ret['comment'] = 'Failed to execute: "GRANT {0} ON {1} TO {2}@{3}"'
         ret['comment'] = ret['comment'].format(grant, database, user, host)
+        err = _get_mysql_error()
+        if err is not None:
+            ret['comment'] += ' ({0})'.format(err)
         ret['result'] = False
     return ret
 
@@ -143,7 +162,7 @@ def absent(name,
            'result': True,
            'comment': ''}
 
-    #check if db exists and remove it
+    # Check if grant exists, and if so, remove it
     if __salt__['mysql.grant_exists'](
             grant,
             database,
@@ -167,6 +186,22 @@ def absent(name,
             ret['comment'] = 'Grant {0} on {1} for {2}@{3} has been revoked'
             ret['comment'].format(grant, database, user, host)
             ret['changes'][name] = 'Absent'
+            return ret
+        else:
+            err = _get_mysql_error()
+            if err is not None:
+                ret['comment'] = 'Unable to revoke grant {0} on {1} for ' \
+                                 '{2}@{3} ({4})'.format(grant, database,
+                                                        user, host, err)
+                ret['result'] = False
+                return ret
+    else:
+        err = _get_mysql_error()
+        if err is not None:
+            ret['comment'] = 'Unable to determine if grant {0} on {1} for ' \
+                             '{2}@{3} exists ({4})'.format(grant, database,
+                                                           user, host, err)
+            ret['result'] = False
             return ret
 
     # fallback
