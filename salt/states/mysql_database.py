@@ -15,6 +15,8 @@ Databases can be set as either absent or present.
       mysql_database.present
 '''
 
+import sys
+
 
 def __virtual__():
     '''
