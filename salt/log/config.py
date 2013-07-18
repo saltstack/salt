@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.log
-    ~~~~~~~~
+    salt.log.config
+    ~~~~~~~~~~~~~~~
 
     This is where Salt's logging gets set up.
 
