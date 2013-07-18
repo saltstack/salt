@@ -20,7 +20,8 @@ from salt.log.mixins import NewStyleClassMixIn
 
 if sys.version_info < (2, 7):
     # Since the NullHandler is only available on python >= 2.7, here's a copy
-    class NullHandler(logging.Handler):
+    # with NewStyleClassMixIn so it's also a new style class
+    class NullHandler(logging.Handler, NewStyleClassMixIn):
         '''
         This is 1 to 1 copy of python's 2.7 NullHandler
         '''
@@ -36,7 +37,7 @@ if sys.version_info < (2, 7):
     logging.NullHandler = NullHandler
 
 
-class QueueLoggingHandler(logging.NullHandler, NewStyleClassMixIn):
+class QueueLoggingHandler(logging.NullHandler):
 
     def __init__(self, *args, **kwargs):
         self.__max_queue_size = kwargs.pop('max_queue_size', 10000)
