@@ -23,6 +23,9 @@ import urlparse
 import logging
 import logging.handlers
 
+# Import salt libs
+import salt.log.handlers
+
 TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
 
@@ -115,8 +118,8 @@ class QueueLoggingHandler(logging.NullHandler):
             for handler in handlers:
                 handler.handle(record)
 
-# Store a reference to the null logging handler
-LOGGING_NULL_HANDLER = QueueLoggingHandler()
+# Store a reference to the temporary queue logging handler
+LOGGING_NULL_HANDLER = salt.log.handlers.QueueLoggingHandler()
 
 # Store a reference to the temporary console logger
 LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
@@ -320,6 +323,7 @@ def setup_temp_logger(log_level='error'):
     for handler in logging.root.handlers:
         if handler in (LOGGING_NULL_HANDLER, LOGGING_QUEUE_HANDLER):
             continue
+
         if handler.stream is sys.stderr:
             # There's already a logging handler outputting to sys.stderr
             break
