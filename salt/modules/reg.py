@@ -79,27 +79,33 @@ def read_key(hkey, path, key):
         return False
 
 
-def set_key(hkey, path, key, value):
+def set_key(hkey, path, key, value, vtype='REG_DWORD'):
     '''
     Set a registry key
+    vtype: http://docs.python.org/2/library/_winreg.html#value-types
 
     CLI Example::
 
-        salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
+        salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97' REG_DWORD
     '''
     registry = Registry()
     hkey2 = getattr(registry, hkey)
     # fullpath = '\\\\'.join([path, key])
+    
+    try:
+        _type = getattr(_winreg, vtype)
+    except AttributeError:
+        return False
 
     try:
         # handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_ALL_ACCESS)
         handle = _winreg.OpenKey(hkey2, path, 0, _winreg.KEY_ALL_ACCESS)
-        _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
+        _winreg.SetValueEx(handle, key, 0, _type, value)
         _winreg.CloseKey(handle)
         return True
     except Exception:
         handle = _winreg.CreateKey(hkey2, path)
-        _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
+        _winreg.SetValueEx(handle, key, 0, _type, value)
         _winreg.CloseKey(handle)
     return True
 
