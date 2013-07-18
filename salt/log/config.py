@@ -23,11 +23,14 @@ import urlparse
 import logging
 import logging.handlers
 
-# Import salt libs
-import salt.log.handlers
-
+# Let's define these custom logging levels before importing the salt.log.mixins
+# since they will be used there
 TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
+
+# Import salt libs
+from salt.log.handlers import QueueLoggingHandler
+from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
@@ -119,7 +122,7 @@ class QueueLoggingHandler(logging.NullHandler):
                 handler.handle(record)
 
 # Store a reference to the temporary queue logging handler
-LOGGING_NULL_HANDLER = salt.log.handlers.QueueLoggingHandler()
+LOGGING_NULL_HANDLER = QueueLoggingHandler()
 
 # Store a reference to the temporary console logger
 LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
@@ -128,61 +131,7 @@ LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
 LOGGING_QUEUE_HANDLER = QueueLoggingHandler()
 
 
-class LoggingTraceMixIn(object):
-    '''
-    Simple mix-in class to add a trace method to python's logging.
-    '''
-
-    def trace(self, msg, *args, **kwargs):
-        self.log(TRACE, msg, *args, **kwargs)
-
-
-class LoggingGarbageMixIn(object):
-    '''
-    Simple mix-in class to add a garbage method to python's logging.
-    '''
-
-    def garbage(self, msg, *args, **kwargs):
-        self.log(GARBAGE, msg, *args, **kwargs)
-
-
-class LoggingMixInMeta(type):
-    '''
-    This class is called whenever a new instance of ``SaltLoggingClass`` is
-    created.
-
-    What this class does is check if any of the bases have a `trace()` or a
-    `garbage()` method defined, if they don't we add the respective mix-ins to
-    the bases.
-    '''
-    def __new__(mcs, name, bases, attrs):
-        include_trace = include_garbage = True
-        bases = list(bases)
-        if name == 'SaltLoggingClass':
-            for base in bases:
-                if hasattr(base, 'trace'):
-                    include_trace = False
-                if hasattr(base, 'garbage'):
-                    include_garbage = False
-        if include_trace:
-            bases.append(LoggingTraceMixIn)
-        if include_garbage:
-            bases.append(LoggingGarbageMixIn)
-        return super(LoggingMixInMeta, mcs).__new__(
-            mcs, name, tuple(bases), attrs
-        )
-
-
-class _NewStyleClassMixIn(object):
-    '''
-    Simple new style class to make pylint shut up!
-    This is required because SaltLoggingClass can't subclass object directly:
-
-        'Cannot create a consistent method resolution order (MRO) for bases'
-    '''
-
-
-class SaltLoggingClass(LOGGING_LOGGER_CLASS, _NewStyleClassMixIn):
+class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
     __metaclass__ = LoggingMixInMeta
 
     def __new__(cls, *args):
