@@ -9,3 +9,10 @@ REST, Websockets, etc.
 Documentation is available on Read the Docs:
 
 http://salt-api.readthedocs.org/
+
+Run the test suite
+------------------
+
+::
+
+    python -m unittest discover -v
