@@ -960,13 +960,36 @@ class Minion(object):
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+
+        recon_delay = self.opts['recon_default']
+
+        if self.opts['recon_randomize']:
+            recon_delay = randint(self.opts['recon_default'], 
+                                  self.opts['recon_default'] + self.opts['recon_max']
+                          )    
+
+            log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
+                self.opts['recon_default'],
+                self.opts['recon_default'] + self.opts['recon_max'],
+                recon_delay)
+            )    
+
+        log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
+        self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
+
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format( 
+                self.opts['recon_default'] + self.opts['recon_max'])
+            )    
+
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
+
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+
         if hasattr(zmq, 'TCP_KEEPALIVE'):
             self.socket.setsockopt(
                 zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
