@@ -58,6 +58,8 @@ def __virtual__():
 
 def __check_table(name, table, **connection_args):
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = 'CHECK TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(qry))
@@ -69,6 +71,8 @@ def __check_table(name, table, **connection_args):
 
 def __repair_table(name, table, **connection_args):
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = 'REPAIR TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(qry))
@@ -80,6 +84,8 @@ def __repair_table(name, table, **connection_args):
 
 def __optimize_table(name, table, **connection_args):
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return {}
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     qry = 'OPTIMIZE TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(qry))
@@ -183,12 +189,19 @@ def query(database, query, **connection_args):
     conv_iter = iter(orig_conv)
     conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
 
-    ret = {}
     dbc = _connect(**(connection_args.update({
         'connection_db': database, 'connection_conv': conv})))
+    if dbc is not None:
+        return {}
     cur = dbc.cursor()
     start = time.time()
-    affected = cur.execute(query)
+    try:
+        affected = cur.execute(query)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return {}
     log.debug('Using db: ' + database + ' to run query: ' + query)
     results = cur.fetchall()
     elapsed = (time.time() - start)
@@ -196,6 +209,8 @@ def query(database, query, **connection_args):
         elapsed_h = str(round(elapsed * 1000, 1)) + 'ms'
     else:
         elapsed_h = str(round(elapsed, 2)) + 's'
+
+    ret = {}
     ret['query time'] = {'human': elapsed_h, 'raw': str(round(elapsed, 5))}
     if query.upper().strip().startswith("SELECT"):
         ret['rows returned'] = affected
@@ -219,10 +234,21 @@ def status(**connection_args):
 
         salt '*' mysql.status
     '''
-    ret = {}
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return {}
     cur = dbc.cursor()
-    cur.execute('SHOW STATUS')
+    qry = 'SHOW STATUS'
+    log.debug('Doing query: {0}'.format(qry))
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return {}
+
+    ret = {}
     for _ in range(cur.rowcount):
         row = cur.fetchone()
         ret[row[0]] = row[1]
@@ -239,10 +265,23 @@ def version(**connection_args):
         salt '*' mysql.version
     '''
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return ''
     cur = dbc.cursor()
-    cur.execute('SELECT VERSION()')
-    row = cur.fetchone()
-    return row
+    qry = 'SELECT VERSION()'
+    log.debug('Doing query: {0}'.format(qry))
+    try:
+        cur.execute('SELECT VERSION()')
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return ''
+
+    try:
+        return cur.fetchone()[0]
+    except IndexError:
+        return ''
 
 
 def slave_lag(**connection_args):
@@ -250,15 +289,27 @@ def slave_lag(**connection_args):
     Return the number of seconds that a slave SQL server is lagging behind the
     master, if the host is not a slave it will return -1.  If the server is
     configured to be a slave for replication but slave IO is not running then
-    -2 will be returned.
+    -2 will be returned. If there was an error connecting to the database or
+    checking the slave status, -3 will be returned.
 
     CLI Example::
 
         salt '*' mysql.slave_lag
     '''
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return -3
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute('show slave status')
+    qry = 'show slave status'
+    log.debug('Doing query: {0}'.format(qry))
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return -3
+
     results = cur.fetchone()
     if cur.rowcount == 0:
         # Server is not a slave if master is not defined.  Return empty tuple
@@ -323,10 +374,21 @@ def db_list(**connection_args):
 
         salt '*' mysql.db_list
     '''
-    ret = []
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
     cur = dbc.cursor()
-    cur.execute('SHOW DATABASES')
+    qry = 'SHOW DATABASES'
+    log.debug('Doing query: {0}'.format(qry))
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return []
+
+    ret = []
     results = cur.fetchall()
     for dbs in results:
         ret.append(dbs[0])
@@ -347,13 +409,21 @@ def db_tables(name, **connection_args):
         log.info("Database '{0}' does not exist".format(name,))
         return False
 
-    ret = []
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
     cur = dbc.cursor()
     qry = 'SHOW TABLES IN {0}'.format(name)
     log.debug('Doing query: {0}'.format(qry))
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return []
 
-    cur.execute(qry)
+    ret = []
     results = cur.fetchall()
     for table in results:
         ret.append(table[0])
@@ -370,10 +440,18 @@ def db_exists(name, **connection_args):
         salt '*' mysql.db_exists 'dbname'
     '''
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
     cur = dbc.cursor()
     qry = 'SHOW DATABASES LIKE \'{0}\''.format(name)
     log.debug('Doing query: {0}'.format(qry))
-    cur.execute(qry)
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
     cur.fetchall()
     return cur.rowcount == 1
 
@@ -393,12 +471,19 @@ def db_create(name, **connection_args):
 
     # db doesn't exist, proceed
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
     cur = dbc.cursor()
     qry = 'CREATE DATABASE `{0}`;'.format(name)
     log.debug('Query: {0}'.format(qry))
-    if cur.execute(qry):
-        log.info('DB \'{0}\' created'.format(name))
-        return True
+    try:
+        if cur.execute(qry):
+            log.info('DB \'{0}\' created'.format(name))
+            return True
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
     return False
 
 
@@ -421,10 +506,18 @@ def db_remove(name, **connection_args):
 
     # db doesn't exist, proceed
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
     cur = dbc.cursor()
     qry = 'DROP DATABASE `{0}`;'.format(name)
     log.debug('Doing query: {0}'.format(qry))
-    cur.execute(qry)
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
 
     if not db_exists(name, **connection_args):
         log.info('Database \'{0}\' has been removed'.format(name))
@@ -861,13 +954,21 @@ def user_grants(user,
         log.info('User \'{0}\'@\'{1}\' does not exist'.format(user, host))
         return False
 
-    ret = []
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
     cur = dbc.cursor()
     qry = 'SHOW GRANTS FOR \'{0}\'@\'{1}\''.format(user, host)
     log.debug('Doing query: {0}'.format(qry))
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
 
-    cur.execute(qry)
+    ret = []
     results = cur.fetchall()
     for grant in results:
         ret.append(grant[0].split(' IDENTIFIED BY')[0])
@@ -923,11 +1024,19 @@ def grant_add(grant,
     '''
     # todo: validate grant
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
     cur = dbc.cursor()
 
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
     log.debug('Query: {0}'.format(qry))
-    cur.execute(qry)
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
     if grant_exists(
             grant, database, user, host, grant_option, escape,
             **connection_args):
@@ -962,6 +1071,8 @@ def grant_revoke(grant,
     '''
     # todo: validate grant
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
     cur = dbc.cursor()
 
     if grant_option:
@@ -970,7 +1081,14 @@ def grant_revoke(grant,
         grant, database, user, host
     )
     log.debug('Query: {0}'.format(qry))
-    cur.execute(qry)
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
     if not grant_exists(grant, database, user, host, grant_option, escape, **connection_args):
         log.info(
             'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been '
@@ -1008,14 +1126,26 @@ def processlist(**connection_args):
         salt '*' mysql.processlist
 
     '''
-    ret = []
     hdr = ('Id', 'User', 'Host', 'db', 'Command', 'Time', 'State',
            'Info', 'Rows_sent', 'Rows_examined', 'Rows_read')
 
     log.debug('MySQL Process List:\n{0}'.format(processlist(**connection_args)))
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
     cur = dbc.cursor()
-    cur.execute("SHOW FULL PROCESSLIST")
+
+    qry = 'SHOW FULL PROCESSLIST'
+    log.debug('Doing query: {0}'.format(qry))
+    try:
+        cur.execute(qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return []
+
+    ret = []
     for _ in range(cur.rowcount):
         row = cur.fetchone()
         idx_r = {}
