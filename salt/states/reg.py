@@ -23,7 +23,7 @@ def _parse_key(key):
     return hive, path, key
 
 
-def present(name, value):
+def present(name, value, vtype='REG_DWORD'):
     '''
     Set a registry entry
     
@@ -32,6 +32,7 @@ def present(name, value):
         'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':
           reg.present:
             - value: 0.15.3
+            - vtype: REG_SZ
     '''
     
     ret = {'name': name,
@@ -51,7 +52,7 @@ def present(name, value):
         return ret
     
     # configure the key
-    ret['result'] = __salt__['reg.set_key'](hive, path, key, int(value))
+    ret['result'] = __salt__['reg.set_key'](hive, path, key, value, vtype)
     if not ret:
         ret['changes'] = {}
         ret['comment'] = 'could not configure the registry key'
