@@ -356,6 +356,9 @@ class LogLevelMixIn(object):
                 )
             else:
                 self.options.log_level = self._default_logging_level_
+
+        # Setup external loggers right before the last step
+        self._mixin_after_parsed_funcs.append(self.__setup_external_loggers)
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
@@ -512,6 +515,9 @@ class LogLevelMixIn(object):
         )
         for name, level in self.config['log_granular_levels'].items():
             log.set_logger_level(name, level)
+
+    def __setup_external_loggers(self, *args):
+        log.setup_additional_logging_handlers(self.config)
 
     def __setup_console_logger(self, *args):
         # If daemon is set force console logger to quiet

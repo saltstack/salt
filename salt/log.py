@@ -50,6 +50,7 @@ MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)')
 __CONSOLE_CONFIGURED = False
 __LOGFILE_CONFIGURED = False
 __TEMP_LOGGING_CONFIGURED = False
+__EXTERNAL_LOGGERS_CONFIGURED = False
 
 
 def is_console_configured():
@@ -66,6 +67,10 @@ def is_logging_configured():
 
 def is_temp_logging_configured():
     return __TEMP_LOGGING_CONFIGURED
+
+
+def are_additional_logging_handlers_configured():
+    return __EXTERNAL_LOGGERS_CONFIGURED
 
 
 if sys.version_info < (2, 7):
@@ -86,11 +91,38 @@ if sys.version_info < (2, 7):
     logging.NullHandler = NullHandler
 
 
+class QueueLoggingHandler(logging.NullHandler):
+
+    def __init__(self, *args, **kwargs):
+        self.__max_queue_size = kwargs.pop('max_queue_size', 10000)
+        super(QueueLoggingHandler, self).__init__(*args, **kwargs)
+        self.__messages = []
+
+    def handle(self, record):
+        self.acquire()
+        if len(self.__messages) >= self.__max_queue_size:
+            # Loose the initial log records
+            self.__messages.pop(0)
+        self.__messages.append(record)
+        self.release()
+
+    def sync_with_handlers(self, handlers=()):
+        if not handlers:
+            return
+
+        while self.__messages:
+            record = self.__messages.pop(0)
+            for handler in handlers:
+                handler.handle(record)
+
 # Store a reference to the null logging handler
-LOGGING_NULL_HANDLER = logging.NullHandler()
+LOGGING_NULL_HANDLER = QueueLoggingHandler()
 
 # Store a reference to the temporary console logger
 LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
+
+# Store a reference to the queue logging handler
+LOGGING_QUEUE_HANDLER = QueueLoggingHandler()
 
 
 class LoggingTraceMixIn(object):
@@ -169,7 +201,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, _NewStyleClassMixIn):
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
-                if handler is LOGGING_NULL_HANDLER:
+                if handler in (LOGGING_NULL_HANDLER, LOGGING_QUEUE_HANDLER):
                     continue
 
                 if not handler.lock:
@@ -253,6 +285,10 @@ if logging.getLoggerClass() is not SaltLoggingClass:
         #   No handlers could be found for logger 'foo'
         logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
 
+    # Add the queue logging handler so we can later sync all message records
+    # with the additional logging handlers
+    logging.getLogger().addHandler(LOGGING_QUEUE_HANDLER)
+
 
 def getLogger(name):  # pylint: disable=C0103
     '''
@@ -275,9 +311,6 @@ def setup_temp_logger(log_level='error'):
         )
         return
 
-    # Remove the temporary null logging handler
-    __remove_null_logging_handler()
-
     if log_level is None:
         log_level = 'warning'
 
@@ -285,6 +318,8 @@ def setup_temp_logger(log_level='error'):
 
     handler = None
     for handler in logging.root.handlers:
+        if handler in (LOGGING_NULL_HANDLER, LOGGING_QUEUE_HANDLER):
+            continue
         if handler.stream is sys.stderr:
             # There's already a logging handler outputting to sys.stderr
             break
@@ -298,6 +333,11 @@ def setup_temp_logger(log_level='error'):
     )
     handler.setFormatter(formatter)
     logging.getLogger().addHandler(handler)
+
+    # Sync the null logging handler messages with the temporary handler
+    LOGGING_NULL_HANDLER.sync_with_handlers([handler])
+    # Remove the temporary null logging handler
+    __remove_null_logging_handler()
 
     global __TEMP_LOGGING_CONFIGURED
     __TEMP_LOGGING_CONFIGURED = True
@@ -321,6 +361,8 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     handler = None
     for handler in logging.root.handlers:
+        if handler is LOGGING_QUEUE_HANDLER:
+            continue
         if handler.stream is sys.stderr:
             # There's already a logging handler outputting to sys.stderr
             break
@@ -505,6 +547,65 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     __LOGFILE_CONFIGURED = True
 
 
+def setup_additional_logging_handlers(opts):
+    '''
+    Setup any additional logging handlers, internal or external
+    '''
+    if are_additional_logging_handlers_configured() is True:
+        # Don't re-configure external loggers
+        return
+
+    # Explicit late import of salt's loader
+    import salt.loader
+
+    # Let's keep a reference to the current logging handlers
+    current_handlers = logging.getLogger().handlers[:]
+
+    # Load any additional logging handlers
+    providers = salt.loader.log_handlers(opts)
+
+    for name, get_handlers_func in providers.iteritems():
+        handlers = get_handlers_func()
+        if not isinstance(handlers, (list, tuple)):
+            handlers = [handlers]
+
+        for handler in handlers:
+            if not handler:
+                logging.getLogger(__name__).warn(
+                    'The `salt.log_handlers.{0}`, did not return any '
+                    'logging handlers.'.format(name)
+                    #The handler(s) might have been added '
+                    #'right on the module. The queued log records won\'t be '
+                    #'synchronized on those handlers.'.format(name)
+                    #)
+                )
+                continue
+
+            logging.getLogger(__name__).debug(
+                'Adding the {0!r} provided logging handler: {1!r}'.format(
+                    name, handler
+                )
+            )
+            logging.getLogger().addHandler(handler)
+
+
+    # Let's get a reference to the newly added logging handlers
+    external_handlers = []
+    for handler in logging.getLogger().handlers:
+        if handler in current_handlers:
+            continue
+        external_handlers.extend(list(handlers))
+
+    if external_handlers:
+        # Sync the null logging handler messages with the temporary handler
+        LOGGING_QUEUE_HANDLER.sync_with_handlers(external_handlers)
+    # Remove the temporary queue logging handler
+    __remove_queue_logging_handler()
+
+    global __EXTERNAL_LOGGERS_CONFIGURED
+    __EXTERNAL_LOGGERS_CONFIGURED = True
+
+
 def set_logger_level(logger_name, log_level='error'):
     '''
     Tweak a specific logger's logging level
@@ -531,6 +632,22 @@ def __remove_null_logging_handler():
             root_logger.removeHandler(LOGGING_NULL_HANDLER)
             # Redefine the null handler to None so it can be garbage collected
             LOGGING_NULL_HANDLER = None
+            break
+
+
+def __remove_queue_logging_handler():
+    '''
+    This function will run once the additional loggers have been synchronized.
+    It just removes the QueueLoggingHandler from the logging handlers.
+    '''
+    root_logger = logging.getLogger()
+    global LOGGING_QUEUE_HANDLER
+
+    for handler in root_logger.handlers:
+        if handler is LOGGING_QUEUE_HANDLER:
+            root_logger.removeHandler(LOGGING_QUEUE_HANDLER)
+            # Redefine the null handler to None so it can be garbage collected
+            LOGGING_QUEUE_HANDLER = None
             break
 
 

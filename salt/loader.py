@@ -219,6 +219,14 @@ def search(opts, returners, whitelist=None):
     return load.gen_functions(pack, whitelist=whitelist)
 
 
+def log_handlers(opts):
+    '''
+    Returns the custom logging handler setup modules
+    '''
+    load = _create_loader(opts, 'log_handlers', 'loghandlers')
+    return load.filter_func('get_handlers')
+
+
 def render(opts, functions):
     '''
     Returns the render modules
