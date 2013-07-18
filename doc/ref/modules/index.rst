@@ -12,10 +12,9 @@ Modules Are Easy to Write!
 ==========================
 
 Salt modules are amazingly simple to write. Just write a regular Python module
-or a regular `Cython`_ module and place it in the ``salt/modules`` directory.
-You can also place them in a directory called ``_modules/`` within the
-:conf_master:`file_roots` specified by the master config file, and they will be
-synced to the minions when :mod:`state.highstate
+or a regular `Cython`_ module and place it a directory called ``_modules/``
+within the :conf_master:`file_roots` specified by the master config file, and
+they will be synced to the minions when :mod:`state.highstate
 <salt.modules.state.highstate>` is run, or by executing the
 :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
