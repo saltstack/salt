@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Jul  5 21:24:21 UTC 2013 - aboe76@gmail.com
+
+- Updated init files, rc_status instead of rc status.
+
+-------------------------------------------------------------------
 Tue Jul  2 04:55:21 UTC 2013 - aboe76@gmail.com
 
 - Update to salt 0.16.0 final
