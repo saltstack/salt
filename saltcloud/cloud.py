@@ -988,6 +988,19 @@ class Map(Cloud):
                             )
                         )
                         overrides[setting] = overrides.pop(deprecated)
+
+                # merge minion grains from map file
+                if 'minion' in overrides:
+                    if 'grains' in overrides['minion']:
+                        if 'grains' in nodedata['minion']:
+                            nodedata['minion']['grains'].update(
+                                overrides['minion']['grains']
+                            )
+                            del(overrides['minion']['grains'])
+                            # remove minion key if now is empty dict
+                            if len(overrides['minion']) == 0:
+                                del(overrides['minion'])
+
                 nodedata.update(overrides)
                 # Add the computed information to the return data
                 ret['create'][nodename] = nodedata
