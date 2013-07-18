@@ -23,6 +23,16 @@ def __virtual__():
     return 'mysql_database' if 'mysql.db_exists' in __salt__ else False
 
 
+def _get_mysql_error():
+    '''
+    Look in module context for a MySQL error. Eventually we should make a less
+    ugly way of doing this.
+    '''
+    return sys.modules[
+        __salt__['test.ping'].__module__
+    ].__context__.pop('mysql.error', None)
+
+
 def present(name, **connection_args):
     '''
     Ensure that the named database is present with the specified properties
@@ -37,6 +47,12 @@ def present(name, **connection_args):
     # check if database exists
     if __salt__['mysql.db_exists'](name, **connection_args):
         return ret
+    else:
+        err = _get_mysql_error()
+        if err is not None:
+            ret['comment'] = err
+            ret['result'] = False
+            return ret
 
     if __opts__['test']:
         ret['result'] = None
@@ -49,6 +65,9 @@ def present(name, **connection_args):
         ret['changes'][name] = 'Present'
     else:
         ret['comment'] = 'Failed to create database {0}'.format(name)
+        err = _get_mysql_error()
+        if err is not None:
+            ret['comment'] += ' ({0})'.format(err)
         ret['result'] = False
 
     return ret
@@ -70,12 +89,25 @@ def absent(name, **connection_args):
     if __salt__['mysql.db_exists'](name, **connection_args):
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('Database {0} is present and needs to be removed'
-                    ).format(name)
+            ret['comment'] = \
+                'Database {0} is present and needs to be removed'.format(name)
             return ret
         if __salt__['mysql.db_remove'](name, **connection_args):
             ret['comment'] = 'Database {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
+            return ret
+        else:
+            err = _get_mysql_error()
+            if err is not None:
+                ret['comment'] = 'Unable to remove database {0} ' \
+                                 '({1})'.format(name, err)
+                ret['result'] = False
+                return ret
+    else:
+        err = _get_mysql_error()
+        if err is not None:
+            ret['comment'] = err
+            ret['result'] = False
             return ret
 
     # fallback
