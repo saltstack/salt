@@ -42,6 +42,8 @@ specification as defined in the MySQL documentation:
        - user: joe
 '''
 
+import sys
+
 
 def __virtual__():
     '''
