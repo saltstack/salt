@@ -7,8 +7,9 @@ printed
 import salt.utils
 
 UNICODE_TRANS = {
-    0xA0: u' ',             # Convert non-breaking space to space
-    u'\xe2\x80\x93': u'-',  # Convert en dash to dash
+    0xA0:           u' ',   # Convert non-breaking space to space
+    '\xe2\x80\x93': u'-',   # Convert en dash to dash
+    u'\u2013':      u'-',   # Convert en dash to dash
 }
 
 
