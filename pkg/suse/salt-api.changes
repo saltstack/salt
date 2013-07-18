@@ -1,4 +1,15 @@
 -------------------------------------------------------------------
+Thu Jul 18 04:46:39 UTC 2013 - aboe76@gmail.com
+
+- Update package to 0.8.2
+- Backward incompatible needs salt 0.15.9 or greater
+- Changes to rest_cherrypy:
+	- Fixed issue #87 which caused the Salt master's PID file to be overwritten.
+	- Fixed an inconsistency with the return format for the /minions convenience URL.
+	- Added a dedicated URL for serving an HTML app
+	- Added dedicated URL for serving static media
+
+-------------------------------------------------------------------
 Sun May 12 20:18:57 UTC 2013 - aboe76@gmail.com
 
 - Updated package spec, for systemd unit files

@@ -16,7 +16,7 @@
 #
 
 Name:           salt-api
-Version:        0.8.1
+Version:        0.8.2
 Release:        1%{?dist}
 License:        Apache-2.0
 Summary:        The api for Salt a parallel remote execution system
@@ -35,7 +35,7 @@ BuildArch:      noarch
 
 BuildRequires:  fdupes
 BuildRequires:  python-devel
-BuildRequires:	salt
+BuildRequires:	salt >= 0.15.9
 BuildRequires:	salt-master
 
 Requires:       salt
