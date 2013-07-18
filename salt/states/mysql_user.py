@@ -241,6 +241,7 @@ def absent(name,
             ret['changes'][name] = 'Absent'
             return ret
         else:
+            err = _get_mysql_error()
             if err is not None:
                 ret['comment'] = err
                 ret['result'] = False
