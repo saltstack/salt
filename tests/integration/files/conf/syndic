@@ -1,3 +1,4 @@
+include: master
 # syndic basic config
 # same config as master ./except the syndic bits
 # in the TestCase we add at the top of the configfile the content of ./master
