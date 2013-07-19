@@ -20,11 +20,18 @@ which makes use of the jinja templating system would look like this:
         - group: root
         - mode: 644
         - template: jinja
-        - context:
-            custom_var: "override"
         - defaults:
             custom_var: "default value"
             other_var: 123
+    {% if grains['os'] = 'Ubuntu' %}
+        - context:
+            custom_var: "override"
+    {% endif %}
+
+If using a template, any user-defined template variables in the file defined in
+``source`` must be passed in using the ``defaults`` and/or ``context``
+arguments. The general best practice is to place default values in
+``defaults``, with conditional overrides going into ``context``, as seen above.
 
 The ``source`` parameter can be specified as a list. If this is done, then the
 first file to be matched will be the one that is used. This allows you to have
@@ -2203,8 +2210,8 @@ def serialize(name,
     return __salt__['file.manage_file'](name=name,
                                         sfn='',
                                         ret=ret,
-                                        source = None,
-                                        source_sum = {},
+                                        source=None,
+                                        source_sum={},
                                         user=user,
                                         group=group,
                                         mode=mode,

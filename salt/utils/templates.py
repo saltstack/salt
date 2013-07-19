@@ -139,6 +139,11 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 traceback.extract_tb(sys.exc_info()[2])[-1][1]
         )
         raise SaltTemplateRenderError(error)
+    except jinja2.exceptions.UndefinedError:
+        error = 'Undefined jinja variable; line {0} in template'.format(
+                traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        )
+        raise SaltTemplateRenderError(error)
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
