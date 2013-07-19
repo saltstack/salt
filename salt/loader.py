@@ -25,6 +25,7 @@ def _create_loader(
         opts,
         ext_type,
         tag,
+        int_type=None,
         ext_dirs=True,
         ext_type_dirs=None,
         base_path=None,
@@ -39,10 +40,7 @@ def _create_loader(
         extension types,
         base types.
     '''
-    if base_path:
-        sys_types = os.path.join(base_path, ext_type)
-    else:
-        sys_types = os.path.join(SALT_BASE_PATH, ext_type)
+    sys_types = os.path.join(base_path or SALT_BASE_PATH, int_type or ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
 
     ext_type_types = []
