@@ -186,13 +186,12 @@ class SerializerExtension(Extension, object):
 
     .. code-block:: jinja
 
-        {% load "state1.sls" as state1 %}
-        {% load_yaml "state2.sls" as state2 %}
-        {% load_json "state3.sls" as state3 %}
+        {% import_yaml "state2.sls" as state2 %}
+        {% import_json "state3.sls" as state3 %}
 
     '''
 
-    tags = set(['load', 'load_yaml', 'load_json'])
+    tags = set(['import_yaml', 'import_json'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -234,9 +233,9 @@ class SerializerExtension(Extension, object):
             raise TemplateRuntimeError("Unable to load json from {}".format(value))
 
     def parse(self, parser):
-        if parser.stream.current.value in ("load", "load_yaml"):
+        if parser.stream.current.value == "import_yaml":
             return self.parse_yaml(parser)
-        elif parser.stream.current.value == "load_json":
+        elif parser.stream.current.value == "import_json":
             return self.parse_json(parser)
 
         parser.fail('Unknown format ' + parser.stream.current.value,

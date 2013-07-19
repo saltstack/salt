@@ -281,20 +281,20 @@ class TestCustomExtensions(TestCase):
     def test_load_yaml_template(self):
         loader = DictLoader({'foo': '{bar: "my god is blue", foo: [1, 2, 3]}'})
         env = Environment(extensions=[SerializerExtension], loader=loader)
-        rendered = env.from_string('{% load "foo" as doc %}{{ doc.bar }}').render()
+        rendered = env.from_string('{% import_yaml "foo" as doc %}{{ doc.bar }}').render()
         self.assertEquals(rendered, u"my god is blue")
 
         with self.assertRaises(exceptions.TemplateNotFound):
-            env.from_string('{% load "does not exists" as doc %}').render()
+            env.from_string('{% import_yaml "does not exists" as doc %}').render()
 
     def test_load_json_template(self):
         loader = DictLoader({'foo': '{"bar": "my god is blue", "foo": [1, 2, 3]}'})
         env = Environment(extensions=[SerializerExtension], loader=loader)
-        rendered = env.from_string('{% load_json "foo" as doc %}{{ doc.bar }}').render()
+        rendered = env.from_string('{% import_json "foo" as doc %}{{ doc.bar }}').render()
         self.assertEquals(rendered, u"my god is blue")
 
         with self.assertRaises(exceptions.TemplateNotFound):
-            env.from_string('{% load "does not exists" as doc %}').render()
+            env.from_string('{% import_json "does not exists" as doc %}').render()
 
 
 if __name__ == '__main__':
