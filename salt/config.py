@@ -555,33 +555,54 @@ def syndic_config(master_config_path,
                   minion_config_path,
                   master_env_var='SALT_MASTER_CONFIG',
                   minion_env_var='SALT_MINION_CONFIG',
-                  defaults=None,
-                  **kwargs):
+                  minion_defaults=None,
+                  master_defaults=None):
+
+    if minion_defaults is None:
+        minion_defaults = DEFAULT_MINION_OPTS
+
+    if master_defaults is None:
+        master_defaults = DEFAULT_MASTER_OPTS
+
     opts = {}
-    master_opts = master_config(master_config_path, master_env_var)
-    minion_opts = minion_config(minion_config_path, minion_env_var)
+    master_opts = master_config(
+        master_config_path, master_env_var, master_defaults
+    )
+    minion_opts = minion_config(
+        minion_config_path, minion_env_var, minion_defaults
+    )
     opts['_minion_conf_file'] = master_opts['conf_file']
     opts['_master_conf_file'] = minion_opts['conf_file']
     opts.update(master_opts)
     opts.update(minion_opts)
     syndic_opts = {
         'root_dir': opts.get('root_dir', '/'),
-        'pidfile': opts.get(
-            'syndic_pidfile',
-            'salt-syndic.pid'),
-        'log_file': opts.get( 'syndic_log_file', 'salt-syndic.log'),
+        'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
+        'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
         'id': minion_opts['id'],
         'pki_dir': minion_opts['pki_dir'],
         'master': opts['syndic_master'],
         'master_port': int(
             opts.get(
+                # The user has explicitly defined the syndic master port
                 'syndic_master_port',
-                opts.get('master_port', None))),
+                opts.get(
+                    # No syndic_master_port, grab master_port from opts
+                    'master_port',
+                    # No master_opts, grab from the provided minion defaults
+                    minion_defaults.get(
+                        'master_port',
+                        # Not on the provided minion defaults, load from the
+                        # static minion defaults
+                        DEFAULT_MINION_OPTS['master_port']
+                    )
+                )
+            )
+        ),
         'user': opts.get('syndic_user', opts['user']),
         'sock_dir': os.path.join(
-            opts['cachedir'],
-            opts.get('syndic_sock_dir',
-                     opts['sock_dir'])),
+            opts['cachedir'], opts.get('syndic_sock_dir', opts['sock_dir'])
+        ),
     }
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
@@ -617,35 +638,35 @@ def get_id():
     # Can /etc/hosts help us?
     try:
         # TODO Add Windows host file support
-        with salt.utils.fopen('/etc/hosts') as f:
-            line = f.readline()
+        with salt.utils.fopen('/etc/hosts') as hfl:
+            line = hfl.readline()
             while line:
                 names = line.split()
-                ip = names.pop(0)
-                if ip.startswith('127.'):
+                ip_ = names.pop(0)
+                if ip_.startswith('127.'):
                     for name in names:
                         if name != 'localhost':
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
                             return name, False
-                line = f.readline()
+                line = hfl.readline()
     except Exception:
         pass
 
     # What IP addresses do we have?
-    ip_addresses = [salt.utils.network.IPv4Address(a) for a
+    ip_addresses = [salt.utils.network.IPv4Address(addr) for addr
                     in salt.utils.network.ip_addrs(include_loopback=True)
-                    if not a.startswith('127.')]
+                    if not addr.startswith('127.')]
 
-    for a in ip_addresses:
-        if not a.is_private:
-            log.info('Using public ip address for id: {0}'.format(a))
-            return str(a), True
+    for addr in ip_addresses:
+        if not addr.is_private:
+            log.info('Using public ip address for id: {0}'.format(addr))
+            return str(addr), True
 
     if ip_addresses:
-        a = ip_addresses.pop(0)
-        log.info('Using private ip address for id: {0}'.format(a))
-        return str(a), True
+        addr = ip_addresses.pop(0)
+        log.info('Using private ip address for id: {0}'.format(addr))
+        return str(addr), True
 
     log.error('No id found, falling back to localhost')
     return 'localhost', False
