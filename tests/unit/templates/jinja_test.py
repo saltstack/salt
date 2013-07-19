@@ -231,12 +231,6 @@ class TestCustomExtensions(TestCase):
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         self.assertEquals(dataset, yaml.load(rendered))
 
-
-        rendered = env.from_string(
-                            '{{ dataset|yaml(anchored="foo") }}'
-                        ).render(dataset=dataset)
-        self.assertEquals(dataset, yaml.load(rendered))
-
     def test_load_yaml(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = "{foo: it works}"|load_yaml %}{{ document.foo }}').render()

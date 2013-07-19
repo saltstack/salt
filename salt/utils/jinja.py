@@ -128,43 +128,6 @@ class SerializerExtension(Extension, object):
         yaml = {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
 
-
-    YAML filter accepts an anchored param, in order to anchors
-    the whole document. For example:
-
-    .. code-block:: jinja
-
-        defaults: {{ data|yaml(anchored("FOO")) }}
-        development:
-            <<: *FOO
-            is it nice?: yes
-
-    will be rendered has::
-
-        defaults = &FOO {bar: 42, baz: &FOO__baz [1, 2, 3]}
-        development:
-            <<: *FOO
-            is it nice?: yes
-
-    and exposed to salt machinery as:
-
-    .. code-block:: python
-        states = {
-            'defaults': {
-                'foo': True,
-                'bar': 42,
-                'baz': [1, 2, 3],
-                'qux': 2.0
-            },
-            'development': {
-                'foo': True,
-                'bar': 42,
-                'baz': [1, 2, 3],
-                'qux': 2.0,
-                'is it nice?': yes
-            },
-        }
-
     Load filters
     ~~~~~~~~~~~~
 
@@ -201,10 +164,10 @@ class SerializerExtension(Extension, object):
             'load_json': self.load_json
         })
 
-    def format_json(self, value, *args, **kwargs):
+    def format_json(self, value):
         return Markup(json.dumps(value, sort_keys=True).strip())
 
-    def format_yaml(self, value, anchored=False, *args, **kwargs):
+    def format_yaml(self, value):
         return Markup(yaml.dump(value, default_flow_style=True).strip())
 
     def load_yaml(self, value):
