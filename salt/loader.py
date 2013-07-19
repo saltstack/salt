@@ -357,8 +357,6 @@ class Loader(object):
         self.module_dirs = module_dirs
         if opts is None:
             opts = {}
-        if '_' in tag:
-            raise LoaderError('Cannot tag loader with an "_"')
         self.tag = tag
         if 'grains' in opts:
             self.grains = opts['grains']
