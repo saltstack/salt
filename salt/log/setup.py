@@ -79,48 +79,6 @@ def are_additional_logging_handlers_configured():
     return __EXTERNAL_LOGGERS_CONFIGURED
 
 
-if sys.version_info < (2, 7):
-    # Since the NullHandler is only available on python >= 2.7, here's a copy
-    class NullHandler(logging.Handler):
-        '''
-        This is 1 to 1 copy of python's 2.7 NullHandler
-        '''
-        def handle(self, record):
-            pass
-
-        def emit(self, record):
-            pass
-
-        def createLock(self):  # pylint: disable=C0103
-            self.lock = None
-
-    logging.NullHandler = NullHandler
-
-
-class QueueLoggingHandler(logging.NullHandler):
-
-    def __init__(self, *args, **kwargs):
-        self.__max_queue_size = kwargs.pop('max_queue_size', 10000)
-        super(QueueLoggingHandler, self).__init__(*args, **kwargs)
-        self.__messages = []
-
-    def handle(self, record):
-        self.acquire()
-        if len(self.__messages) >= self.__max_queue_size:
-            # Loose the initial log records
-            self.__messages.pop(0)
-        self.__messages.append(record)
-        self.release()
-
-    def sync_with_handlers(self, handlers=()):
-        if not handlers:
-            return
-
-        while self.__messages:
-            record = self.__messages.pop(0)
-            for handler in handlers:
-                handler.handle(record)
-
 # Store a reference to the temporary queue logging handler
 LOGGING_NULL_HANDLER = QueueLoggingHandler()
 
