@@ -6,11 +6,6 @@ printed
 # Import Salt libs
 import salt.utils
 
-UNICODE_TRANS = {
-    0xA0: u' ',             # Convert non-breaking space to space
-    u'\xe2\x80\x93': u'-',  # Convert en dash to dash
-}
-
 
 def output(data):
     '''
@@ -24,10 +19,9 @@ def output(data):
             '{0}{1}{2}'.format(colors['GREEN'], top_key, colors['ENDC'])
         )
         for sec_key in sorted(data[top_key]):
-            newval = unicode(sec_key).translate(UNICODE_TRANS)
             ret.append('  {0}{1}{2}'.format(
                 colors['YELLOW'],
-                newval.encode('ascii', 'ignore'),
+                sec_key.encode('ascii', 'salt-cloud-force-ascii'),
                 colors['ENDC'])
             )
             tval = data[top_key][sec_key]
@@ -47,11 +41,10 @@ def output(data):
                         colors['ENDC'])
                     )
                     for ekey in sorted(val):
-                        newval = unicode(val[ekey]).translate(UNICODE_TRANS)
                         ret.append('      {0}{1}: {2}{3}'.format(
                             colors['LIGHT_GREEN'],
                             ekey,
-                            newval.encode('ascii', 'ignore'),
+                            ekey.encode('ascii', 'salt-cloud-force-ascii'),
                             colors['ENDC'])
                         )
     return '\n'.join(ret)

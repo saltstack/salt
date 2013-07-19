@@ -6,6 +6,7 @@ Utility functions for saltcloud
 import os
 import pwd
 import sys
+import codecs
 import shutil
 import socket
 import tempfile
@@ -1045,3 +1046,21 @@ class CloudProviderContext(object):
         # Reset to previous value
         mod = sys.modules[self.__function.__module__]
         mod.__active_provider_name__ = self.__default
+
+
+def salt_cloud_force_ascii(exc):
+    if not isinstance(exc, (UnicodeEncodeError, UnicodeTranslateError)):
+        raise TypeError('Can\'t handle {0}'.format(exc))
+
+    unicode_trans = {
+        u'\xa0':    u' ',   # Convert non-breaking space to space
+        u'\u2013':  u'-',   # Convert en dash to dash
+    }
+
+    if exc.object[exc.start:exc.end] in unicode_trans:
+        return unicode_trans[exc.object[exc.start:exc.end]], exc.end
+
+    # There's nothing else we can do, raise the exception
+    raise exc
+
+codecs.register_error('salt-cloud-force-ascii', salt_cloud_force_ascii)

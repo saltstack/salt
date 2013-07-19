@@ -21,6 +21,7 @@ from libcloud.compute.deployment import (
 
 
 # Import salt libs
+import salt._compat
 import salt.utils.event
 
 # Import salt cloud libs
@@ -154,10 +155,22 @@ def get_location(conn, vm_):
     Return the location object to use
     '''
     locations = conn.list_locations()
-    vm_location = config.get_config_value('location', vm_, __opts__)
+    vm_location = config.get_config_value('location', vm_, __opts__).encode(
+        'ascii', 'salt-cloud-force-ascii'
+    )
 
     for img in locations:
-        if vm_location and str(vm_location) in (str(img.id), str(img.name)):
+        if isinstance(img.id, salt._compat.string_types):
+            img_id = img.id.encode('ascii', 'salt-cloud-force-ascii')
+        else:
+            img_id = str(img.id)
+
+        if isinstance(img.name, salt._compat.string_types):
+            img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
+        else:
+            img_name = str(img.name)
+
+        if vm_location and vm_location in (img_id, img_name):
             return img
 
     raise SaltCloudNotFound('The specified location could not be found.')
@@ -169,10 +182,22 @@ def get_image(conn, vm_):
     '''
     images = conn.list_images()
 
-    vm_image = config.get_config_value('image', vm_, __opts__)
+    vm_image = config.get_config_value('image', vm_, __opts__).encode(
+        'ascii', 'salt-cloud-force-ascii'
+    )
 
     for img in images:
-        if vm_image and str(vm_image) in (str(img.id), str(img.name)):
+        if isinstance(img.id, salt._compat.string_types):
+            img_id = img.id.encode('ascii', 'salt-cloud-force-ascii')
+        else:
+            img_id = str(img.id)
+
+        if isinstance(img.name, salt._compat.string_types):
+            img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
+        else:
+            img_name = str(img.name)
+
+        if vm_image and vm_image in (img_id, img_name):
             return img
 
     raise SaltCloudNotFound('The specified image could not be found.')
