@@ -641,7 +641,7 @@ def script(name,
         # Wow, we passed the test, run this sucker!
         try:
             cmd_all = __salt__['cmd.script'](source, **cmd_kwargs)
-        except CommandExecutionError as err:
+        except (CommandExecutionError, IOError) as err:
             ret['comment'] = str(err)
             return ret
 
@@ -650,7 +650,11 @@ def script(name,
             ret['result'] = not bool(cmd_all)
         else:
             ret['result'] = not bool(cmd_all['retcode'])
-        ret['comment'] = 'Command "{0}" run'.format(name)
+        if ret.get('changes', {}).get('cache_error'):
+            ret['comment'] = 'Unable to cache script {0} from env ' \
+                             '\'{1}\''.format(source, env)
+        else:
+            ret['comment'] = 'Command "{0}" run'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     finally:
