@@ -588,13 +588,13 @@ def syndic_config(master_config_path,
                 'syndic_master_port',
                 opts.get(
                     # No syndic_master_port, grab master_port from opts
-                    'master_port', master_defaults.get(
-                        # No master_opts, grab from the provided master
-                        # defaults
+                    'master_port',
+                    # No master_opts, grab from the provided minion defaults
+                    minion_defaults.get(
                         'master_port',
-                        # No on the provided master defaults, load from the
-                        # static master defaults
-                        DEFAULT_MASTER_OPTS['master_port']
+                        # Not on the provided minion defaults, load from the
+                        # static minion defaults
+                        DEFAULT_MINION_OPTS['master_port']
                     )
                 )
             )
