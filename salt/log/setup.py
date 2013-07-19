@@ -75,7 +75,7 @@ def is_temp_logging_configured():
     return __TEMP_LOGGING_CONFIGURED
 
 
-def are_additional_logging_handlers_configured():
+def is_extended_logging_configured():
     return __EXTERNAL_LOGGERS_CONFIGURED
 
 
@@ -111,7 +111,9 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
-                if handler in (LOGGING_NULL_HANDLER, LOGGING_QUEUE_HANDLER):
+                if handler in (LOGGING_NULL_HANDLER,
+                               LOGGING_QUEUE_HANDLER,
+                               LOGGING_TEMP_HANDLER):
                     continue
 
                 if not handler.lock:
@@ -458,11 +460,11 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     __LOGFILE_CONFIGURED = True
 
 
-def setup_additional_logging_handlers(opts):
+def setup_extended_logging(opts):
     '''
     Setup any additional logging handlers, internal or external
     '''
-    if are_additional_logging_handlers_configured() is True:
+    if is_extended_logging_configured() is True:
         # Don't re-configure external loggers
         return
 
@@ -498,7 +500,6 @@ def setup_additional_logging_handlers(opts):
                 )
             )
             logging.getLogger().addHandler(handler)
-
 
     # Let's get a reference to the newly added logging handlers
     external_handlers = []
