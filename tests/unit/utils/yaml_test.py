@@ -76,26 +76,26 @@ class YAMLTestCase(TestCase):
         self.assertEquals(result, {'foo': {'bar': 'qux'}})
 
         # duplicates anchors
-        with self.assertRaises(yaml.composer.ComposerError):
-            result = yaml.load(anchor_1 + anchor_1)
+        with self.assertRaises(Exception):
+            result = yaml.load('- ' + anchor_1 + '\n- ' + anchor_1)
 
         # duplicates anchors
-        with self.assertRaises(yaml.composer.ComposerError):
+        with self.assertRaises(Exception):
             result = yaml.load(anchor_2 + anchor_2)
 
         anchor_3 = anchored_dump(document, top_anchor=top_anchor1, include_document=True)
         result = yaml.load(anchor_3)
 
         # mix of nested and extended flow styles
-        with self.assertRaises(yaml.scanner.ScannerError):
+        with self.assertRaises(Exception):
             result = yaml.load(anchor_1 + anchor_3)
 
         # mix of nested and extended flow styles
-        with self.assertRaises(yaml.parser.ParserError):
+        with self.assertRaises(Exception):
             result = yaml.load(anchor_3 + anchor_1)
 
         # mix of 2 nested flow styles
-        with self.assertRaises(yaml.parser.ParserError):
+        with self.assertRaises(Exception):
             result = yaml.load(anchor_3 + anchor_3)
 
 if __name__ == '__main__':

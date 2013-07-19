@@ -1,10 +1,3 @@
-"""
-Literature
-- http://www.kuwata-lab.com/kwalify/ruby/users-guide.02.html
-- http://yaml.org/type/value.html
-- http://www.kuwata-lab.com/kwalify/ruby/users-guide.02.html
-"""
-
 from yaml import Dumper, dump_all
 from collections import defaultdict
 
