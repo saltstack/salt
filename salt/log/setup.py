@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.log.config
-    ~~~~~~~~~~~~~~~
+    salt.log.setup
+    ~~~~~~~~~~~~~~
 
     This is where Salt's logging gets set up.
 
@@ -134,7 +134,7 @@ LOGGING_QUEUE_HANDLER = QueueLoggingHandler()
 class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
     __metaclass__ = LoggingMixInMeta
 
-    def __new__(cls, *args):
+    def __new__(cls, *args):  # pylint: disable=W0613
         '''
         We override `__new__` in our logging logger class in order to provide
         some additional features like expand the module name padding if length

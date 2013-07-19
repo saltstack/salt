@@ -12,9 +12,9 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
-# Import severals classes/functions from salt.log.config for backwards
+# Import severals classes/functions from salt.log.setup for backwards
 # compatibility
-from salt.log.config import (
+from salt.log.setup import (
     LOG_LEVELS,
     SORTED_LEVEL_NAMES,
     is_console_configured,

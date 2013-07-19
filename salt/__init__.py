@@ -18,8 +18,8 @@ warnings.filterwarnings(
 
 # Import salt libs
 # We import log ASAP because we NEED to make sure that any logger instance salt
-# instantiates is using salt.log.config.SaltLoggingClass
-import salt.log.config
+# instantiates is using salt.log.setup.SaltLoggingClass
+import salt.log.setup
 
 
 # the try block below bypasses an issue at build time so that modules don't
@@ -37,9 +37,9 @@ except ImportError as e:
 from salt.exceptions import SaltSystemExit, MasterExit
 
 
-# Let's instantiate logger using salt.log.config.logging.getLogger() so pylint
+# Let's instantiate logger using salt.log.setup.logging.getLogger() so pylint
 # leaves us alone and stops complaining about an un-used import
-logger = salt.log.config.logging.getLogger(__name__)
+logger = salt.log.setup.logging.getLogger(__name__)
 
 
 class Master(parsers.MasterOptionParser):
