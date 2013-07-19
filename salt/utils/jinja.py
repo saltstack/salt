@@ -176,7 +176,7 @@ class SerializerExtension(Extension, object):
         try:
             return yaml.load(value)
         except AttributeError:
-            raise TemplateRuntimeError("Unable to load yaml from {}".format(value))
+            raise TemplateRuntimeError("Unable to load yaml from {0}".format(value))
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
@@ -184,7 +184,7 @@ class SerializerExtension(Extension, object):
         try:
             return json.loads(value)
         except (ValueError, TypeError):
-            raise TemplateRuntimeError("Unable to load json from {}".format(value))
+            raise TemplateRuntimeError("Unable to load json from {0}".format(value))
 
     def parse(self, parser):
         if parser.stream.current.value == "import_yaml":
