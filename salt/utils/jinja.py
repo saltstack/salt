@@ -17,7 +17,6 @@ import yaml
 # Import salt libs
 import salt
 import salt.fileclient
-from salt.utils.yamlutil import anchored_dump
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -206,15 +205,7 @@ class SerializerExtension(Extension, object):
         return Markup(json.dumps(value, sort_keys=True).strip())
 
     def format_yaml(self, value, anchored=False, *args, **kwargs):
-        if anchored:
-            if isinstance(anchored, string_types):
-                top_anchor = anchored
-            else:
-                top_anchor = None
-            dumped = anchored_dump(value, top_anchor=top_anchor, include_document=True, default_flow_style=True).strip()
-        else:
-            dumped = yaml.dump(value, default_flow_style=True).strip()
-        return Markup(dumped)
+        return Markup(yaml.dump(value, default_flow_style=True).strip())
 
     def load_yaml(self, value):
         if isinstance(value, TemplateModule):

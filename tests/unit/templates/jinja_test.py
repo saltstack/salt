@@ -237,16 +237,6 @@ class TestCustomExtensions(TestCase):
                         ).render(dataset=dataset)
         self.assertEquals(dataset, yaml.load(rendered))
 
-        rendered = env.from_string('source: {{ dataset|yaml(anchored="foo") }}\n'
-            'dest: *foo__baz').render(dataset=dataset)
-        self.assertEquals({
-            'source': dataset,
-            'dest': dataset['baz']
-        }, yaml.load(rendered))
-
-        rendered = env.from_string('{{ dataset|yaml(anchored="BAR") }}').render(dataset=dataset)
-        self.assertEquals(rendered, u"&BAR {bar: 42, baz: &BAR__baz [1, 2, 3], foo: true, qux: 2.0}")
-
     def test_load_yaml(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = "{foo: it works}"|load_yaml %}{{ document.foo }}').render()
