@@ -219,10 +219,16 @@ def search(opts, returners, whitelist=None):
 
 def log_handlers(opts):
     '''
-    Returns the custom logging handler setup modules
+    Returns the custom logging handler modules
     '''
-    load = _create_loader(opts, 'log_handlers', 'loghandlers')
-    return load.filter_func('get_handlers')
+    load = _create_loader(
+        opts,
+        'log_handlers',
+        'log_handlers',
+        int_type='handlers',
+        base_path=os.path.join(SALT_BASE_PATH, 'log')
+    )
+    return load.filter_func('setup_handlers')
 
 
 def render(opts, functions):
