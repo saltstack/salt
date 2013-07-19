@@ -555,7 +555,6 @@ def syndic_config(master_config_path,
                   minion_config_path,
                   master_env_var='SALT_MASTER_CONFIG',
                   minion_env_var='SALT_MINION_CONFIG',
-                  defaults=None,
                   **kwargs):
     opts = {}
     master_opts = master_config(master_config_path, master_env_var)
