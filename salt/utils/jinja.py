@@ -8,8 +8,10 @@ import logging
 import json
 
 # Import third party libs
-from jinja2 import BaseLoader, Markup, TemplateNotFound
+from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
+from jinja2.environment import TemplateModule
 from jinja2.ext import Extension
+from jinja2.exceptions import TemplateRuntimeError
 import yaml
 
 # Import salt libs
@@ -101,9 +103,12 @@ class SaltCacheLoader(BaseLoader):
 
 class SerializerExtension(Extension, object):
     '''
-    Serializes variables.
+    Yaml and Json manipulation.
 
-    For example, this dataset:
+    Format filters
+    ~~~~~~~~~~~~~~
+
+    Allows to jsonify or yamlify any datastructure. For example, this dataset:
 
     .. code-block:: python
 
@@ -124,13 +129,78 @@ class SerializerExtension(Extension, object):
         yaml = {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
 
+
+    YAML filter accepts an anchored param, in order to anchors
+    the whole document. For example:
+
+    .. code-block:: jinja
+
+        defaults: {{ data|yaml(anchored("FOO")) }}
+        development:
+            <<: *FOO
+            is it nice?: yes
+
+    will be rendered has::
+
+        defaults = &FOO {bar: 42, baz: &FOO__baz [1, 2, 3]}
+        development:
+            <<: *FOO
+            is it nice?: yes
+
+    and exposed to salt machinery as:
+
+    .. code-block:: python
+        states = {
+            'defaults': {
+                'foo': True,
+                'bar': 42,
+                'baz': [1, 2, 3],
+                'qux': 2.0
+            },
+            'development': {
+                'foo': True,
+                'bar': 42,
+                'baz': [1, 2, 3],
+                'qux': 2.0,
+                'is it nice?': yes
+            },
+        }
+
+    Load filters
+    ~~~~~~~~~~~~
+
+    Parse strings variable with the selected serializer:
+
+    .. code-block:: jinja
+
+        {%- set yaml_src = "{foo: it works}"|load_yaml %}
+        {%- set json_src = "{'bar': 'for real'}"|load_yaml %}
+        Dude, {{ yaml_src.foo }} {{ json_src.bar }}!
+
+    will be rendered has::
+
+        Dude, it works for real!
+
+    Template tags
+    ~~~~~~~~~~~~~
+
+    .. code-block:: jinja
+
+        {% load "state1.sls" as state1 %}
+        {% load_yaml "state2.sls" as state2 %}
+        {% load_json "state3.sls" as state3 %}
+
     '''
+
+    tags = set(['load', 'load_yaml', 'load_json'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
         self.environment.filters.update({
             'yaml': self.format_yaml,
-            'json': self.format_json
+            'json': self.format_json,
+            'load_yaml': self.load_yaml,
+            'load_json': self.load_json
         })
 
     def format_json(self, value, *args, **kwargs):
@@ -147,9 +217,77 @@ class SerializerExtension(Extension, object):
             dumped = yaml.dump(value, default_flow_style=True).strip()
         return Markup(dumped)
 
+    def load_yaml(self, value):
+        if isinstance(value, TemplateModule):
+            value = str(value)
+        try:
+            return yaml.load(value)
+        except AttributeError:
+            raise TemplateRuntimeError("Unable to load yaml from {}".format(value))
+
+    def load_json(self, value):
+        if isinstance(value, TemplateModule):
+            value = str(value)
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            raise TemplateRuntimeError("Unable to load json from {}".format(value))
+
     def parse(self, parser):
-        '''
-        If called this method would throw ``NotImplementedError``.
-        While we don't need to implement this method, we override it so pylint
-        does not complain about an abstract method not implemented
-        '''
+        if parser.stream.current.value in ("load", "load_yaml"):
+            return self.parse_yaml(parser)
+        elif parser.stream.current.value == "load_json":
+            return self.parse_json(parser)
+
+        parser.fail('Unknown format ' + parser.stream.current.value,
+                    parser.stream.current.lineno)
+
+    def parse_yaml(self, parser):
+        # import the document
+        node_import = parser.parse_import()
+        target = node_import.target
+
+        # cleanup the remaining nodes
+        while parser.stream.current.type != 'block_end':
+            parser.stream.next()
+
+        node_filter = nodes.Assign(
+                            nodes.Name(target, 'load'),
+                            self.call_method(
+                                'load_yaml',
+                                [nodes.Name(target, 'load')]
+                            )
+                        ).set_lineno(
+                            parser.stream.current.lineno
+                        )
+
+        return [
+            node_import,
+            node_filter
+        ]
+
+
+    def parse_json(self, parser):
+        # import the document
+        node_import = parser.parse_import()
+        target = node_import.target
+
+
+        node_filter = nodes.Assign(
+                            nodes.Name(target, 'load'),
+                            self.call_method(
+                                'load_yaml',
+                                [nodes.Name(target, 'load')]
+                            )
+                        ).set_lineno(
+                            parser.stream.current.lineno
+                        )
+
+        # cleanup the remaining nodes
+        while parser.stream.current.type != 'block_end':
+            parser.stream.next()
+
+        return [
+            node_import,
+            node_filter,
+        ]
