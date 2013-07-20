@@ -1333,8 +1333,11 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
-def warn_until(version_info, message,
-               category=DeprecationWarning, stacklevel=None):
+def warn_until(version_info,
+               message,
+               category=DeprecationWarning,
+               stacklevel=None,
+               _dont_call_warnings=False):
     '''
     Helper function to raise a warning, by default, a ``DeprecationWarning``,
     until the provided ``version_info``, after which, a ``RuntimeError`` will
@@ -1348,8 +1351,11 @@ def warn_until(version_info, message,
                      ``DeprecationWarning``
     :param stacklevel: There should be no need to set the value of
                        ``stacklevel`` salt should be able to do the right thing
+    :param _dont_call_warnings: This parameter is used just to get the
+                                functionality until the actual error is to be
+                                issued. When we're only after the salt version
+                                checks to raise a ``RuntimeError``.
     '''
-
     if not isinstance(version_info, tuple):
         raise RuntimeError(
             'The \'version_info\' argument should be passed as a tuple.'
@@ -1360,7 +1366,7 @@ def warn_until(version_info, message,
         stacklevel = 2
 
     if salt.version.__version_info__ >= version_info:
-        caller = inspect.getframeinfo(sys._getframe(stacklevel-1))
+        caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
             '{lineno}, is supposed to be shown until salt {until_version!r} '
@@ -1373,4 +1379,5 @@ def warn_until(version_info, message,
             ),
         )
 
-    warnings.warn(message, category, stacklevel=stacklevel)
+    if _dont_call_warnings is False:
+        warnings.warn(message, category, stacklevel=stacklevel)

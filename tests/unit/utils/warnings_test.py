@@ -52,6 +52,14 @@ class WarnUntilTestCase(TestCase):
                 'Deprecation Message!', str(recorded_warnings[0].message)
             )
 
+        # the deprecation warning is not issued because we passed
+        # _dont_call_warning
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            warn_until(
+                (0, 17), 'Foo', _dont_call_warnings=True
+            )
+            self.assertEqual(0, len(recorded_warnings))
+
         # Let's set version info to (0, 17), a RuntimeError should be raised
         salt_version_mock.__version_info__ = (0, 17)
         with self.assertRaisesRegexp(
@@ -61,6 +69,18 @@ class WarnUntilTestCase(TestCase):
                 r'\'0.17\' is released. Salt version is now \'0.17\'. Please '
                 r'remove the warning.'):
             raise_warning()
+
+        # Even though we're calling warn_until, we pass _dont_call_warnings
+        # because we're only after the RuntimeError
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                r'The warning triggered on filename \'(.*)warnings_test.py\', '
+                r'line number ([\d]+), is supposed to be shown until salt '
+                r'\'0.17\' is released. Salt version is now \'0.17\'. Please '
+                r'remove the warning.'):
+            warn_until(
+                (0, 17), 'Foo', _dont_call_warnings=True
+            )
 
 
 if __name__ == '__main__':
