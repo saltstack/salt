@@ -10,7 +10,7 @@ import salt.config
 from salt.state import HighState
 
 
-OPTS = salt.config.minion_config(None, check_dns=False)
+OPTS = salt.config.minion_config(None)
 OPTS['id'] = 'match'
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])

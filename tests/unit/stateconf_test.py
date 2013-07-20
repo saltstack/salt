@@ -15,7 +15,7 @@ import salt.config
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.minion_config(None, check_dns=False)
+OPTS = salt.config.minion_config(None)
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/'])
 
