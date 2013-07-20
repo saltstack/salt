@@ -26,11 +26,6 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 
-# check_dns warnings filter to force deprecation warning exhibition once
-warnings.filterwarnings(
-    'once', '(.*)check_dns(.*)', DeprecationWarning, __name__
-)
-
 log = logging.getLogger(__name__)
 
 _DFLT_LOG_DATEFMT = '%H:%M:%S'

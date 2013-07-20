@@ -6,6 +6,15 @@ Make me some salt!
 import os
 import sys
 import logging
+import warnings
+
+# All salt related deprecation warnings should be shown once each!
+warnings.filterwarnings(
+    'once',                 # Show once
+    '',                     # No deprecation message match
+    DeprecationWarning,     # This filter is for DeprecationWarnings
+    r'^(salt|salt\.(.*))$'  # Match module(s) 'salt' and 'salt.<whatever>'
+)
 
 # Import salt libs
 # We import log ASAP because we NEED to make sure that any logger instance salt

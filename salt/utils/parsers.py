@@ -852,11 +852,6 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
 
     def __new__(cls, *args, **kwargs):
         instance = super(OutputOptionsWithTextMixIn, cls).__new__(cls, *args, **kwargs)
-        # Let the next warning show up at least once since DeprecationWarning's
-        # are, by default, ignored by python default filters
-        warnings.filterwarnings(
-            'once', '', DeprecationWarning, 'salt.utils.parsers'
-        )
         warnings.warn(
             '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
             'start using \'OutputOptionsMixIn\', your code should not need '

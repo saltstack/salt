@@ -86,9 +86,6 @@ def create(path,
     if no_site_packages is not None:
         # Show a deprecation warning
         # XXX: Remove deprecation warning message on 0.18.0
-        warnings.filterwarnings(
-            'once', '', DeprecationWarning, __name__
-        )
         warnings.warn(
             '\'no_site_packages\' has been deprecated. Please start using '
             '\'system_site_packages=False\' which means exactly the same '
