@@ -9,7 +9,7 @@ which can be found here:
 
 The following config items are required in the master config:
     stormpath.api_key_file: <path/to/apiKey.properties>
-    stormpath.api_key_file: <Rest url of your Stormpath application>
+    stormpath.app_url: <Rest url of your Stormpath application>
 
 Ensure that your apiKey.properties is readable by the user the
 Salt Master is running as, but not readable by other system users.
