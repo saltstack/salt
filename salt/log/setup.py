@@ -22,6 +22,7 @@ import socket
 import urlparse
 import logging
 import logging.handlers
+import traceback
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
@@ -589,3 +590,31 @@ def __remove_temp_logging_handler():
         # Python versions >= 2.7 allow warnings to be redirected to the logging
         # system now that it's configured. Let's enable it.
         logging.captureWarnings(True)
+
+
+# Let's setup a global exception hook handler which will log all exceptions
+# Store a reference to the original handler
+__GLOBAL_EXCEPTION_HANDLER = sys.excepthook
+
+
+def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
+    '''
+    This function will log all python exceptions.
+    '''
+    # Log the exception
+    logging.getLogger(__name__).error(
+        'An un-handled exception was caught by salt\'s global exception '
+        'handler:\n{0}: {1}\n{2}'.format(
+            exc_type.__name__,
+            exc_value,
+            ''.join(traceback.format_exception(
+                exc_type, exc_value, exc_traceback
+            )).strip()
+        )
+    )
+    # Call the original sys.excepthook
+    __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
+
+
+# Set our own exception handler as the one to use
+sys.excepthook = __global_logging_exception_handler
