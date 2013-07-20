@@ -851,12 +851,14 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
     _include_text_out_ = True
 
     def __new__(cls, *args, **kwargs):
-        instance = super(OutputOptionsWithTextMixIn, cls).__new__(cls, *args, **kwargs)
-        warnings.warn(
+        instance = super(OutputOptionsWithTextMixIn, cls).__new__(
+            cls, *args, **kwargs
+        )
+        utils.warn_until(
+            (0, 19),
             '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
             'start using \'OutputOptionsMixIn\', your code should not need '
-            'any more change.',
-            DeprecationWarning,
+            'any more change.'
         )
         return instance
 
