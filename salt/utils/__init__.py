@@ -64,6 +64,7 @@ import salt._compat
 import salt.log
 import salt.minion
 import salt.payload
+import salt.version
 from salt.exceptions import (
     SaltClientError, CommandNotFoundError, SaltSystemExit
 )
@@ -1330,3 +1331,46 @@ def date_format(date=None, format="%Y-%m-%d"):
     'Dec 25, 2002'
     '''
     return date_cast(date).strftime(format)
+
+
+def warn_until(version_info, message,
+               category=DeprecationWarning, stacklevel=None):
+    '''
+    Helper function to raise a warning, by default, a ``DeprecationWarning``,
+    until the provided ``version_info``, after which, a ``RuntimeError`` will
+    be raised to remember the developers to remove the warning because the
+    version defined has matched.
+
+    :param version_info: The version info after which the warning becomes a
+                         ``RuntimeError``. For example ``(0, 17)``.
+    :param message: The warning message to be displayed.
+    :param category: The warning class to be thrown, by default
+                     ``DeprecationWarning``
+    :param stacklevel: There should be no need to set the value of
+                       ``stacklevel`` salt should be able to do the right thing
+    '''
+
+    if not isinstance(version_info, tuple):
+        raise RuntimeError(
+            'The \'version_info\' argument should be passed as a tuple.'
+        )
+
+    if stacklevel is None:
+        # Show the warning a triggered from the calling function not warn_until
+        stacklevel = 2
+
+    if salt.version.__version_info__ >= version_info:
+        caller = inspect.getframeinfo(sys._getframe(stacklevel-1))
+        raise RuntimeError(
+            'The warning triggered on filename {filename!r}, line number '
+            '{lineno}, is supposed to be shown until salt {until_version!r} '
+            'is released. Salt version is now {salt_version!r}. Please '
+            'remove the warning.'.format(
+                filename=caller.filename,
+                lineno=caller.lineno,
+                until_version='.'.join(map(str, version_info)),
+                salt_version='.'.join(map(str, salt.version.__version_info__))
+            ),
+        )
+
+    warnings.warn(message, category, stacklevel=stacklevel)
