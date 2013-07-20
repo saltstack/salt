@@ -161,6 +161,7 @@ functionality.
 import functools
 import os
 import json
+import textwrap
 
 # Import third-party libs
 import cherrypy
@@ -948,6 +949,40 @@ class Run(LowDataAdapter):
         }
 
 
+class Events(object):
+    exposed = True
+
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'response.stream': True,
+        'tools.encode.encoding': 'utf-8',
+
+        'tools.hypermedia_in.on': False,
+        'tools.hypermedia_out.on': False,
+    })
+
+    def __init__(self):
+        self.opts = cherrypy.config['saltopts']
+
+    def GET(self, *args):
+        cherrypy.response.headers['Content-Type'] = 'text/event-stream'
+        cherrypy.response.headers['Cache-Control'] = 'no-cache'
+        cherrypy.response.headers['Connection'] = 'keep-alive'
+
+        # Release the session lock before starting the long-running response
+        cherrypy.session.release_lock()
+
+        def listen():
+            event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
+            stream = event.iter_events(full=True)
+
+            yield u'retry: {0}\n'.format(400)
+
+            while True:
+                yield u'data: {0}\n\n'.format(stream.next())
+
+        return listen()
+
+
 class App(object):
     exposed = True
     def GET(self, *args):
@@ -966,6 +1001,7 @@ class API(object):
         'minions': Minions,
         'run': Run,
         'jobs': Jobs,
+        'events': Events,
     }
 
     def __init__(self):
