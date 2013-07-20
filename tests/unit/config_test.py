@@ -12,6 +12,7 @@
 import os
 import shutil
 import tempfile
+import warnings
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -23,7 +24,7 @@ ensure_in_syspath('../')
 import salt.minion
 import salt.utils
 import integration
-from salt import config as sconfig
+from salt import config as sconfig, version as salt_version
 
 
 class ConfigTestCase(TestCase):
@@ -294,6 +295,60 @@ class ConfigTestCase(TestCase):
         # are not merged with syndic ones
         self.assertEquals(syndic_opts['_master_conf_file'], minion_config_path)
         self.assertEquals(syndic_opts['_minion_conf_file'], syndic_conf_path)
+
+    def test_check_dns_deprecation_warning(self):
+        if salt_version.__version_info__ >= (0, 19):
+            raise AssertionError(
+                'Failing this test on purpose! Please delete this test case, '
+                'the \'check_dns\' keyword argument and the deprecation '
+                'warnings in `salt.config.minion_config` and '
+                'salt.config.apply_minion_config`'
+            )
+
+        # Let's force the warning to always be thrown
+        warnings.resetwarnings()
+        warnings.filterwarnings(
+            'always', '(.*)check_dns(.*)', DeprecationWarning, 'salt.config'
+        )
+        with warnings.catch_warnings(record=True) as w:
+            sconfig.minion_config(None, None, check_dns=True)
+            self.assertEqual(
+                'The functionality behind the \'check_dns\' keyword argument '
+                'is no longer required, as such, it became unnecessary and is '
+                'now deprecated. \'check_dns\' will be removed in salt > '
+                '0.18.0', str(w[-1].message)
+            )
+
+        with warnings.catch_warnings(record=True) as w:
+            sconfig.apply_minion_config(
+                overrides=None, defaults=None, check_dns=True
+            )
+            self.assertEqual(
+                'The functionality behind the \'check_dns\' keyword argument '
+                'is no longer required, as such, it became unnecessary and is '
+                'now deprecated. \'check_dns\' will be removed in salt > '
+                '0.18.0', str(w[-1].message)
+            )
+
+        with warnings.catch_warnings(record=True) as w:
+            sconfig.minion_config(None, None, check_dns=False)
+            self.assertEqual(
+                'The functionality behind the \'check_dns\' keyword argument '
+                'is no longer required, as such, it became unnecessary and is '
+                'now deprecated. \'check_dns\' will be removed in salt > '
+                '0.18.0', str(w[-1].message)
+            )
+
+        with warnings.catch_warnings(record=True) as w:
+            sconfig.apply_minion_config(
+                overrides=None, defaults=None, check_dns=False
+            )
+            self.assertEqual(
+                'The functionality behind the \'check_dns\' keyword argument '
+                'is no longer required, as such, it became unnecessary and is '
+                'now deprecated. \'check_dns\' will be removed in salt > '
+                '0.18.0', str(w[-1].message)
+            )
 
 
 if __name__ == '__main__':
