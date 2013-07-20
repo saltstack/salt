@@ -4,9 +4,10 @@ master_tops adapter for reclass.
 Please refer to the file ``README.Salt`` in the reclass source for more
 information on how to use these. In a nutshell, you'll just add the plugin to
 the master_tops hash in the master config and tell reclass by way of a few
-options how and where to find the inventory::
+options how and where to find the inventory:
 
-    ---
+.. code-block:: yaml
+
     master_tops:
         reclass:
             storage_type: yaml_fs
@@ -20,7 +21,8 @@ More information about reclass: http://github.com/madduck/reclass
 If you are also using ext_pillar and you want to avoid having to specify the
 same information for both, use YAML anchors:
 
-    ---
+.. code-block:: yaml
+
     reclass: &reclass
         storage_type: yaml_fs
         base_inventory_uri: /srv/salt
