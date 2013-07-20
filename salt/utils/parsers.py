@@ -15,7 +15,6 @@ import os
 import sys
 import logging
 import optparse
-import warnings
 import traceback
 from functools import partial
 
@@ -1137,6 +1136,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
         # XXX: Remove '--key-logfile' support in 0.18.0
+        utils.warn_until((0, 18), '', _dont_call_warnings=True)
         self.logging_options_group.add_option(
             '--key-logfile',
             default=None,
@@ -1312,6 +1312,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if self.options.key_logfile:
             # XXX: Remove '--key-logfile' support in 0.18.0
             # In < 0.18.0 error out
+            utils.warn_until((0, 18), '', _dont_call_warnings=True)
             self.error(
                 'The \'--key-logfile\' option has been deprecated in favour '
                 'of \'--log-file\''
