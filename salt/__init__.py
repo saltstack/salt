@@ -5,7 +5,6 @@ Make me some salt!
 # Import python libs
 import os
 import sys
-import logging
 import warnings
 
 # All salt related deprecation warnings should be shown once each!
@@ -31,8 +30,8 @@ try:
     from salt.utils import parsers, ip_bracket
     from salt.utils.verify import check_user, verify_env, verify_socket
     from salt.utils.verify import verify_files
-except ImportError as e:
-    if e.args[0] != 'No module named _msgpack':
+except ImportError as exc:
+    if exc.args[0] != 'No module named _msgpack':
         raise
 from salt.exceptions import SaltSystemExit, MasterExit
 
@@ -148,11 +147,16 @@ class Minion(parsers.MinionOptionParser):
                         # Value is of the form "minion.d/*.conf"
                         confd = os.path.dirname(confd)
                     if not os.path.isabs(confd):
-                        # If configured 'default_include' is not an absolute path,
-                        # consider it relative to folder of 'conf_file' (/etc/salt by default)
-                        confd = os.path.join(os.path.dirname(self.config['conf_file']), confd)
+                        # If configured 'default_include' is not an absolute
+                        # path, consider it relative to folder of 'conf_file'
+                        # (/etc/salt by default)
+                        confd = os.path.join(
+                            os.path.dirname(self.config['conf_file']), confd
+                        )
                 else:
-                    confd = os.path.join(os.path.dirname(self.config['conf_file']), 'minion.d')
+                    confd = os.path.join(
+                        os.path.dirname(self.config['conf_file']), 'minion.d'
+                    )
                 verify_env(
                     [
                         self.config['pki_dir'],
@@ -208,12 +212,12 @@ class Minion(parsers.MinionOptionParser):
         try:
             if check_user(self.config['user']):
                 self.minion.tune_in()
-        except (KeyboardInterrupt, SaltSystemExit) as e:
+        except (KeyboardInterrupt, SaltSystemExit) as exc:
             logger.warn('Stopping the Salt Minion')
-            if isinstance(e, KeyboardInterrupt):
+            if isinstance(exc, KeyboardInterrupt):
                 logger.warn('Exiting on Ctrl-c')
             else:
-                logger.error(str(e))
+                logger.error(str(exc))
         finally:
             self.shutdown()
 
