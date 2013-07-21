@@ -1341,8 +1341,8 @@ def warn_until(version_info,
     '''
     Helper function to raise a warning, by default, a ``DeprecationWarning``,
     until the provided ``version_info``, after which, a ``RuntimeError`` will
-    be raised to remember the developers to remove the warning because the
-    version defined has matched.
+    be raised to remind the developers to remove the warning because the
+    target version has been reached.
 
     :param version_info: The version info after which the warning becomes a
                          ``RuntimeError``. For example ``(0, 17)``.
@@ -1362,7 +1362,7 @@ def warn_until(version_info,
         )
 
     if stacklevel is None:
-        # Show the warning a triggered from the calling function not warn_until
+        # Attribute the warning to the calling function, not to warn_until()
         stacklevel = 2
 
     if salt.version.__version_info__ >= version_info:
