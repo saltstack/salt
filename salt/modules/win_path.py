@@ -1,5 +1,5 @@
 '''
-Module to interact with WatchDox application / solr-master instances
+Manage the Windows System PATH
 
 Note that not all the Windows application will rehash the PATH environment variable,
 Only the ones that listens to the WM_SETTINGCHANGE message
