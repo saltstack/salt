@@ -14,20 +14,21 @@ def __virtual__():
 
 def _normalize_dir(string):
     '''
-    normalize the directory to make compare possible
+    Normalize the directory to make comparison possible
     '''
     
-    return  re.sub(r'\\$','', string.lower())
+    return re.sub(r'\\$', '', string.lower())
+
 
 def absent(name):
     '''
     Remove the directory from the SYSTEM path
     
-    index: where the directory should be placed in the PATH (default 0)
+    index: where the directory should be placed in the PATH (default: 0)
     
     Example::
     
-        'C:\sysinternals':
+        'C:\\sysinternals':
           win_path.absent
     '''
     
@@ -51,16 +52,16 @@ def absent(name):
 
 def exists(name, index=0):
     '''
-    Add the directory to the system path at index location
+    Add the directory to the system PATH at index location
     
-    index: where the directory should be placed in the PATH (default 0)
+    index: where the directory should be placed in the PATH (default: 0)
     
     Example::
 
-        'C:\python27':
+        'C:\\python27':
           win_path.exists
         
-        'C:\sysinternals':
+        'C:\\sysinternals':
           win_path.exists:
             index: 0
     '''
@@ -84,14 +85,14 @@ def exists(name, index=0):
         currIndex = sysPath.index(path)
         if currIndex != index:
             sysPath.pop(currIndex)
-            ret['changes']['removed'] = '{0} is removed from index {1}'.format(name, currIndex)
+            ret['changes']['removed'] = '{0} was removed from index {1}'.format(name, currIndex)
         else:
-            ret['comment'] = '{0} is already configured in the PATH at the right location'.format(name)
+            ret['comment'] = '{0} is already present in the PATH at the right location'.format(name)
             return ret
     except ValueError:
         pass
     
-    ret['changes']['added'] = '{0} will be added to index {1}'.format(name, index)
+    ret['changes']['added'] = '{0} will be added at index {1}'.format(name, index)
     if __opts__['test']:
         return ret
     
@@ -100,5 +101,5 @@ def exists(name, index=0):
     if not ret['result']:
         ret['comment'] = 'could not add {0} to the PATH'.format(name)
     else:
-        ret['changes']['added'] = '{0} is added to index {1}'.format(name, index)
+        ret['changes']['added'] = '{0} was added at index {1}'.format(name, index)
     return ret
