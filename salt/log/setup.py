@@ -234,6 +234,10 @@ def setup_temp_logger(log_level='error'):
         if handler in (LOGGING_NULL_HANDLER, LOGGING_QUEUE_HANDLER):
             continue
 
+        if not hasattr(handler, 'stream'):
+            # Not a stream handler, continue
+            continue
+
         if handler.stream is sys.stderr:
             # There's already a logging handler outputting to sys.stderr
             break
@@ -277,6 +281,11 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     for handler in logging.root.handlers:
         if handler is LOGGING_QUEUE_HANDLER:
             continue
+
+        if not hasattr(handler, 'stream'):
+            # Not a stream handler, continue
+            continue
+
         if handler.stream is sys.stderr:
             # There's already a logging handler outputting to sys.stderr
             break
