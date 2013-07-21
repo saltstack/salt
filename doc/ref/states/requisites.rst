@@ -85,9 +85,17 @@ state module, then watch does the same thing as require. If the ``mod_watch``
 function is in the state module, then the watched state is checked to see if
 it made any changes to the system, if it has, then ``mod_watch`` is called.
 
-Perhaps the best example of using watch is with a service, when a service
-watches other states, then when the other states make changes on the system
-the service is reloaded or restarted.
+Perhaps the best example of using watch is with a :mod:`service.running
+<salt.states.service.running>` state. When a service watches a state, then
+the service is reloaded/restarted when the watched state changes::
+
+    ntpd:
+      service.running:
+        - watch:
+          - file: /etc/ntp.conf
+      file.managed:
+        - name: /etc/ntp.conf
+        - source: salt://ntp/files/ntp.conf
 
 Prereq
 ------
