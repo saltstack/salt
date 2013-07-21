@@ -150,6 +150,7 @@ class Single(multiprocessing.Process):
         Deploy salt-thin
         '''
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
+        print thin
         self.shell.send(
                 thin,
                 '/tmp/salt-thin.tgz')
@@ -201,7 +202,7 @@ class Single(multiprocessing.Process):
                 # XXX: Remove the next pylint declaration when pylint 0.29
                 # comes out. More information:
                 #   http://hustoknow.blogspot.pt/2013/06/pylint.html
-                self.cmd(self.arg_str)  # pylint: disable=E1121
+                self.cmd()  # pylint: disable=E1121
             )
         try:
             data = json.loads(ret)
