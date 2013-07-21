@@ -6,6 +6,8 @@ The Salt Windows Software Repository provides a package manager and software
 repository similar to what is provided by yum and apt on Linux.
 
 By default, the Windows software repository is found at ``/srv/salt/win/repo``
+This can be changed in the master config file (default location is ``/etc/salt/master``)
+by modifying the  ``win_repo`` variable.
 Each piece of software should have its own directory which contains the
 installers and a package definition file. This package definition file is a
 YAML file named ``init.sls``.
@@ -39,7 +41,65 @@ The package definition file should look similar to this example for Firefox:
         reboot: False
         install_flags: ' -ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S'
+        uninstall_flags: ' /S'        
+
+More examples can be found here: https://github.com/saltstack/salt-winrepo
+
+The version number and ``full_name`` need to match the output from ``pkg.list_pkgs``
+so that the status can be verfied when running highstate.
+Note: It is still possible to succesfully install packages using ``pkg.install``
+even if they don't match which can make this hard to troubleshoot.
+
+.. code-block:: bash
+
+    $ salt 'test-2008' pkg.list_pkgs
+    test-2008
+        ----------
+        7-Zip 9.20 (x64 edition):
+            9.20.00.0
+        Microsoft .NET Framework 4 Client Profile:
+            4.0.30319,4.0.30319
+        Microsoft .NET Framework 4 Extended:
+            4.0.30319,4.0.30319
+        Microsoft Visual C++ 2008 Redistributable - x64 9.0.21022:
+            9.0.21022
+        Mozilla Firefox 17.0.1 (x86 en-US):
+            17.0.1
+        Mozilla Maintenance Service:
+            17.0.1
+        NSClient++ (x64):
+            0.3.8.76
+        Notepad++:
+            6.4.2
+        Salt Minion 0.16.0:
+            0.16.0
+
+If any of these preinstalled packages already exist in winrepo the full_name
+will be automatically renamed to their package name during the next update
+(running highstate or installing another package).
+
+.. code-block:: bash
+
+    test-2008:
+        ----------
+        7zip:
+            9.20.00.0
+        Microsoft .NET Framework 4 Client Profile:
+            4.0.30319,4.0.30319
+        Microsoft .NET Framework 4 Extended:
+            4.0.30319,4.0.30319
+        Microsoft Visual C++ 2008 Redistributable - x64 9.0.21022:
+            9.0.21022
+        Mozilla Maintenance Service:
+            17.0.1
+        Notepad++:
+            6.4.2
+        Salt Minion 0.16.0:
+            0.16.0
+        firefox:
+            17.0.1
+        nsclient:
+            0.3.9.328
 
 Add ``msiexec: True`` if using an MSI installer requiring the use of ``msiexec
 /i`` to install and ``msiexec /x`` to uninstall.
@@ -54,14 +114,15 @@ project's wiki_:
 .. code-block:: yaml
 
     7zip:
-      9.20:
+      9.20.00.0:
         installer: salt://win/repo/7zip/7z920-x64.msi
-        full_name: 7zip 9.22
+        full_name: 7-Zip 9.20 (x64 edition)
         reboot: False
-        install_flags: ' /q '
+        install_flags: ' /q '  
         msiexec: True
         uninstaller: salt://win/repo/7zip/7z920-x64.msi
         uninstall_flags: ' /qn'
+ 
  
 
 Generate Repo Cache File
@@ -107,8 +168,9 @@ The above line will install the latest version of Firefox.
 
 The above line will install version 16.0.2 of Firefox.
 
-This first release requires you uninstall an application and then install a
-newer version in order to accomplish an upgrade. This will be fixed very soon.
+If a different version of the package is already installed it will
+be replaced with the version in winrepo (only if the package itself supports
+live updating)
 
 
 Uninstall Windows Software
