@@ -15,7 +15,6 @@ import os
 import sys
 import logging
 import optparse
-import warnings
 import traceback
 from functools import partial
 
@@ -851,17 +850,14 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
     _include_text_out_ = True
 
     def __new__(cls, *args, **kwargs):
-        instance = super(OutputOptionsWithTextMixIn, cls).__new__(cls, *args, **kwargs)
-        # Let the next warning show up at least once since DeprecationWarning's
-        # are, by default, ignored by python default filters
-        warnings.filterwarnings(
-            'once', '', DeprecationWarning, 'salt.utils.parsers'
+        instance = super(OutputOptionsWithTextMixIn, cls).__new__(
+            cls, *args, **kwargs
         )
-        warnings.warn(
+        utils.warn_until(
+            (0, 19),
             '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
             'start using \'OutputOptionsMixIn\', your code should not need '
-            'any more change.',
-            DeprecationWarning,
+            'any more change.'
         )
         return instance
 
@@ -1140,6 +1136,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
         # XXX: Remove '--key-logfile' support in 0.18.0
+        utils.warn_until((0, 18), '', _dont_call_warnings=True)
         self.logging_options_group.add_option(
             '--key-logfile',
             default=None,
@@ -1315,6 +1312,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if self.options.key_logfile:
             # XXX: Remove '--key-logfile' support in 0.18.0
             # In < 0.18.0 error out
+            utils.warn_until((0, 18), '', _dont_call_warnings=True)
             self.error(
                 'The \'--key-logfile\' option has been deprecated in favour '
                 'of \'--log-file\''

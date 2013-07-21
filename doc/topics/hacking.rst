@@ -310,8 +310,9 @@ For greater control while running the tests, please try::
 
     ./tests/runtests.py -h
 
-Editing and previewing the documention
---------------------------------------
+
+Editing and previewing the documentation
+----------------------------------------
 
 You need ``sphinx-build`` command to build the docs. In Debian/Ubuntu this is
 provided in the ``python-sphinx`` package. Sphinx can also be installed
@@ -319,7 +320,7 @@ to a virtualenv using pip::
 
     pip install Sphinx
 
-Change to salt documention directory, then::
+Change to salt documentation directory, then::
 
     cd doc; make html
 

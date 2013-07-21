@@ -7,7 +7,6 @@ import glob
 import shutil
 import logging
 import os.path
-import warnings
 
 # Import salt libs
 import salt.utils
@@ -56,7 +55,8 @@ def create(path,
     distribute : False
         Passthrough argument given to virtualenv
     pip : False
-        Install pip after creating a virtual environment, implies distribute=True
+        Install pip after creating a virtual environment,
+        implies distribute=True
     clear : False
         Passthrough argument given to virtualenv or pyvenv
     python : None (default)
@@ -85,15 +85,11 @@ def create(path,
 
     if no_site_packages is not None:
         # Show a deprecation warning
-        # XXX: Remove deprecation warning message on 0.18.0
-        warnings.filterwarnings(
-            'once', '', DeprecationWarning, __name__
-        )
-        warnings.warn(
+        salt.utils.warn_until(
+            (0, 19),
             '\'no_site_packages\' has been deprecated. Please start using '
             '\'system_site_packages=False\' which means exactly the same '
-            'as \'no_site_packages=True\'',
-            DeprecationWarning
+            'as \'no_site_packages=True\''
         )
 
     if no_site_packages is True and system_site_packages is True:
