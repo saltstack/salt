@@ -38,7 +38,7 @@ def _normalize_dir(string):
     Normalize the directory to make comparison possible
     '''
     
-    return  re.sub(r'\\$','', string.lower())
+    return  re.sub(r'\\$', '', string.lower())
 
 def rehash():
     '''
@@ -114,7 +114,7 @@ def add(path, index=0):
     sysPath.insert(index, path)
     regedit = __salt__['reg.set_key'](
         'HKEY_LOCAL_MACHINE',
-        'SYSTEM\CurrentControlSet\\Control\\Session Manager\\Environment',
+        'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
         ';'.join(sysPath),
         'REG_EXPAND_SZ'
@@ -140,7 +140,7 @@ def remove(path):
     
     regedit = __salt__['reg.set_key'](
         'HKEY_LOCAL_MACHINE',
-        'SYSTEM\CurrentControlSet\\Control\\Session Manager\\Environment',
+        'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
         ';'.join(sysPath),
         'REG_EXPAND_SZ'
