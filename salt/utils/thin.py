@@ -15,15 +15,6 @@ import yaml
 import salt
 
 
-def exclude_compiled(path):
-    '''
-    Return True if file should be included
-    '''
-    if path.endswith(('.pyc', '.pyo')):
-        return False
-    return True
-
-
 def gen_thin(cachedir):
     '''
     Generate a salt-thin tarball and load it into the location in the cachedir
@@ -45,11 +36,14 @@ def gen_thin(cachedir):
             os.path.dirname(yaml.__file__),
             ]
     with tarfile.open(thintar, 'w:gz') as tfp:
-        start_dir = os.cwd()
+        start_dir = os.getcwd()
         for top in tops:
-            os.chdir(os.path.dirname(top))
             base = os.path.basename(top)
-            tfp.add(base, exclude=exclude_compiled)
+            os.chdir(os.path.dirname(top))
+            for root, dirs, files in os.walk(base):
+                for name in files:
+                    if not name.endswith(('.pyc', '.pyo')):
+                        tfp.add(os.path.join(root, name))
         os.chdir(os.path.dirname(salt.utils.which('salt-call')))
         tfp.add('salt-call')
         os.chdir(start_dir)
