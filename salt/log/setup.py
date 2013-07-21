@@ -111,7 +111,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
             max_logger_length = len(max(
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
-            for handler in logging.getLogger().handlers:
+            for handler in logging.root.handlers:
                 if handler in (LOGGING_NULL_HANDLER,
                                LOGGING_QUEUE_HANDLER,
                                LOGGING_TEMP_HANDLER):
@@ -482,25 +482,28 @@ def setup_extended_logging(opts):
     import salt.loader
 
     # Let's keep a reference to the current logging handlers
-    current_handlers = logging.getLogger().handlers[:]
+    current_handlers = logging.root.handlers[:]
 
     # Load any additional logging handlers
     providers = salt.loader.log_handlers(opts)
 
     for name, get_handlers_func in providers.iteritems():
+        # Keep a reference to the logging handlers count before getting the
+        # possible additional ones.
+        initial_handlers_count = len(logging.root.handlers)
+
         handlers = get_handlers_func()
         if not isinstance(handlers, (list, tuple)):
             handlers = [handlers]
 
         for handler in handlers:
-            if not handler:
-                logging.getLogger(__name__).warn(
-                    'The `salt.log_handlers.{0}`, did not return any '
-                    'logging handlers.'.format(name)
-                    #The handler(s) might have been added '
-                    #'right on the module. The queued log records won\'t be '
-                    #'synchronized on those handlers.'.format(name)
-                    #)
+            if not handler and \
+                    len(logging.root.handlers) == initial_handlers_count:
+                logging.getLogger(__name__).info(
+                    'The `log_handlers.{0}`, did not return any handlers '
+                    'and the global handlers count did not increase. This '
+                    'could be a sign of `log_handlers.{0}` not working as '
+                    'supposed'.format(name)
                 )
                 continue
 
@@ -509,11 +512,11 @@ def setup_extended_logging(opts):
                     name, handler
                 )
             )
-            logging.getLogger().addHandler(handler)
+            logging.root.addHandler(handler)
 
     # Let's get a reference to the newly added logging handlers
     external_handlers = []
-    for handler in logging.getLogger().handlers:
+    for handler in logging.root.handlers:
         if handler in current_handlers:
             continue
         external_handlers.extend(list(handlers))
