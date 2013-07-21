@@ -102,8 +102,8 @@ the context into the included file is required:
 Variable Serializers
 ====================
 
-Salt allows to serialize any variable into **json** or **yaml**. For example this
-variable::
+Salt allows to serialize any variable into **json** or **yaml**. For example
+this variable::
 
     data:
       foo: True
@@ -125,6 +125,61 @@ will be rendered has::
     yaml -> {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
 
     json -> {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
+
+
+Strings and variables can be deserialized with **load_yaml** and **load_json**
+filters. It allows to manipulate data directly in templates, easily:
+
+.. code-block:: yaml
+
+    {%- set json_src = '{"foo": "bar", "baz": "qux"}'|load_json %}
+    My json foo is {{ json_src.foo }}
+
+    {%- set yaml_src = "{bar: baz: qux}"|load_yaml %}
+    My yaml bar.baz is {{ yaml_src.bar.baz }}
+
+will be rendered has::
+
+    My json foo is bar
+
+    My yaml bar.baz is qux
+
+
+Template Serializers
+====================
+
+Salt implements **import_yaml** and **import_json** tags. They work like the
+`import tag`_, except that the document is also deserialized.
+
+Imagine you have a generic state file in which you have the complete data of
+your infrastucture:
+
+.. code-block:: yaml
+
+    # everything.sls
+    users:
+      foo:
+        - john
+      bar:
+        - bob
+      baz:
+        - smith
+
+But you don't want to expose everything to a minion. This state file:
+
+.. code-block:: yaml
+
+    # specialized.sls
+    {% load "everything.sls" as all %}
+    my_admins:
+      my_foo: {{ all.users.foo|yaml }}
+
+will be rendered has::
+
+    my_admins:
+      my_foo: [john]
+
+.. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
 
 Template Inheritance
 ====================
