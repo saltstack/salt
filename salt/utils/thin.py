@@ -45,7 +45,7 @@ def gen_thin(cachedir):
             os.path.dirname(yaml.__file__),
             ]
     with tarfile.open(thintar, 'w:gz') as tfp:
-        start_dir = os.cwd()
+        start_dir = os.getcwd()
         for top in tops:
             os.chdir(os.path.dirname(top))
             base = os.path.basename(top)
