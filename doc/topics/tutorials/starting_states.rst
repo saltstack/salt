@@ -41,6 +41,7 @@ in depth how the data is laid out.
 .. _`strings`: http://docs.python.org/library/stdtypes.html#typesseq
 .. _`numbers`: http://docs.python.org/library/stdtypes.html#numeric-types-int-float-long-complex
 
+
 Default Data - YAML
 ===================
 
@@ -94,6 +95,7 @@ Statement, and it makes sure that the Apache service is only started after
 a successful installation of the apache package.
 
 .. _`YAML`: http://yaml.org/spec/1.1/
+
 
 Adding Configs and Users
 ========================
@@ -151,6 +153,7 @@ So if the package was updated, the config file changed, or the user
 uid modified, then the service state's watcher will be run. The service
 state's watcher just restarts the service, so in this case, a change in the
 config file will also trigger a restart of the respective service.
+
 
 Moving Beyond a Single SLS
 ==========================
@@ -263,6 +266,7 @@ Note that some of the SLS files are called init.sls, while others are not. More
 info on what this means can be found in the :ref:`States Tutorial
 <sls-file-namespace>`.
 
+
 Extending Included SLS Data
 ===========================
 
@@ -312,6 +316,7 @@ the apache service was extended to also watch the mod_python package.
 
 .. include:: /_incl/extend_with_require_watch.rst
 
+
 Understanding the Render System
 ===============================
 
@@ -337,6 +342,16 @@ provides a flexible, domain-specific language for authoring SLS data in Python.
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`Mako`: http://www.makotemplates.org/
 .. _`Wempy`: http://www.wempy.org/
+
+.. note::
+    The templating engines described above aren't just available in SLS files.
+    They can also be used in :mod:`file.managed <salt.states.file.managed>`
+    states, making file management much more dynamic and flexible. Some
+    examples for using templates in managed files can be found in the
+    documentation for the :doc:`file states
+    </ref/states/all/salt.states.file>`, as well as the :ref:`MooseFS
+    example<jinja-example-moosefs>` below.
+
 
 Getting to Know the Default - yaml_jinja
 ----------------------------------------
@@ -391,11 +406,7 @@ for the Grains to be accessed from within the template. A few examples:
 This example is simple. If the ``os`` grain states that the operating system is
 Red Hat, then the name of the Apache package and service needs to be httpd.
 
-.. note::
-    Salt doesn't just serve up static files! Several templating engines can be
-    used to make file management more dynamic and flexible. Some examples for
-    using templates in managed files can be found in the documentation for the
-    :doc:`file state </ref/states/all/salt.states.file>`.
+.. _jinja-example-moosefs:
 
 A more aggressive way to use Jinja can be found here, in a module to set up
 a MooseFS distributed filesystem chunkserver:
@@ -422,7 +433,7 @@ a MooseFS distributed filesystem chunkserver:
           - group: mfs
     {% endfor %}
 
-    '/etc/mfshdd.cfg':
+    /etc/mfshdd.cfg:
       file.managed:
         - source: salt://moosefs/mfshdd.cfg
         - user: root
@@ -432,7 +443,7 @@ a MooseFS distributed filesystem chunkserver:
         - require:
           - pkg: mfs-chunkserver
 
-    '/etc/mfschunkserver.cfg':
+    /etc/mfschunkserver.cfg:
       file.managed:
         - source: salt://moosefs/mfschunkserver.cfg
         - user: root
@@ -461,6 +472,7 @@ This example shows much more of the available power of Jinja.
 Multiple for loops are used to dynamically detect available hard drives
 and set them up to be mounted, and the ``salt`` object is used multiple
 times to call shell commands to gather data.
+
 
 Introducing the Python and the PyDSL Renderers
 ----------------------------------------------
