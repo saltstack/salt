@@ -148,12 +148,15 @@ class Single(multiprocessing.Process):
         '''
         Deploy salt-thin
         '''
+        if not os.path.isfile(self.opts['salt_thin_tar']):
+            return False
         self.shell.send(
                 self.opts['salt_thin_tar'],
                 '/tmp/salt-thin.tgz')
         self.shell.exec_cmd(
                 'tar xvf /tmp/salt-thin.tgz -C /tmp && rm /tmp/salt-thin.tgz'
                 )
+        return True
 
     def copy_id(self):
         '''
@@ -191,7 +194,10 @@ class Single(multiprocessing.Process):
                'EOF').format(self.arg_str)
         ret = self.shell.exec_cmd(cmd)
         if ret.startswith('deploy'):
-            self.deploy()
+            if not self.deploy():
+                msg = ('Failed to deploy salt-thin to target. Is {0} '
+                       'available?'.format(self.opts['salt_thin_tar']))
+                return {self.id: msg}
             return json.loads(
                 # XXX: Remove the next pylint declaration when pylint 0.29
                 # comes out. More information:
