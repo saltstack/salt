@@ -739,8 +739,10 @@ def os_data():
                             grains['lsb_distrib_codename'] = \
                                 comps[3].replace('(', '').replace(')', '')
         # Use the already intelligent platform module to get distro info
-        (osname, osrelease, oscodename) = platform.linux_distribution(
-            supported_dists=_supported_dists)
+        # (though apparently it's not intelligent enough to strip quotes)
+        (osname, osrelease, oscodename) = \
+            [x.strip('"').strip("'") for x in
+             platform.linux_distribution(supported_dists=_supported_dists)]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
