@@ -18,7 +18,7 @@ from salt.utils.templates import render_jinja_tmpl
 
 # Import 3rd party libs
 import yaml
-from jinja2 import Environment
+from jinja2 import Environment, DictLoader, exceptions
 try:
     import timelib
     HAS_TIMELIB = True
@@ -209,7 +209,18 @@ class TestGetTemplate(TestCase):
 
 
 class TestCustomExtensions(TestCase):
-    def test_serialize(self):
+    def test_serialize_json(self):
+        dataset = {
+            "foo": True,
+            "bar": 42,
+            "baz": [1, 2, 3],
+            "qux": 2.0
+        }
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
+        self.assertEquals(dataset, json.loads(rendered))
+
+    def test_serialize_yaml(self):
         dataset = {
             "foo": True,
             "bar": 42,
@@ -220,8 +231,54 @@ class TestCustomExtensions(TestCase):
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         self.assertEquals(dataset, yaml.load(rendered))
 
-        rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
-        self.assertEquals(dataset, json.loads(rendered))
+    def test_load_yaml(self):
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{% set document = "{foo: it works}"|load_yaml %}{{ document.foo }}').render()
+        self.assertEquals(rendered, u"it works")
+
+        rendered = env.from_string('{% set document = document|load_yaml %}'
+                                   '{{ document.foo }}').render(document="{foo: it works}")
+        self.assertEquals(rendered, u"it works")
+
+        with self.assertRaises(exceptions.TemplateRuntimeError):
+            env.from_string('{% set document = document|load_yaml %}'
+                                       '{{ document.foo }}').render(document={"foo": "it works"})
+
+    def test_load_json(self):
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{% set document = \'{"foo": "it works"}\'|load_json %}'
+                                   '{{ document.foo }}').render()
+        self.assertEquals(rendered, u"it works")
+
+        rendered = env.from_string('{% set document = document|load_json %}'
+                                   '{{ document.foo }}').render(document='{"foo": "it works"}')
+        self.assertEquals(rendered, u"it works")
+
+        # bad quotes
+        with self.assertRaises(exceptions.TemplateRuntimeError):
+            env.from_string("{{ document|load_json }}").render(document="{'foo': 'it works'}")
+
+        # not a string
+        with self.assertRaises(exceptions.TemplateRuntimeError):
+            env.from_string('{{ document|load_json }}').render(document={"foo": "it works"})
+
+    def test_load_yaml_template(self):
+        loader = DictLoader({'foo': '{bar: "my god is blue", foo: [1, 2, 3]}'})
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+        rendered = env.from_string('{% import_yaml "foo" as doc %}{{ doc.bar }}').render()
+        self.assertEquals(rendered, u"my god is blue")
+
+        with self.assertRaises(exceptions.TemplateNotFound):
+            env.from_string('{% import_yaml "does not exists" as doc %}').render()
+
+    def test_load_json_template(self):
+        loader = DictLoader({'foo': '{"bar": "my god is blue", "foo": [1, 2, 3]}'})
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+        rendered = env.from_string('{% import_json "foo" as doc %}{{ doc.bar }}').render()
+        self.assertEquals(rendered, u"my god is blue")
+
+        with self.assertRaises(exceptions.TemplateNotFound):
+            env.from_string('{% import_json "does not exists" as doc %}').render()
 
 
 if __name__ == '__main__':
