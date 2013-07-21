@@ -39,7 +39,9 @@ except ImportError:
         LOG_FORMAT = '[%(levelname)-8s] %(message)s'
         salt.log.setup_console_logger(log_format=LOG_FORMAT)
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
-        sys.exit(1)
+        # Don't exit if msgpack is not available, this is to make local mode
+        # work without msgpack
+        #sys.exit(1)
 
 
 def package(payload):

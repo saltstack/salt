@@ -66,8 +66,12 @@ class Caller(object):
                     'pid': os.getpid(),
                     'jid': ret['jid'],
                     'tgt': 'salt-call'}
-            with salt.utils.fopen(proc_fn, 'w+') as fp_:
-                fp_.write(self.serial.dumps(sdata))
+            try:
+                with salt.utils.fopen(proc_fn, 'w+') as fp_:
+                    fp_.write(self.serial.dumps(sdata))
+            except NameError:
+                # Don't require msgpack with local
+                pass
             func = self.minion.functions[fun]
             ret['return'] = func(*args, **kwargs)
             ret['retcode'] = sys.modules[func.__module__].__context__.get(
