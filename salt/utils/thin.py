@@ -37,7 +37,7 @@ def gen_thin(cachedir):
         if not os.path.isfile(thinver):
             os.remove(thintar)
         elif open(thinver).read() == salt.__version__:
-            return True
+            return thintar
     tops = [
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),

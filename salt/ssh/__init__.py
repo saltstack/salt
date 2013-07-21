@@ -9,6 +9,7 @@ import json
 
 # Import salt libs
 import salt.ssh.shell
+import salt.utils.thin
 import salt.roster
 import salt.state
 import salt.loader
@@ -148,10 +149,9 @@ class Single(multiprocessing.Process):
         '''
         Deploy salt-thin
         '''
-        if not os.path.isfile(self.opts['salt_thin_tar']):
-            return False
+        thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
-                self.opts['salt_thin_tar'],
+                thin,
                 '/tmp/salt-thin.tgz')
         self.shell.exec_cmd(
                 'tar xvf /tmp/salt-thin.tgz -C /tmp && rm /tmp/salt-thin.tgz'
@@ -195,8 +195,7 @@ class Single(multiprocessing.Process):
         ret = self.shell.exec_cmd(cmd)
         if ret.startswith('deploy'):
             if not self.deploy():
-                msg = ('Failed to deploy salt-thin to target. Is {0} '
-                       'available?'.format(self.opts['salt_thin_tar']))
+                msg = ('Failed to deploy salt-thin to target.')
                 return {self.id: msg}
             return json.loads(
                 # XXX: Remove the next pylint declaration when pylint 0.29
