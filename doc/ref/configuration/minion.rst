@@ -104,13 +104,12 @@ The directory used to store the minion's public and private keys.
 ``id``
 ------
 
-Default: hostname (as returned by the Python call: ``socket.getfqdn()``)
+Default: the system's hostname (as returned by the Python function 
+``socket.getfqdn()``)
 
-Explicitly declare the id for this minion to use, if left commented the id
-will be the hostname as returned by the Python call: ``socket.getfqdn()``
-Since Salt uses detached ids it is possible to run multiple minions on the
-same machine but with different ids, this can be useful for Salt compute
-clusters.
+Explicitly declare the id for this minion to use. Since Salt uses detached ids
+it is possible to run multiple minions on the same machine but with different
+ids. This can be useful for Salt compute clusters.
 
 .. code-block:: yaml
 
