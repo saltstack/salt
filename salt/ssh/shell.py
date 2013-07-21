@@ -96,7 +96,7 @@ class Shell(object):
             return 'sshpass -p {0} {1} {2} {3} {4} {5}'.format(
                     self.passwd,
                     ssh,
-                    self.host,
+                    '' if ssh == 'scp' else self.host,
                     '-t -t' if self.tty else '',
                     opts,
                     cmd)
@@ -104,7 +104,7 @@ class Shell(object):
             opts = self._key_opts()
             return '{0} {1} {2} {3} {4}'.format(
                     ssh,
-                    self.host,
+                    '' if ssh == 'scp' else self.host,
                     '-t -t' if self.tty else '',
                     opts,
                     cmd)
