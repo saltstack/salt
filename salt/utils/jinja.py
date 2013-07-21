@@ -17,7 +17,6 @@ import yaml
 # Import salt libs
 import salt
 import salt.fileclient
-from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
