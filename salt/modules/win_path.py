@@ -1,8 +1,8 @@
 '''
 Manage the Windows System PATH
 
-Note that not all the Windows application will rehash the PATH environment variable,
-Only the ones that listens to the WM_SETTINGCHANGE message
+Note that not all Windows applications will rehash the PATH environment variable,
+Only the ones that listen to the WM_SETTINGCHANGE message
 http://support.microsoft.com/kb/104011 
 '''
 
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Load only on windows
+    Load only on Windows
     '''
     
     if salt.utils.is_windows() and HAS_WIN32:
@@ -35,7 +35,7 @@ def __virtual__():
 
 def _normalize_dir(string):
     '''
-    normalize the directory to make compare possible
+    Normalize the directory to make comparison possible
     '''
     
     return  re.sub(r'\\$','', string.lower())
@@ -63,7 +63,7 @@ def get_path():
 def exists(path):
     '''
     Check if the directory is configured in the SYSTEM path
-    ignores ending backslash, and not case sensitive
+    Case-insensitive and ignores trailing backslash
     
     CLI Example::
 
@@ -82,7 +82,7 @@ def add(path, index=0):
     Add the directory to the SYSTEM path in the index location
     
     CLI Example::
-        # Will add to the beginnig of the path
+        # Will add to the beginning of the path
         salt '*' win_path.add 'c:\\python27' 0
         
         # Will add to the end of the path
