@@ -16,7 +16,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
     Return the targets from the flat yaml file, checks opts for location but
     defaults to /etc/salt/roster
     '''
-    if os.path.isfile(__opts__['conf_file']):
+    if os.path.isfile(__opts__['conf_file']) or not os.path.exists(__opts__['conf_file']):
         template = os.path.join(
                 os.path.dirname(__opts__['conf_file']),
                 'roster')
