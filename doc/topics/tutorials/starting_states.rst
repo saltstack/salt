@@ -16,9 +16,8 @@ management.
 .. note::
 
     This is just the beginning of using states, make sure to read up on pillar
-    next:
+    :doc:`Pillar </topics/tutorials/pillar>` next.
 
-        :doc:`Pillar Walkthrough </topics/tutorials/pillar>`
 
 It is All Just Data
 ===================
@@ -391,6 +390,12 @@ for the Grains to be accessed from within the template. A few examples:
 
 This example is simple. If the ``os`` grain states that the operating system is
 Red Hat, then the name of the Apache package and service needs to be httpd.
+
+.. note::
+    Salt doesn't just serve up static files! Several templating engines can be
+    used to make file management more dynamic and flexible. Some examples for
+    using templates in managed files can be found in the documentation for the
+    :doc:`file state </ref/states/all/salt.states.file>`.
 
 A more aggressive way to use Jinja can be found here, in a module to set up
 a MooseFS distributed filesystem chunkserver:
