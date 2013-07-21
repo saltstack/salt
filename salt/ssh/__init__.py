@@ -150,7 +150,6 @@ class Single(multiprocessing.Process):
         Deploy salt-thin
         '''
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
-        print thin
         self.shell.send(
                 thin,
                 '/tmp/salt-thin.tgz')
@@ -184,9 +183,9 @@ class Single(multiprocessing.Process):
                'if hash salt-call\n'
                'then\n'
                '    SALT=$(type -p salt-call)\n'
-               'elif [ -f /tmp/salt-thin/salt-call] \n'
+               'elif [ -f /tmp/salt-call ] \n'
                'then\n'
-               '    SALT=/tmp/salt-thin/salt-call\n'
+               '    SALT=/tmp/salt-call\n'
                'else\n'
                '    echo "deploy"\n'
                '    exit 1\n'
