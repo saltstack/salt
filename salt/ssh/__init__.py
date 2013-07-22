@@ -105,7 +105,7 @@ class SSH(object):
             target['passwd'] = getpass.getpass(
                     'Password for {0}:'.format(host)
                     )
-            arg_str = 'ssh.set_auth_key {0} {1}'.format(
+            arg_str = 'ssh.set_auth_key {0} {1}, comment=root@master'.format(
                     target.get('user', 'root'),
                     self.get_pubkey())
             single = Single(
