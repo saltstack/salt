@@ -86,7 +86,7 @@ class SSH(object):
                 )
         pub = '{0}.pub'.format(priv)
         with open(pub, 'r') as fp_:
-            return fp_.read().split()[1]
+            return '{0} root@master'.format(fp_.read().split()[1])
 
     def key_deploy(self, host, ret):
         '''
@@ -105,7 +105,7 @@ class SSH(object):
             target['passwd'] = getpass.getpass(
                     'Password for {0}:'.format(host)
                     )
-            arg_str = 'ssh.set_auth_key {0} {1}, comment=root@master'.format(
+            arg_str = 'ssh.set_auth_key {0} {1}'.format(
                     target.get('user', 'root'),
                     self.get_pubkey())
             single = Single(
