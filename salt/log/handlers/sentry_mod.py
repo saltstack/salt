@@ -88,7 +88,7 @@ def __virtual__():
 def setup_handlers():
     if 'sentry_handler' not in __opts__:
         log.debug('No \'sentry_handler\' key was found in the configuration')
-        return
+        return False
 
     options = {}
     dsn = get_config_value('dsn')
