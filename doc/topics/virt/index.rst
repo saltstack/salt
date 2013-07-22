@@ -34,7 +34,7 @@ Salt Virt Tutorial
 A tutorial about how to get Salt Virt up and running has been added to the
 tutorial section:
 
-:doc:`Cloud Controller Tutorial <topics/tutorials/cloud_controller>`
+:doc:`Cloud Controller Tutorial </topics/tutorials/cloud_controller>`
 
 The Salt Virt Runner
 ====================
@@ -46,7 +46,7 @@ routines.
 Reference documentation for the virt runner is available with the runner
 module documentation:
 
-:doc:`Virt Runner Reference <ref/modules/all/salt.modules.virt>`
+:py:mod:`Virt Runner Reference <salt.modules.virt>`
 
 Based on Live State Data
 ========================
