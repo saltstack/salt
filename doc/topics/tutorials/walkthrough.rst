@@ -225,11 +225,11 @@ start with looks like this::
     # salt '*' test.ping
 
 The ``*`` is the target, which specifies all minions, and ``test.ping`` tells
-the minion to run the :ref:`test.ping <salt.modules.test.ping>` function. The
-result of running this command will be the master instructing all of the
-minions to execute :ref:`test.ping <salt.modules.test.ping>` in parallel and
-return the result. This is not an actual ICMP ping, but rather a simple
-function which returns ``True``. Using :ref:`test.ping
+the minion to run the :py:func:`test.ping <salt.modules.test.ping>` function.
+The result of running this command will be the master instructing all of the
+minions to execute :py:func:`test.ping <salt.modules.test.ping>` in parallel
+and return the result. This is not an actual ICMP ping, but rather a simple
+function which returns ``True``. Using :py:func:`test.ping
 <salt.modules.test.ping>` is a good way of confirming that a minion is
 connected.
 
@@ -245,7 +245,7 @@ Getting to Know the Functions
 
 Salt comes with a vast library of functions available for execution, and Salt
 functions are self documenting. To see what functions are available on the
-minions execute the :ref:`sys.doc <salt.modules.sys.doc>` function::
+minions execute the :py:func:`sys.doc <salt.modules.sys.doc>` function::
 
     # salt '*' sys.doc
 
@@ -291,7 +291,7 @@ addresses, etc::
 Grains
 ~~~~~~
 
-Salt uses a system called :ref:`Grains <../targeting/grains>` to build up
+Salt uses a system called :doc:`Grains <../targeting/grains>` to build up
 static data about minions. This data includes information about the operating
 system that is running, CPU architecture and much more. The grains system is
 used throughout Salt to deliver platform data to many components and to users.
