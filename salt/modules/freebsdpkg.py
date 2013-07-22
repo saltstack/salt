@@ -130,9 +130,8 @@ def version(*names, **kwargs):
 
 def refresh_db():
     '''
-    Use pkg update to get latest repo.txz when using pkgng, else update the
-    ports tree with portsnap otherwise. If the ports tree does not exist it
-    will be downloaded and set up.
+    Use pkg update to get latest repo.txz when using pkgng. Updating
+    with portsnap is not yet supported.
 
     CLI Example::
 
