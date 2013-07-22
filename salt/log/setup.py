@@ -18,6 +18,7 @@
 import os
 import re
 import sys
+import types
 import socket
 import urlparse
 import logging
@@ -30,6 +31,7 @@ TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
 
 # Import salt libs
+from salt._compat import string_types
 from salt.log.handlers import QueueLoggingHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
@@ -496,7 +498,11 @@ def setup_extended_logging(opts):
         initial_handlers_count = len(logging.root.handlers)
 
         handlers = get_handlers_func()
-        if handlers is False:
+        if isinstance(handlers, types.GeneratorType):
+            handlers = list(handlers)
+        elif isinstance(handlers, string_types):
+            handlers = [handlers]
+        elif handlers is False or handlers == [False]:
             # A false return value means not configuring any logging handler on
             # purpose
             logging.getLogger(__name__).info(
@@ -505,9 +511,6 @@ def setup_extended_logging(opts):
                 'purpose. Continuing...'.format(name)
             )
             continue
-
-        if not isinstance(handlers, (list, tuple)):
-            handlers = [handlers]
 
         for handler in handlers:
             if not handler and \
