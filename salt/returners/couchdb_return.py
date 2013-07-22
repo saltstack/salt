@@ -13,17 +13,7 @@ import json
 
 log = logging.getLogger(__name__)
 
-# Import the required modules.
-try:
-    import couchdb
-    HAS_COUCHDB = True
-except ImportError:
-    HAS_COUCHDB = False
-
-
 def __virtual__():
-    if not HAS_COUCHDB:
-        return False
     return 'couchdb'
 
 
@@ -67,12 +57,12 @@ def _request(method,url,content_type=None,_data=None):
     Makes a HTTP request. Returns the JSON parse.
     '''
     opener		= urllib2.build_opener( urllib2.HTTPHandler )
-    request		= urllib2.Request( url, data=_data )
+    request		= urllib2.Request( url, data=_data)
     if content_type:
         request.add_header( 'Content-Type', content_type )
     request.get_method	= lambda: method
     handler		= opener.open( request )
-    return json.reads( handler.read( ) )
+    return json.loads( handler.read( ) )
 
 def returner(ret):
     '''
@@ -82,19 +72,19 @@ def returner(ret):
     options = _get_options( )
 
     # Check to see if the database exists.
-    _response = _request( "GET", options['url '] + "_all_dbs" )
-
+    _response = _request( "GET", options['url'] + "_all_dbs" )
     if options['db'] not in _response:
 
         # Make a PUT request to create the database.
-        response = _request( "PUT", options['url'] + options['db'] )
+        _response = _request( "PUT", options['url'] + options['db'] )
 
         # Confirm that the response back was simple 'ok': true.
-        if not hasattr( response, "ok" ) or response["ok"] != True:
+        if not 'ok' in _response or _response['ok'] != True:
             return log.error( 'Unable to create database "{0}"'.format(options['db']) )
+        log.info( 'Created database "{0}"'.format(options['db']) )
 
+    # Call _generate_doc to get a dict object of the document we're going to 
+    # shove into the database.
     doc = _generate_doc(ret, options)
 
-    _response = _request( "PUT", options['url'] + options['db'] + "/" + doc['_id'], 'application/json', doc )
-    #if hasattr( _response, 'ok' ) and _response['ok'] == True:
-    #    log.debug( 'Successfully added the document.' )
+    _response = _request( "PUT", options['url'] + options['db'] + "/" + doc['_id'], 'application/json', json.dumps(doc) )
