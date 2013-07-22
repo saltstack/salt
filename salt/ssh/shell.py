@@ -54,6 +54,8 @@ class Shell(object):
                 return line
             if line.startswith('Pseudo-terminal'):
                 continue
+            if 'to the list of known hosts.' in line:
+                continue
             return line
         return errstr
 
