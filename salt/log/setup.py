@@ -482,17 +482,30 @@ def setup_extended_logging(opts):
     import salt.loader
 
     # Let's keep a reference to the current logging handlers
-    current_handlers = logging.root.handlers[:]
+    initial_handlers = logging.root.handlers[:]
 
     # Load any additional logging handlers
     providers = salt.loader.log_handlers(opts)
 
     for name, get_handlers_func in providers.iteritems():
+        logging.getLogger(__name__).info(
+            'Processing `log_handlers.{0}`'.format(name)
+        )
         # Keep a reference to the logging handlers count before getting the
         # possible additional ones.
         initial_handlers_count = len(logging.root.handlers)
 
         handlers = get_handlers_func()
+        if handlers is False:
+            # A false return value means not configuring any logging handler on
+            # purpose
+            logging.getLogger(__name__).info(
+                'The `log_handlers.{0}.setup_handlers()` function returned '
+                '`False` which means no logging handler was configured on '
+                'purpose. Continuing...'.format(name)
+            )
+            continue
+
         if not isinstance(handlers, (list, tuple)):
             handlers = [handlers]
 
@@ -515,15 +528,15 @@ def setup_extended_logging(opts):
             logging.root.addHandler(handler)
 
     # Let's get a reference to the newly added logging handlers
-    external_handlers = []
+    additional_handlers = []
     for handler in logging.root.handlers:
-        if handler in current_handlers:
+        if handler in initial_handlers:
             continue
-        external_handlers.extend(list(handlers))
+        additional_handlers.append(handler)
 
-    if external_handlers:
+    if additional_handlers:
         # Sync the null logging handler messages with the temporary handler
-        LOGGING_QUEUE_HANDLER.sync_with_handlers(external_handlers)
+        LOGGING_QUEUE_HANDLER.sync_with_handlers(additional_handlers)
     # Remove the temporary queue logging handler
     __remove_queue_logging_handler()
 
