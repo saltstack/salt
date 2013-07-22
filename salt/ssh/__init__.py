@@ -15,33 +15,6 @@ import salt.state
 import salt.loader
 
 
-class SSHCopyID(object):
-    '''
-    Used to manage copying the public key out to ssh minions
-    '''
-    def __init__(self, opts):
-        super(SSHCopyID, self).__init__()
-        self.opts = opts
-
-    def process(self):
-        '''
-        Execute ssh-copy-id
-        '''
-        for target in self.targets:
-            for default in self.defaults:
-                if not default in self.targets[target]:
-                    self.targets[target][default] = self.defaults[default]
-            if 'passwd' not in self.targets[target]:
-                self.targets[target]['passwd'] = getpass.getpass(
-                        'Password for {0}:'.format(target))
-            single = Single(
-                    self.opts,
-                    self.opts['arg_str'],
-                    target,
-                    **self.targets[target])
-            yield single.copy_id()
-
-
 class SSH(object):
     '''
     Create an ssh execution system
@@ -226,12 +199,15 @@ class Single(multiprocessing.Process):
         # 3. deploy salt-thin
         # 4. execute command
         cmd = (' << "EOF"\n'
-               'if [ `which python2` ]\n'
+               'if [ `type -p python2` ]\n'
                'then\n'
                '    PYTHON=python2\n'
-               'elif [ `which python26` ]\n'
+               'elif [ `type -p python26` ]\n'
                'then\n'
                '    PYTHON=python26\n'
+               'elif [ `type -p python27` ]\n'
+               'then\n'
+               '    PYTHON=python27\n'
                'fi\n'
                'if hash salt-call\n'
                'then\n'
