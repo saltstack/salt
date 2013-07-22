@@ -127,14 +127,18 @@ Viewing Minion Pillar
 
 Once the pillar is set up the data can be viewed on the minion via the
 ``pillar`` module, the pillar module comes with two functions,
-:mod:`pillar.data <salt.modules.pillar.data>` and and :mod:`pillar.raw
-<salt.modules.pillar.raw>`.  :mod:`pillar.data <salt.modules.pillar.data>` will
-return a freshly reloaded pillar and :mod:`pillar.raw
+:mod:`pillar.items <salt.modules.pillar.items>` and and :mod:`pillar.raw
+<salt.modules.pillar.raw>`.  :mod:`pillar.items <salt.modules.pillar.items>`
+will return a freshly reloaded pillar and :mod:`pillar.raw
 <salt.modules.pillar.raw>` will return the current pillar without a refresh:
 
 .. code-block:: bash
 
-    # salt '*' pillar.data
+    # salt '*' pillar.items
+
+.. note::
+    Prior to version 0.16.1, this function is named ``pillar.data``. This
+    function name is still supported for backwards compatibility.
 
 
 Pillar "get" Function
