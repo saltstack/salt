@@ -52,6 +52,9 @@ class Shell(object):
         for line in errstr.split('\n'):
             if line.startswith('ssh:'):
                 return line
+            if line.startswith('Pseudo-terminal'):
+                continue
+            return line
         return errstr
 
 
