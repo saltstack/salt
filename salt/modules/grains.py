@@ -1,5 +1,5 @@
 '''
-Control aspects of the grains data
+Return/control aspects of the grains data
 '''
 
 # Import python libs
@@ -70,7 +70,7 @@ def get(key, default=''):
 
 def items(sanitize=False):
     '''
-    Return the grains data
+    Return all of the minion's grains
 
     CLI Example::
 
@@ -80,7 +80,7 @@ def items(sanitize=False):
 
         salt '*' grains.items sanitize=True
     '''
-    if sanitize:
+    if salt.utils.is_true(sanitize):
         out = dict(__grains__)
         for key, func in _SANITIZERS.items():
             if key in out:
@@ -90,18 +90,13 @@ def items(sanitize=False):
         return __grains__
 
 
-def item(*args, **kargs):
+def item(*args, **kwargs):
     '''
-    Return a single component of the grains data
+    Return one or more grains
 
     CLI Example::
 
         salt '*' grains.item os
-
-    Return multiple components of the grains data
-
-    CLI Example::
-
         salt '*' grains.item os osrelease oscodename
 
     Sanitized CLI Example::
@@ -109,16 +104,16 @@ def item(*args, **kargs):
         salt '*' grains.item host sanitize=True
     '''
     ret = {}
-    for k in args:
-        if k in __grains__:
-            ret[k] = __grains__[k]
-    if 'sanitize' in kargs:
-        for k, func in _SANITIZERS.items():
-            if k in ret:
-                ret[k] = func(ret[k])
-        return ret
-    else:
-        return ret
+    for arg in args:
+        try:
+            ret[arg] = __grains__[arg]
+        except KeyError:
+            pass
+    if salt.utils.is_true(kwargs.get('sanitize')):
+        for arg, func in _SANITIZERS.items():
+            if arg in ret:
+                ret[arg] = func(ret[arg])
+    return ret
 
 
 def setval(key, val):
