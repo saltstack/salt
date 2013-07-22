@@ -4,4 +4,4 @@ salt.modules.pillar
 
 .. automodule:: salt.modules.pillar
     :members:
-    :exclude-members: items
+    :exclude-members: data
