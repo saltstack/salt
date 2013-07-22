@@ -2,18 +2,12 @@
 Simple returner for CouchDB. Optional configuration
 settings are listed below, along with sane defaults.
 
-couchdb.hooks
-    * is a list of dict objects.
-    * in each dict there is a key and value.
-    * the value is eval()'d
-    * optional "eval", which is executed beforehand.
-
 couchdb.db:     'salt'
 couchdb.url:        'http://salt:5984/'
-couchdb.hooks:      [ { "key": "timestamp", "value": "time.time()", "eval": "import time" } ]
 
 '''
 import logging
+import time
 
 log = logging.getLogger(__name__)
 
@@ -46,12 +40,7 @@ def _get_options():
         log.debug("Using default database.")
         db_name = "salt"
 
-    hooks = __salt__['config.option']('couchdb.hooks')
-    if not hooks:
-        log.debug("Using default hooks")
-        hooks = [{"key": "timestamp", "value": "time.time()", "eval": "import time"}]
-
-    return {"url": server_url, "db": db_name, "hooks": hooks}
+    return {"url": server_url, "db": db_name}
 
 
 def _generate_doc(ret, options):
@@ -60,17 +49,14 @@ def _generate_doc(ret, options):
     options.
     '''
 
-    # Just set the document ID to the jid.
+    # Create a copy of the object that we will return.
     r = ret
+
+    # Set the ID of the document to be the JID.
     r["_id"] = ret["jid"]
 
-    for hook in options["hooks"]:
-
-        # Eval if specified.
-        if hasattr(hook, "eval"):
-            eval(hook["eval"])
-
-        r[hook["key"]] = eval(hook["value"])
+    # Add a timestamp field to the document
+    r["timestamp"] = time.time( )
 
     return r
 
