@@ -72,6 +72,55 @@ class SSH(object):
                 'sudo': self.opts.get('ssh_sudo', False),
                 }
 
+    def get_pubkey(self):
+        '''
+        Return the keystring for the ssh public key
+        '''
+        priv = self.opts.get(
+                'ssh_priv',
+                os.path.join(
+                    self.opts['pki_dir'],
+                    'ssh',
+                    'salt-ssh.rsa'
+                    )
+                )
+        pub = '{0}.pub'.format(priv)
+        with open(pub, 'r') as fp_:
+            return fp_.read().split()[1]
+
+    def key_deploy(self, host, ret):
+        '''
+        Deploy the ssh key if the minions don't auth
+        '''
+        if ret[host].startswith('Permission denied'):
+            target = self.targets[host]
+            # permission denied, attempt to auto deploy ssh key
+            print(('Permission denied for host {0}, do you want to '
+                    'deploy the salt-ssh key?'))
+            deploy = raw_input('[Y/n]')
+            if deploy.startswith(('n', 'N')):
+                continue
+            target['passwd'] = getpass.getpass(
+                    'Password for {0}:'.format(host)
+                    )
+            arg_str = 'ssh.set_auth_key {0} {1}'.format(
+                    target.get('user', 'root'),
+                    self.get_pubkey())
+            single = Single(
+                    self.opts,
+                    arg_str,
+                    host,
+                    **target)
+            single.cmd()
+            target.pop('passwd')
+            single = Single(
+                    self.opts,
+                    self.opts['arg_str'],
+                    host,
+                    **target)
+            return single.cmd()
+        return ret
+
     def process(self):
         '''
         Execute the desired routine on the specified systems
@@ -94,6 +143,8 @@ class SSH(object):
         Execute the overall routine
         '''
         for ret in self.process():
+            host = ret.keys()[0]
+            ret = self.key_deploy(host, ret)
             salt.output.display_output(
                     ret,
                     self.opts.get('output', 'nested'),
