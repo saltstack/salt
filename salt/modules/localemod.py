@@ -88,9 +88,9 @@ def get_locale():
     if 'Arch' in __grains__['os_family']:
         return _localectl_get()
     elif 'RedHat' in __grains__['os_family']:
-        cmd = 'grep LANG /etc/sysconfig/i18n | grep -vE "^#"'
+        cmd = 'grep "^LANG=" /etc/sysconfig/i18n'
     elif 'Debian' in __grains__['os_family']:
-        cmd = 'grep LANG /etc/default/locale | grep -vE "^#"'
+        cmd = 'grep "^LANG=" /etc/default/locale'
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale show'
         return __salt__['cmd.run'](cmd).strip()
