@@ -41,7 +41,11 @@ Setting Up Pillar
 The pillar is already running in Salt by default. The data in the minion's
 pillars can be seen via the following command:
 
-    # salt '*' pillar.data
+    # salt '*' pillar.items
+
+.. note::
+    Prior to version 0.16.1, this function is named ``pillar.data``. This
+    function name is still supported for backwards compatibility.
 
 By default the contents of the master configuration file are loaded into
 pillar for all minions, this is to enable the master configuration file to
@@ -64,7 +68,7 @@ To start setting up the pillar, the /srv/pillar directory needs to be present:
 Now a simple top file, following the same format as the top file used for
 states needs to be created:
 
-`/srv/pillar/top.sls`
+``/srv/pillar/top.sls``:
 
 .. code-block:: yaml
 
@@ -73,9 +77,9 @@ states needs to be created:
         - data
 
 This top file associates the data.sls file to all minions. Now the
-`/srv/pillar/data.sls` file needs to be populated:
+``/srv/pillar/data.sls`` file needs to be populated:
 
-`/srv/pillar/data.sls`
+``/srv/pillar/data.sls``:
 
 .. code-block:: yaml
 
@@ -83,7 +87,7 @@ This top file associates the data.sls file to all minions. Now the
 
 Now that the file has been saved the minions' pillars will be updated:
 
-    # salt '*' pillar.data
+    # salt '*' pillar.items
 
 The key `info` should now appear in the returned pillar data.
 
