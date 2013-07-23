@@ -439,7 +439,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
         try:
             __salt__['file.set_mode'](cached, '0644')
         except KeyError:
-           pass
+            pass
 
     # Prepare options
     opts = {
