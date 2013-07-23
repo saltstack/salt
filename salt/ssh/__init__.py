@@ -100,18 +100,37 @@ class SSH(object):
         '''
         Execute the desired routine on the specified systems
         '''
-        # TODO, this is just the code to test the chain, this is where the
-        # parallel stuff needs to go once the chain is proven valid
-        for target in self.targets:
-            for default in self.defaults:
-                if not default in self.targets[target]:
-                    self.targets[target][default] = self.defaults[default]
-            single = Single(
-                    self.opts,
-                    self.opts['arg_str'],
-                    target,
-                    **self.targets[target])
-            yield single.cmd()
+        running = {}
+        active = 0
+        target_iter = self.targets.__iter__()
+        while True:
+            done = set()
+            if len(running) < self.opts['ssh_max_process']:
+                host = next(target_iter)
+                single = Single(
+                        self.opts,
+                        self.opts['arg_str'],
+                        host,
+                        **self.targets[target])
+                running[host] = {'iter': single.cmd(),
+                                 'single': single}
+            for host in running:
+                stdout, stderr = next(running[host])
+                if stdout == 'deploy':
+                    running[host]['single'].deploy()
+                    running[host]['iter'] = single.cmd()
+                elif stdout is None and stderr is None:
+                    continue
+                else:
+                    # This job is done, yield it
+                    if not stdout and stderr:
+                        yield stderr
+                    else:
+                        yield stdout
+                    done.add(host)
+            for host in done:
+                running.pop(host)
+                
 
     def run(self):
         '''
@@ -136,7 +155,7 @@ class SSH(object):
         #file_refs = salt.utils.lowstate_file_refs(lowstate)
 
 
-class Single(multiprocessing.Process):
+class Single():
     '''
     Hold onto a single ssh execution
     '''
@@ -157,7 +176,6 @@ class Single(multiprocessing.Process):
             timeout=None,
             sudo=False,
             **kwargs):
-        super(Single, self).__init__()
         self.opts = opts
         self.arg_str = arg_str
         self.id = id_
@@ -183,12 +201,6 @@ class Single(multiprocessing.Process):
                 'tar xvf /tmp/salt-thin.tgz -C /tmp && rm /tmp/salt-thin.tgz'
                 )
         return True
-
-    def copy_id(self):
-        '''
-        Execute ssh copy id
-        '''
-        pass
 
     def cmd(self):
         '''
@@ -221,19 +233,11 @@ class Single(multiprocessing.Process):
                'fi\n'
                '$PYTHON $SALT --local --out json -l quiet {0}\n'
                'EOF').format(self.arg_str)
-        ret = self.shell.exec_cmd(cmd)
-        if ret.startswith('deploy'):
-            if not self.deploy():
-                msg = ('Failed to deploy salt-thin to target.')
-                return {self.id: msg}
-            return self.cmd()
-        try:
-            data = json.loads(ret)
-            return {self.id: data['local']}
-        except KeyError:
-            return {self.id: data}
-        except Exception:
-            return {self.id: 'No valid data returned, is ssh key deployed?'}
+        for stdout, stderr in self.shell.exec_nb_cmd(cmd):
+            if stdout is None and stderr is None:
+                yield None, None
+            else:
+                yield stdout, stderr
 
 
 class FunctionWrapper(dict):
