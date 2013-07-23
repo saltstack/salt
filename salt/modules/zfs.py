@@ -84,8 +84,9 @@ def _make_function(cmd_name):
         ret = {}
 
         # Run the command.
+
         res = salt_cmd.run_all(
-                '%s %s %s'.format(
+                '{0} {1} {2}'.format(
                     _check_zfs(),
                     cmd_name,
                     ' '.join(args)
