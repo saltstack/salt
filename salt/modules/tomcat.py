@@ -436,7 +436,10 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
         cached = __salt__['cp.get_file'](war, tfile, env)
         if not cached:
             return 'FAIL - could not cache the WAR file'
-        __salt__['file.set_mode'](cached, '0644')
+        try:
+            __salt__['file.set_mode'](cached, '0644')
+        except KeyError:
+           pass
 
     # Prepare options
     opts = {
