@@ -99,14 +99,8 @@ def get_jid(jid):
     Get the document with a given JID.
     '''
     log.debug( "Got here" )
-    return {"foo"}
+    return { }
     _response = _request( "GET", options['url'] + options['db'] + '/' + jid )
     log.debug( "Response is %s" % _response )
     if 'error' in _response:
         log.error( 'Unable to get JID "{0}" : "{1}"'.format(jid,_response) )
-
-def get_jids(jid):
-    '''
-    Foo
-    '''
-    return [ ]
