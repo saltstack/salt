@@ -87,4 +87,26 @@ def returner(ret):
     # shove into the database.
     doc = _generate_doc(ret, options)
 
+    # Make the actual HTTP PUT request to create the doc.
     _response = _request( "PUT", options['url'] + options['db'] + "/" + doc['_id'], 'application/json', json.dumps(doc) )
+
+    # Santiy check regarding the response..
+    if not 'ok' in _response or _response['ok'] != True:
+        log.error( 'Unable to create document: "{0}"'.format(_response) )
+
+def get_jid(jid):
+    '''
+    Get the document with a given JID.
+    '''
+    log.debug( "Got here" )
+    return {"foo"}
+    _response = _request( "GET", options['url'] + options['db'] + '/' + jid )
+    log.debug( "Response is %s" % _response )
+    if 'error' in _response:
+        log.error( 'Unable to get JID "{0}" : "{1}"'.format(jid,_response) )
+
+def get_jids(jid):
+    '''
+    Foo
+    '''
+    return [ ]
