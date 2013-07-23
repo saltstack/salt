@@ -235,8 +235,9 @@ Saltstack extends `builtin filters`_ with his custom filters:
 
 strftime
   Converts any time related object into a time based string. It requires a
-  valid `strftime directives`_. An `exhaustive list`_ can be found in the
-  official Python documentation. Fuzzy dates are parsed by `timelib`_ python
+  valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
+  :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
+  the official Python documentation. Fuzzy dates are parsed by `timelib`_ python
   module. Some exemples are available on this pages.
 
   .. code-block:: yaml
@@ -247,8 +248,6 @@ strftime
       {{ "now"|strftime }}
 
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/##builtin-filters
-.. _`strftime directives`: http://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
-.. _`exhaustive list`: http://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
 .. _`timelib`: https://github.com/pediapress/timelib/
 
 Jinja in Files
