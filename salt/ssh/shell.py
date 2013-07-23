@@ -148,6 +148,42 @@ class Shell(object):
             return '{"local": "Unknown Error"}'
         return '{"local": "Unknown Error"}'
 
+    def _run_nb_cmd(self, cmd):
+        '''
+        cmd iterator
+        '''
+        try:
+            proc = salt.utils.nb_open.NonBlockingPopen(
+                cmd,
+                shell=True,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+            while True:
+                out = proc.recv()
+                err = proc.recv_err()
+                if out is None and err is None:
+                    break
+                yield out, err
+        except Exception:
+            yield ('', 'Unknown Error')
+
+    def exec_nb_cmd(self, cmd):
+        '''
+        Yield None until cmd finished
+        '''
+        r_out = ''
+        r_err = ''
+        if self.sudo:
+            cmd = 'sudo {0}'.format(cmd)
+        for out, err in self._exec_nb_cmd(cmd):
+            if out is not None:
+                r_out += out
+            if err is not None:
+                r_err += err
+            yield None
+        yield r_out, r_err
+
     def exec_cmd(self, cmd):
         '''
         Execute a remote command
