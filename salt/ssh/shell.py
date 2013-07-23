@@ -176,7 +176,7 @@ class Shell(object):
         r_err = ''
         if self.sudo:
             cmd = 'sudo {0}'.format(cmd)
-        for out, err in self._exec_nb_cmd(cmd):
+        for out, err in self._run_nb_cmd(cmd):
             if out is not None:
                 r_out += out
             if err is not None:
