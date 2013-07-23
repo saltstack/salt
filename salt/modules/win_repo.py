@@ -35,7 +35,7 @@ def __virtual__():
 
 
 def genrepo():
-    '''
+    r'''
     Generate win_repo_cachefile based on sls files in the win_repo
 
     CLI Example::
