@@ -47,7 +47,6 @@ def _available_commands():
             cmds = line.split(' ')[0].split('|')
             doc = ' '.join(line.split(' ')[1:])
             for cmd in [ cmd.strip( ) for cmd in cmds ]:
-            #for cmd in [cmd.strip() for cmd in line.split(' ')[0].split('|')]:
                 if cmd not in _return:
                     _return[cmd] = doc
     return _return
@@ -86,7 +85,6 @@ def _make_function(cmd_name,doc):
         ret = {}
 
         # Run the command.
-
         res = salt_cmd.run_all(
                 '{0} {1} {2}'.format(
                     _check_zfs(),
