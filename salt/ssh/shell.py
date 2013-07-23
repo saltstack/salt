@@ -166,6 +166,8 @@ class Shell(object):
                 err = proc.recv_err()
                 if out is None and err is None:
                     break
+                if err:
+                    err = self.get_error(err)
                 yield out, err
         except Exception:
             yield ('', 'Unknown Error')
