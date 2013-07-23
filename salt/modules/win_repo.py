@@ -39,7 +39,7 @@ def genrepo():
 
     CLI Example::
 
-        salt -G 'os:Windows' winrepo.genrepo
+        salt-call winrepo.genrepo -c c:\salt\conf
     '''
     ret = {}
     repo = __opts__['win_repo']
