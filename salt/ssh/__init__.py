@@ -4,8 +4,6 @@ Create ssh executor system
 # Import python libs
 import os
 import getpass
-import multiprocessing
-import json
 
 # Import salt libs
 import salt.ssh.shell
@@ -101,17 +99,16 @@ class SSH(object):
         Execute the desired routine on the specified systems
         '''
         running = {}
-        active = 0
         target_iter = self.targets.__iter__()
         while True:
             done = set()
-            if len(running) < self.opts['ssh_max_process']:
+            if len(running) < self.opts['ssh_max_proc']:
                 host = next(target_iter)
                 single = Single(
                         self.opts,
                         self.opts['arg_str'],
                         host,
-                        **self.targets[target])
+                        **self.targets[host])
                 running[host] = {'iter': single.cmd(),
                                  'single': single}
             for host in running:
@@ -130,7 +127,6 @@ class SSH(object):
                     done.add(host)
             for host in done:
                 running.pop(host)
-                
 
     def run(self):
         '''
