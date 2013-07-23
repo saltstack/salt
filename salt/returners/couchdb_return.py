@@ -48,31 +48,31 @@ def _generate_doc(ret, options):
     r["_id"] = ret["jid"]
 
     # Add a timestamp field to the document
-    r["timestamp"] = time.time( )
+    r["timestamp"] = time.time()
 
     return r
 
-def _request(method,url,content_type=None,_data=None):
+def _request(method, url, content_type=None, _data=None):
     '''
     Makes a HTTP request. Returns the JSON parse.
     '''
-    opener		= urllib2.build_opener( urllib2.HTTPHandler )
+    opener		= urllib2.build_opener(urllib2.HTTPHandler)
     request		= urllib2.Request( url, data=_data)
     if content_type:
-        request.add_header( 'Content-Type', content_type )
+        request.add_header('Content-Type', content_type)
     request.get_method	= lambda: method
     try:
-        handler		= opener.open( request )
+        handler		= opener.open(request)
     except urllib2.HTTPError as e:
         return {'error': '{0}'.format(e) }
-    return json.loads( handler.read( ) )
+    return json.loads(handler.read())
 
 def returner(ret):
     '''
     Take in the return and shove it into the couchdb database.
     '''
 
-    options = _get_options( )
+    options = _get_options()
 
     # Check to see if the database exists.
     _response = _request( "GET", options['url'] + "_all_dbs" )
@@ -95,15 +95,15 @@ def returner(ret):
 
     # Santiy check regarding the response..
     if not 'ok' in _response or _response['ok'] != True:
-        log.error( 'Unable to create document: "{0}"'.format(_response) )
+        log.error('Unable to create document: "{0}"'.format(_response))
 
 def get_jid(jid):
     '''
     Get the document with a given JID.
     '''
-    options = _get_options( )
+    options = _get_options()
     _response = _request( "GET", options['url'] + options['db'] + '/' + jid )
     if 'error' in _response:
-        log.error( 'Unable to get JID "{0}" : "{1}"'.format(jid,_response) )
-        return { }
+        log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
+        return {}
     return { _response['id']: _response }
