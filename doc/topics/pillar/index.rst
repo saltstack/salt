@@ -71,7 +71,7 @@ with different 'os' grains:
     {% endif %}
 
 Now this data can be used from within modules, renderers, State SLS files, and
-more via the shared pillar `dict`_:
+more via the shared pillar :ref:`dict <python2:typesmapping>`:
 
 .. code-block:: yaml
 
@@ -87,7 +87,6 @@ more via the shared pillar `dict`_:
         - installed
         - name: {{ pillar['git'] }}
 
-.. _`dict`: http://docs.python.org/library/stdtypes.html#mapping-types-dict
 
 
 Note that you cannot just list key/value-information in ``top.sls``.
