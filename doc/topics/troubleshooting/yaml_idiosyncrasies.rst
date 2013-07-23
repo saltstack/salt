@@ -252,9 +252,9 @@ Underscores stripped in Integer Definitions
 
 If a definition only includes numbers and underscores, it is parsed by YAML as
 an integer and all underscores are stripped.  To ensure the object becomes a
-string, it should be surrounded by quotes.  `More information here.`_
+string, it should be surrounded by quotes.  `More information here`_.
 
-.. _`More information here.`: http://stackoverflow.com/questions/2723321/snakeyaml-how-to-disable-underscore-stripping-when-parsing
+.. _`More information here`: http://stackoverflow.com/questions/2723321/snakeyaml-how-to-disable-underscore-stripping-when-parsing
 
 Here's an example:
 
