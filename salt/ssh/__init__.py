@@ -3,6 +3,7 @@ Create ssh executor system
 '''
 # Import python libs
 import os
+import json
 import getpass
 
 # Import salt libs
@@ -104,6 +105,10 @@ class SSH(object):
             done = set()
             if len(running) < self.opts.get('ssh_max_procs', 5):
                 host = next(target_iter)
+                for default in self.defaults:
+                    if not default in self.targets[host]:
+                        self.targets[host][default] = self.defaults[default]
+
                 single = Single(
                         self.opts,
                         self.opts['arg_str'],
@@ -119,11 +124,18 @@ class SSH(object):
                 elif stdout is None and stderr is None:
                     continue
                 else:
-                    # This job is done, yield it
-                    if not stdout and stderr:
-                        yield stderr
-                    else:
-                        yield stdout
+                    # This job is done, yield
+                    try:
+                        if not stdout and stderr:
+                            yield {running[host]['single'].id: stderr}
+                        else:
+                            data = json.dumps(stdout)
+                            if 'local' in data:
+                                yield {running[host]['single'].id: data['local']}
+                            else:
+                                yield {running[host]['single'].id: data}
+                    except Exception:
+                            yield {running[host]['single'].id: 'Bad Return'}
                     done.add(host)
             for host in done:
                 running.pop(host)
