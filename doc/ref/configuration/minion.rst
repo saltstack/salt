@@ -607,7 +607,7 @@ can be seen on :func:`time.strftime <python2:time.strftime>`.
 Default: ``[%(levelname)-8s] %(message)s``
 
 The format of the console logging messages. Allowed formatting options can
-be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 .. code-block:: yaml
 
@@ -621,7 +621,7 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. Allowed formatting options can
-be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 .. code-block:: yaml
 
