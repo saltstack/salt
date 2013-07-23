@@ -4,6 +4,7 @@ Manage transport commands via ssh
 
 # Import python libs
 import os
+import json
 import subprocess
 
 # Import salt libs
@@ -43,6 +44,21 @@ class Shell(object):
         self.timeout = timeout
         self.sudo = sudo
         self.tty = tty
+
+    def get_error(self, errstr):
+        '''
+        Parse out an error and return a targetted error string
+        '''
+        for line in errstr.split('\n'):
+            if line.startswith('ssh:'):
+                return line
+            if line.startswith('Pseudo-terminal'):
+                continue
+            if 'to the list of known hosts.' in line:
+                continue
+            return line
+        return errstr
+
 
     def _key_opts(self):
         '''
@@ -123,11 +139,14 @@ class Shell(object):
             )
 
             data = proc.communicate()
-            return data[0]
+            if data[0]:
+                return data[0]
+            if data[1]:
+                ret = {'local': self.get_error(data[1])}
+                return json.dumps(ret)
         except Exception:
-            pass
-        # Signal an error
-        return ''
+            return '{"local": "Unknown Error"}'
+        return '{"local": "Unknown Error"}'
 
     def exec_cmd(self, cmd):
         '''

@@ -1020,8 +1020,12 @@ class State(object):
             for name, body in high.items():
                 if name.startswith('__'):
                     continue
-                if body.get('__sls__', '') in ex_sls:
-                    ex_id.add(name)
+                sls = body.get('__sls__', '')
+                if not sls:
+                    continue
+                for ex_ in ex_sls:
+                    if fnmatch.fnmatch(sls, ex_):
+                        ex_id.add(name)
         for id_ in ex_id:
             if id_ in high:
                 high.pop(id_)

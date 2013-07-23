@@ -65,6 +65,8 @@ MOCK_MODULES = [
     'rpmUtils',
     'rpmUtils.arch',
     'yum',
+    'OpenSSL',
+    'zfs'
 ]
 
 for mod_name in MOCK_MODULES:
