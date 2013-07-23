@@ -203,7 +203,8 @@ Documenting Salt modules is easy! Just add a `Python docstring`_ to the function
 Now when the sys.doc call is executed the docstring will be cleanly returned
 to the calling terminal.
 
-.. _`Python docstring`: http://www.python.org/dev/peps/pep-0257/#what-is-a-docstring
+.. _`Python docstring`: http://docs.python.org/2/glossary.html#term-docstring
+
 
 Add Module metadata
 -------------------
