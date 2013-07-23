@@ -790,7 +790,7 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 Default: ``%H:%M:%S``
 
 The date and time format used in console log messages. Allowed date/time formatting
-can be seen on http://docs.python.org/library/time.html#time.strftime
+can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 .. code-block:: yaml
 
@@ -804,7 +804,7 @@ can be seen on http://docs.python.org/library/time.html#time.strftime
 Default: ``%Y-%m-%d %H:%M:%S``
 
 The date and time format used in log file messages. Allowed date/time formatting
-can be seen on http://docs.python.org/library/time.html#time.strftime
+can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 .. code-block:: yaml
 
