@@ -178,15 +178,18 @@ def interfaces():
     return salt.utils.network.interfaces()
 
 
-def hwaddr(iface):
+def hw_addr(iface):
     '''
     Return the hardware address (a.k.a. MAC address) for a given interface
 
     CLI Example::
 
-        salt '*' network.hwaddr eth0
+        salt '*' network.hw_addr 'Wireless Connection #1'
     '''
-    return salt.utils.network.hwaddr(iface)
+    return salt.utils.network.hw_addr(iface)
+
+# Alias hwaddr to preserve backward compat
+hwaddr = hw_addr
 
 
 def subnets():
@@ -224,6 +227,8 @@ def ip_addrs(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs(interface=interface,
                                        include_loopback=include_loopback)
 
+ipaddrs = ip_addrs
+
 
 def ip_addrs6(interface=None, include_loopback=False):
     '''
@@ -237,3 +242,5 @@ def ip_addrs6(interface=None, include_loopback=False):
     '''
     return salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
+
+ipaddrs6 = ip_addrs6
