@@ -743,7 +743,7 @@ def get_repo(repo, **kwargs):
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
-        dist = __grains__['lsb_codename']
+        dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/')
         if ppa_auth:
             auth_info = '{0}@'.format(ppa_auth)
@@ -753,7 +753,7 @@ def get_repo(repo, **kwargs):
             if ppa_format_support:
                 repo = softwareproperties.ppa.expand_ppa_line(
                     repo,
-                    __grains__['lsb_codename'])[0]
+                    __grains__['lsb_distrib_codename'])[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
@@ -810,7 +810,7 @@ def del_repo(repo, **kwargs):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         is_ppa = True
-        dist = __grains__['lsb_codename']
+        dist = __grains__['lsb_distrib_codename']
         if not ppa_format_support:
             warning_str = 'Unable to use functions from ' \
                           '"python-software-properties" package, making ' \
@@ -951,7 +951,7 @@ def mod_repo(repo, **kwargs):
                               '(e.g. saltstack/salt) not found.  Received ' \
                               '"{0}" instead.'
                     raise Exception(err_str.format(repo[4:]))
-                dist = __grains__['lsb_codename']
+                dist = __grains__['lsb_distrib_codename']
                 # ppa has a lot of implicit arguments. Make them explicit.
                 # These will defer to any user-defined variants
                 kwargs['dist'] = dist
@@ -1186,7 +1186,7 @@ def expand_repo_def(repokwargs):
     repo = repokwargs['repo']
 
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
-        dist = __grains__['lsb_codename']
+        dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
         if 'ppa_auth' in repokwargs:
             auth_info = '{0}@'.format(repokwargs['ppa_auth'])
