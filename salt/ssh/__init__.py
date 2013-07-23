@@ -101,10 +101,13 @@ class SSH(object):
         '''
         running = {}
         target_iter = self.targets.__iter__()
+        done = set()
         while True:
-            done = set()
             if len(running) < self.opts.get('ssh_max_procs', 5):
-                host = next(target_iter)
+                try:
+                    host = next(target_iter)
+                except StopIteration:
+                    pass
                 for default in self.defaults:
                     if not default in self.targets[host]:
                         self.targets[host][default] = self.defaults[default]
@@ -138,7 +141,10 @@ class SSH(object):
                             yield {running[host]['single'].id: 'Bad Return'}
                     done.add(host)
             for host in done:
-                running.pop(host)
+                if host in running:
+                    running.pop(host)
+            if len(done) >= len(self.targets):
+                break
 
     def run(self):
         '''
