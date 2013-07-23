@@ -150,7 +150,7 @@ The Salt modules for package managers all contain a ``__virtual__`` function
 which is called to define what systems the module should be loaded on.
 
 The ``__virtual__`` function is used to return either a
-:ref:`string <python2:typesseq>` or :ref:`False <python2:built-in-consts>`. If
+:ref:`string <python2:typesseq>` or :py:data:`False`. If
 False is returned then the module is not loaded, if a string is returned then
 the module is loaded with the name of the string.
 
