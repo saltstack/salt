@@ -230,6 +230,8 @@ class Single(multiprocessing.Process):
         try:
             data = json.loads(ret)
             return {self.id: data['local']}
+        except KeyError:
+            return {self.id: data}
         except Exception:
             return {self.id: 'No valid data returned, is ssh key deployed?'}
 
