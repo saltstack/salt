@@ -138,7 +138,7 @@ class SSH(object):
                             else:
                                 yield {running[host]['single'].id: data}
                     except Exception:
-                            yield {running[host]['single'].id: 'Bad Return'}
+                        yield {running[host]['single'].id: 'Bad Return'}
                     done.add(host)
             for host in done:
                 if host in running:
