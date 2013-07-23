@@ -181,7 +181,7 @@ class Shell(object):
                 r_out += out
             if err is not None:
                 r_err += err
-            yield None
+            yield None, None
         yield r_out, r_err
 
     def exec_cmd(self, cmd):
