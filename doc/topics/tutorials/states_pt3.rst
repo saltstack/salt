@@ -95,10 +95,10 @@ The Salt module functions are also made available in the template context as
 Note that for the above example to work, ``some_group_that_exists`` must exist
 before the state file is processed by the templating engine.
 
-Below is an example that uses the ``network.hwaddr`` function to retrieve the
+Below is an example that uses the ``network.hw_addr`` function to retrieve the
 MAC address for eth0::
 
-    salt['network.hwaddr']('eth0')
+    salt['network.hw_addr']('eth0')
 
 Advanced SLS module syntax
 ==========================
