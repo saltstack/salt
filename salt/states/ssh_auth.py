@@ -39,6 +39,7 @@ name.
 
 # Import python libs
 import re
+import sys
 
 
 def _present_test(user, name, enc, comment, options, source, config, env):
@@ -60,11 +61,16 @@ def _present_test(user, name, enc, comment, options, source, config, env):
                 comment += 'Set to {0}: {1}\n'.format(status, key)
             if comment:
                 return result, comment
-        result = True
-        comment = (
-                'All host keys in file {0} are already present'
-                ).format(source)
-        return result, comment
+        err = sys.modules[
+            __salt__['test.ping'].__module__
+        ].__context__.pop('ssh_auth.error', None)
+        if err:
+            return False, err
+        else:
+            return (
+                True,
+                'All host keys in file {0} are already present'.format(source)
+            )
     check = __salt__['ssh.check_key'](
             user,
             name,
@@ -116,6 +122,18 @@ def present(
         The source file for the key(s). Can contain any number of public keys,
         in standard "authorized_keys" format. If this is set, comment, enc,
         and options will be ignored.
+
+    .. note::
+        The source file must contain keys in the format ``<enc> <key>
+        <comment>``. If you have generated a keypair using PuTTYgen, then you
+        will need to do the following to retrieve an OpenSSH-compatible public
+        key.
+
+        1. In PuTTYgen, click ``Load``, and select the *private* key file (not
+           the public key), and click ``Open``.
+        2. Copy the public key from the box labeled ``Public key for pasting
+           into OpenSSH authorized_keys file``.
+        3. Paste it into a new file.
 
     options
         The options passed to the key, pass a list object
@@ -191,11 +209,18 @@ def present(
                           .format(name, user))
     elif data == 'fail':
         ret['result'] = False
-        ret['comment'] = ('Failed to add the ssh key, is the home directory'
-                          ' available and/or does the key file exist?')
+        err = sys.modules[
+            __salt__['test.ping'].__module__
+        ].__context__.pop('ssh_auth.error', None)
+        if err:
+            ret['comment'] = err
+        else:
+            ret['comment'] = ('Failed to add the ssh key. Is the home '
+                              'directory available, and/or does the key file '
+                              'exist?')
     elif data == 'invalid':
         ret['result'] = False
-        ret['comment'] = ('Invalid public ssh key, most likely has spaces')
+        ret['comment'] = 'Invalid public ssh key, most likely has spaces'
 
     return ret
 
