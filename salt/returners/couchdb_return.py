@@ -103,6 +103,7 @@ def get_jid(jid):
     '''
     options = _get_options( )
     _response = _request( "GET", options['url'] + options['db'] + '/' + jid )
-    log.debug( "Response is %s" % _response )
     if 'error' in _response:
         log.error( 'Unable to get JID "{0}" : "{1}"'.format(jid,_response) )
+        return { }
+    return { _response['id']: _response }
