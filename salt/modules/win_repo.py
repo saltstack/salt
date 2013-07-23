@@ -3,8 +3,8 @@ Module to manage Windows software repo on a Standalone Minion
 
 The following options must be set in the Minion config:
   file_client: local
-  win_repo_cachefile: c:\\salt\file_roots\winrepo\winrepo.p
-  win_repo: c:\\salt\file_roots\winrepo
+  win_repo_cachefile: c:\salt\file_roots\winrepo\winrepo.p
+  win_repo: c:\salt\file_roots\winrepo
 
 Place all Windows package files in the 'win_repo' directory.
 '''
