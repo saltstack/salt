@@ -2,32 +2,18 @@
 Simple returner for CouchDB. Optional configuration
 settings are listed below, along with sane defaults.
 
-couchdb.hooks
-    * is a list of dict objects.
-    * in each dict there is a key and value.
-    * the value is eval()'d
-    * optional "eval", which is executed beforehand.
-
 couchdb.db:     'salt'
 couchdb.url:        'http://salt:5984/'
-couchdb.hooks:      [ { "key": "timestamp", "value": "time.time()", "eval": "import time" } ]
 
 '''
 import logging
+import time
+import urllib2
+import json
 
 log = logging.getLogger(__name__)
 
-# Import the required modules.
-try:
-    import couchdb
-    HAS_COUCHDB = True
-except ImportError:
-    HAS_COUCHDB = False
-
-
 def __virtual__():
-    if not HAS_COUCHDB:
-        return False
     return 'couchdb'
 
 
@@ -46,12 +32,7 @@ def _get_options():
         log.debug("Using default database.")
         db_name = "salt"
 
-    hooks = __salt__['config.option']('couchdb.hooks')
-    if not hooks:
-        log.debug("Using default hooks")
-        hooks = [{"key": "timestamp", "value": "time.time()", "eval": "import time"}]
-
-    return {"url": server_url, "db": db_name, "hooks": hooks}
+    return {"url": server_url, "db": db_name}
 
 
 def _generate_doc(ret, options):
@@ -60,36 +41,69 @@ def _generate_doc(ret, options):
     options.
     '''
 
-    # Just set the document ID to the jid.
+    # Create a copy of the object that we will return.
     r = ret
+
+    # Set the ID of the document to be the JID.
     r["_id"] = ret["jid"]
 
-    for hook in options["hooks"]:
-
-        # Eval if specified.
-        if hasattr(hook, "eval"):
-            eval(hook["eval"])
-
-        r[hook["key"]] = eval(hook["value"])
+    # Add a timestamp field to the document
+    r["timestamp"] = time.time( )
 
     return r
 
+def _request(method,url,content_type=None,_data=None):
+    '''
+    Makes a HTTP request. Returns the JSON parse.
+    '''
+    opener		= urllib2.build_opener( urllib2.HTTPHandler )
+    request		= urllib2.Request( url, data=_data)
+    if content_type:
+        request.add_header( 'Content-Type', content_type )
+    request.get_method	= lambda: method
+    try:
+        handler		= opener.open( request )
+    except urllib2.HTTPError as e:
+        return {'error': '{0}'.format(e) }
+    return json.loads( handler.read( ) )
 
 def returner(ret):
     '''
     Take in the return and shove it into the couchdb database.
     '''
 
-    # Get the options from configuration.
-    options = _get_options()
+    options = _get_options( )
 
-    # Create a connection to the server.
-    server = couchdb.client.Server(options['url'])
+    # Check to see if the database exists.
+    _response = _request( "GET", options['url'] + "_all_dbs" )
+    if options['db'] not in _response:
 
-    # Create the database if the configuration calls for it.
-    if options['db'] not in server:
-        log.debug('Creating database "{0}"'.format(options['db']))
-        server.create(options['db'])
+        # Make a PUT request to create the database.
+        _response = _request( "PUT", options['url'] + options['db'] )
 
-    # Save the document that comes out of _generate_doc.
-    server[options['db']].save(_generate_doc(ret, options))
+        # Confirm that the response back was simple 'ok': true.
+        if not 'ok' in _response or _response['ok'] != True:
+            return log.error( 'Unable to create database "{0}"'.format(options['db']) )
+        log.info( 'Created database "{0}"'.format(options['db']) )
+
+    # Call _generate_doc to get a dict object of the document we're going to 
+    # shove into the database.
+    doc = _generate_doc(ret, options)
+
+    # Make the actual HTTP PUT request to create the doc.
+    _response = _request( "PUT", options['url'] + options['db'] + "/" + doc['_id'], 'application/json', json.dumps(doc) )
+
+    # Santiy check regarding the response..
+    if not 'ok' in _response or _response['ok'] != True:
+        log.error( 'Unable to create document: "{0}"'.format(_response) )
+
+def get_jid(jid):
+    '''
+    Get the document with a given JID.
+    '''
+    options = _get_options( )
+    _response = _request( "GET", options['url'] + options['db'] + '/' + jid )
+    if 'error' in _response:
+        log.error( 'Unable to get JID "{0}" : "{1}"'.format(jid,_response) )
+        return { }
+    return { _response['id']: _response }
