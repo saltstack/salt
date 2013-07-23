@@ -22,8 +22,9 @@ configuration setting.
 Globbing
 ========
 
-The default matching that Salt utilizes is `shell-style globbing`_ around the
-:term:`minion id`. This also works for states in the :term:`top file`.
+The default matching that Salt utilizes is :py:mod:`shell-style globbing
+<python2:fnmatch>` around the :term:`minion id`. This also works for states
+in the :term:`top file`.
 
 .. note::
 
@@ -51,14 +52,13 @@ Match the ``web1`` through ``web5`` minions::
 Match the ``web-x``, ``web-y``, and ``web-z`` minions::
 
     salt 'web-[x-z]' test.ping
-    
-.. _`shell-style globbing`: http://docs.python.org/library/fnmatch.html
+
 
 Regular Expressions
 ===================
 
-Minions can be matched using Perl-compatible `regular expressions`_ (which is
-globbing on steroids and a ton of caffeine).
+Minions can be matched using Perl-compatible :py:mod:`regular expressions
+<python2:re>` (which is globbing on steroids and a ton of caffeine).
 
 Match both ``web1-prod`` and ``web1-devel`` minions::
 
@@ -75,7 +75,6 @@ the matcher as the first option. The following example executes the contents of
       - match: pcre
       - webserver
       
-.. _`regular expressions`: http://docs.python.org/library/re.html#module-re
 
 Lists
 =====
