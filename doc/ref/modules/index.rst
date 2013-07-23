@@ -149,7 +149,8 @@ package manager can be presented in a generic way.
 The Salt modules for package managers all contain a ``__virtual__`` function
 which is called to define what systems the module should be loaded on.
 
-The ``__virtual__`` function is used to return either a `string`_ or `False`_. If
+The ``__virtual__`` function is used to return either a
+:ref:`string <python2:typesseq>` or :ref:`False <python2:built-in-consts>`. If
 False is returned then the module is not loaded, if a string is returned then
 the module is loaded with the name of the string.
 
@@ -162,8 +163,6 @@ function:
 :blob:`salt/modules/yumpkg.py`
 :blob:`salt/modules/apt.py`
 
-.. _`string`: http://docs.python.org/library/stdtypes.html#typesseq
-.. _`False`: http://docs.python.org/library/constants.html#False
 
 Documentation
 =============
