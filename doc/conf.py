@@ -89,6 +89,13 @@ import salt.version
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
+# ----- Intersphinx Settings ------------------------------------------------>
+intersphinx_mapping = {
+        'python2': ('http://docs.python.org/2', None),
+        'python3': ('http://docs.python.org/3', None)
+}
+# <---- Intersphinx Settings -------------------------------------------------
+
 # -- General configuration -----------------------------------------------------
 
 project = 'Salt'
@@ -106,6 +113,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
+    'sphinx.ext.intersphinx'
 ]
 
 modindex_common_prefix = ['salt.']

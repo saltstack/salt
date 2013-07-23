@@ -27,19 +27,15 @@ file is just a data structure under the hood. While understanding that the SLS
 is just a data structure isn't critical for understanding and making use of 
 Salt States, it should help bolster knowledge of where the real power is.
 
-SLS files are therefore, in reality, just `dictionaries`_, `lists`_,
-`strings`_, and `numbers`_. By using this approach Salt can be much more
-flexible. As one writes more state files, it becomes clearer exactly what is
-being written. The result is a system that is easy to understand, yet grows
-with the needs of the admin or developer.
+SLS files are therefore, in reality, just :ref:`dictionaries
+<python2:typesmapping>`, :ref:`lists <python2:typeseq>`, :ref:`strings 
+<python2:typesseq>`, and :ref:`numbers <python2:typesnumeric>`.
+By using this approach Salt can be much more flexible. As one writes more state
+files, it becomes clearer exactly what is being written. The result is a system
+that is easy to understand, yet grows with the needs of the admin or developer.
 
 In the section titled "State Data Structures" a reference exists, explaining
 in depth how the data is laid out.
-
-.. _`dictionaries`: http://docs.python.org/glossary.html#term-dictionary
-.. _`lists`: http://docs.python.org/glossary.html#term-list
-.. _`strings`: http://docs.python.org/library/stdtypes.html#typesseq
-.. _`numbers`: http://docs.python.org/library/stdtypes.html#numeric-types-int-float-long-complex
 
 
 Default Data - YAML

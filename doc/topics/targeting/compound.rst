@@ -9,8 +9,8 @@ Compound matchers
         boolean operators.
 
 Compound matchers allow very granular minion targeting using any of the
-previously discussed matchers. The default matcher is a `glob`_, as usual. For
-matching via anything other than glob, preface it with the letter denoting
+previously discussed matchers. The default matcher is a :mod:`glob <python2:fnmatch>`, as
+usual. For matching via anything other than glob, preface it with the letter denoting
 the match type. The currently implemented "letters" are:
 
 ====== ==================== ===============================================================
@@ -30,7 +30,8 @@ Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.
 
 For example, the following command matches all minions that have a hostname
 that begins with "webserv" and that are running Debian or it matches any
-minions that have a hostname that matches the `regular expression`_
+minions that have a hostname that matches the :mod:`regular
+expression <python2:re>`
 ``web-dc1-srv.*``::
 
     salt -C 'webserv* and G@os:Debian or E@web-dc1-srv.*' test.ping
@@ -46,6 +47,3 @@ Note that you cannot have a leading ``not`` in a command.  Instead you must do
 something like the following::
 
     salt -C '* and not G@kernel:Darwin' test.ping
-
-.. _`glob`: http://docs.python.org/library/fnmatch.html
-.. _`regular expression`: http://docs.python.org/library/re.html#module-re

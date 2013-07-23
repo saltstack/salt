@@ -31,9 +31,10 @@ Match all minions with 64-bit CPUs and return number of available cores::
     salt -G 'cpuarch:x86_64' grains.item num_cpus
 
 Additionally, globs can be used in grain matches, and grains that are nested in
-a dictionary can be matched by adding a colon for each level that is traversed.
-For example, the following will match hosts that have a grain called
-``ec2_tags``, which itself is a dict with a key named ``environment``, which
+a :ref:`dictionary <python2:typesmapping>` can be matched by adding a colon for
+each level that is traversed. For example, the following will match hosts that
+have a grain called ``ec2_tags``, which itself is a
+:ref:`dict <python2:typesmapping>` with a key named ``environment``, which
 has a value that contains the word ``production``::
 
     salt -G 'ec2_tags:environment:*production*'
@@ -102,8 +103,9 @@ Writing Grains
 Grains are easy to write. The grains interface is derived by executing
 all of the "public" functions found in the modules located in the grains
 package or the custom grains directory. The functions in the modules of
-the grains must return a Python `dict`_, where the keys in the dict are the
-names of the grains and the values are the values.
+the grains must return a Python :ref:`dict <python2:typesmapping>`, where the
+keys in the :ref:`dict <python2:typesmapping>` are the names of the grains and
+the values are the values.
 
 Custom grains should be placed in a ``_grains`` directory located under the
 :conf_master:`file_roots` specified by the master config file. They will be
@@ -115,8 +117,6 @@ distributed to the minions when :mod:`state.highstate
 Before adding a grain to Salt, consider what the grain is and remember that
 grains need to be static data. If the data is something that is likely to
 change, consider using :doc:`Pillar <../pillar/index>` instead.
-
-.. _`dict`: http://docs.python.org/library/stdtypes.html#typesmapping
 
 
 Examples of Grains
