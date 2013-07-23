@@ -158,16 +158,6 @@ class SSH(object):
                     self.opts.get('output', 'nested'),
                     self.opts)
 
-    def highstate_blob(self, target):
-        '''
-        Generate an archive file which contains the instructions and files
-        to execute a state run on a remote system
-        '''
-        wrapper = FunctionWrapper(self.opts, target['id'], **target)
-        st_ = SSHHighState(self.opts, None, wrapper)
-        lowstate = st_.compile_low_chunks()
-        #file_refs = salt.utils.lowstate_file_refs(lowstate)
-
 
 class Single():
     '''
@@ -202,6 +192,14 @@ class Single():
                 priv,
                 timeout,
                 sudo)
+        self.target = self.extra
+        self.target['host'] = host
+        self.target['user'] = user
+        self.target['port'] = port
+        self.target['passwd'] = passwd
+        self.target['priv'] = priv
+        self.target['timeout'] = timeout
+        self.target['sudo'] = sudo
 
     def deploy(self):
         '''
@@ -247,11 +245,23 @@ class Single():
                'fi\n'
                '$PYTHON $SALT --local --out json -l quiet {0}\n'
                'EOF').format(self.arg_str)
+        if self.arg_str.startswith('state.highstate'):
+            self.highstate_seed()
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
             else:
                 yield stdout, stderr
+
+    def highstate_seed(self):
+        '''
+        Generate an archive file which contains the instructions and files
+        to execute a state run on a remote system
+        '''
+        wrapper = FunctionWrapper(self.opts, target['id'], **self.target)
+        st_ = SSHHighState(self.opts, None, wrapper)
+        lowstate = st_.compile_low_chunks()
+        #file_refs = salt.utils.lowstate_file_refs(lowstate)
 
 
 class FunctionWrapper(dict):
