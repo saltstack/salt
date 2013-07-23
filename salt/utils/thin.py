@@ -8,8 +8,13 @@ import tarfile
 
 # Import third party libs
 import jinja2
-import markupsafe
 import yaml
+try:
+    import markupsafe
+    HAS_MARKUPSAFE = True
+except ImportError:
+    # Older jinja does not need markupsafe
+    HAS_MARKUPSAFE = False
 
 # Import salt libs
 import salt
@@ -32,9 +37,10 @@ def gen_thin(cachedir):
     tops = [
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
-            os.path.dirname(markupsafe.__file__),
             os.path.dirname(yaml.__file__),
             ]
+    if HAS_MARKUPSAFE:
+        tops.append(os.path.dirname(markupsafe.__file__))
     with tarfile.open(thintar, 'w:gz') as tfp:
         start_dir = os.getcwd()
         for top in tops:
