@@ -61,7 +61,10 @@ def _request(method,url,content_type=None,_data=None):
     if content_type:
         request.add_header( 'Content-Type', content_type )
     request.get_method	= lambda: method
-    handler		= opener.open( request )
+    try:
+        handler		= opener.open( request )
+    except urllib2.HTTPError as e:
+        return {'error': '{0}'.format(e) }
     return json.loads( handler.read( ) )
 
 def returner(ret):
@@ -98,8 +101,7 @@ def get_jid(jid):
     '''
     Get the document with a given JID.
     '''
-    log.debug( "Got here" )
-    return { }
+    options = _get_options( )
     _response = _request( "GET", options['url'] + options['db'] + '/' + jid )
     log.debug( "Response is %s" % _response )
     if 'error' in _response:
