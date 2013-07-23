@@ -45,12 +45,11 @@ This means that, when creating a module, functions in modules that already exist
 can be called.
 
 The variable ``__salt__`` is packed into the modules after they are loaded into
-the Salt minion. This variable is a `Python dictionary`_ of all of the Salt
-functions, laid out in the same way that they are made available to the Salt
-command.
+the Salt minion. This variable is a :ref:`Python dictionary <python2:typesmapping>`
+of all of the Salt functions, laid out in the same way that they are made available
+to the Salt command.
 
-Salt modules can be cross called by accessing the value in the ``__salt__``
-dict:
+Salt modules can be cross called by accessing the value in the ``__salt__`` dict:
 
 .. code-block:: python
 
@@ -60,7 +59,6 @@ dict:
 This code will call the Salt cmd module's ``run`` function and pass the argument
 ``bar``.
 
-.. _`Python dictionary`: http://docs.python.org/library/stdtypes.html#typesmapping
 
 Preloaded Modules Data
 ======================
@@ -81,9 +79,9 @@ and operating system. This information is referred to as Salt Grains, or
 relying on a Ruby application from a Python application was both slow and
 inefficient. Grains support replaces Facter in all Salt releases after 0.8
 
-The values detected by the Salt Grains on the minion are available in a `dict`_
-named ``__grains__`` and can be accessed from within callable objects in
-the Python modules.
+The values detected by the Salt Grains on the minion are available in a 
+:ref:`dict <python2:typesmapping>` named ``__grains__`` and can be accessed
+from within callable objects in the Python modules.
 
 To see the contents of the grains dict for a given system in your deployment
 run the :func:`grains.items` function:
@@ -96,7 +94,6 @@ To use the ``__grains__`` dict simply call it as a Python dict from within your
 code, an excellent example is available in the Grains module:
 :mod:`salt.modules.grains`.
 
-.. _`dict`: http://docs.python.org/library/stdtypes.html#typesmapping
 
 Module Configuration
 --------------------
@@ -207,7 +204,7 @@ Documenting Salt modules is easy! Just add a `Python docstring`_ to the function
 Now when the sys.doc call is executed the docstring will be cleanly returned
 to the calling terminal.
 
-.. _`Python docstring`: #term-docstring
+.. _`Python docstring`: http://www.python.org/dev/peps/pep-0257/#what-is-a-docstring
 
 Add Module metadata
 -------------------
