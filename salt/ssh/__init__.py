@@ -102,7 +102,7 @@ class SSH(object):
         target_iter = self.targets.__iter__()
         while True:
             done = set()
-            if len(running) < self.opts['ssh_max_proc']:
+            if len(running) < self.opts.get('ssh_max_procs', 5):
                 host = next(target_iter)
                 single = Single(
                         self.opts,
@@ -112,7 +112,7 @@ class SSH(object):
                 running[host] = {'iter': single.cmd(),
                                  'single': single}
             for host in running:
-                stdout, stderr = next(running[host])
+                stdout, stderr = next(running[host]['iter'])
                 if stdout == 'deploy':
                     running[host]['single'].deploy()
                     running[host]['iter'] = single.cmd()
