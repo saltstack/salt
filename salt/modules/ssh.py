@@ -229,7 +229,7 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     return _validate_keys(full)
 
 
-def check_key_file(user, keysource, config='.ssh/authorized_keys', env='base'):
+def check_key_file(user, source, config='.ssh/authorized_keys', env='base'):
     '''
     Check a keyfile from a source destination against the local keys and
     return the keys to change
@@ -238,20 +238,27 @@ def check_key_file(user, keysource, config='.ssh/authorized_keys', env='base'):
 
         salt '*' root salt://ssh/keyfile
     '''
-    ret = {}
-    keyfile = __salt__['cp.cache_file'](keysource, env)
+    keyfile = __salt__['cp.cache_file'](source, env)
     if not keyfile:
         return ret
     s_keys = _validate_keys(keyfile)
-    for key in s_keys:
-        ret[key] = check_key(
-            user,
-            key,
-            s_keys[key]['enc'],
-            s_keys[key]['comment'],
-            s_keys[key]['options'],
-            config)
-    return ret
+    if not s_keys:
+        err = 'No keys detected in {0}. Is file properly ' \
+              'formatted?'.format(source)
+        log.error(err)
+        __context__['ssh_auth.error'] = err
+        return {}
+    else:
+        ret = {}
+        for key in s_keys:
+            ret[key] = check_key(
+                user,
+                key,
+                s_keys[key]['enc'],
+                s_keys[key]['comment'],
+                s_keys[key]['options'],
+                config)
+        return ret
 
 
 def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
@@ -362,29 +369,36 @@ def set_auth_key_from_file(
         msg = 'Failed to pull key file from salt file server'
         raise CommandExecutionError(msg)
 
-    rval = ''
-    newkey = _validate_keys(lfile)
-    for k in newkey:
-        rval += set_auth_key(
-            user,
-            k,
-            newkey[k]['enc'],
-            newkey[k]['comment'],
-            newkey[k]['options'],
-            config
-        )
-    # Due to the ability for a single file to have multiple keys, it's
-    # possible for a single call to this function to have both "replace" and
-    # "new" as possible valid returns. I ordered the following as I thought
-    # best.
-    if 'fail' in rval:
+    s_keys = _validate_keys(lfile)
+    if not s_keys:
+        err = 'No keys detected in {0}. Is file properly ' \
+              'formatted?'.format(source)
+        log.error(err)
+        __context__['ssh_auth.error'] = err
         return 'fail'
-    elif 'replace' in rval:
-        return 'replace'
-    elif 'new' in rval:
-        return 'new'
     else:
-        return 'no change'
+        rval = ''
+        for key in s_keys:
+            rval += set_auth_key(
+                user,
+                key,
+                s_keys[key]['enc'],
+                s_keys[key]['comment'],
+                s_keys[key]['options'],
+                config
+            )
+        # Due to the ability for a single file to have multiple keys, it's
+        # possible for a single call to this function to have both "replace"
+        # and "new" as possible valid returns. I ordered the following as I
+        # thought best.
+        if 'fail' in rval:
+            return 'fail'
+        elif 'replace' in rval:
+            return 'replace'
+        elif 'new' in rval:
+            return 'new'
+        else:
+            return 'no change'
 
 
 def set_auth_key(
