@@ -30,14 +30,13 @@ def _check_zfs():
 
 def _available_commands():
     '''
-    List available commands based on 'zfs help'. Either
-    returns a list, or False.
+    List available commands based on 'zfs help'. Returns a dict.
     '''
     zfs_path = _check_zfs()
     if not zfs_path:
         return False
 
-    _return = []
+    _return = { }
     # Note that we append '|| :' as a unix hack to force return code to be 0.
     res = salt_cmd.run_all('{0} help || :'.format(zfs_path))
 
@@ -45,9 +44,12 @@ def _available_commands():
     # in how this works upstream will require a change.
     for line in res['stderr'].splitlines():
         if re.match('	[a-zA-Z]', line):
-            for cmd in [cmd.strip() for cmd in line.split(' ')[0].split('|')]:
+            cmds = line.split(' ')[0].split('|')
+            doc = ' '.join(line.split(' ')[1:])
+            for cmd in [ cmd.strip( ) for cmd in cmds ]:
+            #for cmd in [cmd.strip() for cmd in line.split(' ')[0].split('|')]:
                 if cmd not in _return:
-                    _return.append(cmd)
+                    _return[cmd] = doc
     return _return
 
 
@@ -70,16 +72,16 @@ def __virtual__():
         return 'zfs'
     return False
 
+def _add_doc( func, doc, prefix='\n\n    ' ):
+    if not func.__doc__:
+        func.__doc__ = ""
+    func.__doc__ += '{0}{1}'.format( prefix, doc )
 
-def _make_function(cmd_name):
+def _make_function(cmd_name,doc):
     '''
     Returns a function based on the command name.
     '''
     def _cmd(*args):
-        '''
-        Generated function. Maybe at some point in the
-        future, fill this in dynamically.
-        '''
         # Define a return value.
         ret = {}
 
@@ -103,19 +105,23 @@ def _make_function(cmd_name):
 
         return ret
 
+    _add_doc( _cmd, "This function is dynamically generated.", "\n    " )
+    _add_doc( _cmd, doc )
+
     # At this point return the function we've just defined.
     return _cmd
 
 # Run through all the available commands
 if _check_zfs():
-    for available_cmd in _available_commands():
+    available_cmds = _available_commands( )
+    for available_cmd in available_cmds:
 
         # Set the output from _make_function to be 'available_cmd_'.
         # ie 'list' becomes 'list_' in local module.
         setattr(
                 sys.modules[__name__],
                 '{0}_'.format(available_cmd),
-                _make_function(available_cmd)
+                _make_function(available_cmd,available_cmds[available_cmd])
                 )
 
         # Update the function alias so that salt finds the functions properly.
