@@ -76,7 +76,7 @@ def _add_doc( func, doc, prefix='\n\n    ' ):
         func.__doc__ = ""
     func.__doc__ += '{0}{1}'.format( prefix, doc )
 
-def _make_function(cmd_name,doc):
+def _make_function(cmd_name, doc):
     '''
     Returns a function based on the command name.
     '''
