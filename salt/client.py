@@ -447,6 +447,7 @@ class LocalClient(object):
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                                                 pub_data['minions'],
                                                 timeout,
+                                                tgt,
                                                 **kwargs):
                 yield fn_ret
 
