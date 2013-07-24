@@ -75,8 +75,15 @@ def _publish(
             'id': __opts__['id'],
             'tok': tok,
             'jid': peer_data['jid']}
-    return auth.crypticle.loads(
+    ret = auth.crypticle.loads(
             sreq.send('aes', auth.crypticle.dumps(load), 5))
+    if form == 'clean':
+        cret = {}
+        for host in ret:
+            cret[host] = ret[host]['ret']
+        return cret
+    else:
+        return ret
 
 
 def _normalize_arg(arg):
