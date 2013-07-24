@@ -449,7 +449,7 @@ class LocalClient(Client):
             return ''
         return fnd['path']
 
-    def file_list(self, env='base'):
+    def file_list(self, env='base', prefix=''):
         '''
         Return a list of files in the given environment
         '''
@@ -457,6 +457,8 @@ class LocalClient(Client):
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
+            if prefix:
+                path = os.path.join(path, prefix)
             for root, dirs, files in os.walk(path, followlinks=True):
                 for fname in files:
                     ret.append(
@@ -480,7 +482,7 @@ class LocalClient(Client):
                     ret.append(os.path.relpath(root, path))
         return ret
 
-    def dir_list(self, env='base'):
+    def dir_list(self, env='base', prefix=''):
         '''
         List the dirs in the file_roots
         '''
@@ -488,6 +490,8 @@ class LocalClient(Client):
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
+            if prefix:
+                path = os.path.join(path, prefix)
             for root, dirs, files in os.walk(path, followlinks=True):
                 ret.append(os.path.relpath(root, path))
         return ret
