@@ -162,6 +162,51 @@ def setval(key, val):
     return {key: val}
 
 
+def append(key, val):
+    '''
+    Append a value to a list in the grains config file
+
+    CLI Example::
+
+        salt '*' grains.append key val
+    '''
+    grains = get(key, [])
+    if not isinstance(grains, list):
+        return 'The key {0} is not a valid list'.format(key)
+    if val in grains:
+        return 'The val {0} was already in the list {1}'.format(val, key)
+    grains.append(val)
+    return setval(key, grains)
+
+
+def remove(key, val):
+    '''
+    Remove a value from a list in the grains config file
+
+    CLI Example:
+
+        salt '*' grains.remove key val
+    '''
+    grains = get(key, [])
+    if not isinstance(grains, list):
+        return 'The key {0} is not a valid list'.format(key)
+    if val not in grains:
+        return 'The val {0} was not in the list {1}'.format(val, key)
+    grains.remove(val)
+    return setval(key, grains)
+
+
+def delval(key):
+    '''
+    Delete a grain from the grains config file
+
+    CLI Example:
+
+        salt '*' grains.delval key
+    '''
+    setval(key, None)
+
+
 def ls():  # pylint: disable=C0103
     '''
     Return a list of all available grains
