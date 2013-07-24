@@ -62,6 +62,7 @@ def installed(name,
               user=None,
               no_chown=False,
               cwd=None,
+              pre_releases=False,
               __env__='base'):
     '''
     Make sure the package is installed
@@ -156,6 +157,7 @@ def installed(name,
         runas=user,
         no_chown=no_chown,
         cwd=cwd,
+        pre_releases=pre_releases,
         __env__=__env__
     )
 

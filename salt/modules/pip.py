@@ -116,6 +116,7 @@ def install(pkgs=None,
             no_chown=False,
             cwd=None,
             activate=False,
+            pre_releases=False,
             __env__='base'):
     '''
     Install packages with pip
@@ -207,6 +208,8 @@ def install(pkgs=None,
     activate
         Activates the virtual environment, if given via bin_env,
         before running install.
+    pre_releases
+        Include pre-releases in the available versions
 
 
     CLI Example::
@@ -382,6 +385,9 @@ def install(pkgs=None,
 
     if no_download:
         cmd.append('--no-download')
+
+    if pre_releases:
+        cmd.append('--pre')
 
     if global_options:
         if isinstance(global_options, string_types):
