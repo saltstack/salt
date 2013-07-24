@@ -528,10 +528,20 @@ def latest(
     else:
         desired_pkgs = [name]
 
+    if salt.utils.is_true(refresh) or os.path.isfile(rtag):
+        refresh = True
+    else:
+        refresh = False
+
     cur = __salt__['pkg.version'](*desired_pkgs)
     avail = __salt__['pkg.latest_version'](*desired_pkgs,
                                            fromrepo=fromrepo,
+                                           refresh=refresh,
                                            **kwargs)
+    # Remove the rtag if it exists, ensuring only one refresh per salt run
+    # (unless overridden with refresh=True)
+    if os.path.isfile(rtag):
+        os.remove(rtag)
 
     # Repack the cur/avail data if only a single package is being checked
     if isinstance(cur, basestring):
@@ -587,22 +597,14 @@ def latest(
         # Build updated list of pkgs to exclude non-targeted ones
         targeted_pkgs = targets.keys() if pkgs else None
 
-        if salt.utils.is_true(refresh) or os.path.isfile(rtag):
-            changes = __salt__['pkg.install'](name,
-                                              refresh=True,
-                                              fromrepo=fromrepo,
-                                              skip_verify=skip_verify,
-                                              pkgs=targeted_pkgs,
-                                              **kwargs)
-            if os.path.isfile(rtag):
-                os.remove(rtag)
-
-        else:
-            changes = __salt__['pkg.install'](name,
-                                              fromrepo=fromrepo,
-                                              skip_verify=skip_verify,
-                                              pkgs=targeted_pkgs,
-                                              **kwargs)
+        # No need to refresh, if a refresh was necessary it would have been
+        # performed above when pkg.latest_version was run.
+        changes = __salt__['pkg.install'](name,
+                                          refresh=False,
+                                          fromrepo=fromrepo,
+                                          skip_verify=skip_verify,
+                                          pkgs=targeted_pkgs,
+                                          **kwargs)
 
         if changes:
             # Find failed and successful updates
