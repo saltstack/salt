@@ -843,6 +843,18 @@ class PipTestCase(TestCase):
                 }
             )
 
+    def test_install_pre_argument_in_resulting_command(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(
+                'pep8', pre_releases=True
+            )
+            mock.assert_called_once_with(
+                'pip install --pre pep8',
+                runas=None,
+                cwd=None
+            )
+
 
 
 if __name__ == '__main__':
