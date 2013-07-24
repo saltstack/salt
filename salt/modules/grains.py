@@ -183,7 +183,7 @@ def remove(key, val):
     '''
     Remove a value from a list in the grains config file
 
-    CLI Example:
+    CLI Example::
 
         salt '*' grains.remove key val
     '''
@@ -200,7 +200,7 @@ def delval(key):
     '''
     Delete a grain from the grains config file
 
-    CLI Example:
+    CLI Example::
 
         salt '*' grains.delval key
     '''
