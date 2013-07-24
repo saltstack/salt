@@ -258,7 +258,7 @@ class Single():
         Generate an archive file which contains the instructions and files
         to execute a state run on a remote system
         '''
-        wrapper = FunctionWrapper(self.opts, target['id'], **self.target)
+        wrapper = FunctionWrapper(self.opts, self.target['id'], **self.target)
         st_ = SSHHighState(self.opts, None, wrapper)
         lowstate = st_.compile_low_chunks()
         #file_refs = salt.utils.lowstate_file_refs(lowstate)
