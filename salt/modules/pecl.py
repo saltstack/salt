@@ -48,6 +48,9 @@ def install(pecls, defaults=False, force=False):
         questions before installation. Without this option, the pecl.installed
         state will hang indefinitely when trying to install these extensions.
 
+    force
+        Whether to force the installed version or not
+
     .. note::
         The ``defaults`` option will be available in version 0.17.0.
 
