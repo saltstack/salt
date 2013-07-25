@@ -202,9 +202,17 @@ def managed(name, **kwargs):
         notset = False
         for kwarg in sanitizedkwargs:
             if kwarg == 'repo':
-                continue
-            if kwarg not in repo.keys():
+                pass
+            elif kwarg not in repo.keys():
                 notset = True
+            elif kwarg == 'comps':
+                if sorted(sanitizedkwargs[kwarg]) != sorted(repo[kwarg]):
+                    notset = True
+            elif kwarg == 'line' and __grains__['os_family'] == 'Debian':
+                sanitizedsplit = sorted(sanitizedkwargs[kwarg].split())
+                reposplit = sorted(repo[kwarg].split())
+                if sanitizedsplit != reposplit:
+                    notset = True
             else:
                 if str(sanitizedkwargs[kwarg]) != str(repo[kwarg]):
                     notset = True
