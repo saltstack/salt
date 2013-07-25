@@ -5,6 +5,7 @@ import os
 import tempfile
 import json
 import datetime
+import textwrap
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -244,6 +245,29 @@ class TestCustomExtensions(TestCase):
             env.from_string('{% set document = document|load_yaml %}'
                                        '{{ document.foo }}').render(document={"foo": "it works"})
 
+    def test_load_tag(self):
+        env = Environment(extensions=[SerializerExtension])
+
+        source = '{{ bar }}, ' + \
+                 '{% load_yaml as docu %}{foo: it works, {{ bar }}: baz}{% endload %}' + \
+                                        '{{ docu.foo }}'
+
+        rendered = env.from_string(source).render(bar="barred")
+        self.assertEquals(rendered, u"barred, it works")
+
+        source = '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}": "baz"}{% endload %}' + \
+                                        '{{ docu.foo }}'
+
+        rendered = env.from_string(source).render(bar="barred")
+        self.assertEquals(rendered, u"barred, it works")
+
+        with self.assertRaises(exceptions.TemplateSyntaxError):
+            env.from_string('{% load_yamle as document %}{foo, bar: it works}{% endload %}').render()
+
+        with self.assertRaises(exceptions.TemplateRuntimeError):
+            env.from_string('{% load_json as document %}{foo, bar: it works}{% endload %}').render()
+
+
     def test_load_json(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = \'{"foo": "it works"}\'|load_json %}'
@@ -279,6 +303,67 @@ class TestCustomExtensions(TestCase):
 
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_json "does not exists" as doc %}').render()
+
+    def test_catalog(self):
+        loader = DictLoader({
+            'doc1': '{bar: "my god is blue"}',
+            'doc2': '{% import_yaml "doc1" as local2 %} never exported',
+            'doc3': '{% load_yaml as local3 %}{"foo": "it works"}{% endload %} me neither',
+            'main1': '{% from "doc2" import local2 %}{{ local2.bar }}',
+            'main2': '{% from "doc3" import local3 %}{{ local3.foo }}',
+            'main3': '''
+                {% import "doc2" as imported2 %}
+                {% import "doc3" as imported3 %}
+                {{ imported2.local2.bar }}
+            ''',
+            'main4': '''
+                {% import "doc2" as imported2 %}
+                {% import "doc3" as imported3 %}
+                {{ imported3.local3.foo }}
+            ''',
+            'main5': '''
+                {% from "doc2" import local2 as imported2 %}
+                {% from "doc3" import local3 as imported3 %}
+                {{ imported2.bar }}
+            ''',
+            'main6': '''
+                {% from "doc2" import local2 as imported2 %}
+                {% from "doc3" import local3 as imported3 %}
+                {{ imported3.foo }}
+            '''
+
+        })
+
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+        rendered = env.get_template('main1').render()
+        self.assertEquals(rendered, u"my god is blue")
+
+        rendered = env.get_template('main2').render()
+        self.assertEquals(rendered, u"it works")
+
+        rendered = env.get_template('main3').render().strip()
+        self.assertEquals(rendered, u"my god is blue")
+
+        rendered = env.get_template('main4').render().strip()
+        self.assertEquals(rendered, u"it works")
+
+        rendered = env.get_template('main5').render().strip()
+        self.assertEquals(rendered, u"my god is blue")
+
+        rendered = env.get_template('main6').render().strip()
+        self.assertEquals(rendered, u"it works")
+
+    # def test_print(self):
+    #     env = Environment(extensions=[SerializerExtension])
+    #     source = '{% import_yaml "toto.foo" as docu %}'
+    #     name, filename = None, '<filename>'
+    #     parsed = env._parse(source, name, filename)
+    #     print parsed
+    #     print
+    #     compiled = env._generate(parsed, name, filename)
+    #     print compiled
+    #     return
+
 
 
 if __name__ == '__main__':
