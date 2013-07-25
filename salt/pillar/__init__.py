@@ -19,6 +19,7 @@ from salt.version import __version__
 
 log = logging.getLogger(__name__)
 
+
 def get_pillar(opts, grains, id_, env=None, ext=None):
     '''
     Return the correct pillar driver based on the file_client option
@@ -328,7 +329,10 @@ class Pillar(object):
             for sls in pstates:
                 pstate, mods, err = self.render_pstate(sls, env, mods)
                 if pstate:
-                    pillar.update(pstate)
+                    try:
+                        pillar.update(pstate)
+                    except:
+                        pass
                 if err:
                     errors += err
         return pillar, errors
@@ -366,8 +370,8 @@ class Pillar(object):
 
                     except TypeError as e:
                         if e.message.startswith('ext_pillar() takes exactly '):
-                            log.warning('Deprecation warning: ext_pillar "{0}"'\
-                                        ' needs to accept minion_id as first'\
+                            log.warning('Deprecation warning: ext_pillar "{0}"'
+                                        ' needs to accept minion_id as first'
                                         ' argument'.format(key))
                         else:
                             raise
