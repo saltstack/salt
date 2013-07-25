@@ -715,7 +715,6 @@ class Login(LowDataAdapter):
     If the request is initiated programmatically, the request must contain a
     :mailheader:`X-Auth-Token` header with valid and active session id.
     '''
-    exposed = True
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.salt_token.on': False,
         'tools.salt_auth.on': False,
