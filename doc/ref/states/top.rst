@@ -108,14 +108,15 @@ as well as pull from their respective environments.
 .. note::
 
     The top files from all defined environments will be compiled into a single
-    top file for all states.  Top files are environment agnostic.
+    top file for all states. Top files are environment agnostic.
 
 Remember, that since everything is a file in Salt, the environments are
 primarily file server environments, this means that environments that have
 nothing to do with states can be defined and used to distribute other files.
 
-A clean and recommended setup for multiple environments would look like this:
+.. _states-top-file_roots:
 
+A clean and recommended setup for multiple environments would look like this:
 
 .. code-block:: yaml
 
@@ -209,4 +210,126 @@ minion with a pillar named ``somekey``, having a value of ``abc`` will receive
 the xyz state.  Finally, minions with ids matching the nag1* glob or with a
 grain named ``role`` equal to ``monitoring`` will receive the nagios.server
 state.
+
+How Top Files Are Compiled
+==========================
+
+As mentioned earlier, the top files in the different environments are compiled
+into a single set of data. The way in which this is done follows a few rules,
+which are important to understand when arranging top files in different
+environments. The examples below all assume that the :conf_master:`file_roots`
+are set as in the :ref:`above multi-environment example
+<states-top-file_roots>`.
+
+
+1. The ``base`` environment's top file is processed first. Any environment which
+   is defined in the ``base`` top.sls as well as another environment's top file,
+   will use the states configured in ``base`` and ignore all other instances.
+   In other words, the ``base`` top file is authoritative. Therefore, in the
+   example below, the ``dev`` section in ``/srv/salt/dev/top.sls`` would be
+   completely ignored.
+
+``/srv/salt/base/top.sls:``
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - common
+    dev:
+      'webserver*dev*':
+        - webserver
+      'db*dev*':
+        - db
+
+``/srv/salt/dev/top.sls:``
+
+.. code-block:: yaml
+
+    dev:
+      '10.10.100.0/24':
+        - match: ipcidr
+        - deployments.dev.site1
+      '10.10.101.0/24':
+        - match: ipcidr
+        - deployments.dev.site2
+
+.. note::
+    The rules below assume that the environments being discussed were not
+    defined in the ``base`` top file.
+
+2. If, for some reason, the ``base`` environment is not configured in the
+   ``base`` environment's top file, then the other environments will be checked
+   in alphabetical order. The first top file found to contain a section for the
+   ``base`` environment wins, and the other top files' ``base`` sections are
+   ignored. So, provided there is no ``base`` section in the ``base`` top file,
+   with the below two top files the ``dev`` environment would win out, and the
+   ``common.centos`` SLS would not be applied to CentOS hosts.
+
+``/srv/salt/dev/top.sls:``
+
+.. code-block:: yaml
+
+    base:
+      'os:Ubuntu':
+        - common.ubuntu
+    dev:
+      'webserver*dev*':
+        - webserver
+      'db*dev*':
+        - db
+
+``/srv/salt/qa/topsls:``
+
+.. code-block:: yaml
+
+    base:
+      'os:Ubuntu':
+        - common.ubuntu
+      'os:CentOS':
+        - common.centos
+    qa:
+      'webserver*qa*':
+        - webserver
+      'db*qa*':
+        - db
+
+3. For environments other than ``base``, the top file in a given environment
+   will be checked for a section matching the environment's name. If one is
+   found, then it is used. Otherwise, the remaining (non-``base``) environments
+   will be checked in alphabetical order. In the below example, the ``qa``
+   section in ``/srv/salt/dev/top.sls`` will be ignored, but if
+   ``/srv/salt/qa/top.sls`` were cleared or removed, then the states configured
+   for the ``qa`` environment in ``/srv/salt/dev/top.sls`` will be applied.
+
+``/srv/salt/dev/top.sls:``
+
+.. code-block:: yaml
+
+    dev:
+      'webserver*dev*':
+        - webserver
+      'db*dev*':
+        - db
+    qa:
+      '10.10.200.0/24':
+        - match: ipcidr
+        - deployments.qa.site1
+      '10.10.201.0/24':
+        - match: ipcidr
+        - deployments.qa.site2
+
+``/srv/salt/qa/top.sls:``
+
+.. code-block:: yaml
+
+    qa:
+      'webserver*qa*':
+        - webserver
+      'db*qa*':
+        - db
+
+.. note::
+    When in doubt, the simplest way to configure your states is with a single
+    top.sls in the ``base`` environment.
 
