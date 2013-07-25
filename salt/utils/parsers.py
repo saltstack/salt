@@ -637,7 +637,8 @@ class TargetOptionsMixIn(object):
             default=False,
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
-                  'servers, take a comma delimited list of servers.')
+                  'servers, take a comma or space delimited list of '
+                  'servers.')
         )
         group.add_option(
             '-G', '--grain',
@@ -1036,7 +1037,10 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.args[2] = self.args[2]
 
         if self.options.list:
-            self.config['tgt'] = self.args[0].split(',')
+            if ',' in self.args[0]:
+                self.config['tgt'] = self.args[0].split(',')
+            else:
+                self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
 
@@ -1107,7 +1111,10 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.exit(1)
 
         if self.options.list:
-            self.config['tgt'] = self.args[0].split(',')
+            if ',' in self.args[0]:
+                self.config['tgt'] = self.args[0].split(',')
+            else:
+                self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
         self.config['src'] = self.args[1:-1]
@@ -1487,7 +1494,10 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_after_parsed(self):
         if self.options.list:
-            self.config['tgt'] = self.args[0].split(',')
+            if ',' in self.args[0]:
+                self.config['tgt'] = self.args[0].split(',')
+            else:
+                self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
         if len(self.args) > 0:
