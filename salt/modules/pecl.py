@@ -36,7 +36,7 @@ def _pecl(command, defaults=False):
         return ''
 
 
-def install(pecls, defaults=False):
+def install(pecls, defaults=False, force=False):
     '''
     Installs one or several pecl extensions.
 
@@ -48,6 +48,9 @@ def install(pecls, defaults=False):
         questions before installation. Without this option, the pecl.installed
         state will hang indefinitely when trying to install these extensions.
 
+    force
+        Whether to force the installed version or not
+
     .. note::
         The ``defaults`` option will be available in version 0.17.0.
 
@@ -55,7 +58,10 @@ def install(pecls, defaults=False):
 
         salt '*' pecl.install fuse
     '''
-    return _pecl('install {0}'.format(pecls), defaults=defaults)
+    if force:
+        return _pecl('install -f {0}'.format(pecls), defaults=defaults)
+    else:
+        return _pecl('install {0}'.format(pecls), defaults=defaults)
 
 
 def uninstall(pecls):

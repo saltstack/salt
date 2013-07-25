@@ -28,7 +28,8 @@ def __virtual__():
 
 def installed(name,
               version=None,
-              defaults=False):
+              defaults=False,
+              force=False):
     '''
     Make sure that a pecl extension is installed.
 
@@ -43,6 +44,9 @@ def installed(name,
         Use default answers for extensions such as pecl_http which ask
         questions before installation. Without this option, the pecl.installed
         state will hang indefinitely when trying to install these extensions.
+
+    force
+        Whether to force the installed version or not
 
     .. note::
         The ``defaults`` option will be available in version 0.17.0.
@@ -62,7 +66,8 @@ def installed(name,
         # The package is only installed if version is absent or matches
         if version is None or version in installed_pecls[name]:
             ret['result'] = True
-            ret['comment'] = 'Pecl extension {0} is already installed.'.format(name)
+            ret['comment'] = ('Pecl extension {0} is already installed.'
+                              .format(name))
             return ret
 
     if version is not None:
@@ -70,12 +75,14 @@ def installed(name,
         name = '{0}-{1}'.format(name, version)
 
     if __opts__['test']:
-        ret['comment'] = 'Pecl extension {0} would have been installed'.format(name)
+        ret['comment'] = ('Pecl extension {0} would have been installed'
+                          .format(name))
         return ret
-    if __salt__['pecl.install'](name, defaults=defaults):
+    if __salt__['pecl.install'](name, defaults=defaults, force=force):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
-        ret['comment'] = 'Pecl extension {0} was successfully installed'.format(name)
+        ret['comment'] = ('Pecl extension {0} was successfully installed'
+                          .format(name))
     else:
         ret['result'] = False
         ret['comment'] = 'Could not install pecl extension {0}.'.format(name)
@@ -97,12 +104,14 @@ def removed(name):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'Pecl extension {0} would have been removed'.format(name)
+        ret['comment'] = ('Pecl extension {0} would have been removed'
+                          .format(name))
         return ret
     if __salt__['pecl.uninstall'](name):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
-        ret['comment'] = 'Pecl extension {0} was successfully removed.'.format(name)
+        ret['comment'] = ('Pecl extension {0} was successfully removed.'
+                          .format(name))
     else:
         ret['result'] = False
         ret['comment'] = 'Could not remove pecl extension {0}.'.format(name)
