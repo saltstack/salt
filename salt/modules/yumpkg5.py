@@ -3,9 +3,10 @@ Support for YUM
 '''
 
 # Import python libs
+import collections
 import copy
 import logging
-import collections
+import re
 
 # Import salt libs
 import salt.utils
@@ -73,8 +74,9 @@ def _parse_pkginfo(line):
         return None
 
     # Support 32-bit packages on x86_64 systems
-    if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
-        name += '.i686'
+    if __grains__.get('cpuarch', '') == 'x86_64' \
+            and re.match('i\d86', arch):
+        name += '.{0}'.format(arch)
     if rel:
         pkgver += '-{0}'.format(rel)
 
@@ -282,8 +284,9 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
-        32-bit packages can be installed on 64-bit systems by appending
-        ``.i686`` to the end of the package name.
+        32-bit packages can be installed on 64-bit systems by appending the
+        architecture designation (``.i686``, ``.i586``, etc.) to the end of the
+        package name.
 
         CLI Example::
             salt '*' pkg.install <package name>
@@ -370,11 +373,14 @@ def install(name=None,
                 targets.append(pkgname)
             else:
                 cver = old.get(pkgname, '')
-                if __grains__.get('cpuarch', '') == 'x86_64' \
-                        and pkgname.endswith('.i686'):
-                    # Remove '.i686' from pkgname
-                    pkgname = pkgname[:-5]
-                    arch = '.i686'
+                if __grains__.get('cpuarch', '') == 'x86_64':
+                    try:
+                        arch = re.search('(\.i\d86)$', pkgname).group(1)
+                    except AttributeError:
+                        arch = ''
+                    else:
+                        # Remove arch from pkgname
+                        pkgname = pkgname[:-len(arch)]
                 else:
                     arch = ''
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
