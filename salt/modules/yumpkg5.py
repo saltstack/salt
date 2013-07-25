@@ -75,7 +75,7 @@ def _parse_pkginfo(line):
 
     # Support 32-bit packages on x86_64 systems
     if __grains__.get('cpuarch', '') == 'x86_64' \
-            and re.match('i\d86', arch):
+            and re.match(r'i\d86', arch):
         name += '.{0}'.format(arch)
     if rel:
         pkgver += '-{0}'.format(rel)
@@ -375,7 +375,7 @@ def install(name=None,
                 cver = old.get(pkgname, '')
                 if __grains__.get('cpuarch', '') == 'x86_64':
                     try:
-                        arch = re.search('(\.i\d86)$', pkgname).group(1)
+                        arch = re.search(r'(\.i\d86)$', pkgname).group(1)
                     except AttributeError:
                         arch = ''
                     else:
