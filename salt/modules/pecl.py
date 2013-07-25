@@ -36,7 +36,7 @@ def _pecl(command, defaults=False):
         return ''
 
 
-def install(pecls, defaults=False):
+def install(pecls, defaults=False, force=False):
     '''
     Installs one or several pecl extensions.
 
@@ -55,7 +55,10 @@ def install(pecls, defaults=False):
 
         salt '*' pecl.install fuse
     '''
-    return _pecl('install {0}'.format(pecls), defaults=defaults)
+    if force:
+        return _pecl('install -f {0}'.format(pecls), defaults=defaults)
+    else:
+        return _pecl('install {0}'.format(pecls), defaults=defaults)
 
 
 def uninstall(pecls):
