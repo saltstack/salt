@@ -319,7 +319,7 @@ class Pillar(object):
                 if pstate:
                     try:
                         pillar.update(pstate)
-                    except:
+                    except Exception:
                         pass
                 if err:
                     errors += err
