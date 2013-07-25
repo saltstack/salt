@@ -145,7 +145,7 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
-* Wed Jul 17 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.8.1-0
+* Wed Jul 17 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.8.2-0
 - Bugfix release that fixes a compatibility issue with changes in Salt 0.15.9.
 - Fixed an inconsistency with the return format for the /minions convenience URL.
 - Added a dedicated URL for serving an HTML app and static media
