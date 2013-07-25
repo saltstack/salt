@@ -636,6 +636,9 @@ publication a new process is spawned and the command is executed therein.
 
     multiprocessing: True
 
+
+.. _minion-logging-settings:
+
 Minion Logging Settings
 -----------------------
 
