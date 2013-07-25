@@ -637,7 +637,8 @@ class TargetOptionsMixIn(object):
             default=False,
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
-                  'servers, take a comma delimited list of servers.')
+                  'servers, take a comma or space delimited list of '
+                  'servers.')
         )
         group.add_option(
             '-G', '--grain',
