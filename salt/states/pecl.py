@@ -28,7 +28,8 @@ def __virtual__():
 
 def installed(name,
               version=None,
-              defaults=False):
+              defaults=False,
+              force=False):
     '''
     Make sure that a pecl extension is installed.
 
@@ -72,7 +73,7 @@ def installed(name,
     if __opts__['test']:
         ret['comment'] = 'Pecl extension {0} would have been installed'.format(name)
         return ret
-    if __salt__['pecl.install'](name, defaults=defaults):
+    if __salt__['pecl.install'](name, defaults=defaults, force=force):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Pecl extension {0} was successfully installed'.format(name)
