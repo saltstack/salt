@@ -435,8 +435,8 @@ def clean_path(root, path, subdir=False):
     return ''
 
 
-def valid_id(id_):
+def valid_id(opts, id_):
     '''
     Returns if the passed id is valid
     '''
-    return bool(clean_path('/etc/pki/salt/master', id_))
+    return bool(clean_path(opts['pki_dir'], id_))
