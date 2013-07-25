@@ -121,9 +121,10 @@ def create(path,
         # Virtualenv package
         try:
             import virtualenv
+            version = getattr(virtualenv, '__version__',
+                              virtualenv.virtualenv_version)
             virtualenv_version_info = tuple(
-                [int(i) for i in
-                 virtualenv.__version__.split('rc')[0].split('.')]
+                [int(i) for i in version.split('rc')[0].split('.')]
             )
         except ImportError:
             # Unable to import?? Let's parse the version from the console
