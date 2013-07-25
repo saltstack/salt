@@ -193,13 +193,7 @@ def salt_auth_tool():
     '''
     Redirect all unauthenticated requests to the login page
     '''
-    # Short-circuit for the login page
-    ignore_urls = ('/login', '/logout', '/run')
-
-    if cherrypy.request.path_info.startswith(ignore_urls):
-        return
-
-    # Otherwise redirect to the login page if the session hasn't been authed
+    # Redirect to the login page if the session hasn't been authed
     if not cherrypy.session.get('token', None):
         raise cherrypy.InternalRedirect('/login')
 
@@ -722,6 +716,11 @@ class Login(LowDataAdapter):
     :mailheader:`X-Auth-Token` header with valid and active session id.
     '''
     exposed = True
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'tools.salt_token.on': False,
+        'tools.salt_auth.on': False,
+    })
+
 
     def __init__(self, *args, **kwargs):
         super(Login, self).__init__(*args, **kwargs)
@@ -857,6 +856,11 @@ class Login(LowDataAdapter):
 
 
 class Logout(LowDataAdapter):
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'tools.salt_token.on': False,
+        'tools.salt_auth.on': False,
+    })
+
     def POST(self):
         '''
         Destroy the currently active session and expire the session cookie
@@ -870,6 +874,21 @@ class Logout(LowDataAdapter):
 
 
 class Run(LowDataAdapter):
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'tools.sessions.on': False,
+        'tools.salt_token.on': False,
+        'tools.salt_auth.on': False,
+    })
+
+    def exec_lowstate(self):
+        '''
+        Override exec_lowstate to avoid pulling token from the session
+        '''
+        lowstate = cherrypy.request.lowstate
+
+        for chunk in lowstate:
+            yield self.api.run(chunk)
+
     def POST(self, **kwargs):
         '''
         Run commands bypassing the normal session handling
