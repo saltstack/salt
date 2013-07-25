@@ -697,7 +697,7 @@ class AESFuncs(object):
         Take a minion id and a string signed with the minion private key
         The string needs to verify as 'salt' with the minion public key
         '''
-        if not salt.utils.verify.valid_id(id_):
+        if not salt.utils.verify.valid_id(self.opts, id_):
             return False
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with salt.utils.fopen(pub_path, 'r') as fp_:
@@ -779,7 +779,7 @@ class AESFuncs(object):
         if 'id' not in load:
             log.error('Received call for external nodes without an id')
             return {}
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             return {}
         ret = {}
         # The old ext_nodes method is set to be deprecated in 0.10.4
@@ -860,7 +860,7 @@ class AESFuncs(object):
         if any(key not in load for key in ('id', 'tgt', 'fun')):
             return {}
         ret = {}
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
         checker = salt.utils.minions.CkMinions(self.opts)
         minions = checker.check_minions(
@@ -888,7 +888,7 @@ class AESFuncs(object):
         '''
         if 'id' not in load or 'data' not in load:
             return False
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
@@ -918,7 +918,7 @@ class AESFuncs(object):
         if os.path.isabs(load['path']) or '../' in load['path']:
             # Can overwrite master files!!
             return False
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         cpath = os.path.join(
                 self.opts['cachedir'],
@@ -948,7 +948,7 @@ class AESFuncs(object):
         '''
         if any(key not in load for key in ('id', 'grains', 'env')):
             return False
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         pillar = salt.pillar.Pillar(
                 self.opts,
@@ -990,7 +990,7 @@ class AESFuncs(object):
         '''
         if 'id' not in load:
             return False
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         if 'events' not in load and ('tag' not in load or 'data' not in load):
             return False
@@ -1009,7 +1009,7 @@ class AESFuncs(object):
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         if load['jid'] == 'req':
         # The minion is returning a standalone job, request a jobid
@@ -1079,7 +1079,7 @@ class AESFuncs(object):
         # Verify the load
         if any(key not in load for key in ('return', 'jid', 'id')):
             return None
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         # set the write flag
         jid_dir = salt.utils.jid_dir(
@@ -1565,7 +1565,7 @@ class ClearFuncs(object):
 
         salt.utils.verify.check_max_open_files(self.opts)
 
-        if not salt.utils.verify.valid_id(load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
             log.info(
                 'Authentication request from invalid id {id}'.format(**load)
                 )
