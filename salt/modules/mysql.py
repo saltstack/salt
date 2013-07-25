@@ -17,10 +17,11 @@ Module to provide MySQL compatibility to salt.
 
         mysql.default_file: '/etc/mysql/debian.cnf'
 
-    .. note::
-        Version 0.16.1 will add the option to set passwordless logins, as well
-        as supply the connection arguments directly from the CLI or in an SLS
-        file.
+.. versionchanged:: 0.16.1
+    Connection arguments from the minion config file can be overridden on the
+    CLI by using the arguments defined :doc:`here
+    </ref/states/all/salt.states.mysql_user>`. Additionally, it is now possible
+    to setup a user with no password.
 '''
 
 # Import python libs
@@ -563,8 +564,8 @@ def user_exists(user,
     if passwordless login is permitted by omitting ``password`` and
     ``password_hash``, and using ``passwordless=True``.
 
-    .. note::
-        The ``passwordless`` option will be available in version 0.16.1.
+    .. versionadded:: 0.16.1
+        The ``passwordless`` option was added.
 
     CLI Example::
 
@@ -660,8 +661,8 @@ def user_create(user,
         If ``True``, then ``password`` and ``password_hash`` can be omitted (or
         set to ``None``) to permit a passwordless login.
 
-    .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.1.
+    .. versionadded:: 0.16.1
+        The ``allow_passwordless`` option was added.
 
     CLI Examples::
 
@@ -741,8 +742,8 @@ def user_chpass(user,
         If ``True``, then ``password`` and ``password_hash`` can be omitted (or
         set to ``None``) to permit a passwordless login.
 
-    .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.1.
+    .. versionadded:: 0.16.1
+        The ``allow_passwordless`` option was added.
 
     CLI Examples::
 
