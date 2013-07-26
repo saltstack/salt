@@ -142,7 +142,9 @@ def get_image(vm_):
     if vm_image and str(vm_image) in images.keys():
         return images[vm_image]
 
-    raise SaltCloudNotFound('The specified image could not be found.')
+    raise SaltCloudNotFound(
+        'The specified image, {0!r}, could not be found.'.format(vm_image)
+    )
 
 
 def get_size(vm_):
@@ -157,7 +159,9 @@ def get_size(vm_):
     if vm_size and str(vm_size) in sizes.keys():
         return sizes[vm_size]
 
-    raise SaltCloudNotFound('The specified size could not be found.')
+    raise SaltCloudNotFound(
+        'The specified size, {0!r}, could not be found.'.format(vm_size)
+    )
 
 
 def create(vm_):
