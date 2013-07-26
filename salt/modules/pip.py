@@ -112,6 +112,7 @@ def install(pkgs=None,
             no_download=False,
             global_options=None,
             install_options=None,
+            user=None,
             runas=None,
             no_chown=False,
             cwd=None,
@@ -198,10 +199,13 @@ def install(pkgs=None,
     global_options
         Extra global options to be supplied to the setup.py call before the
         install command.
-    runas
-        User to run pip as
+    user
+        The user under which to run pip
+    .. note::
+        The ``runas`` argument is deprecated as of 0.16.1. ``user`` should be
+        used instead.
     no_chown
-        When runas is given, do not attempt to copy and chown
+        When user is given, do not attempt to copy and chown
         a requirements file
     cwd
         Current working directory to run pip from
@@ -236,6 +240,15 @@ def install(pkgs=None,
     if env and not bin_env:
         bin_env = env
 
+    # Support deprecated 'runas' arg
+    if not user and runas is not None:
+        user = str(runas)
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in 0.18.0. Please use \'user\' instead.'
+        )
+
     cmd = [_get_pip_bin(bin_env), 'install']
 
     if activate and bin_env:
@@ -264,16 +277,16 @@ def install(pkgs=None,
                     }
                 requirement = cached_requirements
 
-            if runas and not no_chown:
-                # Need to make a temporary copy since the runas user will, most
+            if user and not no_chown:
+                # Need to make a temporary copy since the user will, most
                 # likely, not have the right permissions to read the file
                 treq = salt.utils.mkstemp()
                 shutil.copyfile(requirement, treq)
                 logger.debug(
                     'Changing ownership of requirements file {0!r} to '
-                    'user {1!r}'.format(treq, runas)
+                    'user {1!r}'.format(treq, user)
                 )
-                __salt__['file.chown'](treq, runas, None)
+                __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
             cmd.append('--requirement={0!r}'.format(treq or requirement))
 
@@ -432,7 +445,7 @@ def install(pkgs=None,
             cmd.append('--editable={0}'.format(entry))
 
     try:
-        cmd_kwargs = dict(runas=runas, cwd=cwd)
+        cmd_kwargs = dict(runas=user, cwd=cwd)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
         return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -450,6 +463,7 @@ def uninstall(pkgs=None,
               log=None,
               proxy=None,
               timeout=None,
+              user=None,
               runas=None,
               no_chown=False,
               cwd=None,
@@ -481,10 +495,13 @@ def uninstall(pkgs=None,
         password.
     timeout
         Set the socket timeout (default 15 seconds)
-    runas
-        User to run pip as
+    user
+        The user under which to run pip
+    .. note::
+        The ``runas`` argument is deprecated as of 0.16.1. ``user`` should be
+        used instead.
     no_chown
-        When runas is given, do not attempt to copy and chown
+        When user is given, do not attempt to copy and chown
         a requirements file
     cwd
         Current working directory to run pip from
@@ -501,6 +518,15 @@ def uninstall(pkgs=None,
 
     '''
     cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
+
+    # Support deprecated 'runas' arg
+    if not user and runas is not None:
+        user = str(runas)
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in 0.18.0. Please use \'user\' instead.'
+        )
 
     cleanup_requirements = []
     if requirements is not None:
@@ -524,16 +550,16 @@ def uninstall(pkgs=None,
                     }
                 requirement = cached_requirements
 
-            if runas and not no_chown:
-                # Need to make a temporary copy since the runas user will, most
+            if user and not no_chown:
+                # Need to make a temporary copy since the user will, most
                 # likely, not have the right permissions to read the file
                 treq = salt.utils.mkstemp()
                 shutil.copyfile(requirement, treq)
                 logger.debug(
                     'Changing ownership of requirements file {0!r} to '
-                    'user {1!r}'.format(treq, runas)
+                    'user {1!r}'.format(treq, user)
                 )
-                __salt__['file.chown'](treq, runas, None)
+                __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
             cmd.append('--requirement={0!r}'.format(treq or requirement))
 
@@ -563,7 +589,7 @@ def uninstall(pkgs=None,
             pkgs = [p.strip() for p in pkgs.split(',')]
         cmd.extend(pkgs)
 
-    cmd_kwargs = dict(runas=runas, cwd=cwd)
+    cmd_kwargs = dict(runas=user, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -578,6 +604,7 @@ def uninstall(pkgs=None,
 
 
 def freeze(bin_env=None,
+           user=None,
            runas=None,
            cwd=None):
     '''
@@ -590,8 +617,11 @@ def freeze(bin_env=None,
         pip-2.6, etc..) just specify the pip bin you want.
         If uninstalling from a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
-    runas
-        User to run pip as
+    user
+        The user under which to run pip
+    .. note::
+        The ``runas`` argument is deprecated as of 0.16.1. ``user`` should be
+        used instead.
     cwd
         Current working directory to run pip from
 
@@ -599,9 +629,17 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
+    # Support deprecated 'runas' arg
+    if not user and runas is not None:
+        user = str(runas)
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in 0.18.0. Please use \'user\' instead.'
+        )
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
-    cmd_kwargs = dict(runas=runas, cwd=cwd)
+    cmd_kwargs = dict(runas=user, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -614,6 +652,7 @@ def freeze(bin_env=None,
 
 def list_(prefix=None,
           bin_env=None,
+          user=None,
           runas=None,
           cwd=None):
     '''
@@ -628,7 +667,16 @@ def list_(prefix=None,
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
 
-    cmd_kwargs = dict(runas=runas, cwd=cwd)
+    # Support deprecated 'runas' arg
+    if not user and runas is not None:
+        user = str(runas)
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in 0.18.0. Please use \'user\' instead.'
+        )
+
+    cmd_kwargs = dict(runas=user, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
