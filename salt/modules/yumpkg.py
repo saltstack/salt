@@ -181,18 +181,18 @@ def _set_repo_options(yumbase, **kwargs):
 
     try:
         if fromrepo:
-            log.info('Restricting to repo \'{0}\''.format(fromrepo))
+            log.info('Restricting to repo {0!r}'.format(fromrepo))
             yumbase.repos.disableRepo('*')
             yumbase.repos.enableRepo(fromrepo)
         else:
             if disablerepo:
-                log.info('Disabling repo \'{0}\''.format(disablerepo))
+                log.info('Disabling repo {0!r}'.format(disablerepo))
                 yumbase.repos.disableRepo(disablerepo)
             if enablerepo:
-                log.info('Enabling repo \'{0}\''.format(enablerepo))
+                log.info('Enabling repo {0!r}'.format(enablerepo))
                 yumbase.repos.enableRepo(enablerepo)
-    except yum.Errors.RepoError as e:
-        return e
+    except yum.Errors.RepoError as exc:
+        return exc
 
 
 def latest_version(*names, **kwargs):
