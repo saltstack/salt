@@ -7,17 +7,11 @@ import os
 import re
 import logging
 import shutil
-import warnings
 
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
-
-# runas warnings filter to force deprecation warning exhibition once
-warnings.filterwarnings(
-    'once', '(.*)runas(.*)', DeprecationWarning, __name__
-)
 
 # It would be cool if we could use __virtual__() in this module, though, since
 # pip can be installed on a virtualenv anywhere on the filesystem, there's no
@@ -249,10 +243,10 @@ def install(pkgs=None,
     # Support deprecated 'runas' arg
     if not user and runas is not None:
         user = str(runas)
-        warnings.warn('The \'runas\' argument to pip.install is deprecated, '
-                      'and will be removed in 0.18.0. Please use \'user\' '
-                      'instead.',
-                      DeprecationWarning
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in 0.18.0. Please use \'user\' instead.'
         )
 
     cmd = [_get_pip_bin(bin_env), 'install']
@@ -528,10 +522,10 @@ def uninstall(pkgs=None,
     # Support deprecated 'runas' arg
     if not user and runas is not None:
         user = str(runas)
-        warnings.warn('The \'runas\' argument to pip.uninstall is deprecated, '
-                      'and will be removed in 0.18.0. Please use \'user\' '
-                      'instead.',
-                      DeprecationWarning
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in 0.18.0. Please use \'user\' instead.'
         )
 
     cleanup_requirements = []
@@ -639,10 +633,10 @@ def freeze(bin_env=None,
     # Support deprecated 'runas' arg
     if not user and runas is not None:
         user = str(runas)
-        warnings.warn('The \'runas\' argument to pip.freeze is deprecated, '
-                      'and will be removed in 0.18.0. Please use \'user\' '
-                      'instead.',
-                      DeprecationWarning
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in 0.18.0. Please use \'user\' instead.'
         )
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
@@ -678,10 +672,10 @@ def list_(prefix=None,
     # Support deprecated 'runas' arg
     if not user and runas is not None:
         user = str(runas)
-        warnings.warn('The \'runas\' argument to pip.freeze is deprecated, '
-                      'and will be removed in 0.18.0. Please use \'user\' '
-                      'instead.',
-                      DeprecationWarning
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in 0.18.0. Please use \'user\' instead.'
         )
 
     cmd_kwargs = dict(runas=user, cwd=cwd)
