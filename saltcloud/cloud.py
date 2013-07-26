@@ -781,6 +781,10 @@ class Cloud(object):
                         )
                     )
                     self.opts['providers'][alias].pop(driver)
+
+                    if alias not in self.opts['providers']:
+                        continue
+
                     if not self.opts['providers'][alias]:
                         self.opts['providers'].pop(alias)
                     continue
@@ -794,6 +798,10 @@ class Cloud(object):
                             'providers list'.format(driver, alias)
                         )
                         self.opts['providers'][alias].pop(driver)
+
+            if alias not in self.opts['providers']:
+                continue
+
             if not self.opts['providers'][alias]:
                 self.opts['providers'].pop(alias)
 
