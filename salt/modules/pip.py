@@ -6,11 +6,16 @@ Install Python packages with pip to either the system or a virtualenv
 import os
 import logging
 import shutil
+import warnings
 
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
+warnings.filterwarnings(
+    'once', '(.*)runas(.*)', DeprecationWarning, __name__
+)
 
 # It would be cool if we could use __virtual__() in this module, though, since
 # pip can be installed on a virtualenv anywhere on the filesystem, there's no
@@ -234,10 +239,10 @@ def install(pkgs=None,
     # Support deprecated 'runas' arg
     if not user and runas is not None:
         user = str(runas)
-        salt.utils.warn_until(
-            (0, 18),
+        warnings.warn(
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in 0.18.0. Please use \'user\' instead.'
+            'removed in 0.18.0. Please use \'user\' instead.',
+            DeprecationWarning
         )
 
     cmd = '{0} install'.format(_get_pip_bin(bin_env))
@@ -481,10 +486,10 @@ def uninstall(pkgs=None,
     # Support deprecated 'runas' arg
     if not user and runas is not None:
         user = str(runas)
-        salt.utils.warn_until(
-            (0, 18),
+        warnings.warn(
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in 0.18.0. Please use \'user\' instead.'
+            'removed in 0.18.0. Please use \'user\' instead.',
+            DeprecationWarning
         )
 
     if pkgs:
@@ -564,10 +569,10 @@ def freeze(bin_env=None,
     # Support deprecated 'runas' arg
     if not user and runas is not None:
         user = str(runas)
-        salt.utils.warn_until(
-            (0, 18),
+        warnings.warn(
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in 0.18.0. Please use \'user\' instead.'
+            'removed in 0.18.0. Please use \'user\' instead.',
+            DeprecationWarning
         )
 
     pip_bin = _get_pip_bin(bin_env)
@@ -604,10 +609,10 @@ def list_(prefix=None,
     # Support deprecated 'runas' arg
     if not user and runas is not None:
         user = str(runas)
-        salt.utils.warn_until(
-            (0, 18),
+        warnings.warn(
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in 0.18.0. Please use \'user\' instead.'
+            'removed in 0.18.0. Please use \'user\' instead.',
+            DeprecationWarning
         )
 
     if result['retcode'] > 0:
