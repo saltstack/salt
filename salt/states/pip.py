@@ -69,6 +69,8 @@ def installed(name,
 
     name
         The name of the python package to install
+    user
+        The user under which to run pip
     pip_bin : None
         Deprecated, use bin_env
     env : None
@@ -94,7 +96,7 @@ def installed(name,
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     try:
-        pip_list = __salt__['pip.list'](prefix, bin_env, runas=user, cwd=cwd)
+        pip_list = __salt__['pip.list'](prefix, bin_env, user=user, cwd=cwd)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
@@ -154,7 +156,7 @@ def installed(name,
         no_install=no_install,
         no_download=no_download,
         install_options=install_options,
-        runas=user,
+        user=user,
         no_chown=no_chown,
         cwd=cwd,
         pre_releases=pre_releases,
@@ -164,7 +166,7 @@ def installed(name,
     if pip_install_call and (pip_install_call['retcode'] == 0):
         ret['result'] = True
 
-        pkg_list = __salt__['pip.list'](prefix, bin_env, runas=user, cwd=cwd)
+        pkg_list = __salt__['pip.list'](prefix, bin_env, user=user, cwd=cwd)
         if not pkg_list:
             ret['comment'] = (
                 'There was no error installing package \'{0}\' although '
@@ -204,14 +206,15 @@ def removed(name,
 
     name
         The name of the package to uninstall
+    user
+        The user under which to run pip
     bin_env : None
         the pip executable or virtualenenv to use
     '''
-
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        pip_list = __salt__['pip.list'](bin_env=bin_env, runas=user, cwd=cwd)
+        pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
@@ -233,7 +236,7 @@ def removed(name,
                                  log=log,
                                  proxy=proxy,
                                  timeout=timeout,
-                                 runas=user,
+                                 user=user,
                                  cwd=cwd,
                                  __env__='base'):
         ret['result'] = True
