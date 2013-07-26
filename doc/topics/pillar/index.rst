@@ -95,6 +95,8 @@ Note that you cannot just list key/value-information in ``top.sls``.
 Including Other Pillars
 =======================
 
+.. versionadded:: 0.16.0
+
 Pillar SLS files may include other pillar files, similar to State files.
 Two syntaxes are available for this purpose. The simple form simply includes
 the additional pillar as if it were part of the same file:
