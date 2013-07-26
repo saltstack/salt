@@ -185,7 +185,9 @@ def get_image(vm_):
     for image in images:
         if vm_image in (images[image]['name'], images[image]['id']):
             return images[image]['id']
-    raise SaltCloudNotFound('The specified image could not be found.')
+    raise SaltCloudNotFound(
+        'The specified image, {0!r}, could not be found.'.format(vm_image)
+    )
 
 
 def get_size(vm_):
@@ -199,7 +201,9 @@ def get_size(vm_):
     for size in sizes:
         if vm_size in (sizes[size]['name'], sizes[size]['id']):
             return sizes[size]['id']
-    raise SaltCloudNotFound('The specified size could not be found.')
+    raise SaltCloudNotFound(
+        'The specified size, {0!r}, could not be found.'.format(vm_size)
+    )
 
 
 def get_location(vm_):
@@ -215,7 +219,11 @@ def get_location(vm_):
         if vm_location in (locations[location]['name'],
                            locations[location]['id']):
             return locations[location]['id']
-    raise SaltCloudNotFound('The specified location could not be found.')
+    raise SaltCloudNotFound(
+        'The specified location, {0!r}, could not be found.'.format(
+            vm_location
+        )
+    )
 
 
 def create_node(args):

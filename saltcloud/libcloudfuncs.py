@@ -173,7 +173,11 @@ def get_location(conn, vm_):
         if vm_location and vm_location in (img_id, img_name):
             return img
 
-    raise SaltCloudNotFound('The specified location could not be found.')
+    raise SaltCloudNotFound(
+        'The specified location, {0!r}, could not be found.'.format(
+            vm_location
+        )
+    )
 
 
 def get_image(conn, vm_):
@@ -200,7 +204,9 @@ def get_image(conn, vm_):
         if vm_image and vm_image in (img_id, img_name):
             return img
 
-    raise SaltCloudNotFound('The specified image could not be found.')
+    raise SaltCloudNotFound(
+        'The specified image, {0!r}, could not be found.'.format(vm_image)
+    )
 
 
 def get_size(conn, vm_):
@@ -215,7 +221,9 @@ def get_size(conn, vm_):
     for size in sizes:
         if vm_size and str(vm_size) in (str(size.id), str(size.name)):
             return size
-    raise SaltCloudNotFound('The specified size could not be found.')
+    raise SaltCloudNotFound(
+        'The specified size, {0!r}, could not be found.'.format(vm_size)
+    )
 
 
 def script(vm_):
