@@ -606,8 +606,7 @@ def uninstall(pkgs=None,
 def freeze(bin_env=None,
            user=None,
            runas=None,
-           cwd=None,
-           **kwargs):
+           cwd=None):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -655,8 +654,7 @@ def list_(prefix=None,
           bin_env=None,
           user=None,
           runas=None,
-          cwd=None,
-          **kwargs):
+          cwd=None):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
