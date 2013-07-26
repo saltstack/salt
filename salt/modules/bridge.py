@@ -74,7 +74,10 @@ def _linux_brshow(br=None):
             brs[brname]['interfaces'].append(vals[0])
 
     if br:
-        return brs[br]
+        try:
+            return brs[br]
+        except KeyError, ke :
+            return None
     return brs
 
 
@@ -151,7 +154,10 @@ def _netbsd_brshow(br=None):
                     brs[brname]['stp'] = 'yes'
 
     if br:
-        return brs[br]
+        try:
+            return brs[br]
+        except KeyError, ke :
+            return None
     return brs
 
 
