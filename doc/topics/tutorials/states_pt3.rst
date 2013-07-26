@@ -4,7 +4,7 @@ States tutorial, part 3
 
 .. note::
 
-  This tutorial builds on the topic covered in :doc:`part1 <states_pt1>` and
+  This tutorial builds on topics covered in :doc:`part 1 <states_pt1>` and
   :doc:`part 2 <states_pt2>`. It is recommended that you begin there.
 
 This part of the tutorial will cover more advanced templating and
@@ -210,16 +210,9 @@ can be rewritten without the loop:
           - larry
           - curly
 
-Continue learning
-=================
+Next steps
+==========
 
-The best way to continue learning about Salt States is to read through the
-:doc:`reference documentation </ref/states/index>` and to look through examples
-of existing :term:`state trees <state tree>`. You can find examples in the
-`salt-states repository`_ and please send a pull-request on GitHub with any
-state trees that you build and want to share!
-
-.. _`salt-states repository`: https://github.com/saltstack/salt-states
-
-If you have any questions, suggestions, or just want to chat with other people
-who are using Salt we have an :doc:`active community </topics/community>`.
+In :doc:`part 4 <states_pt4>` we will discuss how to use salt's
+:conf_master:`file_roots` to set up a workflow in which states can be
+"promoted" from dev, to QA, to production.

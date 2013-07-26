@@ -4,8 +4,8 @@ States tutorial, part 2
 
 .. note:: 
 
-  This tutorial builds on the topic covered in :doc:`part 1 <states_pt1>`.
-  It is recommended that you begin there.
+  This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`. It is
+  recommended that you begin there.
 
 In the :doc:`last part <states_pt1>` of the Salt States tutorial we covered
 the basics of installing a package. We will now modify our ``webserver.sls``
