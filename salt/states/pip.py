@@ -63,12 +63,15 @@ def installed(name,
               no_chown=False,
               cwd=None,
               pre_releases=False,
-              __env__='base'):
+              __env__='base',
+              **kwargs):
     '''
     Make sure the package is installed
 
     name
         The name of the python package to install
+    user
+        The user under which to run pip
     pip_bin : None
         Deprecated, use bin_env
     env : None
@@ -81,6 +84,10 @@ def installed(name,
         bin_env = pip_bin
     elif env and not bin_env:
         bin_env = env
+
+    # Support "runas" if "user" not used (will need to unify this for 0.17)
+    if not user and 'runas' in kwargs:
+        user = str(kwargs['runas'])
 
     scheme, netloc, path, query, fragment = urlparse.urlsplit(name)
     if scheme and netloc:
@@ -198,15 +205,21 @@ def removed(name,
             timeout=None,
             user=None,
             cwd=None,
-            __env__='base'):
+            __env__='base',
+            **kwargs):
     '''
     Make sure that a package is not installed.
 
     name
         The name of the package to uninstall
+    user
+        The user under which to run pip
     bin_env : None
         the pip executable or virtualenenv to use
     '''
+    # Support "runas" if "user" not used (will need to unify this for 0.17)
+    if not user and 'runas' in kwargs:
+        user = str(kwargs['runas'])
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 

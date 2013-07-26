@@ -117,7 +117,8 @@ def install(pkgs=None,
             cwd=None,
             activate=False,
             pre_releases=False,
-            __env__='base'):
+            __env__='base',
+            **kwargs):
     '''
     Install packages with pip
 
@@ -199,7 +200,7 @@ def install(pkgs=None,
         Extra global options to be supplied to the setup.py call before the
         install command.
     runas
-        User to run pip as
+        The user under which to run pip
     no_chown
         When runas is given, do not attempt to copy and chown
         a requirements file
@@ -235,6 +236,10 @@ def install(pkgs=None,
     # the `bin_env` argument and we'll take care of the rest.
     if env and not bin_env:
         bin_env = env
+
+    # Support "user" if "runas" not used (will need to unify this for 0.17)
+    if not runas and 'user' in kwargs:
+        runas = str(kwargs['user'])
 
     cmd = [_get_pip_bin(bin_env), 'install']
 
@@ -453,7 +458,8 @@ def uninstall(pkgs=None,
               runas=None,
               no_chown=False,
               cwd=None,
-              __env__='base'):
+              __env__='base',
+              **kwargs):
     '''
     Uninstall packages with pip
 
@@ -482,7 +488,7 @@ def uninstall(pkgs=None,
     timeout
         Set the socket timeout (default 15 seconds)
     runas
-        User to run pip as
+        The user under which to run pip
     no_chown
         When runas is given, do not attempt to copy and chown
         a requirements file
@@ -501,6 +507,10 @@ def uninstall(pkgs=None,
 
     '''
     cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
+
+    # Support "user" if "runas" not used (will need to unify this for 0.17)
+    if not runas and 'user' in kwargs:
+        runas = str(kwargs['user'])
 
     cleanup_requirements = []
     if requirements is not None:
@@ -579,7 +589,8 @@ def uninstall(pkgs=None,
 
 def freeze(bin_env=None,
            runas=None,
-           cwd=None):
+           cwd=None,
+           **kwargs):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -591,7 +602,7 @@ def freeze(bin_env=None,
         If uninstalling from a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
     runas
-        User to run pip as
+        The user under which to run pip
     cwd
         Current working directory to run pip from
 
@@ -599,6 +610,9 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
+    # Support "user" if "runas" not used (will need to unify this for 0.17)
+    if not runas and 'user' in kwargs:
+        runas = str(kwargs['user'])
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
     cmd_kwargs = dict(runas=runas, cwd=cwd)
@@ -615,7 +629,8 @@ def freeze(bin_env=None,
 def list_(prefix=None,
           bin_env=None,
           runas=None,
-          cwd=None):
+          cwd=None,
+          **kwargs):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
@@ -627,6 +642,10 @@ def list_(prefix=None,
     packages = {}
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
+
+    # Support "user" if "runas" not used (will need to unify this for 0.17)
+    if not runas and 'user' in kwargs:
+        runas = str(kwargs['user'])
 
     cmd_kwargs = dict(runas=runas, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
