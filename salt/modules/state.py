@@ -347,7 +347,11 @@ def show_highstate():
         salt '*' state.show_highstate
     '''
     st_ = salt.state.HighState(__opts__)
-    ret = st_.compile_highstate()
+    st_.push_active()
+    try:
+        ret = st_.compile_highstate()
+    finally:
+        st_.pop_active()
     if isinstance(ret, list):
         __context__['retcode'] = 1
     return ret
@@ -362,7 +366,11 @@ def show_lowstate():
         salt '*' state.show_lowstate
     '''
     st_ = salt.state.HighState(__opts__)
-    ret = st_.compile_low_chunks()
+    st_.push_active()
+    try:
+        ret = st_.compile_low_chunks()
+    finally:
+        st_.pop_active()
     if isinstance(ret, list):
         __context__['retcode'] = 1
     return ret
@@ -385,7 +393,11 @@ def show_sls(mods, env='base', test=None, **kwargs):
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
-    high_, errors = st_.render_highstate({env: mods})
+    st_.push_active()
+    try:
+        high_, errors = st_.render_highstate({env: mods})
+    finally:
+        st_.pop_active()
     errors += st_.state.verify_high(high_)
     if errors:
         __context__['retcode'] = 1
