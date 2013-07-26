@@ -57,6 +57,7 @@ States - Configuration Management with Salt:
     - :doc:`Basic config management <topics/tutorials/states_pt1>`
     - :doc:`Less basic config management <topics/tutorials/states_pt2>`
     - :doc:`Advanced techniques <topics/tutorials/states_pt3>`
+    - :doc:`Salt Fileserver Path Inheritance <topics/tutorials/states_pt4>`
 
 Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
