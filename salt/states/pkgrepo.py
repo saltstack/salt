@@ -211,9 +211,9 @@ def managed(name, **kwargs):
             elif kwarg == 'line' and __grains__['os_family'] == 'Debian':
                 # split the line and sort everything after the URL
                 sanitizedsplit = sanitizedkwargs[kwarg].split()
-                sanitizedsplit[2:] = sorted(sanitizedsplit[2:])
+                sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
                 reposplit = repo[kwarg].split()
-                reposplit[2:] = sorted(reposplit[2:])
+                reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
                     notset = True
             else:
