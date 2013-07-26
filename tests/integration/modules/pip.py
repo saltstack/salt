@@ -63,7 +63,7 @@ class PipModuleTest(integration.ModuleCase):
             )
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_issue_4805_nested_requirements_runas_no_chown(self):
+    def test_issue_4805_nested_requirements_user_no_chown(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -76,7 +76,7 @@ class PipModuleTest(integration.ModuleCase):
 
         this_user = pwd.getpwuid(os.getuid())[0]
         ret = self.run_function('pip.install', requirements=req1_filename,
-                                runas=this_user, no_chown=True)
+                                user=this_user, no_chown=True)
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
