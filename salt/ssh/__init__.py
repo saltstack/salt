@@ -263,6 +263,39 @@ class Single():
         lowstate = st_.compile_low_chunks()
         #file_refs = salt.utils.lowstate_file_refs(lowstate)
 
+    def sls_seed(self, mods, env='base', test=None, exclude=None, **kwargs):
+        '''
+        Create the seed file for a state.sls run
+        '''
+        wrapper = FunctionWrapper(self.opts, self.target['id'], **self.target)
+        pillar = kwargs.get('pillar', {})
+        st_ = SSHHighState(self.opts, pillar, wrapper)
+        if isinstance(mods, str):
+            mods = mods.split(',')
+        high, errors = st_.render_highstate({env: mods})
+        if exclude:
+            if isinstance(exclude, str):
+                exclude = exclude.split(',')
+            if '__exclude__' in high:
+                high['__exclude__'].extend(exclude)
+            else:
+                high['__exclude__'] = exclude
+        high, ext_errors = st_.reconcile_extend(high)
+        errors += ext_errors
+        errors += st_.verify_high(high)
+        if errors:
+            return errors
+        high, req_in_errors = st_.requisite_in(high)
+        errors += req_in_errors
+        high = st_.apply_exclude(high)
+        # Verify that the high data is structurally sound
+        if errors:
+            return errors
+        # Compile and verify the raw chunks
+        chunks = st_.compile_high_data(high)
+        file_refs = lowstate_file_refs(chunks)
+
+
 
 class FunctionWrapper(dict):
     '''
@@ -341,3 +374,45 @@ class SSHHighState(salt.state.BaseHighState):
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
+
+
+def lowstate_file_refs(chunks):
+    '''
+    Create a list of file ref objects to reconcile
+    '''
+    refs = {}
+    for chunk in chunks:
+        env = 'base'
+        crefs = []
+        for state in chunk:
+            if state == '__env__':
+                env = chunk[state]
+            elif state.startswith('__'):
+                continue
+            for arg in chunk[state]:
+                if not isinstance(arg, dict):
+                    continue
+                if len(arg) < 1:
+                    continue
+                crefs = salt_refs(arg[arg.keys()][0])
+        if crefs:
+            if not env in refs:
+                refs[env] = []
+            refs[env].append(crefs)
+    return refs
+
+def salt_refs(data):
+    '''
+    Pull salt file references out of the states
+    '''
+    proto = 'salt://'
+    ret = []
+    if isinstance(data, str):
+        if data.startswith(proto):
+            return [data]
+    if isinstance(data, list):
+        for comp in data:
+            if isinstance(comp, str):
+                if comp.startswith(proto):
+                    ret.append(comp)
+    return ret
