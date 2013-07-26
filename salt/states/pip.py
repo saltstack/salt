@@ -62,8 +62,7 @@ def installed(name,
               user=None,
               no_chown=False,
               cwd=None,
-              __env__='base',
-              **kwargs):
+              __env__='base'):
     '''
     Make sure the package is installed
 
@@ -84,10 +83,6 @@ def installed(name,
     elif env and not bin_env:
         bin_env = env
 
-    # Support "runas" if "user" not used (will need to unify this for 0.17)
-    if not user and 'runas' in kwargs:
-        user = str(kwargs['runas'])
-
     scheme, netloc, path, query, fragment = urlparse.urlsplit(name)
     if scheme and netloc:
         # parse as VCS url
@@ -100,7 +95,7 @@ def installed(name,
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     try:
-        pip_list = __salt__['pip.list'](prefix, bin_env, runas=user, cwd=cwd)
+        pip_list = __salt__['pip.list'](prefix, bin_env, user=user, cwd=cwd)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
@@ -160,7 +155,7 @@ def installed(name,
         no_install=no_install,
         no_download=no_download,
         install_options=install_options,
-        runas=user,
+        user=user,
         no_chown=no_chown,
         cwd=cwd,
         __env__=__env__
@@ -169,7 +164,7 @@ def installed(name,
     if pip_install_call and (pip_install_call['retcode'] == 0):
         ret['result'] = True
 
-        pkg_list = __salt__['pip.list'](prefix, bin_env, runas=user, cwd=cwd)
+        pkg_list = __salt__['pip.list'](prefix, bin_env, user=user, cwd=cwd)
         if not pkg_list:
             ret['comment'] = (
                 'There was no error installing package \'{0}\' although '
@@ -203,8 +198,7 @@ def removed(name,
             timeout=None,
             user=None,
             cwd=None,
-            __env__='base',
-            **kwargs):
+            __env__='base'):
     '''
     Make sure that a package is not installed.
 
@@ -215,14 +209,10 @@ def removed(name,
     bin_env : None
         the pip executable or virtualenenv to use
     '''
-    # Support "runas" if "user" not used (will need to unify this for 0.17)
-    if not user and 'runas' in kwargs:
-        user = str(kwargs['runas'])
-
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        pip_list = __salt__['pip.list'](bin_env=bin_env, runas=user, cwd=cwd)
+        pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
@@ -244,7 +234,7 @@ def removed(name,
                                  log=log,
                                  proxy=proxy,
                                  timeout=timeout,
-                                 runas=user,
+                                 user=user,
                                  cwd=cwd,
                                  __env__='base'):
         ret['result'] = True
