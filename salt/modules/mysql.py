@@ -1129,7 +1129,7 @@ def processlist(**connection_args):
     '''
     ret = []
 
-    dbc = _connect()
+    dbc = _connect(**connection_args)
     cur = dbc.cursor()
     cur.execute('SHOW FULL PROCESSLIST')
     hdr = [c[0] for c in cur.description]
