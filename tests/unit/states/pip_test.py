@@ -19,6 +19,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 from salt.states import pip
+from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 try:
@@ -61,6 +62,17 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                     'instead.', {'testsuite': ret}
                 )
 
+    def test_installed_runas_and_user_raises_exception(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.installed,
+                'pep8',
+                user='Me!',
+                runas='Not Me!'
+            )
+
     def test_removed_deprecated_runas(self):
         # We *always* want *all* warnings thrown on this module
         warnings.resetwarnings()
@@ -88,7 +100,16 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                     'instead.', {'testsuite': ret}
                 )
 
-
+    def test_removed_runas_and_user_raises_exception(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.removed,
+                'pep8',
+                user='Me!',
+                runas='Not Me!'
+            )
 
 
 if __name__ == '__main__':
