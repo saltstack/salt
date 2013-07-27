@@ -24,7 +24,8 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
 from salt._compat import (
-    URLError, HTTPError, BaseHTTPServer, urlparse, url_open)
+    URLError, HTTPError, BaseHTTPServer, urlparse, urlunparse, url_open,
+    url_passwd_mgr, url_auth_handler, url_build_opener, url_install_opener )
 
 log = logging.getLogger(__name__)
 
@@ -346,8 +347,19 @@ class Client(object):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
+	if url_data.username is not None:
+	    _, netloc = url_data.netloc.split('@', 1)
+	    fixed_url = urlunparse((url_data.scheme, netloc, url_data.path, 
+		url_data.params, url_data.query, url_data.fragment ))
+	    passwd_mgr = url_passwd_mgr()
+	    passwd_mgr.add_password(None, fixed_url, url_data.username, url_data.password)
+	    auth_handler = url_auth_handler(passwd_mgr)
+	    opener = url_build_opener(auth_handler)
+	    url_install_opener(opener)
+	else:
+	    fixed_url = url
         try:
-            with contextlib.closing(url_open(url)) as srcfp:
+            with contextlib.closing(url_open(fixed_url)) as srcfp:
                 with salt.utils.fopen(dest, 'wb') as destfp:
                     shutil.copyfileobj(srcfp, destfp)
             return dest
