@@ -113,6 +113,7 @@ Python 2: If ``s`` is an instance of ``text_type``, return
 if PY3:
     # pylint: disable=E0611
     from urllib.parse import urlparse
+    from urllib.parse import urlunparse
     from urllib.error import URLError
     import http.server as BaseHTTPServer
     from urllib.error import HTTPError
@@ -121,10 +122,15 @@ if PY3:
     from urllib.parse import unquote as url_unquote
     from urllib.parse import urlencode as url_encode
     from urllib.request import urlopen as url_open
+    from urllib.request import HTTPPasswordMgrWithDefaultRealm as url_passwd_mgr
+    from urllib.request import HTTPBasicAuthHandler as url_auth_handler
+    from urllib.request import build_opener as url_build_opener
+    from urllib.request import install_opener as url_install_opener
     url_unquote_text = url_unquote
     url_unquote_native = url_unquote
 else:
     from urlparse import urlparse
+    from urlparse import urlunparse
     import BaseHTTPServer
     from urllib2 import HTTPError, URLError
     from urllib import quote as url_quote
@@ -132,6 +138,10 @@ else:
     from urllib import unquote as url_unquote
     from urllib import urlencode as url_encode
     from urllib2 import urlopen as url_open
+    from urllib2 import HTTPPasswordMgrWithDefaultRealm as url_passwd_mgr
+    from urllib2 import HTTPBasicAuthHandler as url_auth_handler
+    from urllib2 import build_opener as url_build_opener
+    from urllib2 import install_opener as url_install_opener
     def url_unquote_text(v, encoding='utf-8', errors='replace'):
         v = url_unquote(v)
         return v.decode(encoding, errors)
