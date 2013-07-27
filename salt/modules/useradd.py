@@ -108,14 +108,15 @@ def add(name,
             return retval
         if usergroups():
             cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
-    if home is None:
-        if createhome:
-            cmd += '-m '
-    else:
-        if createhome:
-            cmd += '-m -d {0} '.format(home)
-        else:
-            cmd += '-d {0} '.format(home)
+     
+    if createhome:
+        cmd += '-m '
+    elif createhome is False:
+        cmd += '-M '
+    
+    if home is not None:
+        cmd += '-d {0} '.format(home)
+
     if not unique:
         cmd += '-o '
     if system:
