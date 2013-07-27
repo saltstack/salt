@@ -9,6 +9,7 @@ import time
 import signal
 import logging
 import multiprocessing
+import pprint
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -1281,6 +1282,23 @@ class Map(Cloud):
                 func=create_multiprocessing,
                 iterable=parallel_data
             )
+            if self.opts['start_action']:
+                action_list = [[]]
+                level = 0
+                for item in sorted(dmap['create'].values(), key=lambda x: x['level']):
+                    new_level = item['level']
+                    if new_level != level:
+                        action_list.append([])
+                    action_list[new_level].append(item['name'])
+                    level = new_level
+                for group in action_list:
+                    
+                    client = salt.client.LocalClient()
+                    output = client.cmd(
+                        ','.join(group), self.opts['start_action'], timeout=300,
+                        expr_form='list'
+                    )
+                    pprint.pprint(output)
             for obj in output_multip:
                 output.update(obj)
 

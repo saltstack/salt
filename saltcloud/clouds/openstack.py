@@ -462,6 +462,7 @@ def create(vm_):
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
         'start_action': __opts__['start_action'],
+        'parallel': __opts__['parallel'],
         'minion_pem': vm_['priv_key'],
         'minion_pub': vm_['pub_key'],
         'keep_tmp': __opts__['keep_tmp'],
