@@ -8,6 +8,7 @@ data
 
 # Import python libs
 import contextlib  # For < 2.7 compat
+import datetime
 import os
 import re
 import time
@@ -1851,3 +1852,42 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
                 user,
                 group,
                 int('{0}'.format(mode)) if mode else None)
+
+
+def list_backups(path):
+    '''
+    .. note::
+        This function will be available in version 0.17.0.
+
+    Lists the previous versions of a file backed up using Salt's :doc:`file
+    state backup </ref/states/backup_mode>` system.
+
+    CLI Example::
+
+        salt '*' file.list_backups /foo/bar/baz.txt
+    '''
+    # Get the cachedir from the minion config
+    cachedir = __salt__['config.get']('cachedir')
+    parent_dir, basename = os.path.split(path)
+    # Figure out full path of location of backup file in minion cache
+    cachedir = os.path.join(cachedir, 'file_backup', parent_dir.lstrip('/'))
+
+    files = {}
+    for fn in [x for x in os.listdir(cachedir)
+               if os.path.isfile(os.path.join(cachedir, x))]:
+        strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
+        try:
+            timestamp = datetime.datetime.strptime(fn, strpfmt)
+        except ValueError:
+            # File didn't match the strp format string, so it's not a backup
+            # for this file. Move on to the next one.
+            continue
+        files.setdefault(timestamp, {})['Backup Time'] = \
+            timestamp.strftime('%a %b %d %Y %H:%M:%S.%f')
+        stats = os.stat(os.path.join(cachedir, fn))
+        files[timestamp]['Size'] = stats.st_size
+        files[timestamp]['Location'] = os.path.join(cachedir, fn)
+
+    return dict(zip(range(len(files)), [files[x] for x in sorted(files)]))
+
+list_backup = list_backups
