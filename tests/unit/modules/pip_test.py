@@ -918,6 +918,51 @@ class PipTestCase(TestCase):
                     str(w[-1].message)
                 )
 
+    def test_install_user_and_runas_raises_exception(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.install,
+                'pep8',
+                user='Me!',
+                runas='Not Me!'
+            )
+
+    def test_uninstall_user_and_runas_raises_exception(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.uninstall,
+                'pep8',
+                user='Me!',
+                runas='Not Me!'
+            )
+
+    def test_freeze_user_and_runas_raises_exception(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.freeze,
+                '/tmp/pip-env',
+                user='Me!',
+                runas='Not Me!'
+            )
+
+    def test_list_user_and_runas_raises_exception(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(
+                CommandExecutionError,
+                pip.list_,
+                'pep8',
+                user='Me!',
+                runas='Not Me!'
+            )
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
