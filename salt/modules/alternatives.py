@@ -60,7 +60,7 @@ def display(name):
 
 def show_current(name):
     '''
-    Display the current higest-priority alternative for a given alternatives
+    Display the current highest-priority alternative for a given alternatives
     link
 
     CLI Example::
