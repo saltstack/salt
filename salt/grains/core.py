@@ -249,11 +249,16 @@ def _bsd_cpudata(osdata):
 
     if osdata['kernel'] == 'Darwin':
         cmds['cpu_model'] = '{0} -n machdep.cpu.brand_string'.format(sysctl)
+        cmds['cpu_flags'] = '{0} -n machdep.cpu.features'.format(sysctl)
 
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
-    grains['cpu_flags'] = []
+
+    if grains['cpu_flags'] and not isinstance(grains['cpu_flags'], list):
+        grains['cpu_flags'] = grains['cpu_flags'].split(' ')
+
 
     if osdata['kernel'] == 'NetBSD':
+        grains['cpu_flags'] = []
         for line in __salt__['cmd.run']('cpuctl identify 0').splitlines():
             m = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
             if m:
@@ -261,6 +266,7 @@ def _bsd_cpudata(osdata):
                 grains['cpu_flags'].extend(flag)
 
     if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
+        grains['cpu_flags'] = []
         # TODO: at least it needs to be tested for BSD other then FreeBSD
         with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
             cpu_here = False
