@@ -39,8 +39,7 @@ def _get_cmd():
     '''
     if __grains__['os_family'] == 'RedHat':
         return 'alternatives'
-    else:
-        return 'update-alternatives'
+    return 'update-alternatives'
 
 
 def display(name):
