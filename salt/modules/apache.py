@@ -251,7 +251,7 @@ def userdel(pwfile, user):
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
-def checkSiteEnabled(site):
+def check_site_enabled(site):
   '''
   Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled
   '''
