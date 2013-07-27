@@ -854,7 +854,6 @@ def os_data():
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
         osrelease = __salt__['cmd.run']('sw_vers -productVersion')
-        raise ValueError(repr(type(osrelease))+repr(osrelease))
         grains['os'] = 'MacOS'
         grains['osrelease'] = osrelease
         grains.update(_bsd_cpudata(grains))
