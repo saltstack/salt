@@ -9,20 +9,21 @@ data
 # Import python libs
 import contextlib  # For < 2.7 compat
 import datetime
-import os
-import re
-import time
-import shutil
-import stat
-import tempfile
-import sys
+import difflib
+import errno
+import fnmatch
 import getpass
 import hashlib
-import difflib
-import fnmatch
-import errno
-import logging
 import itertools
+import logging
+import os
+import re
+import shutil
+import stat
+import sys
+import tempfile
+import time
+
 try:
     import grp
     import pwd
@@ -88,6 +89,14 @@ def _binary_replace(old, new):
         elif new_isbin:
             return 'Replace text file with binary file'
     return ''
+
+
+def _get_bkroot():
+    '''
+    Get the location of the backup dir in the minion cache
+    '''
+    # Get the cachedir from the minion config
+    return os.path.join(__salt__['config.get']('cachedir'), 'file_backup')
 
 
 def gid_to_group(gid):
@@ -1854,7 +1863,7 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
                 int('{0}'.format(mode)) if mode else None)
 
 
-def list_backups(path):
+def list_backups(path, limit=None):
     '''
     .. note::
         This function will be available in version 0.17.0.
@@ -1862,19 +1871,31 @@ def list_backups(path):
     Lists the previous versions of a file backed up using Salt's :doc:`file
     state backup </ref/states/backup_mode>` system.
 
+    path
+        The path on the minion to check for backups
+    limit
+        Limit the number of results to the most recent N backups
+
     CLI Example::
 
         salt '*' file.list_backups /foo/bar/baz.txt
     '''
-    # Get the cachedir from the minion config
-    cachedir = __salt__['config.get']('cachedir')
+    try:
+        limit = int(limit)
+    except TypeError:
+        pass
+    except ValueError:
+        log.error('file.list_backups: \'limit\' value must be numeric')
+        limit = None
+
+    bkroot = _get_bkroot()
     parent_dir, basename = os.path.split(path)
     # Figure out full path of location of backup file in minion cache
-    cachedir = os.path.join(cachedir, 'file_backup', parent_dir.lstrip('/'))
+    bkdir = os.path.join(bkroot, parent_dir[1:])
 
     files = {}
-    for fn in [x for x in os.listdir(cachedir)
-               if os.path.isfile(os.path.join(cachedir, x))]:
+    for fn in [x for x in os.listdir(bkdir)
+               if os.path.isfile(os.path.join(bkdir, x))]:
         strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
         try:
             timestamp = datetime.datetime.strptime(fn, strpfmt)
@@ -1884,10 +1905,118 @@ def list_backups(path):
             continue
         files.setdefault(timestamp, {})['Backup Time'] = \
             timestamp.strftime('%a %b %d %Y %H:%M:%S.%f')
-        stats = os.stat(os.path.join(cachedir, fn))
+        stats = os.stat(os.path.join(bkdir, fn))
         files[timestamp]['Size'] = stats.st_size
-        files[timestamp]['Location'] = os.path.join(cachedir, fn)
+        files[timestamp]['Location'] = os.path.join(bkdir, fn)
 
-    return dict(zip(range(len(files)), [files[x] for x in sorted(files)]))
+    return dict(zip(
+        range(len(files)),
+        [files[x] for x in sorted(files, reverse=True)[:limit]]
+    ))
 
 list_backup = list_backups
+
+
+def restore_backup(path, backup_id):
+    '''
+    .. note::
+        This function will be available in version 0.17.0.
+
+    Restore a previous version of a file that was backed up using Salt's
+    :doc:`file state backup </ref/states/backup_mode>` system.
+
+    path
+        The path on the minion to check for backups
+    backup_id
+        The numeric id for the backup you wish to restore, as found using
+        :mod:`file.list_backups <salt.modules.file.list_backups>`
+
+    CLI Example::
+
+        salt '*' file.restore_backup /foo/bar/baz.txt 0
+    '''
+    # Note: This only supports minion backups, so this function will need to be
+    # modified if/when master backups are implemented.
+    ret = {'result': False,
+           'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
+    try:
+        if len(str(backup_id)) == len(str(int(backup_id))):
+            backup = list_backups(path)[int(backup_id)]
+        else:
+            return ret
+    except ValueError:
+        return ret
+    except KeyError:
+        ret['comment'] = 'backup_id \'{0}\' does not exist for ' \
+                         '{1}'.format(backup_id, path)
+        return ret
+
+    salt.utils.backup_minion(path, _get_bkroot())
+    try:
+        shutil.copyfile(backup['Location'], path)
+    except IOError as exc:
+        ret['comment'] = \
+            'Unable to restore {0} to {1}: ' \
+            '{2}'.format(backup['Location'], path, exc)
+        return ret
+    else:
+        ret['result'] = True
+        ret['comment'] = 'Successfully restored {0} to ' \
+                         '{1}'.format(backup['Location'], path)
+
+    # Try to set proper ownership
+    try:
+        fstat = os.stat(path)
+    except (FileNotFoundError, IOError):
+        pass
+        ret['comment'] += ', but was unable to set ownership'
+    else:
+        os.chown(path, fstat.st_uid, fstat.st_gid)
+
+    return ret
+
+
+def delete_backup(path, backup_id):
+    '''
+    .. note::
+        This function will be available in version 0.17.0.
+
+    Restore a previous version of a file that was backed up using Salt's
+    :doc:`file state backup </ref/states/backup_mode>` system.
+
+    path
+        The path on the minion to check for backups
+    backup_id
+        The numeric id for the backup you wish to delete, as found using
+        :mod:`file.list_backups <salt.modules.file.list_backups>`
+
+    CLI Example::
+
+        salt '*' file.restore_backup /foo/bar/baz.txt 0
+    '''
+    ret = {'result': False,
+           'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
+    try:
+        if len(str(backup_id)) == len(str(int(backup_id))):
+            backup = list_backups(path)[int(backup_id)]
+        else:
+            return ret
+    except ValueError:
+        return ret
+    except KeyError:
+        ret['comment'] = 'backup_id \'{0}\' does not exist for ' \
+                         '{1}'.format(backup_id, path)
+        return ret
+
+    try:
+        os.remove(backup['Location'])
+    except IOError as exc:
+        ret['comment'] = 'Unable to remove {0}: {1}'.format(backup['Location'],
+                                                            exc)
+    else:
+        ret['result'] = True
+        ret['comment'] = 'Successfully removed {0}'.format(backup['Location'])
+
+    return ret
+
+remove_backup = delete_backup
