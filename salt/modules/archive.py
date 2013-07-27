@@ -4,7 +4,7 @@ A module to wrap archive calls
 
 # Import salt libs
 from salt.utils import which as _which
-# TODO: Add wrapping to each function to check for existence of the binary
+import salt.utils.decorators as decorators
 # TODO: Check that the passed arguments are correct
 
 
@@ -16,6 +16,7 @@ def __virtual__():
     return 'archive'
 
 
+@decorators.which('tar')
 def tar(options, tarfile, cwd=None, template=None, *sources):
     '''
     Uses the tar command to pack, unpack, etc tar files
@@ -37,6 +38,7 @@ def tar(options, tarfile, cwd=None, template=None, *sources):
     return out
 
 
+@decorators.which('gzip')
 def gzip(sourcefile, template=None):
     '''
     Uses the gzip command to create gzip files
@@ -57,6 +59,7 @@ def gzip(sourcefile, template=None):
     return out
 
 
+@decorators.which('gunzip')
 def gunzip(gzipfile, template=None):
     '''
     Uses the gunzip command to unpack gzip files
@@ -77,6 +80,7 @@ def gunzip(gzipfile, template=None):
     return out
 
 
+@decorators.which('zip')
 def zip(zipfile, template=None, *sources):
     '''
     Uses the zip command to create zip files
@@ -98,6 +102,7 @@ def zip(zipfile, template=None, *sources):
     return out
 
 
+@decorators.which('unzip')
 def unzip(zipfile, dest, template=None, *xfiles):
     '''
     Uses the unzip command to unpack zip files
@@ -121,6 +126,7 @@ def unzip(zipfile, dest, template=None, *xfiles):
     return out
 
 
+@decorators.which('rar')
 def rar(rarfile, template=None, *sources):
     '''
     Uses the rar command to create rar files
@@ -145,6 +151,7 @@ def rar(rarfile, template=None, *sources):
     return out
 
 
+@decorators.which('unrar')
 def unrar(rarfile, dest, template=None, *xfiles):
     '''
     Uses the unrar command to unpack rar files
