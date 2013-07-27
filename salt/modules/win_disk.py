@@ -9,7 +9,7 @@ import ctypes
 import string
 
 # Import salt libs
-import salt.util
+import salt.utils
 
 try:
     import win32api
@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.util.is_windows():
+    if salt.utils.is_windows():
         return 'disk'
     return False
 
