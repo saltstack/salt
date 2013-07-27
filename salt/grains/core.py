@@ -247,6 +247,9 @@ def _bsd_cpudata(osdata):
     if arch and osdata['kernel'] == 'OpenBSD':
         cmds['cpuarch'] = '{0} -s'.format(arch)
 
+    if osdata['kernel'] == 'Darwin':
+        cmds['cpu_model'] = '{0} -n machdep.cpu.brand_string'.format(sysctl)
+
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
     grains['cpu_flags'] = []
 
