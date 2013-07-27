@@ -214,3 +214,31 @@ def list_user_permissions(name, user=None):
         'rabbitmqctl list_user_permissions {0}'.format(name),
         runas=user)
     return [r.split('\t') for r in res.splitlines()]
+
+def status(name, user=None):
+    '''
+    return rabbitmq status
+
+    Example::
+
+        salt '*' rabbitmq.status
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl status',
+        runas=user)
+    return res
+
+def cluster_status(user=None):
+    '''
+    return rabbitmq cluster_status
+
+    Example::
+
+        salt '*' rabbitmq.cluster_status
+    '''
+    ret = {}
+    res = __salt__['cmd.run'](
+        'rabbitmqctl cluster_status',
+        runas=user)
+
+    return res
