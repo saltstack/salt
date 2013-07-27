@@ -18,9 +18,11 @@ requisite to a pkg.installed state for the package which provides pip
           - pkg: python-pip
 '''
 
+# Import python libs
 import urlparse
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -60,6 +62,7 @@ def installed(name,
               no_download=False,
               install_options=None,
               user=None,
+              runas=None,
               no_chown=False,
               cwd=None,
               pre_releases=False,
@@ -95,6 +98,25 @@ def installed(name,
         prefix = name.split('=')[0].split('<')[0].split('>')[0].strip()
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    if runas is not None:
+        # The user is using a deprecated argument, warn!
+        msg = (
+            'The \'runas\' argument to pip.installed is deprecated, and will '
+            'be removed in 0.18.0. Please use \'user\' instead.'
+        )
+        salt.utils.warn_until((0, 18), msg)
+        ret.setdefault('warnings', []).append(msg)
+
+    # "There can only be one"
+    if runas is not None and user:
+        raise CommandExecutionError(
+            'The \'runas\' and \'user\' arguments are mutually exclusive. '
+            'Please use \'user\' as \'runas\' is being deprecated.'
+        )
+    # Support deprecated 'runas' arg
+    elif runas is not None and not user:
+        user = runas
+
     try:
         pip_list = __salt__['pip.list'](prefix, bin_env, user=user, cwd=cwd)
     except (CommandNotFoundError, CommandExecutionError) as err:
@@ -199,6 +221,7 @@ def removed(name,
             proxy=None,
             timeout=None,
             user=None,
+            runas=None,
             cwd=None,
             __env__='base'):
     '''
@@ -212,6 +235,25 @@ def removed(name,
         the pip executable or virtualenenv to use
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if runas is not None:
+        # The user is using a deprecated argument, warn!
+        msg = (
+            'The \'runas\' argument to pip.installed is deprecated, and will '
+            'be removed in 0.18.0. Please use \'user\' instead.'
+        )
+        salt.utils.warn_until((0, 18), msg)
+        ret.setdefault('warnings', []).append(msg)
+
+    # "There can only be one"
+    if runas is not None and user:
+        raise CommandExecutionError(
+            'The \'runas\' and \'user\' arguments are mutually exclusive. '
+            'Please use \'user\' as \'runas\' is being deprecated.'
+        )
+    # Support deprecated 'runas' arg
+    elif runas is not None and not user:
+        user = runas
 
     try:
         pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)

@@ -172,10 +172,9 @@ class VirtualenvTestCase(TestCase):
             )
 
     def test_no_site_packages_deprecation(self):
-        # NOTE: If this test starts failing it might be because the deprecation
-        # warning was removed, or because some other test in this module is
-        # passing 'no_site_packages' to 'virtualenv_mod.create'. The
-        # deprecation warning is shown only once.
+        # We *always* want *all* warnings thrown on this module
+        warnings.resetwarnings()
+        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
