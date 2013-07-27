@@ -5,7 +5,7 @@ Module for gathering disk information
 # Import python libs
 import logging
 
-# Import salt libs
+# Import salt libs (this is important)
 import salt.utils
 
 log = logging.getLogger(__name__)
