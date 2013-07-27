@@ -369,10 +369,17 @@ def _virtual(osdata):
     #   virtual_subtype
     grains = {'virtual': 'physical'}
     for command in ('dmidecode', 'lspci', 'dmesg'):
+        args = []
+        if osdata['kernel'] == 'Darwin':
+            command = 'system_profiler'
+            args = ['SPDisplaysDataType']
+
         cmd = salt.utils.which(command)
 
         if not cmd:
             continue
+
+        cmd = '%s %s' % (command, ' '.join(args))
 
         ret = __salt__['cmd.run_all'](cmd)
 
@@ -389,7 +396,8 @@ def _virtual(osdata):
 
         output = ret['stdout']
 
-        if command == 'dmidecode' or command == 'dmesg':
+        if command == 'dmidecode' or command == 'dmesg' or \
+                command == "system_profiler":
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
