@@ -212,6 +212,21 @@ master.
 
     acceptance_wait_time: 10
 
+.. conf_minion:: acceptance_wait_time_max
+
+``acceptance_wait_time_max``
+------------------------
+
+Default: ``None``
+
+The maximum number of seconds to wait until attempting to re\-authenticate
+with the master. If set, the wait will increase by acceptance_wait_time
+seconds each iteration.
+
+.. code-block:: yaml
+
+    acceptance_wait_time_max: None
+
 .. conf_minion:: dns_check
 
 ``dns_check``

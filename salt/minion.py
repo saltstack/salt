@@ -839,13 +839,20 @@ class Minion(object):
             )
         )
         auth = salt.crypt.Auth(self.opts)
+	acceptance_wait_time = self.opts['acceptance_wait_time']
+	acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+	if acceptance_wait_time_max is None:
+	    acceptance_wait_time_max = acceptance_wait_time
         while True:
             creds = auth.sign_in(timeout, safe)
             if creds != 'retry':
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
-            time.sleep(self.opts['acceptance_wait_time'])
+            time.sleep(acceptance_wait_time)
+	    if acceptance_wait_time < acceptance_wait_time_max:
+		acceptance_wait_time += acceptance_wait_time
+		log.debug('Authentication wait time is {0}'.format( acceptance_wait_time ))
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
