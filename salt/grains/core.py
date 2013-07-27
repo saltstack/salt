@@ -404,9 +404,20 @@ def _virtual(osdata):
             continue
 
         output = ret['stdout']
+        if command == "system_profiler":
+            macoutput = output.lower()
+            if '0x1ab8' in macoutput:
+                grains['virtual'] = 'Parallels'
+            if 'parallels' in macoutput:
+                grains['virtual'] = 'Parallels'
+            if 'vmware' in macoutput:
+                grains['virtual'] = 'VMware'
+            if '0x15ad' in macoutput:
+                grains['virtual'] = 'VMware'
+            if 'virtualbox' in macoutput:
+                grains['virtual'] = 'VirtualBox'
 
-        if command == 'dmidecode' or command == 'dmesg' or \
-                command == "system_profiler":
+        elif command == 'dmidecode' or command == 'dmesg':
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
