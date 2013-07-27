@@ -8,9 +8,12 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import python libs
+import os
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -51,6 +54,23 @@ class AlternativesTestCase(TestCase):
                 mock.assert_called_once_with(
                     'update-alternatives --display better-world'
                 )
+
+    @patch('os.readlink')
+    def test_show_current(self, os_readlink_mock):
+        os_readlink_mock.return_value = '/etc/alternatives/salt'
+        ret = alternatives.show_current('better-world')
+        self.assertEqual('/etc/alternatives/salt', ret)
+        os_readlink_mock.assert_called_once_with(
+            '/etc/alternatives/better-world'
+        )
+
+        with TestsLoggingHandler() as handler:
+            os_readlink_mock.side_effect = OSError('Hell was not found!!!')
+            self.assertFalse(alternatives.show_current('hell'))
+            os_readlink_mock.assert_called_with('/etc/alternatives/hell')
+            self.assertIn('ERROR:alternatives: path /etc/alternatives/hell '
+                          'does not exist',
+                          handler.messages)
 
 
 if __name__ == '__main__':
