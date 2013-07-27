@@ -5,7 +5,12 @@ Helpful decorators module writing
 # Import python libs
 import inspect
 import logging
+from functools import wraps
 from collections import defaultdict
+
+# Import salt libs
+import salt.utils
+from salt.exceptions import CommandNotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -109,3 +114,19 @@ class depends(Depends):
     '''
     Wrapper of Depends for capitalization
     '''
+
+
+def which(exe):
+    '''
+    Decorator wrapper for salt.utils.which
+    '''
+    def wrapper(function):
+        @wraps(function)
+        def wrapped(*args, **kwargs):
+            if salt.utils.which(exe) is None:
+                raise CommandNotFoundError(
+                    'The {0!r} binary was not found in $PATH.'
+                )
+            return function(*args, **kwargs)
+        return wrapped
+    return wrapper
