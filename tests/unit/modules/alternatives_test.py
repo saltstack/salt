@@ -72,6 +72,22 @@ class AlternativesTestCase(TestCase):
                           'does not exist',
                           handler.messages)
 
+    @patch('os.readlink')
+    def test_check_installed(self, os_readlink_mock):
+        os_readlink_mock.return_value = '/etc/alternatives/salt'
+        self.assertTrue(
+            alternatives.check_installed(
+                'better-world', '/etc/alternatives/salt'
+            )
+        )
+        os_readlink_mock.return_value = False
+        self.assertFalse(
+            alternatives.check_installed(
+                'help', '/etc/alternatives/salt'
+            )
+        )
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
