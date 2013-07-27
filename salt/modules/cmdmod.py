@@ -337,6 +337,11 @@ def _run(cmd,
     ret['stderr'] = err
     ret['pid'] = proc.process.pid
     ret['retcode'] = proc.process.returncode
+    try:
+        __context__['retcode'] = ret['retcode']
+    except NameError:
+        # Ignore the context error during grain generation
+        pass 
     return ret
 
 
