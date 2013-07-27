@@ -528,17 +528,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         bkroot = os.path.join(cachedir, 'file_backup')
     if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
         if os.path.exists(dest):
-            fstat = os.stat(dest)
-            msecs = str(int(time.time() * 1000000))[-6:]
-            stamp = time.asctime().replace(' ', '_')
-            stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
-            bkpath = os.path.join(bkroot,
-                                  dname[1:],
-                                  '{0}_{1}'.format(bname, stamp))
-            if not os.path.isdir(os.path.dirname(bkpath)):
-                os.makedirs(os.path.dirname(bkpath))
-            shutil.copyfile(dest, bkpath)
-            os.chown(bkpath, fstat.st_uid, fstat.st_gid)
+            backup_minion(dest, bkroot)
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
@@ -555,6 +545,24 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
             os.remove(tgt)
         except Exception:
             pass
+
+
+def backup_minion(path, bkroot):
+    '''
+    Backup a file on the minion
+    '''
+    dname, bname = os.path.split(path)
+    fstat = os.stat(path)
+    msecs = str(int(time.time() * 1000000))[-6:]
+    stamp = time.asctime().replace(' ', '_')
+    stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
+    bkpath = os.path.join(bkroot,
+                          dname[1:],
+                          '{0}_{1}'.format(bname, stamp))
+    if not os.path.isdir(os.path.dirname(bkpath)):
+        os.makedirs(os.path.dirname(bkpath))
+    shutil.copyfile(path, bkpath)
+    os.chown(bkpath, fstat.st_uid, fstat.st_gid)
 
 
 def path_join(*parts):
