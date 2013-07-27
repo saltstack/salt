@@ -263,7 +263,7 @@ def start_app(runas=None):
 
     Example::
 
-        salt '*' rabbitmq.stop_app
+        salt '*' rabbitmq.start_app
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl start_app',
@@ -277,7 +277,7 @@ def reset(runas=None):
 
     Example::
 
-        salt '*' rabbitmq.stop_app
+        salt '*' rabbitmq.reset
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl reset',
@@ -291,7 +291,7 @@ def force_reset(runas=None):
 
     Example::
 
-        salt '*' rabbitmq.stop_app
+        salt '*' rabbitmq.force_reset
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl force_reset',
