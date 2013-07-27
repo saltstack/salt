@@ -333,10 +333,13 @@ def _memdata(osdata):
                         continue
                     if comps[0].strip() == 'MemTotal':
                         grains['mem_total'] = int(comps[1].split()[0]) / 1024
-    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Darwin'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
-            mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
+            if osdata['kernel'] == 'Darwin':
+                mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
+            else:
+                mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
             if (osdata['kernel'] == 'NetBSD' and mem.startswith('-')):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
