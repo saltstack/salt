@@ -48048,6 +48048,11 @@ def get_file(path, dest, env=\(aqbase\(aq):
 # seconds, between those reconnection attempts.
 #acceptance_wait_time: 10
 
+# If this is set, the time between reconnection attempts will increase by 
+# acceptance_wait_time seconds per iteration, up to this maximum. If this
+# is not set, the time between reconnection attempts will stay constant.
+# acceptance_wait_time_max: None
+
 # The loop_interval sets how long in seconds the minion will wait between
 # evaluating the scheduler and running cleanup tasks. This defaults to a
 # sane 60 seconds, but if the minion scheduler needs to be evaluated more
@@ -49245,6 +49250,19 @@ master.
 .nf
 .ft C
 acceptance_wait_time: 10
+.ft P
+.fi
+.SS \fBacceptance_wait_time_max\fP
+.sp
+Default: \fBNone\fP
+.sp
+The maximum number of seconds to wait until attempting to re\-authenticate
+with the master. If set, the wait will increase by \fBacceptance_wait_time\fP
+seconds each iteration.
+.sp
+.nf
+.ft C
+acceptance_wait_time_max: None
 .ft P
 .fi
 .SS \fBdns_check\fP

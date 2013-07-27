@@ -98,6 +98,11 @@
 # seconds, between those reconnection attempts.
 #acceptance_wait_time: 10
 
+# If this is set, the time between reconnection attempts will increase by 
+# acceptance_wait_time seconds per iteration, up to this maximum. If this
+# is not set, the time between reconnection attempts will stay constant.
+# acceptance_wait_time_max: None
+
 # When the master-key changes, the minion will try to re-auth itself to
 # receive the new master key. In larger environments this can cause a 
 # syn-flood on the master because all minions try to re-auth immediately. 
