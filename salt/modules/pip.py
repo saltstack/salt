@@ -240,14 +240,24 @@ def install(pkgs=None,
     if env and not bin_env:
         bin_env = env
 
-    # Support deprecated 'runas' arg
-    if not user and runas is not None:
-        user = str(runas)
+    if runas is not None:
+        # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
             (0, 18),
             'The \'runas\' argument to pip.install is deprecated, and will be '
             'removed in 0.18.0. Please use \'user\' instead.'
         )
+
+    # "There can only be one"
+    if runas is not None and user:
+        raise CommandExecutionError(
+            'The \'runas\' and \'user\' arguments are mutually exclusive. '
+            'Please use \'user\' as \'runas\' is being deprecated.'
+        )
+
+    # Support deprecated 'runas' arg
+    elif runas is not None and not user:
+        user = str(runas)
 
     cmd = [_get_pip_bin(bin_env), 'install']
 
@@ -519,14 +529,24 @@ def uninstall(pkgs=None,
     '''
     cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
 
-    # Support deprecated 'runas' arg
-    if not user and runas is not None:
-        user = str(runas)
+    if runas is not None:
+        # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
             (0, 18),
             'The \'runas\' argument to pip.install is deprecated, and will be '
             'removed in 0.18.0. Please use \'user\' instead.'
         )
+
+    # "There can only be one"
+    if runas is not None and user:
+        raise CommandExecutionError(
+            'The \'runas\' and \'user\' arguments are mutually exclusive. '
+            'Please use \'user\' as \'runas\' is being deprecated.'
+        )
+
+    # Support deprecated 'runas' arg
+    elif runas is not None and not user:
+        user = str(runas)
 
     cleanup_requirements = []
     if requirements is not None:
@@ -629,14 +649,24 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
-    # Support deprecated 'runas' arg
-    if not user and runas is not None:
-        user = str(runas)
+    if runas is not None:
+        # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
             (0, 18),
             'The \'runas\' argument to pip.install is deprecated, and will be '
             'removed in 0.18.0. Please use \'user\' instead.'
         )
+
+    # "There can only be one"
+    if runas is not None and user:
+        raise CommandExecutionError(
+            'The \'runas\' and \'user\' arguments are mutually exclusive. '
+            'Please use \'user\' as \'runas\' is being deprecated.'
+        )
+
+    # Support deprecated 'runas' arg
+    elif runas is not None and not user:
+        user = str(runas)
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
     cmd_kwargs = dict(runas=user, cwd=cwd)
@@ -667,14 +697,24 @@ def list_(prefix=None,
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
 
-    # Support deprecated 'runas' arg
-    if not user and runas is not None:
-        user = str(runas)
+    if runas is not None:
+        # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
             (0, 18),
             'The \'runas\' argument to pip.install is deprecated, and will be '
             'removed in 0.18.0. Please use \'user\' instead.'
         )
+
+    # "There can only be one"
+    if runas is not None and user:
+        raise CommandExecutionError(
+            'The \'runas\' and \'user\' arguments are mutually exclusive. '
+            'Please use \'user\' as \'runas\' is being deprecated.'
+        )
+
+    # Support deprecated 'runas' arg
+    elif runas is not None and not user:
+        user = str(runas)
 
     cmd_kwargs = dict(runas=user, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
