@@ -962,6 +962,14 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'named function before executing')
         )
         self.add_option(
+            '--state_output',
+            default='full',
+            dest='state_output',
+            type=str,
+            help=('Override the configured state_output value for minion output'
+                  '. Default: full')
+        )
+        self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
