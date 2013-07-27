@@ -1127,34 +1127,17 @@ def processlist(**connection_args):
         salt '*' mysql.processlist
 
     '''
-    hdr = ('Id', 'User', 'Host', 'db', 'Command', 'Time', 'State',
-           'Info', 'Rows_sent', 'Rows_examined', 'Rows_read')
-
-    log.debug('MySQL Process List:\n{0}'.format(processlist(**connection_args)))
-    dbc = _connect(**connection_args)
-    if dbc is None:
-        return []
-    cur = dbc.cursor()
-
-    qry = 'SHOW FULL PROCESSLIST'
-    log.debug('Doing query: {0}'.format(qry))
-    try:
-        cur.execute(qry)
-    except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
-        __context__['mysql.error'] = err
-        log.error(err)
-        return []
-
     ret = []
+
+    dbc = _connect()
+    cur = dbc.cursor()
+    cur.execute('SHOW FULL PROCESSLIST')
+    hdr = [c[0] for c in cur.description]
     for _ in range(cur.rowcount):
         row = cur.fetchone()
         idx_r = {}
         for idx_j in range(len(hdr)):
-            try:
-                idx_r[hdr[idx_j]] = row[idx_j]
-            except KeyError:
-                pass
+            idx_r[hdr[idx_j]] = row[idx_j]
         ret.append(idx_r)
     cur.close()
     return ret
