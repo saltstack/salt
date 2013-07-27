@@ -5,7 +5,13 @@ A module to wrap archive calls
 # Import salt libs
 from salt.utils import which as _which
 import salt.utils.decorators as decorators
+
 # TODO: Check that the passed arguments are correct
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'zip_': 'zip'
+}
 
 
 def __virtual__():
@@ -81,7 +87,7 @@ def gunzip(gzipfile, template=None):
 
 
 @decorators.which('zip')
-def zip(zipfile, template=None, *sources):
+def zip_(zipfile, template=None, *sources):
     '''
     Uses the zip command to create zip files
 
