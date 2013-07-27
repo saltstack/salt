@@ -174,7 +174,7 @@ documentation for all available modules:
 
     salt '*' sys.doc
 
-This function simple prints out the docstrings found in the modules, when
+This function simply prints out the docstrings found in the modules; when
 writing Salt modules, please follow the formatting conventions for docstrings as
 they appear in the other modules.
 
