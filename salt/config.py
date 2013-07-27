@@ -367,6 +367,11 @@ def _validate_opts(opts):
                     errors.append(
                         err.format(key, val, type(val), VALID_OPTS[key])
                     )
+                except TypeError:
+                    errors.append(
+                        err.format(key, val, type(val), VALID_OPTS[key])
+                    )
+
     for error in errors:
         log.warning(error)
     if errors:
