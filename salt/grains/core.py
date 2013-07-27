@@ -224,6 +224,34 @@ def _netbsd_gpu_data():
     return grains
 
 
+def _osx_gpudata(osdata):
+    '''
+    num_gpus: int
+    gpus:
+      - vendor: nvidia|amd|ati|...
+        model: string
+    '''
+
+    gpus = []
+    try:
+        pcictl_out = __salt__['cmd.run']('system_profiler SPDisplaysDataType')
+
+        for line in pcictl_out.splitlines():
+            fieldname, _, fieldval = line.partition(': ')
+            if fieldname.strip() == "Chipset Model":
+                vendor, _, model = fieldval.partition(' ')
+                vendor = vendor.lower()
+                gpus.append({'vendor': vendor, 'model': model})
+
+    except OSError:
+        pass
+
+    grains = {}
+    grains['num_gpus'] = len(gpus)
+    grains['gpus'] = gpus
+    return grains
+
+
 def _bsd_cpudata(osdata):
     '''
     Return CPU information for BSD-like systems
@@ -827,6 +855,7 @@ def os_data():
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
         grains.update(_bsd_cpudata(grains))
+        grains.update(_osx_gpudata(grains))
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
