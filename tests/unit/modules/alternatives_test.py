@@ -87,6 +87,36 @@ class AlternativesTestCase(TestCase):
             )
         )
 
+    def test_install(self):
+        with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': 'salt'})
+            with patch.dict(alternatives.__salt__, {'cmd.run_all': mock}):
+                solution = alternatives.install(
+                    'better-world',
+                    '/usr/bin/better-world',
+                    '/usr/bin/salt',
+                    100
+                )
+                self.assertEqual('salt', solution)
+                mock.assert_called_once_with(
+                    'alternatives --install /usr/bin/better-world '
+                    'better-world /usr/bin/salt 100'
+                )
+
+        with patch.dict(alternatives.__grains__, {'os_family': 'Debian'}):
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': 'salt'})
+            with patch.dict(alternatives.__salt__, {'cmd.run_all': mock}):
+                solution = alternatives.install(
+                    'better-world',
+                    '/usr/bin/better-world',
+                    '/usr/bin/salt',
+                    100
+                )
+                self.assertEqual('salt', solution)
+                mock.assert_called_once_with(
+                    'update-alternatives --install /usr/bin/better-world '
+                    'better-world /usr/bin/salt 100'
+                )
 
 
 if __name__ == '__main__':
