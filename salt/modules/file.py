@@ -1967,8 +1967,7 @@ def restore_backup(path, backup_id):
     # Try to set proper ownership
     try:
         fstat = os.stat(path)
-    except (FileNotFoundError, IOError):
-        pass
+    except (OSError, IOError):
         ret['comment'] += ', but was unable to set ownership'
     else:
         os.chown(path, fstat.st_uid, fstat.st_gid)
