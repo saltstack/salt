@@ -8,9 +8,6 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
-# Import python libs
-import os
-
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
@@ -26,9 +23,7 @@ try:
 except ImportError:
     HAS_MOCK = False
 
-
-alternatives.__salt__ = {}
-alternatives.__grains__ = {'os_family': 'RedHat'}
+alternatives.__salt__ = alternatives.__grains__ = {}
 
 
 @skipIf(HAS_MOCK is False, 'mock python module is unavailable')
