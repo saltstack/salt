@@ -889,6 +889,16 @@ class SaltReturnAssertsMixIn(object):
     def assertSaltCommentRegexpMatches(self, ret, pattern):
         return self.assertInSaltReturnRegexpMatches(ret, pattern, 'comment')
 
+    def assertInSalStatetWarning(self, in_comment, ret):
+        return self.assertIn(
+            in_comment, self.__getWithinSaltReturn(ret, 'warnings')
+        )
+
+    def assertNotInSaltStateWarning(self, not_in_comment, ret):
+        return self.assertNotIn(
+            not_in_comment, self.__getWithinSaltReturn(ret, 'warnings')
+        )
+
     def assertInSaltReturn(self, ret, item_to_check, keys):
         return self.assertIn(
             item_to_check, self.__getWithinSaltReturn(ret, keys)
