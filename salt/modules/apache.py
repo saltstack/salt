@@ -269,7 +269,7 @@ def a2ensite(site):
   command = 'a2ensite {0}'.format(site)
 
   try:
-    status = os.system(command)
+    status = __salt__['cmd.run'](command)
   except Exception as e:
     return e
 
@@ -292,7 +292,7 @@ def a2dissite(site):
   command = 'a2dissite {0}'.format(site)
 
   try:
-    status = os.system(command)
+    status = __salt__['cmd.run'](command)
   except Exception as e:
     return e
 
