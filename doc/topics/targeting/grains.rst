@@ -96,6 +96,40 @@ same way as in the above example, only without a top-level ``grains:`` key:
     minion config file takes precedence, and will always be used over its
     counterpart in ``/etc/salt/grains``.
 
+Grains in Top file
+==================
+
+With correctly setup grains on the Minion, the Top file used in Pillar or during Highstate can be made really efficient.  Like for example, you could do:
+
+.. code-block:: yaml
+
+    'node_type:web':
+        - match: grain
+        - webserver
+
+    'node_type:postgres':
+        - match: grain
+        - database
+
+    'node_type:redis':
+        - match: grain
+        - redis
+
+    'node_type:lb':
+        - match: grain
+        - lb
+        
+For this example to work, you would need the grain ``node_type`` and the correct value to match on.  This simple example is nice, but too much of the code is similar.  To go one step further, we can place in some JINJA into the Top file.
+
+.. code-block:: yaml
+
+    {% set self = grains['node_type'] %}
+
+        'node_type:{{ self }}':
+            - match: grain
+            - {{ self }}
+
+With the JINJA, we simplified the Top file, and allowed SaltStack to work it's magic.
 
 Writing Grains
 ==============
