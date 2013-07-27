@@ -77,8 +77,8 @@ found with :mod:`file.list_backups <salt.modules.file.list_backups>`::
         result:
             True
 
-The existing file will be backed up, just in case, as can be seen if :mod:`file.list_backups
-<salt.modules.file.list_backups>` is run again::
+The existing file will be backed up, just in case, as can be seen if
+:mod:`file.list_backups <salt.modules.file.list_backups>` is run again::
 
     # salt foo.bar.com file.list_backups /tmp/foo.txt
     foo.bar.com:
@@ -107,6 +107,11 @@ The existing file will be backed up, just in case, as can be seen if :mod:`file.
                 /var/cache/salt/minion/file_backup/tmp/foo.txt_Sat_Jul_27_17:48:28_369804_2013
             Size:
                 35
+
+.. note::
+    Since no state is being run, restoring a file will not trigger any watches
+    for the file. So, if you are restoring a config file for a service, it will
+    likely still be necessary to run a ``service.restart``.
 
 Deleting
 --------
