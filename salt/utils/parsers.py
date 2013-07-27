@@ -953,6 +953,14 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Run the salt command but don\'t wait for a reply')
         )
         self.add_option(
+            '--state_output',
+            default='full',
+            dest='state_output',
+            type=str,
+            help=('Override the configured state_output value for minion output'
+                  '. Default: full')
+        )
+        self.add_option(
             '--subset',
             default=0,
             dest='subset',
