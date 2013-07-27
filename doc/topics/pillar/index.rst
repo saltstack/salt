@@ -91,6 +91,39 @@ more via the shared pillar `dict`_:
 
 Note that you cannot just list key/value-information in ``top.sls``.
 
+Pillar namespace flattened
+==========================
+
+The separate pillar files all share the same namespace. Given 
+a ``top.sls`` of
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+        - services
+
+a packages.sls file of:
+
+.. code-block:: yaml
+
+    bind: bind9
+
+and a services.sls file of:
+
+.. code-block:: yaml
+
+    bind: named
+
+Then a pillar request for pillar['bind'] will only return "named", the
+'bind9' value is not available. It's better to structure your pillar 
+files with more heirarchy. For example your package files could look like:
+
+.. code-block:: yaml
+
+    packages:
+      bind: bind9
 
 Viewing Minion Pillar
 =====================
