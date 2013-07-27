@@ -242,3 +242,59 @@ def cluster_status(user=None):
         runas=user)
 
     return res
+
+def stop_app(runas=None):
+    '''
+    Stops the RabbitMQ application, leaving the Erlang node running.
+
+    Example::
+
+        salt '*' rabbitmq.stop_app
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl stop_app',
+        runas=runas)
+
+    return res
+
+def start_app(runas=None):
+    '''
+    Start the RabbitMQ application.
+
+    Example::
+
+        salt '*' rabbitmq.start_app
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl start_app',
+        runas=runas)
+
+    return res
+
+def reset(runas=None):
+    '''
+    Return a RabbitMQ node to its virgin state
+
+    Example::
+
+        salt '*' rabbitmq.reset
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl reset',
+        runas=runas)
+
+    return res
+
+def force_reset(runas=None):
+    '''
+    Forcefully Return a RabbitMQ node to its virgin state
+
+    Example::
+
+        salt '*' rabbitmq.force_reset
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl force_reset',
+        runas=runas)
+
+    return res
