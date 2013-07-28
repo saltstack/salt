@@ -462,16 +462,16 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     return res
 
 
-def passwd(user, passwd, alg='md5', realm=None):
+def passwd(passwd, user='', alg='md5', realm=None):
     '''
     This function replaces the $CATALINS_HOME/bin/digest.sh script
-    convert a clear-text password to be hashed in $CATALINA_BASE/conf/tomcat-users.xml file
+    convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml format
     
     CLI Examples::
 
-        salt '*' tomcat.passwd tomcat secret
-        salt '*' tomcat.passwd tomcat secret sha1
-        salt '*' tomcat.passwd tomcat secret sha1 'Protected Realm'
+        salt '*' tomcat.passwd secret
+        salt '*' tomcat.passwd secret tomcat sha1
+        salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
     '''
     
     if alg == 'md5':
