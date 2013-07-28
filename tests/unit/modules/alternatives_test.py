@@ -50,6 +50,21 @@ class AlternativesTestCase(TestCase):
                     'update-alternatives --display better-world'
                 )
 
+        with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):
+            mock = MagicMock(
+                return_value={
+                    'retcode': 1,
+                    'stdout': 'salt-out',
+                    'stderr': 'salt-err'
+                }
+            )
+            with patch.dict(alternatives.__salt__, {'cmd.run_all': mock}):
+                solution = alternatives.display('better-world')
+                self.assertEqual('salt-err', solution)
+                mock.assert_called_once_with(
+                    'alternatives --display better-world'
+                )
+
     @patch('os.readlink')
     def test_show_current(self, os_readlink_mock):
         os_readlink_mock.return_value = '/etc/alternatives/salt'
@@ -113,6 +128,27 @@ class AlternativesTestCase(TestCase):
                     'better-world /usr/bin/salt 100'
                 )
 
+        with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):
+            mock = MagicMock(
+                return_value={
+                    'retcode': 1,
+                    'stdout': 'salt-out',
+                    'stderr': 'salt-err'
+                }
+            )
+            with patch.dict(alternatives.__salt__, {'cmd.run_all': mock}):
+                ret = alternatives.install(
+                    'better-world',
+                    '/usr/bin/better-world',
+                    '/usr/bin/salt',
+                    100
+                )
+                self.assertEqual('salt-err', ret)
+                mock.assert_called_once_with(
+                    'alternatives --install /usr/bin/better-world '
+                    'better-world /usr/bin/salt 100'
+                )
+
     def test_remove(self):
         with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):
             mock = MagicMock(return_value={'retcode': 0, 'stdout': 'salt'})
@@ -138,6 +174,25 @@ class AlternativesTestCase(TestCase):
                     'update-alternatives --remove better-world '
                     '/usr/bin/better-world'
                 )
+
+        with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):
+            mock = MagicMock(
+                return_value={
+                    'retcode': 1,
+                    'stdout': 'salt-out',
+                    'stderr': 'salt-err'
+                }
+            )
+            with patch.dict(alternatives.__salt__, {'cmd.run_all': mock}):
+                solution = alternatives.remove(
+                    'better-world',
+                    '/usr/bin/better-world',
+                )
+                self.assertEqual('salt-err', solution)
+                mock.assert_called_once_with(
+                    'alternatives --remove better-world /usr/bin/better-world'
+                )
+
 
 
 if __name__ == '__main__':
