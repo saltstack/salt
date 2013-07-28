@@ -224,7 +224,7 @@ def _netbsd_gpu_data():
     return grains
 
 
-def _osx_gpudata(osdata):
+def _osx_gpudata():
     '''
     num_gpus: int
     gpus:
@@ -857,7 +857,7 @@ def os_data():
         grains['os'] = 'MacOS'
         grains['osrelease'] = osrelease
         grains.update(_bsd_cpudata(grains))
-        grains.update(_osx_gpudata(grains))
+        grains.update(_osx_gpudata())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
