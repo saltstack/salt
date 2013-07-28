@@ -23,6 +23,7 @@ class Depends(object):
     '''
     # Dependency -> list of things that depend on it
     dependency_dict = defaultdict(set)
+
     def __init__(self, *dependencies, **kwargs):
         '''
         The decorator is instantiated with a list of dependencies (string of
@@ -110,7 +111,7 @@ class Depends(object):
                     continue
 
 
-class depends(Depends):
+class depends(Depends):  # pylint: disable=C0103
     '''
     Wrapper of Depends for capitalization
     '''
@@ -120,13 +121,40 @@ def which(exe):
     '''
     Decorator wrapper for salt.utils.which
     '''
+    try:
+        from decorator import decorator
+
+        # This is easy!
+        @decorator
+        def decorated_function(function, *args, **kwargs):
+            if salt.utils.which(exe) is None:
+                raise CommandNotFoundError(
+                    'The {0!r} binary was not found in $PATH.'.format(exe)
+                )
+            return function(*args, **kwargs)
+        return decorated_function
+    except ImportError:
+        pass
+
     def wrapper(function):
-        @wraps(function)
         def wrapped(*args, **kwargs):
             if salt.utils.which(exe) is None:
                 raise CommandNotFoundError(
-                    'The {0!r} binary was not found in $PATH.'
+                    'The {0!r} binary was not found in $PATH.'.format(exe)
                 )
             return function(*args, **kwargs)
-        return wrapped
+
+        argspec = inspect.getargspec(function)
+        formatted_argspec = inspect.formatargspec(
+            formatvalue=lambda val: '', *argspec
+        )
+        function_def = 'lambda {0}: __wrapped__({0})'.format(
+            formatted_argspec[1:-1]
+        )
+        fake_function = eval(function_def, {'__wrapped__': wrapped})
+        fake_function.__name__ = function.__name__
+        fake_function.__doc__ = function.__doc__
+        fake_function.__module__ = function.__module__
+        fake_function.__dict__.update(function.__dict__)
+        return wraps(function)(fake_function)
     return wrapper
