@@ -215,7 +215,7 @@ DEFAULT_MINION_OPTS = {
     'state_output': 'full',
     'state_auto_order': False,
     'acceptance_wait_time': 10,
-    'acceptance_wait_time_max': None,
+    'acceptance_wait_time_max': 0,
     'loop_interval': 1,
     'dns_check': True,
     'verify_env': True,
