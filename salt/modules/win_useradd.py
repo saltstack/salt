@@ -304,21 +304,19 @@ def getent():
 
 def list_users():
     'This functions returns a list of id and full_names on an NT server'
-    print "Inside list_users"
     j=1
     res=1
     users=[]
     user_list=[]
     try:
         while res:
-            (users,total,res) = win32net.NetUserEnum("localhost",3,win32netcon.FILTER_NORMAL_ACCOUNT,res,win32netcon.MAX_PREFERRED_LENGTH)
+            (users,total,res) = win32net.NetUserEnum('localhost',3,win32netcon.FILTER_NORMAL_ACCOUNT,res,win32netcon.MAX_PREFERRED_LENGTH)
             for i in users:
                 add=0
                 login=str(i['name'])
-                info_dict=win32net.NetUserGetInfo("localhost", login, 3)
+                info_dict=win32net.NetUserGetInfo('localhost', login, 3)
                 j=j+1
                 user_list.append(login)
         return user_list
     except win32net.error:
-        #print traceback.format_tb(sys.exc_info()[2]),'\n',sys.exc_type,'\n',sys.exc_value
         pass
