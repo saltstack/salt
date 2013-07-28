@@ -9,7 +9,7 @@ import ctypes
 import string
 
 # Import salt libs
-import salt.util
+import salt.utils
 
 try:
     import win32api
