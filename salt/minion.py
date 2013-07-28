@@ -529,7 +529,7 @@ class Minion(object):
             # decryption of the payload failed, try to re-auth but wait
             # random seconds if set in config with random_reauth_delay
             if 'random_reauth_delay' in self.opts:
-                reauth_delay = randint(0, int(self.opts['random_reauth_delay']) )
+                reauth_delay = randint(0, int(self.opts['random_reauth_delay']))
                 log.debug("Waiting {0} seconds to re-authenticate".format(reauth_delay))
                 time.sleep(reauth_delay)
 
@@ -841,7 +841,7 @@ class Minion(object):
         auth = salt.crypt.Auth(self.opts)
         acceptance_wait_time = self.opts['acceptance_wait_time']
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
-        if acceptance_wait_time_max is None:
+        if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         while True:
             creds = auth.sign_in(timeout, safe)
@@ -852,7 +852,7 @@ class Minion(object):
             time.sleep(acceptance_wait_time)
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time
-                log.debug('Authentication wait time is {0}'.format( acceptance_wait_time ))
+                log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
@@ -971,23 +971,23 @@ class Minion(object):
         recon_delay = self.opts['recon_default']
 
         if self.opts['recon_randomize']:
-            recon_delay = randint(self.opts['recon_default'], 
+            recon_delay = randint(self.opts['recon_default'],
                                   self.opts['recon_default'] + self.opts['recon_max']
-                          )    
+                          )
 
             log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
                 self.opts['recon_default'],
                 self.opts['recon_default'] + self.opts['recon_max'],
                 recon_delay)
-            )    
+            )
 
         log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
         self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
 
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
-            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format( 
+            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format(
                 self.opts['recon_default'] + self.opts['recon_max'])
-            )    
+            )
 
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
