@@ -10,6 +10,12 @@ import os
 import salt.utils
 
 
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'list_': 'list'
+}
+
+
 def __virtual__():
     '''
     Only works on Windows systems
@@ -20,7 +26,7 @@ def __virtual__():
     return False
 
 
-def list():
+def list_():
     '''
     Get a list of automatically running programs
 
@@ -29,12 +35,11 @@ def list():
         salt '*' autoruns.list
     '''
     autoruns = {}
-    curr = None
 
     # Find autoruns in registry
-    keys = ['HKLM\Software\Microsoft\Windows\CurrentVersion\Run',\
-    'HKLM\Software\Microsoft\Windows\CurrentVersion\Run /reg:64',\
-    'HKCU\Software\Microsoft\Windows\CurrentVersion\Run'\
+    keys = ['HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+        'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /reg:64',
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
     ]
     winver = __grains__['osfullname']
     for key in keys:
@@ -47,11 +52,11 @@ def list():
 
     # Find autoruns in user's startup folder
     if '7' in winver:
-        user_dir = 'C:\Users\\'
-        startup_dir = '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup'
+        user_dir = 'C:\\Users\\'
+        startup_dir = '\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup'
     else:
-        user_dir = 'C:\Documents and Settings\\'
-        startup_dir = '\Start Menu\Programs\Startup'
+        user_dir = 'C:\\Documents and Settings\\'
+        startup_dir = '\\Start Menu\\Programs\\Startup'
 
     for user in os.listdir(user_dir):
         try:
@@ -60,7 +65,7 @@ def list():
             autoruns[full_dir] = []
             for afile in files:
                 autoruns[full_dir].append(afile)
-        except:
+        except Exception:
             pass
         
     return autoruns
