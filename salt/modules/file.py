@@ -1905,9 +1905,9 @@ def list_backups(path, limit=None):
             continue
         files.setdefault(timestamp, {})['Backup Time'] = \
             timestamp.strftime('%a %b %d %Y %H:%M:%S.%f')
-        stats = os.stat(os.path.join(bkdir, fn))
-        files[timestamp]['Size'] = stats.st_size
-        files[timestamp]['Location'] = os.path.join(bkdir, fn)
+        location = os.path.join(bkdir, fn)
+        files[timestamp]['Size'] = os.stat(location).st_size
+        files[timestamp]['Location'] = location
 
     return dict(zip(
         range(len(files)),
