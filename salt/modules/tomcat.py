@@ -42,6 +42,7 @@ Notes:
 
 # Import python libs
 import glob
+import hashlib
 import urllib
 import urllib2
 import tempfile
@@ -459,6 +460,37 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
         __salt__['file.remove'](tfile)
 
     return res
+
+
+def passwd(passwd, user='', alg='md5', realm=None):
+    '''
+    This function replaces the $CATALINS_HOME/bin/digest.sh script
+    convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml format
+    
+    CLI Examples::
+
+        salt '*' tomcat.passwd secret
+        salt '*' tomcat.passwd secret tomcat sha1
+        salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
+    '''
+    
+    if alg == 'md5':
+        m = hashlib.md5()
+    elif alg == 'sha1':
+        m = hashlib.sha1()
+    else:
+        return False
+    
+    if realm:
+        m.update('{0}:{1}:{2}'.format(
+            user,
+            realm,
+            passwd,
+            ))
+    else:
+        m.update(passwd)
+    
+    return m.hexdigest()
 
 
 # Non-Manager functions
