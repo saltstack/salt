@@ -7,15 +7,22 @@ NOTE: This currently only works with local user accounts, not domain accounts
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
-import win32net
-import win32netcon
+
+try:
+    import win32net
+    import win32netcon
+    HAS_WIN32NET_MODS = True
+except ImportError:
+    HAS_WIN32NET_MODS = False
 
 
 def __virtual__():
     '''
     Set the user module if the kernel is Windows
     '''
-    return 'user' if salt.utils.is_windows() else False
+    if HAS_WIN32NET_MODS is True and salt.utils.is_windows():
+        return 'user'
+    return False
 
 
 def add(name,
@@ -150,6 +157,7 @@ def chprofile(name, profile):
     if post_info['profile'] != pre_info['profile']:
         return post_info['profile'] == profile
     return False
+
 
 def chfullname(name, fullname):
     '''
@@ -301,6 +309,7 @@ def getent():
 
     __context__['user.getent'] = ret
     return ret
+
 
 def list_users():
     '''
