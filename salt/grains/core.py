@@ -444,6 +444,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'VMware'
             if 'virtualbox' in macoutput:
                 grains['virtual'] = 'VirtualBox'
+            # Break out of the loop so the next log message is not issued
+            break
 
         elif command == 'dmidecode' or command == 'dmesg':
             # Product Name: VirtualBox
