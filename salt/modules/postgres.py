@@ -105,7 +105,7 @@ def version(user=None, host=None, port=None, maintenance_db=None,
 def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
                     password=None, runas=None):
     '''
-    Returns the sever version properly parsed and int casted for internal use
+    Returns the server version properly parsed and int casted for internal use
     '''
 
     psql_version = version(
