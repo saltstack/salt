@@ -190,13 +190,13 @@ settings for software packages that support that option.
 
 
 
-Salt Windows Repo Module
-========================
+Standalone Minion Salt Windows Repo Module
+==========================================
 
-In order to facilitate managing a Salt Windows software repo with Salt on
-Windows, a new module named winrepo has been added to Salt. wirepo matches what
-is available in the salt runner and allows you to manage the cloud
-infrastructure. Example:  salt \* winrepo.genrepo
+In order to facilitate managing a Salt Windows software repo with Salt on a
+Standalone Minion on Windows, a new module named winrepo has been added to
+Salt. wirepo matches what is available in the salt runner and allows you to
+manage the Windows software repo contents. Example:  salt \* winrepo.genrepo
 
 Git Hosted Repo
 ===============
