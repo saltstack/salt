@@ -316,7 +316,7 @@ def list_users():
             for i in users:
                 add = 0
                 login = str(i['name'])
-                info_dict=win32net.NetUserGetInfo('localhost', login, 3)
+                info_dict = win32net.NetUserGetInfo('localhost', login, 3)
                 j = j + 1
                 user_list.append(login)
         return user_list
