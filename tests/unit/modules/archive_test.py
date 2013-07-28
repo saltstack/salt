@@ -40,6 +40,16 @@ class ArchiveTestCase(TestCase):
                 template=None
             )
 
+    def test_gzip(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            ret = archive.gzip('/tmp/something-to-compress')
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                'gzip /tmp/something-to-compress',
+                template=None
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
