@@ -257,11 +257,11 @@ def check_site_enabled(site):
     Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled
     '''
     if os.path.islink('/etc/apache2/sites-enabled/{0}'.format(site)):
-      return True
+        return True
     elif (site == 'default' and os.path.islink('/etc/apache2/sites-enabled/000-{0}'.format(site))):
-      return True
+        return True
     else:
-      return False
+        return False
   
 def a2ensite(site):
     '''  Runs a2ensite for the given site '''
@@ -270,19 +270,19 @@ def a2ensite(site):
     command = 'a2ensite {0}'.format(site)
   
     try:
-      status = __salt__['cmd.retcode'](command)
+        status = __salt__['cmd.retcode'](command)
     except Exception as e:
-      return e
+        return e
   
     ret['Name'] = 'Apache2 Enable Site'
     ret['Site'] = site
   
     if status == 1:
-      ret['Status'] = 'Site {0} Not found'.format(site)
+        ret['Status'] = 'Site {0} Not found'.format(site)
     elif status == 0:
-      ret['Status'] = 'Site {0} enabled'.format(site)
+        ret['Status'] = 'Site {0} enabled'.format(site)
     else:
-      ret['Status'] = status
+        ret['Status'] = status
   
     return ret
   
@@ -293,18 +293,18 @@ def a2dissite(site):
     command = 'a2dissite {0}'.format(site)
   
     try:
-      status = __salt__['cmd.retcode'](command)
+        status = __salt__['cmd.retcode'](command)
     except Exception as e:
-      return e
+        return e
   
     ret['Name'] = 'Apache2 Disable Site'
     ret['Site'] = site
   
     if status == 256:
-      ret['Status'] = 'Site {0} Not found'.format(site)
+        ret['Status'] = 'Site {0} Not found'.format(site)
     elif status == 0:
-      ret['Status'] = 'Site {0} disabled'.format(site)
+        ret['Status'] = 'Site {0} disabled'.format(site)
     else:
-      ret['Status'] = status
+        ret['Status'] = status
   
     return ret
