@@ -287,7 +287,7 @@ Using easy_install to Install Salt
 
 If you are installing using ``easy_install``, you will need to define a
 :strong:`USE_SETUPTOOLS` environment variable, otherwise dependencies will not
-be installed.
+be installed::
 
     $ USE_SETUPTOOLS=1 easy_install salt
 
