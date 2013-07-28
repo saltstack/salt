@@ -49,6 +49,9 @@ def _getargs(func):
     if not callable(func):
         raise TypeError('{0} is not a callable'.format(func))
 
+    import pprint
+    pprint.pprint(dir(func))
+
     if inspect.isfunction(func):
         aspec = inspect.getargspec(func)
     elif isinstance(func, object):

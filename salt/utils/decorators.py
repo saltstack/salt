@@ -121,21 +121,6 @@ def which(exe):
     '''
     Decorator wrapper for salt.utils.which
     '''
-    try:
-        from decorator import decorator
-
-        # This is easy!
-        @decorator
-        def decorated_function(function, *args, **kwargs):
-            if salt.utils.which(exe) is None:
-                raise CommandNotFoundError(
-                    'The {0!r} binary was not found in $PATH.'.format(exe)
-                )
-            return function(*args, **kwargs)
-        return decorated_function
-    except ImportError:
-        pass
-
     def wrapper(function):
         def wrapped(*args, **kwargs):
             if salt.utils.which(exe) is None:
@@ -143,18 +128,20 @@ def which(exe):
                     'The {0!r} binary was not found in $PATH.'.format(exe)
                 )
             return function(*args, **kwargs)
-
-        argspec = inspect.getargspec(function)
-        formatted_argspec = inspect.formatargspec(
-            formatvalue=lambda val: '', *argspec
-        )
-        function_def = 'lambda {0}: __wrapped__({0})'.format(
-            formatted_argspec[1:-1]
-        )
-        fake_function = eval(function_def, {'__wrapped__': wrapped})
-        fake_function.__name__ = function.__name__
-        fake_function.__doc__ = function.__doc__
-        fake_function.__module__ = function.__module__
-        fake_function.__dict__.update(function.__dict__)
-        return wraps(function)(fake_function)
+        return identical_signature_wrapper(function, wrapped)
     return wrapper
+
+
+def identical_signature_wrapper(original_function, wrapped_function):
+    '''
+    Return a function with identical signature as ``original_function``'s which
+    will call the ``wrapped_function``.
+    '''
+    function_def = 'lambda {0}: __wrapped__({0})'.format(
+        inspect.formatargspec(
+            formatvalue=lambda val: '',
+            *inspect.getargspec(original_function)
+        )[1:-1]
+    )
+    fake_function = eval(function_def, {'__wrapped__': wrapped_function})
+    return wraps(original_function)(fake_function)

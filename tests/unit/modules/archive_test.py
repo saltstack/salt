@@ -32,7 +32,12 @@ class ArchiveTestCase(TestCase):
     def test_tar(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            ret = archive.tar('zcvf', 'foo.tar', '/tmp/something-to-compress')
+            ret = archive.tar(
+                'zcvf', 'foo.tar',
+                '/tmp/something-to-compress-1',
+                '/tmp/something-to-compress-2',
+                cwd=None, template=None
+            )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 'tar -zcvf foo.tar ',

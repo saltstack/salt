@@ -3,6 +3,7 @@ A module to wrap archive calls
 '''
 
 # Import salt libs
+import salt._compat
 from salt.utils import which as _which
 import salt.utils.decorators as decorators
 
@@ -22,7 +23,7 @@ def __virtual__():
     return 'archive'
 
 
-@decorators.which('tar')
+@decorators.which('tar1')
 def tar(options, tarfile, cwd=None, template=None, *sources):
     '''
     Uses the tar command to pack, unpack, etc tar files
@@ -38,8 +39,10 @@ def tar(options, tarfile, cwd=None, template=None, *sources):
         salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 {{grains.saltpath}}
 
     '''
-    sourcefiles = ' '.join(sources)
-    cmd = 'tar -{0} {1} {2}'.format(options, tarfile, sourcefiles)
+    if isinstance(sources, salt._compat.string_types):
+        sourcefiles = [s.strip() for s in sources.split(',')]
+
+    cmd = 'tar -{0} {1} {2}'.format(options, tarfile, ' '.join(sourcefiles))
     out = __salt__['cmd.run'](cmd, cwd, template=template).splitlines()
     return out
 

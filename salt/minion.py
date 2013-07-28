@@ -130,6 +130,7 @@ def parse_args_and_kwargs(func, args, data=None):
     dictionaries.
     '''
     spec_args, _, has_kwargs, _ = salt.state._getargs(func)
+    print 2222222, func, spec_args, has_kwargs
     _args = []
     kwargs = {}
     for arg in args:
@@ -964,23 +965,23 @@ class Minion(object):
         recon_delay = self.opts['recon_default']
 
         if self.opts['recon_randomize']:
-            recon_delay = randint(self.opts['recon_default'], 
+            recon_delay = randint(self.opts['recon_default'],
                                   self.opts['recon_default'] + self.opts['recon_max']
-                          )    
+                          )
 
             log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
                 self.opts['recon_default'],
                 self.opts['recon_default'] + self.opts['recon_max'],
                 recon_delay)
-            )    
+            )
 
         log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
         self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
 
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
-            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format( 
+            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format(
                 self.opts['recon_default'] + self.opts['recon_max'])
-            )    
+            )
 
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
