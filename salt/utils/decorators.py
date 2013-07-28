@@ -137,11 +137,18 @@ def identical_signature_wrapper(original_function, wrapped_function):
     Return a function with identical signature as ``original_function``'s which
     will call the ``wrapped_function``.
     '''
-    function_def = 'lambda {0}: __wrapped__({0})'.format(
-        inspect.formatargspec(
-            formatvalue=lambda val: '',
-            *inspect.getargspec(original_function)
-        )[1:-1]
+    context = {'__wrapped__': wrapped_function}
+    function_def = compile(
+        'def {0}({1}):\n'
+        '    return __wrapped__({1})'.format(
+            original_function.__name__,
+            inspect.formatargspec(
+                formatvalue=lambda val: '',
+                *inspect.getargspec(original_function)
+            )[1:-1]
+        ),
+        '<string>',
+        'exec'
     )
-    fake_function = eval(function_def, {'__wrapped__': wrapped_function})
-    return wraps(original_function)(fake_function)
+    exec function_def in context
+    return wraps(original_function)(context[original_function.__name__])
