@@ -50,6 +50,16 @@ class ArchiveTestCase(TestCase):
                 template=None
             )
 
+    def test_gunzip(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            ret = archive.gunzip('/tmp/something-to-decompress.tar.gz')
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                'gunzip /tmp/something-to-decompress.tar.gz',
+                template=None
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
