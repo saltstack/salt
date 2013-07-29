@@ -13,8 +13,8 @@ to be replaced in the sls data with the arguments m_name and m_fun.
 import datetime
 
 # Import salt libs
-import salt.state
 import salt.loader
+import salt.utils
 
 
 def wait(name, **kwargs):
@@ -63,7 +63,7 @@ def run(name, **kwargs):
         ret['comment'] = 'Module function {0} is set to execute'.format(name)
         return ret
 
-    aspec = salt.state._getargs(__salt__[name])
+    aspec = salt.utils.get_function_argspec(__salt__[name])
 
     args = []
     defaults = {}

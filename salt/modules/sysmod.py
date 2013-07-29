@@ -7,8 +7,7 @@ minion.
 import logging
 
 # Import salt libs
-# TODO: should probably use _getargs() from salt.utils?
-from salt.state import _getargs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -143,7 +142,7 @@ def argspec(module=''):
     for fun in __salt__:
         if fun.startswith(module):
             try:
-                aspec = _getargs(__salt__[fun])
+                aspec = salt.utils.get_function_argspec(__salt__[fun])
             except TypeError:
                 # this happens if not callable
                 continue

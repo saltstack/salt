@@ -15,7 +15,6 @@ The data sent to the state calls is as follows:
 import os
 import sys
 import copy
-import inspect
 import fnmatch
 import logging
 import collections
@@ -40,24 +39,6 @@ def _gen_tag(low):
     Generate the running dict tag string from the low data structure
     '''
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
-
-
-def _getargs(func):
-    '''
-    A small wrapper around getargspec that also supports callable classes
-    '''
-    if not callable(func):
-        raise TypeError('{0} is not a callable'.format(func))
-
-    if inspect.isfunction(func):
-        aspec = inspect.getargspec(func)
-    elif isinstance(func, object):
-        aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0]  # self
-    else:
-        raise TypeError('Cannot inspect argument list for "{0}"'.format(func))
-
-    return aspec
 
 
 def trim_req(req):
@@ -624,7 +605,7 @@ class State(object):
                         )
         else:
             # First verify that the parameters are met
-            aspec = _getargs(self.states[full])
+            aspec = salt.utils.get_function_argspec(self.states[full])
             arglen = 0
             deflen = 0
             if isinstance(aspec[0], list):
@@ -845,7 +826,7 @@ class State(object):
         ret = {}
         ret['full'] = '{0[state]}.{0[fun]}'.format(data)
         ret['args'] = []
-        aspec = _getargs(self.states[ret['full']])
+        aspec = salt.utils.get_function_argspec(self.states[ret['full']])
         arglen = 0
         deflen = 0
         if isinstance(aspec[0], list):

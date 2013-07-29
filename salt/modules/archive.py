@@ -3,6 +3,7 @@ A module to wrap archive calls
 '''
 
 # Import salt libs
+import salt._compat
 from salt.utils import which as _which
 import salt.utils.decorators as decorators
 
@@ -23,13 +24,13 @@ def __virtual__():
 
 
 @decorators.which('tar')
-def tar(options, tarfile, cwd=None, template=None, *sources):
+def tar(options, tarfile, sources, cwd=None, template=None):
     '''
     Uses the tar command to pack, unpack, etc tar files
 
     CLI Example::
 
-        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1 /tmp/file_2
+        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
@@ -38,10 +39,11 @@ def tar(options, tarfile, cwd=None, template=None, *sources):
         salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 {{grains.saltpath}}
 
     '''
-    sourcefiles = ' '.join(sources)
-    cmd = 'tar -{0} {1} {2}'.format(options, tarfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd, cwd, template=template).splitlines()
-    return out
+    if isinstance(sources, salt._compat.string_types):
+        sources = [s.strip() for s in sources.split(',')]
+
+    cmd = 'tar -{0} {1} {2}'.format(options, tarfile, ' '.join(sources))
+    return __salt__['cmd.run'](cmd, cwd=cwd, template=template).splitlines()
 
 
 @decorators.which('gzip')
