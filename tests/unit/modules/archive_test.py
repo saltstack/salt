@@ -15,6 +15,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import archive
+from salt.exceptions import CommandNotFoundError
 
 # Import 3rd party libs
 try:
@@ -27,8 +28,9 @@ archive.__salt__ = {}
 
 
 @skipIf(HAS_MOCK is False, 'mock python module is unavailable')
-@patch('salt.utils.which', lambda exe: exe)
 class ArchiveTestCase(TestCase):
+
+    @patch('salt.utils.which', lambda exe: exe)
     def test_tar(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
@@ -61,6 +63,21 @@ class ArchiveTestCase(TestCase):
                 template=None
             )
 
+    @patch('salt.utils.which', lambda exe: None)
+    def test_tar_raises_exception_if_not_found(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            self.assertRaises(
+                CommandNotFoundError,
+                archive.tar,
+                'zxvf',
+                'foo.tar',
+                '/tmp/something-to-compress'
+            )
+            self.assertFalse(mock.called)
+
+
+    @patch('salt.utils.which', lambda exe: exe)
     def test_gzip(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
@@ -71,6 +88,18 @@ class ArchiveTestCase(TestCase):
                 template=None
             )
 
+    @patch('salt.utils.which', lambda exe: None)
+    def test_gzip_raises_exception_if_not_found(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            self.assertRaises(
+                CommandNotFoundError,
+                archive.gzip, '/tmp/something-to-compress'
+            )
+            self.assertFalse(mock.called)
+
+
+    @patch('salt.utils.which', lambda exe: exe)
     def test_gunzip(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
@@ -80,6 +109,17 @@ class ArchiveTestCase(TestCase):
                 'gunzip /tmp/something-to-decompress.tar.gz',
                 template=None
             )
+
+    @patch('salt.utils.which', lambda exe: None)
+    def test_gunzip_raises_exception_if_not_found(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            self.assertRaises(
+                CommandNotFoundError,
+                archive.gunzip,
+                '/tmp/something-to-decompress.tar.gz'
+            )
+            self.assertFalse(mock.called)
 
 
 if __name__ == '__main__':
