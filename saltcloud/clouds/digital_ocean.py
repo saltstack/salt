@@ -369,7 +369,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     path = 'https://api.digitalocean.com/{0}/'.format(method)
 
     if droplet_id:
-        path = '{0}/'.format(droplet_id)
+        path += '{0}/'.format(droplet_id)
 
     if command:
         path += command
