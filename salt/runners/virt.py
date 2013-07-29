@@ -100,7 +100,13 @@ def list(hyper=None, quiet=False):
             continue
         if not isinstance(info[id_]['ret'], dict):
             continue
-        chunk[id_] = info[id_]['ret'].keys()
+        data = {}
+        for k, v in info[id_]['ret'].items():
+            if v['state'] in data:
+                data[v['state']].append(k)
+            else:
+                data[v['state']] = [k]
+        chunk[id_] = data
         ret.update(chunk)
         if not quiet:
             salt.output.display_output(chunk, 'virt_list', __opts__)
