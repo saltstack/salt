@@ -10,6 +10,7 @@ import signal
 import logging
 import multiprocessing
 import pprint
+from itertools import groupby
 
 # Import saltcloud libs
 import saltcloud.utils
