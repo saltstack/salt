@@ -98,7 +98,7 @@ KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$")
 log = logging.getLogger(__name__)
 
 
-def _getargs(func):
+def get_function_argspec(func):
     '''
     A small wrapper around getargspec that also supports callable classes
     '''
@@ -661,7 +661,7 @@ def format_call(fun, data):
     '''
     ret = {}
     ret['args'] = []
-    aspec = _getargs(fun)
+    aspec = get_function_argspec(fun)
     arglen = 0
     deflen = 0
     if isinstance(aspec.args, list):
@@ -703,7 +703,7 @@ def arg_lookup(fun):
     '''
     ret = {'args': [],
            'kwargs': {}}
-    aspec = _getargs(fun)
+    aspec = get_function_argspec(fun)
     arglen = 0
     deflen = 0
     if isinstance(aspec[0], list):
