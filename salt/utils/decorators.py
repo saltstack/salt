@@ -142,10 +142,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         'def {0}({1}):\n'
         '    return __wrapped__({1})'.format(
             original_function.__name__,
-            inspect.formatargspec(
-                formatvalue=lambda val: '',
-                *inspect.getargspec(original_function)
-            )[1:-1]
+            inspect.formatargspec(*inspect.getargspec(original_function))[1:-1]
         ),
         '<string>',
         'exec'
