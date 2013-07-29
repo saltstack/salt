@@ -281,9 +281,8 @@ def _bsd_cpudata(osdata):
 
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
 
-    if grains['cpu_flags'] and not isinstance(grains['cpu_flags'], list):
+    if 'cpu_flags' in grains and not isinstance(grains['cpu_flags'], list):
         grains['cpu_flags'] = grains['cpu_flags'].split(' ')
-
 
     if osdata['kernel'] == 'NetBSD':
         grains['cpu_flags'] = []
