@@ -43,6 +43,9 @@ def __virtual__():
                   'could not be loaded, is GitPython installed?')
         return False
     if not git.__version__ > '0.3.0':
+        log.error('Git fileserver backend is enabled in configuration but '
+                  'GitPython version is not greater than 0.3.0, '
+                  'version {0} detected'.format(git.__version__))
         return False
     return 'git'
 
@@ -179,19 +182,17 @@ def find_file(path, short='base', **kwargs):
         short = 'master'
     dest = os.path.join(__opts__['cachedir'], 'gitfs/refs', short, path)
     hashes_glob = os.path.join(__opts__['cachedir'],
-                                        'gitfs/hash',
-                                        short,
-                                        '{0}.hash.*'.format(path))
-    blobshadest = os.path.join(
-            __opts__['cachedir'],
-            'gitfs/hash',
-            short,
-            '{0}.hash.blob_sha1'.format(path))
-    lk_fn = os.path.join(
-            __opts__['cachedir'],
-            'gitfs/hash',
-            short,
-            '{0}.lk'.format(path))
+                               'gitfs/hash',
+                               short,
+                               '{0}.hash.*'.format(path))
+    blobshadest = os.path.join(__opts__['cachedir'],
+                               'gitfs/hash',
+                               short,
+                               '{0}.hash.blob_sha1'.format(path))
+    lk_fn = os.path.join(__opts__['cachedir'],
+                         'gitfs/hash',
+                         short,
+                         '{0}.lk'.format(path))
     destdir = os.path.dirname(dest)
     hashdir = os.path.dirname(blobshadest)
     if not os.path.isdir(destdir):
@@ -281,11 +282,11 @@ def file_hash(load, fnd):
         short = 'master'
     relpath = fnd['rel']
     path = fnd['path']
-    hashdest = os.path.join(
-            __opts__['cachedir'],
-            'gitfs/hash',
-            short,
-            '{0}.hash.{1}'.format(relpath, __opts__['hash_type']))
+    hashdest = os.path.join(__opts__['cachedir'],
+                            'gitfs/hash',
+                            short,
+                            '{0}.hash.{1}'.format(relpath,
+                                                  __opts__['hash_type']))
     if not os.path.isfile(hashdest):
         with salt.utils.fopen(path, 'rb') as fp_:
             ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
