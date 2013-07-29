@@ -615,6 +615,12 @@ class Cloud(object):
                 )
             )
 
+        if self.opts['parallel'] and self.opts['start_action']:
+            client = salt.client.LocalClient()
+            out = client.cmd(
+                vm_['name'], self.opts['start_action'], timeout=300
+            )
+            pprint.pprint(out)
         return output
 
     def run_profile(self, profile, names):
