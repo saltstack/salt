@@ -140,9 +140,18 @@ def identical_signature_wrapper(original_function, wrapped_function):
     context = {'__wrapped__': wrapped_function}
     function_def = compile(
         'def {0}({1}):\n'
-        '    return __wrapped__({1})'.format(
+        '    return __wrapped__({2})'.format(
+            # Keep the original function name
             original_function.__name__,
-            inspect.formatargspec(*inspect.getargspec(original_function))[1:-1]
+            # The function signature including defaults, ie, 'timeout=1'
+            inspect.formatargspec(
+                *inspect.getargspec(original_function)
+            )[1:-1],
+            # The function signature without the defaults
+            inspect.formatargspec(
+                formatvalue=lambda val: '',
+                *inspect.getargspec(original_function)
+            )[1:-1]
         ),
         '<string>',
         'exec'
