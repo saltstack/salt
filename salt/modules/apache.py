@@ -254,7 +254,14 @@ def userdel(pwfile, user):
 
 def check_site_enabled(site):
     '''
-    Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled
+    Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples::
+
+        salt '*' apache.check_site_enabled example.com
     '''
     if os.path.islink('/etc/apache2/sites-enabled/{0}'.format(site)):
         return True
@@ -264,7 +271,16 @@ def check_site_enabled(site):
         return False
   
 def a2ensite(site):
-    '''  Runs a2ensite for the given site '''
+    '''
+    Runs a2ensite for the given site.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples::
+
+        salt '*' apache.a2ensite example.com
+    '''
   
     ret = {}
     command = 'a2ensite {0}'.format(site)
@@ -287,7 +303,16 @@ def a2ensite(site):
     return ret
   
 def a2dissite(site):
-    ''' Runs a2dissite for the given site '''
+    '''
+    Runs a2dissite for the given site.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples::
+
+        salt '*' apache.a2dissite example.com
+    '''
   
     ret = {}
     command = 'a2dissite {0}'.format(site)
