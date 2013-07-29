@@ -77,6 +77,37 @@ def query(hyper=None, quiet=False):
     return ret
 
 
+def list(hyper=None, quiet=False):
+    '''
+    List the virtual machines on each hyper
+    '''
+    ret = {}
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    for info in client.cmd_iter('virtual:physical',
+                                'virt.vm_info', expr_form='grain'):
+        if not info:
+            continue
+        if not isinstance(info, dict):
+            continue
+        chunk = {}
+        id_ = info.keys()[0]
+        if hyper:
+            if hyper != id_:
+                continue
+        if not isinstance(info[id_], dict):
+            continue
+        if 'ret' not in info[id_]:
+            continue
+        if not isinstance(info[id_]['ret'], dict):
+            continue
+        chunk[id_] = info[id_]['ret'].keys()
+        ret.update(chunk)
+        if not quiet:
+            salt.output.display_output(chunk, 'virt_list', __opts__)
+
+    return ret
+
+
 def next_hyper():
     '''
     Return the hypervisor to use for the next autodeployed vm
