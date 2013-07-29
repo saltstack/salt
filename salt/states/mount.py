@@ -78,6 +78,14 @@ def mounted(name,
 
     # Get the active data
     active = __salt__['mount.active']()
+    if name in active:
+        if active.__getitem__(name).__getitem__('device') != device:
+            # name matches but device doesn't - need to umount
+            out = __salt__['mount.umount'](name)
+            active = __salt__['mount.active']()
+        else:
+            ret['comment'] = 'Target was already mounted'
+    # using a duplicate check so I can catch the results of a umount
     if name not in active:
         # The mount is not present! Mount it
         if __opts__['test']:
@@ -94,8 +102,6 @@ def mounted(name,
             # (Re)mount worked!
             ret['comment'] = 'Target was successfully mounted'
             ret['changes']['mount'] = True
-    else:
-        ret['comment'] = 'Target was already mounted'
 
     if persist:
         if __opts__['test']:
