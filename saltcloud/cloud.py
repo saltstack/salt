@@ -979,14 +979,15 @@ class Map(Cloud):
         return False
 
     def _calcdep(self, dmap, machine, data, level):
-        level+=1
         try:
-            for name in data['requires']:
+            deplist = data['requires']
+            levels = []
+            for name in deplist:
                 data = dmap['create'][name]
-                level = self._calcdep(dmap, name, data, level)
+                levels.append(self._calcdep(dmap, name, data, level))
+            level = max(levels) + 1
             return level
         except KeyError:
-            level-=1
             return level
 
     def map_data(self, cached=False):
