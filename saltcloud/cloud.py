@@ -614,6 +614,8 @@ class Cloud(object):
                     vm_['name'], exc
                 )
             )
+        # If it's a map then we need to respect the 'requires'
+        # so we do it later
         if not self.opts['map']:
             if self.opts['parallel'] and self.opts['start_action']:
                 client = salt.client.LocalClient()
@@ -1289,6 +1291,8 @@ class Map(Cloud):
                 func=create_multiprocessing,
                 iterable=parallel_data
             )
+            # We have deployed in parallel, now do start action in
+            # correct order based on dependencies.
             if self.opts['start_action']:
                 action_list = [[]]
                 level = 0
@@ -1299,7 +1303,6 @@ class Map(Cloud):
                     action_list[new_level].append(item['name'])
                     level = new_level
                 for group in action_list:
-                    
                     client = salt.client.LocalClient()
                     output = client.cmd(
                         ','.join(group), self.opts['start_action'], timeout=300,
