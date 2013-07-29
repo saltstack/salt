@@ -36,6 +36,7 @@ def output(data):
     '''
     colors = salt.utils.get_colors(__opts__.get('color'))
     for host in data:
+        rcounts = {}
         hcolor = colors['GREEN']
         hstrs = []
         if isinstance(data[host], list):
@@ -64,6 +65,9 @@ def output(data):
                     data[host],
                     key=lambda k: data[host][k].get('__run_num__', 0)):
                 ret = data[host][tname]
+                # Increment result counts
+                rcounts.setdefault(ret['result'], 0)
+                rcounts[ret['result']] += 1
                 tcolor = colors['GREEN']
                 if ret['changes']:
                     tcolor = colors['CYAN']
@@ -138,6 +142,43 @@ def output(data):
                                         '\n                   ')
                 hstrs.append(('{0}{1}{2[ENDC]}'
                               .format(tcolor, changes, colors)))
+
+            # Append result counts to end of output
+            colorfmt = '{0}{1}{2[ENDC]}'
+            rlabel = {True: 'Succeeded', False: 'Failed', None: 'Not Run'}
+            count_max_len = max([len(str(x)) for x in rcounts.values()])
+            label_max_len = max([len(x) for x in rlabel.values()])
+            line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
+            hstrs.append(
+                colorfmt.format(
+                    colors['CYAN'],
+                    '\nSummary\n{0}'.format('-' * line_max_len),
+                    colors
+                )
+            )
+
+            def _counts(label, count):
+                return '{0}: {1:>{2}}'.format(
+                    label,
+                    count,
+                    line_max_len - (len(label) + 2)
+                )
+
+            for result, tcolor in ((True, colors['GREEN']),
+                                   (False, colors['RED'])):
+                line = _counts(rlabel[result], rcounts.get(result, 0))
+                hstrs.append(colorfmt.format(tcolor, line, colors))
+
+            if None in rcounts:
+                line = _counts(rlabel[None], rcounts.get(None, 0))
+                hstrs.append(colorfmt.format(colors['YELLOW'], line, colors))
+
+            totals = '{0}\nTotal: {1:>{2}}'.format('-' * line_max_len,
+                                                   sum(rcounts.values()),
+                                                   line_max_len - 7)
+
+            hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
+
         hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
         return '\n'.join(hstrs)
 
