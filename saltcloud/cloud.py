@@ -1313,7 +1313,7 @@ class Map(Cloud):
             # We have deployed in parallel, now do start action in
             # correct order based on dependencies.
             if self.opts['start_action']:
-                action_list = [[]]
+                actionlist = []
                 grp=-1
                 for k,v in groupby(dmap['create'].values(), lambda x: x['level']):
                     actionlist.append([]) 
@@ -1321,7 +1321,7 @@ class Map(Cloud):
                     for item in v:
                         actionlist[grp].append(item['name'])
                 pprint.pprint(actionlist)
-                for group in action_list:
+                for group in actionlist:
                     client = salt.client.LocalClient()
                     output = client.cmd(
                         ','.join(group), self.opts['start_action'], timeout=300,
