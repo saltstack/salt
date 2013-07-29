@@ -23,14 +23,14 @@ def __virtual__():
     return 'archive'
 
 
-@decorators.which('tar1')
-def tar(options, tarfile, cwd=None, template=None, *sources):
+@decorators.which('tar')
+def tar(options, tarfile, sources, cwd=None, template=None):
     '''
     Uses the tar command to pack, unpack, etc tar files
 
     CLI Example::
 
-        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1 /tmp/file_2
+        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
@@ -40,11 +40,10 @@ def tar(options, tarfile, cwd=None, template=None, *sources):
 
     '''
     if isinstance(sources, salt._compat.string_types):
-        sourcefiles = [s.strip() for s in sources.split(',')]
+        sources = [s.strip() for s in sources.split(',')]
 
-    cmd = 'tar -{0} {1} {2}'.format(options, tarfile, ' '.join(sourcefiles))
-    out = __salt__['cmd.run'](cmd, cwd, template=template).splitlines()
-    return out
+    cmd = 'tar -{0} {1} {2}'.format(options, tarfile, ' '.join(sources))
+    return __salt__['cmd.run'](cmd, cwd=cwd, template=template).splitlines()
 
 
 @decorators.which('gzip')
