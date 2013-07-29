@@ -983,14 +983,22 @@ class Map(Cloud):
     def _calcdep(self, dmap, machine, data, level):
         try:
             deplist = data['requires']
-            levels = []
-            for name in deplist:
-                data = dmap['create'][name]
-                levels.append(self._calcdep(dmap, name, data, level))
-            level = max(levels) + 1
-            return level
         except KeyError:
             return level
+        levels = []
+        for name in deplist:
+            try:
+                data = dmap['create'][name]
+            except KeyError:
+                try:
+                    data = dmap['existing'][name]
+                except KeyError:
+                    msg = 'Missing dependency in cloud map'
+                    log.error(msg)
+                    raise SaltCloudException(msg)
+            levels.append(self._calcdep(dmap, name, data, level))
+        level = max(levels) + 1
+        return level
 
     def map_data(self, cached=False):
         '''
@@ -1132,6 +1140,16 @@ class Map(Cloud):
             level = self._calcdep(dmap, k, v, level)
             log.debug("Got execution order {0} for {1}".format(level,k))
             dmap['create'][k]['level'] = level
+        try: 
+            existing_list = dmap['existing'].items()
+        except KeyError:
+            existing_list={}
+        for k,v in existing_list:
+            log.info("Calculating dependencies for {0}".format(k)) 
+            level = 0
+            level = self._calcdep(dmap, k, v, level)
+            log.debug("Got execution order {0} for {1}".format(level,k))
+            dmap['existing'][k]['level'] = level
         #Now sort the create list based on dependencies
         create_list = sorted(dmap['create'].items(), key=lambda x: x[1]['level'])
         output = {}
@@ -1295,13 +1313,13 @@ class Map(Cloud):
             # correct order based on dependencies.
             if self.opts['start_action']:
                 action_list = [[]]
-                level = 0
-                for item in sorted(dmap['create'].values(), key=lambda x: x['level']):
-                    new_level = item['level']
-                    if new_level != level:
-                        action_list.append([])
-                    action_list[new_level].append(item['name'])
-                    level = new_level
+                grp=-1
+                for k,v in groupby(dmap['create'].values(), lambda x: x['level']):
+                    actionlist.append([]) 
+                    grp +=1
+                    for item in v:
+                        actionlist[grp].append(item['name'])
+                pprint.pprint(actionlist)
                 for group in action_list:
                     client = salt.client.LocalClient()
                     output = client.cmd(
