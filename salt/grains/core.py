@@ -885,7 +885,7 @@ def os_data():
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
     if grains['os_family'] == "RedHat":
-        grains['osmajorrelease'] = grains['osrelease'].split('.',1)
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
 
     return grains
 
