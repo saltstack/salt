@@ -103,7 +103,7 @@ def add_user(name, password, runas=None):
         salt '*' rabbitmq.add_user rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl add_user {0} {1}'.format(name, password),
+        'rabbitmqctl add_user {0} \'{1}\''.format(name, password),
         runas=runas)
 
     msg = 'Added'
@@ -134,7 +134,7 @@ def change_password(name, password, runas=None):
         salt '*' rabbitmq.change_password rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl change_password {0} {1}'.format(name, password),
+        'rabbitmqctl change_password {0} \'{1}\''.format(name, password),
         runas=runas)
     msg = 'Password Changed'
 
