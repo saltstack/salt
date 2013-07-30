@@ -69,7 +69,7 @@ The location of the daemon's process ID file
 
 .. code-block:: yaml
 
-    pidfie: /var/run/salt-minion.pid
+    pidfile: /var/run/salt-minion.pid
 
 .. conf_minion:: root_dir
 
