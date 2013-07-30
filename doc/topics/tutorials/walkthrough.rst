@@ -192,7 +192,7 @@ The easiest way to accept the minion key is to accept all pending keys::
 
     On the minion::
 
-        # cat /etc/salt/pkg/minion/minion.pub
+        # cat /etc/salt/pki/minion/minion.pub
         -----BEGIN PUBLIC KEY-----
         MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0JcA0IEp/yqghK5V2VLM
         jbG7FWV6qtw/ubTDBnpDGQgrvSNOtd0QcJsAzAtDcHwrudQgyxTZGVJqPY7gLc7P
