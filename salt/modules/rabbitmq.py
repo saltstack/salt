@@ -305,3 +305,30 @@ def force_reset(runas=None):
         runas=runas)
 
     return res
+
+def list_queues(*kwargs):
+    '''
+    Returns queue details of the / virtual host
+
+    Example::
+
+        salt '*' rabbitmq.list_queues messages consumers
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_queues {0}'.format(' '.join(list(kwargs))))
+    return res
+
+def list_queues_vhost(vhost, *kwargs):
+    '''
+    Returns queue details of specified virtual host.
+    This command will consider first parameter as the vhost name and rest will be treated as queueinfoitem.
+    Also rabbitmqctl's -p parameter will be passed by salt, it should not be provided by salt command
+    For getting details on vhost '/', use list_queues instead).
+
+    Example::
+
+        salt '*' rabbitmq.list_queues messages consumers
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))))
+    return res
