@@ -23,6 +23,7 @@ VALID_SERVICE_DIRS = [
     '/service',
     '/var/service',
     '/etc/service',
+    '/etc/init.d',
 ]
 SERVICE_DIR = None
 for service_dir in VALID_SERVICE_DIRS:
