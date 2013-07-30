@@ -9,7 +9,6 @@ import time
 import signal
 import logging
 import multiprocessing
-import pprint
 from itertools import groupby
 
 # Import saltcloud libs
@@ -617,13 +616,19 @@ class Cloud(object):
             )
         # If it's a map then we need to respect the 'requires'
         # so we do it later
-        if not self.opts['map']:
-            if self.opts['parallel'] and self.opts['start_action']:
-                client = salt.client.LocalClient()
-                out = client.cmd(
-                    vm_['name'], self.opts['start_action'], timeout=300
-                )
-                pprint.pprint(out)
+        try:
+            opt_map = self.opts['map']
+        except KeyError:
+            opt_map = False 
+        if self.opts['parallel'] and self.opts['start_action'] and not opt_map:
+            log.info(
+                "Running {0} on {1}".format(self.opts['start_action'], vm_['name'])
+            )
+            client = salt.client.LocalClient()
+            action_out = client.cmd(
+                vm_['name'], self.opts['start_action'], timeout=300
+            )
+            output['ret']=action_out
         return output
 
     def run_profile(self, profile, names):
@@ -1320,15 +1325,18 @@ class Map(Cloud):
                     grp +=1
                     for item in v:
                         actionlist[grp].append(item['name'])
-                pprint.pprint(actionlist)
+                out={}
                 for group in actionlist:
+                    log.info(
+                        "Running {0} on {1}".format(self.opts['start_action'], ', '.join(group))
+                    )
                     client = salt.client.LocalClient()
-                    output = client.cmd(
+                    out.update(client.cmd(
                         ','.join(group), self.opts['start_action'], timeout=300,
                         expr_form='list'
-                    )
-                    pprint.pprint(output)
+                    ))
             for obj in output_multip:
+                obj.values()[0]['ret'] = out[obj.keys()[0]] 
                 output.update(obj)
 
         return output
