@@ -39,6 +39,8 @@ An example Apache virtual host configuration::
 '''
 # pylint: disable=C0103
 
+import os
+
 import cherrypy
 
 from . import app
@@ -47,9 +49,11 @@ def bootstrap_app():
     '''
     Grab the opts dict of the master config by trying to import Salt
     '''
-    import salt.client
-    opts = salt.client.LocalClient().opts
-    return app.get_app(opts)
+    import salt.config
+    __opts__ = salt.config.client_config(
+            os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
+    return app.get_app(__opts__)
+
 
 def get_application(*args):
     '''
