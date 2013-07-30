@@ -626,7 +626,7 @@ class Cloud(object):
             )
             client = salt.client.LocalClient()
             action_out = client.cmd(
-                vm_['name'], self.opts['start_action'], timeout=300
+                vm_['name'], self.opts['start_action'], timeout=self.opts['timeout'] * 60
             )
             output['ret']=action_out
         return output
@@ -1332,8 +1332,8 @@ class Map(Cloud):
                     )
                     client = salt.client.LocalClient()
                     out.update(client.cmd(
-                        ','.join(group), self.opts['start_action'], timeout=300,
-                        expr_form='list'
+                        ','.join(group), self.opts['start_action'],
+                        timeout=self.opts['timeout'] * 60, expr_form='list'
                     ))
             for obj in output_multip:
                 obj.values()[0]['ret'] = out[obj.keys()[0]] 
