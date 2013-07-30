@@ -111,27 +111,30 @@ def zip_(zipfile, sources, template=None):
 
 
 @decorators.which('unzip')
-def unzip(zipfile, dest, template=None, *xfiles):
+def unzip(zipfile, dest, excludes=None, template=None):
     '''
     Uses the unzip command to unpack zip files
 
     CLI Example::
 
-        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ file_1 file_2
+        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ \
+                excludes=file_1,file_2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ file_1 file_2
+        salt '*' archive.unzip template=jinja /tmp/zipfile.zip \
+                /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
-    xfileslist = ' '.join(xfiles)
+    if isinstance(excludes, salt._compat.string_types):
+        excludes = [entry.strip() for entry in excludes.split(',')]
+
     cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
-    if xfileslist:
-        cmd = cmd + ' -x {0}'.format(xfiles)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    if excludes is not None:
+        cmd += ' -x {0}'.format(' '.join(excludes))
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
 @decorators.which('rar')
