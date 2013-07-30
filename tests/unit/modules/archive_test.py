@@ -121,6 +121,35 @@ class ArchiveTestCase(TestCase):
             )
             self.assertFalse(mock.called)
 
+    @patch('salt.utils.which', lambda exe: exe)
+    def test_zip(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            ret = archive.zip_(
+                '/tmp/salt.{{grains.id}}.zip',
+                '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
+                template='jinja'
+            )
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                'zip /tmp/salt.{{grains.id}}.zip '
+                '/tmp/tmpePe8yO /tmp/tmpLeSw1A',
+                template='jinja'
+            )
+
+    @patch('salt.utils.which', lambda exe: None)
+    def test_zip_raises_exception_if_not_found(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            self.assertRaises(
+                CommandNotFoundError,
+                archive.zip_,
+                '/tmp/salt.{{grains.id}}.zip',
+                '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
+                template='jinja',
+            )
+            self.assertFalse(mock.called)
+
 
 if __name__ == '__main__':
     from integration import run_tests
