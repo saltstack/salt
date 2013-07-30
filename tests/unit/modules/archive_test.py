@@ -249,6 +249,7 @@ class ArchiveTestCase(TestCase):
             )
             self.assertFalse(mock.called)
 
+    @patch('salt.utils.which', lambda exe: exe)
     @patch('salt.utils.which_bin', lambda exe: exe)
     def test_unrar(self):
         mock = MagicMock(return_value='salt')
@@ -260,8 +261,8 @@ class ArchiveTestCase(TestCase):
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
-                'rar a -idp /tmp/rarfile.rar '
-                '/tmp/sourcefile1 /tmp/sourcefile2',
+                'unrar x -idp /tmp/rarfile.rar '
+                '-x file_1 -x file_2 /home/strongbad/',
                 template=None
             )
 
@@ -274,8 +275,8 @@ class ArchiveTestCase(TestCase):
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
-                'rar a -idp /tmp/rarfile.rar '
-                '/tmp/sourcefile1 /tmp/sourcefile2',
+                'unrar x -idp /tmp/rarfile.rar '
+                '-x file_1 -x file_2 /home/strongbad/',
                 template=None
             )
 
