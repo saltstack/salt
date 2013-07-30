@@ -137,6 +137,20 @@ class ArchiveTestCase(TestCase):
                 template='jinja'
             )
 
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            ret = archive.zip_(
+                '/tmp/salt.{{grains.id}}.zip',
+                ['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
+                template='jinja'
+            )
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                'zip /tmp/salt.{{grains.id}}.zip '
+                '/tmp/tmpePe8yO /tmp/tmpLeSw1A',
+                template='jinja'
+            )
+
     @patch('salt.utils.which', lambda exe: None)
     def test_zip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value='salt')
