@@ -44,7 +44,7 @@ def __virtual__():
         log.error('Git fileserver backend is enabled in configuration but '
                   'could not be loaded, is GitPython installed?')
         return False
-    gitver = disutils.version.LooseVersion(git.__version__)
+    gitver = distutils.version.LooseVersion(git.__version__)
     minver = distutils.version.LooseVersion('0.3.0')
     if gitver < minver:
         log.error('Git fileserver backend is enabled in configuration but '
