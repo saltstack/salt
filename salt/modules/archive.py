@@ -160,7 +160,6 @@ def rar(rarfile, sources, template=None):
         sources = [s.strip() for s in sources.split(',')]
     cmd = 'rar a -idp {0} {1}'.format(rarfile, ' '.join(sources))
     return __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
 
 
 @decorators.which_bin(('unrar', 'rar'))
