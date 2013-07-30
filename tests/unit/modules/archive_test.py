@@ -181,6 +181,46 @@ class ArchiveTestCase(TestCase):
             )
             self.assertFalse(mock.called)
 
+    @patch('salt.utils.which', lambda exe: exe)
+    def test_rar(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            ret = archive.rar(
+                '/tmp/rarfile.rar',
+                '/tmp/sourcefile1,/tmp/sourcefile2'
+            )
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                'rar a -idp /tmp/rarfile.rar '
+                '/tmp/sourcefile1 /tmp/sourcefile2',
+                template=None
+            )
+
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            ret = archive.rar(
+                '/tmp/rarfile.rar',
+                ['/tmp/sourcefile1', '/tmp/sourcefile2']
+            )
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                'rar a -idp /tmp/rarfile.rar '
+                '/tmp/sourcefile1 /tmp/sourcefile2',
+                template=None
+            )
+
+    @patch('salt.utils.which', lambda exe: None)
+    def test_rar_raises_exception_if_not_found(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            self.assertRaises(
+                CommandNotFoundError,
+                archive.rar,
+                '/tmp/rarfile.rar',
+                '/tmp/sourcefile1,/tmp/sourcefile2'
+            )
+            self.assertFalse(mock.called)
+
 
 if __name__ == '__main__':
     from integration import run_tests
