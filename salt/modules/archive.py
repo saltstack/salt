@@ -36,7 +36,8 @@ def tar(options, tarfile, sources, cwd=None, template=None):
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 {{grains.saltpath}}
+        salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 \
+                {{grains.saltpath}}
 
     '''
     if isinstance(sources, salt._compat.string_types):
@@ -63,8 +64,7 @@ def gzip(sourcefile, template=None):
 
     '''
     cmd = 'gzip {0}'.format(sourcefile)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
 @decorators.which('gunzip')
@@ -84,30 +84,30 @@ def gunzip(gzipfile, template=None):
 
     '''
     cmd = 'gunzip {0}'.format(gzipfile)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
 @decorators.which('zip')
-def zip_(zipfile, template=None, *sources):
+def zip_(zipfile, sources, template=None):
     '''
     Uses the zip command to create zip files
 
     CLI Example::
 
-        salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1 /tmp/sourcefile2
+        salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1 /tmp/{{grains.id}}.txt
+        salt '*' archive.zip template=jinja /tmp/zipfile.zip \
+                /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
     '''
-    sourcefiles = ' '.join(sources)
-    cmd = 'zip {0} {1}'.format(zipfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    if isinstance(sources, salt._compat.string_types):
+        sources = [s.strip() for s in sources.split(',')]
+    cmd = 'zip {0} {1}'.format(zipfile, ' '.join(sources))
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
 @decorators.which('unzip')
