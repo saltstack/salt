@@ -103,7 +103,7 @@ def add_user(name, password, runas=None):
         salt '*' rabbitmq.add_user rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl add_user {0} {1}'.format(name, password),
+        'rabbitmqctl add_user {0} \'{1}\''.format(name, password),
         runas=runas)
 
     msg = 'Added'
@@ -134,7 +134,7 @@ def change_password(name, password, runas=None):
         salt '*' rabbitmq.change_password rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl change_password {0} {1}'.format(name, password),
+        'rabbitmqctl change_password {0} \'{1}\''.format(name, password),
         runas=runas)
     msg = 'Password Changed'
 
@@ -215,7 +215,8 @@ def list_user_permissions(name, user=None):
         runas=user)
     return [r.split('\t') for r in res.splitlines()]
 
-def status(name, user=None):
+
+def status(user=None):
     '''
     return rabbitmq status
 
@@ -225,8 +226,10 @@ def status(name, user=None):
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl status',
-        runas=user)
+        runas=user
+    )
     return res
+
 
 def cluster_status(user=None):
     '''
@@ -243,6 +246,7 @@ def cluster_status(user=None):
 
     return res
 
+
 def stop_app(runas=None):
     '''
     Stops the RabbitMQ application, leaving the Erlang node running.
@@ -256,6 +260,7 @@ def stop_app(runas=None):
         runas=runas)
 
     return res
+
 
 def start_app(runas=None):
     '''
@@ -271,6 +276,7 @@ def start_app(runas=None):
 
     return res
 
+
 def reset(runas=None):
     '''
     Return a RabbitMQ node to its virgin state
@@ -284,6 +290,7 @@ def reset(runas=None):
         runas=runas)
 
     return res
+
 
 def force_reset(runas=None):
     '''
