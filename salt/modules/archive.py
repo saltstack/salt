@@ -138,27 +138,28 @@ def unzip(zipfile, dest, excludes=None, template=None):
 
 
 @decorators.which('rar')
-def rar(rarfile, template=None, *sources):
+def rar(rarfile, sources, template=None):
     '''
     Uses the rar command to create rar files
     Uses rar for Linux from http://www.rarlab.com/
 
     CLI Example::
 
-        salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1 /tmp/sourcefile2
+        salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1,/tmp/sourcefile2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.rar template=jinja /tmp/rarfile.rar /tmp/sourcefile1 /tmp/{{grains.id}}.txt
+        salt '*' archive.rar template=jinja /tmp/rarfile.rar \
+                /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
 
     '''
-    # TODO: Check that len(sources) >= 1
-    sourcefiles = ' '.join(sources)
-    cmd = 'rar a -idp {0} {1}'.format(rarfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
+    if isinstance(sources, salt._compat.string_types):
+        sources = [s.strip() for s in sources.split(',')]
+    cmd = 'rar a -idp {0} {1}'.format(rarfile, ' '.join(sources))
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
     return out
 
 
