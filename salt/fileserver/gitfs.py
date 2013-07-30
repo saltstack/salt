@@ -14,6 +14,7 @@ import os
 import time
 import hashlib
 import logging
+import distutils
 
 # Import third party libs
 HAS_GIT = False
@@ -26,6 +27,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.fileserver
+
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +44,9 @@ def __virtual__():
         log.error('Git fileserver backend is enabled in configuration but '
                   'could not be loaded, is GitPython installed?')
         return False
-    if not git.__version__ > '0.3.0':
+    gitver = disutils.version.LooseVersion(git.__version__)
+    minver = distutils.version.LooseVersion('0.3.0')
+    if gitver < minver:
         log.error('Git fileserver backend is enabled in configuration but '
                   'GitPython version is not greater than 0.3.0, '
                   'version {0} detected'.format(git.__version__))
