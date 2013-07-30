@@ -76,7 +76,6 @@ class ArchiveTestCase(TestCase):
             )
             self.assertFalse(mock.called)
 
-
     @patch('salt.utils.which', lambda exe: exe)
     def test_gzip(self):
         mock = MagicMock(return_value='salt')
@@ -247,6 +246,48 @@ class ArchiveTestCase(TestCase):
                 archive.rar,
                 '/tmp/rarfile.rar',
                 '/tmp/sourcefile1,/tmp/sourcefile2'
+            )
+            self.assertFalse(mock.called)
+
+    @patch('salt.utils.which_bin', lambda exe: exe)
+    def test_unrar(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            ret = archive.unrar(
+                '/tmp/rarfile.rar',
+                '/home/strongbad/',
+                excludes='file_1,file_2'
+            )
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                'rar a -idp /tmp/rarfile.rar '
+                '/tmp/sourcefile1 /tmp/sourcefile2',
+                template=None
+            )
+
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            ret = archive.unrar(
+                '/tmp/rarfile.rar',
+                '/home/strongbad/',
+                excludes=['file_1', 'file_2']
+            )
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                'rar a -idp /tmp/rarfile.rar '
+                '/tmp/sourcefile1 /tmp/sourcefile2',
+                template=None
+            )
+
+    @patch('salt.utils.which_bin', lambda exe: None)
+    def test_unrar_raises_exception_if_not_found(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+            self.assertRaises(
+                CommandNotFoundError,
+                archive.unrar,
+                '/tmp/rarfile.rar',
+                '/home/strongbad/',
             )
             self.assertFalse(mock.called)
 
