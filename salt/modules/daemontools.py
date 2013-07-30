@@ -29,14 +29,14 @@ for service_dir in VALID_SERVICE_DIRS:
     if os.path.exists(service_dir):
         SERVICE_DIR = service_dir
         break
-if not SERVICE_DIR:
-    raise CommandExecutionError("Could not find service directory.")
 
 
 def _service_path(name):
     '''
     build service path
     '''
+    if not SERVICE_DIR:
+        raise CommandExecutionError("Could not find service directory.")
     return '{0}/{1}'.format(SERVICE_DIR, name)
 
 
@@ -146,5 +146,7 @@ def get_all():
 
         salt '*' daemontools.get_all
     '''
+    if not SERVICE_DIR:
+        raise CommandExecutionError("Could not find service directory.")
     #- List all daemontools services in
     return sorted(os.listdir(SERVICE_DIR))
