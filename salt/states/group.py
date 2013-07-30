@@ -13,6 +13,9 @@ can be either present or absent:
         - system: True
 '''
 
+# Import python libs
+import sys
+
 
 def present(name, gid=None, system=False):
     '''
@@ -52,6 +55,10 @@ def present(name, gid=None, system=False):
                             'be changed to {1}').format(name, gid)
                         return ret
                     ret['result'] = __salt__['group.chgid'](name, gid)
+                    # Clear cached group data
+                    sys.modules[
+                        __salt__['test.ping'].__module__
+                    ].__context__.pop('group.getent', None)
                     if ret['result']:
                         ret['comment'] = ('Changed gid to {0} for group {1}'
                                           .format(gid, name))
@@ -64,20 +71,20 @@ def present(name, gid=None, system=False):
             else:
                 ret['comment'] = 'Group {0} is already present'.format(name)
                 return ret
-                
+
     # Group is not present, test if gid is free
-    if gid != None:
+    if gid is not None:
         gid_group = None
         for lgrp in grps:
             if lgrp['gid'] == gid:
                 gid_group = lgrp['name']
                 break
 
-        if gid_group != None:
+        if gid_group is not None:
             ret['result'] = False
             ret['comment'] = ('Group {0} is not present but gid {1}'
                               ' is already taken by group {2}'
-                            ).format(name,gid,gid_group)
+                              .format(name, gid, gid_group))
             return ret
 
     # Group is not present, make it!
@@ -86,7 +93,13 @@ def present(name, gid=None, system=False):
         ret['comment'] = ('Group {0} is not present and should be created'
                 ).format(name)
         return ret
+
     ret['result'] = __salt__['group.add'](name, gid, system)
+    # Clear cached group data
+    sys.modules[
+        __salt__['test.ping'].__module__
+    ].__context__.pop('group.getent', None)
+
     if ret['result']:
         ret['changes'] = __salt__['group.info'](name)
         ret['comment'] = 'Added group {0}'.format(name)
