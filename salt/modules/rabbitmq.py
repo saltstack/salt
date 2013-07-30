@@ -216,7 +216,7 @@ def list_user_permissions(name, user=None):
     return [r.split('\t') for r in res.splitlines()]
 
 
-def status(name, user=None):
+def status(user=None):
     '''
     return rabbitmq status
 
@@ -226,7 +226,8 @@ def status(name, user=None):
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl status',
-        runas=user)
+        runas=user
+    )
     return res
 
 
