@@ -883,6 +883,8 @@ def os_data():
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
+    if grains['os_family'] == "RedHat":
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
 
     return grains
 
