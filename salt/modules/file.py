@@ -983,6 +983,25 @@ def rename(src, dst):
     return False
 
 
+def copy(src, dst):
+    '''
+    Copy a file or directory
+
+    CLI Example::
+
+        salt '*' file.copy /path/to/src /path/to/dst
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        shutil.copyfile(src, dst)
+        return True
+    except OSError:
+        raise CommandExecutionError('Could not copy "{0}" to "{1}"'.format(src, dst))
+    return False
+
+
 def stats(path, hash_type='md5', follow_symlink=False):
     '''
     Return a dict containing the stats for a given file
