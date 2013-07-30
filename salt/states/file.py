@@ -136,7 +136,6 @@ import os
 import shutil
 import difflib
 import logging
-import copy
 import re
 import fnmatch
 import json
@@ -1034,7 +1033,7 @@ def directory(name,
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
                              '"group" and "mode"'
         else:
-            targets = copy.copy(recurse)
+            targets = recurse[:]
             if 'user' in targets:
                 if user:
                     uid = __salt__['file.user_to_uid'](user)
