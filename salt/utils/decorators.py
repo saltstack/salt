@@ -132,6 +132,25 @@ def which(exe):
     return wrapper
 
 
+def which_bin(exes):
+    '''
+    Decorator wrapper for salt.utils.which_bin
+    '''
+    def wrapper(function):
+        def wrapped(*args, **kwargs):
+            if salt.utils.which_bin(exes) is None:
+                raise CommandNotFoundError(
+                    'None of provided binaries({0}) was not found '
+                    'in $PATH.'.format(
+                        ['{0!r}'.format(exe) for exe in exes]
+                    )
+                )
+            return function(*args, **kwargs)
+        return identical_signature_wrapper(function, wrapped)
+    return wrapper
+
+
+
 def identical_signature_wrapper(original_function, wrapped_function):
     '''
     Return a function with identical signature as ``original_function``'s which

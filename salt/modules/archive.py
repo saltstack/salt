@@ -4,7 +4,7 @@ A module to wrap archive calls
 
 # Import salt libs
 import salt._compat
-from salt.utils import which as _which
+from salt.utils import which as _which, which_bin as _which_bin
 import salt.utils.decorators as decorators
 
 # TODO: Check that the passed arguments are correct
@@ -36,7 +36,8 @@ def tar(options, tarfile, sources, cwd=None, template=None):
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 {{grains.saltpath}}
+        salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 \
+                {{grains.saltpath}}
 
     '''
     if isinstance(sources, salt._compat.string_types):
@@ -63,8 +64,7 @@ def gzip(sourcefile, template=None):
 
     '''
     cmd = 'gzip {0}'.format(sourcefile)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
 @decorators.which('gunzip')
@@ -84,102 +84,109 @@ def gunzip(gzipfile, template=None):
 
     '''
     cmd = 'gunzip {0}'.format(gzipfile)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
 @decorators.which('zip')
-def zip_(zipfile, template=None, *sources):
+def zip_(zipfile, sources, template=None):
     '''
     Uses the zip command to create zip files
 
     CLI Example::
 
-        salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1 /tmp/sourcefile2
+        salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1 /tmp/{{grains.id}}.txt
+        salt '*' archive.zip template=jinja /tmp/zipfile.zip \
+                /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
     '''
-    sourcefiles = ' '.join(sources)
-    cmd = 'zip {0} {1}'.format(zipfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    if isinstance(sources, salt._compat.string_types):
+        sources = [s.strip() for s in sources.split(',')]
+    cmd = 'zip {0} {1}'.format(zipfile, ' '.join(sources))
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
 @decorators.which('unzip')
-def unzip(zipfile, dest, template=None, *xfiles):
+def unzip(zipfile, dest, excludes=None, template=None):
     '''
     Uses the unzip command to unpack zip files
 
     CLI Example::
 
-        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ file_1 file_2
+        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ \
+                excludes=file_1,file_2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ file_1 file_2
+        salt '*' archive.unzip template=jinja /tmp/zipfile.zip \
+                /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
-    xfileslist = ' '.join(xfiles)
+    if isinstance(excludes, salt._compat.string_types):
+        excludes = [entry.strip() for entry in excludes.split(',')]
+
     cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
-    if xfileslist:
-        cmd = cmd + ' -x {0}'.format(xfiles)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    if excludes is not None:
+        cmd += ' -x {0}'.format(' '.join(excludes))
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
 @decorators.which('rar')
-def rar(rarfile, template=None, *sources):
+def rar(rarfile, sources, template=None):
     '''
     Uses the rar command to create rar files
     Uses rar for Linux from http://www.rarlab.com/
 
     CLI Example::
 
-        salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1 /tmp/sourcefile2
+        salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1,/tmp/sourcefile2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.rar template=jinja /tmp/rarfile.rar /tmp/sourcefile1 /tmp/{{grains.id}}.txt
+        salt '*' archive.rar template=jinja /tmp/rarfile.rar \
+                /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
 
     '''
-    # TODO: Check that len(sources) >= 1
-    sourcefiles = ' '.join(sources)
-    cmd = 'rar a -idp {0} {1}'.format(rarfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    if isinstance(sources, salt._compat.string_types):
+        sources = [s.strip() for s in sources.split(',')]
+    cmd = 'rar a -idp {0} {1}'.format(rarfile, ' '.join(sources))
+    return __salt__['cmd.run'](cmd, template=template).splitlines()
 
 
-@decorators.which('unrar')
-def unrar(rarfile, dest, template=None, *xfiles):
+@decorators.which_bin(('unrar', 'rar'))
+def unrar(rarfile, dest, excludes=None, template=None):
     '''
     Uses the unrar command to unpack rar files
     Uses rar for Linux from http://www.rarlab.com/
 
     CLI Example::
 
-        salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ file_1 file_2
+        salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ \
+                excludes=file_1,file_2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' archive.unrar template=jinja /tmp/rarfile.rar /tmp/{{grains.id}}/ file_1 file_2
+        salt '*' archive.unrar template=jinja /tmp/rarfile.rar \
+                /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
-    xfileslist = ' '.join(xfiles)
-    cmd = 'rar x -idp {0}'.format(rarfile, dest)
-    if xfileslist:
-        cmd = cmd + ' {0}'.format(xfiles)
-    cmd = cmd + ' {0}'.format(dest)
-    out = __salt__['cmd.run'](cmd, template=template).splitlines()
-    return out
+    if isinstance(excludes, salt._compat.string_types):
+        excludes = [entry.strip() for entry in excludes.split(',')]
+
+    cmd = [_which_bin(('unrar', 'rar')), 'x', '-idp', rarfile]
+    if excludes is not None:
+        for exclude in excludes:
+            cmd.extend(['-x', exclude])
+    cmd.append(dest)
+    return __salt__['cmd.run'](' '.join(cmd), template=template).splitlines()
