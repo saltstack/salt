@@ -810,8 +810,8 @@ def os_data():
                     for line in ifile:
                         # Need to pull out the version and codename
                         # in the case of custom content in /etc/centos-release
-                        find_release = re.compile('\d+\.\d+')
-                        find_codename = re.compile('(?<=\()(.*?)(?=\))')
+                        find_release = re.compile(r'\d+\.\d+')
+                        find_codename = re.compile(r'(?<=\()(.*?)(?=\))')
                         release = find_release.search(line)
                         codename = find_codename.search(line)
                         if release is not None:
