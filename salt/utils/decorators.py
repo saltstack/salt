@@ -47,7 +47,7 @@ class Depends(object):
                 dependencies
             )
         )
-        self.depencancies = dependencies
+        self.dependencies = dependencies
         self.fallback_funcion = kwargs.get('fallback_funcion')
 
     def __call__(self, function):
@@ -57,7 +57,7 @@ class Depends(object):
         class wide depandancy_dict
         '''
         module = inspect.getmodule(inspect.stack()[1][0])
-        for dep in self.depencancies:
+        for dep in self.dependencies:
             self.dependency_dict[dep].add(
                 (module, function, self.fallback_funcion)
             )
