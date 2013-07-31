@@ -231,6 +231,10 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
+        32-bit packages can be installed on 64-bit systems by appending the
+        architecture designation (``:i386``, etc.) to the end of the package
+        name.
+
         CLI Example::
             salt '*' pkg.install <package name>
 
