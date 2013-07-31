@@ -85,12 +85,13 @@ def mkfs(device, fs_type, **kwargs):
                  'uuid': 'U'}
 
     opts = ''
-    for key in kwargs.keys():
-        opt = kwarg_map[key]
-        if kwargs[key] == 'True':
-            opts += '-{0} '.format(opt)
-        else:
-            opts += '-{0} {1} '.format(opt, kwargs[key])
+    for key in kwargs:
+        if key in kwarg_map:
+            opt = kwarg_map[key]
+            if kwargs[key] == 'True':
+                opts += '-{0} '.format(opt)
+            else:
+                opts += '-{0} {1} '.format(opt, kwargs[key])
     cmd = 'mke2fs -F -t {0} {1}{2}'.format(fs_type, opts, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     ret = []
@@ -166,12 +167,13 @@ def tune(device, **kwargs):
                  'user': 'u',
                  'uuid': 'U'}
     opts = ''
-    for key in kwargs.keys():
-        opt = kwarg_map[key]
-        if kwargs[key] == 'True':
-            opts += '-{0} '.format(opt)
-        else:
-            opts += '-{0} {1} '.format(opt, kwargs[key])
+    for key in kwargs:
+        if key in kwarg_map:
+            opt = kwarg_map[key]
+            if kwargs[key] == 'True':
+                opts += '-{0} '.format(opt)
+            else:
+                opts += '-{0} {1} '.format(opt, kwargs[key])
     cmd = 'tune2fs {0}{1}'.format(opts, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
