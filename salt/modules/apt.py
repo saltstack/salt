@@ -269,6 +269,10 @@ def install(name=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
+        32-bit packages can be installed on 64-bit systems by appending the
+        architecture designation (``:i386``, etc.) to the end of the package
+        name.
+
         CLI Example::
             salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
 
@@ -509,7 +513,7 @@ def list_pkgs(versions_as_list=False, removed=False):
 
     ret = {'installed': {}, 'removed': {}}
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
-          '${Version}\n\' -W'
+          '${Version} ${Architecture}\n\' -W'
 
     out = __salt__['cmd.run_all'](cmd).get('stdout', '')
     # Typical lines of output:
@@ -518,10 +522,13 @@ def list_pkgs(versions_as_list=False, removed=False):
     for line in out.splitlines():
         cols = line.split()
         try:
-            linetype, status, name, version_num = \
-                [cols[x] for x in (0, 2, 3, 4)]
+            linetype, status, name, version_num, arch = \
+                [cols[x] for x in (0, 2, 3, 4, 5)]
         except ValueError:
             continue
+        if __grains__.get('cpuarch', '') == 'x86_64' \
+                and re.match(r'i\d86', arch):
+            name += ':{0}'.format(arch)
         if len(cols):
             if ('install' in linetype or 'hold' in linetype) and \
                     'installed' in status:

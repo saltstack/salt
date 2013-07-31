@@ -3,13 +3,15 @@ Resources needed by pkg providers
 '''
 
 # Import python libs
+import collections
+import distutils.version  # pylint: disable=E0611
 import fnmatch
-import os
-import re
-import yaml
-import pprint
 import logging
-import distutils.version
+import os
+import pprint
+import re
+import sys
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -23,30 +25,22 @@ def _parse_pkg_meta(path):
     version number.
     '''
     def parse_rpm(path):
-        name = ''
-        version = ''
-        rel = ''
-        result = __salt__['cmd.run_all']('rpm -qpi "{0}"'.format(path))
-        if result['retcode'] == 0:
-            for line in result['stdout'].splitlines():
-                if not name:
-                    match = re.match(r'^Name\s*:\s*(\S+)', line)
-                    if match:
-                        name = match.group(1)
-                        continue
-                if not version:
-                    match = re.match(r'^Version\s*:\s*(\S+)', line)
-                    if match:
-                        version = match.group(1)
-                        continue
-                if not rel:
-                    match = re.match(r'^Release\s*:\s*(\S+)', line)
-                    if match:
-                        rel = match.group(1)
-                        continue
-        if rel:
-            version += '-{0}'.format(rel)
-        return name, version
+        try:
+            from salt.modules.yumpkg5 import __QUERYFORMAT, _parse_pkginfo
+            from salt.utils import namespaced_function
+            _parse_pkginfo = namespaced_function(_parse_pkginfo, globals())
+        except ImportError:
+            log.critical('Error importing helper functions. This is almost '
+                         'certainly a bug.')
+            return '', ''
+        pkginfo = __salt__['cmd.run_all'](
+            'rpm -qp --queryformat {0!r} {1!r}'.format(__QUERYFORMAT, path)
+        ).get('stdout', '').strip()
+        pkginfo = _parse_pkginfo(pkginfo)
+        if pkginfo is None:
+            return '', ''
+        else:
+            return pkginfo.name, pkginfo.version
 
     def parse_pacman(path):
         name = ''
@@ -69,19 +63,42 @@ def _parse_pkg_meta(path):
     def parse_deb(path):
         name = ''
         version = ''
+        arch = ''
+        # This is ugly, will have to try to find a better way of accessing the
+        # __grains__ global.
+        cpuarch = sys.modules[
+            __salt__['test.ping'].__module__
+        ].__grains__.get('cpuarch', '')
+
         result = __salt__['cmd.run_all']('dpkg-deb -I "{0}"'.format(path))
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    match = re.match(r'^\s*Package\s*:\s*(\S+)', line)
-                    if match:
-                        name = match.group(1)
+                    try:
+                        name = re.match(
+                            r'^\s*Package\s*:\s*(\S+)',
+                            line
+                        ).group(1)
+                    except AttributeError:
                         continue
                 if not version:
-                    match = re.match(r'^\s*Version\s*:\s*(\S+)', line)
-                    if match:
-                        version = match.group(1)
+                    try:
+                        version = re.match(
+                            r'^\s*Version\s*:\s*(\S+)',
+                            line
+                        ).group(1)
+                    except AttributeError:
                         continue
+                if cpuarch == 'x86_64' and not arch:
+                    try:
+                        arch = re.match(
+                            r'^\s*Architecture\s*:\s*(\S+)',
+                            line
+                        ).group(1)
+                    except AttributeError:
+                        continue
+        if arch:
+            name += ':{0}'.format(arch)
         return name, version
 
     if __grains__['os_family'] in ('Suse', 'RedHat', 'Mandriva'):

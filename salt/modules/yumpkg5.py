@@ -16,6 +16,8 @@ from salt.modules.yumpkg import (mod_repo, _parse_repo_file, list_repos,
 
 log = logging.getLogger(__name__)
 
+# This is imported in salt.modules.pkg_resource._parse_pkg_meta. Don't change
+# it without considering its impact there.
 __QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}'
 
 
@@ -60,6 +62,8 @@ def __virtual__():
     return False
 
 
+# This is imported in salt.modules.pkg_resource._parse_pkg_meta. Don't change
+# it without considering its impact there.
 def _parse_pkginfo(line):
     '''
     A small helper to parse package information; returns a namedtuple
