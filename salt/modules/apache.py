@@ -6,6 +6,7 @@ Support for Apache
 import os
 import re
 import logging
+import urllib2
 
 # Import salt libs
 import salt.utils
