@@ -5,7 +5,7 @@ in here
 '''
 
 # Import python libs
-import sys
+#import sys  # Use of sys is commented out below
 
 # Import salt libs
 import salt.log
