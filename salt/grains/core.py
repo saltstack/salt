@@ -803,6 +803,22 @@ def os_data():
                             grains['lsb_distrib_release'] = comps[2]
                             grains['lsb_distrib_codename'] = \
                                 comps[3].replace('(', '').replace(')', '')
+            elif os.path.isfile('/etc/centos-release'):
+                # CentOS Linux
+                grains['lsb_distrib_id'] = 'CentOS'
+                with salt.utils.fopen('/etc/centos-release') as ifile:
+                    for line in ifile:
+                        # Need to pull out the version and codename
+                        # in the case of custom content in /etc/centos-release
+                        find_release = re.compile('\d+\.\d+')
+                        find_codename = re.compile('(?<=\()(.*?)(?=\))')
+                        release = find_release.search(line)
+                        codename = find_codename.search(line)
+                        if release is not None:
+                            grains['lsb_distrib_release'] = release.group()
+                        if codename is not None:
+                            grains['lsb_distrib_codename'] = codename.group()
+
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
         (osname, osrelease, oscodename) = \
