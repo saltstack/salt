@@ -120,7 +120,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not any(['logstash_zmq_handler' in __opts__,
+    if not any(['logstash_udp_handler' in __opts__,
                 'logstash_zmq_handler' in __opts__]):
         log.debug(
             'None of the required configuration sections, '
