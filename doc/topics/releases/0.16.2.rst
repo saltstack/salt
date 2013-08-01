@@ -4,6 +4,16 @@ Salt 0.16.2 Release Notes
 
 Version 0.16.2 is a bugfix release for 0.16.0, and contains a number of fixes.
 
+Windows
+-------
+
+- Only allow Administrator's group and SYSTEM user access to C:\\salt. This
+  eliminates a race condition where a non-admin user could modify a template or
+  managed file before it is executed by the minion (which is running as an
+  elevated user), thus avoiding a potential escalation of privileges. (6361_)
+
+.. _`6361`: https://github.com/saltstack/salt/issues/6361
+
 Grains
 ------
 - Fixed detection of ``virtual`` grain on OpenVZ hardware nodes
@@ -58,6 +68,10 @@ User/Group Management
 - Fixed regression that prevents a :mod:`user.present
   <salt.states.user.present>` state to set the password hash to the system
   default (i.e. an unset password)
+- Fixed multiple :mod:`group.present <salt.states.group.present>` states with
+same group (6439_)
+
+.. _`6439`: https://github.com/saltstack/salt/issues/6439
 
 File Management
 ---------------
@@ -183,6 +197,8 @@ Miscellaneous
 - Fixed tracebacks when Salt encounters problems running gem (5886_)
 - Fixed incorrect behavior of :mod:`selinux.boolean
   <salt.states.selinux.boolean>` states (5912_)
+- :doc:`RabbitMQ </ref/states/all/salt.modules.rabbitmq>`: Quote passwords to
+avoid symbols being interpolated by the shell (6338_)
 
 .. _`6162`: https://github.com/saltstack/salt/issues/6162
 .. _`6175`: https://github.com/saltstack/salt/issues/6175
@@ -193,4 +209,5 @@ Miscellaneous
 .. _`5871`: https://github.com/saltstack/salt/issues/5871
 .. _`5886`: https://github.com/saltstack/salt/issues/5886
 .. _`5912`: https://github.com/saltstack/salt/issues/5912
+.. _`6338`: https://github.com/saltstack/salt/issues/6338
 
