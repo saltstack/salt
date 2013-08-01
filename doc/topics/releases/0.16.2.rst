@@ -1,0 +1,196 @@
+=========================
+Salt 0.16.2 Release Notes
+=========================
+
+Version 0.16.2 is a bugfix release for 0.16.0, and contains a number of fixes.
+
+Grains
+------
+- Fixed detection of ``virtual`` grain on OpenVZ hardware nodes
+- Gracefully handle lsb_release data when it is enclosed in quotes
+- Improved grains detection on MacOS
+
+Pillar
+------
+- Don't try to load :doc:`git_pillar </ref/pillar/all/salt.pillar.git_pillar>`
+  if not enabled in master config (6052_)
+- Functions :mod:`pillar.item <salt.modules.pillar.item>` and
+  :mod:`pillar.items <salt.modules.pillar.items>` added for parity with
+  :mod:`grains.item <salt.modules.grains.item>`/:mod:`grains.items
+  <salt.modules.grains.items>`. The old function ``pillar.data`` is preserved
+  for backwards compatibility.
+- Fixed minion traceback when Pillar SLS is malformed (5910_)
+
+.. _`6052`: https://github.com/saltstack/salt/issues/6052
+.. _`5910`: https://github.com/saltstack/salt/issues/5910
+
+Peer Publishing
+---------------
+- More gracefully handle improperly quoted publish commands (5958_)
+- Fixed traceback when timeout specified via the CLI fo :mod:`publish.publish
+  <salt.modules.publish.publish>`, :mod:`publish.full_data
+  <salt.modules.publish.full_data>` (5959_)
+- Fixed unintended change in output of :mod:`publish.publish
+  <salt.modules.publish.publish>` (5928_)
+
+.. _`5958`: https://github.com/saltstack/salt/issues/5958
+.. _`5959`: https://github.com/saltstack/salt/issues/5959
+.. _`5928`: https://github.com/saltstack/salt/issues/5928
+
+Minion
+------
+- Fixed salt-key usage in minionswarm script
+- Quieted warning about :strong:`SALT_MINION_CONFIG` environment variable on
+  minion startup and for CLI commands run via ``salt-call`` (5956_)
+- Added minion config parameter :conf_minion:`random_reauth_delay` to stagger
+  re-auth attempts when the minion is waiting for the master to approve its
+  public key. This helps prevent SYN flooding in larger environments.
+
+.. _`5956`: https://github.com/saltstack/salt/issues/5956
+
+User/Group Management
+---------------------
+- Implement previously-ignored ``unique`` option for :mod:`user.present
+  <salt.states.user.present>` states in FreeBSD
+- Report in state output when a :mod:`group.present
+  <salt.states.group.present>` state attempts to use a gid in use by another
+  group
+- Fixed regression that prevents a :mod:`user.present
+  <salt.states.user.present>` state to set the password hash to the system
+  default (i.e. an unset password)
+
+File Management
+---------------
+- Fixed file.mkdir setting incorrect permissions (6033_)
+- Fixed cleanup of source files for templates when ``/tmp`` is in file_roots
+  (6118_)
+- Fixed caching of zero-byte files when a non-empty file was previously cached
+  at the same path
+- Added HTTP authentication support to the cp module (5641_)
+- Diffs are now suppressed when binary files are changed
+
+.. _`6033`: https://github.com/saltstack/salt/issues/6033
+.. _`6118`: https://github.com/saltstack/salt/issues/6118
+.. _`5641`: https://github.com/saltstack/salt/issues/5641
+
+Package/Repository Management
+-----------------------------
+- Fixed traceback when there is only one target for :mod:`pkg.latest
+  <salt.states.pkg.latest>` states
+- Fixed regression in detection of virtual packages (apt)
+- Limit number of pkg database refreshes to once per :mod:`state.sls
+  <salt.modules.state.sls>`/:mod:`state.highstate
+  <salt.modules.state.highstate>`
+- YUM: Allow 32-bit packages with arches other than i686 to be managed on
+  64-bit systems (6299_)
+- Fixed incorrect reporting in pkgrepo.managed states (5517_)
+
+.. _`6299`: https://github.com/saltstack/salt/issues/6299
+.. _`5517`: https://github.com/saltstack/salt/issues/5517
+
+Service Management
+------------------
+- Fixed inaccurate reporting of results in :mod:`service.running
+  <salt.states.service.running>` states when the service fails to start (5894_)
+- Fixed handling of custom initscripts in RHEL-based distros so that they are
+  immediately available, negating the need for a second state run to manage the
+  service that the initscript controls
+
+.. _`5894`: https://github.com/saltstack/salt/issues/5894
+
+Networking
+----------
+- Function network.hwaddr renamed to :mod:`network.hw_addr
+  <salt.modules.network.hw_addr>` to match :mod:`network.ip_addrs
+  <salt.modules.network.ip_addrs>` and :mod:`network.ip_addrs6
+  <salt.modules.network.ip_addrs6>`. All three functions also now work without
+  the underscore in the name, as well.
+- Fixed traceback in :mod:`bridge.show <salt.modules.bridge.show>` when
+  interface is not present (6326_)
+
+.. _`6326`: https://github.com/saltstack/salt/issues/6326
+
+SSH
+---
+- Fixed incorrect result reporting for some :mod:`ssh_known_hosts.present
+  <salt.states.ssh_known_hosts.present>` states
+- Fixed inaccurate reporting when :mod:`ssh_auth.present
+  <salt.states.ssh_auth.present>` states are run with ``test=True``, when
+  rsa/dss is used for the ``enc`` param instead of ssh-rsa/ssh-dss (5374_)
+
+.. _`5374`: https://github.com/saltstack/salt/issues/5374
+
+pip
+---
+- Properly handle ``-f`` lines in pip freeze output
+- Fixed regression in pip.installed states with specifying a requirements file
+  (6003_)
+- Fixed use of ``editable`` argument in :mod:`pip.installed
+  <salt.states.pip.installed>` states (6025_)
+- Deprecated ``runas`` parameter in execution function calls, in favor of
+  ``user``
+
+.. _`6003`: https://github.com/saltstack/salt/issues/6003
+.. _`6025`: https://github.com/saltstack/salt/issues/6025
+
+MySQL
+-----
+- Allow specification of :doc:`MySQL </ref/modules/all/salt.modules.mysql>`
+  connection arguments via the CLI, overriding/bypassing minion config params
+- Allow :mod:`mysql_user.present <salt.states.mysql_user.present>` states to
+  set a passwordless login (5550_)
+- Fixed endless loop when :mod:`mysql.processlist
+  <salt.modules.mysql.processlist>` is run (6297_)
+
+.. _`5550`: https://github.com/saltstack/salt/issues/5550
+.. _`6297`: https://github.com/saltstack/salt/issues/6297
+
+PostgreSQL
+----------
+- Fixed traceback in :mod:`postgres.user_list
+  <salt.modules.postgres.user_list>` (6352_)
+
+.. _`6352`: https://github.com/saltstack/salt/issues/6352
+
+Miscellaneous
+-------------
+- Don't allow :doc:`npm states </ref/states/all/salt.states.npm>` to be used if
+  :doc:`npm module </ref/modules/all/salt.modules.npm>` is not available
+- Fixed :mod:`alternatives.install <salt.states.alternatives.install>` states
+  for which the target is a symlink (6162_)
+- Fixed traceback in :doc:`sysbench module
+  </ref/modules/all/salt.modules.sysbench>` (6175_)
+- Fixed traceback in job cache
+- Fixed tempfile cleanup for windows
+- Fixed issue where SLS files using the :doc:`pydsl renderer
+  </ref/renderers/all/salt.renderers.pydsl>` were not being run
+- Fixed issue where returners were being passed incorrect information
+  (5518_)
+- Fixed traceback when numeric args are passed to :mod:`cmd.script
+  <salt.states.cmd.script>` states
+- Fixed bug causing :mod:`cp.get_dir <salt.modules.cp.get_dir>` to return more
+  directories than expected (6048_)
+- Fixed traceback when :mod:`supervisord.running
+  <salt.states.supervisord.running>` states are run with ``test=True`` (6053_)
+- Fixed tracebacks when Salt encounters problems running rbenv (5888_)
+- Only make the :doc:`monit module </ref/modules/all/salt.modules.monit>`
+  available if monit binary is present (5871_)
+- Fixed incorrect behavior of :mod:`img.mount_image
+  <salt.modules.img.mount_image>`
+- Fixed traceback in :mod:`tomcat.deploy_war <salt.modules.tomcat.deploy_war>`
+  in Windows
+- Don't re-write /etc/fstab if mount fails
+- Fixed tracebacks when Salt encounters problems running gem (5886_)
+- Fixed incorrect behavior of :mod:`selinux.boolean
+  <salt.states.selinux.boolean>` states (5912_)
+
+.. _`6162`: https://github.com/saltstack/salt/issues/6162
+.. _`6175`: https://github.com/saltstack/salt/issues/6175
+.. _`5518`: https://github.com/saltstack/salt/issues/5518
+.. _`6048`: https://github.com/saltstack/salt/issues/6048
+.. _`6053`: https://github.com/saltstack/salt/issues/6053
+.. _`5888`: https://github.com/saltstack/salt/issues/5888
+.. _`5871`: https://github.com/saltstack/salt/issues/5871
+.. _`5886`: https://github.com/saltstack/salt/issues/5886
+.. _`5912`: https://github.com/saltstack/salt/issues/5912
+
