@@ -212,6 +212,22 @@ master.
 
     acceptance_wait_time: 10
 
+.. conf_minion:: random_reauth_delay
+
+``random_reauth_delay``
+------------------------
+
+When the master key changes, the minion will try to re-auth itself to
+receive the new master key. In larger environments this can cause a syn-flood
+on the master because all minions try to re-auth immediately. To prevent this
+and have a minion wait for a random amount of time, use this optional
+parameter. The wait-time will be a random number of seconds between
+0 and the defined value.
+
+.. code-block:: yaml
+
+    random_reauth_delay: 60
+
 .. conf_minion:: acceptance_wait_time_max
 
 ``acceptance_wait_time_max``
