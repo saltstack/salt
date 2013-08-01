@@ -100,10 +100,13 @@ Package/Repository Management
 - Fixed incorrect reporting in pkgrepo.managed states (5517_)
 - Fixed 32-bit binary package installs on 64-bit RHEL-based distros, and added
   proper support for 32-bit packages on 64-bit Debian-based distros (6303_)
+- Fixed issue where requisites were inadvertently being put into YUM repo files
+  (6471_)
 
 .. _`6299`: https://github.com/saltstack/salt/issues/6299
 .. _`5517`: https://github.com/saltstack/salt/issues/5517
 .. _`6303`: https://github.com/saltstack/salt/issues/6303
+.. _`6471`: https://github.com/saltstack/salt/issues/6471
 
 Service Management
 ------------------
