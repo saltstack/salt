@@ -29,6 +29,7 @@ import traceback
 # since they will be used there
 TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
+QUIET = logging.QUIET = 1000
 
 # Import salt libs
 from salt._compat import string_types
@@ -41,7 +42,7 @@ LOG_LEVELS = {
     'error': logging.ERROR,
     'garbage': GARBAGE,
     'info': logging.INFO,
-    'quiet': 1000,
+    'quiet': QUIET,
     'trace': TRACE,
     'warning': logging.WARNING,
 }
@@ -187,6 +188,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
 if logging.getLoggerClass() is not SaltLoggingClass:
 
     logging.setLoggerClass(SaltLoggingClass)
+    logging.addLevelName(QUIET, 'QUIET')
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
 
