@@ -195,16 +195,16 @@ if logging.getLoggerClass() is not SaltLoggingClass:
     if len(logging.root.handlers) == 0:
         # No configuration to the logging system has been done so far.
         # Set the root logger at the lowest level possible
-        logging.getLogger().setLevel(GARBAGE)
+        logging.root.setLevel(GARBAGE)
 
         # Add a Null logging handler until logging is configured(will be
         # removed at a later stage) so we stop getting:
         #   No handlers could be found for logger 'foo'
-        logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
+        logging.root.addHandler(LOGGING_NULL_HANDLER)
 
     # Add the queue logging handler so we can later sync all message records
     # with the additional logging handlers
-    logging.getLogger().addHandler(LOGGING_QUEUE_HANDLER)
+    logging.root.addHandler(LOGGING_QUEUE_HANDLER)
 
 
 def getLogger(name):  # pylint: disable=C0103
@@ -254,7 +254,7 @@ def setup_temp_logger(log_level='error'):
         '[%(levelname)-8s] %(message)s', datefmt='%H:%M:%S'
     )
     handler.setFormatter(formatter)
-    logging.getLogger().addHandler(handler)
+    logging.root.addHandler(handler)
 
     # Sync the null logging handler messages with the temporary handler
     LOGGING_NULL_HANDLER.sync_with_handlers([handler])
@@ -306,7 +306,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    logging.getLogger().addHandler(handler)
+    logging.root.addHandler(handler)
 
     global __CONSOLE_CONFIGURED
     __CONSOLE_CONFIGURED = True
