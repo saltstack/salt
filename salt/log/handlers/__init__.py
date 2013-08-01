@@ -37,11 +37,23 @@ if sys.version_info < (2, 7):
     logging.NullHandler = NullHandler
 
 
-class QueueLoggingHandler(logging.NullHandler):
+class TemporaryLoggingHandler(logging.NullHandler):
+    '''
+    This logging handler will store all the log records up to it's maximum
+    queue size at which stage the first messages stored will be dropped.
 
-    def __init__(self, *args, **kwargs):
-        self.__max_queue_size = kwargs.pop('max_queue_size', 10000)
-        super(QueueLoggingHandler, self).__init__(*args, **kwargs)
+    Should only be used as a temporary logging handler, while the logging
+    system is not fully configured.
+
+    Once configured, pass any logging handlers that should have received the
+    initial log messages to the function
+    :func:`TemporaryLoggingHandler.sync_with_handlers` and all stored log
+    records will be dispatched to the provided handlers.
+    '''
+
+    def __init__(self, max_queue_size=10000):
+        self.__max_queue_size = max_queue_size
+        super(TemporaryLoggingHandler, self).__init__()
         self.__messages = []
 
     def handle(self, record):
@@ -53,6 +65,9 @@ class QueueLoggingHandler(logging.NullHandler):
         self.release()
 
     def sync_with_handlers(self, handlers=()):
+        '''
+        Sync the stored log records to the provided log handlers.
+        '''
         if not handlers:
             return
 

@@ -33,7 +33,7 @@ QUIET = logging.QUIET = 1000
 
 # Import salt libs
 from salt._compat import string_types
-from salt.log.handlers import QueueLoggingHandler
+from salt.log.handlers import TemporaryLoggingHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
 LOG_LEVELS = {
@@ -84,13 +84,13 @@ def is_extended_logging_configured():
 
 
 # Store a reference to the temporary queue logging handler
-LOGGING_NULL_HANDLER = QueueLoggingHandler()
+LOGGING_NULL_HANDLER = TemporaryLoggingHandler()
 
 # Store a reference to the temporary console logger
 LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
 
 # Store a reference to the queue logging handler
-LOGGING_QUEUE_HANDLER = QueueLoggingHandler()
+LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
 
 
 class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
@@ -116,7 +116,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
             ))
             for handler in logging.root.handlers:
                 if handler in (LOGGING_NULL_HANDLER,
-                               LOGGING_QUEUE_HANDLER,
+                               LOGGING_STORE_HANDLER,
                                LOGGING_TEMP_HANDLER):
                     continue
 
@@ -204,7 +204,7 @@ if logging.getLoggerClass() is not SaltLoggingClass:
 
     # Add the queue logging handler so we can later sync all message records
     # with the additional logging handlers
-    logging.root.addHandler(LOGGING_QUEUE_HANDLER)
+    logging.root.addHandler(LOGGING_STORE_HANDLER)
 
 
 def getLogger(name):  # pylint: disable=C0103
@@ -235,7 +235,7 @@ def setup_temp_logger(log_level='error'):
 
     handler = None
     for handler in logging.root.handlers:
-        if handler in (LOGGING_NULL_HANDLER, LOGGING_QUEUE_HANDLER):
+        if handler in (LOGGING_NULL_HANDLER, LOGGING_STORE_HANDLER):
             continue
 
         if not hasattr(handler, 'stream'):
@@ -283,7 +283,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     handler = None
     for handler in logging.root.handlers:
-        if handler is LOGGING_QUEUE_HANDLER:
+        if handler is LOGGING_STORE_HANDLER:
             continue
 
         if not hasattr(handler, 'stream'):
@@ -541,7 +541,7 @@ def setup_extended_logging(opts):
 
     if additional_handlers:
         # Sync the null logging handler messages with the temporary handler
-        LOGGING_QUEUE_HANDLER.sync_with_handlers(additional_handlers)
+        LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
     # Remove the temporary queue logging handler
     __remove_queue_logging_handler()
 
@@ -584,13 +584,13 @@ def __remove_queue_logging_handler():
     It just removes the QueueLoggingHandler from the logging handlers.
     '''
     root_logger = logging.getLogger()
-    global LOGGING_QUEUE_HANDLER
+    global LOGGING_STORE_HANDLER
 
     for handler in root_logger.handlers:
-        if handler is LOGGING_QUEUE_HANDLER:
-            root_logger.removeHandler(LOGGING_QUEUE_HANDLER)
+        if handler is LOGGING_STORE_HANDLER:
+            root_logger.removeHandler(LOGGING_STORE_HANDLER)
             # Redefine the null handler to None so it can be garbage collected
-            LOGGING_QUEUE_HANDLER = None
+            LOGGING_STORE_HANDLER = None
             break
 
 
