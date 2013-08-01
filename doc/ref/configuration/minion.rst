@@ -231,7 +231,7 @@ parameter. The wait-time will be a random number of seconds between
 .. conf_minion:: acceptance_wait_time_max
 
 ``acceptance_wait_time_max``
-------------------------
+----------------------------
 
 Default: ``None``
 
