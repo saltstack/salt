@@ -176,7 +176,8 @@ def managed(name, **kwargs):
         elif kwarg == 'humanname':
             repokwargs['name'] = kwargs[kwarg]
         elif kwarg in ('__id__', 'fun', 'state', '__env__', '__sls__',
-                       'order'):
+                       'order', 'watch', 'watch_in', 'require', 'require_in',
+                       'prereq', 'prereq_in'):
             pass
         else:
             repokwargs[kwarg] = kwargs[kwarg]
