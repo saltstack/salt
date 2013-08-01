@@ -3,6 +3,8 @@ Create ssh executor system
 '''
 # Import python libs
 import os
+import tarfile
+import tempfile
 import json
 import getpass
 
@@ -247,6 +249,9 @@ class Single():
                'EOF').format(self.arg_str)
         if self.arg_str.startswith('state.highstate'):
             self.highstate_seed()
+        if self.arg_str.startswith('state.sls'):
+            trans_tar = self.sls_seed()
+            print trans_tar
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
@@ -294,7 +299,7 @@ class Single():
         # Compile and verify the raw chunks
         chunks = st_.compile_high_data(high)
         file_refs = lowstate_file_refs(chunks)
-
+        trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
 
 
 class FunctionWrapper(dict):
@@ -401,6 +406,7 @@ def lowstate_file_refs(chunks):
             refs[env].append(crefs)
     return refs
 
+
 def salt_refs(data):
     '''
     Pull salt file references out of the states
@@ -416,3 +422,34 @@ def salt_refs(data):
                 if comp.startswith(proto):
                     ret.append(comp)
     return ret
+
+
+def prep_trans_tar(opts, chunks, file_refs):
+    '''
+    Generate the execution package from the env file refs and a low state
+    data structure
+    '''
+    gendir = tempfile.mkdtemp()
+    trans_tar = salt.utils.mkstemp()
+    fnopts = copy.copy(opts)
+    fnopts['cachedir'] = gendir
+    file_client = salt.fileclient.LocalClient(fnopts)
+    lowfn = os.path.join(gendir, 'lowstate.json')
+    with open(lowfn, 'w+') as fp_:
+        fp_.write(json.dumpd(lowfn))
+    for env in file_refs:
+        c_files = file_client.list_env(env)
+        for ref in file_refs[env]:
+            if file_client.cache_file(ref, env):
+                break
+            if file_client.cache_dir(ref, env, True):
+                break
+    cwd = os.getcwd()
+    os.chdir(gendir)
+    with tarfile.open(trans_tar, 'w:gz') as tfp:
+        for roots, dirs, files in os.walk(gendir):
+            for name in files:
+                tfp.add(os.path.join(root, name))
+    os.chdir(cwd)
+    shutil.rmtree(gendir)
+    return trans_tar
