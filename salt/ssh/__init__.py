@@ -7,6 +7,7 @@ import tarfile
 import tempfile
 import json
 import getpass
+import shutil
 
 # Import salt libs
 import salt.ssh.shell
@@ -436,7 +437,7 @@ def prep_trans_tar(opts, chunks, file_refs):
     file_client = salt.fileclient.LocalClient(fnopts)
     lowfn = os.path.join(gendir, 'lowstate.json')
     with open(lowfn, 'w+') as fp_:
-        fp_.write(json.dumpd(lowfn))
+        fp_.write(json.dumps(lowfn))
     for env in file_refs:
         c_files = file_client.list_env(env)
         for ref in file_refs[env]:
