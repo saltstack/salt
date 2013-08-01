@@ -6,6 +6,7 @@ Support for Apache
 import os
 import re
 import logging
+import urllib2
 
 # Import salt libs
 import salt.utils
@@ -333,3 +334,89 @@ def a2dissite(site):
         ret['Status'] = status
   
     return ret
+
+
+def server_status(profile='default'):
+    '''
+    Get Information from the Apache server-status handler
+    
+    NOTE:
+    the server-status handler is disabled by default.
+    in order for this function to work it needs to be enabled.
+    http://httpd.apache.org/docs/2.2/mod/mod_status.html
+    
+    The following configuration needs to exists in pillar/grains
+    each entry nested in apache.server-status is a profile of a vhost/server
+    this would give support for multiple apache servers/vhosts
+    
+    apache.server-status:
+      'default':
+        'url': http://localhost/server-status
+        'user': someuser
+        'pass': password
+        'realm': 'authentication realm for digest passwords'
+        'timeout': 5
+    
+    CLI Examples::
+
+        salt '*' apache.server_status
+        salt '*' apache.server_status other-profile
+    '''
+    
+    ret = {
+        'Scoreboard': {
+            '_': 0,
+            'S': 0,
+            'R': 0,
+            'W': 0,
+            'K': 0,
+            'D': 0,
+            'C': 0,
+            'L': 0,
+            'G': 0,
+            'I': 0,
+            '.': 0,
+        },
+    }
+    
+    # Get configuration from pillar
+    url = __salt__['config.get']('apache.server-status:'+profile+':url', 'http://localhost/server-status')
+    user = __salt__['config.get']('apache.server-status:'+profile+':user', '')
+    passwd = __salt__['config.get']('apache.server-status:'+profile+':pass', '')
+    realm = __salt__['config.get']('apache.server-status:'+profile+':realm', '')
+    timeout = __salt__['config.get']('apache.server-status:'+profile+':timeout', 5)
+    
+    # create authentication handler if configuration exists
+    if user and passwd:
+        basic = urllib2.HTTPBasicAuthHandler()
+        basic.add_password(realm=realm, uri=url, user=user, passwd=passwd)
+        digest = urllib2.HTTPDigestAuthHandler()
+        digest.add_password(realm=realm, uri=url, user=user, passwd=passwd)
+        urllib2.install_opener(urllib2.build_opener(basic, digest))
+    
+    # get http data
+    url += '?auto'
+    try:
+        response = urllib2.urlopen(url, timeout=timeout).read().splitlines()
+    except urllib2.URLError:
+        return 'error'
+    
+    # parse the data
+    for line in response:
+        splt = line.split(':', 1)
+        splt[0] = splt[0].strip()
+        splt[1] = splt[1].strip()
+        
+        if splt[0] == 'Scoreboard':
+            for c in splt[1]:
+                ret['Scoreboard'][c] += 1
+        else:
+            if splt[1].isdigit():
+                ret[splt[0]] = int(splt[1])
+            else:
+                ret[splt[0]] = float(splt[1])
+    
+    # return the good stuff
+    return ret
+
+
