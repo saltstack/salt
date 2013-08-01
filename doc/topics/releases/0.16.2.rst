@@ -69,7 +69,7 @@ User/Group Management
   <salt.states.user.present>` state to set the password hash to the system
   default (i.e. an unset password)
 - Fixed multiple :mod:`group.present <salt.states.group.present>` states with
-same group (6439_)
+  the same group (6439_)
 
 .. _`6439`: https://github.com/saltstack/salt/issues/6439
 
