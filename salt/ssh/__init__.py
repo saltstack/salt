@@ -252,8 +252,9 @@ class Single():
         if self.arg_str.startswith('state.highstate'):
             self.highstate_seed()
         if self.arg_str.startswith('state.sls'):
-            trans_tar = self.sls_seed()
-            print trans_tar
+            pass
+            #trans_tar = self.sls_seed()
+            #print trans_tar
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
@@ -440,7 +441,6 @@ def prep_trans_tar(opts, chunks, file_refs):
     with open(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(lowfn))
     for env in file_refs:
-        c_files = file_client.list_env(env)
         for ref in file_refs[env]:
             if file_client.cache_file(ref, env):
                 break
@@ -449,7 +449,7 @@ def prep_trans_tar(opts, chunks, file_refs):
     cwd = os.getcwd()
     os.chdir(gendir)
     with tarfile.open(trans_tar, 'w:gz') as tfp:
-        for roots, dirs, files in os.walk(gendir):
+        for root, dirs, files in os.walk(gendir):
             for name in files:
                 tfp.add(os.path.join(root, name))
     os.chdir(cwd)
