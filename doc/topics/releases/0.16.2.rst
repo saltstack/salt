@@ -98,9 +98,12 @@ Package/Repository Management
 - YUM: Allow 32-bit packages with arches other than i686 to be managed on
   64-bit systems (6299_)
 - Fixed incorrect reporting in pkgrepo.managed states (5517_)
+- Fixed 32-bit binary package installs on 64-bit RHEL-based distros, and added
+  proper support for 32-bit packages on 64-bit Debian-based distros (6303_)
 
 .. _`6299`: https://github.com/saltstack/salt/issues/6299
 .. _`5517`: https://github.com/saltstack/salt/issues/5517
+.. _`6303`: https://github.com/saltstack/salt/issues/6303
 
 Service Management
 ------------------
@@ -198,7 +201,9 @@ Miscellaneous
 - Fixed incorrect behavior of :mod:`selinux.boolean
   <salt.states.selinux.boolean>` states (5912_)
 - :doc:`RabbitMQ </ref/states/all/salt.modules.rabbitmq>`: Quote passwords to
-avoid symbols being interpolated by the shell (6338_)
+  avoid symbols being interpolated by the shell (6338_)
+- Fixed tracebacks in :mod:`extfs.mkfs <salt.modules.extfs.mkfs>` and
+  :mod:`extfs.tune <salt.modules.extfs.tune>` (6462_)
 
 .. _`6162`: https://github.com/saltstack/salt/issues/6162
 .. _`6175`: https://github.com/saltstack/salt/issues/6175
@@ -210,4 +215,5 @@ avoid symbols being interpolated by the shell (6338_)
 .. _`5886`: https://github.com/saltstack/salt/issues/5886
 .. _`5912`: https://github.com/saltstack/salt/issues/5912
 .. _`6338`: https://github.com/saltstack/salt/issues/6338
+.. _`6462`: https://github.com/saltstack/salt/issues/6462
 
