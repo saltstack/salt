@@ -1063,11 +1063,11 @@ def get_app(opts):
     # Register salt-specific hooks
     cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
             salt_token_tool, priority=55)
+    cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
+            hypermedia_in)
     cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
             salt_auth_tool, priority=60)
     cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
             hypermedia_out)
-    cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
-            hypermedia_in)
 
     return root, apiopts, cpyopts
