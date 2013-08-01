@@ -236,13 +236,6 @@ def unmounted(name,
            'result': True,
            'comment': ''}
 
-    # Make sure that opts is correct, it can be a list or a comma delimited
-    # string
-    if isinstance(opts, string_types):
-        opts = opts.split(',')
-    elif opts is None:
-        opts = ['defaults']
-
     # Get the active data
     active = __salt__['mount.active']()
     if name not in active:
