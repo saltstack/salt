@@ -207,6 +207,8 @@ Miscellaneous
   avoid symbols being interpolated by the shell (6338_)
 - Fixed tracebacks in :mod:`extfs.mkfs <salt.modules.extfs.mkfs>` and
   :mod:`extfs.tune <salt.modules.extfs.tune>` (6462_)
+- Fixed a regression with the :mod:`module.run <salt.states.module.run>` state
+  where the ``m_name`` and ``m_fun`` arguments were being ignored (6464_)
 
 .. _`6162`: https://github.com/saltstack/salt/issues/6162
 .. _`6175`: https://github.com/saltstack/salt/issues/6175
@@ -219,4 +221,5 @@ Miscellaneous
 .. _`5912`: https://github.com/saltstack/salt/issues/5912
 .. _`6338`: https://github.com/saltstack/salt/issues/6338
 .. _`6462`: https://github.com/saltstack/salt/issues/6462
+.. _`6464`: https://github.com/saltstack/salt/issues/6464
 
