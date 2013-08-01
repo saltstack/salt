@@ -157,4 +157,9 @@ if PY3:
     from io import StringIO
 else:
     from StringIO import StringIO
+
+if PY3:
+    import queue as Queue
+else:
+    import Queue
 # pylint: enable=C0103
