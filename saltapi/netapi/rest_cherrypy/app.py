@@ -22,10 +22,10 @@ A REST API for Salt
 
         .. versionadded:: 0.8.2
     debug : ``False``
-        Starts a for-development web server instead of the production-ready web
-        server.
+        Starts a for-development web server that will reload itself when the
+        underlying code is changed. This server is not multithreaded.
 
-        Does not use SSL and ignores the certificate configuration options.
+        Does not use SSL!
     ssl_crt
         Required when ``debug`` is ``False``
 
@@ -34,6 +34,13 @@ A REST API for Salt
         Required when ``debug`` is ``False``
 
         The path to the private key for your SSL certificate. (See below)
+    disable_ssl
+        A flag to disable SSL on the production-ready server. This is rarely
+        useful outside testing environments. If you enable this tread
+        carefully.
+
+        Warning: your Salt authentication credentials will be sent in the
+        clear!
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
