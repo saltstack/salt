@@ -340,6 +340,9 @@ def server_status(profile='default'):
     '''
     Get Information from the Apache server-status handler
     
+    NOTE:
+    the server-status handler is disabled by default.
+    in order for this function to work it needs to be enabled.
     http://httpd.apache.org/docs/2.2/mod/mod_status.html
     
     The following configuration needs to exists in pillar/grains
