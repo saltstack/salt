@@ -75,6 +75,22 @@ state, and if the dependent state fails, don't run the depending state. So in
 the above examples the file ``/etc/vimrc`` will only be applied after the vim
 package is installed and only if the vim package is installed successfully.
 
+Require an entire sls file
+--------------------------
+
+As of Salt 0.16.0, it is possible to require an entire sls file. Do this by first including
+the sls file and then setting a state to ``require`` the included sls file.
+
+.. code-block:: yaml
+
+    include:
+      - foo
+
+    bar:
+      pkg.installed:
+        - require:
+          - sls: foo
+
 Watch
 -----
 
