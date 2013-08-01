@@ -8,6 +8,7 @@ import tempfile
 import json
 import getpass
 import shutil
+import copy
 
 # Import salt libs
 import salt.ssh.shell
