@@ -12,7 +12,7 @@
     .. code-block: yaml
 
         sentry_handler:
-          dsn: threaded+https://pub-key:secret-key@app.getsentry.com/app-id
+          dsn: https://pub-key:secret-key@app.getsentry.com/app-id
 
 
     More complex configurations can be achieved, for example:
@@ -20,7 +20,7 @@
     .. code-block: yaml
         sentry_handler:
           servers:
-            - threaded+https://sentry.example.com
+            - https://sentry.example.com
             - http://192.168.1.1
           project: app-id
           public_key: deadbeefdeadbeefdeadbeefdeadbeef
@@ -36,7 +36,7 @@
     .. code-block: yaml
 
       sentry_handler:
-        dsn: threaded+https://pub-key:secret-key@app.getsentry.com/app-id
+        dsn: https://pub-key:secret-key@app.getsentry.com/app-id
         log_level: warning
 
 
@@ -44,11 +44,15 @@
     tools and configuration, ``salt --help`` should give you the required
     information.
 
-    .. admonition:: Performance Impact
 
-        Whenever possible please use the ``threaded+`` prefix on the servers,
-        ie, ``threaded+https``. The reason behind this is because salt might
-        suffer a performance impact if the sentry connection is slow.
+    Threaded Raven Transports
+    -------------------------
+
+    Raven's documents rightly suggest using it's threaded transport for
+    critical applications. Salt however handles this possible performance
+    impact for us by dispatching log records on a dedicated thread. It's up
+    to the user to use the threaded transports or not but it's not *required*
+    for salt.
 
 
     .. _`DSN`: http://raven.readthedocs.org/en/latest/config/index.html#the-sentry-dsn
@@ -173,7 +177,6 @@ def setup_handlers():
             'Failed to setup the sentry logging handler: {0}'.format(exc),
             exc_info=exc
         )
-        return
 
 
 def get_config_value(name, default=None):
