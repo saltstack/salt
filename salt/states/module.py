@@ -104,11 +104,11 @@ def run(name, **kwargs):
             rarg = 'm_fun'
         else:
             rarg = arg
-        if rarg not in kwargs and rarg not in defaults:
+        if rarg not in kwargs and arg not in defaults:
             missing.add(rarg)
             continue
-        if rarg in defaults:
-            args.append(defaults[rarg])
+        if arg in defaults:
+            args.append(defaults[arg])
         else:
             args.append(kwargs.pop(rarg))
     if missing:
