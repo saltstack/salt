@@ -131,16 +131,7 @@ class Serial(object):
                             obj[idx] = odict_encoder(entry)
                         return obj
                     return obj
-
-                if isinstance(msg, dict):
-                    for k, v in msg.copy().iteritems():
-                        msg[k] = odict_encoder(v)
-                elif isinstance(msg, (list, tuple)):
-                    msg = list(msg)
-                    for idx, entry in enumerate(msg):
-                        msg[idx] = odict_encoder(entry)
-
-                return msgpack.dumps(msg)
+                return msgpack.dumps(odict_encoder(msg))
 
     def dump(self, msg, fn_):
         '''
