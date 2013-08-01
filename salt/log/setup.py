@@ -33,7 +33,7 @@ QUIET = logging.QUIET = 1000
 
 # Import salt libs
 from salt._compat import string_types
-from salt.log.handlers import TemporaryLoggingHandler
+from salt.log.handlers import QueueDispatchingHandler, TemporaryLoggingHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
 LOG_LEVELS = {
@@ -89,8 +89,11 @@ LOGGING_NULL_HANDLER = TemporaryLoggingHandler()
 # Store a reference to the temporary console logger
 LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
 
-# Store a reference to the queue logging handler
+# Store a reference to the "storing" logging handler
 LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
+
+# Store a reference to the logging queue dispatcher
+LOGGING_QUEUE_DISPATCHER = QueueDispatchingHandler()
 
 
 class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
@@ -366,7 +369,6 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         syslog_opts = {
             'facility': logging.handlers.SysLogHandler.LOG_USER,
             'socktype': socket.SOCK_DGRAM
-
         }
 
         if parsed_log_path.scheme == 'file' and parsed_log_path.path:
@@ -482,6 +484,8 @@ def setup_extended_logging(opts):
         # Don't re-configure external loggers
         return
 
+    logging.root.addHandler(LOGGING_QUEUE_DISPATCHER)
+
     # Explicit late import of salt's loader
     import salt.loader
 
@@ -530,18 +534,21 @@ def setup_extended_logging(opts):
                     name, handler
                 )
             )
-            logging.root.addHandler(handler)
+            LOGGING_QUEUE_DISPATCHER.addHandler(handler)
+
+    # Let's now start our queue dispatching handler background thread
+    LOGGING_QUEUE_DISPATCHER.start()
 
     # Let's get a reference to the newly added logging handlers
-    additional_handlers = []
+    additional_handlers = [LOGGING_QUEUE_DISPATCHER]
     for handler in logging.root.handlers:
         if handler in initial_handlers:
             continue
         additional_handlers.append(handler)
 
-    if additional_handlers:
-        # Sync the null logging handler messages with the temporary handler
-        LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
+    # Sync the null logging handler messages with the temporary handler
+    LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
+
     # Remove the temporary queue logging handler
     __remove_queue_logging_handler()
 
