@@ -74,13 +74,6 @@ def run(name, **kwargs):
         arglen = len(aspec[0])
     if isinstance(aspec[3], tuple):
         deflen = len(aspec[3])
-    if aspec[2]:
-        # This state accepts kwargs
-        for key in kwargs:
-            # Passing kwargs the conflict with args == stack trace
-            if key in aspec[0]:
-                continue
-            defaults[key] = kwargs[key]
     # Match up the defaults with the respective args
     for ind in range(arglen - 1, -1, -1):
         minus = arglen - ind
@@ -130,9 +123,19 @@ def run(name, **kwargs):
 
         args.extend(varargs)
 
+    nkwargs = {}
+    if aspec[2] and aspec[2] in kwargs:
+        nkwargs = kwargs.pop(aspec[2])
+
+        if not isinstance(nkwargs, dict):
+            msg = "'{0}' must be a dict."
+            ret['comment'] = msg.format(aspec[2])
+            ret['result'] = False
+            return ret
+
     try:
         if aspec[2]:
-            mret = __salt__[name](*args, **kwargs)
+            mret = __salt__[name](*args, **nkwargs)
         else:
             mret = __salt__[name](*args)
     except Exception:
