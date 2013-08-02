@@ -281,9 +281,8 @@ def _bsd_cpudata(osdata):
 
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
 
-    if grains['cpu_flags'] and not isinstance(grains['cpu_flags'], list):
+    if 'cpu_flags' in grains and isinstance(grains['cpu_flags'], basestring):
         grains['cpu_flags'] = grains['cpu_flags'].split(' ')
-
 
     if osdata['kernel'] == 'NetBSD':
         grains['cpu_flags'] = []
@@ -712,7 +711,8 @@ _OS_FAMILY_MAP = {
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
-    'GCEL': 'Debian'
+    'GCEL': 'Debian',
+    'Linaro': 'Debian'
 }
 
 
@@ -804,6 +804,22 @@ def os_data():
                             grains['lsb_distrib_release'] = comps[2]
                             grains['lsb_distrib_codename'] = \
                                 comps[3].replace('(', '').replace(')', '')
+            elif os.path.isfile('/etc/centos-release'):
+                # CentOS Linux
+                grains['lsb_distrib_id'] = 'CentOS'
+                with salt.utils.fopen('/etc/centos-release') as ifile:
+                    for line in ifile:
+                        # Need to pull out the version and codename
+                        # in the case of custom content in /etc/centos-release
+                        find_release = re.compile(r'\d+\.\d+')
+                        find_codename = re.compile(r'(?<=\()(.*?)(?=\))')
+                        release = find_release.search(line)
+                        codename = find_codename.search(line)
+                        if release is not None:
+                            grains['lsb_distrib_release'] = release.group()
+                        if codename is not None:
+                            grains['lsb_distrib_codename'] = codename.group()
+
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
         (osname, osrelease, oscodename) = \
@@ -884,6 +900,8 @@ def os_data():
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
+    if grains['os_family'] == "RedHat":
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
 
     return grains
 

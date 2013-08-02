@@ -42,7 +42,9 @@ def latest(name,
            bare=False,
            remote_name='origin',
            always_fetch=False,
-           identity=None):
+           identity=None,
+           onlyif=False,
+           unless=False):
     '''
     Make sure the repository is cloned to the given directory and is up to date
 
@@ -78,10 +80,27 @@ def latest(name,
         a fetch to occur. Only applies when rev is set. (Default: False)
     identity
         A path to a private key to use over SSH
+    onlyif
+        A command to run as a check, run the named command only if the command
+        passed to the ``onlyif`` option returns true
+    unless
+        A command to run as a check, only run the named command if the command
+        passed to the ``unless`` option returns false
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
         return _fail(ret, '"target" option is required')
+
+    run_check_cmd_kwargs = {'cwd': target,
+                            'runas': runas}
+
+    # check if git.latest should be applied
+    cret = _run_check(
+        run_check_cmd_kwargs, onlyif, unless
+    )
+    if isinstance(cret, dict):
+        ret.update(cret)
+        return ret
 
     bare = bare or mirror
     check = 'refs' if bare else '.git'
@@ -298,3 +317,25 @@ def _neutral_test(ret, comment):
     ret['result'] = None
     ret['comment'] = comment
     return ret
+
+
+def _run_check(cmd_kwargs, onlyif, unless):
+    '''
+    Execute the onlyif and unless logic.
+    Return a result dict if:
+    * onlyif failed (onlyif != 0)
+    * unless succeeded (unless == 0)
+    else return True
+    '''
+    if onlyif:
+        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+            return {'comment': 'onlyif execution failed',
+                    'result': True}
+
+    if unless:
+        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+            return {'comment': 'unless execution succeeded',
+                    'result': True}
+
+    # No reason to stop, return True
+    return True

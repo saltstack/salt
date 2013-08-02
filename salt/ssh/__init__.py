@@ -3,8 +3,12 @@ Create ssh executor system
 '''
 # Import python libs
 import os
+import tarfile
+import tempfile
 import json
 import getpass
+import shutil
+import copy
 
 # Import salt libs
 import salt.ssh.shell
@@ -85,14 +89,25 @@ class SSH(object):
                     arg_str,
                     host,
                     **target)
-            single.cmd()
+            ret = single.cmd_block()
+            if ret.startswith('deploy'):
+                single.deploy()
+                ret = single.cmd_block()
             target.pop('passwd')
             single = Single(
                     self.opts,
                     self.opts['arg_str'],
                     host,
                     **target)
-            return single.cmd()
+            stdout = single.cmd_block()
+            try:
+                data = json.loads(stdout)
+                if 'local' in data:
+                    return {host: data['local']}
+                else:
+                    return {host: data}
+            except Exception:
+                return {host: 'Bad Return'}
         return ret
 
     def process(self):
@@ -112,27 +127,28 @@ class SSH(object):
                     if not default in self.targets[host]:
                         self.targets[host][default] = self.defaults[default]
 
-                single = Single(
-                        self.opts,
-                        self.opts['arg_str'],
-                        host,
-                        **self.targets[host])
-                running[host] = {'iter': single.cmd(),
-                                 'single': single}
+                if host not in running:
+                    single = Single(
+                            self.opts,
+                            self.opts['arg_str'],
+                            host,
+                            **self.targets[host])
+                    running[host] = {'iter': single.cmd(),
+                                     'single': single}
             for host in running:
                 stdout, stderr = next(running[host]['iter'])
-                if stdout == 'deploy':
+                if stdout is None and stderr is None:
+                    continue
+                if stdout.startswith('deploy'):
                     running[host]['single'].deploy()
                     running[host]['iter'] = single.cmd()
-                elif stdout is None and stderr is None:
-                    continue
                 else:
                     # This job is done, yield
                     try:
                         if not stdout and stderr:
                             yield {running[host]['single'].id: stderr}
                         else:
-                            data = json.dumps(stdout)
+                            data = json.loads(stdout)
                             if 'local' in data:
                                 yield {running[host]['single'].id: data['local']}
                             else:
@@ -247,11 +263,48 @@ class Single():
                'EOF').format(self.arg_str)
         if self.arg_str.startswith('state.highstate'):
             self.highstate_seed()
+        if self.arg_str.startswith('state.sls'):
+            pass
+            #trans_tar = self.sls_seed()
+            #print trans_tar
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
             else:
                 yield stdout, stderr
+
+    def cmd_block(self):
+        '''
+        Prepare the precheck command to send to the subsystem
+        '''
+        # 1. check if python is on the target
+        # 2. check is salt-call is on the target
+        # 3. deploy salt-thin
+        # 4. execute command
+        cmd = (' << "EOF"\n'
+               'if [ `type -p python2` ]\n'
+               'then\n'
+               '    PYTHON=python2\n'
+               'elif [ `type -p python26` ]\n'
+               'then\n'
+               '    PYTHON=python26\n'
+               'elif [ `type -p python27` ]\n'
+               'then\n'
+               '    PYTHON=python27\n'
+               'fi\n'
+               'if hash salt-call\n'
+               'then\n'
+               '    SALT=$(type -p salt-call)\n'
+               'elif [ -f /tmp/salt-call ] \n'
+               'then\n'
+               '    SALT=/tmp/salt-call\n'
+               'else\n'
+               '    echo "deploy"\n'
+               '    exit 1\n'
+               'fi\n'
+               '$PYTHON $SALT --local --out json -l quiet {0}\n'
+               'EOF').format(self.arg_str)
+        return self.shell.exec_cmd(cmd)
 
     def highstate_seed(self):
         '''
@@ -294,7 +347,7 @@ class Single():
         # Compile and verify the raw chunks
         chunks = st_.compile_high_data(high)
         file_refs = lowstate_file_refs(chunks)
-
+        trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
 
 
 class FunctionWrapper(dict):
@@ -401,6 +454,7 @@ def lowstate_file_refs(chunks):
             refs[env].append(crefs)
     return refs
 
+
 def salt_refs(data):
     '''
     Pull salt file references out of the states
@@ -416,3 +470,33 @@ def salt_refs(data):
                 if comp.startswith(proto):
                     ret.append(comp)
     return ret
+
+
+def prep_trans_tar(opts, chunks, file_refs):
+    '''
+    Generate the execution package from the env file refs and a low state
+    data structure
+    '''
+    gendir = tempfile.mkdtemp()
+    trans_tar = salt.utils.mkstemp()
+    fnopts = copy.copy(opts)
+    fnopts['cachedir'] = gendir
+    file_client = salt.fileclient.LocalClient(fnopts)
+    lowfn = os.path.join(gendir, 'lowstate.json')
+    with open(lowfn, 'w+') as fp_:
+        fp_.write(json.dumps(lowfn))
+    for env in file_refs:
+        for ref in file_refs[env]:
+            if file_client.cache_file(ref, env):
+                break
+            if file_client.cache_dir(ref, env, True):
+                break
+    cwd = os.getcwd()
+    os.chdir(gendir)
+    with tarfile.open(trans_tar, 'w:gz') as tfp:
+        for root, dirs, files in os.walk(gendir):
+            for name in files:
+                tfp.add(os.path.join(root, name))
+    os.chdir(cwd)
+    shutil.rmtree(gendir)
+    return trans_tar

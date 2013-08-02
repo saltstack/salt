@@ -103,11 +103,11 @@
 # set to zero, the time between reconnection attempts will stay constant.
 #acceptance_wait_time_max: 0
 
-# When the master-key changes, the minion will try to re-auth itself to
-# receive the new master key. In larger environments this can cause a 
-# syn-flood on the master because all minions try to re-auth immediately. 
-# To prevent this and have a minion wait for a random amount of time, 
-# specify a value here. The wait-time will be chosen in seconds between
+# When the master key changes, the minion will try to re-auth itself to receive
+# the new master key. In larger environments this can cause a SYN flood on the
+# master because all minions try to re-auth immediately. To prevent this and
+# have a minion wait for a random amount of time, use this optional parameter.
+# The wait-time will be a random number of seconds between
 # 0 and the defined value.
 #random_reauth_delay: 60
 

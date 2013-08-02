@@ -45,8 +45,6 @@ import salt.loader
 import salt.utils
 import salt.payload
 import salt.utils.schedule
-# TODO: should probably use _getargs() from salt.utils?
-from salt.state import _getargs
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
@@ -129,7 +127,7 @@ def parse_args_and_kwargs(func, args, data=None):
     This is to prevent things like 'echo "Hello: world"' to be parsed as
     dictionaries.
     '''
-    spec_args, _, has_kwargs, _ = salt.state._getargs(func)
+    spec_args, _, has_kwargs, _ = salt.utils.get_function_argspec(func)
     _args = []
     kwargs = {}
     for arg in args:
@@ -658,7 +656,9 @@ class Minion(object):
                 )
             except TypeError as exc:
                 trb = traceback.format_exc()
-                aspec = _getargs(minion_instance.functions[data['fun']])
+                aspec = salt.utils.get_function_argspec(
+                    minion_instance.functions[data['fun']]
+                )
                 msg = ('TypeError encountered executing {0}: {1}. See '
                        'debug log for more info.  Possibly a missing '
                        'arguments issue:  {2}').format(function_name, exc,

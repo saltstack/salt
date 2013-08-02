@@ -23,6 +23,7 @@ class Depends(object):
     '''
     # Dependency -> list of things that depend on it
     dependency_dict = defaultdict(set)
+
     def __init__(self, *dependencies, **kwargs):
         '''
         The decorator is instantiated with a list of dependencies (string of
@@ -46,7 +47,7 @@ class Depends(object):
                 dependencies
             )
         )
-        self.depencancies = dependencies
+        self.dependencies = dependencies
         self.fallback_funcion = kwargs.get('fallback_funcion')
 
     def __call__(self, function):
@@ -56,7 +57,7 @@ class Depends(object):
         class wide depandancy_dict
         '''
         module = inspect.getmodule(inspect.stack()[1][0])
-        for dep in self.depencancies:
+        for dep in self.dependencies:
             self.dependency_dict[dep].add(
                 (module, function, self.fallback_funcion)
             )
@@ -110,7 +111,7 @@ class Depends(object):
                     continue
 
 
-class depends(Depends):
+class depends(Depends):  # pylint: disable=C0103
     '''
     Wrapper of Depends for capitalization
     '''
@@ -121,12 +122,58 @@ def which(exe):
     Decorator wrapper for salt.utils.which
     '''
     def wrapper(function):
-        @wraps(function)
         def wrapped(*args, **kwargs):
             if salt.utils.which(exe) is None:
                 raise CommandNotFoundError(
-                    'The {0!r} binary was not found in $PATH.'
+                    'The {0!r} binary was not found in $PATH.'.format(exe)
                 )
             return function(*args, **kwargs)
-        return wrapped
+        return identical_signature_wrapper(function, wrapped)
     return wrapper
+
+
+def which_bin(exes):
+    '''
+    Decorator wrapper for salt.utils.which_bin
+    '''
+    def wrapper(function):
+        def wrapped(*args, **kwargs):
+            if salt.utils.which_bin(exes) is None:
+                raise CommandNotFoundError(
+                    'None of provided binaries({0}) was not found '
+                    'in $PATH.'.format(
+                        ['{0!r}'.format(exe) for exe in exes]
+                    )
+                )
+            return function(*args, **kwargs)
+        return identical_signature_wrapper(function, wrapped)
+    return wrapper
+
+
+
+def identical_signature_wrapper(original_function, wrapped_function):
+    '''
+    Return a function with identical signature as ``original_function``'s which
+    will call the ``wrapped_function``.
+    '''
+    context = {'__wrapped__': wrapped_function}
+    function_def = compile(
+        'def {0}({1}):\n'
+        '    return __wrapped__({2})'.format(
+            # Keep the original function name
+            original_function.__name__,
+            # The function signature including defaults, ie, 'timeout=1'
+            inspect.formatargspec(
+                *inspect.getargspec(original_function)
+            )[1:-1],
+            # The function signature without the defaults
+            inspect.formatargspec(
+                formatvalue=lambda val: '',
+                *inspect.getargspec(original_function)
+            )[1:-1]
+        ),
+        '<string>',
+        'exec'
+    )
+    exec function_def in context
+    return wraps(original_function)(context[original_function.__name__])

@@ -125,4 +125,21 @@ command::
 
     salt \* cmd.run 'rm -rf /tmp/*'
 
+Use the `expr_form` argument to specify a matcher
 
+.. code-block:: yaml
+
+    clean_tmp:
+      cmd.cmd.run:
+        - tgt: 'os:Ubuntu'
+        - expr_form: grain
+        - arg:
+          - rm -rf /tmp/*
+
+
+    clean_tmp:
+      cmd.cmd.run:
+        - tgt: 'G@roles:hbase_master'
+        - expr_form: compound
+        - arg:
+          - rm -rf /tmp/*

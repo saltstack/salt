@@ -44,6 +44,6 @@ Consider the following example:
 
 Consider that the current salt release is ``0.16.0``. Whenever ``foo`` is 
 passed a value different from ``None`` that warning will be shown to the user.  
-This will happen in versions ``0.16.1`` to ``0.18.0``, after which a 
+This will happen in versions ``0.16.2`` to ``0.18.0``, after which a 
 :py:exc:`RuntimeError` will be raised making us aware that the deprecated code 
 should now be removed.
