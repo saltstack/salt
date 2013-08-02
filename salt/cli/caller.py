@@ -52,7 +52,10 @@ class Caller(object):
         ret = {}
         fun = self.opts['fun']
         ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
-        proc_fn = os.path.join(self.opts['cachedir'], 'proc', ret['jid'])
+        proc_fn = os.path.join(
+            salt.minion.get_proc_dir(self.opts['cachedir']),
+            ret['jid']
+        )
         if fun not in self.minion.functions:
             sys.stderr.write('Function {0} is not available\n'.format(fun))
             sys.exit(-1)

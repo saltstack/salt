@@ -107,10 +107,6 @@ def get_proc_dir(cachedir):
     if not os.path.isdir(fn_):
         # proc_dir is not present, create it
         os.makedirs(fn_)
-    else:
-        # proc_dir is present, clean out old proc files
-        for proc_fn in os.listdir(fn_):
-            os.remove(os.path.join(fn_, proc_fn))
     return fn_
 
 
