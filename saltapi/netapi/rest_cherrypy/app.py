@@ -202,7 +202,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     '''
     # Redirect to the login page if the session hasn't been authed
-    if not cherrypy.session.get('token', None):
+    if not cherrypy.session.has_key('token'):
         raise cherrypy.InternalRedirect('/login')
 
     # Session is authenticated; inform caches
