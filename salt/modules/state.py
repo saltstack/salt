@@ -168,6 +168,9 @@ def highstate(test=None, **kwargs):
     CLI Example::
 
         salt '*' state.highstate
+
+        salt '*' state.highstate exclude=sls_to_exclude
+        salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
     conflict = running()
     if conflict:
@@ -228,6 +231,8 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     CLI Example::
 
         salt '*' state.sls core,edit.vim dev
+
+        salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
 
     conflict = running()
@@ -309,6 +314,9 @@ def top(topfn, test=None, **kwargs):
     CLI Example::
 
         salt '*' state.top reverse_top.sls
+
+        salt '*' state.top reverse_top.sls exclude=sls_to_exclude
+        salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
     conflict = running()
     if conflict:
