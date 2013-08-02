@@ -30,3 +30,6 @@ REST URI Reference
 
 .. autoclass:: Run
     :members: POST
+
+.. autoclass:: Events
+    :members: GET

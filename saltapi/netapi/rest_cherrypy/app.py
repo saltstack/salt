@@ -957,6 +957,12 @@ class Run(LowDataAdapter):
 
 
 class Events(object):
+    '''
+    The event bus on the Salt master exposes a large variety of things, notably
+    when executions are started on the master and also when minions ultimately
+    return their results. This URL provides a real-time window into a running
+    Salt infrastructure.
+    '''
     exposed = True
 
     _cp_config = dict(LowDataAdapter._cp_config, **{
@@ -975,6 +981,49 @@ class Events(object):
         self.opts = cherrypy.config['saltopts']
 
     def GET(self, token=None):
+        '''
+        Return an HTTP stream of the Salt master event bus; this stream is
+        formatted per the Server Sent Events (SSE) spec
+
+        .. versionadded:: 0.8.3
+
+        .. http:get:: /events
+
+            **Example request**::
+
+                % curl -sS localhost:8000/events
+
+            .. code-block:: http
+
+                GET /events HTTP/1.1
+                Host: localhost:8000
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Connection: keep-alive
+                Cache-Control: no-cache
+                Content-Type: text/event-stream;charset=utf-8
+
+                retry: 400
+                data: {'tag': '', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
+
+                data: {'tag': '20130802115730568475', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
+
+        .. note:: Caveat when using CORS
+
+            Browser clients currently lack Cross-origin resource sharing (CORS)
+            support for the ``EventSource()`` API. Cross-domain requests from a
+            browser may instead pass the :mailheader:`X-Auth-Token` value as an
+            URL parameter::
+
+                % curl -sS localhost:8000/events/6d1b722e
+
+        :status 200: success
+        :status 401: could not authenticate using provided credentials
+        '''
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
         if token:
