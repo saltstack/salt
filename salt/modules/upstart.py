@@ -50,7 +50,7 @@ def __virtual__():
     Only work on Ubuntu
     '''
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] == 'Ubuntu':
+    if __grains__['os'] in ('Ubuntu', 'Linaro'):
         return 'service'
     return False
 
