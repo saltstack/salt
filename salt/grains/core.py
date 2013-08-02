@@ -711,7 +711,8 @@ _OS_FAMILY_MAP = {
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
-    'GCEL': 'Debian'
+    'GCEL': 'Debian',
+    'Linaro': 'Debian'
 }
 
 
