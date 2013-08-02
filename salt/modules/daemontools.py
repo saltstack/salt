@@ -11,21 +11,32 @@ service state via provider interface:
 import os
 import re
 
+# Import salt libs
+from salt.exceptions import CommandExecutionError
+
 # Function alias to not shadow built-ins.
 __func_alias__ = {
     'reload_': 'reload'
 }
 
-if os.path.exists('/service'):
-    SERVICE_DIR = "/service"
-elif os.path.exists('/var/service'):
-    SERVICE_DIR = "/var/service"
+VALID_SERVICE_DIRS = [
+    '/service',
+    '/var/service',
+    '/etc/service',
+]
+SERVICE_DIR = None
+for service_dir in VALID_SERVICE_DIRS:
+    if os.path.exists(service_dir):
+        SERVICE_DIR = service_dir
+        break
 
 
 def _service_path(name):
     '''
     build service path
     '''
+    if not SERVICE_DIR:
+        raise CommandExecutionError("Could not find service directory.")
     return '{0}/{1}'.format(SERVICE_DIR, name)
 
 
@@ -135,5 +146,7 @@ def get_all():
 
         salt '*' daemontools.get_all
     '''
+    if not SERVICE_DIR:
+        raise CommandExecutionError("Could not find service directory.")
     #- List all daemontools services in
     return sorted(os.listdir(SERVICE_DIR))
