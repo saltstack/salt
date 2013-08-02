@@ -17,7 +17,7 @@
 
 
 Name:           salt
-Version:        0.16.1
+Version:        0.16.2
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -52,9 +52,6 @@ Requires:       python-pycrypto
 Requires:       python-pyzmq >= 2.1.9
 Requires(pre): %fillup_prereq
 Requires(pre): %insserv_prereq
-Requires(pre): /usr/sbin/groupadd
-Requires(pre): /usr/sbin/useradd
-Requires(pre): /usr/sbin/userdel
 %if 0%{?suse_version} >= 1210
 BuildRequires:  systemd
 %{?systemd_requires}

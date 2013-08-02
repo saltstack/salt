@@ -1,4 +1,32 @@
 -------------------------------------------------------------------
+Fri Aug  2 05:36:08 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.16.2
+  - gracefully handle lsb_release data when it is enclosed in quotes
+  - fixed pillar load from master config
+  - pillar function pillar.item and pillar.items instead of pillar.data
+  - fixed traceback when pillar sls is malformed
+  - gracefully handle quoted publish commands
+  - publich function publish.item and publish.items instead of publish.data
+  - salt-key usage in minionswarm script fixed
+  - minion random reauth_delay added to stagger re-auth attempts.
+  - improved user and group management
+  - improved file management
+  - improved package management
+  - service management custom initscripts support
+  - module networking hwaddr renamed to be in line with other modules
+  - fixed traceback in bridge.show
+  - fixed ssh know_hosts and auth.present output.
+  for more information: http://docs.saltstack.com/topics/releases/0.16.2.html
+
+-------------------------------------------------------------------
+Mon Jul 29 20:11:14 UTC 2013 - aboe76@gmail.com
+
+- removed not needed requirements:
+  Requires(pre): /usr/sbin/groupadd
+  Requires(pre): /usr/sbin/useradd
+  Requires(pre): /usr/sbin/userdel
+-------------------------------------------------------------------
 Mon Jul 29 18:06:03 UTC 2013 - aboe76@gmail.com
 
 - Updated to salt 0.16.1
