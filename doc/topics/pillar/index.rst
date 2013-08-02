@@ -171,7 +171,7 @@ will return a freshly reloaded pillar and :mod:`pillar.raw
     # salt '*' pillar.items
 
 .. note::
-    Prior to version 0.16.1, this function is named ``pillar.data``. This
+    Prior to version 0.16.2, this function is named ``pillar.data``. This
     function name is still supported for backwards compatibility.
 
 

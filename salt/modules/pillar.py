@@ -62,7 +62,7 @@ data = items
 
 def item(*args):
     '''
-    .. versionadded:: 0.16.1
+    .. versionadded:: 0.16.2
 
     Return one ore more pillar entries
 
