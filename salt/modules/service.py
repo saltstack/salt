@@ -11,21 +11,22 @@ __func_alias__ = {
 }
 
 GRAINMAP = {
-           'Arch': '/etc/rc.d',
-           'Arch ARM': '/etc/rc.d',
-           'Debian': '/etc/init.d',
-           'Fedora': '/etc/init.d',
-           'RedHat': '/etc/init.d',
-           'Ubuntu': '/etc/init.d',
-           'Gentoo': '/etc/init.d',
-           'CentOS': '/etc/init.d',
-           'CloudLinux': '/etc/init.d',
-           'Amazon': '/etc/init.d',
-           'SunOS': '/etc/init.d',
-           'SUSE  Enterprise Server': '/etc/init.d',
-           'openSUSE': '/etc/init.d',
-           'OEL': '/etc/init.d',
-          }
+    'Arch': '/etc/rc.d',
+    'Arch ARM': '/etc/rc.d',
+    'Debian': '/etc/init.d',
+    'Fedora': '/etc/init.d',
+    'RedHat': '/etc/init.d',
+    'Ubuntu': '/etc/init.d',
+    'Gentoo': '/etc/init.d',
+    'CentOS': '/etc/init.d',
+    'CloudLinux': '/etc/init.d',
+    'Amazon': '/etc/init.d',
+    'SunOS': '/etc/init.d',
+    'SUSE  Enterprise Server': '/etc/init.d',
+    'openSUSE': '/etc/init.d',
+    'OEL': '/etc/init.d',
+}
+
 
 def __virtual__():
     '''
@@ -33,21 +34,22 @@ def __virtual__():
     '''
     # Disable on these platforms, specific service modules exist:
     disable = set((
-               'RedHat',
-               'CentOS',
-               'Amazon',
-               'Scientific',
-               'CloudLinux',
-               'Fedora',
-               'Gentoo',
-               'Ubuntu',
-               'Debian',
-               'Arch',
-               'Arch ARM',
-               'ALT',
-               'SUSE  Enterprise Server',
-               'OEL',
-              ))
+        'RedHat',
+        'CentOS',
+        'Amazon',
+        'Scientific',
+        'CloudLinux',
+        'Fedora',
+        'Gentoo',
+        'Ubuntu',
+        'Debian',
+        'Arch',
+        'Arch ARM',
+        'ALT',
+        'SUSE  Enterprise Server',
+        'OEL',
+        'Linaro',
+    ))
     if __grains__.get('os', '') in disable:
         return False
     # Disable on all non-Linux OSes as well
