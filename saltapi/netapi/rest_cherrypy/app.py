@@ -963,6 +963,10 @@ class Events(object):
         'response.stream': True,
         'tools.encode.encoding': 'utf-8',
 
+        # These two are handled manually below
+        'tools.salt_auth.on': False,
+        'tools.salt_token.on': False,
+
         'tools.hypermedia_in.on': False,
         'tools.hypermedia_out.on': False,
     })
@@ -970,13 +974,23 @@ class Events(object):
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
 
-    def GET(self, *args):
-        cherrypy.response.headers['Content-Type'] = 'text/event-stream'
-        cherrypy.response.headers['Cache-Control'] = 'no-cache'
-        cherrypy.response.headers['Connection'] = 'keep-alive'
+    def GET(self, token=None):
+        # Pulling the session token from an URL param is a workaround for
+        # browsers not supporting CORS in the EventSource API.
+        if token:
+            cherrypy.session['token'] = token
+        else:
+            cherrypy.tools.salt_token.callable()
+
+        # Perform authentication check as normal
+        cherrypy.tools.salt_auth.callable()
 
         # Release the session lock before starting the long-running response
         cherrypy.session.release_lock()
+
+        cherrypy.response.headers['Content-Type'] = 'text/event-stream'
+        cherrypy.response.headers['Cache-Control'] = 'no-cache'
+        cherrypy.response.headers['Connection'] = 'keep-alive'
 
         def listen():
             event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
