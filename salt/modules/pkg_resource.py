@@ -3,7 +3,6 @@ Resources needed by pkg providers
 '''
 
 # Import python libs
-import collections
 import distutils.version  # pylint: disable=E0611
 import fnmatch
 import logging
