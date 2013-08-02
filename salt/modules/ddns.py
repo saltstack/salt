@@ -29,42 +29,37 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True):
     '''
     Add, replace, or update the A and PTR (reverse) records for a host.
 
-    Note: This function attempts to add reverse records to each
-    possible zone, beginning with the least specific.
-
     CLI Example::
         
         salt ns1 ddns.add_host example.com host1 60 10.1.1.1
     '''
 
-    a = update(zone, name, ttl, 'A', ip, nameserver, replace)
-    if a is False:
+    res = update(zone, name, ttl, 'A', ip, nameserver, replace)
+    if res is False:
         return False
     
     fqdn = '{0}.{1}.'.format(name, zone)
     zone = 'in-addr.arpa.'
     parts = ip.split('.')
-    ptr = False
+    popped = []
 
-    # Iterate over possible reverse zones, starting at the
-    # least specific.
+    # Iterate over possible reverse zones
     while len(parts) > 1:
-        zone = '{0}.{1}'.format(parts.pop(0), zone)
-        name = ip.replace('{0}.'.format('.'.join(parts)), '')
+        p = parts.pop(0)
+        popped.append(p)
+        zone = '{0}.{1}'.format(p, zone)
+        name = ip.replace('{0}.'.format('.'.join(popped)), '', 1)
         ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, replace)
         if ptr:
             return True
-        elif ptr is None:
-            return a
-    return False
+    return res
 
 
 def delete_host(zone, name, nameserver='127.0.0.1'):
     '''
-    Delete the A and PTR (reverse) records for a host.
+    Delete the forward and reverse records for a host.
 
-    Note: This attempts to delete reverse records from each
-    possible zone, beginning with the least specific.
+    Returns true if any records are deleted.
 
     CLI Example::
         
@@ -75,29 +70,28 @@ def delete_host(zone, name, nameserver='127.0.0.1'):
     request = dns.message.make_query(fqdn, 'A')
     answer = dns.query.udp(request, nameserver)
     try:
-        ip = answer.answer[0].items[0].address
+        ips = [i.address for i in answer.answer[0].items]
     except IndexError:
-        ip = None
+        ips = []
 
-    a = delete(zone, name, 'A', nameserver=nameserver)
-    if not ip:
-        return a
+    res = delete(zone, name, nameserver=nameserver)
 
-    zone = 'in-addr.arpa.'
-    parts = ip.split('.')
-    ptr = False
+    fqdn = fqdn + '.' 
+    for ip in ips:
+        zone = 'in-addr.arpa.'
+        parts = ip.split('.')
+        popped = []
 
-    # Iterate over possible reverse zones, starting at the
-    # least specific.
-    while len(parts) > 1:
-        zone = '{0}.{1}'.format(parts.pop(0), zone)
-        name = ip.replace('{0}.'.format('.'.join(parts)), '')
-        ptr = delete(zone, name, 'PTR', nameserver=nameserver)
+        # Iterate over possible reverse zones
+        while len(parts) > 1:
+            p = parts.pop(0)
+            popped.append(p)
+            zone = '{0}.{1}'.format(p, zone)
+            name = ip.replace('{0}.'.format('.'.join(popped)), '', 1)
+            ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver)
         if ptr:
-            return True
-        elif ptr is None:
-            return a
-    return False
+            res = True
+    return res
 
 
 def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False):
