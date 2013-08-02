@@ -23,7 +23,7 @@ which makes use of the jinja templating system would look like this:
         - defaults:
             custom_var: "default value"
             other_var: 123
-    {% if grains['os'] = 'Ubuntu' %}
+    {% if grains['os'] == 'Ubuntu' %}
         - context:
             custom_var: "override"
     {% endif %}
