@@ -969,9 +969,8 @@ class Events(object):
         'response.stream': True,
         'tools.encode.encoding': 'utf-8',
 
-        # These two are handled manually below
+        # Auth handled manually below
         'tools.salt_auth.on': False,
-        'tools.salt_token.on': False,
 
         'tools.hypermedia_in.on': False,
         'tools.hypermedia_out.on': False,
@@ -979,6 +978,7 @@ class Events(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
+        self.auth = salt.auth.LoadAuth(self.opts)
 
     def GET(self, token=None):
         '''
@@ -1027,12 +1027,14 @@ class Events(object):
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
         if token:
-            cherrypy.session['token'] = token
+            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
+            salt_token = orig_sesion.get('token')
         else:
-            cherrypy.tools.salt_token.callable()
+            salt_token = cherrypy.session.get('token')
 
-        # Perform authentication check as normal
-        cherrypy.tools.salt_auth.callable()
+        # Manually verify the token
+        if not salt_token or not self.auth.get_tok(salt_token):
+            raise cherrypy.InternalRedirect('/login')
 
         # Release the session lock before starting the long-running response
         cherrypy.session.release_lock()
