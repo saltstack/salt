@@ -202,7 +202,7 @@ def install(pkgs=None,
     user
         The user under which to run pip
     .. note::
-        The ``runas`` argument is deprecated as of 0.16.1. ``user`` should be
+        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
         used instead.
     no_chown
         When user is given, do not attempt to copy and chown
@@ -508,7 +508,7 @@ def uninstall(pkgs=None,
     user
         The user under which to run pip
     .. note::
-        The ``runas`` argument is deprecated as of 0.16.1. ``user`` should be
+        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
         used instead.
     no_chown
         When user is given, do not attempt to copy and chown
@@ -640,7 +640,7 @@ def freeze(bin_env=None,
     user
         The user under which to run pip
     .. note::
-        The ``runas`` argument is deprecated as of 0.16.1. ``user`` should be
+        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
         used instead.
     cwd
         Current working directory to run pip from
