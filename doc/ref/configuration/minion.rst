@@ -515,6 +515,91 @@ environments is to isolate via the top file.
 
     environment: None
 
+File Directory Settings
+-----------------------
+
+.. conf_minion:: file_client
+
+``file_client``
+---------------
+
+Default: ``remote``
+
+The client defaults to looking on the master server for files, but can be
+directed to look on the minion by setting this parameter to ``local``.
+
+.. code-block:: yaml
+
+    file_client: remote
+
+.. conf_minion:: file_roots
+
+``file_roots``
+--------------
+
+Default:
+
+.. code-block:: yaml
+
+    base:
+      - /srv/salt
+
+When using a local :conf_minion:`file_client`, this parameter is used to setup
+the fileserver's environments. This parameter operates identically to the
+:conf_master:`master config parameter of the same name <file_roots>`.
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt
+      dev:
+        - /srv/salt/dev/services
+        - /srv/salt/dev/states
+      prod:
+        - /srv/salt/prod/services
+        - /srv/salt/prod/states
+
+.. conf_master:: hash_type
+
+``hash_type``
+-------------
+
+Default: ``md5``
+
+The hash_type is the hash to use when discovering the hash of a file on the
+local fileserver. The default is md5, but sha1, sha224, sha256, sha384 and
+sha512 are also supported.
+
+.. code-block:: yaml
+
+    hash_type: md5
+
+.. conf_minion:: pillar_roots
+
+``pillar_roots``
+----------------
+
+Default:
+
+.. code-block:: yaml
+
+    base:
+      - /srv/pillar
+
+When using a local :conf_minion:`file_client`, this parameter is used to setup
+the pillar environments.
+
+.. code-block:: yaml
+
+    pillar_roots:
+      base:
+        - /srv/pillar
+      dev:
+        - /srv/pillar/dev
+      prod:
+        - /srv/pillar/prod
+
 Security Settings
 -----------------
 
