@@ -301,7 +301,7 @@
 # copied completely onto the minion. This is a literal copy of the settings on
 # the master but used to reference a local directory on the minion.
 
-# Set the file client, the client defaults to looking on the master server for
+# Set the file client. The client defaults to looking on the master server for
 # files, but can be directed to look at the local file directory setting
 # defined below by setting it to local.
 #file_client: remote
@@ -327,7 +327,7 @@
 #    - /srv/salt
 
 # The hash_type is the hash to use when discovering the hash of a file in
-# the minion directory, the default is md5, but sha1, sha224, sha256, sha384
+# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #hash_type: md5
 
