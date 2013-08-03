@@ -146,7 +146,7 @@ import yaml
 # Import salt libs
 import salt.utils
 import salt.utils.templates
-from salt._compat import string_types
+from salt._compat import string_types, urlparse
 
 log = logging.getLogger(__name__)
 
@@ -708,6 +708,10 @@ def managed(name,
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
 
+        If the file's contents is in pillar data, the source can be specified
+        with a pillar:// prefix and followed by a pillar path as understood by
+        the pillar.get function
+
     source_hash:
         This can be either a file which contains a source hash string for
         the source, or a source hash string. The source hash string is the
@@ -820,6 +824,13 @@ def managed(name,
     elif not isinstance(context, dict):
         return _error(
             ret, 'Context must be formed as a dict')
+
+    # if the source is for pillar data, get the pillar data and put it in
+    # contents, then blank out the source.
+    if urlparse(source).scheme == 'pillar':
+        pillar_path = source.replace('pillar://','')
+        source = None
+        contents = __salt__['pillar.get'](pillar_path)
 
     if not replace and os.path.exists(name):
        # Check and set the permissions if necessary
