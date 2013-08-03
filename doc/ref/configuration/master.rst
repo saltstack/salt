@@ -461,7 +461,12 @@ Master File Server Settings
 ``file_roots``
 --------------
 
-Default: ``base: [/srv/salt]``
+Default:
+
+.. code-block:: yaml
+
+    base:
+      - /srv/salt
 
 Salt runs a lightweight file server written in ZeroMQ to deliver files to
 minions. This file server is built into the master daemon and does not
@@ -485,11 +490,6 @@ Example:
         - /srv/salt/prod/services
         - /srv/salt/prod/states
 
-.. code-block:: yaml
-
-    base:
-      - /srv/salt
-
 .. conf_master:: hash_type
 
 ``hash_type``
@@ -498,7 +498,7 @@ Example:
 Default: ``md5``
 
 The hash_type is the hash to use when discovering the hash of a file on
-the master server, the default is md5, but sha1, sha224, sha256, sha384
+the master server. The default is md5, but sha1, sha224, sha256, sha384
 and sha512 are also supported.
 
 .. code-block:: yaml
@@ -528,25 +528,25 @@ Pillar Configuration
 ``pillar_roots``
 ----------------
 
-Set the environments and directories used to hold pillar sls data. This
-configuration is the same as file_roots:
-
-Default: ``base: [/srv/pillar]``
-
-.. code-block:: yaml
-
-    pillar_roots:
-      base:
-        - /srv/pillar/
-      dev:
-        - /srv/pillar/dev/
-      prod:
-        - /srv/pillar/prod/
+Default:
 
 .. code-block:: yaml
 
     base:
       - /srv/pillar
+
+Set the environments and directories used to hold pillar sls data. This
+configuration is the same as :conf_master:`file_roots`:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      base:
+        - /srv/pillar
+      dev:
+        - /srv/pillar/dev
+      prod:
+        - /srv/pillar/prod
 
 .. conf_master:: ext_pillar
 
