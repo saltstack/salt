@@ -34,6 +34,17 @@ from salt.exceptions import SaltReqTimeoutError, SaltException
 log = logging.getLogger(__name__)
 
 
+def split_low_tag(tag):
+    '''
+    Take a low tag and split it back into the low dict that it came from
+    '''
+    state, id_, name, fun = tag.split('_|-')
+
+    return {'state': state,
+            '__id__': id_,
+            'name': name,
+            'fun': fun}
+
 def _gen_tag(low):
     '''
     Generate the running dict tag string from the low data structure
