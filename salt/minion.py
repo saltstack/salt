@@ -101,7 +101,8 @@ def resolve_dns(opts):
 
 def get_proc_dir(cachedir):
     '''
-    Return the directory that process data is stored in
+    Given the cache directory, return the directory that process data is
+    stored in, creating it if it doesn't exist.
     '''
     fn_ = os.path.join(cachedir, 'proc')
     if not os.path.isdir(fn_):
