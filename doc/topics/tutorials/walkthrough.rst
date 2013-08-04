@@ -316,28 +316,26 @@ Many other targeting systems can be used other than globs, these systems
 include:
 
 Regular Expressions
-    Target using PCRE compliant regular expressions:
-    :doc:`Targeting with Regular Expressions</topics/targeting/pcre>`
+    Target using PCRE compliant regular expressions
 
 Grains
     Target based on grains data:
-    :doc:`Targeting with Grains</topics/targeting/grains>`
+    :doc:`Targeting with Grains </topics/targeting/grains>`
 
 Pillar
     Target based on pillar data:
-    :doc:`Targeting with Pillar</topics/targeting/pillar>`
+    :doc:`Targeting with Pillar </ref/pillar/index>`
 
 IP
-    Target based on IP addr/subnet/range:
-    :doc:`Targeting with ipcidr</topics/targeting/ipcidr>`
+    Target based on IP addr/subnet/range
 
 Compound
     Create logic to target based on multiple targets:
-    :doc:`Targeting with Compound</topics/targeting/compound>`
+    :doc:`Targeting with Compound </topics/targeting/compound>`
 
 Nodegroup
     Target with nodegroups:
-    :doc:`Targeting with Nodegroup</topics/targeting/nodegroups>`
+    :doc:`Targeting with Nodegroup </topics/targeting/nodegroups>`
 
 The concepts of targets are used on the command line with salt, but also
 function in many other areas as well, including the state system and the
