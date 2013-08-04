@@ -158,6 +158,8 @@ can be used on any states in Salt. This made sense for the networking state
 because it can define a long list of options that need to be applied to
 multiple network interfaces.
 
+.. _requisites-require-in:
+
 Require In
 ----------
 
@@ -235,6 +237,8 @@ mod_python.sls
 
 Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
+
+.. _requisites-watch-in:
 
 Watch In
 --------
