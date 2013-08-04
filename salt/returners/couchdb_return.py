@@ -125,5 +125,4 @@ def get_jids():
     for row in _response['rows']:
         ret.append( row['id'] )
     
-    log.debug(ret)
     return ret
