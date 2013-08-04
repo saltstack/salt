@@ -88,7 +88,8 @@ Package/Repository Management
   64-bit systems (:issue:`6299`)
 - Fixed incorrect reporting in pkgrepo.managed states (:issue:`5517`)
 - Fixed 32-bit binary package installs on 64-bit RHEL-based distros, and added
-  proper support for 32-bit packages on 64-bit Debian-based distros (:issue:`6303`)
+  proper support for 32-bit packages on 64-bit Debian-based distros
+  (:issue:`6303`)
 - Fixed issue where requisites were inadvertently being put into YUM repo files
   (:issue:`6471`)
 
@@ -96,7 +97,8 @@ Package/Repository Management
 Service Management
 ------------------
 - Fixed inaccurate reporting of results in :mod:`service.running
-  <salt.states.service.running>` states when the service fails to start (:issue:`5894`)
+  <salt.states.service.running>` states when the service fails to start
+  (:issue:`5894`)
 - Fixed handling of custom initscripts in RHEL-based distros so that they are
   immediately available, negating the need for a second state run to manage the
   service that the initscript controls
@@ -119,7 +121,8 @@ SSH
   <salt.states.ssh_known_hosts.present>` states
 - Fixed inaccurate reporting when :mod:`ssh_auth.present
   <salt.states.ssh_auth.present>` states are run with ``test=True``, when
-  rsa/dss is used for the ``enc`` param instead of ssh-rsa/ssh-dss (:issue:`5374`)
+  rsa/dss is used for the ``enc`` param instead of ssh-rsa/ssh-dss
+  (:issue:`5374`)
 
 
 pip
@@ -168,8 +171,9 @@ Miscellaneous
 - Fixed bug causing :mod:`cp.get_dir <salt.modules.cp.get_dir>` to return more
   directories than expected (:issue:`6048`)
 - Fixed traceback when :mod:`supervisord.running
-  <salt.states.supervisord.running>` states are run with ``test=True`` (:issue:`6053`)
-- Fixed tracebacks when Salt encounters problems running rbenv (5888_)
+  <salt.states.supervisord.running>` states are run with ``test=True``
+  (:issue:`6053`)
+- Fixed tracebacks when Salt encounters problems running rbenv (:issue:`5888`)
 - Only make the :doc:`monit module </ref/modules/all/salt.modules.monit>`
   available if monit binary is present (:issue:`5871`)
 - Fixed incorrect behavior of :mod:`img.mount_image
