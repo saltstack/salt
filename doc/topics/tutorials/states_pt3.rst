@@ -110,8 +110,8 @@ trees.
 ---------------------------
 
 A previous example showed how to spread a Salt tree across several files.
-Similarly, :term:`requisite references <requisite references>` span multiple
-files by using an :term:`include declaration`. For example:
+Similarly, :doc:`requisites </ref/states/requisites>` span multiple files by
+using an :term:`include declaration`. For example:
 
 ``python/python-libs.sls``:
 
