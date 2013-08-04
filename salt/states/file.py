@@ -708,10 +708,6 @@ def managed(name,
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
 
-        If the file's contents is in pillar data, the source can be specified
-        with a pillar:// prefix and followed by a pillar path as understood by
-        the pillar.get function
-
     source_hash:
         This can be either a file which contains a source hash string for
         the source, or a source hash string. The source hash string is the
@@ -776,19 +772,9 @@ def managed(name,
         contents of the file.  Should not be used in conjunction with a source
         file of any kind.  Ignores hashes and does not use a templating engine.
 
-        Note, including a multiline string from an external source (such as
-        Pillar) presents a formatting challenege since the multiline content
-        will not adhere to YAML's required indentation. The external content
-        must be indented manually at the Jinja level::
-
-            /tmp/myfile:
-              file:
-                - managed
-                - contents: |
-                    {{ salt['pillar.get']('some:multiline:text') | indent(8) }}
-
-            # Note the above example is indented by 8 spaces.
-
+        The contents parameter can extract pillar data by using a pillar://
+        prefix and followed by a pillar path as understood by the pillar.get
+        function
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -825,11 +811,9 @@ def managed(name,
         return _error(
             ret, 'Context must be formed as a dict')
 
-    # if the source is for pillar data, get the pillar data and put it in
-    # contents, then blank out the source.
-    if urlparse(source).scheme == 'pillar':
-        pillar_path = source.replace('pillar://','')
-        source = None
+    # if the contents specifies a pillar scheme, convert it here
+    if urlparse(contents).scheme == 'pillar':
+        pillar_path = contents.replace('pillar://','')
         contents = __salt__['pillar.get'](pillar_path)
 
     if not replace and os.path.exists(name):
