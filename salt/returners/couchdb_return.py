@@ -112,6 +112,7 @@ def get_jids():
     '''
     List all the jobs that we have..
     '''
+    options = _get_options()
     _response = _request( "GET", options['url'] + options['db'] + "/_all_docs" )
 
     # Make sure the 'total_rows' is returned.. if not error out.
@@ -120,4 +121,9 @@ def get_jids():
         return []
     
     # Return the rows .
-    return _response.rows
+    ret = []
+    for row in _response['rows']:
+        ret.append( row['id'] )
+    
+    log.debug(ret)
+    return ret
