@@ -104,6 +104,7 @@ def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base',
 
     # Test
     if __opts__['test']:
+        ret['result'] = None
         return ret
 
     # make sure the webapp is up if deployed
