@@ -72,9 +72,8 @@ minion matches is defined; for now simply specify all hosts (``*``).
 Create an ``sls`` module
 ========================
 
-In the same directory as the :term:`top file`, create an empty file, called an
-:term:`SLS module`, named ``webserver.sls``. Type the following and save the
-file:
+In the same directory as the :term:`top file`, create an empty file named
+``webserver.sls``, containing the following:
 
 .. code-block:: yaml
     :linenos:
