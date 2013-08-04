@@ -12,54 +12,6 @@ development.
 
 Set up the cloud config at ``/etc/salt/cloud``:
 
-* Using the old format:
-
-.. code-block:: yaml
-
-    # Set up the location of the salt master
-    #
-    minion:
-        master: saltmaster.example.com
-
-    # Specify whether to use public or private IP for deploy script.
-    #
-    # Valid options are:
-    #     private_ips - The salt-master is also hosted with EC2
-    #     public_ips - The salt-master is hosted outside of EC2
-    #
-    EC2.ssh_interface: public_ips
-
-    # Set the EC2 access credentials (see below)
-    #
-    EC2.id: HJGRYCILJLKJYG
-    EC2.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-
-    # Make sure this key is owned by root with permissions 0400.
-    #
-    EC2.private_key: /etc/salt/my_test_key.pem
-    EC2.keyname: my_test_key
-    EC2.securitygroup: default
-
-    # Optionally configure default region
-    #
-    EC2.location: ap-southeast-1
-    EC2.availability_zone: ap-southeast-1b
-
-    # Configure which user to use to run the deploy script. This setting is
-    # dependent upon the AMI that is used to deploy. It is usually safer to
-    # configure this individually in a profile, than globally. Typical users
-    # are:
-    #
-    # Amazon Linux -> ec2-user
-    # RHEL         -> ec2-user
-    # CentOS       -> ec2-user
-    # Ubuntu       -> ubuntu
-    #
-    EC2.ssh_username: ec2-user
-
-
-* Using the new configuration format:
-
 .. code-block:: yaml
 
     # Note: This example is for /etc/salt/cloud
@@ -205,20 +157,6 @@ Cloud Profiles
 ==============
 Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
-* Using the old cloud providers configuration format:
-
-.. code-block:: yaml
-
-    base_ec2:
-      provider: ec2
-      image: ami-e565ba8c
-      size: Micro Instance
-      ssh_username: ec2-user
-
-
-* Using the new cloud providers configuration format and the example 
-  configuration above:
-
 .. code-block:: yaml
 
     base_ec2_private:
@@ -260,20 +198,6 @@ Required Settings
 =================
 The following settings are always required for EC2:
 
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    # Set the EC2 login data
-    EC2.id: HJGRYCILJLKJYG
-    EC2.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-    EC2.keyname: test
-    EC2.securitygroup: quick-start
-    EC2.private_key: /root/test.pem
-
-
-* Using the new cloud configuration format:
-
 .. code-block:: yaml
 
     # Set the EC2 login data
@@ -292,17 +216,6 @@ Optional Settings
 EC2 allows a location to be set for servers to be deployed in. Availability 
 zones exist inside regions, and may be added to increase specificity.
 
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    # Optionally configure default region
-    EC2.location: ap-southeast-1
-    EC2.availability_zone: ap-southeast-1b
-
-
-* Using the new cloud configuration format:
-
 .. code-block:: yaml
 
     my-ec2-config:
@@ -315,17 +228,6 @@ EC2 instances can have a public or private IP, or both. When an instance is
 deployed, Salt Cloud needs to log into it via SSH to run the deploy script.
 By default, the public IP will be used for this. If the salt-cloud command is 
 run from another EC2 instance, the private IP should be used.
-
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    # Specify whether to use public or private IP for deploy script
-    # private_ips or public_ips
-    EC2.ssh_interface: public_ips
-
-
-* Using the new cloud configuration format:
 
 .. code-block:: yaml
 
@@ -341,16 +243,6 @@ common usernames include ec2-user (for Amazon Linux), ubuntu (for Ubuntu
 instances), admin (official Debian) and bitnami (for images provided by 
 Bitnami).
 
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    # Configure which user to use to run the deploy script
-    EC2.ssh_username: ec2-user
-
-
-* Using the new cloud configuration format:
-
 .. code-block:: yaml
 
     my-ec2-config:
@@ -361,19 +253,6 @@ Bitnami).
 Multiple usernames can be provided, in which case Salt Cloud will attempt to 
 guess the correct username. This is mostly useful in the main configuration 
 file:
-
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    EC2.ssh_username:
-      - ec2-user
-      - ubuntu
-      - admin
-      - bitnami
-
-
-* Using the new cloud configuration format:
 
 .. code-block:: yaml
 
@@ -387,17 +266,6 @@ file:
 
 Multiple security groups can also be specified in the same fashion:
 
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    EC2.securitygroup:
-      - default
-      - extra
-
-
-* Using the old cloud configuration format:
-
 .. code-block:: yaml
 
     my-ec2-config:
@@ -408,18 +276,7 @@ Multiple security groups can also be specified in the same fashion:
 
 Block device mappings enable you to specify additional EBS volumes or instance
 store volumes when the instance is launched. This setting is also available on
-each cloud profile. Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    EC2.block_device_mappings:
-      - DeviceName: /dev/sdb
-        VirtualName: ephemeral0
-      - DeviceName: /dev/sdc
-        VirtualName: ephemeral1
-
-
-Using the new cloud configuration syntax:
+each cloud profile.
 
 .. code-block:: yaml
 
@@ -481,17 +338,8 @@ like:
     myinstance-DEL20f5b8ad4eb64ed88f2c428df80a1a0c
 
 
-In order to enable this, add EC2.rename_on_destroy line to the main 
+In order to enable this, add rename_on_destroy line to the main 
 configuration file:
-
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    EC2.rename_on_destroy: True
-
-
-* Using the new cloud configuration format:
 
 .. code-block:: yaml
 
@@ -573,20 +421,10 @@ for an instance.
 This can also be set as a cloud provider setting in the EC2 cloud 
 configuration:
 
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    EC2.delvol_on_destroy: True
-
-
-* Using the new cloud configuration format:
-
 .. code-block:: yaml
 
     my-ec2-config:
       delvol_on_destroy: True
-
 
 
 The setting for this may be changed on an existing instance using one of the 
@@ -632,13 +470,6 @@ This results in an endpoint that looks like:
 There are other projects that support an EC2 compatibility layer, which this 
 scheme does not account for. This can be overridden by specifying the endpoint 
 directly in the main cloud configuration file:
-
-.. code-block:: yaml
-
-    EC2.endpoint: myendpoint.example.com:1138/services/Cloud
-
-
-Or, when using the new cloud configuration syntax:
 
 .. code-block:: yaml
 
