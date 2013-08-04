@@ -635,7 +635,8 @@ def _windows_platform_data():
         # location. For example:
         # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
         (osfullname, _) = osinfo.Name.split('|', 1)
-        osfullname = osfullname.strip()
+        osfullname = osfullname.strip()    
+
         grains = {
             'osmanufacturer': osinfo.Manufacturer,
             'manufacturer': systeminfo.Manufacturer,
@@ -647,6 +648,17 @@ def _windows_platform_data():
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
         }
+
+        # test for virtualized environments
+        # I only had VMware available so the rest are unvalidated
+        if 'VRTUAL' in biosinfo.Version: # (not a typo)
+            grains['virtual'] = 'HyperV'
+        elif 'A M I' in biosinfo.Version:
+            grains['virtual'] = 'VirtualPC'
+        elif 'VMware' in systeminfo.Model:
+            grains['virtual'] = 'VMware'
+        elif 'VirtualBox' in systeminfo.Model:
+            grains['virtual'] = 'VirtualBox'
 
     return grains
 
