@@ -1033,8 +1033,7 @@ def directory(name,
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
                              '"group" and "mode"'
         else:
-            targets = recurse[:]
-            if 'user' in targets:
+            if 'user' in recurse:
                 if user:
                     uid = __salt__['file.user_to_uid'](user)
                     # file.user_to_uid returns '' if user does not exist. Above
@@ -1045,16 +1044,12 @@ def directory(name,
                         ret['comment'] = 'Failed to enforce ownership for ' \
                                          'user {0} (user does not ' \
                                          'exist)'.format(user)
-                        # Remove 'user' from list of recurse targets
-                        targets = list(x for x in targets if x != 'user')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'user not specified, but configured as ' \
                                      'a target for recursive ownership ' \
                                      'management'
-                    # Remove 'user' from list of recurse targets
-                    targets = list(x for x in targets if x != 'user')
-            if 'group' in targets:
+            if 'group' in recurse:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
                     # As above with user, we need to make sure group exists.
@@ -1062,15 +1057,11 @@ def directory(name,
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)
-                        # Remove 'group' from list of recurse targets
-                        targets = list(x for x in targets if x != 'group')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
                                      'as a target for recursive ownership ' \
                                      'management'
-                    # Remove 'group' from list of recurse targets
-                    targets = list(x for x in targets if x != 'group')
 
             for root, dirs, files in os.walk(name):
                 for fn_ in files:
