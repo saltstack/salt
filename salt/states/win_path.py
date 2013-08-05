@@ -43,6 +43,7 @@ def absent(name):
         ret['comment'] = '{0} is not in the PATH'.format(name)
     
     if __opts__['test']:
+        ret['result'] = None
         return ret
     
     ret['result'] = __salt__['win_path.remove'](name)
@@ -94,6 +95,7 @@ def exists(name, index=0):
     
     ret['changes']['added'] = '{0} will be added at index {1}'.format(name, index)
     if __opts__['test']:
+        ret['result'] = None
         return ret
     
     # Add it
