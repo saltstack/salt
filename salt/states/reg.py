@@ -49,6 +49,7 @@ def present(name, value, vtype='REG_DWORD'):
         ret['changes'] = {'reg': 'configured to {}'.format(value) }
     
     if __opts__['test']:
+        ret['result'] = None
         return ret
     
     # configure the key
