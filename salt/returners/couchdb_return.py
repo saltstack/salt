@@ -140,5 +140,33 @@ def get_fun(fun):
     '''
     Return a dict with key being minion and value being the last job.
     '''
-    # Waiting on _ensure_views to be finished as it will be used to get a list of all minions.
-    return
+
+    _ret = { }
+
+    # For each minion we know about
+    for minion in get_minions():
+
+        # Make a query of the by-minion-and-date view and limit the count to 1.
+        pass
+
+    return _ret
+
+def get_minions():
+    '''
+    Return a list of minion identifiers from a request of the view.
+    '''
+    options = _get_options()
+
+    # Make the request for the view..
+    _response = _request( "GET", options['url'] + options['db'] + "/_design/salt/_view/minions?group=true" )
+
+    # Verify that we got a response back.
+    if not 'rows' in _response:
+        log.error('Unable to get available minions: {0}'.format(_response))
+        return []
+    
+    # Iterate over the rows to build up a list return it.
+    _ret = [ ]
+    for row in _response['rows']:
+        _ret.append( row['key'] )
+    return _ret
