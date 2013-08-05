@@ -45,6 +45,7 @@ def installed(name, recurse=False, force=False):
         return ret
     
     if __opts__['test']:
+        ret['result'] = None
         return ret
     
     # Install the features
