@@ -31,6 +31,7 @@ def disabled(name):
             break
     
     if __opts__['test']:
+        ret['result'] = None
         return ret
     
     # Disable it
