@@ -112,7 +112,7 @@ def mounted(name,
                                   'be set to be made persistent').format(name)
                 return ret
 
-        if ret['changes']['mount']:
+        if ret['changes'].get('mount'):
             out = __salt__['mount.set_fstab'](name,
                                               device,
                                               fstype,
