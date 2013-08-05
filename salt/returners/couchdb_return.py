@@ -67,6 +67,15 @@ def _request(method, url, content_type=None, _data=None):
         return {'error': '{0}'.format(e) }
     return json.loads(handler.read())
 
+def _ensure_views():
+    '''
+    Ensure that basic views exist, such as getting a list of minions.
+    '''
+    # Make a request to check if the design document exists.
+
+    # If the design document exists, check the views in the document.
+    return None
+
 def returner(ret):
     '''
     Take in the return and shove it into the couchdb database.
@@ -107,3 +116,29 @@ def get_jid(jid):
         log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
         return {}
     return { _response['id']: _response }
+
+def get_jids():
+    '''
+    List all the jobs that we have..
+    '''
+    options = _get_options()
+    _response = _request( "GET", options['url'] + options['db'] + "/_all_docs" )
+
+    # Make sure the 'total_rows' is returned.. if not error out.
+    if not 'total_rows' in _response:
+        log.error('Didn\'t get valid response from requesting all docs: {0}'.format(_response))
+        return []
+    
+    # Return the rows.
+    ret = []
+    for row in _response['rows']:
+        ret.append( row['id'] )
+    
+    return ret
+
+def get_fun(fun):
+    '''
+    Return a dict with key being minion and value being the last job.
+    '''
+    # Waiting on _ensure_views to be finished as it will be used to get a list of all minions.
+    return
