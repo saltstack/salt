@@ -197,6 +197,8 @@ def salt_auth_tool():
     if not cherrypy.session.get('token', None):
         raise cherrypy.InternalRedirect('/login')
 
+    print cherrypy.config
+
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
 
