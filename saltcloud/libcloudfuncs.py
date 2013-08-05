@@ -101,11 +101,23 @@ def avail_locations(conn=None):
     locations = conn.list_locations()
     ret = {}
     for img in locations:
-        ret[img.name] = {}
+        if isinstance(img.name, salt._compat.string_types):
+            img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
+        else:
+            img_name = str(img.name)
+
+        ret[img_name] = {}
         for attr in dir(img):
             if attr.startswith('_'):
                 continue
-            ret[img.name][attr] = getattr(img, attr)
+
+            attr_value = getattr(img, attr)
+            if isinstance(attr_value, salt._compat.string_types):
+                attr_value = attr_value.encode(
+                    'ascii', 'salt-cloud-force-ascii'
+                )
+            ret[img_name][attr] = attr_value
+
     return ret
 
 
@@ -120,11 +132,21 @@ def avail_images(conn=None):
     images = conn.list_images()
     ret = {}
     for img in images:
-        ret[img.name] = {}
+        if isinstance(img.name, salt._compat.string_types):
+            img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
+        else:
+            img_name = str(img.name)
+
+        ret[img_name] = {}
         for attr in dir(img):
             if attr.startswith('_'):
                 continue
-            ret[img.name][attr] = getattr(img, attr)
+            attr_value = getattr(img, attr)
+            if isinstance(attr_value, salt._compat.string_types):
+                attr_value = attr_value.encode(
+                    'ascii', 'salt-cloud-force-ascii'
+                )
+            ret[img_name][attr] = attr_value
     return ret
 
 
@@ -139,14 +161,26 @@ def avail_sizes(conn=None):
     sizes = conn.list_sizes()
     ret = {}
     for size in sizes:
-        ret[size.name] = {}
+        if isinstance(size.name, salt._compat.string_types):
+            size_name = size.name.encode('ascii', 'salt-cloud-force-ascii')
+        else:
+            size_name = str(size.name)
+
+        ret[size_name] = {}
         for attr in dir(size):
             if attr.startswith('_'):
                 continue
+
             try:
-                ret[size.name][attr] = getattr(size, attr)
+                attr_value = getattr(size, attr)
             except Exception:
                 pass
+
+            if isinstance(attr_value, salt._compat.string_types):
+                attr_value = attr_value.encode(
+                    'ascii', 'salt-cloud-force-ascii'
+                )
+            ret[size_name][attr] = attr_value
     return ret
 
 
