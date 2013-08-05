@@ -72,6 +72,7 @@ log = logging.getLogger(__name__)
 # this module namespace
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
+get_location = namespaced_function(get_location, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())
