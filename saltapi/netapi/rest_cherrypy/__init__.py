@@ -85,22 +85,26 @@ def start():
         from . import wsgi
         application = wsgi.get_application(root, apiopts, conf)
 
-        if not 'ssl_crt' in apiopts or not 'ssl_key' in apiopts:
-            logger.error("Not starting '%s'. Options 'ssl_crt' and 'ssl_key' "
-                    "are required in production mode." % __name__)
-
-            return None
-
         # Mount and start the WSGI app using the production CherryPy server
-        verify_certs(apiopts['ssl_crt'], apiopts['ssl_key'])
-
-        ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(
-                apiopts['ssl_crt'], apiopts['ssl_key'])
         wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': application})
         server = wsgiserver.CherryPyWSGIServer(
                 (apiopts.get('host', '0.0.0.0'), apiopts['port']),
                 wsgi_app=wsgi_d)
-        server.ssl_adapter = ssl_a
+
+        # Add SSL adapter to the server unless configured to disable
+        if not apiopts.get('disable_ssl', False):
+            if not 'ssl_crt' in apiopts or not 'ssl_key' in apiopts:
+                logger.error("Not starting '%s'. Options 'ssl_crt' and "
+                        "'ssl_key' are required if SSL is not disabled."
+                        % __name__)
+
+                return None
+
+            verify_certs(apiopts['ssl_crt'], apiopts['ssl_key'])
+
+            ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(
+                    apiopts['ssl_crt'], apiopts['ssl_key'])
+            server.ssl_adapter = ssl_a
 
         signal.signal(signal.SIGINT, lambda *args: server.stop())
         server.start()

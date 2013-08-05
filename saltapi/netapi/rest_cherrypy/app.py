@@ -22,10 +22,10 @@ A REST API for Salt
 
         .. versionadded:: 0.8.2
     debug : ``False``
-        Starts a for-development web server instead of the production-ready web
-        server.
+        Starts a for-development web server that will reload itself when the
+        underlying code is changed. This server is not multithreaded.
 
-        Does not use SSL and ignores the certificate configuration options.
+        Does not use SSL!
     ssl_crt
         Required when ``debug`` is ``False``
 
@@ -34,6 +34,13 @@ A REST API for Salt
         Required when ``debug`` is ``False``
 
         The path to the private key for your SSL certificate. (See below)
+    disable_ssl
+        A flag to disable SSL on the production-ready server. This is rarely
+        useful outside testing environments. If you enable this tread
+        carefully.
+
+        Warning: your Salt authentication credentials will be sent in the
+        clear!
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
@@ -161,6 +168,7 @@ functionality.
 import functools
 import os
 import json
+import textwrap
 
 # Import third-party libs
 import cherrypy
@@ -194,7 +202,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     '''
     # Redirect to the login page if the session hasn't been authed
-    if not cherrypy.session.get('token', None):
+    if not cherrypy.session.has_key('token'):
         raise cherrypy.InternalRedirect('/login')
 
     print cherrypy.config
@@ -950,6 +958,105 @@ class Run(LowDataAdapter):
         }
 
 
+class Events(object):
+    '''
+    The event bus on the Salt master exposes a large variety of things, notably
+    when executions are started on the master and also when minions ultimately
+    return their results. This URL provides a real-time window into a running
+    Salt infrastructure.
+    '''
+    exposed = True
+
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'response.stream': True,
+        'tools.encode.encoding': 'utf-8',
+
+        # Auth handled manually below
+        'tools.salt_auth.on': False,
+
+        'tools.hypermedia_in.on': False,
+        'tools.hypermedia_out.on': False,
+    })
+
+    def __init__(self):
+        self.opts = cherrypy.config['saltopts']
+        self.auth = salt.auth.LoadAuth(self.opts)
+
+    def GET(self, token=None):
+        '''
+        Return an HTTP stream of the Salt master event bus; this stream is
+        formatted per the Server Sent Events (SSE) spec
+
+        .. versionadded:: 0.8.3
+
+        .. http:get:: /events
+
+            **Example request**::
+
+                % curl -sS localhost:8000/events
+
+            .. code-block:: http
+
+                GET /events HTTP/1.1
+                Host: localhost:8000
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Connection: keep-alive
+                Cache-Control: no-cache
+                Content-Type: text/event-stream;charset=utf-8
+
+                retry: 400
+                data: {'tag': '', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
+
+                data: {'tag': '20130802115730568475', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
+
+        .. note:: Caveat when using CORS
+
+            Browser clients currently lack Cross-origin resource sharing (CORS)
+            support for the ``EventSource()`` API. Cross-domain requests from a
+            browser may instead pass the :mailheader:`X-Auth-Token` value as an
+            URL parameter::
+
+                % curl -sS localhost:8000/events/6d1b722e
+
+        :status 200: success
+        :status 401: could not authenticate using provided credentials
+        '''
+        # Pulling the session token from an URL param is a workaround for
+        # browsers not supporting CORS in the EventSource API.
+        if token:
+            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
+            salt_token = orig_sesion.get('token')
+        else:
+            salt_token = cherrypy.session.get('token')
+
+        # Manually verify the token
+        if not salt_token or not self.auth.get_tok(salt_token):
+            raise cherrypy.InternalRedirect('/login')
+
+        # Release the session lock before starting the long-running response
+        cherrypy.session.release_lock()
+
+        cherrypy.response.headers['Content-Type'] = 'text/event-stream'
+        cherrypy.response.headers['Cache-Control'] = 'no-cache'
+        cherrypy.response.headers['Connection'] = 'keep-alive'
+
+        def listen():
+            event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
+            stream = event.iter_events(full=True)
+
+            yield u'retry: {0}\n'.format(400)
+
+            while True:
+                yield u'data: {0}\n\n'.format(json.dumps(stream.next()))
+
+        return listen()
+
+
 class App(object):
     exposed = True
     def GET(self, *args):
@@ -968,6 +1075,7 @@ class API(object):
         'minions': Minions,
         'run': Run,
         'jobs': Jobs,
+        'events': Events,
     }
 
     def __init__(self):
@@ -1029,11 +1137,11 @@ def get_app(opts):
     # Register salt-specific hooks
     cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
             salt_token_tool, priority=55)
+    cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
+            hypermedia_in)
     cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
             salt_auth_tool, priority=60)
     cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
             hypermedia_out)
-    cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
-            hypermedia_in)
 
     return root, apiopts, cpyopts

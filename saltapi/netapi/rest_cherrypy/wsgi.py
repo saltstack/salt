@@ -43,13 +43,13 @@ import os
 
 import cherrypy
 
-from . import app
-
 def bootstrap_app():
     '''
     Grab the opts dict of the master config by trying to import Salt
     '''
+    from . import app
     import salt.config
+
     __opts__ = salt.config.client_config(
             os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
     return app.get_app(__opts__)
