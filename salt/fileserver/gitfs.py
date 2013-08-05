@@ -14,7 +14,7 @@ import os
 import time
 import hashlib
 import logging
-import distutils
+import distutils.version
 
 # Import third party libs
 HAS_GIT = False
