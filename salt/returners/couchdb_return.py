@@ -107,3 +107,22 @@ def get_jid(jid):
         log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
         return {}
     return { _response['id']: _response }
+
+def get_jids():
+    '''
+    List all the jobs that we have..
+    '''
+    options = _get_options()
+    _response = _request( "GET", options['url'] + options['db'] + "/_all_docs" )
+
+    # Make sure the 'total_rows' is returned.. if not error out.
+    if not 'total_rows' in _response:
+        log.error('Didn\'t get valid response from requesting all docs: {0}'.format(_response))
+        return []
+    
+    # Return the rows .
+    ret = []
+    for row in _response['rows']:
+        ret.append( row['id'] )
+    
+    return ret
