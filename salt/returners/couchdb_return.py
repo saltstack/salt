@@ -71,9 +71,22 @@ def _ensure_views():
     '''
     Ensure that basic views exist, such as getting a list of minions.
     '''
-    # Make a request to check if the design document exists.
 
-    # If the design document exists, check the views in the document.
+    # Get the options so we have the URL and DB..
+    options = _get_options()
+
+    # Make a request to check if the design document exists.
+    _response = _request( "GET", options['url'] + options['db'] + "/design/salt" )
+    
+    _new_doc = { }
+
+    # If the document doesn't exist..
+    if 'error' _response:
+
+        # Build _new_doc.. return with the request to PUT it.. 
+        return
+
+    # Iterate through and check if the views are valid.
     return None
 
 def returner(ret):
