@@ -51,6 +51,7 @@ class RunnerClient(object):
         '''
         Pass in the runner function name and the low data structure
         '''
+        self._verify_fun(fun)
         l_fun = self.functions[fun]
         f_call = salt.utils.format_call(l_fun, low)
         ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
