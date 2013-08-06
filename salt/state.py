@@ -1453,7 +1453,11 @@ class State(object):
                         running['__FAILHARD__'] = True
                         return running
             if low.get('__prereq__'):
+                status = self.check_requisite(low, running, chunks)
                 self.pre[tag] = self.call(low)
+                if not self.pre[tag]['changes'] and status == 'change':
+                    self.pre[tag]['changes'] = {'watch': 'Watch call triggered'}
+                    self.pre[tag]['result'] = None
             else:
                 running = self.call_chunk(low, running, chunks)
             if self.check_failhard(chunk, running):
