@@ -220,6 +220,8 @@ def salt_ip_verify_tool():
                         'status': cherrypy.response.status,
                         'return': "Bad IP",
                     }
+    request = cherrypy.serving.request
+    cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
 
 
 def salt_auth_tool():
