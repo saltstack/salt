@@ -689,6 +689,7 @@ def managed(name,
             show_diff=True,
             create=True,
             contents=None,
+            contents_pillar=None,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -772,19 +773,13 @@ def managed(name,
         contents of the file.  Should not be used in conjunction with a source
         file of any kind.  Ignores hashes and does not use a templating engine.
 
-        Note, including a multiline string from an external source (such as
-        Pillar) presents a formatting challenege since the multiline content
-        will not adhere to YAML's required indentation. The external content
-        must be indented manually at the Jinja level::
-
-            /tmp/myfile:
-              file:
-                - managed
-                - contents: |
-                    {{ salt['pillar.get']('some:multiline:text') | indent(8) }}
-
-            # Note the above example is indented by 8 spaces.
-
+    contents_pillar
+        Operates like ``contents``, but draws from a value stored in pillar,
+        using the pillar path syntax used in :mod:`pillar.get
+        <salt.modules.pillar.get>`. This is useful when the pillar value
+        contains newlines, as referencing a pillar variable using a jinja/mako
+        template can result in YAML formatting issues due to the newlines
+        causing indentation mismatches.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -820,6 +815,17 @@ def managed(name,
     elif not isinstance(context, dict):
         return _error(
             ret, 'Context must be formed as a dict')
+
+    if contents and contents_pillar:
+        return _error(
+            ret, 'Only one of contents and contents_pillar is permitted')
+
+    # If contents_pillar was used, get the pillar data
+    if contents_pillar:
+        contents = __salt__['pillar.get'](contents_pillar)
+        # Make sure file ends in newline
+        if not contents.endswith('\n'):
+            contents += '\n'
 
     if not replace and os.path.exists(name):
        # Check and set the permissions if necessary
