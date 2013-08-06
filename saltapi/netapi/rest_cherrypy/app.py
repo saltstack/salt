@@ -210,7 +210,6 @@ def salt_ip_verify_tool():
         if cherrypy_conf:
             auth_ip_list = cherrypy_conf.get('authorized_ips', None)
             if auth_ip_list:
-                print auth_ip_list
                 logger.debug("Found IP list: {0}".format(auth_ip_list))
                 rem_ip = cherrypy.request.headers.get('Remote-Addr', None)
                 logger.debug("Request from IP: {0}".format(rem_ip))
