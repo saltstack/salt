@@ -7,6 +7,8 @@ dist
 MANIFEST
 *~
 *#
+*.wpr
+*.wpu
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
