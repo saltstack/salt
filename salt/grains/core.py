@@ -659,6 +659,10 @@ def _windows_platform_data():
             grains['virtual'] = 'VMware'
         elif 'VirtualBox' in systeminfo.Model:
             grains['virtual'] = 'VirtualBox'
+        elif 'Xen' in biosinfo.Version:
+            grains['virtual'] = 'Xen'
+            if 'HVM domU' in systeminfo.Model:
+                grains['virtual_subtype'] = 'HVM domU'
 
     return grains
 
