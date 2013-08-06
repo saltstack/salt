@@ -70,7 +70,7 @@ class TestFileState(TestCase):
     def test_contents_pillar_adds_newline(self):
         # make sure the newline
         pillar_value = 'i am the pillar value'
-        expected = '{}\n'.format(pillar_value)
+        expected = '{0}\n'.format(pillar_value)
 
         self.run_contents_pillar(pillar_value, expected)
 
