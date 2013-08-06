@@ -128,6 +128,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 'incorrect results.'
             )
 
+        # Set the required environment variable in order to know if destructive
+        # tests should be executed or not.
+        os.environ['DESTRUCTIVE_TESTS'] = str(self.options.run_destructive)
+
         # Set test suite defaults if no specific suite options are provided
         if not any((self.options.module, self.options.client,
                     self.options.shell, self.options.unit, self.options.state,
