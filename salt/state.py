@@ -1459,7 +1459,7 @@ class State(object):
                 status = self.check_requisite(low, running, chunks)
                 self.pre[tag] = self.call(low)
                 if not self.pre[tag]['changes'] and status == 'change':
-                    self.pre[tag]['changes'] = {'watch': 'Watch call triggered'}
+                    self.pre[tag]['changes'] = {'watch': 'watch'}
                     self.pre[tag]['result'] = None
             else:
                 running = self.call_chunk(low, running, chunks)
