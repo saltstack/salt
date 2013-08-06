@@ -8,6 +8,7 @@ This is run by ``salt-api`` and started in a multiprocess.
 # Import Python libs
 import os
 import signal
+import sys
 
 # Import CherryPy without traceback so we can provide an intelligent log
 # message in the __virtual__ function
@@ -75,36 +76,25 @@ def start():
     Start the server loop
     '''
     from . import app
-
     root, apiopts, conf = app.get_app(__opts__)
 
-    if apiopts.get('debug', False):
-        # Start the development server
-        cherrypy.quickstart(root, '/', conf)
-    else:
-        from . import wsgi
-        application = wsgi.get_application(root, apiopts, conf)
+    if not apiopts.get('disable_ssl', False):
+        if not 'ssl_crt' in apiopts or not 'ssl_key' in apiopts:
+            logger.error("Not starting '%s'. Options 'ssl_crt' and "
+                    "'ssl_key' are required if SSL is not disabled."
+                    % __name__)
 
-        # Mount and start the WSGI app using the production CherryPy server
-        wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': application})
-        server = wsgiserver.CherryPyWSGIServer(
-                (apiopts.get('host', '0.0.0.0'), apiopts['port']),
-                wsgi_app=wsgi_d)
+            return None
 
-        # Add SSL adapter to the server unless configured to disable
-        if not apiopts.get('disable_ssl', False):
-            if not 'ssl_crt' in apiopts or not 'ssl_key' in apiopts:
-                logger.error("Not starting '%s'. Options 'ssl_crt' and "
-                        "'ssl_key' are required if SSL is not disabled."
-                        % __name__)
+        verify_certs(apiopts['ssl_crt'], apiopts['ssl_key'])
 
-                return None
+        cherrypy.server.ssl_module = 'builtin'
+        cherrypy.server.ssl_certificate = apiopts['ssl_crt']
+        cherrypy.server.ssl_private_key = apiopts['ssl_key']
 
-            verify_certs(apiopts['ssl_crt'], apiopts['ssl_key'])
+    def signal_handler(signal, frame):
+            cherrypy.engine.exit()
+            sys.exit(0)
+    signal.signal(signal.SIGINT, signal_handler)
 
-            ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(
-                    apiopts['ssl_crt'], apiopts['ssl_key'])
-            server.ssl_adapter = ssl_a
-
-        signal.signal(signal.SIGINT, lambda *args: server.stop())
-        server.start()
+    cherrypy.quickstart(root, '/', conf)
