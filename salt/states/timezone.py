@@ -7,8 +7,23 @@ The timezone can be managed for the system:
 .. code-block:: yaml
 
     America/Denver:
+      timezone.system
+
+The system and the hardware clock are not necessarily set to the same time.
+By default, the hardware clock is set to localtime, meaning it is set to the
+same time as the system clock. If `utc` is set to True, then the hardware clock
+will be set to UTC, and the system clock will be an offset of that.
+
+.. code-block:: yaml
+
+    America/Denver:
       timezone.system:
         - utc: True
+
+The Ubuntu community documentation contains an explanation of this setting, as
+it applies to systems that dual-boot with Windows.
+
+http://tinyurl.com/5fjzmn
 '''
 
 
