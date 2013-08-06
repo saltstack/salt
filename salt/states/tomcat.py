@@ -98,6 +98,8 @@ def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base',
             if webapps[name]['mode'] != 'running':
                 ret['changes']['start'] = 'starting {0}'.format(name, version)
                 status = False
+            else:
+                return ret
     except Exception:
         deploy = True
         ret['changes']['deploy'] = 'deployed {0} in version {1}'.format(name, version)
