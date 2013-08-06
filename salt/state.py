@@ -1455,7 +1455,10 @@ class State(object):
                     if self.check_failhard(chunk, running):
                         running['__FAILHARD__'] = True
                         return running
-            running = self.call_chunk(low, running, chunks)
+            if low.get('__prereq__'):
+                self.pre[tag] = self.call(low)
+            else:
+                running = self.call_chunk(low, running, chunks)
             if self.check_failhard(chunk, running):
                 running['__FAILHARD__'] = True
                 return running
