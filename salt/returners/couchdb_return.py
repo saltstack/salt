@@ -218,6 +218,9 @@ def get_valid_salt_views():
     ret['minions'] = { }
     ret['minions']['map'] = "function( doc ){ emit( doc.id, null ); }"
     ret['minions']['reduce'] = "function( keys,values,rereduce ){ return key[0]; }"
+
+    ret['by-minion-fun-date'] = { }
+    ret['by-minion-fun-date']['map'] = "function( doc ){ emit( [doc.id,doc.fun,doc.timestamp], doc ); }"
     return ret
 
 def set_salt_view( ):
