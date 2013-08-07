@@ -21,26 +21,26 @@ target
 The target component allows you to filter which minions should run the
 following function. The default filter is a glob on the minion id. For example::
 
-    salt '*' test.ping
-    salt '*.example.org' test.ping
+    # salt '*' test.ping
+    # salt '*.example.org' test.ping
 
 Targets can be based on minion system information using the Grains system::
 
-    salt -G 'os:Ubuntu' test.ping
+    # salt -G 'os:Ubuntu' test.ping
 
 .. seealso:: :doc:`Grains system </topics/targeting/grains>`
 
 Targets can be filtered by regular expression::
 
-    salt -E 'virtmach[0-9]' test.ping
+    # salt -E 'virtmach[0-9]' test.ping
 
 Targets can be explicitly specified in a list::
 
-    salt -L 'foo,bar,baz,quo' test.ping
+    # salt -L 'foo,bar,baz,quo' test.ping
 
 Or Multiple target types can be combined in one command::
     
-    salt -C 'G@os:Ubuntu and webser* or E@database.*' test.ping
+    # salt -C 'G@os:Ubuntu and webser* or E@database.*' test.ping
 
 
 function
@@ -50,17 +50,17 @@ A function is some functionality provided by a module. Salt ships with a large
 collection of available functions. List all available functions on your
 minions::
 
-    salt '*' sys.doc
+    # salt '*' sys.doc
 
 Here are some examples:
 
 Show all currently available minions::
 
-    salt '*' test.ping
+    # salt '*' test.ping
 
 Run an arbitrary shell command::
 
-    salt '*' cmd.run 'uname -a'
+    # salt '*' cmd.run 'uname -a'
 
 .. seealso:: :doc:`the full list of modules </ref/modules/index>`
 
@@ -69,10 +69,10 @@ arguments
 
 Space-delimited arguments to the function::
 
-    salt '*' cmd.exec_code python 'import sys; print sys.version'
+    # salt '*' cmd.exec_code python 'import sys; print sys.version'
 
 Optional, keyword arguments are also supported::
 
-    salt '*' pip.install salt timeout=5 upgrade=True
+    # salt '*' pip.install salt timeout=5 upgrade=True
 
 They are always in the form of ``kwarg=argument``.
