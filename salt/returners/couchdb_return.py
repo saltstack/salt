@@ -155,8 +155,8 @@ def get_fun(fun):
     # For each minion we know about
     for minion in get_minions():
 
-        # Make a query of the by-minion-and-date view and limit the count to 1.
-        _response = _request( "GET", options['url'] + options['db'] + '/_design/salt/_view/by-minion-fun-date?descending=true&endkey=["{0}","{1}",0]&startkey=["{2}","{3}",9999999999]&limit=1'.format(minion,fun,minion,fun) )
+        # Make a query of the by-minion-and-timestamp view and limit the count to 1.
+        _response = _request( "GET", options['url'] + options['db'] + '/_design/salt/_view/by-minion-fun-timestamp?descending=true&endkey=["{0}","{1}",0]&startkey=["{2}","{3}",9999999999]&limit=1'.format(minion,fun,minion,fun) )
         # Skip the minion if we got an error..
         if 'error' in _response:
             log.warning( 'Got an error when querying for last command by a minion: {0}'.format(_response['error']))
@@ -234,8 +234,8 @@ def get_valid_salt_views():
     ret['minions']['map'] = "function( doc ){ emit( doc.id, null ); }"
     ret['minions']['reduce'] = "function( keys,values,rereduce ){ return key[0]; }"
 
-    ret['by-minion-fun-date'] = { }
-    ret['by-minion-fun-date']['map'] = "function( doc ){ emit( [doc.id,doc.fun,doc.timestamp], doc ); }"
+    ret['by-minion-fun-timestamp'] = { }
+    ret['by-minion-fun-timestamp']['map'] = "function( doc ){ emit( [doc.id,doc.fun,doc.timestamp], doc ); }"
     return ret
 
 def set_salt_view( ):
