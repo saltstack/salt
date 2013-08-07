@@ -1,3 +1,5 @@
+.. _tutorial-gitfs:
+
 =========================
 GitFS Backend Walkthrough
 =========================
