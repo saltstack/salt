@@ -85,6 +85,9 @@ def mounted(name,
             active = __salt__['mount.active']()
         else:
             ret['comment'] = 'Target was already mounted'
+            # The mount didn't fail, it was already there
+            ret['changes']['mount'] = True
+            
     # using a duplicate check so I can catch the results of a umount
     if name not in active:
         # The mount is not present! Mount it
