@@ -19,6 +19,7 @@ if 'USE_SETUPTOOLS' in os.environ:
 if USE_SETUPTOOLS is False:
     from distutils.core import setup
 
+
 # pylint: disable-msg=W0122,E0602
 exec(compile(open('saltapi/version.py').read(), 'saltapi/version.py', 'exec'))
 VERSION = __version__
@@ -59,12 +60,12 @@ kwargs.update(
         ('share/man/man7',
         ['doc/man/salt-api.7'])],
     scripts=['scripts/salt-api'],
-    install_requires=open('requirements.txt').readlines(),
-    )
+)
 
 if USE_SETUPTOOLS:
     kwargs.update(
+        install_requires=open('requirements.txt').readlines(),
         test_suite='tests',
-        )
+    )
 
 setup(**kwargs)
