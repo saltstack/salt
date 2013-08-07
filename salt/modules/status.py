@@ -119,9 +119,9 @@ def uptime():
 def loadavg():
     '''
     Return the load averages for this minion
-    
+
     CLI Example::
-    
+
         salt '*' status.loadavg
     '''
     load_avg = os.getloadavg()
@@ -445,6 +445,7 @@ def all_status():
     return {'cpuinfo': cpuinfo(),
             'cpustats': cpustats(),
             'diskstats': diskstats(),
+            'diskusage': diskusage(),
             'loadavg': loadavg(),
             'meminfo': meminfo(),
             'netdev': netdev(),
