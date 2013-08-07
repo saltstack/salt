@@ -916,8 +916,19 @@ def os_data():
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
+
+    # Load additional OS family grains
     if grains['os_family'] == "RedHat":
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+                os=grains['osfullname'],
+                ver=grains['osrelease'].partition('.')[0])
+    elif grains['osfullname'] == 'Ubuntu':
+        grains['osfinger'] = '{os}-{ver}'.format(
+                os=grains['osfullname'],
+                ver=grains['osrelease'])
+
 
     return grains
 
