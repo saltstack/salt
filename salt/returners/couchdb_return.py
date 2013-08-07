@@ -143,7 +143,8 @@ def get_jids():
 
 def get_fun(fun):
     '''
-    Return a dict with key being minion and value being the last job.
+    Return a dict with key being minion and value
+    being the job details of the last run of function 'fun'.
     '''
 
     # Get the options..
