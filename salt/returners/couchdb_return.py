@@ -152,6 +152,7 @@ def get_fun(fun):
     # Define a simple return object.
     _ret = { }
 
+    # get_minions takes care of calling ensure_views for us.
     # For each minion we know about
     for minion in get_minions():
 
