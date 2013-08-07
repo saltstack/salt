@@ -146,13 +146,29 @@ def get_fun(fun):
     Return a dict with key being minion and value being the last job.
     '''
 
+    # Get the options..
+    options = _get_options()
+
+    # Define a simple return object.
     _ret = { }
 
     # For each minion we know about
     for minion in get_minions():
 
         # Make a query of the by-minion-and-date view and limit the count to 1.
-        pass
+        _response = _request( "GET", options['url'] + options['db'] + '/_design/salt/_view/by-minion-fun-date?descending=true&limit=1&endkey=["{0}","{1}",0]'.format(minion,fun) )
+        # Skip the minion if we got an error..
+        if 'error' in _response:
+            log.warning( 'Got an error when querying for last command by a minion: {0}'.format(_response['error']))
+            continue
+
+        # Verify that we have at least one row, otherwise just skip.
+        if _response['total_rows'] < 1:
+            log.warning('No result when querying for last command for minion "{0}", althugh it shows up in the view "minions"?'.format(minion))
+            continue
+
+        # Set the respnse ..
+        _ret[minion] = _response['rows'][0]['value']
 
     return _ret
 
