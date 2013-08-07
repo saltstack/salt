@@ -144,10 +144,17 @@ def get_jids():
     ret = []
     for row in _response['rows']:
         # Because this shows all the documents in the database, including the design documents,
-        # whitelist the matching salt jid's which is a 22 digit int.
-        #TODO
+        # whitelist the matching salt jid's which is a 20 digit int.
 
-        ret.append( row['id'] )
+        # See if the identifier is an int..
+        try:
+            _id = int( row['id'] )
+        except Exception as exp:
+            continue
+
+        # Check the correct number of digits by simply casting to str and splitting.
+        if len(str(row['id'])) == 20:
+            ret.append( row['id'] )
     
     return ret
 
