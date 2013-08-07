@@ -67,26 +67,6 @@ def _request(method, url, content_type=None, _data=None):
         return {'error': '{0}'.format(e) }
     return json.loads(handler.read())
 
-def _ensure_views():
-    '''
-    Ensure that basic views exist, such as getting a list of minions.
-    '''
-
-    # Get the options so we have the URL and DB..
-    options = _get_options()
-
-    # Make a request to check if the design document exists.
-    _response = _request( "GET", options['url'] + options['db'] + "/design/salt" )
-    
-    _new_doc = { }
-
-    # If the document doesn't exist..
-    if 'error' in _response:
-        # Build _new_doc.. return with the request to PUT it.. 
-        return
-
-    return None
-
 def returner(ret):
     '''
     Take in the return and shove it into the couchdb database.
@@ -117,6 +97,7 @@ def returner(ret):
     if not 'ok' in _response or _response['ok'] != True:
         log.error('Unable to create document: "{0}"'.format(_response))
 
+
 def get_jid(jid):
     '''
     Get the document with a given JID.
@@ -127,6 +108,7 @@ def get_jid(jid):
         log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
         return {}
     return { _response['id']: _response }
+
 
 def get_jids():
     '''
@@ -158,6 +140,7 @@ def get_jids():
     
     return ret
 
+
 def get_fun(fun):
     '''
     Return a dict with key being minion and value being the last job.
@@ -172,6 +155,7 @@ def get_fun(fun):
         pass
 
     return _ret
+
 
 def get_minions():
     '''
@@ -192,3 +176,24 @@ def get_minions():
     for row in _response['rows']:
         _ret.append( row['key'] )
     return _ret
+
+
+def _ensure_views():
+    '''
+    Ensure that basic views exist, such as getting a list of minions.
+    '''
+
+    # Get the options so we have the URL and DB..
+    options = _get_options()
+
+    # Make a request to check if the design document exists.
+    _response = _request( "GET", options['url'] + options['db'] + "/design/salt" )
+    
+    _new_doc = { }
+
+    # If the document doesn't exist..
+    if 'error' in _response:
+        # Build _new_doc.. return with the request to PUT it.. 
+        return
+
+    return None
