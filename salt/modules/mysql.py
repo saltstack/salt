@@ -192,7 +192,7 @@ def query(database, query, **connection_args):
 
     connection_args.update({'connection_db': database, 'connection_conv': conv})
     dbc = _connect(**connection_args)
-    if dbc is not None:
+    if dbc is None:
         return {}
     cur = dbc.cursor()
     start = time.time()
