@@ -190,17 +190,14 @@ def ensure_views():
     # Make a request to check if the design document exists.
     _response = _request( "GET", options['url'] + options['db'] + "/design/salt" )
 
-    # Get the views that should exist..
-    valid_views = get_valid_views()
-    
-    # If the document doesn't exist..
+    # If the document doesn't exist, or for some reason there are not views.
     if 'error' in _response or not hasattr( _response, 'views' ):
         return set_salt_view( )
 
     # Determine if any views are missing from the design doc stored on the server..
     # If we come across one, simply set the salt view and return out. set_salt_view
     # will set all the views, so we don't need to continue t check.
-    for view in valid_views:
+    for view in get_valid_views():
         if not view in _response['views']:
             return set_salt_view( )
 
