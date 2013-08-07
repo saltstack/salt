@@ -81,12 +81,10 @@ def _ensure_views():
     _new_doc = { }
 
     # If the document doesn't exist..
-    if 'error' _response:
-
+    if 'error' in _response:
         # Build _new_doc.. return with the request to PUT it.. 
         return
 
-    # Iterate through and check if the views are valid.
     return None
 
 def returner(ret):
@@ -142,9 +140,13 @@ def get_jids():
         log.error('Didn\'t get valid response from requesting all docs: {0}'.format(_response))
         return []
     
-    # Return the rows .
+    # Return the rows.
     ret = []
     for row in _response['rows']:
+        # Because this shows all the documents in the database, including the design documents,
+        # whitelist the matching salt jid's which is a 22 digit int.
+        #TODO
+
         ret.append( row['id'] )
     
     return ret
