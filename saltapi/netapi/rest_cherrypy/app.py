@@ -197,6 +197,33 @@ def salt_token_tool():
         cherrypy.request.cookie['session_id'] = x_auth
 
 
+def salt_ip_verify_tool():
+    '''
+    If there is a list of restricted IPs, verify current
+    client is coming from one of those IPs.
+    '''
+    # This is overly cumbersome and crude,
+    # But, it's also safe... ish...
+    salt_config = cherrypy.config.get('saltopts', None)
+    if salt_config:
+        cherrypy_conf = salt_config.get('rest_cherrypy', None)
+        if cherrypy_conf:
+            auth_ip_list = cherrypy_conf.get('authorized_ips', None)
+            if auth_ip_list:
+                logger.debug("Found IP list: {0}".format(auth_ip_list))
+                rem_ip = cherrypy.request.headers.get('Remote-Addr', None)
+                logger.debug("Request from IP: {0}".format(rem_ip))
+                if not rem_ip in auth_ip_list:
+                    logger.error("Blocked IP: {0}".format(rem_ip))
+                    cherrypy.response.status = 403
+                    return {
+                        'status': cherrypy.response.status,
+                        'return': "Bad IP",
+                    }
+    request = cherrypy.serving.request
+    cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
+
+
 def salt_auth_tool():
     '''
     Redirect all unauthenticated requests to the login page
@@ -391,6 +418,7 @@ class LowDataAdapter(object):
 
         'tools.hypermedia_out.on': True,
         'tools.hypermedia_in.on': True,
+        'tools.salt_ip_verify.on': True,
     }
 
     def __init__(self):
@@ -1141,5 +1169,7 @@ def get_app(opts):
             salt_auth_tool, priority=60)
     cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
             hypermedia_out)
+    cherrypy.tools.salt_ip_verify = cherrypy.Tool('before_handler',
+            salt_ip_verify_tool)
 
     return root, apiopts, cpyopts
