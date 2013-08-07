@@ -7,8 +7,8 @@ documentation for the :mod:`augeas_cfg <salt.modules.augeas_cfg>` module for
 more information.
 
 Augeas can be used to manage configuration files. Currently only the 'set'
-command is supported through this state file. The Augeas module also has support
-for get, match, remove, etc.
+command is supported through this state file. The Augeas module also has
+support for get, match, remove, etc.
 
 Examples:
 
@@ -44,6 +44,7 @@ You can also set a prefix if you want to avoid redundancy:
 
 '''
 
+
 def setvalue(name, prefix=None, changes=(), **kwargs):
     '''
     Set a value for a specific augeas path
@@ -53,12 +54,13 @@ def setvalue(name, prefix=None, changes=(), **kwargs):
 
     args = []
     for change in changes:
-        tpl = change.split(None, 1);
+        tpl = change.split(None, 1)
         if len(tpl) != 2:
-            raise ValueError('Change must have format "foo bar", was given {0}'.format(change))
+            raise ValueError('Change must have format "foo bar", was given {0}'
+                             .format(change))
 
-        args.append(str(tpl[0]));
-        args.append(str(tpl[1]));
+        args.append(str(tpl[0]))
+        args.append(str(tpl[1]))
 
     if prefix is not None:
         args.insert(0, 'prefix=%s' % prefix)
@@ -72,7 +74,7 @@ def setvalue(name, prefix=None, changes=(), **kwargs):
 
     ret['result'] = call['retval']
 
-    if ret['result'] == False:
+    if ret['result'] is False:
         ret['comment'] = 'Error: %s' % call['error']
         return ret
 
