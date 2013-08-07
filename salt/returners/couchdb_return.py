@@ -216,8 +216,15 @@ def get_valid_salt_views():
     '''
     pass
 
-def set_salt_view( doc=get_valid_salt_views() ):
-    _response = _request( "PUT", options['url'] + options['db'] + "/design/salt", "application/json", doc )
+def set_salt_view( ):
+
+    # Create the new object that we will shove in as the design doc.
+    new_doc = { }
+    new_doc['views']	= get_valid_salt_views( )
+    new_doc['language'] = "javascript"
+
+    # Make the request to update the design doc.
+    _response = _request( "PUT", options['url'] + options['db'] + "/_design/salt", "application/json", new_doc )
     if 'error' in _response:
         return False
     return True
