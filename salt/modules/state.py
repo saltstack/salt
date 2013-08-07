@@ -354,6 +354,10 @@ def show_highstate():
 
         salt '*' state.show_highstate
     '''
+    conflict = running()
+    if conflict:
+        __context__['retcode'] = 1
+        return conflict
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     try:
@@ -373,6 +377,10 @@ def show_lowstate():
 
         salt '*' state.show_lowstate
     '''
+    conflict = running()
+    if conflict:
+        __context__['retcode'] = 1
+        return conflict
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     try:
@@ -393,6 +401,10 @@ def show_sls(mods, env='base', test=None, **kwargs):
 
         salt '*' state.show_sls core,edit.vim dev
     '''
+    conflict = running()
+    if conflict:
+        __context__['retcode'] = 1
+        return conflict
     opts = copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -421,6 +433,10 @@ def show_top():
 
         salt '*' state.show_top
     '''
+    conflict = running()
+    if conflict:
+        __context__['retcode'] = 1
+        return conflict
     st_ = salt.state.HighState(__opts__)
     ret = {}
     static = st_.get_top()
