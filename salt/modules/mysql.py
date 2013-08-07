@@ -190,8 +190,8 @@ def query(database, query, **connection_args):
     conv_iter = iter(orig_conv)
     conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
 
-    dbc = _connect(**(connection_args.update({
-        'connection_db': database, 'connection_conv': conv})))
+    connection_args.update({'connection_db': database, 'connection_conv': conv})
+    dbc = _connect(**connection_args)
     if dbc is not None:
         return {}
     cur = dbc.cursor()
