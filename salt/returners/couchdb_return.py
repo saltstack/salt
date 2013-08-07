@@ -54,7 +54,7 @@ def _generate_doc(ret, options):
 
 def _request(method, url, content_type=None, _data=None):
     '''
-    Makes a HTTP request. Returns the JSON parse.
+    Makes a HTTP request. Returns the JSON parse, or an obj with an error.
     '''
     opener		= urllib2.build_opener(urllib2.HTTPHandler)
     request		= urllib2.Request( url, data=_data)
@@ -178,9 +178,10 @@ def get_minions():
     return _ret
 
 
-def _ensure_views():
+def ensure_views():
     '''
-    Ensure that basic views exist, such as getting a list of minions.
+    Ensure the following views exist:
+        * salt/minions
     '''
 
     # Get the options so we have the URL and DB..
@@ -188,12 +189,35 @@ def _ensure_views():
 
     # Make a request to check if the design document exists.
     _response = _request( "GET", options['url'] + options['db'] + "/design/salt" )
+
+    # Get the views that should exist..
+    valid_views = get_valid_views()
     
-    _new_doc = { }
-
     # If the document doesn't exist..
-    if 'error' in _response:
-        # Build _new_doc.. return with the request to PUT it.. 
-        return
+    if 'error' in _response or not hasattr( _response, 'views' ):
+        return set_salt_view( )
 
-    return None
+    # Determine if any views are missing from the design doc stored on the server..
+    missing_views = [ ]
+    for view in valid_views:
+        if not view in _response['views']:
+            missing_views.append( view )
+
+    # Exit out here if there are no missing views..
+    if len( missing_views ) is 0:
+        return True
+    else:
+        return set_salt_view( )
+
+def get_valid_salt_views():
+    '''
+    Returns a dict object of views that should be
+    part of the salt design document.
+    '''
+    pass
+
+def set_salt_view( doc=get_valid_salt_views() ):
+    _response = _request( "PUT", options['url'] + options['db'] + "/design/salt", "application/json", doc )
+    if 'error' in _response:
+        return False
+    return True
