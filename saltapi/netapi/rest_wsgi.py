@@ -243,6 +243,11 @@ def saltenviron(environ):
     '''
     Make Salt's opts dict and the APIClient available in the WSGI environ
     '''
+    if not '__opts__' in locals():
+        import salt.config
+        __opts__ = salt.config.client_config(
+                os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
+
     environ['SALT_OPTS'] = __opts__
     environ['SALT_APIClient'] = saltapi.APIClient(__opts__)
 
