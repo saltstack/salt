@@ -163,6 +163,10 @@ def get_minions():
     '''
     options = _get_options()
 
+    # Make sure the views are valid, which includes the minions..
+    if not ensure_views( ):
+        return []
+
     # Make the request for the view..
     _response = _request( "GET", options['url'] + options['db'] + "/_design/salt/_view/minions?group=true" )
 
@@ -180,26 +184,29 @@ def get_minions():
 
 def ensure_views():
     '''
-    Ensure the following views exist:
-        * salt/minions
+    This function makes sure that all the views that should
+    exist in the design document do exist.
     '''
 
     # Get the options so we have the URL and DB..
     options = _get_options()
 
     # Make a request to check if the design document exists.
-    _response = _request( "GET", options['url'] + options['db'] + "/design/salt" )
+    _response = _request( "GET", options['url'] + options['db'] + "/_design/salt" )
 
     # If the document doesn't exist, or for some reason there are not views.
-    if 'error' in _response or not hasattr( _response, 'views' ):
+    if 'error' in _response:
         return set_salt_view( )
 
     # Determine if any views are missing from the design doc stored on the server..
     # If we come across one, simply set the salt view and return out. set_salt_view
     # will set all the views, so we don't need to continue t check.
-    for view in get_valid_views():
+    for view in get_valid_salt_views():
         if not view in _response['views']:
             return set_salt_view( )
+
+    # Valid views, return true.
+    return True
 
 def get_valid_salt_views():
     '''
@@ -209,19 +216,17 @@ def get_valid_salt_views():
     ret = { }
 
     ret['minions'] = { }
-    ret['minions']['map'] = """
-                            function( dc ){
-                                     emit( doc.id, null );
-                            }
-                            """
-    ret['minions']['reduce'] = """
-                               function( keys,values,rereduce ){
-                                   return key[0];
-                               }
-                               """
+    ret['minions']['map'] = "function( doc ){ emit( doc.id, null ); }"
+    ret['minions']['reduce'] = "function( keys,values,rereduce ){ return key[0]; }"
     return ret
 
 def set_salt_view( ):
+    '''
+    Helper function that sets the salt design
+    document. Uses get_valid_salt_views and some hardcoded values.
+    '''
+
+    options = _get_options()
 
     # Create the new object that we will shove in as the design doc.
     new_doc = { }
@@ -229,7 +234,8 @@ def set_salt_view( ):
     new_doc['language'] = "javascript"
 
     # Make the request to update the design doc.
-    _response = _request( "PUT", options['url'] + options['db'] + "/_design/salt", "application/json", new_doc )
+    _response = _request( "PUT", options['url'] + options['db'] + "/_design/salt", "application/json", json.dumps(new_doc) )
     if 'error' in _response:
+        log.warning( "Unable to set the salt design document: {0}".format( _response['error'] ) )
         return False
     return True
