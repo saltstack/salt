@@ -162,9 +162,8 @@ def get_fun(fun):
             log.warning( 'Got an error when querying for last command by a minion: {0}'.format(_response['error']))
             continue
 
-        # Verify that we have at least one row, otherwise just skip.
-        if _response['total_rows'] < 1:
-            log.warning('No result when querying for last command for minion "{0}", althugh it shows up in the view "minions"?'.format(minion))
+        # Skip the minion if we didn't get any rows back. ( IE function that they're looking for has a typo in it or some such ).
+        if len(_response['rows']) < 1:
             continue
 
         # Set the respnse ..
