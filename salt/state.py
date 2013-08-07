@@ -1407,6 +1407,8 @@ class State(object):
                             if chunk['state'] == req_key:
                                 if requisite == 'prereq':
                                     chunk['__prereq__'] = True
+                                elif requisite == 'prerequired':
+                                    chunk['__prerequired__'] = True
                                 reqs.append(chunk)
                                 found = True
                         elif req_key == 'sls':
@@ -1442,8 +1444,14 @@ class State(object):
                 ctag = _gen_tag(chunk)
                 if ctag not in running:
                     if ctag in self.active:
-                        log.error('Recursive requisite found')
-                        if ctag not in running:
+                        if chunk.get('__prerequired__'):
+                            # Prereq recusive, run this chunk with prereq on
+                            if tag not in self.pre:
+                                low['__prereq__'] = True
+                                self.pre[ctag] = self.call(low)
+                                return running
+                        elif ctag not in running:
+                            log.error('Recursive requisite found')
                             running[tag] = {
                                     'changes': {},
                                     'result': False,
