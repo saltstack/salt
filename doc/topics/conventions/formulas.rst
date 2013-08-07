@@ -98,13 +98,12 @@ done directly from a Top File and may look something like this:
 .. code:: yaml
 
     base:
-      '*':
-        - openstack.utils
-      'myopenstackmaster':
-        - openstack.dashboard
+      'controller':
+        - openstack.horizon
         - openstack.keystone
-      'beancounter-*':
+      'hyper-*':
         - openstack.nova
+        - openstack.glance
       'storage-*':
         - openstack.swift
 
