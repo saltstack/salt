@@ -37,6 +37,7 @@ REQUIRED_OPEN_FILES = 3072
 
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
+    support_destructive_tests_selection = True
 
     def setup_additional_options(self):
         self.add_option(
@@ -97,14 +98,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run unit tests'
-        )
-        self.test_selection_group.add_option(
-            '--run-destructive',
-            action='store_true',
-            default=False,
-            help=('Run destructive tests. These tests can include adding or '
-                  'removing users from your system for example. Default: '
-                  '%default')
         )
 
         self.output_options_group.add_option(
