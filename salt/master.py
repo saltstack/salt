@@ -2059,6 +2059,10 @@ class ClearFuncs(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
+
+        # Announce the job on the event bus 
+        self.event.fire_event(clear_load, 'new_job')
+
         # Verify the jid dir
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
