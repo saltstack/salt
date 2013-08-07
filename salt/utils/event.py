@@ -135,28 +135,28 @@ class SaltEvent(object):
 
     def get_event(self, wait=5, tag='', full=False):
         '''
-        Get a single publication
+        Get a single publication.
+        IF no publication available THEN block for upto wait seconds
+        AND either return publication OR None IF no publication available.
+        
+        IF wait is 0 then block forever.
+        
         '''
-        end_time = time.time() + wait
-        wait = wait * 1000
-
         self.subscribe(tag)
-        while True:
-            if time.time() >= end_time:
+        socks = dict(self.poller.poll(wait * 1000)) #convert to milliseconds
+        if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+            raw = self.sub.recv()
+            # Double check the tag
+            if not raw[:20].rstrip('|').startswith(tag):
                 return None
-            socks = dict(self.poller.poll(wait))
-            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                raw = self.sub.recv()
-                # Double check the tag
-                if not raw[:20].rstrip('|').startswith(tag):
-                    continue
-                data = self.serial.loads(raw[20:])
-                if full:
-                    ret = {'data': data,
-                           'tag': raw[:20].rstrip('|')}
-                    return ret
-                return data
-            return None
+            data = self.serial.loads(raw[20:])
+            if full:
+                ret = {'data': data,
+                        'tag': raw[:20].rstrip('|')}
+                return ret
+            return data
+        return None
+
 
     def iter_events(self, tag='', full=False):
         '''
