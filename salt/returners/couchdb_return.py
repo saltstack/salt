@@ -198,23 +198,31 @@ def ensure_views():
         return set_salt_view( )
 
     # Determine if any views are missing from the design doc stored on the server..
-    missing_views = [ ]
+    # If we come across one, simply set the salt view and return out. set_salt_view
+    # will set all the views, so we don't need to continue t check.
     for view in valid_views:
         if not view in _response['views']:
-            missing_views.append( view )
-
-    # Exit out here if there are no missing views..
-    if len( missing_views ) is 0:
-        return True
-    else:
-        return set_salt_view( )
+            return set_salt_view( )
 
 def get_valid_salt_views():
     '''
     Returns a dict object of views that should be
     part of the salt design document.
     '''
-    pass
+    ret = { }
+
+    ret['minions'] = { }
+    ret['minions']['map'] = """
+                            function( dc ){
+                                     emit( doc.id, null );
+                            }
+                            """
+    ret['minions']['reduce'] = """
+                               function( keys,values,rereduce ){
+                                   return key[0];
+                               }
+                               """
+    return ret
 
 def set_salt_view( ):
 
