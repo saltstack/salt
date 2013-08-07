@@ -341,7 +341,7 @@ def _run(cmd,
         __context__['retcode'] = ret['retcode']
     except NameError:
         # Ignore the context error during grain generation
-        pass 
+        pass
     return ret
 
 

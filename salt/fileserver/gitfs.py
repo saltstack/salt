@@ -14,7 +14,7 @@ import os
 import time
 import hashlib
 import logging
-import distutils
+import distutils.version  # pylint: disable=E0611
 
 # Import third party libs
 HAS_GIT = False

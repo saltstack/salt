@@ -80,7 +80,8 @@ def __catalina_home():
 def _auth(uri):
     '''
     returns a authentication handler.
-    Get user & password from grains, if are not set default to modules.config.option
+    Get user & password from grains, if are not set default to 
+    modules.config.option
 
     If user & pass are missing return False
     '''
@@ -89,8 +90,10 @@ def _auth(uri):
         password = __grains__['tomcat-manager.passwd']
     except KeyError:
         try:
-            user = salt.utils.option('tomcat-manager.user', '', __opts__, __pillar__)
-            password = salt.utils.option('tomcat-manager.passwd', '', __opts__, __pillar__)
+            user = salt.utils.option('tomcat-manager.user', '', __opts__,
+                    __pillar__)
+            password = salt.utils.option('tomcat-manager.passwd', '', __opts__,
+                    __pillar__)
         except Exception:
             return False
 
@@ -98,15 +101,18 @@ def _auth(uri):
         return False
 
     basic = urllib2.HTTPBasicAuthHandler()
-    basic.add_password(realm='Tomcat Manager Application', uri=uri, user=user, passwd=password)
+    basic.add_password(realm='Tomcat Manager Application', uri=uri,
+            user=user, passwd=password)
     digest = urllib2.HTTPDigestAuthHandler()
-    digest.add_password(realm='Tomcat Manager Application', uri=uri, user=user, passwd=password)
+    digest.add_password(realm='Tomcat Manager Application', uri=uri,
+            user=user, passwd=password)
     return urllib2.build_opener(basic, digest)
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     '''
-    A private function used to issue the command to tomcat via the manager webapp
+    A private function used to issue the command to tomcat via the manager 
+    webapp
 
     cmd
         the command to execute
@@ -189,7 +195,8 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.leaks
     '''
 
-    return '\n'.join(_wget('findleaks', {'statusLine': 'true'}, url, timeout=timeout)['msg'])
+    return '\n'.join(_wget('findleaks', {'statusLine': 'true'}, 
+        url, timeout=timeout)['msg'])
 
 
 def status(url='http://localhost:8080/manager', timeout=180):
@@ -398,7 +405,8 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
     return _simple_cmd('undeploy', app, url, timeout=timeout)
 
 
-def deploy_war(war, context, force='no', url='http://localhost:8080/manager', env='base', timeout=180):
+def deploy_war(war, context, force='no', url='http://localhost:8080/manager', 
+        env='base', timeout=180):
     '''
     Deploy a WAR file
 
@@ -422,18 +430,21 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
         cp module
         salt '*' tomcat.deploy_war salt://application.war /api
         salt '*' tomcat.deploy_war salt://application.war /api no
-        salt '*' tomcat.deploy_war salt://application.war /api yes http://localhost:8080/manager
+        salt '*' tomcat.deploy_war salt://application.war /api yes \\
+                http://localhost:8080/manager
 
         minion local file system
         salt '*' tomcat.deploy_war /tmp/application.war /api
         salt '*' tomcat.deploy_war /tmp/application.war /api no
-        salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
+        salt '*' tomcat.deploy_war /tmp/application.war /api yes \\
+                http://localhost:8080/manager
     '''
 
     # Copy file name if needed
     tfile = war
     if war[0] != '/':
-        tfile = os.path.join(tempfile.gettempdir(), 'salt.' + os.path.basename(war))
+        tfile = os.path.join(tempfile.gettempdir(), 'salt.' + 
+                os.path.basename(war))
         cached = __salt__['cp.get_file'](war, tfile, env)
         if not cached:
             return 'FAIL - could not cache the WAR file'
@@ -465,7 +476,8 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
 def passwd(passwd, user='', alg='md5', realm=None):
     '''
     This function replaces the $CATALINS_HOME/bin/digest.sh script
-    convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml format
+    convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml 
+    format
     
     CLI Examples::
 

@@ -45,6 +45,7 @@ def split_low_tag(tag):
             'name': name,
             'fun': fun}
 
+
 def _gen_tag(low):
     '''
     Generate the running dict tag string from the low data structure
@@ -1318,6 +1319,8 @@ class State(object):
                     for chunk in chunks:
                         req_key = next(iter(req))
                         req_val = req[req_key]
+                        if req_val is None:
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
@@ -1394,6 +1397,8 @@ class State(object):
                     for chunk in chunks:
                         req_key = next(iter(req))
                         req_val = req[req_key]
+                        if req_val is None:
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
@@ -1413,10 +1418,15 @@ class State(object):
             if lost['require'] or lost['watch'] or lost['prereq'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
+                    if not lreqs:
+                        continue
+                    comment += \
+                        '{0}{1}:\n'.format(' ' * 19, requisite)
                     for lreq in lreqs:
-                        comment += '{0}{1}: {2}\n'.format(' ' * 19,
-                                requisite,
-                                lreq)
+                        req_key = next(iter(lreq))
+                        req_val = lreq[req_key]
+                        comment += \
+                            '{0}{1}: {2}\n'.format(' ' * 23, req_key, req_val)
                 running[tag] = {'changes': {},
                                 'result': False,
                                 'comment': comment,
@@ -1442,7 +1452,14 @@ class State(object):
                     if self.check_failhard(chunk, running):
                         running['__FAILHARD__'] = True
                         return running
-            running = self.call_chunk(low, running, chunks)
+            if low.get('__prereq__'):
+                status = self.check_requisite(low, running, chunks)
+                self.pre[tag] = self.call(low)
+                if not self.pre[tag]['changes'] and status == 'change':
+                    self.pre[tag]['changes'] = {'watch': 'watch'}
+                    self.pre[tag]['result'] = None
+            else:
+                running = self.call_chunk(low, running, chunks)
             if self.check_failhard(chunk, running):
                 running['__FAILHARD__'] = True
                 return running
@@ -2273,7 +2290,8 @@ class HighState(BaseHighState):
     compound state derived from a group of template files stored on the
     salt master or in the local cache.
     '''
-    stack = [] # a stack of active HighState objects during a state.highstate run.
+    # a stack of active HighState objects during a state.highstate run
+    stack = []
 
     def __init__(self, opts, pillar=None):
         self.client = salt.fileclient.get_file_client(opts)

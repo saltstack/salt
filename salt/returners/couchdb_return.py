@@ -142,7 +142,7 @@ def get_jids():
         log.error('Didn\'t get valid response from requesting all docs: {0}'.format(_response))
         return []
     
-    # Return the rows.
+    # Return the rows .
     ret = []
     for row in _response['rows']:
         ret.append( row['id'] )

@@ -24,6 +24,7 @@ Full list of builtin state modules
     group
     hg
     host
+    iptables
     keyboard
     kmod
     layman
