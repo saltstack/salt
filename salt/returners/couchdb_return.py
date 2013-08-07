@@ -156,7 +156,7 @@ def get_fun(fun):
     for minion in get_minions():
 
         # Make a query of the by-minion-and-date view and limit the count to 1.
-        _response = _request( "GET", options['url'] + options['db'] + '/_design/salt/_view/by-minion-fun-date?descending=true&limit=1&endkey=["{0}","{1}",0]'.format(minion,fun) )
+        _response = _request( "GET", options['url'] + options['db'] + '/_design/salt/_view/by-minion-fun-date?descending=true&endkey=["{0}","{1}",0]&startkey=["{2}","{3}",9999999999]&limit=1'.format(minion,fun,minion,fun) )
         # Skip the minion if we got an error..
         if 'error' in _response:
             log.warning( 'Got an error when querying for last command by a minion: {0}'.format(_response['error']))
