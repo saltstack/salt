@@ -224,6 +224,34 @@ def _netbsd_gpu_data():
     return grains
 
 
+def _osx_gpudata():
+    '''
+    num_gpus: int
+    gpus:
+      - vendor: nvidia|amd|ati|...
+        model: string
+    '''
+
+    gpus = []
+    try:
+        pcictl_out = __salt__['cmd.run']('system_profiler SPDisplaysDataType')
+
+        for line in pcictl_out.splitlines():
+            fieldname, _, fieldval = line.partition(': ')
+            if fieldname.strip() == "Chipset Model":
+                vendor, _, model = fieldval.partition(' ')
+                vendor = vendor.lower()
+                gpus.append({'vendor': vendor, 'model': model})
+
+    except OSError:
+        pass
+
+    grains = {}
+    grains['num_gpus'] = len(gpus)
+    grains['gpus'] = gpus
+    return grains
+
+
 def _bsd_cpudata(osdata):
     '''
     Return CPU information for BSD-like systems
@@ -247,10 +275,17 @@ def _bsd_cpudata(osdata):
     if arch and osdata['kernel'] == 'OpenBSD':
         cmds['cpuarch'] = '{0} -s'.format(arch)
 
+    if osdata['kernel'] == 'Darwin':
+        cmds['cpu_model'] = '{0} -n machdep.cpu.brand_string'.format(sysctl)
+        cmds['cpu_flags'] = '{0} -n machdep.cpu.features'.format(sysctl)
+
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
-    grains['cpu_flags'] = []
+
+    if 'cpu_flags' in grains and isinstance(grains['cpu_flags'], basestring):
+        grains['cpu_flags'] = grains['cpu_flags'].split(' ')
 
     if osdata['kernel'] == 'NetBSD':
+        grains['cpu_flags'] = []
         for line in __salt__['cmd.run']('cpuctl identify 0').splitlines():
             m = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
             if m:
@@ -258,6 +293,7 @@ def _bsd_cpudata(osdata):
                 grains['cpu_flags'].extend(flag)
 
     if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
+        grains['cpu_flags'] = []
         # TODO: at least it needs to be tested for BSD other then FreeBSD
         with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
             cpu_here = False
@@ -330,10 +366,13 @@ def _memdata(osdata):
                         continue
                     if comps[0].strip() == 'MemTotal':
                         grains['mem_total'] = int(comps[1].split()[0]) / 1024
-    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Darwin'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
-            mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
+            if osdata['kernel'] == 'Darwin':
+                mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
+            else:
+                mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
             if (osdata['kernel'] == 'NetBSD' and mem.startswith('-')):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
@@ -366,10 +405,17 @@ def _virtual(osdata):
     #   virtual_subtype
     grains = {'virtual': 'physical'}
     for command in ('dmidecode', 'lspci', 'dmesg'):
+        args = []
+        if osdata['kernel'] == 'Darwin':
+            command = 'system_profiler'
+            args = ['SPDisplaysDataType']
+
         cmd = salt.utils.which(command)
 
         if not cmd:
             continue
+
+        cmd = '%s %s' % (command, ' '.join(args))
 
         ret = __salt__['cmd.run_all'](cmd)
 
@@ -385,8 +431,22 @@ def _virtual(osdata):
             continue
 
         output = ret['stdout']
+        if command == "system_profiler":
+            macoutput = output.lower()
+            if '0x1ab8' in macoutput:
+                grains['virtual'] = 'Parallels'
+            if 'parallels' in macoutput:
+                grains['virtual'] = 'Parallels'
+            if 'vmware' in macoutput:
+                grains['virtual'] = 'VMware'
+            if '0x15ad' in macoutput:
+                grains['virtual'] = 'VMware'
+            if 'virtualbox' in macoutput:
+                grains['virtual'] = 'VirtualBox'
+            # Break out of the loop so the next log message is not issued
+            break
 
-        if command == 'dmidecode' or command == 'dmesg':
+        elif command == 'dmidecode' or command == 'dmesg':
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
@@ -575,7 +635,8 @@ def _windows_platform_data():
         # location. For example:
         # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
         (osfullname, _) = osinfo.Name.split('|', 1)
-        osfullname = osfullname.strip()
+        osfullname = osfullname.strip()    
+
         grains = {
             'osmanufacturer': osinfo.Manufacturer,
             'manufacturer': systeminfo.Manufacturer,
@@ -587,6 +648,21 @@ def _windows_platform_data():
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
         }
+
+        # test for virtualized environments
+        # I only had VMware available so the rest are unvalidated
+        if 'VRTUAL' in biosinfo.Version: # (not a typo)
+            grains['virtual'] = 'HyperV'
+        elif 'A M I' in biosinfo.Version:
+            grains['virtual'] = 'VirtualPC'
+        elif 'VMware' in systeminfo.Model:
+            grains['virtual'] = 'VMware'
+        elif 'VirtualBox' in systeminfo.Model:
+            grains['virtual'] = 'VirtualBox'
+        elif 'Xen' in biosinfo.Version:
+            grains['virtual'] = 'Xen'
+            if 'HVM domU' in systeminfo.Model:
+                grains['virtual_subtype'] = 'HVM domU'
 
     return grains
 
@@ -651,7 +727,8 @@ _OS_FAMILY_MAP = {
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
-    'GCEL': 'Debian'
+    'GCEL': 'Debian',
+    'Linaro': 'Debian'
 }
 
 
@@ -743,6 +820,22 @@ def os_data():
                             grains['lsb_distrib_release'] = comps[2]
                             grains['lsb_distrib_codename'] = \
                                 comps[3].replace('(', '').replace(')', '')
+            elif os.path.isfile('/etc/centos-release'):
+                # CentOS Linux
+                grains['lsb_distrib_id'] = 'CentOS'
+                with salt.utils.fopen('/etc/centos-release') as ifile:
+                    for line in ifile:
+                        # Need to pull out the version and codename
+                        # in the case of custom content in /etc/centos-release
+                        find_release = re.compile(r'\d+\.\d+')
+                        find_codename = re.compile(r'(?<=\()(.*?)(?=\))')
+                        release = find_release.search(line)
+                        codename = find_codename.search(line)
+                        if release is not None:
+                            grains['lsb_distrib_release'] = release.group()
+                        if codename is not None:
+                            grains['lsb_distrib_codename'] = codename.group()
+
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
         (osname, osrelease, oscodename) = \
@@ -794,8 +887,11 @@ def os_data():
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
+        osrelease = __salt__['cmd.run']('sw_vers -productVersion')
         grains['os'] = 'MacOS'
+        grains['osrelease'] = osrelease
         grains.update(_bsd_cpudata(grains))
+        grains.update(_osx_gpudata())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
@@ -820,6 +916,19 @@ def os_data():
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
+
+    # Load additional OS family grains
+    if grains['os_family'] == "RedHat":
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+                os=grains['osfullname'],
+                ver=grains['osrelease'].partition('.')[0])
+    elif grains['osfullname'] == 'Ubuntu':
+        grains['osfinger'] = '{os}-{ver}'.format(
+                os=grains['osfullname'],
+                ver=grains['osrelease'])
+
 
     return grains
 

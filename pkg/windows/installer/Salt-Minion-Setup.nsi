@@ -1,5 +1,5 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "0.16.0"
+!define PRODUCT_VERSION "0.16.2"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -130,6 +130,7 @@ Section "MainSection" SEC01
   SetOverwrite try
   CreateDirectory $INSTDIR\conf\pki\minion
   File /r "..\buildenv\"
+  Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F' 
 
 SectionEnd
 

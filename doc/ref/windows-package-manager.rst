@@ -189,6 +189,15 @@ future ``pkg.purge`` may direct the installer to remove all configs and
 settings for software packages that support that option.
 
 
+
+Standalone Minion Salt Windows Repo Module
+==========================================
+
+In order to facilitate managing a Salt Windows software repo with Salt on a
+Standalone Minion on Windows, a new module named winrepo has been added to
+Salt. wirepo matches what is available in the salt runner and allows you to
+manage the Windows software repo contents. Example:  salt \* winrepo.genrepo
+
 Git Hosted Repo
 ===============
 

@@ -17,10 +17,11 @@ Module to provide MySQL compatibility to salt.
 
         mysql.default_file: '/etc/mysql/debian.cnf'
 
-    .. note::
-        Version 0.16.1 will add the option to set passwordless logins, as well
-        as supply the connection arguments directly from the CLI or in an SLS
-        file.
+.. versionchanged:: 0.16.2
+    Connection arguments from the minion config file can be overridden on the
+    CLI by using the arguments defined :doc:`here
+    </ref/states/all/salt.states.mysql_user>`. Additionally, it is now possible
+    to setup a user with no password.
 '''
 
 # Import python libs
@@ -189,9 +190,9 @@ def query(database, query, **connection_args):
     conv_iter = iter(orig_conv)
     conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
 
-    dbc = _connect(**(connection_args.update({
-        'connection_db': database, 'connection_conv': conv})))
-    if dbc is not None:
+    connection_args.update({'connection_db': database, 'connection_conv': conv})
+    dbc = _connect(**connection_args)
+    if dbc is None:
         return {}
     cur = dbc.cursor()
     start = time.time()
@@ -563,8 +564,8 @@ def user_exists(user,
     if passwordless login is permitted by omitting ``password`` and
     ``password_hash``, and using ``passwordless=True``.
 
-    .. note::
-        The ``passwordless`` option will be available in version 0.16.1.
+    .. versionadded:: 0.16.2
+        The ``passwordless`` option was added.
 
     CLI Example::
 
@@ -660,8 +661,8 @@ def user_create(user,
         If ``True``, then ``password`` and ``password_hash`` can be omitted (or
         set to ``None``) to permit a passwordless login.
 
-    .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.1.
+    .. versionadded:: 0.16.2
+        The ``allow_passwordless`` option was added.
 
     CLI Examples::
 
@@ -741,8 +742,8 @@ def user_chpass(user,
         If ``True``, then ``password`` and ``password_hash`` can be omitted (or
         set to ``None``) to permit a passwordless login.
 
-    .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.1.
+    .. versionadded:: 0.16.2
+        The ``allow_passwordless`` option was added.
 
     CLI Examples::
 
@@ -1126,34 +1127,17 @@ def processlist(**connection_args):
         salt '*' mysql.processlist
 
     '''
-    hdr = ('Id', 'User', 'Host', 'db', 'Command', 'Time', 'State',
-           'Info', 'Rows_sent', 'Rows_examined', 'Rows_read')
-
-    log.debug('MySQL Process List:\n{0}'.format(processlist(**connection_args)))
-    dbc = _connect(**connection_args)
-    if dbc is None:
-        return []
-    cur = dbc.cursor()
-
-    qry = 'SHOW FULL PROCESSLIST'
-    log.debug('Doing query: {0}'.format(qry))
-    try:
-        cur.execute(qry)
-    except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
-        __context__['mysql.error'] = err
-        log.error(err)
-        return []
-
     ret = []
+
+    dbc = _connect(**connection_args)
+    cur = dbc.cursor()
+    cur.execute('SHOW FULL PROCESSLIST')
+    hdr = [c[0] for c in cur.description]
     for _ in range(cur.rowcount):
         row = cur.fetchone()
         idx_r = {}
         for idx_j in range(len(hdr)):
-            try:
-                idx_r[hdr[idx_j]] = row[idx_j]
-            except KeyError:
-                pass
+            idx_r[hdr[idx_j]] = row[idx_j]
         ret.append(idx_r)
     cur.close()
     return ret

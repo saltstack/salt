@@ -43,6 +43,15 @@ def __virtual__():
     return 'service'
 
 
+def _enabled_used_error(ret):
+    ret['result'] = False
+    ret['comment'] = (
+        'Service {0} uses non-existant option "enabled".  ' +
+        'Perhaps "enable" option was intended?'
+    ).format(ret['name'])
+    return ret
+
+
 def _enable(name, started, result=True, **kwargs):
     '''
     Enable the service
@@ -256,6 +265,10 @@ def running(name, enable=None, sig=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    # Check for common error: using enabled option instead of enable
+    if 'enabled' in kwargs:
+        return _enabled_used_error(ret)
+
     # Check if the service is available
     ret = _available(name, ret)
     if not ret.pop('available', True):
@@ -318,6 +331,10 @@ def dead(name, enable=None, sig=None, **kwargs):
            'changes': {},
            'result': True,
            'comment': ''}
+
+    # Check for common error: using enabled option instead of enable
+    if 'enabled' in kwargs:
+        return _enabled_used_error(ret)
 
     # Check if the service is available
     ret = _available(name, ret)

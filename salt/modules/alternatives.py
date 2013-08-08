@@ -39,8 +39,7 @@ def _get_cmd():
     '''
     if __grains__['os_family'] == 'RedHat':
         return 'alternatives'
-    else:
-        return 'update-alternatives'
+    return 'update-alternatives'
 
 
 def display(name):
@@ -61,7 +60,7 @@ def display(name):
 
 def show_current(name):
     '''
-    Display the current higest-priority alternative for a given alternatives
+    Display the current highest-priority alternative for a given alternatives
     link
 
     CLI Example::

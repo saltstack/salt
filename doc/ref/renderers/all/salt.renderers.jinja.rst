@@ -99,8 +99,8 @@ the context into the included file is required:
 
 .. _imports: http://jinja.pocoo.org/docs/templates/#import
 
-Variable Serializers
-====================
+Variable and block Serializers
+==============================
 
 Salt allows to serialize any variable into **json** or **yaml**. For example
 this variable::
@@ -128,22 +128,39 @@ will be rendered has::
 
 
 Strings and variables can be deserialized with **load_yaml** and **load_json**
-filters. It allows to manipulate data directly in templates, easily:
+tags and filters. It allows to manipulate data directly in templates, easily:
 
 .. code-block:: yaml
 
-    {%- set json_src = '{"foo": "bar", "baz": "qux"}'|load_json %}
-    My json foo is {{ json_src.foo }}
+    {%- set json_var = '{"foo": "bar", "baz": "qux"}'|load_json %}
+    My json_var foo is {{ json_var.foo }}
 
-    {%- set yaml_src = "{bar: baz: qux}"|load_yaml %}
-    My yaml bar.baz is {{ yaml_src.bar.baz }}
+    {%- set yaml_var = "{bar: baz: qux}"|load_yaml %}
+    My yaml_var bar.baz is {{ yaml_var.bar.baz }}
+
+    {%- load_json as json_block %}
+      {
+        "qux": {{ yaml_var|json }},
+      }
+    {% endload %}
+    My json_block qux.bar.baz is {{ json_block.qux.bar.baz }}
+
+    {%- load_yaml as yaml_block %}
+      bar:
+        baz:
+          qux
+    {% endload %}
+    My yaml_block bar.baz is {{ yaml2.bar.baz }}
 
 will be rendered has::
 
-    My json foo is bar
+    My json_var foo is bar
 
-    My yaml bar.baz is qux
+    My yaml_var bar.baz is qux
 
+    My json_block foo is quz
+
+    My yaml_block bar.baz is qux
 
 Template Serializers
 ====================
@@ -170,7 +187,7 @@ But you don't want to expose everything to a minion. This state file:
 .. code-block:: yaml
 
     # specialized.sls
-    {% load "everything.sls" as all %}
+    {% import_yaml "everything.sls" as all %}
     my_admins:
       my_foo: {{ all.users.foo|yaml }}
 
@@ -180,12 +197,6 @@ will be rendered has::
       my_foo: [john]
 
 .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
-
-Template Inheritance
-====================
-
-`Template inheritance`_ works fine from state files and files. The search path
-starts at the root of the state tree or pillar.
 
 Macros
 ======
@@ -222,6 +233,12 @@ This would define a macro_ that would return a string of the full package name,
 depending on the packaging system's naming convention. The whitespace of the
 macro was eliminated, so that the macro would return a string without line
 breaks, using `whitespace control`_.
+
+Template Inheritance
+====================
+
+`Template inheritance`_ works fine from state files and files. The search path
+starts at the root of the state tree or pillar.
 
 .. _`Template inheritance`: http://jinja.pocoo.org/docs/templates/#template-inheritance
 .. _`Macros`: http://jinja.pocoo.org/docs/templates/#macros
@@ -279,6 +296,13 @@ Jinja_ can be used in the same way in managed files:
 
 As an example, configuration was pulled from the file context and from an
 external template file.
+
+.. note::
+
+    Macros and variables can be shared across templates. They should not be
+    starting with one or more underscores, and should be managed by one of the
+    following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
+    `import_json`.
 
 
 .. automodule:: salt.renderers.jinja

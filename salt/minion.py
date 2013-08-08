@@ -45,8 +45,6 @@ import salt.loader
 import salt.utils
 import salt.payload
 import salt.utils.schedule
-# TODO: should probably use _getargs() from salt.utils?
-from salt.state import _getargs
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
@@ -105,16 +103,13 @@ def resolve_dns(opts):
 
 def get_proc_dir(cachedir):
     '''
-    Return the directory that process data is stored in
+    Given the cache directory, return the directory that process data is
+    stored in, creating it if it doesn't exist.
     '''
     fn_ = os.path.join(cachedir, 'proc')
     if not os.path.isdir(fn_):
         # proc_dir is not present, create it
         os.makedirs(fn_)
-    else:
-        # proc_dir is present, clean out old proc files
-        for proc_fn in os.listdir(fn_):
-            os.remove(os.path.join(fn_, proc_fn))
     return fn_
 
 
@@ -129,7 +124,7 @@ def parse_args_and_kwargs(func, args, data=None):
     This is to prevent things like 'echo "Hello: world"' to be parsed as
     dictionaries.
     '''
-    spec_args, _, has_kwargs, _ = salt.state._getargs(func)
+    spec_args, _, has_kwargs, _ = salt.utils.get_function_argspec(func)
     _args = []
     kwargs = {}
     for arg in args:
@@ -529,7 +524,7 @@ class Minion(object):
             # decryption of the payload failed, try to re-auth but wait
             # random seconds if set in config with random_reauth_delay
             if 'random_reauth_delay' in self.opts:
-                reauth_delay = randint(0, int(self.opts['random_reauth_delay']) )
+                reauth_delay = randint(0, int(self.opts['random_reauth_delay']))
                 log.debug("Waiting {0} seconds to re-authenticate".format(reauth_delay))
                 time.sleep(reauth_delay)
 
@@ -658,7 +653,9 @@ class Minion(object):
                 )
             except TypeError as exc:
                 trb = traceback.format_exc()
-                aspec = _getargs(minion_instance.functions[data['fun']])
+                aspec = salt.utils.get_function_argspec(
+                    minion_instance.functions[data['fun']]
+                )
                 msg = ('TypeError encountered executing {0}: {1}. See '
                        'debug log for more info.  Possibly a missing '
                        'arguments issue:  {2}').format(function_name, exc,
@@ -839,13 +836,20 @@ class Minion(object):
             )
         )
         auth = salt.crypt.Auth(self.opts)
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        if not acceptance_wait_time_max:
+            acceptance_wait_time_max = acceptance_wait_time
         while True:
             creds = auth.sign_in(timeout, safe)
             if creds != 'retry':
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
-            time.sleep(self.opts['acceptance_wait_time'])
+            time.sleep(acceptance_wait_time)
+            if acceptance_wait_time < acceptance_wait_time_max:
+                acceptance_wait_time += acceptance_wait_time
+                log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
@@ -964,23 +968,23 @@ class Minion(object):
         recon_delay = self.opts['recon_default']
 
         if self.opts['recon_randomize']:
-            recon_delay = randint(self.opts['recon_default'], 
+            recon_delay = randint(self.opts['recon_default'],
                                   self.opts['recon_default'] + self.opts['recon_max']
-                          )    
+                          )
 
             log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
                 self.opts['recon_default'],
                 self.opts['recon_default'] + self.opts['recon_max'],
                 recon_delay)
-            )    
+            )
 
         log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
         self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
 
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
-            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format( 
+            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format(
                 self.opts['recon_default'] + self.opts['recon_max'])
-            )    
+            )
 
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']

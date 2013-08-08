@@ -103,7 +103,7 @@ def add_user(name, password, runas=None):
         salt '*' rabbitmq.add_user rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl add_user {0} {1}'.format(name, password),
+        'rabbitmqctl add_user {0} \'{1}\''.format(name, password),
         runas=runas)
 
     msg = 'Added'
@@ -134,7 +134,7 @@ def change_password(name, password, runas=None):
         salt '*' rabbitmq.change_password rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl change_password {0} {1}'.format(name, password),
+        'rabbitmqctl change_password {0} \'{1}\''.format(name, password),
         runas=runas)
     msg = 'Password Changed'
 
@@ -214,3 +214,121 @@ def list_user_permissions(name, user=None):
         'rabbitmqctl list_user_permissions {0}'.format(name),
         runas=user)
     return [r.split('\t') for r in res.splitlines()]
+
+
+def status(user=None):
+    '''
+    return rabbitmq status
+
+    Example::
+
+        salt '*' rabbitmq.status
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl status',
+        runas=user
+    )
+    return res
+
+
+def cluster_status(user=None):
+    '''
+    return rabbitmq cluster_status
+
+    Example::
+
+        salt '*' rabbitmq.cluster_status
+    '''
+    ret = {}
+    res = __salt__['cmd.run'](
+        'rabbitmqctl cluster_status',
+        runas=user)
+
+    return res
+
+
+def stop_app(runas=None):
+    '''
+    Stops the RabbitMQ application, leaving the Erlang node running.
+
+    Example::
+
+        salt '*' rabbitmq.stop_app
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl stop_app',
+        runas=runas)
+
+    return res
+
+
+def start_app(runas=None):
+    '''
+    Start the RabbitMQ application.
+
+    Example::
+
+        salt '*' rabbitmq.start_app
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl start_app',
+        runas=runas)
+
+    return res
+
+
+def reset(runas=None):
+    '''
+    Return a RabbitMQ node to its virgin state
+
+    Example::
+
+        salt '*' rabbitmq.reset
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl reset',
+        runas=runas)
+
+    return res
+
+
+def force_reset(runas=None):
+    '''
+    Forcefully Return a RabbitMQ node to its virgin state
+
+    Example::
+
+        salt '*' rabbitmq.force_reset
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl force_reset',
+        runas=runas)
+
+    return res
+
+def list_queues(*kwargs):
+    '''
+    Returns queue details of the / virtual host
+
+    Example::
+
+        salt '*' rabbitmq.list_queues messages consumers
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_queues {0}'.format(' '.join(list(kwargs))))
+    return res
+
+def list_queues_vhost(vhost, *kwargs):
+    '''
+    Returns queue details of specified virtual host.
+    This command will consider first parameter as the vhost name and rest will be treated as queueinfoitem.
+    Also rabbitmqctl's -p parameter will be passed by salt, it should not be provided by salt command
+    For getting details on vhost '/', use list_queues instead).
+
+    Example::
+
+        salt '*' rabbitmq.list_queues messages consumers
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))))
+    return res

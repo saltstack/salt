@@ -15,6 +15,9 @@ information.
         - password: bobcat
 
 
+.. versionadded:: 0.16.2
+    Authentication overrides have been added.
+
 The MySQL authentication information specified in the minion config file can be
 overidden in states using the following arguments: ``connection_host``,
 ``connection_port``, ``connection_user``, ``connection_pass``,
@@ -28,9 +31,6 @@ overidden in states using the following arguments: ``connection_host``,
         - password: bobcat
         - connection_user: someuser
         - connection_pass: somepass
-
-.. note::
-    Authentication overrides will be available in version 0.16.1.
 '''
 
 # Import python libs
@@ -96,7 +96,7 @@ def present(name,
         permit a passwordless login.
 
     .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.1.
+        The ``allow_passwordless`` option will be available in version 0.16.2.
     '''
     ret = {'name': name,
            'changes': {},

@@ -82,7 +82,7 @@ Running Salt
 
         salt-master --log-level=debug
 
-.. admonition:: Run as an unprivileged (non-root) user?
+.. admonition:: Run as an unprivileged (non-root) user
 
     To run Salt as another user, specify ``--user`` in the command
     line or assign ``user`` in the

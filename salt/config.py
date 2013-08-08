@@ -91,6 +91,7 @@ VALID_OPTS = {
     'state_verbose': bool,
     'state_output': str,
     'acceptance_wait_time': float,
+    'acceptance_wait_time_max': float,
     'loop_interval': float,
     'dns_check': bool,
     'verify_env': bool,
@@ -214,6 +215,7 @@ DEFAULT_MINION_OPTS = {
     'state_output': 'full',
     'state_auto_order': False,
     'acceptance_wait_time': 10,
+    'acceptance_wait_time_max': 0,
     'loop_interval': 1,
     'dns_check': True,
     'verify_env': True,
@@ -365,6 +367,11 @@ def _validate_opts(opts):
                     errors.append(
                         err.format(key, val, type(val), VALID_OPTS[key])
                     )
+                except TypeError:
+                    errors.append(
+                        err.format(key, val, type(val), VALID_OPTS[key])
+                    )
+
     for error in errors:
         log.warning(error)
     if errors:

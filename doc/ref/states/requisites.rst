@@ -75,6 +75,22 @@ state, and if the dependent state fails, don't run the depending state. So in
 the above examples the file ``/etc/vimrc`` will only be applied after the vim
 package is installed and only if the vim package is installed successfully.
 
+Require an entire sls file
+--------------------------
+
+As of Salt 0.16.0, it is possible to require an entire sls file. Do this by first including
+the sls file and then setting a state to ``require`` the included sls file.
+
+.. code-block:: yaml
+
+    include:
+      - foo
+
+    bar:
+      pkg.installed:
+        - require:
+          - sls: foo
+
 Watch
 -----
 
@@ -141,6 +157,8 @@ The ``use`` statement was developed primarily for the networking states but
 can be used on any states in Salt. This made sense for the networking state
 because it can define a long list of options that need to be applied to
 multiple network interfaces.
+
+.. _requisites-require-in:
 
 Require In
 ----------
@@ -219,6 +237,8 @@ mod_python.sls
 
 Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
+
+.. _requisites-watch-in:
 
 Watch In
 --------

@@ -3,8 +3,12 @@ Create ssh executor system
 '''
 # Import python libs
 import os
+import tarfile
+import tempfile
 import json
 import getpass
+import shutil
+import copy
 
 # Import salt libs
 import salt.ssh.shell
@@ -12,6 +16,41 @@ import salt.utils.thin
 import salt.roster
 import salt.state
 import salt.loader
+import salt.minion
+
+
+def decode_list(data):
+    '''
+    JSON decodes as unicode, Jinja needs raw strings...
+    '''
+    rv = []
+    for item in data:
+        if isinstance(item, unicode):
+            item = item.encode('utf-8')
+        elif isinstance(item, list):
+            item = decode_list(item)
+        elif isinstance(item, dict):
+            item = decode_dict(item)
+        rv.append(item)
+    return rv
+
+
+def decode_dict(data):
+    '''
+    JSON decodes as unicode, Jinja needs raw strings...
+    '''
+    rv = {}
+    for key, value in data.iteritems():
+        if isinstance(key, unicode):
+           key = key.encode('utf-8')
+        if isinstance(value, unicode):
+           value = value.encode('utf-8')
+        elif isinstance(value, list):
+           value = decode_list(value)
+        elif isinstance(value, dict):
+           value = decode_dict(value)
+        rv[key] = value
+    return rv
 
 
 class SSH(object):
@@ -85,14 +124,25 @@ class SSH(object):
                     arg_str,
                     host,
                     **target)
-            single.cmd()
+            ret = single.cmd_block()
+            if ret.startswith('deploy'):
+                single.deploy()
+                ret = single.cmd_block()
             target.pop('passwd')
             single = Single(
                     self.opts,
                     self.opts['arg_str'],
                     host,
                     **target)
-            return single.cmd()
+            stdout = single.cmd_block()
+            try:
+                data = json.loads(stdout)
+                if 'local' in data:
+                    return {host: data['local']}
+                else:
+                    return {host: data}
+            except Exception:
+                return {host: 'Bad Return'}
         return ret
 
     def process(self):
@@ -112,28 +162,29 @@ class SSH(object):
                     if not default in self.targets[host]:
                         self.targets[host][default] = self.defaults[default]
 
-                single = Single(
-                        self.opts,
-                        self.opts['arg_str'],
-                        host,
-                        **self.targets[host])
-                running[host] = {'iter': single.cmd(),
-                                 'single': single}
+                if host not in running:
+                    single = Single(
+                            self.opts,
+                            self.opts['arg_str'],
+                            host,
+                            **self.targets[host])
+                    running[host] = {'iter': single.cmd(),
+                                     'single': single}
             for host in running:
                 stdout, stderr = next(running[host]['iter'])
-                if stdout == 'deploy':
+                if stdout is None and stderr is None:
+                    continue
+                if stdout.startswith('deploy'):
                     running[host]['single'].deploy()
                     running[host]['iter'] = single.cmd()
-                elif stdout is None and stderr is None:
-                    continue
                 else:
                     # This job is done, yield
                     try:
                         if not stdout and stderr:
                             yield {running[host]['single'].id: stderr}
                         else:
-                            data = json.dumps(stdout)
-                            if 'local' in data:
+                            data = json.loads(stdout)
+                            if len(data) < 2 and 'local' in data:
                                 yield {running[host]['single'].id: data['local']}
                             else:
                                 yield {running[host]['single'].id: data}
@@ -182,6 +233,7 @@ class Single():
             **kwargs):
         self.opts = opts
         self.arg_str = arg_str
+        self.fun, self.arg = self.__arg_comps()
         self.id = id_
         self.extra = kwargs
         self.shell = salt.ssh.shell.Shell(
@@ -200,6 +252,19 @@ class Single():
         self.target['priv'] = priv
         self.target['timeout'] = timeout
         self.target['sudo'] = sudo
+
+    def __arg_comps(self):
+        '''
+        Return the function name and the arg list
+        '''
+        fun = ''
+        arg = []
+        comps = self.arg_str.split()
+        if len(comps) > 0:
+            fun = comps[0]
+        if len(comps) > 1:
+            arg = comps[1:]
+        return fun, arg
 
     def deploy(self):
         '''
@@ -247,21 +312,94 @@ class Single():
                'EOF').format(self.arg_str)
         if self.arg_str.startswith('state.highstate'):
             self.highstate_seed()
+        if self.arg_str.startswith('state.sls'):
+            args, kwargs = salt.minion.parse_args_and_kwargs(
+                    self.sls_seed, self.arg)
+            trans_tar = self.sls_seed(*args, **kwargs)
+            print trans_tar
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
             else:
                 yield stdout, stderr
 
+    def cmd_block(self):
+        '''
+        Prepare the precheck command to send to the subsystem
+        '''
+        # 1. check if python is on the target
+        # 2. check is salt-call is on the target
+        # 3. deploy salt-thin
+        # 4. execute command
+        cmd = (' << "EOF"\n'
+               'if [ `type -p python2` ]\n'
+               'then\n'
+               '    PYTHON=python2\n'
+               'elif [ `type -p python26` ]\n'
+               'then\n'
+               '    PYTHON=python26\n'
+               'elif [ `type -p python27` ]\n'
+               'then\n'
+               '    PYTHON=python27\n'
+               'fi\n'
+               'if hash salt-call\n'
+               'then\n'
+               '    SALT=$(type -p salt-call)\n'
+               'elif [ -f /tmp/salt-call ] \n'
+               'then\n'
+               '    SALT=/tmp/salt-call\n'
+               'else\n'
+               '    echo "deploy"\n'
+               '    exit 1\n'
+               'fi\n'
+               '$PYTHON $SALT --local --out json -l quiet {0}\n'
+               'EOF').format(self.arg_str)
+        return self.shell.exec_cmd(cmd)
+
     def highstate_seed(self):
         '''
         Generate an archive file which contains the instructions and files
         to execute a state run on a remote system
         '''
-        wrapper = FunctionWrapper(self.opts, target['id'], **self.target)
+        wrapper = FunctionWrapper(self.opts, self.target['id'], **self.target)
         st_ = SSHHighState(self.opts, None, wrapper)
         lowstate = st_.compile_low_chunks()
         #file_refs = salt.utils.lowstate_file_refs(lowstate)
+
+    def sls_seed(self, mods, env='base', test=None, exclude=None, **kwargs):
+        '''
+        Create the seed file for a state.sls run
+        '''
+        wrapper = FunctionWrapper(self.opts, self.id, **self.target)
+        minion_opts = wrapper['test.opts_pkg']()
+        pillar = kwargs.get('pillar', {})
+        st_ = SSHHighState(minion_opts, pillar, wrapper)
+        if isinstance(mods, str):
+            mods = mods.split(',')
+        high, errors = st_.render_highstate({env: mods})
+        if exclude:
+            if isinstance(exclude, str):
+                exclude = exclude.split(',')
+            if '__exclude__' in high:
+                high['__exclude__'].extend(exclude)
+            else:
+                high['__exclude__'] = exclude
+        high, ext_errors = st_.state.reconcile_extend(high)
+        errors += ext_errors
+        errors += st_.state.verify_high(high)
+        if errors:
+            return errors
+        high, req_in_errors = st_.state.requisite_in(high)
+        errors += req_in_errors
+        high = st_.state.apply_exclude(high)
+        # Verify that the high data is structurally sound
+        if errors:
+            return errors
+        # Compile and verify the raw chunks
+        chunks = st_.state.compile_high_data(high)
+        file_refs = lowstate_file_refs(chunks)
+        trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
+        return trans_tar
 
 
 class FunctionWrapper(dict):
@@ -285,7 +423,7 @@ class FunctionWrapper(dict):
         '''
         Return the function call to simulate the salt local lookup system
         '''
-        def caller(args, kwargs):
+        def caller(*args, **kwargs):
             '''
             The remote execution function
             '''
@@ -294,9 +432,9 @@ class FunctionWrapper(dict):
                 arg_str += '{0} '.format(arg)
             for key, val in kwargs.items():
                 arg_str += '{0}={1} '.format(key, val)
-            single = Single(self.opts, arg_str, **kwargs)
-            ret = single.cmd()
-            return ret[single.id]
+            single = Single(self.opts, arg_str, **self.kwargs)
+            ret = json.loads(single.cmd_block(), object_hook=decode_dict)
+            return ret
         return caller
 
 
@@ -305,7 +443,6 @@ class SSHState(salt.state.State):
     Create a State object which wraps the ssh functions for state operations
     '''
     def __init__(self, opts, pillar=None, wrapper=None):
-        opts['grains'] = wrapper['grains.items']()
         self.wrapper = wrapper
         super(SSHState, self).__init__(opts, pillar)
 
@@ -341,3 +478,73 @@ class SSHHighState(salt.state.BaseHighState):
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
+
+
+def lowstate_file_refs(chunks):
+    '''
+    Create a list of file ref objects to reconcile
+    '''
+    refs = {}
+    for chunk in chunks:
+        env = 'base'
+        crefs = []
+        for state in chunk:
+            if state == '__env__':
+                env = chunk[state]
+            elif state.startswith('__'):
+                continue
+            crefs.extend(salt_refs(chunk[state]))
+        if crefs:
+            if not env in refs:
+                refs[env] = []
+            refs[env].append(crefs)
+    return refs
+
+
+def salt_refs(data):
+    '''
+    Pull salt file references out of the states
+    '''
+    proto = 'salt://'
+    ret = []
+    if isinstance(data, str):
+        if data.startswith(proto):
+            return [data]
+    if isinstance(data, list):
+        for comp in data:
+            if isinstance(comp, str):
+                if comp.startswith(proto):
+                    ret.append(comp)
+    return ret
+
+
+def prep_trans_tar(opts, chunks, file_refs):
+    '''
+    Generate the execution package from the env file refs and a low state
+    data structure
+    '''
+    gendir = tempfile.mkdtemp()
+    trans_tar = salt.utils.mkstemp()
+    fnopts = copy.copy(opts)
+    fnopts['cachedir'] = gendir
+    file_client = salt.fileclient.LocalClient(fnopts)
+    lowfn = os.path.join(gendir, 'lowstate.json')
+    with open(lowfn, 'w+') as fp_:
+        fp_.write(json.dumps(chunks))
+    for env in file_refs:
+        for ref in file_refs[env]:
+            for name in ref:
+                path = file_client.cache_file(name, env)
+                if path:
+                    break
+                if file_client.cache_dir(name, env, True):
+                    break
+    cwd = os.getcwd()
+    os.chdir(gendir)
+    with tarfile.open(trans_tar, 'w:gz') as tfp:
+        for root, dirs, files in os.walk(gendir):
+            for name in files:
+                tfp.add(os.path.join(root, name))
+    os.chdir(cwd)
+    shutil.rmtree(gendir)
+    return trans_tar

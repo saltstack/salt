@@ -15,7 +15,6 @@ The data sent to the state calls is as follows:
 import os
 import sys
 import copy
-import inspect
 import fnmatch
 import logging
 import collections
@@ -28,11 +27,23 @@ import salt.minion
 import salt.pillar
 import salt.fileclient
 import salt.utils.event
-from salt._compat import string_types, callable
+from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltReqTimeoutError, SaltException
 
 log = logging.getLogger(__name__)
+
+
+def split_low_tag(tag):
+    '''
+    Take a low tag and split it back into the low dict that it came from
+    '''
+    state, id_, name, fun = tag.split('_|-')
+
+    return {'state': state,
+            '__id__': id_,
+            'name': name,
+            'fun': fun}
 
 
 def _gen_tag(low):
@@ -40,24 +51,6 @@ def _gen_tag(low):
     Generate the running dict tag string from the low data structure
     '''
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
-
-
-def _getargs(func):
-    '''
-    A small wrapper around getargspec that also supports callable classes
-    '''
-    if not callable(func):
-        raise TypeError('{0} is not a callable'.format(func))
-
-    if inspect.isfunction(func):
-        aspec = inspect.getargspec(func)
-    elif isinstance(func, object):
-        aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0]  # self
-    else:
-        raise TypeError('Cannot inspect argument list for "{0}"'.format(func))
-
-    return aspec
 
 
 def trim_req(req):
@@ -624,7 +617,7 @@ class State(object):
                         )
         else:
             # First verify that the parameters are met
-            aspec = _getargs(self.states[full])
+            aspec = salt.utils.get_function_argspec(self.states[full])
             arglen = 0
             deflen = 0
             if isinstance(aspec[0], list):
@@ -845,7 +838,7 @@ class State(object):
         ret = {}
         ret['full'] = '{0[state]}.{0[fun]}'.format(data)
         ret['args'] = []
-        aspec = _getargs(self.states[ret['full']])
+        aspec = salt.utils.get_function_argspec(self.states[ret['full']])
         arglen = 0
         deflen = 0
         if isinstance(aspec[0], list):
@@ -1326,6 +1319,8 @@ class State(object):
                     for chunk in chunks:
                         req_key = next(iter(req))
                         req_val = req[req_key]
+                        if req_val is None:
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
@@ -1402,11 +1397,15 @@ class State(object):
                     for chunk in chunks:
                         req_key = next(iter(req))
                         req_val = req[req_key]
+                        if req_val is None:
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
                                 if requisite == 'prereq':
                                     chunk['__prereq__'] = True
+                                elif requisite == 'prerequired':
+                                    chunk['__prerequired__'] = True
                                 reqs.append(chunk)
                                 found = True
                         elif req_key == 'sls':
@@ -1421,10 +1420,15 @@ class State(object):
             if lost['require'] or lost['watch'] or lost['prereq'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
+                    if not lreqs:
+                        continue
+                    comment += \
+                        '{0}{1}:\n'.format(' ' * 19, requisite)
                     for lreq in lreqs:
-                        comment += '{0}{1}: {2}\n'.format(' ' * 19,
-                                requisite,
-                                lreq)
+                        req_key = next(iter(lreq))
+                        req_val = lreq[req_key]
+                        comment += \
+                            '{0}{1}: {2}\n'.format(' ' * 23, req_key, req_val)
                 running[tag] = {'changes': {},
                                 'result': False,
                                 'comment': comment,
@@ -1437,8 +1441,14 @@ class State(object):
                 ctag = _gen_tag(chunk)
                 if ctag not in running:
                     if ctag in self.active:
-                        log.error('Recursive requisite found')
-                        if ctag not in running:
+                        if chunk.get('__prerequired__'):
+                            # Prereq recusive, run this chunk with prereq on
+                            if tag not in self.pre:
+                                low['__prereq__'] = True
+                                self.pre[ctag] = self.call(low)
+                                return running
+                        elif ctag not in running:
+                            log.error('Recursive requisite found')
                             running[tag] = {
                                     'changes': {},
                                     'result': False,
@@ -1450,7 +1460,14 @@ class State(object):
                     if self.check_failhard(chunk, running):
                         running['__FAILHARD__'] = True
                         return running
-            running = self.call_chunk(low, running, chunks)
+            if low.get('__prereq__'):
+                status = self.check_requisite(low, running, chunks)
+                self.pre[tag] = self.call(low)
+                if not self.pre[tag]['changes'] and status == 'change':
+                    self.pre[tag]['changes'] = {'watch': 'watch'}
+                    self.pre[tag]['result'] = None
+            else:
+                running = self.call_chunk(low, running, chunks)
             if self.check_failhard(chunk, running):
                 running['__FAILHARD__'] = True
                 return running
@@ -1794,6 +1811,10 @@ class BaseHighState(object):
                        'laid out as a dict').format(env)
                 errors.append(err)
             for slsmods in matches.values():
+                if not isinstance(slsmods, list):
+                    errors.append('Malformed topfile (state declarations not '
+                                  'formed as a list)')
+                    continue
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
@@ -2281,7 +2302,8 @@ class HighState(BaseHighState):
     compound state derived from a group of template files stored on the
     salt master or in the local cache.
     '''
-    stack = [] # a stack of active HighState objects during a state.highstate run.
+    # a stack of active HighState objects during a state.highstate run
+    stack = []
 
     def __init__(self, opts, pillar=None):
         self.client = salt.fileclient.get_file_client(opts)

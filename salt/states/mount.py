@@ -78,35 +78,62 @@ def mounted(name,
 
     # Get the active data
     active = __salt__['mount.active']()
+    if name in active:
+        if active.__getitem__(name).__getitem__('device') != device:
+            # name matches but device doesn't - need to umount
+            out = __salt__['mount.umount'](name)
+            active = __salt__['mount.active']()
+        else:
+            ret['comment'] = 'Target was already mounted'
+    # using a duplicate check so I can catch the results of a umount
     if name not in active:
         # The mount is not present! Mount it
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('Mount point {0} is not mounted but needs to '
-                              'be').format(name)
+            ret['comment'] = '{0} would be mounted'.format(name)
             return ret
+
         out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
+        active = __salt__['mount.active']()
         if isinstance(out, string_types):
             # Failed to (re)mount, the state has failed!
             ret['comment'] = out
             ret['result'] = False
-        elif out is True:
+            return ret
+        elif name in active:
             # (Re)mount worked!
             ret['comment'] = 'Target was successfully mounted'
             ret['changes']['mount'] = True
-    else:
-        ret['comment'] = 'Target was already mounted'
 
-    if persist:
+    if persist and name in active:
         if __opts__['test']:
-            fstab_data = __salt__['mount.fstab'](config)
-            if name not in fstab_data:
+            out = __salt__['mount.set_fstab'](name,
+                                              device,
+                                              fstype,
+                                              opts,
+                                              dump,
+                                              pass_num,
+                                              config,
+                                              test=True)
+            if out != 'present':
                 ret['result'] = None
-                ret['comment'] = ('Mount point {0} is mounted but needs to '
-                                  'be set to be made persistent').format(name)
+                if out == 'new':
+                    ret['comment'] = ('{0} is mounted, but needs to be '
+                                      'written to the fstab in order to be '
+                                      'made persistent').format(name)
+                elif out == 'change':
+                    ret['comment'] = ('{0} is mounted, but its fstab entry '
+                                      'must be updated').format(name)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = ('Unable to detect fstab status for '
+                                      'mount point {0} due to unexpected '
+                                      'output \'{1}\' from call to '
+                                      'mount.set_fstab. This is most likely '
+                                      'a bug.').format(name, out)
                 return ret
 
-        if ret['changes']['mount']:
+        else:
             out = __salt__['mount.set_fstab'](name,
                                               device,
                                               fstype,
@@ -114,8 +141,6 @@ def mounted(name,
                                               dump,
                                               pass_num,
                                               config)
-        else:
-            out = 'bad mount'
 
         if out == 'present':
             return ret
@@ -131,9 +156,6 @@ def mounted(name,
             ret['result'] = False
             ret['comment'] += '. However, the fstab was not found.'
             return ret
-        if out == 'bad mount':
-            ret['result'] = False
-            ret['comment'] += '. Unfortunately the file system didn\'t exist.'
 
     return ret
 
@@ -207,4 +229,74 @@ def swap(name, persist=True, config='/etc/fstab'):
             ret['result'] = False
             ret['comment'] += '. However, the fstab was not found.'
             return ret
+    return ret
+
+
+def unmounted(name,
+              config='/etc/fstab',
+              persist=False):
+    '''
+    .. note::
+        This state will be available in verion 0.17.0.
+
+    Verify that a device is mounted
+
+    name
+        The path to the location where the device is to be unmounted from
+
+    config
+        Set an alternative location for the fstab, default to /etc/fstab
+
+    persist
+        Set if the mount should be purged from the fstab, default to False
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    # Get the active data
+    active = __salt__['mount.active']()
+    if name not in active:
+        # Nothing to unmount
+        ret['comment'] = 'Target was already unmounted'
+    if name in active:
+        # The mount is present! Unmount it
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('Mount point {0} is mounted but should not '
+                              'be').format(name)
+            return ret
+        out = __salt__['mount.umount'](name)
+        if isinstance(out, string_types):
+            # Failed to umount, the state has failed!
+            ret['comment'] = out
+            ret['result'] = False
+        elif out is True:
+            # umount worked!
+            ret['comment'] = 'Target was successfully unmounted'
+            ret['changes']['umount'] = True
+
+    if persist:
+        if __opts__['test']:
+            fstab_data = __salt__['mount.fstab'](config)
+            if name in fstab_data:
+                ret['result'] = None
+                ret['comment'] = ('Mount point {0} is unmounted but needs to '
+                                  'be purged from {1} to be made '
+                                  'persistent').format(name, config)
+                return ret
+
+        if ret['changes']['umount']:
+            out = __salt__['mount.rm_fstab'](name, config)
+        else:
+            out = 'bad mount'
+
+        if out is True:
+            ret['changes']['persist'] = 'purged'
+            return ret
+        if out == 'bad mount':
+            ret['result'] = False
+            ret['comment'] += '. Unfortunately the mount could not be purged'
+
     return ret

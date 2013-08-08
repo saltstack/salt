@@ -1,3 +1,5 @@
+.. _pillar:
+
 ==============
 Pillar of Salt
 ==============
@@ -91,9 +93,44 @@ more via the shared pillar :ref:`dict <python2:typesmapping>`:
 
 Note that you cannot just list key/value-information in ``top.sls``.
 
+Pillar namespace flattened
+==========================
+
+The separate pillar files all share the same namespace. Given 
+a ``top.sls`` of
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+        - services
+
+a packages.sls file of:
+
+.. code-block:: yaml
+
+    bind: bind9
+
+and a services.sls file of:
+
+.. code-block:: yaml
+
+    bind: named
+
+Then a pillar request for pillar['bind'] will only return "named", the
+'bind9' value is not available. It's better to structure your pillar 
+files with more heirarchy. For example your package files could look like:
+
+.. code-block:: yaml
+
+    packages:
+      bind: bind9
 
 Including Other Pillars
 =======================
+
+.. versionadded:: 0.16.0
 
 Pillar SLS files may include other pillar files, similar to State files.
 Two syntaxes are available for this purpose. The simple form simply includes
@@ -136,7 +173,7 @@ will return a freshly reloaded pillar and :mod:`pillar.raw
     # salt '*' pillar.items
 
 .. note::
-    Prior to version 0.16.1, this function is named ``pillar.data``. This
+    Prior to version 0.16.2, this function is named ``pillar.data``. This
     function name is still supported for backwards compatibility.
 
 
@@ -185,8 +222,8 @@ locally. This is done with the ``saltutil.refresh_pillar`` function.
 
     salt '*' saltutil.refresh_pillar
 
-This function triggers the minion to asynchronously refresh the pillar and will always return
-``None``
+This function triggers the minion to asynchronously refresh the pillar and will
+always return ``None``.
 
 Targeting with Pillar
 =====================

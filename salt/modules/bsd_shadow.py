@@ -64,6 +64,9 @@ def set_password(name, password):
 
     ``python -c "import crypt; print crypt.crypt('password', ciphersalt)"``
 
+    :strong:`NOTE:` When constructing the ``ciphersalt`` string, you must
+    escape any dollar signs, to avoid them being interpolated by the shell.
+
     ``'password'`` is, of course, the password for which you want to generate
     a hash.
 

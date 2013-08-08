@@ -13,8 +13,8 @@ to be replaced in the sls data with the arguments m_name and m_fun.
 import datetime
 
 # Import salt libs
-import salt.state
 import salt.loader
+import salt.utils
 
 
 def wait(name, **kwargs):
@@ -63,7 +63,7 @@ def run(name, **kwargs):
         ret['comment'] = 'Module function {0} is set to execute'.format(name)
         return ret
 
-    aspec = salt.state._getargs(__salt__[name])
+    aspec = salt.utils.get_function_argspec(__salt__[name])
 
     args = []
     defaults = {}
@@ -74,13 +74,6 @@ def run(name, **kwargs):
         arglen = len(aspec[0])
     if isinstance(aspec[3], tuple):
         deflen = len(aspec[3])
-    if aspec[2]:
-        # This state accepts kwargs
-        for key in kwargs:
-            # Passing kwargs the conflict with args == stack trace
-            if key in aspec[0]:
-                continue
-            defaults[key] = kwargs[key]
     # Match up the defaults with the respective args
     for ind in range(arglen - 1, -1, -1):
         minus = arglen - ind
@@ -104,11 +97,11 @@ def run(name, **kwargs):
             rarg = 'm_fun'
         else:
             rarg = arg
-        if rarg not in kwargs and rarg not in defaults:
+        if rarg not in kwargs and arg not in defaults:
             missing.add(rarg)
             continue
-        if rarg in defaults:
-            args.append(defaults[rarg])
+        if arg in defaults:
+            args.append(defaults[arg])
         else:
             args.append(kwargs.pop(rarg))
     if missing:
@@ -130,9 +123,19 @@ def run(name, **kwargs):
 
         args.extend(varargs)
 
+    nkwargs = {}
+    if aspec[2] and aspec[2] in kwargs:
+        nkwargs = kwargs.pop(aspec[2])
+
+        if not isinstance(nkwargs, dict):
+            msg = "'{0}' must be a dict."
+            ret['comment'] = msg.format(aspec[2])
+            ret['result'] = False
+            return ret
+
     try:
         if aspec[2]:
-            mret = __salt__[name](*args, **kwargs)
+            mret = __salt__[name](*args, **nkwargs)
         else:
             mret = __salt__[name](*args)
     except Exception:

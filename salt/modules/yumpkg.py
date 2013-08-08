@@ -15,8 +15,9 @@ account when configuring your syslog daemon.
 
 # Import python libs
 import copy
-import os
 import logging
+import os
+import re
 import yaml
 
 # Import salt libs
@@ -180,18 +181,18 @@ def _set_repo_options(yumbase, **kwargs):
 
     try:
         if fromrepo:
-            log.info('Restricting to repo \'{0}\''.format(fromrepo))
+            log.info('Restricting to repo {0!r}'.format(fromrepo))
             yumbase.repos.disableRepo('*')
             yumbase.repos.enableRepo(fromrepo)
         else:
             if disablerepo:
-                log.info('Disabling repo \'{0}\''.format(disablerepo))
+                log.info('Disabling repo {0!r}'.format(disablerepo))
                 yumbase.repos.disableRepo(disablerepo)
             if enablerepo:
-                log.info('Enabling repo \'{0}\''.format(enablerepo))
+                log.info('Enabling repo {0!r}'.format(enablerepo))
                 yumbase.repos.enableRepo(enablerepo)
-    except yum.Errors.RepoError as e:
-        return e
+    except yum.Errors.RepoError as exc:
+        return exc
 
 
 def latest_version(*names, **kwargs):
@@ -302,8 +303,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
     yb = yum.YumBase()
     for p in yb.rpmdb:
         name = p.name
-        if __grains__.get('cpuarch', '') == 'x86_64' and p.arch == 'i686':
-            name += '.i686'
+        if __grains__.get('cpuarch', '') == 'x86_64' \
+                and re.match(r'i\d86', p.arch):
+            name += '.{0}'.format(p.arch)
         pkgver = p.version
         if p.release:
             pkgver += '-{0}'.format(p.release)
@@ -433,8 +435,9 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
-        32-bit packages can be installed on 64-bit systems by appending
-        ``.i686`` to the end of the package name.
+        32-bit packages can be installed on 64-bit systems by appending the
+        architecture designation (``.i686``, ``.i586``, etc.) to the end of the
+        package name.
 
         CLI Example::
             salt '*' pkg.install <package name>
@@ -536,11 +539,14 @@ def install(name=None,
             else:
                 version = pkg_params[pkgname]
                 if version is not None:
-                    if __grains__.get('cpuarch', '') == 'x86_64' \
-                            and pkgname.endswith('.i686'):
-                        # Remove '.i686' from pkgname
-                        pkgname = pkgname[:-5]
-                        arch = '.i686'
+                    if __grains__.get('cpuarch', '') == 'x86_64':
+                        try:
+                            arch = re.search(r'(\.i\d86)$', pkgname).group(1)
+                        except AttributeError:
+                            arch = ''
+                        else:
+                            # Remove arch from pkgname
+                            pkgname = pkgname[:-len(arch)]
                     else:
                         arch = ''
                     target = '{0}-{1}{2}'.format(pkgname, version, arch)
@@ -652,10 +658,15 @@ def remove(name=None, pkgs=None, **kwargs):
 
     # same comments as in upgrade for remove.
     for target in targets:
-        if __grains__.get('cpuarch', '') == 'x86_64' \
-                and target.endswith('.i686'):
-            target = target[:-5]
-            arch = 'i686'
+        if __grains__.get('cpuarch', '') == 'x86_64':
+            try:
+                arch = re.search(r'(\.i\d86)$', target).group(1)
+            except AttributeError:
+                arch = None
+            else:
+                # Remove arch from pkgname
+                target = target[:-len(arch)]
+                arch = arch.lstrip('.')
         else:
             arch = None
         yumbase.remove(name=target, arch=arch)

@@ -23,7 +23,7 @@ which makes use of the jinja templating system would look like this:
         - defaults:
             custom_var: "default value"
             other_var: 123
-    {% if grains['os'] = 'Ubuntu' %}
+    {% if grains['os'] == 'Ubuntu' %}
         - context:
             custom_var: "override"
     {% endif %}
@@ -136,7 +136,6 @@ import os
 import shutil
 import difflib
 import logging
-import copy
 import re
 import fnmatch
 import json
@@ -690,6 +689,7 @@ def managed(name,
             show_diff=True,
             create=True,
             contents=None,
+            contents_pillar=None,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -773,19 +773,13 @@ def managed(name,
         contents of the file.  Should not be used in conjunction with a source
         file of any kind.  Ignores hashes and does not use a templating engine.
 
-        Note, including a multiline string from an external source (such as
-        Pillar) presents a formatting challenege since the multiline content
-        will not adhere to YAML's required indentation. The external content
-        must be indented manually at the Jinja level::
-
-            /tmp/myfile:
-              file:
-                - managed
-                - contents: |
-                    {{ salt['pillar.get']('some:multiline:text') | indent(8) }}
-
-            # Note the above example is indented by 8 spaces.
-
+    contents_pillar
+        Operates like ``contents``, but draws from a value stored in pillar,
+        using the pillar path syntax used in :mod:`pillar.get
+        <salt.modules.pillar.get>`. This is useful when the pillar value
+        contains newlines, as referencing a pillar variable using a jinja/mako
+        template can result in YAML formatting issues due to the newlines
+        causing indentation mismatches.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -821,6 +815,17 @@ def managed(name,
     elif not isinstance(context, dict):
         return _error(
             ret, 'Context must be formed as a dict')
+
+    if contents and contents_pillar:
+        return _error(
+            ret, 'Only one of contents and contents_pillar is permitted')
+
+    # If contents_pillar was used, get the pillar data
+    if contents_pillar:
+        contents = __salt__['pillar.get'](contents_pillar)
+        # Make sure file ends in newline
+        if not contents.endswith('\n'):
+            contents += '\n'
 
     if not replace and os.path.exists(name):
        # Check and set the permissions if necessary
@@ -1034,8 +1039,7 @@ def directory(name,
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
                              '"group" and "mode"'
         else:
-            targets = copy.copy(recurse)
-            if 'user' in targets:
+            if 'user' in recurse:
                 if user:
                     uid = __salt__['file.user_to_uid'](user)
                     # file.user_to_uid returns '' if user does not exist. Above
@@ -1046,16 +1050,12 @@ def directory(name,
                         ret['comment'] = 'Failed to enforce ownership for ' \
                                          'user {0} (user does not ' \
                                          'exist)'.format(user)
-                        # Remove 'user' from list of recurse targets
-                        targets = list(x for x in targets if x != 'user')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'user not specified, but configured as ' \
                                      'a target for recursive ownership ' \
                                      'management'
-                    # Remove 'user' from list of recurse targets
-                    targets = list(x for x in targets if x != 'user')
-            if 'group' in targets:
+            if 'group' in recurse:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
                     # As above with user, we need to make sure group exists.
@@ -1063,15 +1063,11 @@ def directory(name,
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)
-                        # Remove 'group' from list of recurse targets
-                        targets = list(x for x in targets if x != 'group')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
                                      'as a target for recursive ownership ' \
                                      'management'
-                    # Remove 'group' from list of recurse targets
-                    targets = list(x for x in targets if x != 'group')
 
             for root, dirs, files in os.walk(name):
                 for fn_ in files:
@@ -1982,6 +1978,90 @@ def touch(name, atime=None, mtime=None, makedirs=False):
             'directory' if os.path.isdir(name) else 'file', name
         )
 
+    return ret
+
+
+def copy(name, source, force=False, makedirs=False):
+    '''
+    If the source file exists on the system, copy it to the named file. The
+    named file will not be overwritten if it already exists unless the force
+    option is set to True.
+
+    name
+        The location of the file to copy to
+
+    source
+        The location of the file to copy to the location specified with name
+
+    force
+        If the target location is present then the file will not be moved,
+        specify "force: True" to overwrite the target file
+
+    makedirs
+        If the target subdirectories don't exist create them
+
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'comment': '',
+        'result': True}
+
+    if not os.path.isabs(name):
+        return _error(
+            ret, 'Specified file {0} is not an absolute path'.format(name))
+
+    if not os.path.exists(source):
+        return _error(ret, 'Source file "{0}" is not present'.format(source))
+
+    if os.path.lexists(source) and os.path.lexists(name):
+        if not force:
+            ret['comment'] = ('The target file "{0}" exists and will not be '
+                              'overwritten'.format(name))
+            ret['result'] = True
+            return ret
+        elif not __opts__['test']:
+            # Remove the destination to prevent problems later
+            try:
+                if os.path.islink(name):
+                    os.unlink(name)
+                elif os.path.isfile(name):
+                    os.remove(name)
+                else:
+                    shutil.rmtree(name)
+            except (IOError, OSError):
+                return _error(
+                    ret,
+                    'Failed to delete "{0}" in preparation for '
+                    'forced move'.format(name)
+                )
+
+    if __opts__['test']:
+        ret['comment'] = 'File "{0}" is set to be copied to "{1}"'.format(
+            source,
+            name
+        )
+        ret['result'] = None
+        return ret
+
+    # Run makedirs
+    dname = os.path.dirname(name)
+    if not os.path.isdir(dname):
+        if makedirs:
+            os.makedirs(dname)
+        else:
+            return _error(
+                ret,
+                'The target directory {0} is not present'.format(dname))
+    # All tests pass, move the file into place
+    try:
+        shutil.copy(source, name)
+    except (IOError, OSError):
+        return _error(
+            ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
+
+    ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
+    ret['changes'] = {name: source}
     return ret
 
 

@@ -9,20 +9,20 @@ import ctypes
 import string
 
 # Import salt libs
+import salt.utils
+
 try:
     import win32api
-    IS_WINDOWS = True
 except ImportError:
-    IS_WINDOWS = False
-
+    pass
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if not IS_WINDOWS:
-        return False
-    return 'disk'
+    if salt.utils.is_windows():
+        return 'disk'
+    return False
 
 
 def usage():

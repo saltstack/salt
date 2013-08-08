@@ -5,7 +5,7 @@ in here
 '''
 
 # Import python libs
-import sys
+#import sys  # Use of sys is commented out below
 
 # Import salt libs
 import salt.log
@@ -131,17 +131,13 @@ class Serial(object):
                         for key, value in obj.copy().iteritems():
                             obj[key] = odict_encoder(value)
                         return dict(obj)
+                    elif isinstance(obj, (list, tuple)):
+                        obj = list(obj)
+                        for idx, entry in enumerate(obj):
+                            obj[idx] = odict_encoder(entry)
+                        return obj
                     return obj
-
-                if isinstance(msg, dict):
-                    for k, v in msg.copy().iteritems():
-                        msg[k] = odict_encoder(v)
-                elif isinstance(msg, (list, tuple)):
-                    msg = list(msg)
-                    for idx, entry in enumerate(msg):
-                        msg[idx] = odict_encoder(entry)
-
-                return msgpack.dumps(msg)
+                return msgpack.dumps(odict_encoder(msg))
 
     def dump(self, msg, fn_):
         '''
