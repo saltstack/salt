@@ -167,16 +167,20 @@
 #     - cmd
 
 # The external auth system uses the Salt auth modules to authenticate and
-# validate users to access areas of the Salt system
+# validate users to access areas of the Salt system.
 #
 # external_auth:
 #   pam:
 #     fred:
 #       - test.*
 #
+
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 # token_expire: 43200
 
+# Allow minions to push files to the master. This is disabled by default, for
+# security purposes.
+# file_recv: False 
 
 #####    Master Module Management    #####
 ##########################################
