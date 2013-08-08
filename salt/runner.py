@@ -2,11 +2,16 @@
 Execute salt convenience routines
 '''
 
+# Import python libs
+import multiprocessing
+import datetime
+
 # Import salt libs
 import salt.loader
 import salt.exceptions
 import salt.utils
 import salt.minion
+import salt.utils.event
 
 
 class RunnerClient(object):
@@ -16,6 +21,23 @@ class RunnerClient(object):
     def __init__(self, opts):
         self.opts = opts
         self.functions = salt.loader.runner(opts)
+
+    def _proc_runner(self, tag, fun, arg, kwarg):
+        '''
+        Run this method in a multiprocess target to execute the runner in a
+        multiprocess and fire the return data on the event bus
+        '''
+        salt.utils.daemonize()
+        data = {}
+        try:
+            data['ret'] = self.cmd(fun, arg, kwarg)
+        except Exception as exc:
+            data['ret'] = 'Exception occured in runner {0}: {1}'.format(
+                    fun,
+                    exc,
+                    )
+        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        event.fire_event(data, tag)
 
     def _verify_fun(self, fun):
         '''
@@ -56,6 +78,19 @@ class RunnerClient(object):
         f_call = salt.utils.format_call(l_fun, low)
         ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
+
+    def async(self, fun, arg, kwarg=None):
+        '''
+        Execute the runner in a multiprocess and return the event tag to use
+        to watch for the return
+        '''
+        tag = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        tag[20] = 'r'
+        proc = multiprocessing.Process(
+                target=self._proc_runner,
+                args=(tag, fun, arg, kwarg))
+        proc.start()
+        return tag
 
 
 class Runner(RunnerClient):
