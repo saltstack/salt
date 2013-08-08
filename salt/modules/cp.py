@@ -379,12 +379,12 @@ def push(path):
     '''
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
-    (defaults to /var/cache/salt/master/minions/files)
+    (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
 
     Since this feature allows a minion to push a file up to the master server
-    it is disabled by default for security purposes. To enable add the option:
-    file_recv: True
-    to the master configuration and restart the master
+    it is disabled by default for security purposes. To enable, set
+    ``file_recv`` to ``True`` in the master configuration file, and restart the
+    master.
 
     CLI Example::
 
