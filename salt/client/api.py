@@ -36,9 +36,9 @@ class APIClient(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
-        self.runner = salt.runner.RunnerClient(self.opts)
-        self.wheel = salt.wheel.Wheel(self.opts)
+        self.localClient = salt.client.LocalClient(self.opts['conf_file'])
+        self.runnerClient = salt.runner.RunnerClient(self.opts)
+        self.wheelClient = salt.wheel.Wheel(self.opts)
         self.resolver = salt.auth.Resolver(self.opts)
         self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
 
@@ -88,7 +88,7 @@ class APIClient(object):
 
         .. seealso:: :ref:`python-api`
         '''
-        return self.local.run_job(*args, **kwargs)
+        return self.localClient.run_job(*args, **kwargs)
     
     async = local_async # default async client
 
@@ -98,30 +98,32 @@ class APIClient(object):
 
         .. seealso:: :ref:`python-api`
         '''
-        return self.local.cmd(*args, **kwargs)
+        return self.localClient.cmd(*args, **kwargs)
     
     local = local_sync  # backwards compatible alias
     sync = local_sync # default sync client
 
-    def runner_async(self, fun, **kwargs):
+    def runner_async(self, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
+        Expects that one of the kwargs is key 'fun' whose value is the namestring
+        of the function to call
         '''
-        kwargs['fun'] = fun
-        return self.runner.master_call(**kwargs)
+        return self.runnerClient.master_call(**kwargs)
     
-    runner = runner_async #backwards compatible alias
-    runner_sync = runner_async # until we get an runner_async
+    runner = runner_async # default runner client
+    runner_sync = runner_async # always runner async, so works in either mode
 
-    def wheel_sync(self, fun, **kwargs):
+    def wheel_sync(self, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
+        Expects that one of the kwargs is key 'fun' whose value is the namestring
+        of the function to call
         '''
-        kwargs['fun'] = fun
-        return self.wheel.master_call(**kwargs)
+        return self.wheelClient.master_call(**kwargs)
     
-    wheel = wheel_sync # backwards compatible alias
-    wheel_async = wheel_sync # so it works either mode
+    wheel = wheel_sync # default wheel client
+    wheel_async = wheel_sync # always wheel_sync, so it works either mode
     
     def create_token(self, creds):
         '''

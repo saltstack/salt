@@ -92,13 +92,14 @@ class RunnerClient(object):
         proc.start()
         return tag
 
-    def master_call(self, fun, **kwargs):
+    def master_call(self,**kwargs):
         '''
         Send a function call to a wheel module through the master network interface
+        Expects that one of the kwargs is key 'fun' whose value is the namestring
+        of the function to call
         '''
         load = kwargs
         load['cmd'] = 'runner'
-        load['fun'] = fun
         sreq = salt.payload.SREQ(
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
