@@ -464,6 +464,7 @@ class LocalClient(Client):
     def file_list(self, env='base', prefix=''):
         '''
         Return a list of files in the given environment
+        with optional relative prefix path to limit directory traversal
         '''
         ret = []
         if env not in self.opts['file_roots']:
@@ -484,6 +485,7 @@ class LocalClient(Client):
     def file_list_emptydirs(self, env='base', prefix=''):
         '''
         List the empty dirs in the file_roots
+        with optional relative prefix path to limit directory traversal
         '''
         ret = []
         if env not in self.opts['file_roots']:
@@ -499,6 +501,7 @@ class LocalClient(Client):
     def dir_list(self, env='base', prefix=''):
         '''
         List the dirs in the file_roots
+        with optional relative prefix path to limit directory traversal
         '''
         ret = []
         if env not in self.opts['file_roots']:
