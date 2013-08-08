@@ -132,7 +132,11 @@ def latest_version(*names, **kwargs):
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
         if avail:
-            if not installed or compare(pkg1=installed, oper='<', pkg2=avail):
+            if not installed \
+                    or salt.utils.compare_versions(ver1=installed,
+                                                   oper='<',
+                                                   ver2=avail,
+                                                   cmp_func=version_cmp):
                 ret[name] = avail
 
     # Return a string if only one package name passed
@@ -221,8 +225,8 @@ def porttree_matches(name):
     '''
     matches = []
     for category in _porttree().dbapi.categories:
-        if _porttree().dbapi.cp_list(category+"/"+name):
-            matches.append(category+"/"+name)
+        if _porttree().dbapi.cp_list(category + "/" + name):
+            matches.append(category + "/" + name)
     return matches
 
 
@@ -276,7 +280,8 @@ def refresh_db():
     if 'makeconf.features_contains'in __salt__ and __salt__['makeconf.features_contains']('webrsync-gpg'):
         # GPG sign verify is supported only for "webrsync"
         cmd = 'emerge-webrsync -q'
-        if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'
+        # We prefer 'delta-webrsync' to 'webrsync'
+        if salt.utils.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd) == 0
     else:
@@ -284,7 +289,8 @@ def refresh_db():
             return True
         # We fall back to "webrsync" if "rsync" fails for some reason
         cmd = 'emerge-webrsync -q'
-        if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'
+        # We prefer 'delta-webrsync' to 'webrsync'
+        if salt.utils.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd) == 0
 
@@ -413,7 +419,7 @@ def install(name=None,
         for param, version_num in pkg_params.iteritems():
             original_param = param
             param = _p_to_cp(param)
-            if param == None:
+            if param is None:
                 raise portage.dep.InvalidAtom(original_param)
 
             if version_num is None:
@@ -442,12 +448,12 @@ def install(name=None,
                     __salt__['portage_config.append_use_flags'](target[1:-1])
                     new = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
                     if old != new:
-                        changes[param+'-USE'] = {'old': old, 'new': new}
+                        changes[param + '-USE'] = {'old': old, 'new': new}
                     target = target[:target.rfind('[')] + '"'
 
-                if keyword != None:
+                if keyword is not None:
                     __salt__['portage_config.append_to_package_conf']('accept_keywords', target[1:-1], ['~ARCH'])
-                    changes[param+'-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
+                    changes[param + '-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
 
                 targets.append(target)
     else:
@@ -571,7 +577,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
             targets = ['{0}:{1}'.format(fullatom, slot)]
         if fromrepo is not None:
             targets = ['{0}::{1}'.format(fullatom, fromrepo)]
-        targets = [ fullatom ]
+        targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]
 
@@ -656,7 +662,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
             targets = ['{0}:{1}'.format(fullatom, slot)]
         if fromrepo is not None:
             targets = ['{0}::{1}'.format(fullatom, fromrepo)]
-        targets = [ fullatom ]
+        targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]
 
@@ -667,7 +673,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def perform_cmp(pkg1='', pkg2=''):
+def version_cmp(pkg1, pkg2):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
@@ -675,8 +681,7 @@ def perform_cmp(pkg1='', pkg2=''):
 
     CLI Example::
 
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
+        salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     '''
     regex = r'^~?([^:\[]+):?[^\[]*\[?.*$'
     ver1 = re.match(regex, pkg1)
@@ -685,18 +690,6 @@ def perform_cmp(pkg1='', pkg2=''):
     if ver1 and ver2:
         return portage.versions.vercmp(ver1.group(1), ver2.group(1))
     return None
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
 
 
 def version_clean(version):
@@ -752,7 +745,8 @@ def check_extra_requirements(pkgname, pkgver):
 
     des_uses = set(portage.dep.dep_getusedeps(atom))
     cur_use = cur_use.split()
-    if len([ x for x in des_uses.difference(cur_use) if x[0]!='-' or x[1:] in cur_use ]) > 0:
+    if len([x for x in des_uses.difference(cur_use)
+            if x[0] != '-' or x[1:] in cur_use]) > 0:
         return False
 
     if keyword:
