@@ -1241,7 +1241,7 @@ def recurse(name,
 
     if not _src_path:
         pass
-    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](env, srcpath):
+    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](env, _src_path):
         ret['result'] = False
         ret['comment'] = (
             'The source: {0} does not exist on the master'.format(source)
