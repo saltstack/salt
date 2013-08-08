@@ -21,7 +21,7 @@ import salt.minion
 
 def decode_list(data):
     '''
-    JSON decodes as unicode, Jinja needs raw strings...
+    JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = []
     for item in data:
@@ -37,25 +37,25 @@ def decode_list(data):
 
 def decode_dict(data):
     '''
-    JSON decodes as unicode, Jinja needs raw strings...
+    JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = {}
     for key, value in data.iteritems():
         if isinstance(key, unicode):
-           key = key.encode('utf-8')
+            key = key.encode('utf-8')
         if isinstance(value, unicode):
-           value = value.encode('utf-8')
+            value = value.encode('utf-8')
         elif isinstance(value, list):
-           value = decode_list(value)
+            value = decode_list(value)
         elif isinstance(value, dict):
-           value = decode_dict(value)
+            value = decode_dict(value)
         rv[key] = value
     return rv
 
 
 class SSH(object):
     '''
-    Create an ssh execution system
+    Create an SSH execution system
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -85,7 +85,7 @@ class SSH(object):
 
     def get_pubkey(self):
         '''
-        Return the keystring for the ssh public key
+        Return the keystring for the SSH public key
         '''
         priv = self.opts.get(
                 'ssh_priv',
@@ -101,7 +101,7 @@ class SSH(object):
 
     def key_deploy(self, host, ret):
         '''
-        Deploy the ssh key if the minions don't auth
+        Deploy the SSH key if the minions don't auth
         '''
         if not isinstance(ret[host], basestring):
             return ret
@@ -405,7 +405,7 @@ class Single():
 class FunctionWrapper(dict):
     '''
     Create an object that acts like the salt function dict and makes function
-    calls remotely via the ssh shell system
+    calls remotely via the SSH shell system
     '''
     def __init__(
             self,
@@ -440,7 +440,7 @@ class FunctionWrapper(dict):
 
 class SSHState(salt.state.State):
     '''
-    Create a State object which wraps the ssh functions for state operations
+    Create a State object which wraps the SSH functions for state operations
     '''
     def __init__(self, opts, pillar=None, wrapper=None):
         self.wrapper = wrapper

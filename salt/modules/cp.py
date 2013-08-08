@@ -312,7 +312,7 @@ def list_states(env='base'):
     return __context__['cp.fileclient'].list_states(env)
 
 
-def list_master(env='base'):
+def list_master(env='base', prefix=''):
     '''
     List all of the files stored on the master
 
@@ -321,10 +321,10 @@ def list_master(env='base'):
         salt '*' cp.list_master
     '''
     _mk_client()
-    return __context__['cp.fileclient'].file_list(env)
+    return __context__['cp.fileclient'].file_list(env, prefix)
 
 
-def list_master_dirs(env='base'):
+def list_master_dirs(env='base', prefix=''):
     '''
     List all of the directories stored on the master
 
@@ -333,7 +333,7 @@ def list_master_dirs(env='base'):
         salt '*' cp.list_master_dirs
     '''
     _mk_client()
-    return __context__['cp.fileclient'].dir_list(env)
+    return __context__['cp.fileclient'].dir_list(env, prefix)
 
 
 def list_minion(env='base'):
@@ -379,12 +379,12 @@ def push(path):
     '''
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
-    (defaults to /var/cache/salt/master/minions/files)
+    (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
 
     Since this feature allows a minion to push a file up to the master server
-    it is disabled by default for security purposes. To enable add the option:
-    file_recv: True
-    to the master configuration and restart the master
+    it is disabled by default for security purposes. To enable, set
+    ``file_recv`` to ``True`` in the master configuration file, and restart the
+    master.
 
     CLI Example::
 

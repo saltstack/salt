@@ -743,10 +743,10 @@ class AESFuncs(object):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warn(
-                ('Minion id {0} is not who it says it is and is attempting '
-                 'to issue a peer command').format(
-                    clear_load['id']
-                )
+                (
+                    'Minion id {0} is not who it says it is and is attempting '
+                    'to issue a peer command'
+                ).format(clear_load['id'])
             )
             return False
         perms = []
@@ -1324,10 +1324,10 @@ class AESFuncs(object):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warn(
-                ('Minion id {0} is not who it says it is and is attempting '
-                 'to revoke the key for {0}').format(
-                    load['id']
-                )
+                (
+                    'Minion id {0} is not who it says it is and is attempting '
+                    'to revoke the key for {0}'
+                ).format(load['id'])
             )
             return False
         keyapi = salt.key.Key(self.opts)
@@ -1753,6 +1753,94 @@ class ClearFuncs(object):
         self.event.fire_event(eload, 'auth')
         return ret
 
+    def runner(self, clear_load):
+        '''
+        Send a master control function back to the wheel system
+        '''
+        # All wheel ops pass through eauth
+        if 'token' in clear_load:
+            try:
+                token = self.loadauth.get_tok(clear_load['token'])
+            except Exception as exc:
+                log.error(
+                    'Exception occurred when generating auth token: {0}'.format(
+                        exc
+                    )
+                )
+                return ''
+            if not token:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
+            if token['eauth'] not in self.opts['external_auth']:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
+            if token['name'] not in self.opts['external_auth'][token['eauth']]:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
+            good = self.ckminions.runner_check(
+                    self.opts['external_auth'][clear_load['eauth']][token['name']] if token['name'] in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                    clear_load['fun'])
+            if not good:
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                log.warning(msg)
+                return ''
+
+            try:
+                fun = clear_load.pop('fun')
+                return self.wheel_.call_func(fun, **clear_load)
+            except Exception as exc:
+                log.error('Exception occurred while '
+                        'introspecting {0}: {1}'.format(fun, exc))
+                return ''
+
+        if 'eauth' not in clear_load:
+            msg = ('Authentication failure of type "eauth" occurred for '
+                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+            log.warning(msg)
+            return ''
+        if clear_load['eauth'] not in self.opts['external_auth']:
+            # The eauth system is not enabled, fail
+            msg = ('Authentication failure of type "eauth" occurred for '
+                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+            log.warning(msg)
+            return ''
+
+        try:
+            name = self.loadauth.load_name(clear_load)
+            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                log.warning(msg)
+                return ''
+            if not self.loadauth.time_auth(clear_load):
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                log.warning(msg)
+                return ''
+            good = self.ckminions.runner_check(
+                    self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                    clear_load['fun'])
+            if not good:
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                log.warning(msg)
+                return ''
+
+            try:
+                fun = clear_load.pop('fun')
+                return self.wheel_.call_func(fun, **clear_load)
+            except Exception as exc:
+                log.error('Exception occurred while '
+                        'introspecting {0}: {1}'.format(fun, exc))
+                return ''
+
+        except Exception as exc:
+            log.error(
+                'Exception occurred in the wheel system: {0}'.format(exc)
+            )
+            return ''
+
     def wheel(self, clear_load):
         '''
         Send a master control function back to the wheel system
@@ -1776,6 +1864,14 @@ class ClearFuncs(object):
                 return ''
             if token['name'] not in self.opts['external_auth'][token['eauth']]:
                 log.warning('Authentication failure of type "token" occurred.')
+                return ''
+            good = self.ckminions.wheel_check(
+                    self.opts['external_auth'][clear_load['eauth']][token['name']] if token['name'] in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                    clear_load['fun'])
+            if not good:
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                log.warning(msg)
                 return ''
 
             try:
@@ -2060,7 +2156,7 @@ class ClearFuncs(object):
                 self.opts['hash_type']
                 )
 
-        # Announce the job on the event bus 
+        # Announce the job on the event bus
         self.event.fire_event(clear_load, 'new_job')
 
         # Verify the jid dir
