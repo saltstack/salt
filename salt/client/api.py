@@ -46,6 +46,8 @@ class APIClient(object):
         '''
         Execute the specified function in the specified client by passing the
         lowstate cmd
+        Change this so pass in data that has mode tgt and low
+        has pargs and kwargs ask about pollution
         
         New backwards compatible client and fun naming scheme. 
         In new scheme low['client'] is the client mode either 'sync' or 'async'. 
