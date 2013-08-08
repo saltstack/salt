@@ -166,7 +166,8 @@ def set_fstab(
         dump=0,
         pass_num=0,
         config='/etc/fstab',
-        ):
+        test=False,
+        **kwargs):
     '''
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
@@ -222,7 +223,7 @@ def set_fstab(
                         comps[5] = str(pass_num)
                     if change:
                         log.debug(
-                            'fstab entry for mount point {0} is being '
+                            'fstab entry for mount point {0} needs to be '
                             'updated'.format(name)
                         )
                         newline = (
@@ -234,43 +235,46 @@ def set_fstab(
                 else:
                     lines.append(line)
     except (IOError, OSError) as exc:
-        msg = 'Couldn\'t write to {0}: {1}'
+        msg = 'Couldn\'t read from {0}: {1}'
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     if change:
-        try:
-            with salt.utils.fopen(config, 'w+') as ofile:
-                # The line was changed, commit it!
-                ofile.writelines(lines)
-        except (IOError, OSError):
-            msg = 'File not writable {0}'
-            raise CommandExecutionError(msg.format(config))
+        if not salt.utils.test_mode(test=test, **kwargs):
+            try:
+                with salt.utils.fopen(config, 'w+') as ofile:
+                    # The line was changed, commit it!
+                    ofile.writelines(lines)
+            except (IOError, OSError):
+                msg = 'File not writable {0}'
+                raise CommandExecutionError(msg.format(config))
 
         return 'change'
 
-    if not change and not present:
-        # The entry is new, add it to the end of the fstab
-        newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
-                device,
-                name,
-                fstype,
-                opts,
-                dump,
-                pass_num)
-        lines.append(newline)
-        try:
-            with salt.utils.fopen(config, 'w+') as ofile:
-                # The line was changed, commit it!
-                ofile.writelines(lines)
-        except (IOError, OSError):
-            raise CommandExecutionError(
-                'File not writable {0}'.format(
-                    config
-                )
-            )
-    if present and not change:
-        # The right entry is already here
-        return 'present'
+    if not change:
+        if present:
+            # The right entry is already here
+            return 'present'
+        else:
+            if not salt.utils.test_mode(test=test, **kwargs):
+                # The entry is new, add it to the end of the fstab
+                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
+                        device,
+                        name,
+                        fstype,
+                        opts,
+                        dump,
+                        pass_num)
+                lines.append(newline)
+                try:
+                    with salt.utils.fopen(config, 'w+') as ofile:
+                        # The line was changed, commit it!
+                        ofile.writelines(lines)
+                except (IOError, OSError):
+                    raise CommandExecutionError(
+                        'File not writable {0}'.format(
+                            config
+                        )
+                    )
     return 'new'
 
 
