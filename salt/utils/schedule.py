@@ -1,7 +1,7 @@
 '''
-Scheduling routines are located here. To activate the scheduler make the schedule
-option available to the master or minion configurations (master config file or
-for the minion via config or pillar)
+Scheduling routines are located here. To activate the scheduler make the
+schedule option available to the master or minion configurations (master config
+file or for the minion via config or pillar)
 
 code-block:: yaml
 
@@ -30,6 +30,7 @@ import logging
 import salt.utils
 
 log = logging.getLogger(__name__)
+
 
 class Schedule(object):
     '''
