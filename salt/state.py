@@ -1811,6 +1811,10 @@ class BaseHighState(object):
                        'laid out as a dict').format(env)
                 errors.append(err)
             for slsmods in matches.values():
+                if not isinstance(slsmods, list):
+                    errors.append('Malformed topfile (state declarations not '
+                                  'formed as a list)')
+                    continue
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
