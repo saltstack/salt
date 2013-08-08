@@ -204,3 +204,16 @@ class Resolver(object):
         except (IOError, OSError):
             pass
         return tdata
+
+    def request_token(self, load):
+        '''
+        Request a token fromt he master
+        '''
+        load['cmd'] = 'mk_token'
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        tdata = sreq.send('clear', load)
+        if 'token' not in tdata:
+            return tdata
+        return tdata
