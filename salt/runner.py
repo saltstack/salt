@@ -92,6 +92,21 @@ class RunnerClient(object):
         proc.start()
         return tag
 
+    def master_call(self, fun, **kwargs):
+        '''
+        Send a function call to a wheel module through the master network interface
+        '''
+        load = kwargs
+        load['cmd'] = 'runner'
+        load['fun'] = fun
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        ret = sreq.send('clear', load)
+        if ret == '':
+            raise salt.exceptions.EauthAuthenticationError
+        return ret
+
 
 class Runner(RunnerClient):
     '''
