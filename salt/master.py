@@ -1788,7 +1788,8 @@ class ClearFuncs(object):
 
             try:
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load)
+                runner_client = salt.runner.RunnerClient(self.opts)
+                return runner_client.async(fun, **clear_load)
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1829,7 +1830,8 @@ class ClearFuncs(object):
 
             try:
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load)
+                runner_client = salt.runner.RunnerClient(self.opts)
+                return runner_client.async(fun, **clear_load)
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1955,6 +1957,14 @@ class ClearFuncs(object):
                 'Exception occurred while authenticating: {0}'.format(exc)
             )
             return ''
+
+    def get_token(self, clear_load):
+        '''
+        Return the name associated with a token or False if the token is invalid
+        '''
+        if 'token' not in clear_load:
+            return False
+        return self.loadauth.get_tok(clear_load['token'])
 
     def publish(self, clear_load):
         '''
