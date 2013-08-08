@@ -951,25 +951,29 @@ def create_attach_volumes(name, kwargs, call=None):
             'volume_name': volume_name,
             'zone': kwargs['zone']
         }
-        if 'snapshot' in volume:
+        if 'volume_id' in volume:
+            volume_dict['volume_id'] = volume['volume_id']
+        elif 'snapshot' in volume:
             volume_dict['snapshot'] = volume['snapshot']
         else:
             volume_dict['size'] = volume['size']
 
-        created_volume = create_volume(volume_dict, call='function')
-        for item in created_volume:
-            if 'volumeId' in item:
-                volume_id = item['volumeId']
+        if 'volume_id' not in volume_dict:
+            created_volume = create_volume(volume_dict, call='function')
+            for item in created_volume:
+                if 'volumeId' in item:
+                    volume_dict['volume_id'] = item['volumeId']
+
         attach = attach_volume(
             name,
-            {'volume_id': volume_id, 'device': volume['device']},
+            {'volume_id': volume_dict['volume_id'], 'device': volume['device']},
             instance_id=kwargs['instance_id'],
             call='action'
         )
         if attach:
             msg = (
                 '{0} attached to {1} (aka {2}) as device {3}'.format(
-                    volume_id, kwargs['instance_id'], name, volume['device']
+                    volume_dict['volume_id'], kwargs['instance_id'], name, volume['device']
                 )
             )
             log.info(msg)
@@ -1584,6 +1588,13 @@ def create_volume(kwargs=None, call=None):
     log.debug(params)
 
     data = query(params, return_root=True)
+
+    # Wait a few seconds to make sure the volume
+    # has had a chance to shift to available state
+    # TODO: Should probably create a util method to
+    # wait for available status and fail on others
+    time.sleep(5)
+
     return data
 
 
@@ -1622,6 +1633,8 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
               'VolumeId': kwargs['volume_id'],
               'InstanceId': instance_id,
               'Device': kwargs['device']}
+
+    log.debug(params)
 
     data = query(params, return_root=True)
     return data
