@@ -19,6 +19,40 @@ import salt.loader
 import salt.minion
 
 
+def decode_list(data):
+    '''
+    JSON decodes as unicode, Jinja needs raw strings...
+    '''
+    rv = []
+    for item in data:
+        if isinstance(item, unicode):
+            item = item.encode('utf-8')
+        elif isinstance(item, list):
+            item = decode_list(item)
+        elif isinstance(item, dict):
+            item = decode_dict(item)
+        rv.append(item)
+    return rv
+
+
+def decode_dict(data):
+    '''
+    JSON decodes as unicode, Jinja needs raw strings...
+    '''
+    rv = {}
+    for key, value in data.iteritems():
+        if isinstance(key, unicode):
+           key = key.encode('utf-8')
+        if isinstance(value, unicode):
+           value = value.encode('utf-8')
+        elif isinstance(value, list):
+           value = decode_list(value)
+        elif isinstance(value, dict):
+           value = decode_dict(value)
+        rv[key] = value
+    return rv
+
+
 class SSH(object):
     '''
     Create an ssh execution system
@@ -282,7 +316,7 @@ class Single():
             args, kwargs = salt.minion.parse_args_and_kwargs(
                     self.sls_seed, self.arg)
             trans_tar = self.sls_seed(*args, **kwargs)
-            #print trans_tar
+            print trans_tar
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
@@ -350,19 +384,19 @@ class Single():
                 high['__exclude__'].extend(exclude)
             else:
                 high['__exclude__'] = exclude
-        high, ext_errors = st_.reconcile_extend(high)
+        high, ext_errors = st_.state.reconcile_extend(high)
         errors += ext_errors
-        errors += st_.verify_high(high)
+        errors += st_.state.verify_high(high)
         if errors:
             return errors
-        high, req_in_errors = st_.requisite_in(high)
+        high, req_in_errors = st_.state.requisite_in(high)
         errors += req_in_errors
-        high = st_.apply_exclude(high)
+        high = st_.state.apply_exclude(high)
         # Verify that the high data is structurally sound
         if errors:
             return errors
         # Compile and verify the raw chunks
-        chunks = st_.compile_high_data(high)
+        chunks = st_.state.compile_high_data(high)
         file_refs = lowstate_file_refs(chunks)
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
 
@@ -398,7 +432,7 @@ class FunctionWrapper(dict):
             for key, val in kwargs.items():
                 arg_str += '{0}={1} '.format(key, val)
             single = Single(self.opts, arg_str, **self.kwargs)
-            ret = json.loads(single.cmd_block())
+            ret = json.loads(single.cmd_block(), object_hook=decode_dict)
             return ret
         return caller
 
