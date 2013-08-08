@@ -171,3 +171,30 @@ def ls():  # pylint: disable=C0103
         salt '*' grains.ls
     '''
     return sorted(__grains__)
+
+
+def filter_by(lookup_dict, grain='os_family'):
+    '''
+    Look up the given grain in a given dictionary for the current OS and return
+    the result
+
+    Although this may occasionally be useful at the CLI, the primary intent of
+    this function is for use in Jinja to make short work of creating lookup
+    tables for OS-specific data. For example::
+
+        {% set pkg_table = {
+            'Debian': {'name': 'apache2'},
+            'RedHat': {'name': 'httpd'},
+        } %}
+        {% set pkg = salt['grains.filter_by'](pkg_table) %}
+
+        myapache:
+          pkg:
+            - installed
+            - name: {{ pkg.name }}
+
+    CLI Example::
+
+        salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
+    '''
+    return lookup_dict.get(__grains__[grain], None)
