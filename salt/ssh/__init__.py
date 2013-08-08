@@ -399,6 +399,7 @@ class Single():
         chunks = st_.state.compile_high_data(high)
         file_refs = lowstate_file_refs(chunks)
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
+        return trans_tar
 
 
 class FunctionWrapper(dict):
@@ -492,12 +493,7 @@ def lowstate_file_refs(chunks):
                 env = chunk[state]
             elif state.startswith('__'):
                 continue
-            for arg in chunk[state]:
-                if not isinstance(arg, dict):
-                    continue
-                if len(arg) < 1:
-                    continue
-                crefs = salt_refs(arg[arg.keys()][0])
+            crefs.extend(salt_refs(chunk[state]))
         if crefs:
             if not env in refs:
                 refs[env] = []
@@ -534,13 +530,15 @@ def prep_trans_tar(opts, chunks, file_refs):
     file_client = salt.fileclient.LocalClient(fnopts)
     lowfn = os.path.join(gendir, 'lowstate.json')
     with open(lowfn, 'w+') as fp_:
-        fp_.write(json.dumps(lowfn))
+        fp_.write(json.dumps(chunks))
     for env in file_refs:
         for ref in file_refs[env]:
-            if file_client.cache_file(ref, env):
-                break
-            if file_client.cache_dir(ref, env, True):
-                break
+            for name in ref:
+                path = file_client.cache_file(name, env)
+                if path:
+                    break
+                if file_client.cache_dir(name, env, True):
+                    break
     cwd = os.getcwd()
     os.chdir(gendir)
     with tarfile.open(trans_tar, 'w:gz') as tfp:
