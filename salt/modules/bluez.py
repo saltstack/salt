@@ -96,21 +96,52 @@ def power(dev, mode):
         salt '*' bluetooth.power hci0 on
         salt '*' bluetooth.power hci0 off
     '''
-    log.debug('mode is {0}'.format(mode))
     if mode == 'on' or mode is True:
         state = 'up'
         mode = 'on'
     else:
         state = 'down'
         mode = 'off'
-    log.debug('state is {0}'.format(state))
     cmd = 'hciconfig {0} {1}'.format(dev, state)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run'](cmd).splitlines()
     info = address_()
-    log.debug(info)
     if info[dev]['power'] == mode:
         return True
     return False
+
+
+def discoverable(dev):
+    '''
+    Enable this bluetooth device to be discovrable.
+
+    CLI Example::
+
+        salt '*' bluetooth.discoverable hci0
+    '''
+    cmd = 'hciconfig {0} iscan'.format(dev)
+    __salt__['cmd.run'](cmd).splitlines()
+    cmd = 'hciconfig {0}'.format(dev)
+    out = __salt__['cmd.run'](cmd)
+    if 'UP RUNNING ISCAN' in out:
+        return True
+    return False
+
+
+def noscan(dev):
+    '''
+    Turn off scanning modes on this device.
+
+    CLI Example::
+
+        salt '*' bluetooth.noscan hci0
+    '''
+    cmd = 'hciconfig {0} noscan'.format(dev)
+    __salt__['cmd.run'](cmd).splitlines()
+    cmd = 'hciconfig {0}'.format(dev)
+    out = __salt__['cmd.run'](cmd)
+    if 'SCAN' in out:
+        return False
+    return True
 
 
 def scan():
