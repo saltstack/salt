@@ -48,8 +48,10 @@ if salt.utils.is_windows():
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
     _get_package_info = namespaced_function(_get_package_info, globals())
     get_repo_data = namespaced_function(get_repo_data, globals())
-    _get_latest_pkg_version = namespaced_function(_get_latest_pkg_version, globals())
-    _reverse_cmp_pkg_versions = namespaced_function(_reverse_cmp_pkg_versions, globals())
+    _get_latest_pkg_version = \
+            namespaced_function(_get_latest_pkg_version, globals())
+    _reverse_cmp_pkg_versions = \
+            namespaced_function(_reverse_cmp_pkg_versions, globals())
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     import msgpack
@@ -70,7 +72,7 @@ def _fulfills_version_spec(version, oper, desired_version):
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
     '''
-    for ver in versions:
+    for ver in version:
         if salt.utils.compare_versions(ver1=version,
                                        oper=oper,
                                        ver2=desired_version,
@@ -156,7 +158,8 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
             if not cver:
                 targets[pkgname] = pkgver
                 continue
-            elif not __salt__['pkg_resource.check_extra_requirements'](pkgname, pkgver):
+            elif not __salt__['pkg_resource.check_extra_requirements'](pkgname,
+                                                                       pkgver):
                 targets[pkgname] = pkgver
                 continue
             # No version specified and pkg is installed, do not add to targets
