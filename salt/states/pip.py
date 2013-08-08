@@ -19,6 +19,7 @@ requisite to a pkg.installed state for the package which provides pip
 '''
 
 # Import python libs
+import re
 import urlparse
 
 # Import salt libs
@@ -31,6 +32,34 @@ def __virtual__():
     Only load if the pip module is available in __salt__
     '''
     return 'pip' if 'pip.list' in __salt__ else False
+
+
+def _find_key(prefix, pip_list):
+    '''
+    Does a case-insensitive match in the pip_list for the desired package.
+    '''
+    try:
+        match = next(
+            iter(x for x in pip_list if x.lower() == prefix.lower())
+        )
+    except StopIteration:
+        return None
+    else:
+        return match
+
+
+def _fulfills_version_spec(version, version_spec):
+    '''
+    Check version number against version specification info and return a
+    boolean value based on whether or not the version number meets the
+    specified version.
+    '''
+    for oper, spec in (version_spec[0:2], version_spec[2:4]):
+        if oper is None:
+            continue
+        if not salt.utils.compare_versions(ver1=version, oper=oper, ver2=spec):
+            return False
+    return True
 
 
 def installed(name,
@@ -87,17 +116,38 @@ def installed(name,
     elif env and not bin_env:
         bin_env = env
 
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
     scheme, netloc, path, query, fragment = urlparse.urlsplit(name)
     if scheme and netloc:
         # parse as VCS url
         prefix = path.lstrip('/').split('@', 1)[0]
-        if scheme.startswith("git+"):
-            prefix = prefix.rstrip(".git")
+        if scheme.startswith('git+'):
+            prefix = prefix.rstrip('.git')
     else:
-        # Pull off any requirements specifiers
-        prefix = name.split('=')[0].split('<')[0].split('>')[0].strip()
+        # Split the passed string into the prefix and version
+        try:
+            version_spec = list(re.match(
+                (r'([^=<>]+)(?:(?:([<>]=?|==?)([^<>=,]+))'
+                 r'(?:,([<>]=?|==?)([^<>=]+))?)?$'),
+                name
+            ).groups())
+            prefix = version_spec.pop(0)
+        except AttributeError:
+            ret['result'] = False
+            ret['comment'] = 'Invalidly-formatted package {0}'.format(name)
+            return ret
+        else:
+            # Check to see if '=' was used instead of '=='. version_spec will
+            # contain two sets of comparison operators and version numbers, so
+            # we are checking elements 0 and 2 of this list.
+            if any((version_spec[x] == '=' for x in (0, 2))):
+                ret['result'] = False
+                ret['comment'] = ('Invalid version specification in '
+                                  'package {0}. \'=\' is not supported, use '
+                                  '\'==\' instead.'.format(name))
+                return ret
 
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     if runas is not None:
         # The user is using a deprecated argument, warn!
         msg = (
@@ -107,41 +157,48 @@ def installed(name,
         salt.utils.warn_until((0, 18), msg)
         ret.setdefault('warnings', []).append(msg)
 
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = runas
+        # "There can only be one"
+        if user:
+            raise CommandExecutionError(
+                'The \'runas\' and \'user\' arguments are mutually exclusive. '
+                'Please use \'user\' as \'runas\' is being deprecated.'
+            )
+        # Support deprecated 'runas' arg
+        else:
+            user = runas
 
     try:
-        pip_list = __salt__['pip.list'](prefix, bin_env, user=user, cwd=cwd)
+        pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
+                                        user=user, cwd=cwd)
+        prefix_realname = _find_key(prefix, pip_list)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if ignore_installed is False and prefix.lower() in (p.lower()
-                                                        for p in pip_list):
-        if force_reinstall is False and upgrade is False:
-            ret['result'] = True
-            ret['comment'] = 'Package already installed'
-            return ret
+    if ignore_installed is False and prefix_realname is not None:
+        if force_reinstall is False and not upgrade:
+            # Check desired version (if any) against currently-installed
+            if (
+                    any(version_spec) and
+                    _fulfills_version_spec(pip_list[prefix_realname],
+                                           version_spec)
+                    ) or (not any(version_spec)):
+                ret['result'] = True
+                ret['comment'] = ('Python package {0} already '
+                                  'installed'.format(name))
+                return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Python package {0} is set to be installed'.format(
-                name)
+        ret['comment'] = \
+            'Python package {0} is set to be installed'.format(name)
         return ret
 
     # Replace commas (used for version ranges) with semicolons (which are not
     # supported) in name so it does not treat them as multiple packages.  Comma
-    # will be re-added in pip.install call.  Wrap in double quotes to allow for
-    # version ranges
-    name = '"' + name.replace(',', ';') + '"'
+    # will be re-added in pip.install call.
+    name = name.replace(',', ';')
 
     if repo:
         name = repo
@@ -153,7 +210,7 @@ def installed(name,
         name = ''
 
     pip_install_call = __salt__['pip.install'](
-        pkgs=name,
+        pkgs='"{0}"'.format(name),
         requirements=requirements,
         bin_env=bin_env,
         log=log,

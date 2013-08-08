@@ -3,7 +3,6 @@ Resources needed by pkg providers
 '''
 
 # Import python libs
-import distutils.version  # pylint: disable=E0611
 import fnmatch
 import logging
 import os
@@ -419,62 +418,10 @@ def find_changes(old=None, new=None):
     return pkgs
 
 
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Compares two version strings using distutils.version.LooseVersion. This is
-    a fallback for providers which don't have a version comparison utility
-    built into them.  Return -1 if version1 < version2, 0 if version1 ==
-    version2, and 1 if version1 > version2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg_resource.perform_cmp
-    '''
-    try:
-        if distutils.version.LooseVersion(pkg1) < \
-                distutils.version.LooseVersion(pkg2):
-            return -1
-        elif distutils.version.LooseVersion(pkg1) == \
-                distutils.version.LooseVersion(pkg2):
-            return 0
-        elif distutils.version.LooseVersion(pkg1) > \
-                distutils.version.LooseVersion(pkg2):
-            return 1
-    except Exception as e:
-        log.exception(e)
-    return None
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Package version comparison function.
-
-    CLI Example::
-
-        salt '*' pkg_resource.compare
-    '''
-    cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
-               '>=': (0, 1), '>': (1,)}
-    if oper not in ['!='] + cmp_map.keys():
-        log.error('Invalid operator "{0}" for package '
-                  'comparison'.format(oper))
-        return False
-
-    cmp_result = __salt__['pkg.perform_cmp'](pkg1, pkg2)
-    if cmp_result is None:
-        return False
-
-    if oper == '!=':
-        return cmp_result not in cmp_map['==']
-    else:
-        return cmp_result in cmp_map[oper]
-
-
 def version_clean(version):
     '''
     Clean the version string removing extra data.
-    This function will simply try to call "pkg.version_clean".
+    This function will simply try to call ``pkg.version_clean``.
 
     CLI Example::
 

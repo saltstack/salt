@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import datetime
+import distutils.version  # pylint: disable=E0611
 import fnmatch
 import hashlib
 import imp
@@ -1389,3 +1390,51 @@ def warn_until(version_info,
 
     if _dont_call_warnings is False:
         warnings.warn(message, category, stacklevel=stacklevel)
+
+
+def version_cmp(pkg1, pkg2):
+    '''
+    Compares two version strings using distutils.version.LooseVersion. This is
+    a fallback for providers which don't have a version comparison utility
+    built into them.  Return -1 if version1 < version2, 0 if version1 ==
+    version2, and 1 if version1 > version2. Return None if there was a problem
+    making the comparison.
+    '''
+    try:
+        if distutils.version.LooseVersion(pkg1) < \
+                distutils.version.LooseVersion(pkg2):
+            return -1
+        elif distutils.version.LooseVersion(pkg1) == \
+                distutils.version.LooseVersion(pkg2):
+            return 0
+        elif distutils.version.LooseVersion(pkg1) > \
+                distutils.version.LooseVersion(pkg2):
+            return 1
+    except Exception as e:
+        log.exception(e)
+    return None
+
+
+def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
+    '''
+    Compares two version numbers. Accepts a custom function to perform the
+    cmp-style version comparison, otherwise uses version_cmp().
+    '''
+    cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
+               '>=': (0, 1), '>': (1,)}
+    if oper not in ['!='] + cmp_map.keys():
+        log.error('Invalid operator "{0}" for version '
+                  'comparison'.format(oper))
+        return False
+
+    if cmp_func is None:
+        cmp_func = version_cmp
+
+    cmp_result = cmp_func(ver1, ver2)
+    if cmp_result is None:
+        return False
+
+    if oper == '!=':
+        return cmp_result not in cmp_map['==']
+    else:
+        return cmp_result in cmp_map[oper]
