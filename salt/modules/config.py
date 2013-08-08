@@ -126,6 +126,10 @@ def merge(value,
 
     Same as ``option()`` except that it merges all matches, rather than taking
     the first match.
+
+    CLI Example::
+
+        salt '*' config.merge schedule
     '''
     ret = None
     if not omit_opts:
