@@ -103,14 +103,15 @@ class APIClient(object):
     local = local_sync  # backwards compatible alias
     sync = local_sync # default sync client
 
-    def runner_sync(self, fun, **kwargs):
+    def runner_async(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        return self.runner.low(fun, kwargs)
+        kwargs['fun'] = fun
+        return self.runner.master_call(**kwargs)
     
-    runner = runner_sync #backwards compatible alias
-    runner_async = runner_sync # until we get an runner_async
+    runner = runner_async #backwards compatible alias
+    runner_sync = runner_async # until we get an runner_async
 
     def wheel_sync(self, fun, **kwargs):
         '''
@@ -161,7 +162,7 @@ class APIClient(object):
         
         '''
         try:
-            tokenage = self.resolver.request_token(creds)
+            tokenage = self.resolver.mk_token(creds)
         except Exception as ex:
             raise EauthAuthenticationError(
                 "Authentication failed with {0}.".format(repr(ex)))
@@ -179,6 +180,19 @@ class APIClient(object):
         tokenage['username'] = tokenage['name']
         
         return tokenage
+
+    def verify_token(self, token):
+        '''
+        If token is valid Then returns user name associated with token
+        Else False.
+        '''
+        try:
+            result = self.resolver.get_token(token)
+        except Exception as ex:
+            raise EauthAuthenticationError(
+                "Token validation failed with {0}.".format(repr(ex)))
+        
+        return result
     
     def get_next_event(self, wait=0.25, tag='', full=False):
         '''
