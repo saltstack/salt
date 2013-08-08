@@ -305,7 +305,7 @@ insecure!
 ``client_acl``
 --------------
 
-Default: {}
+Default: ``{}``
 
 Enable user accounts on the master to execute specific modules. These modules
 can be expressed as regular expressions
@@ -316,6 +316,74 @@ can be expressed as regular expressions
       fred:
         - test.ping
         - pkg.*
+
+.. conf_master:: client_acl_blacklist
+
+``client_acl_blacklist``
+------------------------
+
+Default: ``{}``
+
+Blacklist users or modules
+
+This example would blacklist all non sudo users, including root from
+running any commands. It would also blacklist any use of the "cmd"
+module.
+
+This is completely disabled by default.
+
+.. code-block:: yaml
+
+    client_acl_blacklist:
+      users:
+        - root
+        - '^(?!sudo_).*$'   #  all non sudo users
+      modules:
+        - cmd
+
+.. conf_master:: external_auth
+
+``external_auth``
+-----------------
+
+Default: ``{}``
+
+The external auth system uses the Salt auth modules to authenticate and
+validate users to access areas of the Salt system.
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        fred:
+          - test.*
+
+.. conf_master:: token_expire
+
+``token_expire``
+----------------
+
+Default: ``43200``
+
+Time (in seconds) for a newly generated token to live. Default: 12 hours
+
+.. code-block:: yaml
+
+    token_expire: 43200
+
+.. conf_master:: file_recv
+
+``file_recv``
+-------------
+
+Default: ``False``
+
+Allow minions to push files to the master. This is disabled by default, for
+security purposes.
+
+.. code-block:: yaml
+
+    file_recv: False 
 
 
 Master Module Management
