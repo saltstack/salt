@@ -22,7 +22,7 @@ class RunnerClient(object):
         self.opts = opts
         self.functions = salt.loader.runner(opts)
 
-    def _proc_runner(self, tag, fun, arg, kwarg):
+    def _proc_runner(self, tag, fun, low):
         '''
         Run this method in a multiprocess target to execute the runner in a
         multiprocess and fire the return data on the event bus
@@ -30,7 +30,7 @@ class RunnerClient(object):
         salt.utils.daemonize()
         data = {}
         try:
-            data['ret'] = self.cmd(fun, arg, kwarg)
+            data['ret'] = self.low(fun, low)
         except Exception as exc:
             data['ret'] = 'Exception occured in runner {0}: {1}'.format(
                     fun,
@@ -79,7 +79,7 @@ class RunnerClient(object):
         ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
 
-    def async(self, fun, arg, kwarg=None):
+    def async(self, fun, low):
         '''
         Execute the runner in a multiprocess and return the event tag to use
         to watch for the return
@@ -88,7 +88,7 @@ class RunnerClient(object):
         tag[20] = 'r'
         proc = multiprocessing.Process(
                 target=self._proc_runner,
-                args=(tag, fun, arg, kwarg))
+                args=(tag, fun, low))
         proc.start()
         return tag
 
