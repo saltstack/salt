@@ -102,7 +102,7 @@ class Client(object):
         '''
         raise NotImplementedError
 
-    def file_list_emptydirs(self, env='base', prefix=''):
+    def file_list_emptydirs(self, env='base'):
         '''
         List the empty dirs
         '''
@@ -207,13 +207,13 @@ class Client(object):
         ldest = self._file_local_list(localfilesdest)
         return sorted(fdest.union(ldest))
 
-    def file_list(self, env='base', prefix=''):
+    def file_list(self, env='base'):
         '''
         This function must be overwritten
         '''
         return []
 
-    def dir_list(self, env='base', prefix=''):
+    def dir_list(self, env='base'):
         '''
         This function must be overwritten
         '''
@@ -461,56 +461,47 @@ class LocalClient(Client):
             return ''
         return fnd['path']
 
-    def file_list(self, env='base', prefix=''):
+    def file_list(self, env='base'):
         '''
         Return a list of files in the given environment
-        with optional relative prefix path to limit directory traversal
         '''
         ret = []
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            if prefix:
-                path = os.path.join(path, prefix)
             for root, dirs, files in os.walk(path, followlinks=True):
                 for fname in files:
                     ret.append(
                         os.path.relpath(
-                            os.path.join(root, prefix, fname),
+                            os.path.join(root, fname),
                             path
                         )
                     )
         return ret
 
-    def file_list_emptydirs(self, env='base', prefix=''):
+    def file_list_emptydirs(self, env='base'):
         '''
         List the empty dirs in the file_roots
-        with optional relative prefix path to limit directory traversal
         '''
         ret = []
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            if prefix:
-                path = os.path.join(path, prefix)
             for root, dirs, files in os.walk(path, followlinks=True):
                 if len(dirs) == 0 and len(files) == 0:
-                    ret.append(os.path.relpath(root, os.path.join(prefix, path)))
+                    ret.append(os.path.relpath(root, path))
         return ret
 
-    def dir_list(self, env='base', prefix=''):
+    def dir_list(self, env='base'):
         '''
         List the dirs in the file_roots
-        with optional relative prefix path to limit directory traversal
         '''
         ret = []
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            if prefix:
-                path = os.path.join(path, prefix)
             for root, dirs, files in os.walk(path, followlinks=True):
-                ret.append(os.path.relpath(root, os.path.join(prefix, path)))
+                ret.append(os.path.relpath(root, path))
         return ret
 
     def hash_file(self, path, env='base'):
@@ -676,12 +667,11 @@ class RemoteClient(Client):
             fn_.close()
         return dest
 
-    def file_list(self, env='base', prefix=''):
+    def file_list(self, env='base'):
         '''
         List the files on the master
         '''
         load = {'env': env,
-                'prefix': prefix,
                 'cmd': '_file_list'}
         try:
             return self.auth.crypticle.loads(
@@ -693,12 +683,11 @@ class RemoteClient(Client):
         except SaltReqTimeoutError:
             return ''
 
-    def file_list_emptydirs(self, env='base', prefix=''):
+    def file_list_emptydirs(self, env='base'):
         '''
         List the empty dirs on the master
         '''
         load = {'env': env,
-                'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
         try:
             return self.auth.crypticle.loads(
@@ -710,12 +699,11 @@ class RemoteClient(Client):
         except SaltReqTimeoutError:
             return ''
 
-    def dir_list(self, env='base', prefix=''):
+    def dir_list(self, env='base'):
         '''
         List the dirs on the master
         '''
         load = {'env': env,
-                'prefix': prefix,
                 'cmd': '_dir_list'}
         try:
             return self.auth.crypticle.loads(
