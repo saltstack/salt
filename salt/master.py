@@ -1958,6 +1958,14 @@ class ClearFuncs(object):
             )
             return ''
 
+    def get_token(self, clear_load):
+        '''
+        Return the name associated with a token or False if the token is invalid
+        '''
+        if 'token' not in clear_load:
+            return False
+        return self.loadauth.get_tok(clear_load['token'])
+
     def publish(self, clear_load):
         '''
         This method sends out publications to the minions, it can only be used

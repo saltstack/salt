@@ -122,7 +122,7 @@ class LoadAuth(object):
 
     def get_tok(self, tok):
         '''
-        Return the name associate with the token, or False if the token is
+        Return the name associated with the token, or False if the token is
         not valid
         '''
         t_path = os.path.join(self.opts['token_dir'], tok)
@@ -205,7 +205,7 @@ class Resolver(object):
             pass
         return tdata
 
-    def request_token(self, load):
+    def mk_token(self, load):
         '''
         Request a token fromt he master
         '''
@@ -217,3 +217,19 @@ class Resolver(object):
         if 'token' not in tdata:
             return tdata
         return tdata
+
+    def get_token(self, token):
+        '''
+        Request a token fromt he master
+        '''
+        load = {}
+        load['token'] = token
+        load['cmd'] = 'get_token'
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        tdata = sreq.send('clear', load)
+        if 'token' not in tdata:
+            return tdata
+        return tdata
+
