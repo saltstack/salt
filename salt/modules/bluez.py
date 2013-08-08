@@ -173,9 +173,9 @@ def pair(address, key):
     TODO: This function is currently broken, as the bluez-simple-agent program
     no longer ships with BlueZ >= 5.0. It needs to be refactored.
     '''
-    address = address()
+    addy = address_()
     cmd = 'echo "{0}" | bluez-simple-agent {1} {2}'.format(
-        address['devname'], address, key
+        addy['device'], address, key
     )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
@@ -194,7 +194,6 @@ def unpair(address):
     TODO: This function is currently broken, as the bluez-simple-agent program
     no longer ships with BlueZ >= 5.0. It needs to be refactored.
     '''
-    address = address()
     cmd = 'bluez-test-device remove {0}'.format(address)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
