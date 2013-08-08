@@ -123,6 +123,7 @@ def init(branch, repo_location):
             repo.create_remote('origin', repo_location)
         except Exception:
             pass
+    repo.git.fetch()
     return repo
 
 def update(branch, repo_location):
