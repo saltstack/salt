@@ -278,3 +278,32 @@ class CkMinions(object):
                             if self.match_check(regex, fun):
                                 return True
         return False
+
+    def runner_check(self, auth_list, fun):
+        '''
+        Check special API permissions
+        '''
+        comps = fun.split('.')
+        if len(comps) != 2:
+            return False
+        mod = comps[0]
+        fun = comps[1]
+        for ind in auth_list:
+            if isinstance(ind, str):
+                if ind.startswith('@') and ind[1:] == mod:
+                    return True
+                if ind == '@runners':
+                    return True
+            elif isinstance(ind, dict):
+                if len(ind) != 1:
+                    continue
+                valid = ind.keys()[0]
+                if valid.startswith('@') and valid[1:] == mod:
+                    if isinstance(ind[valid], str):
+                        if self.match_check(ind[valid], fun):
+                            return True
+                    elif isinstance(ind[valid], list):
+                        for regex in ind[valid]:
+                            if self.match_check(regex, fun):
+                                return True
+        return False
