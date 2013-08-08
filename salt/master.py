@@ -1788,7 +1788,8 @@ class ClearFuncs(object):
 
             try:
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load)
+                runner_client = salt.runner.RunnerClient(self.opts)
+                return runner_client.async(fun, **clear_load)
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1829,7 +1830,8 @@ class ClearFuncs(object):
 
             try:
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load)
+                runner_client = salt.runner.RunnerClient(self.opts)
+                return runner_client.async(fun, **clear_load)
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
