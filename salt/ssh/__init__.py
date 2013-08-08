@@ -42,13 +42,13 @@ def decode_dict(data):
     rv = {}
     for key, value in data.iteritems():
         if isinstance(key, unicode):
-           key = key.encode('utf-8')
+            key = key.encode('utf-8')
         if isinstance(value, unicode):
-           value = value.encode('utf-8')
+            value = value.encode('utf-8')
         elif isinstance(value, list):
-           value = decode_list(value)
+            value = decode_list(value)
         elif isinstance(value, dict):
-           value = decode_dict(value)
+            value = decode_dict(value)
         rv[key] = value
     return rv
 
