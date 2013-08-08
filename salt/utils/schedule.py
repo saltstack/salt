@@ -1,7 +1,7 @@
 '''
-Scheduling routines are located here. To activate the scheduler make the schedule
-option available to the master or minion configurations (master config file or
-for the minion via config or pillar)
+Scheduling routines are located here. To activate the scheduler make the
+schedule option available to the master or minion configurations (master config
+file or for the minion via config or pillar)
 
 code-block:: yaml
 
@@ -31,6 +31,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+
 class Schedule(object):
     '''
     Create a Schedule object, pass in the opts and the functions dict to use
@@ -54,8 +55,8 @@ class Schedule(object):
         '''
         Return the schedule data structure
         '''
-        if 'config.option' in self.functions:
-            return self.functions['config.option'](opt, {}, omit_master=True)
+        if 'config.merge' in self.functions:
+            return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
     def handle_func(self, func, data):
