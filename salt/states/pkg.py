@@ -65,13 +65,16 @@ def __gen_rtag():
     return os.path.join(__opts__['cachedir'], 'pkg_refresh')
 
 
-def _fulfills_version_spec(versions, oper, desired_version):
+def _fulfills_version_spec(version, oper, desired_version):
     '''
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
     '''
     for ver in versions:
-        if __salt__['pkg.compare'](pkg1=ver, oper=oper, pkg2=desired_version):
+        if salt.utils.compare_versions(ver1=version,
+                                       oper=oper,
+                                       ver2=desired_version,
+                                       cmp_func=__salt__.get('version_cmp')):
             return True
     return False
 
@@ -170,7 +173,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
                 comparison = gt_lt or ''
                 comparison += eq or ''
                 # A comparison operator of "=" is redundant, but possible.
-                # Change it to "==" so that it works in pkg.compare.
+                # Change it to "==" so that the version comparison works
                 if comparison in ['=', '']:
                     comparison = '=='
                 if not _fulfills_version_spec(cver, comparison, verstr):
@@ -215,7 +218,7 @@ def _verify_install(desired, new_pkgs):
         comparison = gt_lt or ''
         comparison += eq or ''
         # A comparison operator of "=" is redundant, but possible.
-        # Change it to "==" so that it works in pkg.compare.
+        # Change it to "==" so that the version comparison works.
         if comparison in ('=', ''):
             comparison = '=='
         if _fulfills_version_spec(cver, comparison, verstr):
@@ -557,10 +560,12 @@ def latest(
                 msg = 'No information found for "{0}".'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
-        elif not cur[pkg] or \
-                __salt__['pkg.compare'](pkg1=cur[pkg],
-                                        oper='<',
-                                        pkg2=avail[pkg]):
+        elif not cur[pkg] \
+                or salt.utils.compare_versions(
+                    ver1=cur[pkg],
+                    oper='<',
+                    ver2=avail[pkg],
+                    cmp_func=__salt__.get('version_cmp')):
             targets[pkg] = avail[pkg]
 
     if problems:
@@ -608,7 +613,8 @@ def latest(
 
         if changes:
             # Find failed and successful updates
-            failed = [x for x in targets if changes[x]['new'] != targets[x]]
+            failed = [x for x in targets
+                      if not changes.get(x) or changes[x]['new'] != targets[x]]
             successful = [x for x in targets if x not in failed]
 
             comments = []
