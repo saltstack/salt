@@ -194,7 +194,9 @@ def latest_version(*names, **kwargs):
         if name in names:
             cver = pkgs.get(name, '')
             nver = version_rev.split(',')[0]
-            if not cver or compare(pkg1=cver, oper='<', pkg2=nver):
+            if not cver or salt.utils.compare_versions(ver1=cver,
+                                                       oper='<',
+                                                       ver2=nver):
                 # Remove revision for version comparison
                 ret[name] = version_rev
 
@@ -326,29 +328,3 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
     return remove(name=name, pkgs=pkgs)
-
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
