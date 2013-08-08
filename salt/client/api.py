@@ -39,7 +39,7 @@ class APIClient(object):
         self.local = salt.client.LocalClient(self.opts['conf_file'])
         self.runner = salt.runner.RunnerClient(self.opts)
         self.wheel = salt.wheel.Wheel(self.opts)
-        self.auth = salt.auth.LoadAuth(self.opts)
+        self.resolver = salt.auth.Resolver(self.opts)
         self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
 
     def run(self, low):
@@ -161,11 +161,10 @@ class APIClient(object):
         
         '''
         try:
-            tokenage = self.auth.mk_token(creds)
-        except IOError as ex:
-            if ex.errno == 13:
-                raise  #should raise permissions error here
-        
+            tokenage = self.resolver.request_token(creds)
+        except Exception as ex:
+            raise EauthAuthenticationError(
+                "Authentication failed with {0}.".format(repr(ex)))
             
         if not 'token' in tokenage:
             raise EauthAuthenticationError("Authentication failed with provided credentials.") 
