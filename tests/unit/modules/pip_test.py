@@ -847,16 +847,36 @@ class PipTestCase(TestCase):
             )
 
     def test_install_pre_argument_in_resulting_command(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        # Lower than 1.4 versions don't end-up with `--pre` in the resulting
+        # output
+        mock = MagicMock(side_effect=[
+            {'retcode': 0, 'stdout': 'pip 1.2.0 /path/to/site-packages/pip'},
+            {'retcode': 0, 'stdout': ''}
+        ])
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(
                 'pep8', pre_releases=True
             )
-            mock.assert_called_once_with(
+            mock.assert_called_with(
+                'pip install pep8',
+                runas=None,
+                cwd=None
+            )
+
+        mock = MagicMock(side_effect=[
+            {'retcode': 0, 'stdout': 'pip 1.4.0 /path/to/site-pacakges/pip'},
+            {'retcode': 0, 'stdout': ''}
+        ])
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(
+                'pep8', pre_releases=True
+            )
+            mock.assert_called_with(
                 'pip install --pre pep8',
                 runas=None,
                 cwd=None
             )
+
 
     def test_install_deprecated_runas_triggers_warning(self):
         # We *always* want *all* warnings thrown on this module
