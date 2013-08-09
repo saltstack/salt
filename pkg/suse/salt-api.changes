@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Aug  9 20:24:28 UTC 2013 - aboe76@gmail.com
+
+- Updated salt-api init file:
+  Same file as the salt-api package for Rhel/Fedora
+
+-------------------------------------------------------------------
 Thu Jul 18 04:46:39 UTC 2013 - aboe76@gmail.com
 
 - Update package to 0.8.2

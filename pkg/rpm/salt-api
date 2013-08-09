@@ -7,10 +7,12 @@
 
 ### BEGIN INIT INFO
 # Provides:          salt-api
-# Required-Start:    $all
-# Required-Stop:     
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
+# Required-Start:    $local_fs $remote_fs $network $named $time
+# Should-Start:		 $time ypbind smtp
+# Required-Stop:	 $local_fs $remote_fs $network $named $time
+# Should-Stop:		 ypbind smtp
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
 # Short-Description: Salt API control daemon
 # Description:       This is a daemon that controls the Salt API.
 ### END INIT INFO
@@ -134,4 +136,3 @@ case "$1" in
         ;;
 esac
 exit $RETVAL
-
