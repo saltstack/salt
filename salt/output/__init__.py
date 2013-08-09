@@ -48,31 +48,20 @@ def get_printout(out, opts=None, **kwargs):
         out = opts['output']
         if out == 'text':
             out = 'txt'
-    else:
-        # XXX: This should be removed before 0.10.8 comes out
-        for outputter in STATIC:
-            if outputter in opts:
-                if opts[outputter]:
-                    if outputter == 'text_out':
-                        out = 'txt'
-                    else:
-                        out = outputter
-        if out and out.endswith('_out'):
-            out = out[:-4]
 
     if out is None:
         out = 'nested'
 
     opts.update(kwargs)
     if 'color' not in opts:
-        
+
         def is_pipe():
             try:
                 fileno = sys.stdout.fileno()
             except AttributeError:
                 fileno = -1  # sys.stdout is StringIO or fake
             return not os.isatty(fileno)
-        
+
         if opts.get('force_color', False):
             opts['color'] = True
         elif opts.get('no_color', False) or is_pipe():
