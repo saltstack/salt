@@ -691,6 +691,7 @@ _OS_NAME_MAP = {
     'alt': 'ALT',
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
+    'pidora': 'Fedora'
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -728,7 +729,8 @@ _OS_FAMILY_MAP = {
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
     'GCEL': 'Debian',
-    'Linaro': 'Debian'
+    'Linaro': 'Debian',
+    'Pidora': 'RedHat'
 }
 
 
