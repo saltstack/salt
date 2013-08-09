@@ -287,7 +287,7 @@ def unmounted(name,
                                   'persistent').format(name, config)
                 return ret
 
-        if ret['changes']['umount']:
+        if ret['changes'].get('umount', False):
             out = __salt__['mount.rm_fstab'](name, config)
         else:
             out = 'bad mount'
