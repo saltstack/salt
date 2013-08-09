@@ -217,8 +217,8 @@ def query(database, query, **connection_args):
     select_query = False
     for keyword in select_keywords:
         if query.upper().strip().startswith(keyword):
-           select_query = True
-           break
+            select_query = True
+            break
     if select_query:
         ret['rows returned'] = affected
         columns = ()
