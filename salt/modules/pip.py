@@ -412,7 +412,14 @@ def install(pkgs=None,
         cmd.append('--no-download')
 
     if pre_releases:
-        cmd.append('--pre')
+        # Check the locally installed pip version
+        pip_version_cmd = '{0} --version'.format(_get_pip_bin(bin_env))
+        output = __salt__['cmd.run_all'](pip_version_cmd).get('stdout', '')
+        pip_version = output.split()[1]
+
+        # From pip v1.4 the --pre flag is available
+        if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='1.4'):
+            cmd.append('--pre')
 
     if global_options:
         if isinstance(global_options, string_types):
