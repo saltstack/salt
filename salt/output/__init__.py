@@ -30,10 +30,10 @@ def display_output(data, out, opts=None):
         opts.pop('output', None)
         try:
             print(get_printout('nested', opts)(data).rstrip())
-        except IOError as e:
+        except IOError as exc:
             # Only raise if it's NOT a broken pipe
-            if e.errno != errno.EPIPE:
-                raise e
+            if exc.errno != errno.EPIPE:
+                raise exc
 
 
 def get_printout(out, opts=None, **kwargs):
@@ -56,6 +56,9 @@ def get_printout(out, opts=None, **kwargs):
     if 'color' not in opts:
 
         def is_pipe():
+            '''
+            Check if sys.stdout is a pipe or not
+            '''
             try:
                 fileno = sys.stdout.fileno()
             except AttributeError:
