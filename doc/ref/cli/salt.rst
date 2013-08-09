@@ -164,9 +164,15 @@ Options
     Some outputters are formatted only for data returned from specific
     functions, for instance the grains outputter will not work for non grains
     data.
+
     If an outputter is used that does not support the data passed into it, then
     Salt will fall back on the pprint outputter and display the return data
     using the python pprint library.
+
+	Note: If using --out=json, you will probably want --static as well. Without 
+    the static option you will get a JSON strign for each minion. This is due to
+    using an iterative outputter. So if you want to feed it to a JSON parser, use
+    --static as well.
 
 .. option:: --out-indent OUTPUT_INDENT, --output-indent OUTPUT_INDENT
 
