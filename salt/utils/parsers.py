@@ -801,6 +801,12 @@ class OutputOptionsMixIn(object):
                   'outputters that support indentation.')
         )
         group.add_option(
+            '--out-file', '--output-file',
+            dest='output_file',
+            default=None,
+            help='Write the output to the specified file'
+        )
+        group.add_option(
             '--no-color', '--no-colour',
             default=False,
             action='store_true',
