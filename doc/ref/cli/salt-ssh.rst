@@ -23,12 +23,6 @@ Options
 
 .. include:: _includes/target-selection.rst
 
-.. option:: --return
-
-    Chose an alternative returner to call on the minion, if an alternative
-    returner is used then the return will not come back to the command line
-    but will be sent to the specified return system.
-
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/ssh
 .. |loglevel| replace:: ``warning``
