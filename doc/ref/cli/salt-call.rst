@@ -60,7 +60,7 @@ Options
     the configuration files for Salt master and minions. The default location
     on most systems is /etc/salt.
 
-.. include:: _include/output-options.rst
+.. include:: _includes/output-options.rst
 
 .. option:: --version
 
