@@ -41,10 +41,10 @@ class VirtKey(object):
         # Limit aceptance window to 10 minutes
         # TODO: Move this value to the master config file
         if (time.time() - expiry) > 600:
-            log.warning('Request to sign key for minion "{0}" on hyper "{1}" denied: ' 
+            log.warning('Request to sign key for minion "{0}" on hyper "{1}" denied: '
                         'authorization expired'.format(self.id, self.hyper))
             return False
-        
+
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 self.id)
@@ -52,7 +52,7 @@ class VirtKey(object):
             fp_.write(pub)
         self.void()
         return True
-        
+
     def authorize(self):
         '''
         Prepare the master to expect a signing request
