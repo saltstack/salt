@@ -14,7 +14,7 @@ import random
 import optparse
 
 
-def run(platform, provider):
+def run(platform, provider, commit):
     '''
     RUN!
     '''
@@ -25,7 +25,9 @@ def run(platform, provider):
             shell=True)
     # Run tests here
     subprocess.call(
-            'salt {0} state.sls testrun'.format(vm_name),
+            'salt {0} state.sls testrun pillar="{git_commit: {1}}"'.format(
+                vm_name,
+                commit),
             shell=True)
     # Clean up the vm
     subprocess.call(
@@ -45,10 +47,14 @@ def parse():
     parser.add_option('--provider',
             dest='provider',
             help='The vm provider')
+    parser.add_option('--commit',
+            dest='commit',
+            help='The git commit to track')
     options, args = parser.parse_args()
     return options.__dict__()
 
 if __name__ == '__main__':
     opts = parse()
     exit_code = run(opts['platform'], opts['provider'])
+    print('Exit Code: {0}'.format(exit_code))
     sys.exit(exit_code)
