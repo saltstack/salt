@@ -635,7 +635,7 @@ def _windows_platform_data():
         # location. For example:
         # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
         (osfullname, _) = osinfo.Name.split('|', 1)
-        osfullname = osfullname.strip()    
+        osfullname = osfullname.strip()
 
         grains = {
             'osmanufacturer': osinfo.Manufacturer,
