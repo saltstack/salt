@@ -14,7 +14,7 @@ import random
 import optparse
 
 
-def run(platform, provider, commit):
+def run(platform, provider, commit, clean):
     '''
     RUN!
     '''
@@ -34,11 +34,12 @@ def run(platform, provider, commit):
             cmd,
             shell=True)
     # Clean up the vm
-    cmd = 'salt-cloud -d {0} -y'.format(vm_name),
-    print('Running CMD: {0}'.format(cmd))
-    subprocess.call(
-            cmd,
-            shell=True)
+    if clean:
+        cmd = 'salt-cloud -d {0} -y'.format(vm_name),
+        print('Running CMD: {0}'.format(cmd))
+        subprocess.call(
+                cmd,
+                shell=True)
     return 0
 
 
@@ -56,11 +57,16 @@ def parse():
     parser.add_option('--commit',
             dest='commit',
             help='The git commit to track')
+    parser.add_option('--clean',
+            dest='clean',
+            default=True,
+            action='store_false',
+            help='Clean up the built vm')
     options, args = parser.parse_args()
     return options.__dict__
 
 if __name__ == '__main__':
     opts = parse()
-    exit_code = run(opts['platform'], opts['provider'], opts['commit'])
+    exit_code = run(**opts)
     print('Exit Code: {0}'.format(exit_code))
     sys.exit(exit_code)
