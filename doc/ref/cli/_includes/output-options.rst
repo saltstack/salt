@@ -5,7 +5,9 @@ Output Options
 
     Pass in an alternative outputter to display the return of data. This
     outputter can be any of the available outputters:
-    grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
+
+        grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
+
     Some outputters are formatted only for data returned from specific
     functions, for instance the grains outputter will not work for non grains
     data.
@@ -18,6 +20,10 @@ Output Options
     Print the output indented by the provided value in spaces. Negative values
     disables indentation. Only applicable in outputters that support 
     indentation.
+
+.. option:: --out-file=OUTPUT_FILE, --output-file=OUTPUT_FILE
+
+    Write the output to the specified file.
 
 .. option:: --no-color
 
