@@ -27,13 +27,18 @@ def run(platform, provider, commit, clean):
             cmd,
             shell=True)
     # Run tests here
-    cmd = 'salt {0} state.sls testrun pillar="{{git_commit: {1}}}"'.format(
+    cmd = 'salt {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
                 vm_name,
                 commit),
     print('Running CMD: {0}'.format(cmd))
-    retcode = subprocess.call(
+    out = subprocess.Popen(
             cmd,
-            shell=True)
+            shell=True,
+            stdout=subprocess.stdout,
+            stderr=subprocess.PIPE).communicate()[0]
+    print(out)
+    if 'Result:    False' in out:
+        retcode = 1
     # Clean up the vm
     if clean:
         cmd = 'salt-cloud -d {0} -y'.format(vm_name),
