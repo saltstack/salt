@@ -63,7 +63,6 @@ def get_printout(out, opts=None, **kwargs):
 
     opts.update(kwargs)
     if 'color' not in opts:
-
         def is_pipe():
             '''
             Check if sys.stdout is a pipe or not
