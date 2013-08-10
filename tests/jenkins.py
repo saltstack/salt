@@ -39,6 +39,8 @@ def run(platform, provider, commit, clean):
     print(out)
     if 'Result:    False' in out:
         retcode = 1
+    else:
+        retcode = 0
     # Clean up the vm
     if clean:
         cmd = 'salt-cloud -d {0} -y'.format(vm_name),
