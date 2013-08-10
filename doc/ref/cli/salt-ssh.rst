@@ -37,10 +37,7 @@ Options
 
     Show program's dependencies version number and exit
 
-.. option:: -E, --pcre
-
-    The target expression will be interpreted as a pcre regular expression
-    rather than a shell glob.
+.. include:: _includes/target-selection.rst
 
 .. option:: --return
 
