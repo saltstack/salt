@@ -31,6 +31,18 @@ Options
     Specify an additional directories to pull modules from, multiple
     directories can be delimited by commas
 
+.. option:: -d, --doc, --documentation
+
+    Return the documentation for the specified module or for all modules if
+    none are specified
+
+.. option:: --master=MASTER
+
+    Specify the master to use. The minion must be authenticated with the 
+    master. If this option is omitted, the master options from the minion 
+    config will be used. If multi masters are set up the first listed master 
+    that responds will be used.
+
 .. option:: --return RETURNER
 
     Set salt-call to pass the return data to one or many returner interfaces.
@@ -40,11 +52,6 @@ Options
 .. option:: --local
 
     Run salt-call locally, as if there was no master running.
-
-.. option:: -d, --doc
-
-    Return the documentation for the specified module or for all modules if
-    none are specified
 
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/minion
