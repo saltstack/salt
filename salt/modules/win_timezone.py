@@ -452,7 +452,6 @@ def __virtual__():
     '''
     Only load on windows
     '''
-    
     if salt.utils.is_windows():
         return 'timezone'
     return False
@@ -466,12 +465,11 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
-    
     winzone = __salt__['cmd.run']('tzutil /g')
     for key in LINTOWIN:
         if LINTOWIN[key] == winzone:
             return key
-    
+
     return False
 
 
@@ -483,7 +481,6 @@ def get_offset():
 
         salt '*' timezone.get_offset
     '''
-    
     string = False
     zone = __salt__['cmd.run']('tzutil /g')
     prev = ''
@@ -493,16 +490,16 @@ def get_offset():
             break
         else:
             prev = line
-    
+
     if not string:
         return False
-    
+
     reg = re.search(r"\(UTC(.\d\d:\d\d)\) .*", string, re.M)
     if not reg:
         ret = '0000'
     else:
         ret = reg.group(1).replace(':','')
-    
+
     return ret
 
 
@@ -514,7 +511,6 @@ def get_zonecode():
 
         salt '*' timezone.get_zonecode
     '''
-    
     # Still not implemented on windows
     return False
 
@@ -531,8 +527,6 @@ def set_zone(timezone):
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
-    
-    
     return __salt__['cmd.retcode']( 'tzutil /s "{0}"'.format(LINTOWIN[timezone]) ) == 0
 
 
@@ -546,7 +540,6 @@ def zone_compare(timezone):
 
         salt '*' timezone.zone_compare 'America/Denver'
     '''
-    
     return __salt__['cmd.run']('tzutil /g') == LINTOWIN[timezone]
 
 
@@ -558,7 +551,6 @@ def get_hwclock():
 
         salt '*' timezone.get_hwclock
     '''
-    
     # Need to search for a way to figure it out ...
     return 'localtime'
 
@@ -571,8 +563,5 @@ def set_hwclock(clock):
 
         salt '*' timezone.set_hwclock UTC
     '''
-    
     # Need to search for a way to figure it out ...
     return False
-
-
