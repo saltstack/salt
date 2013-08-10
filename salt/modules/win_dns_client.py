@@ -13,7 +13,6 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    
     if salt.utils.is_windows():
         return 'win_dns_client'
     return False
@@ -53,27 +52,27 @@ def add_dns(ip, interface='Local Area Connection', index=1):
     
     Note: if the interface dns is configured by DHCP all the dns servers will
     be removed from the interface and the requested dns will be the only one
-    
+
     CLI Example::
 
         salt '*' win_dns_client.add_dns <interface> <index>
     '''
     servers = get_dns_servers(interface)
-    
+
     # Return true if configured
     try:
         if servers[index-1] == ip:
             return True
     except IndexError:
         pass
-    
+
     # If configured in the wrong order delete it
     if ip in servers:
         rm_dns(ip, interface)
     cmd = 'netsh interface ip add dns "{0}" {1} index={2} validate=no'.format(
         interface, ip, index
         )
-    
+
     retcode = __salt__['cmd.retcode'](cmd)
     return retcode == 0
 
@@ -86,7 +85,6 @@ def dns_dhcp(interface='Local Area Connection'):
 
         salt '*' win_dns_client.dns_dhcp <interface>
     '''
-    
     return __salt__['cmd.retcode'](
             'netsh interface ip set dns "{0}" source=dhcp'.format(interface)
             ) == 0
