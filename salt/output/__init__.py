@@ -10,6 +10,7 @@ import errno
 
 # Import salt libs
 import salt.loader
+import salt.utils
 
 
 STATIC = (
@@ -25,15 +26,23 @@ def display_output(data, out, opts=None):
     Print the passed data using the desired output
     '''
     try:
-        print(get_printout(out, opts)(data).rstrip())
+        display_data = get_printout(out, opts)(data).rstrip()
     except KeyError:
         opts.pop('output', None)
-        try:
-            print(get_printout('nested', opts)(data).rstrip())
-        except IOError as exc:
-            # Only raise if it's NOT a broken pipe
-            if exc.errno != errno.EPIPE:
-                raise exc
+        display_data = get_printout('nested', opts)(data).rstrip()
+
+    output_filename = opts.get('output_file', None)
+    try:
+        if output_filename is not None:
+            with salt.utils.fopen(output_filename, 'w') as ofh:
+                ofh.write(display_data)
+                ofh.write('\n')
+            return
+        print(display_data)
+    except IOError as exc:
+        # Only raise if it's NOT a broken pipe
+        if exc.errno != errno.EPIPE:
+            raise exc
 
 
 def get_printout(out, opts=None, **kwargs):
