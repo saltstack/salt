@@ -22,17 +22,8 @@ Options
 
 .. include:: _includes/common-options.rst
 
-.. option:: -d, --daemon
-
-    Run the Salt minion as a daemon
-
-.. option:: -u USER, --user=USER
-
-    Specify user to run minion
-
-.. option:: --pid-file PIDFILE
-
-    Specify the location of the pidfile
+.. include:: _includes/daemon-options.rst
+.. |salt-daemon| replace:: salt-minion
 
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/minion

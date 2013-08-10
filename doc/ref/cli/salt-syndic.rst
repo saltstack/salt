@@ -23,13 +23,8 @@ Options
 
 .. include:: _includes/common-options.rst
 
-.. option:: -d, --daemon
-
-    Run the Salt syndic as a daemon
-
-.. option:: --pid-file PIDFILE
-
-    Specify the location of the pidfile
+.. include:: _includes/daemon-options.rst
+.. |salt-daemon| replace:: salt-syndic
 
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/master
