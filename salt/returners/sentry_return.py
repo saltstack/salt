@@ -65,7 +65,7 @@ def returner(ret):
         if pillar_data['raven'].has_key('tags'):
             for tag  in pillar_data['raven']['tags']:
                 tags[tag] = grains[tag]
-         
+
         if ret['return']:
             data['level'] = 'info'
 
