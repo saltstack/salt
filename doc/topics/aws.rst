@@ -171,6 +171,16 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       size: Micro Instance
       ssh_username: ec2-user
 
+    base_ec2_db:
+      provider: my-ec2-southeast-public-ips
+      image: ami-e565ba8c
+      size: m1.xlarge
+      ssh_username: ec2-user
+      volumes:
+        - { size: 10, device: /dev/sdf }
+        - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
+        - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
+
 
 The profile can be realized now with a salt command:
 
@@ -494,6 +504,8 @@ will be used.
     salt-cloud -f create_volume ec2 zone=us-east-1b
     salt-cloud -f create_volume ec2 zone=us-east-1b size=10
     salt-cloud -f create_volume ec2 zone=us-east-1b snapshot=snap12345678
+    salt-cloud -f create_volume ec2 size=10 type=standard
+    salt-cloud -f create_volume ec2 size=10 type=io1 iops=1000
 
 
 Attaching Volumes
