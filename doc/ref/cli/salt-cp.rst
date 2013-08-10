@@ -28,9 +28,8 @@ Options
 
 .. include:: _includes/common-options.rst
 
-.. option:: -t TIMEOUT, --timeout=TIMEOUT
-
-    The timeout in seconds to wait for replies from the Salt minions.
+.. include:: _includes/timeout-option.rst
+.. |timeout| replace:: 5
 
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/master

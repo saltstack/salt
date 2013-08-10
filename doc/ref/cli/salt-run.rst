@@ -25,6 +25,9 @@ Options
 
 .. include:: _includes/common-options.rst
 
+.. include:: _includes/timeout-option.rst
+.. |timeout| replace:: 1
+
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/master
 .. |loglevel| replace:: ``warning``

@@ -25,15 +25,10 @@ Options
 
 .. program:: salt
 
-.. option:: -h, --help
+.. include:: _includes/common-options.rst
 
-    Print a usage message briefly summarizing these command-line options
-
-.. option:: -t TIMEOUT, --timeout=TIMEOUT
-
-    The timeout in seconds to wait for replies from the Salt minions. The
-    timeout number specifies how long the command line client will wait to
-    query the minions and check on running jobs.
+.. include:: _includes/timeout-option.rst
+.. |timeout| replace:: 5
 
 .. option:: -s, --static
 
