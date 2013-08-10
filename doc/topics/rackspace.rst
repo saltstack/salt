@@ -66,31 +66,16 @@ that Salt Cloud has been built to support.
 Compute Region
 ==============
 
-Rackspace currently has three compute regions which may be used:
+Rackspace currently has four compute regions which may be used:
 
 .. code-block:: bash
 
     DFW -> Dallas/Forth Worth
     ORD -> Chicago
+    SYD -> Sydney
     LON -> London
 
-Note: if you are using LON with a UK account, using the old cloud providers 
-syntax, you must use the following identity_url and compute_region:
-
-.. code-block:: yaml
-
-    OPENSTACK.identity_url: 'https://lon.identity.api.rackspacecloud.com/v2.0/tokens'
-    OPENSTACK.compute_region: LON
-
-
-And using the new cloud providers syntax:
-
-.. code-block:: yaml
-
-    my-openstack-config:
-      identity_url: 'https://lon.identity.api.rackspacecloud.com/v2.0/tokens'
-      compute_region: LON
-
+Note: Currently the LON region is only avaiable with a UK account, and UK accounts cannot access other regions
 
 Authentication
 ==============
