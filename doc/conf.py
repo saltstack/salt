@@ -201,8 +201,8 @@ authors = [
 ]
 
 man_pages = [
-    ('ref/cli/salt', 'salt', 'salt', authors, 1),
     ('contents', 'salt', 'Salt Documentation', authors, 7),
+    ('ref/cli/salt', 'salt', 'salt', authors, 1),
     ('ref/cli/salt-master', 'salt-master', 'salt-master Documentation', authors, 1),
     ('ref/cli/salt-minion', 'salt-minion', 'salt-minion Documentation', authors, 1),
     ('ref/cli/salt-key', 'salt-key', 'salt-key Documentation', authors, 1),
@@ -210,6 +210,7 @@ man_pages = [
     ('ref/cli/salt-call', 'salt-call', 'salt-call Documentation', authors, 1),
     ('ref/cli/salt-syndic', 'salt-syndic', 'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
+    ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
 ]
 
 
