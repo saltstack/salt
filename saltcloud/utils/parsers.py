@@ -215,6 +215,12 @@ class ExecutionOptionsMixIn(object):
             help='Include the options used to deploy the minion in the data '
                  'returned.'
         )
+        group.add_option(
+            '--script-args',
+            default=None,
+            help='Script arguments to be fed to the bootstrap script when '
+                 'deploying the VM'
+        )
         self.add_option_group(group)
 
     def process_function(self):
