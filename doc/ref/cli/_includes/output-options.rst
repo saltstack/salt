@@ -1,0 +1,24 @@
+Output Options
+--------------
+
+.. option:: --out
+
+    Pass in an alternative outputter to display the return of data. This
+    outputter can be any of the available outputters:
+    grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
+    Some outputters are formatted only for data returned from specific
+    functions, for instance the grains outputter will not work for non grains
+    data.
+    If an outputter is used that does not support the data passed into it, then
+    Salt will fall back on the pprint outputter and display the return data
+    using the python pprint library.
+
+.. option:: --out-indent OUTPUT_INDENT, --output-indent OUTPUT_INDENT
+
+    Print the output indented by the provided value in spaces. Negative values
+    disables indentation. Only applicable in outputters that support 
+    indentation.
+
+.. option:: --no-color
+
+    Disable all colored output
