@@ -57,7 +57,7 @@ def parse():
     parser.add_option('--commit',
             dest='commit',
             help='The git commit to track')
-    parser.add_option('--clean',
+    parser.add_option('--no-clean',
             dest='clean',
             default=True,
             action='store_false',
