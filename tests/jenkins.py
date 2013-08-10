@@ -30,7 +30,7 @@ def run(platform, provider, commit, clean):
                 vm_name,
                 commit),
     print('Running CMD: {0}'.format(cmd))
-    subprocess.call(
+    retcode = subprocess.call(
             cmd,
             shell=True)
     # Clean up the vm
@@ -40,7 +40,7 @@ def run(platform, provider, commit, clean):
         subprocess.call(
                 cmd,
                 shell=True)
-    return 0
+    return retcode
 
 
 def parse():
