@@ -31,7 +31,8 @@ class CMDModuleTest(integration.ModuleCase):
         shell = os.environ.get('SHELL')
         if shell is None:
             # Failed to get the SHELL var, don't run
-            return
+            self.skipTest('Unable to get the SHELL environment variable')
+
         self.assertTrue(self.run_function('cmd.run', ['echo $SHELL']))
         self.assertEqual(
             self.run_function('cmd.run',
