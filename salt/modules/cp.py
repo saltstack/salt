@@ -312,7 +312,7 @@ def list_states(env='base'):
     return __context__['cp.fileclient'].list_states(env)
 
 
-def list_master(env='base'):
+def list_master(env='base', prefix=''):
     '''
     List all of the files stored on the master
 
@@ -321,10 +321,10 @@ def list_master(env='base'):
         salt '*' cp.list_master
     '''
     _mk_client()
-    return __context__['cp.fileclient'].file_list(env)
+    return __context__['cp.fileclient'].file_list(env, prefix)
 
 
-def list_master_dirs(env='base'):
+def list_master_dirs(env='base', prefix=''):
     '''
     List all of the directories stored on the master
 
@@ -333,7 +333,7 @@ def list_master_dirs(env='base'):
         salt '*' cp.list_master_dirs
     '''
     _mk_client()
-    return __context__['cp.fileclient'].dir_list(env)
+    return __context__['cp.fileclient'].dir_list(env, prefix)
 
 
 def list_minion(env='base'):
