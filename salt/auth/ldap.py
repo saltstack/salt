@@ -58,7 +58,7 @@ def _render_template(filter_, username):
     return template.render(variables)
 
 
-class _LDAPConnection:
+class _LDAPConnection(object):
     '''
     Setup an LDAP connection.
     '''
