@@ -801,6 +801,12 @@ class OutputOptionsMixIn(object):
                   'outputters that support indentation.')
         )
         group.add_option(
+            '--out-file', '--output-file',
+            dest='output_file',
+            default=None,
+            help='Write the output to the specified file'
+        )
+        group.add_option(
             '--no-color', '--no-colour',
             default=False,
             action='store_true',
@@ -953,19 +959,16 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Run the salt command but don\'t wait for a reply')
         )
         self.add_option(
-            '--state_output',
+            '--state-output', '--state_output',
             default='full',
-            dest='state_output',
-            type=str,
             help=('Override the configured state_output value for minion output'
                   '. Default: full')
         )
         self.add_option(
             '--subset',
             default=0,
-            dest='subset',
             type=int,
-            help=('Execute the routine on a random subset of the targetted '
+            help=('Execute the routine on a random subset of the targeted '
                   'minions. The minions will be verified that they have the '
                   'named function before executing')
         )
