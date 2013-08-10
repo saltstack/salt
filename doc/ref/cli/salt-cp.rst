@@ -34,6 +34,9 @@ Options
 
     The timeout in seconds to wait for replies from the Salt minions.
 
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/master
+.. |loglevel| replace:: ``warning``
 
 .. include:: _includes/target-selection.rst
 

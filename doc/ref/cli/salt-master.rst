@@ -49,11 +49,10 @@ Options
 
     Specify the location of the pidfile.
 
-.. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/master
+.. |loglevel| replace:: ``warning``
 
-    Console log level. One of ``info``, ``none``, ``garbage``,
-    ``trace``, ``warning``, ``error``, ``debug``. For the logfile
-    settings see the config file. Default: ``warning``.
 
 See also
 ========

@@ -51,6 +51,9 @@ Options
     the configuration files for Salt master and minions. The default location
     on most systems is /etc/salt.
 
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/ssh
+.. |loglevel| replace:: ``warning``
 .. include:: _includes/output-options.rst
 
 

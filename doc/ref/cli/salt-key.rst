@@ -101,6 +101,13 @@ Options
    higher, otherwise it will be rounded up to 2048. The
    default is 2048.
 
+.. include:: _includes/logging-options.rst
+    :end-before: start-console-output
+.. include:: _includes/logging-options.rst
+    :start-after: stop-console-output
+.. |logfile| replace:: /var/log/salt/minion
+.. |loglevel| replace:: ``warning``
+
 .. include:: _includes/output-options.rst
 
 .. option:: --version

@@ -42,12 +42,6 @@ Options
 
     Specify the location of the pidfile
 
-.. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
-
-    Console log level. One of ``info``, ``none``, ``garbage``,
-    ``trace``, ``warning``, ``error``, ``debug``. For the logfile
-    settings see the config file. Default: ``warning``.
-
 .. option:: --version
 
     Show program's version number and exit
@@ -55,6 +49,11 @@ Options
 .. option:: --versions-report
 
     Show program's dependencies version number and exit
+
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/minion
+.. |loglevel| replace:: ``warning``
+
 
 See also
 ========

@@ -21,7 +21,7 @@ master
 Options
 =======
 
-.. program:: salt-cp
+.. program:: salt-run
 
 .. option:: -h, --help
 
@@ -40,6 +40,12 @@ Options
     The location of the Salt configuration directory, this directory contains
     the configuration files for Salt master and minions. The default location
     on most systems is /etc/salt.
+
+
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/master
+.. |loglevel| replace:: ``warning``
+
 
 See also
 ========

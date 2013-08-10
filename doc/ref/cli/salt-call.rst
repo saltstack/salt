@@ -48,17 +48,15 @@ Options
     Return the documentation for the specified module or for all modules if
     none are specified
 
-.. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
-
-    Console log level. One of ``info``, ``none``, ``garbage``,
-    ``trace``, ``warning``, ``error``, ``debug``. For the logfile
-    settings see the config file. Default: ``info``.
-
 .. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
 
     The location of the Salt configuration directory, this directory contains
     the configuration files for Salt master and minions. The default location
     on most systems is /etc/salt.
+
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/minion
+.. |loglevel| replace:: ``info``
 
 .. include:: _includes/output-options.rst
 

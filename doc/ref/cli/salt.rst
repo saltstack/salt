@@ -98,7 +98,12 @@ Options
 
     Return the documentation for the module functions available on the minions
 
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/master
+.. |loglevel| replace:: ``warning``
+
 .. include:: _includes/output-options.rst
+
 
 See also
 ========
