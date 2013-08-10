@@ -22,3 +22,7 @@ Output Options
 .. option:: --no-color
 
     Disable all colored output
+
+.. option:: --force-color
+
+    Force colored output
