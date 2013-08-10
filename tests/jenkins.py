@@ -55,6 +55,6 @@ def parse():
 
 if __name__ == '__main__':
     opts = parse()
-    exit_code = run(opts['platform'], opts['provider'])
+    exit_code = run(opts['platform'], opts['provider'], opts['commit'])
     print('Exit Code: {0}'.format(exit_code))
     sys.exit(exit_code)
