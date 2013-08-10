@@ -18,9 +18,7 @@ Options
 
 .. program:: salt-key
 
-.. option:: -h, --help
-
-    Print a usage message briefly summarizing these command-line options.
+.. include:: _includes/common-options.rst
 
 .. option:: -l ARG, --list=ARG
 
@@ -59,12 +57,6 @@ Options
 
     Delete all keys
 
-.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
-
-    The location of the Salt configuration directory, this directory contains
-    the configuration files for Salt master and minions. The default location
-    on most systems is /etc/salt.
-
 .. option:: -p PRINT, --print=PRINT
 
    Print the specified public key
@@ -80,10 +72,6 @@ Options
 .. option:: -y, --yes
 
    Answer 'Yes' to all questions presented, defaults to False
-
-.. option:: --key-logfile=KEY_LOGFILE
-
-   Send all output to a file. Default is /var/log/salt/key
 
 .. option:: --gen-keys=GEN_KEYS
 
@@ -110,13 +98,6 @@ Options
 
 .. include:: _includes/output-options.rst
 
-.. option:: --version
-
-    Show program's version number and exit
-
-.. option:: --versions-report
-
-    Show program's dependencies version number and exit
 
 See also
 ========

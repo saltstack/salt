@@ -26,9 +26,7 @@ Options
 
 .. program:: salt-cp
 
-.. option:: -h, --help
-
-    Print a usage message briefly summarizing these command-line options
+.. include:: _includes/common-options.rst
 
 .. option:: -t TIMEOUT, --timeout=TIMEOUT
 
@@ -40,11 +38,6 @@ Options
 
 .. include:: _includes/target-selection.rst
 
-.. option:: -c CONFIG, --config=CONFIG
-
-    The location of the Salt master configuration file, the Salt master
-    settings are required to know where the connections are;
-    default=/etc/salt/master
 
 See also
 ========

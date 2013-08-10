@@ -20,9 +20,7 @@ Options
 
 .. program:: salt-call
 
-.. option:: -h, --help
-
-    Print a usage message briefly summarizing these command-line options
+.. include:: _includes/common-options.rst
 
 .. option:: -g, --grains
 
@@ -48,25 +46,12 @@ Options
     Return the documentation for the specified module or for all modules if
     none are specified
 
-.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
-
-    The location of the Salt configuration directory, this directory contains
-    the configuration files for Salt master and minions. The default location
-    on most systems is /etc/salt.
-
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/minion
 .. |loglevel| replace:: ``info``
 
 .. include:: _includes/output-options.rst
 
-.. option:: --version
-
-    Show program's version number and exit
-
-.. option:: --versions-report
-
-    Show program's dependencies version number and exit
 
 See also
 ========

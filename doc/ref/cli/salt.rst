@@ -65,13 +65,6 @@ Options
     for the authenticated user to send commands without needing to
     re-authenticate.
 
-.. option:: --version
-
-    Print the version of Salt that is running.
-
-.. option:: --versions-report
-
-    Show program's dependencies version number and exit
 
 .. include:: _includes/target-selection.rst
 .. include:: _includes/extended-target-selection.rst
@@ -83,11 +76,6 @@ Options
     returner is used then the return will not come back to the command line
     but will be sent to the specified return system.
 
-.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
-
-    The location of the Salt configuration directory, this directory contains
-    the configuration files for Salt master and minions. The default location
-    on most systems is /etc/salt.
 
 .. option:: -v VERBOSE, --verbose
 
