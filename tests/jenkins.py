@@ -20,18 +20,24 @@ def run(platform, provider, commit):
     '''
     htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6] 
     vm_name = '{0}{1}'.format(platform, htag)
+    cmd = 'salt-cloud -p {0}_{1} {2}'.format(provider, platform, vm_name)
+    print('Running CMD: {0}'.format(cmd))
     subprocess.call(
-            'salt-cloud -p {0}_{1} {2}'.format(provider, platform, vm_name),
+            cmd,
             shell=True)
     # Run tests here
-    subprocess.call(
-            'salt {0} state.sls testrun pillar="{git_commit: {1}}"'.format(
+    cmd = 'salt {0} state.sls testrun pillar="{{git_commit: {1}}}"'.format(
                 vm_name,
                 commit),
+    print('Running CMD: {0}'.format(cmd))
+    subprocess.call(
+            cmd,
             shell=True)
     # Clean up the vm
+    cmd = 'salt-cloud -d {0} -y'.format(vm_name),
+    print('Running CMD: {0}'.format(cmd))
     subprocess.call(
-            'salt-cloud -d {0} -y'.format(vm_name),
+            cmd,
             shell=True)
     return 0
 
