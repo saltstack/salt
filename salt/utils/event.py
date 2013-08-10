@@ -142,9 +142,8 @@ class SaltEvent(object):
         Get a single publication.
         IF no publication available THEN block for upto wait seconds
         AND either return publication OR None IF no publication available.
-        
+
         IF wait is 0 then block forever.
-        
         '''
         self.subscribe(tag)
         socks = dict(self.poller.poll(wait * 1000)) #convert to milliseconds
