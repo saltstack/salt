@@ -106,7 +106,7 @@ release = '.'.join(map(str, salt.version.__version_info__))
 
 master_doc = 'contents'
 templates_path = ['_templates']
-exclude_patterns = ['_build', '_incl/*']
+exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 
 extensions = [
     'saltdocs',
