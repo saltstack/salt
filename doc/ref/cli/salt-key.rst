@@ -20,6 +20,26 @@ Options
 
 .. include:: _includes/common-options.rst
 
+.. option:: -q, --quiet
+
+   Suppress output
+
+.. option:: -y, --yes
+
+   Answer 'Yes' to all questions presented, defaults to False
+
+.. include:: _includes/logging-options.rst
+    :end-before: start-console-output
+.. include:: _includes/logging-options.rst
+    :start-after: stop-console-output
+.. |logfile| replace:: /var/log/salt/minion
+.. |loglevel| replace:: ``warning``
+
+.. include:: _includes/output-options.rst
+
+Actions
+-------
+
 .. option:: -l ARG, --list=ARG
 
     List the public keys. The args "pre", "un", and "unaccepted" will list
@@ -48,6 +68,14 @@ Options
 
     Rejects all pending public keys.
 
+.. option:: -p PRINT, --print=PRINT
+
+   Print the specified public key
+
+.. option:: -P, --print-all
+
+   Print all public keys
+
 .. option:: -d DELETE, --delete=DELETE
 
     Delete the named minion key or minion keys matching a glob for command
@@ -57,21 +85,17 @@ Options
 
     Delete all keys
 
-.. option:: -p PRINT, --print=PRINT
+.. option:: -f FINGER, --finger=FINGER
 
-   Print the specified public key
+    Print the named key's fingerprint
 
-.. option:: -P, --print-all
+.. option:: -F, --finger-all
 
-   Print all public keys
+    Print all key's fingerprints
 
-.. option:: -q, --quiet
 
-   Supress output
-
-.. option:: -y, --yes
-
-   Answer 'Yes' to all questions presented, defaults to False
+Key Generation Options
+-----------------------
 
 .. option:: --gen-keys=GEN_KEYS
 
@@ -88,15 +112,6 @@ Options
    the '--gen-keys' option, the key size must be 2048 or
    higher, otherwise it will be rounded up to 2048. The
    default is 2048.
-
-.. include:: _includes/logging-options.rst
-    :end-before: start-console-output
-.. include:: _includes/logging-options.rst
-    :start-after: stop-console-output
-.. |logfile| replace:: /var/log/salt/minion
-.. |loglevel| replace:: ``warning``
-
-.. include:: _includes/output-options.rst
 
 
 See also
