@@ -34,7 +34,7 @@ def run(platform, provider, commit, clean):
     out = subprocess.Popen(
             cmd,
             shell=True,
-            stdout=subprocess.STDOUT,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()[0]
     print(out)
     if 'Result:    False' in out:
