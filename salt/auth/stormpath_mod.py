@@ -22,7 +22,7 @@ except ImportError:
 
 
 def __virtual__():
-    ''' 
+    '''
     Only load if stormpath is installed
     '''
     if HAS_STORMPATH:
