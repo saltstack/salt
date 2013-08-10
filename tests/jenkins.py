@@ -51,7 +51,7 @@ def parse():
             dest='commit',
             help='The git commit to track')
     options, args = parser.parse_args()
-    return options.__dict__()
+    return options.__dict__
 
 if __name__ == '__main__':
     opts = parse()
