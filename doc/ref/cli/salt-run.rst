@@ -28,6 +28,11 @@ Options
 .. include:: _includes/timeout-option.rst
 .. |timeout| replace:: 1
 
+.. option:: -d, --doc, --documentation
+
+    Display documentation for runners, pass a module or a runner to see 
+    documentation on only that module/runner.
+
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/master
 .. |loglevel| replace:: ``warning``
