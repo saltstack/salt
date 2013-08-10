@@ -6,6 +6,8 @@ jenkins.satstack.com.
 This script is intended to be shell centric!!
 '''
 
+# Import python libs
+import sys
 import subprocess
 import hashlib
 import random
@@ -29,3 +31,24 @@ def run(platform, provider):
     subprocess.call(
             'salt-cloud -d {0} -y'.format(vm_name),
             shell=True)
+    return 0
+
+
+def parse():
+    '''
+    Parse the cli options
+    '''
+    parser = optparse.OptionParser()
+    parser.add_option('--platform',
+            dest='platform',
+            help='The target platform, choose from:\ncent6\ncent5\nubuntu12.04')
+    parser.add_option('--provider',
+            dest='provider',
+            help='The vm provider')
+    options, args = parser.parse_args()
+    return options.__dict__()
+
+if __name__ == '__main__':
+    opts = parse()
+    exit_code = run(opts['platform'], opts['provider'])
+    sys.exit(exit_code)
