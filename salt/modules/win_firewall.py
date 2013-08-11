@@ -53,5 +53,3 @@ def disable():
     return __salt__['cmd.run'](
             'netsh advfirewall set allprofiles state off'
             ) == 'Ok.'
-
-

@@ -327,4 +327,3 @@ def tty(device, echo=None):
                 teletype,
                 ret['retcode'])
         }
-
