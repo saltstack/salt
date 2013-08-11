@@ -25,7 +25,7 @@ def _parse_return_code_powershell(string):
     if not regex:
         return False
     else:
-        return int( regex.group(1) )
+        return int(regex.group(1))
 
 
 def enable():
@@ -37,7 +37,7 @@ def enable():
         salt '*' rdp.enable
     '''
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(1,1) }"'
-    return _parse_return_code_powershell( __salt__['cmd.run'](cmd) ) == 0
+    return _parse_return_code_powershell(__salt__['cmd.run'](cmd)) == 0
 
 
 def disable():
@@ -49,7 +49,7 @@ def disable():
         salt '*' rdp.disable
     '''
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(0,1) }"'
-    return _parse_return_code_powershell( __salt__['cmd.run'](cmd) ) == 0
+    return _parse_return_code_powershell(__salt__['cmd.run'](cmd)) == 0
 
 
 def status():
@@ -61,5 +61,5 @@ def status():
         salt '*' rdp.status
     '''
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; echo $RDP.AllowTSConnections }"'
-    out = int( __salt__['cmd.run'](cmd).strip() )
+    out = int(__salt__['cmd.run'](cmd).strip())
     return out != 0

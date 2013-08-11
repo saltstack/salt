@@ -75,8 +75,8 @@ def exists(name, index=0):
     index = int(index)
     if index < 0:
         index = len(sysPath) + index
-    if index > len(sysPath)-1:
-        index = len(sysPath)-1
+    if index > len(sysPath) - 1:
+        index = len(sysPath) - 1
 
     try:
         currIndex = sysPath.index(path)

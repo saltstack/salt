@@ -379,11 +379,11 @@ def win_interfaces():
                         item = {'address': ip,
                                 'label': iface.Description}
                         if iface.DefaultIPGateway:
-                            broadcast = next(( i for i in iface.DefaultIPGateway if '.' in i ), '')
+                            broadcast = next((i for i in iface.DefaultIPGateway if '.' in i), '')
                             if broadcast:
                                 item['broadcast'] = broadcast
                         if iface.IPSubnet:
-                            netmask = next(( i for i in iface.IPSubnet if '.' in i ), '')
+                            netmask = next((i for i in iface.IPSubnet if '.' in i), '')
                             if netmask:
                                 item['netmask'] = netmask
                         ifaces[iface.Description]['inet'].append(item)
@@ -392,11 +392,11 @@ def win_interfaces():
                             ifaces[iface.Description]['inet6'] = []
                         item = {'address': ip}
                         if iface.DefaultIPGateway:
-                            broadcast = next(( i for i in iface.DefaultIPGateway if ':' in i ), '')
+                            broadcast = next((i for i in iface.DefaultIPGateway if ':' in i), '')
                             if broadcast:
                                 item['broadcast'] = broadcast
                         if iface.IPSubnet:
-                            netmask = next(( i for i in iface.IPSubnet if ':' in i ), '')
+                            netmask = next((i for i in iface.IPSubnet if ':' in i), '')
                             if netmask:
                                 item['netmask'] = netmask
                         ifaces[iface.Description]['inet6'].append(item)

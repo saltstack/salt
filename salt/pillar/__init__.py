@@ -244,11 +244,11 @@ class Pillar(object):
         '''
         sorted_top = collections.defaultdict(OrderedDict)
         for env, targets in top.items():
-            sorted_targets = sorted(targets.keys(), 
+            sorted_targets = sorted(targets.keys(),
                     key=lambda target: orders[env][target])
             for target in sorted_targets:
                 sorted_top[env][target] = targets[target]
-        return sorted_top            
+        return sorted_top
 
     def get_top(self):
         '''

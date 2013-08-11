@@ -60,7 +60,7 @@ def exists(path):
     '''
     Check if the directory is configured in the SYSTEM path
     Case-insensitive and ignores trailing backslash
-    
+
     CLI Example::
 
         salt '*' win_path.exists 'c:\\python27'
@@ -75,7 +75,7 @@ def exists(path):
 def add(path, index=0):
     '''
     Add the directory to the SYSTEM path in the index location
-    
+
     CLI Example::
         # Will add to the beginning of the path
         salt '*' win_path.add 'c:\\python27' 0

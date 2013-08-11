@@ -89,7 +89,7 @@ def top(**kwargs):
 
     except ImportError as e:
         if 'reclass' in e.message:
-            raise SaltInvocationError('master_tops.reclass: cannot find reclass '\
+            raise SaltInvocationError('master_tops.reclass: cannot find reclass '
                                       'module in ' + sys.path)
         else:
             raise
@@ -103,7 +103,7 @@ def top(**kwargs):
 
     except KeyError as e:
         if 'reclass' in e.message:
-            raise SaltInvocationError('master_tops.reclass: no configuration '\
+            raise SaltInvocationError('master_tops.reclass: no configuration '
                                       'found in master config')
         else:
             raise

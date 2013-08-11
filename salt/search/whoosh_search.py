@@ -32,13 +32,13 @@ def index():
     Build the search index
     '''
     schema = whoosh.fields.Schema(
-            path=whoosh.fields.TEXT, # Path for sls files
-            content=whoosh.fields.TEXT, # All content is indexed here
-            env=whoosh.fields.ID, # The environment associated with a file
-            fn_type=whoosh.fields.ID, # Set to pillar or state
-            minion=whoosh.fields.ID, # The minion id associated with the content
-            jid=whoosh.fields.ID, # The job id
-            load=whoosh.fields.ID, # The load data
+            path=whoosh.fields.TEXT,  # Path for sls files
+            content=whoosh.fields.TEXT,  # All content is indexed here
+            env=whoosh.fields.ID,  # The environment associated with a file
+            fn_type=whoosh.fields.ID,  # Set to pillar or state
+            minion=whoosh.fields.ID,  # The minion id associated with the content
+            jid=whoosh.fields.ID,  # The job id
+            load=whoosh.fields.ID,  # The load data
             )
     index_dir = os.path.join(__opts__['cachedir'], 'whoosh')
     if not os.path.isdir(index_dir):
