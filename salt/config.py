@@ -678,11 +678,9 @@ def get_id():
     try:
         windir = os.getenv("WINDIR")
         with salt.utils.fopen(windir + '\\system32\\drivers\\etc\\hosts') as hfl:
-            line = hfl.readline()
-            while line:
+            for line in hfl:
                 # skip commented or blank lines
                 if line[0] == '#' or len(line) <= 1:
-                    line = hfl.readline()
                     continue
                 # process lines looking for '127.' in first column
                 try:
@@ -694,7 +692,6 @@ def get_id():
                                 return name, False
                 except IndexError:
                     pass  # could not split line (malformed entry?)
-                line = hfl.readline()
     except Exception:
         pass
 
