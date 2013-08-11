@@ -111,7 +111,7 @@ def installed(name, default=False, runas=None):
         return ret
 
     ret = _check_rbenv(ret, runas)
-    if ret['result'] == False:
+    if ret['result'] is False:
         if not __salt__['rbenv.install'](runas):
             ret['comment'] = 'Rbenv failed to install'
             return ret
@@ -166,7 +166,7 @@ def absent(name, runas=None):
         return ret
 
     ret = _check_rbenv(ret, runas)
-    if ret['result'] == False:
+    if ret['result'] is False:
         ret['result'] = True
         ret['comment'] = 'Rbenv not installed, {0} not either'.format(name)
         return ret
