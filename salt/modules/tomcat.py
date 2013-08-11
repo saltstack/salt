@@ -139,7 +139,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
 
     # prepare authentication
     auth = _auth(url)
-    if auth == False:
+    if auth is False:
         ret['res'] = False
         ret['msg'] = 'missing username and password settings (grain/pillar)'
         return ret
@@ -234,7 +234,7 @@ def ls(url='http://localhost:8080/manager', timeout=180):
 
     ret = {}
     data = _wget('list', '', url, timeout=timeout)
-    if data['res'] == False:
+    if data['res'] is False:
         return {}
     data['msg'].pop(0)
     for line in data['msg']:
@@ -373,7 +373,7 @@ def serverinfo(url='http://localhost:8080/manager', timeout=180):
     '''
 
     data = _wget('serverinfo', {}, url, timeout=timeout)
-    if data['res'] == False:
+    if data['res'] is False:
         return {'error': data['msg'][0]}
 
     ret = {}
