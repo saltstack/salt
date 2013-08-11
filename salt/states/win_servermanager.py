@@ -50,6 +50,6 @@ def installed(name, recurse=False, force=False):
     ret['changes'] = {'feature': __salt__['win_servermanager.install'](name, recurse)}
     ret['result'] = ret['changes']['feature']['Success'] == 'True'
     if not ret['result']:
-        ret['comment'] = 'failed to install the feature: {0}'.format( ret['changes']['feature']['ExitCode'] )
+        ret['comment'] = 'failed to install the feature: {0}'.format(ret['changes']['feature']['ExitCode'])
 
     return ret

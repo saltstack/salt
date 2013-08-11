@@ -20,7 +20,7 @@ def _srvmgr(func):
     '''
     Execute a function from the ServerManager PS module and return the STDOUT
     '''
-    return __salt__['cmd.run']( 'powershell -InputFormat None -Command "& {{ Import-Module ServerManager ; {0} }}"'.format( func ) )
+    return __salt__['cmd.run']('powershell -InputFormat None -Command "& {{ Import-Module ServerManager ; {0} }}"'.format(func))
 
 
 def _parse_powershell_list(lst):
@@ -31,7 +31,7 @@ def _parse_powershell_list(lst):
     for line in lst.splitlines():
         if line:
             splt = line.split()
-            ret[ splt[0] ] = splt[2]
+            ret[splt[0]] = splt[2]
 
     return ret
 
@@ -86,8 +86,8 @@ def install(feature, recurse=False):
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
-    out = _srvmgr( 'Add-WindowsFeature -Name {0} {1} -erroraction silentlycontinue | format-list'.format(feature, sub) )
-    return _parse_powershell_list( out )
+    out = _srvmgr('Add-WindowsFeature -Name {0} {1} -erroraction silentlycontinue | format-list'.format(feature, sub))
+    return _parse_powershell_list(out)
 
 
 def remove(feature):
@@ -105,5 +105,5 @@ def remove(feature):
 
         salt '*' win_servermanager.remove Telnet-Client
     '''
-    out = _srvmgr( 'Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list'.format(feature) )
-    return _parse_powershell_list( out )
+    out = _srvmgr('Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list'.format(feature))
+    return _parse_powershell_list(out)
