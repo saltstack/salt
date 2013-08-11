@@ -660,8 +660,7 @@ def get_id():
     # Can /etc/hosts help us?
     try:
         with salt.utils.fopen('/etc/hosts') as hfl:
-            line = hfl.readline()
-            while line:
+            for line in hfl:
                 names = line.split()
                 ip_ = names.pop(0)
                 if ip_.startswith('127.'):
@@ -670,7 +669,6 @@ def get_id():
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
                             return name, False
-                line = hfl.readline()
     except Exception:
         pass
 
