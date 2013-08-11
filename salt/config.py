@@ -696,7 +696,7 @@ def get_id():
                     pass  # could not split line (malformed entry?)
                 line = hfl.readline()
     except Exception:
-            pass
+        pass
 
     # What IP addresses do we have?
     ip_addresses = [salt.utils.network.IPv4Address(addr) for addr
