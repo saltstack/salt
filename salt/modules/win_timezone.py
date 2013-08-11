@@ -498,7 +498,7 @@ def get_offset():
     if not reg:
         ret = '0000'
     else:
-        ret = reg.group(1).replace(':','')
+        ret = reg.group(1).replace(':', '')
 
     return ret
 
@@ -527,7 +527,7 @@ def set_zone(timezone):
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
-    return __salt__['cmd.retcode']( 'tzutil /s "{0}"'.format(LINTOWIN[timezone]) ) == 0
+    return __salt__['cmd.retcode']('tzutil /s "{0}"'.format(LINTOWIN[timezone])) == 0
 
 
 def zone_compare(timezone):
