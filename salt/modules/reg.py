@@ -91,7 +91,7 @@ def set_key(hkey, path, key, value, vtype='REG_DWORD'):
     registry = Registry()
     hkey2 = getattr(registry, hkey)
     # fullpath = '\\\\'.join([path, key])
-    
+
     try:
         _type = getattr(_winreg, vtype)
     except AttributeError:

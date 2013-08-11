@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    
+
     if salt.utils.is_windows():
         return 'autoruns'
     return False
@@ -67,5 +67,5 @@ def list_():
                 autoruns[full_dir].append(afile)
         except Exception:
             pass
-        
+
     return autoruns
