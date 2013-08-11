@@ -1068,14 +1068,14 @@ def vm_netstats(vm_=None):
         dom = _get_dom(vm_)
         nics = get_nics(vm_)
         ret = {
-                'rx_bytes'  : 0,
+                'rx_bytes': 0,
                 'rx_packets': 0,
-                'rx_errs'   : 0,
-                'rx_drop'   : 0,
-                'tx_bytes'  : 0,
+                'rx_errs': 0,
+                'rx_drop': 0,
+                'tx_bytes': 0,
                 'tx_packets': 0,
-                'tx_errs'   : 0,
-                'tx_drop'   : 0
+                'tx_errs': 0,
+                'tx_drop': 0
                }
         for attrs in nics.values():
             if 'target' in attrs:
@@ -1137,19 +1137,19 @@ def vm_diskstats(vm_=None):
         # and unsuitable for any sort of real time statistics
         disks = get_disk_devs(vm_)
         ret = {
-                'rd_req'  : 0,
+                'rd_req': 0,
                 'rd_bytes': 0,
-                'wr_req'  : 0,
+                'wr_req': 0,
                 'wr_bytes': 0,
-                'errs'    : 0
+                'errs': 0
                }
         for disk in disks:
             stats = dom.blockStats(disk)
-            ret['rd_req']   += stats[0]
+            ret['rd_req'] += stats[0]
             ret['rd_bytes'] += stats[1]
-            ret['wr_req']   += stats[2]
+            ret['wr_req'] += stats[2]
             ret['wr_bytes'] += stats[3]
-            ret['errs']     += stats[4]
+            ret['errs'] += stats[4]
 
         return ret
     info = {}

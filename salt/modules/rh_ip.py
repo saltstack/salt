@@ -595,11 +595,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                     _raise_error_iface(iface, opts[opt], valid)
         if bypassfirewall:
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '0')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables',  '0')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '0')
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '0')
         else:
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '1')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables',  '1')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '1')
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '1')
     else:
         if 'bridge' in opts:
