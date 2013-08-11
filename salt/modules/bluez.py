@@ -159,6 +159,30 @@ def scan():
     return ret
 
 
+def block(bdaddr):
+    '''
+    Block a specific bluetooth device by BD Address
+
+    CLI Example::
+
+        salt '*' bluetooth.block DE:AD:BE:EF:CA:FE
+    '''
+    cmd = 'hciconfig {0} block'.format(dev)
+    __salt__['cmd.run'](cmd).splitlines()
+
+
+def unblock(bdaddr):
+    '''
+    Unblock a specific bluetooth device by BD Address
+
+    CLI Example::
+
+        salt '*' bluetooth.unblock DE:AD:BE:EF:CA:FE
+    '''
+    cmd = 'hciconfig {0} unblock'.format(dev)
+    __salt__['cmd.run'](cmd).splitlines()
+
+
 def pair(address, key):
     '''
     Pair the bluetooth adapter with a device
