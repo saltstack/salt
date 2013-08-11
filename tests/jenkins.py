@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 '''
-This script is used to test salt from a jenkins server, specifically
-jenkins.satstack.com.
+This script is used to test Salt from a Jenkins server, specifically
+jenkins.saltstack.com.
 
-This script is intended to be shell centric!!
+This script is intended to be shell-centric!!
 '''
 
 # Import python libs
@@ -53,7 +53,7 @@ def run(platform, provider, commit, clean):
 
 def parse():
     '''
-    Parse the cli options
+    Parse the CLI options
     '''
     parser = optparse.OptionParser()
     parser.add_option('--platform',
