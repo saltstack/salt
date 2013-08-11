@@ -104,7 +104,8 @@ reports=no
 
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html
-output-format=parseable
+# output-format=parseable
+msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
 # Put messages in a separate file for each module / package specified on the
 # command line instead of printing them on stdout. Reports (if any) will be
