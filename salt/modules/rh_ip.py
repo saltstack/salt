@@ -28,7 +28,7 @@ ENV = jinja2.Environment(
 
 def __virtual__():
     '''
-    Confine this module to RHEL/Fedora based distros$
+    Confine this module to RHEL/Fedora based distros
     '''
     if __grains__['os_family'] == 'RedHat':
         return 'ip'
@@ -189,7 +189,7 @@ def _parse_settings_bond(opts, iface):
         'tx_queues': '16',
         # Link monitoring in milliseconds. Most NICs support this
         'miimon': '100',
-        # arp interval in milliseconds
+        # ARP interval in milliseconds
         'arp_interval': '250',
         # Delay before considering link down in milliseconds (miimon * 2)
         'downdelay': '200',
@@ -206,7 +206,7 @@ def _parse_settings_bond(opts, iface):
         # On: driver sends mii
         # Off: ethtool sends mii
         'use_carrier': 'on',
-        # Defualt. Don't change unless you know what you are doing.
+        # Default. Don't change unless you know what you are doing.
         'xmit_hash_policy': 'layer2',
     }
 
@@ -270,7 +270,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     '''
     bond = {'mode': '0'}
 
-    # arp targets in n.n.n.n form
+    # ARP targets in n.n.n.n form
     valid = ['list of ips (up to 16)']
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
@@ -879,7 +879,7 @@ def build_interface(iface, iface_type, enabled, **settings):
 
 def build_routes(iface, **settings):
     '''
-    Build an route script for a network interface.
+    Build a route script for a network interface.
 
     CLI Example::
 
@@ -1025,7 +1025,7 @@ def build_network_settings(**settings):
     if settings['test']:
         return _read_temp(network)
 
-    # Wirte settings
+    # Write settings
     _write_file_network(network, _RH_NETWORK_FILE)
 
     return _read_file(_RH_NETWORK_FILE)
