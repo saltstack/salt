@@ -25,7 +25,7 @@ def absent(name):
     index: where the directory should be placed in the PATH (default: 0)
 
     Example::
-    
+
         'C:\\sysinternals':
           win_path.absent
     '''
