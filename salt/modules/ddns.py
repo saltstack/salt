@@ -74,7 +74,7 @@ def delete_host(zone, name, nameserver='127.0.0.1'):
 
     res = delete(zone, name, nameserver=nameserver)
 
-    fqdn = fqdn + '.' 
+    fqdn = fqdn + '.'
     for ip in ips:
         zone = 'in-addr.arpa.'
         parts = ip.split('.')

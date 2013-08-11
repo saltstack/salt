@@ -387,7 +387,6 @@ def rename_state_ids(data, sls, is_extend=False):
             del data[sid]
 
 
-
 REQUIRE = set(['require', 'watch'])
 REQUIRE_IN = set(['require_in', 'watch_in'])
 EXTENDED_REQUIRE = {}

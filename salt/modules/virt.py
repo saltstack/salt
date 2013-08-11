@@ -466,7 +466,7 @@ def get_disks(vm_):
             elif source.hasAttribute('dev'):
                 qemu_target = source.getAttribute('dev')
             elif source.hasAttribute('protocol') and \
-                    source.hasAttribute('name'): # For rbd network
+                    source.hasAttribute('name'):  # For rbd network
                 qemu_target = '%s:%s' % (
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
