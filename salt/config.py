@@ -659,7 +659,6 @@ def get_id():
 
     # Can /etc/hosts help us?
     try:
-        # TODO Add Windows host file support
         with salt.utils.fopen('/etc/hosts') as hfl:
             line = hfl.readline()
             while line:
@@ -674,6 +673,30 @@ def get_id():
                 line = hfl.readline()
     except Exception:
         pass
+
+    # Can Windows 'hosts' file help?
+    try:
+        windir = os.getenv("WINDIR")
+        with salt.utils.fopen(windir + '\\system32\\drivers\\etc\\hosts') as hfl:
+            line = hfl.readline()
+            while line:
+                # skip commented or blank lines
+                if line[0] == '#' or len(line) <= 1:
+                    line = hfl.readline()
+                    continue
+                # process lines looking for '127.' in first column
+                try:
+                    entry = line.split()
+                    if '127.' in entry[0]:
+                        for name in entry[1:]:  # try each name in the row
+                            if name != 'localhost':
+                                log.info('Found minion id in hosts file: {0}'.format(name))
+                                return name, False
+                except IndexError:
+                    pass  # could not split line (malformed entry?)
+                line = hfl.readline()
+    except Exception:
+            pass
 
     # What IP addresses do we have?
     ip_addresses = [salt.utils.network.IPv4Address(addr) for addr
