@@ -18,7 +18,7 @@ def run(platform, provider, commit, clean):
     '''
     RUN!
     '''
-    htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6] 
+    htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
     vm_name = 'ZZZ{0}{1}'.format(platform, htag)
     cmd = 'salt-cloud --script-args "git {0}" -p {1}_{2} {3}'.format(
             commit, provider, platform, vm_name)
@@ -71,6 +71,12 @@ def parse():
             action='store_false',
             help='Clean up the built vm')
     options, args = parser.parse_args()
+    if not options.platform:
+        parser.exit('--platform is required')
+    if not options.provider:
+        parser.exit('--provider is required')
+    if not options.commit:
+        parser.exit('--commit is required')
     return options.__dict__
 
 if __name__ == '__main__':
