@@ -56,4 +56,3 @@ def gen_thin(cachedir):
     with open(thinver, 'w+') as fp_:
         fp_.write(salt.__version__)
     return thintar
-

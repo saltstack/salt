@@ -1029,4 +1029,3 @@ def build_network_settings(**settings):
     _write_file_network(network, _RH_NETWORK_FILE)
 
     return _read_file(_RH_NETWORK_FILE)
-

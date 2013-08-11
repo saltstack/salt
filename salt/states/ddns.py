@@ -108,4 +108,3 @@ def absent(name, zone, data=None, rdtype=None):
         ret['result'] = False
         ret['comment'] = 'Failed to delete DNS record(s)'
     return ret
-
