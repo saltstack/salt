@@ -13,7 +13,7 @@ def __virtual__():
 def dns_exists(name, servers=None, interface='Local Area Connection'):
     '''
     Configure the DNS server list in the specified interface
-    
+
     Example::
 
         config_dns_servers:
@@ -40,7 +40,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
         return ret
     else:
         ret['changes'] = {'configure servers': servers}
-    
+
     if __opts__['test']:
         ret['result'] = None
         return ret
@@ -65,7 +65,6 @@ def dns_dhcp(name, interface='Local Area Connection'):
     '''
     Configure the DNS server list from DHCP Server
     '''
-    
     ret = {'name': name,
            'result': True,
            'changes': {},
