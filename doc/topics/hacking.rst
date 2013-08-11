@@ -21,7 +21,9 @@ sending a pull request for a GitHub repository.
 First, make a local clone of your GitHub fork of the salt GitHub repo and make
 edits and changes locally.
 
-Then, create a new branch on your clone by entering the following commands::
+Then, create a new branch on your clone by entering the following commands:
+
+.. code-block:: bash
 
     git checkout -b fixed-broken-thing
 
@@ -29,12 +31,24 @@ Then, create a new branch on your clone by entering the following commands::
 
 Choose a name for your branch that describes its purpose.  
 
-Now commit your changes to this new branch with the following command::
+Now commit your changes to this new branch with the following command:
 
-    #add and commit all changes at once
-    git commit -a -m 'description of my fixes for the broken thing'
+.. code-block:: bash
 
-And then push your locally committed changes back up to GitHub::
+    git commit -am 'description of my fixes for the broken thing'
+
+.. note::
+
+    Using ``git commit -am``, followed by a quoted string, both stages and
+    commits all modified files in a single command. Depending on the nature of
+    your changes, you may wish to stage and commit them separately. Also, note
+    that if you wish to add newly-tracked files as part of your commit, they
+    will not be caught using ``git commit -am`` and will need to be added using
+    ``git add`` before committing.
+
+Push your locally-committed changes back up to GitHub:
+
+.. code-block:: bash
 
     git push --set-upstream origin fixed-broken-thing
     
@@ -42,27 +56,33 @@ Now go look at your fork of the salt repo on the GitHub website. The new
 branch will now be listed under the "Source" tab where it says "Switch Branches".
 Select the new branch from this list, and then click the "Pull request" button.
 
-Put in a descriptive comment, and include links to any project issues related to the pull request.
+Put in a descriptive comment, and include links to any project issues related
+to the pull request.
 
-The repo managers will be notified of your pull request and it will
-be reviewed. If a reviewer asks for changes, just make the changes locally in the 
-same local feature branch, push them to GitHub, then add a comment to the 
+The repo managers will be notified of your pull request and it will be
+reviewed. If a reviewer asks for changes, just make the changes locally in the
+same local feature branch, push them to GitHub, then add a comment to the
 discussion section of the pull request. 
 
 .. note:: Travis-CI
 
-    To make reviewing pull requests easier for the maintainers, please enable Travis-CI on 
-    the fork. Salt is already configured, so simply follow the first 
-    2 steps on the Travis-CI `Getting Started Doc`_.
+    To make reviewing pull requests easier for the maintainers, please enable
+    Travis-CI on your fork. Salt is already configured, so simply follow the
+    first 2 steps on the Travis-CI `Getting Started Doc`_.
 
 .. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
 
 Keeping Salt Forks in Sync
 --------------------------
 
-Salt is advancing quickly. It is therefore critical to pull upstream changes from master into forks on a regular basis. Nothing is worse than putting in a days of hard work into a pull request only to have it rejected because it has diverged too far from master. 
+Salt is advancing quickly. It is therefore critical to pull upstream changes
+from master into forks on a regular basis. Nothing is worse than putting in a
+days of hard work into a pull request only to have it rejected because it has
+diverged too far from master. 
 
-To pull in upstream changes::
+To pull in upstream changes:
+
+.. code-block:: bash
 
     # For ssh github
     git remote add upstream git@github.com:saltstack/salt.git
@@ -73,15 +93,21 @@ To pull in upstream changes::
     git fetch upstream
 
 
-To check the log to be sure that you actually want the changes, run this before merging::
+To check the log to be sure that you actually want the changes, run the
+following before merging:
+
+.. code-block:: bash
 
     git log upstream/develop
 
-Then to accept the changes and merge into the current branch::
+Then to accept the changes and merge into the current branch:
+
+.. code-block:: bash
 
     git merge upstream/develop
 
-For more info, see `GitHub Fork a Repo Guide`_ or `Open Comparison Contributing Docs`_
+For more info, see `GitHub Fork a Repo Guide`_ or `Open Comparison Contributing
+Docs`_
 
 .. _`GitHub Fork a Repo Guide`: http://help.github.com/fork-a-repo/
 .. _`Open Comparison Contributing Docs`: http://opencomparison.readthedocs.org/en/latest/contributing.html
@@ -89,16 +115,19 @@ For more info, see `GitHub Fork a Repo Guide`_ or `Open Comparison Contributing 
 Posting patches to the mailing list
 -----------------------------------
 
-Patches will also be accepted by email. Format patches using `git format-patch`_
-and send them to the Salt users mailing list. The contributor will then get credit 
-for the patch, and the Salt community will have an archive of the patch and a place for discussion.
+Patches will also be accepted by email. Format patches using `git
+format-patch`_ and send them to the Salt users mailing list. The contributor
+will then get credit for the patch, and the Salt community will have an archive
+of the patch and a place for discussion.
 
 .. _`git format-patch`: http://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
 
 Installing Salt for development
 -------------------------------
 
-Clone the repository using::
+Clone the repository using:
+
+.. code-block:: bash
 
     git clone https://github.com/saltstack/salt
 
@@ -107,15 +136,21 @@ Clone the repository using::
     Just cloning the repository is enough to work with Salt and make
     contributions. However, fetching additional tags from git is required to
     have Salt report the correct version for itself. To do this, first
-    add the git repository as an upstream source::
+    add the git repository as an upstream source:
+
+    .. code-block:: bash
 
         git remote add upstream http://github.com/saltstack/salt
 
-    Fetching tags is done with the git 'fetch' utility::
+    Fetching tags is done with the git 'fetch' utility:
+
+    .. code-block:: bash
 
         git fetch --tags upstream
 
-Create a new `virtualenv`_::
+Create a new `virtualenv`_:
+
+.. code-block:: bash
 
     virtualenv /path/to/your/virtualenv
 
@@ -132,11 +167,15 @@ On Arch Linux, where Python 3 is the default installation of Python, use the
     again, although it does assume that the listed modules are all installed in the
     system PYTHONPATH at the time of virtualenv creation.
 
-Activate the virtualenv::
+Activate the virtualenv:
+
+.. code-block:: bash
 
     source /path/to/your/virtualenv/bin/activate
 
-Install Salt (and dependencies) into the virtualenv::
+Install Salt (and dependencies) into the virtualenv:
+
+.. code-block:: bash
 
     pip install M2Crypto    # Don't install on Debian/Ubuntu (see below)
     pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil
@@ -146,13 +185,17 @@ Install Salt (and dependencies) into the virtualenv::
 
     ``swig`` and ``libssl-dev`` are required to build M2Crypto. To fix
     the error ``command 'swig' failed with exit status 1`` while installing M2Crypto, 
-    try installing it with the following command::
+    try installing it with the following command:
+
+    .. code-block:: bash
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
 
     Debian and Ubuntu systems have modified openssl libraries and mandate that
     a patched version of M2Crypto be installed. This means that M2Crypto
-    needs to be installed via apt::
+    needs to be installed via apt:
+
+    .. code-block:: bash
 
         apt-get install python-m2crypto
 
@@ -200,7 +243,9 @@ During development it is easiest to be able to run the Salt master and minion
 that are installed in the virtualenv you created above, and also to have all
 the configuration, log, and cache files contained in the virtualenv as well.
 
-Copy the master and minion config files into your virtualenv::
+Copy the master and minion config files into your virtualenv:
+
+.. code-block:: bash
 
     mkdir -p /path/to/your/virtualenv/etc/salt
     cp ./salt/conf/master /path/to/your/virtualenv/etc/salt/master
@@ -238,7 +283,9 @@ Edit the minion config file:
     `/etc/salt`.
 
 Start the master and minion, accept the minion's key, and verify your local Salt
-installation is working::
+installation is working:
+
+.. code-block:: bash
 
     cd /path/to/your/virtualenv
     salt-master -c ./etc/salt -d
@@ -270,7 +317,9 @@ and 103 characters on BSD-based systems.
 
 .. note:: File descriptor limits
 
-    Ensure that the system open file limit is raised to at least 2047::
+    Ensure that the system open file limit is raised to at least 2047:
+
+    .. code-block:: bash
 
         # check your current limit
         ulimit -n
@@ -279,7 +328,8 @@ and 103 characters on BSD-based systems.
         # use 'limit descriptors 2047' for c-shell
         ulimit -n 2047
 
-    To set file descriptors on OSX, refer to the :doc:`OS X Installation </topics/installation/osx>` instructions.
+    To set file descriptors on OSX, refer to the :doc:`OS X Installation
+    </topics/installation/osx>` instructions.
 
 
 Using easy_install to Install Salt
@@ -287,26 +337,36 @@ Using easy_install to Install Salt
 
 If you are installing using ``easy_install``, you will need to define a
 :strong:`USE_SETUPTOOLS` environment variable, otherwise dependencies will not
-be installed::
+be installed:
 
-    $ USE_SETUPTOOLS=1 easy_install salt
+.. code-block:: bash
+
+    USE_SETUPTOOLS=1 easy_install salt
 
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-You will need ``mock`` to run the tests::
+You will need ``mock`` to run the tests:
+
+.. code-block:: bash
 
     pip install mock
 
-If you are on Python < 2.7 then you will also need unittest2::
+If you are on Python < 2.7 then you will also need unittest2:
+
+.. code-block:: bash
 
     pip install unittest2
 
-Finally you use setup.py to run the tests with the following command::
+Finally you use setup.py to run the tests with the following command:
+
+.. code-block:: bash
 
     ./setup.py test
 
-For greater control while running the tests, please try::
+For greater control while running the tests, please try:
+
+.. code-block:: bash
 
     ./tests/runtests.py -h
 
@@ -316,11 +376,15 @@ Editing and previewing the documentation
 
 You need ``sphinx-build`` command to build the docs. In Debian/Ubuntu this is
 provided in the ``python-sphinx`` package. Sphinx can also be installed
-to a virtualenv using pip::
+to a virtualenv using pip:
+
+.. code-block:: bash
 
     pip install Sphinx
 
-Change to salt documentation directory, then::
+Change to salt documentation directory, then:
+
+.. code-block:: bash
 
     cd doc; make html
 
@@ -336,11 +400,15 @@ Change to salt documentation directory, then::
 
 - To build the docs on Arch Linux, the :strong:`python2-sphinx` package is
   required. Additionally, it is necessary to tell :strong:`make` where to find
-  the proper :strong:`sphinx-build` binary, like so::
+  the proper :strong:`sphinx-build` binary, like so:
+
+.. code-block:: bash
 
     make SPHINXBUILD=sphinx-build2 html
 
 - To build the docs on RHEL/CentOS 6, the :strong:`python-sphinx10` package
-  must be installed from EPEL, and the following make command must be used::
+  must be installed from EPEL, and the following make command must be used:
+
+.. code-block:: bash
 
     make SPHINXBUILD=sphinx-1.0-build html
