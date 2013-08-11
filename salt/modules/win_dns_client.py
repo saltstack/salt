@@ -49,7 +49,7 @@ def add_dns(ip, interface='Local Area Connection', index=1):
     '''
     Add the dns server to the nertwork interface
     (index starts from 1)
-    
+
     Note: if the interface dns is configured by DHCP all the dns servers will
     be removed from the interface and the requested dns will be the only one
 
@@ -80,7 +80,7 @@ def add_dns(ip, interface='Local Area Connection', index=1):
 def dns_dhcp(interface='Local Area Connection'):
     '''
     Configure the interface to get it's DNS servers from the DHCP server
-    
+
     CLI Example::
 
         salt '*' win_dns_client.dns_dhcp <interface>
