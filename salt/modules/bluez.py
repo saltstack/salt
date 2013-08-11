@@ -167,7 +167,7 @@ def block(bdaddr):
 
         salt '*' bluetooth.block DE:AD:BE:EF:CA:FE
     '''
-    cmd = 'hciconfig {0} block'.format(dev)
+    cmd = 'hciconfig {0} block'.format(bdaddr)
     __salt__['cmd.run'](cmd).splitlines()
 
 
@@ -179,7 +179,7 @@ def unblock(bdaddr):
 
         salt '*' bluetooth.unblock DE:AD:BE:EF:CA:FE
     '''
-    cmd = 'hciconfig {0} unblock'.format(dev)
+    cmd = 'hciconfig {0} unblock'.format(bdaddr)
     __salt__['cmd.run'](cmd).splitlines()
 
 
