@@ -99,8 +99,8 @@ def _get_svc(rcd, service_status):
     Returns a unique service status
     '''
     ena = None
-    for rcvar in __salt__['cmd.run']('{0} rcvar'.format(rcd)
-                                    ).splitlines():
+    lines = __salt__['cmd.run']('{0} rcvar'.format(rcd)).splitlines()
+    for rcvar in lines:
         if rcvar.startswith('$') and '={0}'.format(service_status) in rcvar:
             ena = 'yes'
         elif rcvar.startswith('#'):

@@ -38,8 +38,7 @@ def running(name,
             update=False,
             runas=None,
             conf_file=None,
-            bin_env=None
-        ):
+            bin_env=None):
     '''
     Ensure the named service is running.
 
