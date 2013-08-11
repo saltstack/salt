@@ -184,7 +184,7 @@ def installed(name, default=False, runas=None):
         return ret
 
     ret = _check_rvm(ret, runas)
-    if ret['result'] == False:
+    if ret['result'] is False:
         if not __salt__['rvm.install'](runas=runas):
             ret['comment'] = 'RVM failed to install.'
             return ret

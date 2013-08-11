@@ -93,7 +93,7 @@ def flags(name,
         result = _flags_helper('use', name, use, __opts__['test'])
         if result['result']:
             ret['changes']['use'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -102,7 +102,7 @@ def flags(name,
         result = _flags_helper('accept_keywords', name, accept_keywords, __opts__['test'])
         if result['result']:
             ret['changes']['accept_keywords'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -111,7 +111,7 @@ def flags(name,
         result = _flags_helper('env', name, env, __opts__['test'])
         if result['result']:
             ret['changes']['env'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -120,7 +120,7 @@ def flags(name,
         result = _flags_helper('license', name, license, __opts__['test'])
         if result['result']:
             ret['changes']['license'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -129,7 +129,7 @@ def flags(name,
         result = _flags_helper('properties', name, properties, __opts__['test'])
         if result['result']:
             ret['changes']['properties'] = result['changes']
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -138,7 +138,7 @@ def flags(name,
         result = _mask_helper('mask', name, __opts__['test'])
         if result['result']:
             ret['changes']['mask'] = 'masked'
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -147,7 +147,7 @@ def flags(name,
         result = _mask_helper('unmask', name, __opts__['test'])
         if result['result']:
             ret['changes']['unmask'] = 'unmasked'
-        elif result['result'] == False:
+        elif result['result'] is False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
