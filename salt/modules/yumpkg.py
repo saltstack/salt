@@ -39,6 +39,7 @@ try:
         implementation.
         '''
         def __init__(self):
+            super(yum.rpmtrans.RPMBaseCallback).__init__()
             self.messages = {}
             self.failed = []
             self.action = {
