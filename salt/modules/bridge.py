@@ -76,7 +76,7 @@ def _linux_brshow(br=None):
     if br:
         try:
             return brs[br]
-        except KeyError, ke :
+        except KeyError:
             return None
     return brs
 
@@ -156,7 +156,7 @@ def _netbsd_brshow(br=None):
     if br:
         try:
             return brs[br]
-        except KeyError, ke :
+        except KeyError:
             return None
     return brs
 
