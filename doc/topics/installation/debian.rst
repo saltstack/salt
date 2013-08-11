@@ -88,7 +88,7 @@ may be given at a time:
 Post-installation tasks
 -----------------------
 
-Now go to the :doc:`Configuring Salt</topics/configuration>` page.
+Now, go to the :doc:`Configuring Salt </topics/configuration>` page.
 
 
 Notes
@@ -108,6 +108,3 @@ upgrade paths between debian versions.
 
 If you have any questions regarding these, please email the mailing
 list or look for joehh on irc.
-
-
-

@@ -22,11 +22,16 @@ information in grains is unchanging, therefore the nature of the data is
 static. So grains information are things like the running kernel, or the
 operating system.
 
-Match all CentOS minions::
+Match all CentOS minions:
+
+.. code-block:: bash
 
     salt -G 'os:CentOS' test.ping
 
-Match all minions with 64-bit CPUs and return number of available cores::
+Match all minions with 64-bit CPUs, and return number of CPU cores for each
+matching minion:
+
+.. code-block:: bash
 
     salt -G 'cpuarch:x86_64' grains.item num_cpus
 
@@ -35,7 +40,9 @@ a :ref:`dictionary <python2:typesmapping>` can be matched by adding a colon for
 each level that is traversed. For example, the following will match hosts that
 have a grain called ``ec2_tags``, which itself is a
 :ref:`dict <python2:typesmapping>` with a key named ``environment``, which
-has a value that contains the word ``production``::
+has a value that contains the word ``production``:
+
+.. code-block:: bash
 
     salt -G 'ec2_tags:environment:*production*'
 
@@ -43,11 +50,15 @@ has a value that contains the word ``production``::
 Listing Grains
 ==============
 
-Available grains can be listed by using the 'grains.ls' module::
+Available grains can be listed by using the 'grains.ls' module:
+
+.. code-block:: bash
 
     salt '*' grains.ls
 
-Grains data can be listed by using the 'grains.items' module::
+Grains data can be listed by using the 'grains.items' module:
+
+.. code-block:: bash
 
     salt '*' grains.items
 
@@ -166,5 +177,7 @@ Syncing Grains
 --------------
 
 Syncing grains can be done a number of ways, they are automatically synced when
-state.highstate is called, or the grains can be synced and reloaded by calling
-the saltutil.sync_grains or saltutil.sync_all functions.
+:mod:`state.highstate <salt.modules.state.highstate>` is called, or (as noted
+above) the grains can be manually synced and reloaded by calling the
+:mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
+:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
