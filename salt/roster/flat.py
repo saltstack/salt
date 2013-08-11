@@ -80,4 +80,3 @@ class RosterMatcher(object):
         if isinstance(self.raw[minion], dict):
             return self.raw[minion]
         return False
-
