@@ -79,7 +79,7 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.setval',
                     ['setgrain', 'grainval']),
                 {'setgrain': 'grainval'})
-        time.sleep(1)
+        time.sleep(10)
         self.assertTrue(
                 self.run_function(
                     'grains.item', ['setgrain']
