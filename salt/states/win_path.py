@@ -21,9 +21,9 @@ def _normalize_dir(string):
 def absent(name):
     '''
     Remove the directory from the SYSTEM path
-    
+
     index: where the directory should be placed in the PATH (default: 0)
-    
+
     Example::
     
         'C:\\sysinternals':
@@ -51,14 +51,14 @@ def absent(name):
 def exists(name, index=0):
     '''
     Add the directory to the system PATH at index location
-    
+
     index: where the directory should be placed in the PATH (default: 0)
-    
+
     Example::
 
         'C:\\python27':
           win_path.exists
-        
+
         'C:\\sysinternals':
           win_path.exists:
             index: 0
