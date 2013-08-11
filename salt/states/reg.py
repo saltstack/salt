@@ -40,10 +40,10 @@ def present(name, value, vtype='REG_DWORD'):
     # determine what to do
     hive, path, key = _parse_key(name)
     if value == __salt__['reg.read_key'](hive, path, key):
-        ret['comment'] = '{0} is already configured'.format( name )
+        ret['comment'] = '{0} is already configured'.format(name)
         return ret
     else:
-        ret['changes'] = {'reg': 'configured to {}'.format(value) }
+        ret['changes'] = {'reg': 'configured to {}'.format(value)}
 
     if __opts__['test']:
         ret['result'] = None

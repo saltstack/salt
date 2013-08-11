@@ -62,8 +62,8 @@ def returner(ret):
             'level': 'error'
         }
         tags = {}
-        if pillar_data['raven'].has_key('tags'):
-            for tag  in pillar_data['raven']['tags']:
+        if 'tags' in pillar_data['raven']:
+            for tag in pillar_data['raven']['tags']:
                 tags[tag] = grains[tag]
 
         if ret['return']:

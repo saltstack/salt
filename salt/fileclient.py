@@ -25,7 +25,7 @@ import salt.utils.templates
 import salt.utils.gzip_util
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, urlunparse, url_open,
-    url_passwd_mgr, url_auth_handler, url_build_opener, url_install_opener )
+    url_passwd_mgr, url_auth_handler, url_build_opener, url_install_opener)
 
 log = logging.getLogger(__name__)
 

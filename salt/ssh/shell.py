@@ -60,7 +60,6 @@ class Shell(object):
             return line
         return errstr
 
-
     def _key_opts(self):
         '''
         Return options for the ssh command base for Salt to call

@@ -135,7 +135,6 @@ def loaddata(settings_module,
 
     '''
 
-
     kwargs = {}
     if database:
         kwargs['database'] = database

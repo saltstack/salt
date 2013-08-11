@@ -240,7 +240,7 @@ def latest(name,
                                           opts='--recursive')
 
             new_rev = None if bare else (
-                   __salt__['git.revision'](cwd=target, user=runas))
+                __salt__['git.revision'](cwd=target, user=runas))
 
         except Exception as exc:
             return _fail(

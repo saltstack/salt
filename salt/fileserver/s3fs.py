@@ -56,7 +56,7 @@ import salt.utils.s3 as s3
 
 log = logging.getLogger(__name__)
 
-_s3_cache_expire = 30 # cache for 30 seconds
+_s3_cache_expire = 30  # cache for 30 seconds
 _s3_sync_on_update = True  # sync cache on update rather than jit
 
 def envs():

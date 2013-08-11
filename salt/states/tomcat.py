@@ -191,8 +191,8 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     ret = {'name': name,
        'result': result,
        'changes': {},
-       'comment': 'tomcat manager is ready' if result \
-               else 'tomcat manager is not ready'
+       'comment': ('tomcat manager is ready' if result
+               else 'tomcat manager is not ready')
        }
 
     return ret

@@ -47,10 +47,10 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
 
     # add the DNS servers
     for i, server in enumerate(servers):
-        if not __salt__['win_dns_client.add_dns'](server, interface, i+1):
+        if not __salt__['win_dns_client.add_dns'](server, interface, i + 1):
             ret['comment'] = (
                     'Failed to add {0} as DNS server number {1}'
-                    ).format(server, i+1)
+                    ).format(server, i + 1)
             ret['result'] = False
             if i > 0:
                 ret['changes'] = {'configure servers': servers[:i]}
