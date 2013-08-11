@@ -100,7 +100,7 @@ def find_file(path, env='base', **kwargs):
     '''
 
     fnd = {'bucket': None,
-            'path' : None}
+           'path': None}
 
     metadata = _init()
     if not metadata or env not in metadata:
