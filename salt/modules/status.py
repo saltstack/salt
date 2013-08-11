@@ -186,7 +186,7 @@ def meminfo():
         comps = line.split()
         comps[0] = comps[0].replace(':', '')
         ret[comps[0]] = {
-            'value':    comps[1],
+            'value': comps[1],
         }
         if len(comps) > 2:
             ret[comps[0]]['unit'] = comps[2]

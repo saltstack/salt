@@ -74,7 +74,7 @@ def __virtual__():
 def _add_doc( func, doc, prefix='\n\n    ' ):
     if not func.__doc__:
         func.__doc__ = ""
-    func.__doc__ += '{0}{1}'.format( prefix, doc )
+    func.__doc__ += '{0}{1}'.format(prefix, doc)
 
 def _make_function(cmd_name, doc):
     '''
