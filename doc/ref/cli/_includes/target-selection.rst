@@ -3,12 +3,12 @@ Target Selection
 
 .. option:: -E, --pcre
 
-    The target expression will be interpreted as a pcre regular expression
+    The target expression will be interpreted as a PCRE regular expression
     rather than a shell glob.
 
 .. option:: -L, --list
 
-    The target expression will be interpreted as a comma delimited list,
+    The target expression will be interpreted as a comma-delimited list;
     example: server1.foo.bar,server2.foo.bar,example7.quo.qux
 
 .. option:: -G, --grain
@@ -18,7 +18,7 @@ Target Selection
     expression>'; example: 'os:Arch*'
 
     This was changed in version 0.9.8 to accept glob expressions instead of
-    regular expression. To use regular expression matching with grains use
+    regular expression. To use regular expression matching with grains, use
     the --grain-pcre option.
 
 .. option:: --grain-pcre
@@ -34,7 +34,7 @@ Target Selection
 
 .. option:: -R, --range
 
-    Instead of using shell globs to evaluate the target use a range expression
+    Instead of using shell globs to evaluate the target, use a range expression
     to identify targets. Range expressions look like %cluster.
 
     Using the Range option requires that a range server is set up and the

@@ -4,7 +4,7 @@
 
 .. option:: --versions-report
 
-    Show program's dependencies version number and exit
+    Show program's dependencies and version number, and then exit
 
 .. option:: -h, --help
 
@@ -12,6 +12,6 @@
 
 .. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
 
-    The location of the Salt configuration directory, this directory contains
+    The location of the Salt configuration directory. This directory contains
     the configuration files for Salt master and minions. The default location
-    on most systems is /etc/salt.
+    on most systems is ``/etc/salt``.
