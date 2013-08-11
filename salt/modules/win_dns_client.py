@@ -20,7 +20,7 @@ def __virtual__():
 
 def get_dns_servers(interface='Local Area Connection'):
     '''
-    Return a list of the configured dns servers of the specific interface
+    Return a list of the configured DNS servers of the specific interface
 
     CLI Example::
 
@@ -33,7 +33,7 @@ def get_dns_servers(interface='Local Area Connection'):
 
 def rm_dns(ip, interface='Local Area Connection'):
     '''
-    Remove the dns server to the nertwork interface
+    Remove the DNS server to the network interface
 
     CLI Example::
 
@@ -47,11 +47,11 @@ def rm_dns(ip, interface='Local Area Connection'):
 
 def add_dns(ip, interface='Local Area Connection', index=1):
     '''
-    Add the dns server to the nertwork interface
+    Add the DNS server to the network interface
     (index starts from 1)
 
-    Note: if the interface dns is configured by DHCP all the dns servers will
-    be removed from the interface and the requested dns will be the only one
+    Note: if the interface DNS is configured by DHCP, all the DNS servers will
+    be removed from the interface and the requested DNS will be the only one
 
     CLI Example::
 
@@ -61,7 +61,7 @@ def add_dns(ip, interface='Local Area Connection', index=1):
 
     # Return true if configured
     try:
-        if servers[index-1] == ip:
+        if servers[index - 1] == ip:
             return True
     except IndexError:
         pass
@@ -79,7 +79,7 @@ def add_dns(ip, interface='Local Area Connection', index=1):
 
 def dns_dhcp(interface='Local Area Connection'):
     '''
-    Configure the interface to get it's DNS servers from the DHCP server
+    Configure the interface to get its DNS servers from the DHCP server
 
     CLI Example::
 
@@ -92,7 +92,7 @@ def dns_dhcp(interface='Local Area Connection'):
 
 def get_dns_config(interface='Local Area Connection'):
     '''
-    Get the type of dns configuration (dhcp / static)
+    Get the type of DNS configuration (dhcp / static)
 
     CLI Example::
 
