@@ -350,7 +350,7 @@ class Client(object):
         if url_data.username is not None:
             _, netloc = url_data.netloc.split('@', 1)
             fixed_url = urlunparse((url_data.scheme, netloc, url_data.path,
-                url_data.params, url_data.query, url_data.fragment ))
+                url_data.params, url_data.query, url_data.fragment))
             passwd_mgr = url_passwd_mgr()
             passwd_mgr.add_password(None, fixed_url, url_data.username, url_data.password)
             auth_handler = url_auth_handler(passwd_mgr)
