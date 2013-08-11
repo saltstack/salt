@@ -687,7 +687,7 @@ def get_id():
                 # process lines looking for '127.' in first column
                 try:
                     entry = line.split()
-                    if '127.' in entry[0]:
+                    if entry[0].startswith('127.'):
                         for name in entry[1:]:  # try each name in the row
                             if name != 'localhost':
                                 log.info('Found minion id in hosts file: {0}'.format(name))
