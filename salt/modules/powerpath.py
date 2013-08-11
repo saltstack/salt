@@ -10,14 +10,14 @@ import os
 import re
 
 POLICY_MAP_DICT = {
-    'Adaptive':     'ad',
-    'CLAROpt':      'co',
-    'LeastBlocks':  'lb',
-    'LeastIos':     'li',
-    'REquest':      're',
-    'RoundRobin':   'rr',
-    'StreamIo':     'si',
-    'SymmOpt':      'so',
+    'Adaptive': 'ad',
+    'CLAROpt': 'co',
+    'LeastBlocks': 'lb',
+    'LeastIos': 'li',
+    'REquest': 're',
+    'RoundRobin': 'rr',
+    'StreamIo': 'si',
+    'SymmOpt': 'so',
 }
 
 POLICY_RE = re.compile('.*policy=([^;]+)')
