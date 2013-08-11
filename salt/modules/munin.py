@@ -46,7 +46,7 @@ def run(plugins):
         data[plugin] = {}
         muninout = __salt__['cmd.run']('munin-run ' + plugin)
         for line in muninout.split('\n'):
-            if 'value' in line: # This skips multigraph lines, etc
+            if 'value' in line:  # This skips multigraph lines, etc
                 key, val = line.split(' ')
                 key = key.split('.')[0]
                 try:

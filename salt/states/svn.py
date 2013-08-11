@@ -85,7 +85,7 @@ def latest(name,
                     ret,
                     ('{0} doesn\'t exist and is set to be checked out.').format(target))
         svn_cmd = 'svn.diff'
-        opts += ('-r',  'HEAD')
+        opts += ('-r', 'HEAD')
         out = __salt__[svn_cmd](cwd, target, user, username, *opts)
         return _neutral_test(
                 ret,
