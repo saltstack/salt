@@ -182,4 +182,3 @@ class Batch(object):
                     for minion in minion_tracker[queue]['minions']:
                         if minion in active:
                             active.remove(minion)
-
