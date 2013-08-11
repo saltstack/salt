@@ -71,10 +71,11 @@ def run(platform, provider, commit, clean):
     stdout, stderr = proc.communicate()
     if stderr:
         print(stderr)
-    print(stdout)
+    if stdout:
+        print(stdout)
 
-    match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
     try:
+        match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
         retcode = int(match.group('exitcode'))
     except AttributeError:
         # No regex matching
@@ -82,6 +83,12 @@ def run(platform, provider, commit, clean):
     except ValueError:
         # Not a number!?
         retcode = 1
+    except TypeError:
+        # No output!?
+        retcode = 1
+        if stdout:
+            # Anything else, raise the exception
+            raise
 
     # Clean up the vm
     if clean:
