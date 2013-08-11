@@ -43,7 +43,7 @@ def stop():
 def cluster_join(riak_user=None, riak_host=None):
     '''
     Join a Riak cluster
-    
+
     CLI Example::
 
         salt '*' riak.cluster_join <user> <host>
@@ -58,7 +58,7 @@ def cluster_join(riak_user=None, riak_host=None):
 def cluster_plan():
     '''
     Review Cluster Plan
-    
+
     CLI Example::
 
         salt '*' riak.cluster_plan
@@ -69,7 +69,7 @@ def cluster_plan():
 def cluster_commit():
     '''
     Commit Cluster Changes
-    
+
     CLI Example::
 
         salt '*' riak.cluster_commit
@@ -111,4 +111,4 @@ def member_status():
                                           'Ring': vals[1],
                                           'Pending': vals[2],
                                           }
-    return ret 
+    return ret

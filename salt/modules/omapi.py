@@ -8,7 +8,7 @@ config or pillar:
   omapi.server_ip: 127.0.0.1
   omapi.server_port: 7991
 
-:depends: pypureomapi Python module 
+:depends: pypureomapi Python module
 '''
 # Import python libs
 import logging
@@ -35,13 +35,13 @@ def __virtual__():
 
 
 def _conn():
-    server_ip = __pillar__.get('omapi.server_ip', 
+    server_ip = __pillar__.get('omapi.server_ip',
             __opts__.get('omapi.server_ip', '127.0.0.1'))
-    server_port = __pillar__.get('omapi.server_port', 
+    server_port = __pillar__.get('omapi.server_port',
             __opts__.get('omapi.server_port', 7991))
-    key = __pillar__.get('omapi.key', 
+    key = __pillar__.get('omapi.key',
             __opts__.get('omapi.key', None))
-    username = __pillar__.get('omapi.user', 
+    username = __pillar__.get('omapi.user',
             __opts__.get('omapi.user', None))
     return omapi.Omapi(server_ip, server_port, username=username, key=key)
 
@@ -50,9 +50,9 @@ def add_host(mac, name=None, ip=None, ddns=False, group=None,
         supersede_host=False):
     '''
     Add a host object for the given mac.
-    
+
     CLI Example::
-        
+
         salt dhcp-server omapi.add_host ab:ab:ab:ab:ab:ab name=host1
 
     Add ddns-hostname and a fixed-ip statements::
@@ -89,7 +89,7 @@ def delete_host(mac=None, name=None):
     Delete the host with the given mac or name.
 
     CLI Examples::
-        
+
         salt dhcp-server omapi.delete_host name=host1
         salt dhcp-server omapi.delete_host mac=ab:ab:ab:ab:ab:ab
     '''

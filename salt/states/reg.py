@@ -24,7 +24,7 @@ def _parse_key(key):
 def present(name, value, vtype='REG_DWORD'):
     '''
     Set a registry entry
-    
+
     Example::
 
         'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':

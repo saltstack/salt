@@ -13,17 +13,17 @@ def __virtual__():
 def installed(name, recurse=False, force=False):
     '''
     Install the windows feature
-    
+
     name:
         short name of the feature (the right column in win_servermanager.list_available)
-    
+
     recurse:
         install all sub-features as well
-    
+
     force:
         if the feature is installed but on of its sub-features are not installed set this to True to force
         the installation of the sub-features
-    
+
     Note:
     Some features requires reboot after un/installation, if so until the server is restarted
     Other features can not be installed !

@@ -90,7 +90,7 @@ def seed(location, id_, config=None, approve_key=True, install=True):
     privkeyfn = os.path.join(mpt_tmp, 'minion.pem')
     with salt.utils.fopen(pubkeyfn) as fp_:
         pubkey = fp_.read()
-    
+
     if approve_key:
         __salt__['pillar.ext']({'virtkey': {'name': id_, 'key': pubkey}})
     res = _check_install(mpt)
@@ -117,7 +117,7 @@ def seed(location, id_, config=None, approve_key=True, install=True):
 
 def _install(mpt):
     '''
-    Determine whether salt-minion is installed and, if not, 
+    Determine whether salt-minion is installed and, if not,
     install it
     Return True if install is successful or already installed
     '''

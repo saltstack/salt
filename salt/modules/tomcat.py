@@ -80,7 +80,7 @@ def __catalina_home():
 def _auth(uri):
     '''
     returns a authentication handler.
-    Get user & password from grains, if are not set default to 
+    Get user & password from grains, if are not set default to
     modules.config.option
 
     If user & pass are missing return False
@@ -111,7 +111,7 @@ def _auth(uri):
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     '''
-    A private function used to issue the command to tomcat via the manager 
+    A private function used to issue the command to tomcat via the manager
     webapp
 
     cmd
@@ -195,7 +195,7 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.leaks
     '''
 
-    return '\n'.join(_wget('findleaks', {'statusLine': 'true'}, 
+    return '\n'.join(_wget('findleaks', {'statusLine': 'true'},
         url, timeout=timeout)['msg'])
 
 
@@ -405,7 +405,7 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
     return _simple_cmd('undeploy', app, url, timeout=timeout)
 
 
-def deploy_war(war, context, force='no', url='http://localhost:8080/manager', 
+def deploy_war(war, context, force='no', url='http://localhost:8080/manager',
         env='base', timeout=180):
     '''
     Deploy a WAR file
@@ -443,7 +443,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager',
     # Copy file name if needed
     tfile = war
     if war[0] != '/':
-        tfile = os.path.join(tempfile.gettempdir(), 'salt.' + 
+        tfile = os.path.join(tempfile.gettempdir(), 'salt.' +
                 os.path.basename(war))
         cached = __salt__['cp.get_file'](war, tfile, env)
         if not cached:
@@ -476,23 +476,22 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager',
 def passwd(passwd, user='', alg='md5', realm=None):
     '''
     This function replaces the $CATALINS_HOME/bin/digest.sh script
-    convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml 
+    convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml
     format
-    
+
     CLI Examples::
 
         salt '*' tomcat.passwd secret
         salt '*' tomcat.passwd secret tomcat sha1
         salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
     '''
-    
     if alg == 'md5':
         m = hashlib.md5()
     elif alg == 'sha1':
         m = hashlib.sha1()
     else:
         return False
-    
+
     if realm:
         m.update('{0}:{1}:{2}'.format(
             user,
@@ -501,7 +500,7 @@ def passwd(passwd, user='', alg='md5', realm=None):
             ))
     else:
         m.update(passwd)
-    
+
     return m.hexdigest()
 
 
