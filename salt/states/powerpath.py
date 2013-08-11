@@ -95,4 +95,3 @@ def license_absent(name):
         ret['result'] = False
         ret['comment'] = data['output']
         return ret
-
