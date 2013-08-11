@@ -125,8 +125,8 @@ def loadavg():
         salt '*' status.loadavg
     '''
     load_avg = os.getloadavg()
-    return {'1-min':  load_avg[0],
-            '5-min':  load_avg[1],
+    return {'1-min': load_avg[0],
+            '5-min': load_avg[1],
             '15-min': load_avg[2]}
 
 
