@@ -28,7 +28,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt.modules.file import (check_hash, check_managed, check_perms, # pylint: disable=W0611
+from salt.modules.file import (check_hash, check_managed, check_perms,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
         patch, remove, source_list, sed_contains, touch, append, contains,
         contains_regex, contains_regex_multiline, contains_glob, patch,

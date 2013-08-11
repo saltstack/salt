@@ -206,7 +206,7 @@ def _has_dig():
     because they are also DNS utilities, a compatibility layer exists. This
     function helps add that layer.
     '''
-    return salt.utils.which('dig') != None
+    return salt.utils.which('dig') is not None
 
 
 def check_ip(ip_addr):

@@ -63,7 +63,7 @@ def cluster_plan():
 
         salt '*' riak.cluster_plan
     '''
-    return not bool( __salt__['cmd.run']('riak-admin cluster plan'))
+    return not bool(__salt__['cmd.run']('riak-admin cluster plan'))
 
 
 def cluster_commit():

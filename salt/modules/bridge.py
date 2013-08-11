@@ -138,7 +138,7 @@ def _netbsd_brshow(br=None):
     for line in __salt__['cmd.run'](cmd).splitlines():
         if line.startswith('bridge'):
             start_int = False
-            brname = line.split(':')[0] # on NetBSD, always ^bridge[0-9]:
+            brname = line.split(':')[0]  # on NetBSD, always ^bridge[0-9]:
             brs[brname] = {
                 'interfaces': [],
                 'stp': 'no'
@@ -291,7 +291,7 @@ def find_interfaces(*args):
 
     for iface in args:
         for br in brs:
-            try: # a bridge may not contain interfaces
+            try:  # a bridge may not contain interfaces
                 if iface in brs[br]['interfaces']:
                     iflist[iface] = br
             except Exception:

@@ -379,11 +379,11 @@ def server_status(profile='default'):
     }
 
     # Get configuration from pillar
-    url = __salt__['config.get']('apache.server-status:'+profile+':url', 'http://localhost/server-status')
-    user = __salt__['config.get']('apache.server-status:'+profile+':user', '')
-    passwd = __salt__['config.get']('apache.server-status:'+profile+':pass', '')
-    realm = __salt__['config.get']('apache.server-status:'+profile+':realm', '')
-    timeout = __salt__['config.get']('apache.server-status:'+profile+':timeout', 5)
+    url = __salt__['config.get']('apache.server-status:{0}:url'.format(profile), 'http://localhost/server-status')
+    user = __salt__['config.get']('apache.server-status:{0}:user'.format(profile), '')
+    passwd = __salt__['config.get']('apache.server-status:{0}:pass'.format(profile), '')
+    realm = __salt__['config.get']('apache.server-status:{0}:realm'.format(profile), '')
+    timeout = __salt__['config.get']('apache.server-status:{0}:timeout'.format(profile), 5)
 
     # create authentication handler if configuration exists
     if user and passwd:

@@ -1,7 +1,8 @@
 '''
 Common utility functions for the reclass adapters
 '''
-import os, sys
+import sys
+import os
 
 def prepend_reclass_source_path(opts):
     source_path = opts.get('reclass_source_path')

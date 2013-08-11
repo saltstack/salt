@@ -150,7 +150,6 @@ def which_bin(exes):
     return wrapper
 
 
-
 def identical_signature_wrapper(original_function, wrapped_function):
     '''
     Return a function with identical signature as ``original_function``'s which

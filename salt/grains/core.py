@@ -651,7 +651,7 @@ def _windows_platform_data():
 
         # test for virtualized environments
         # I only had VMware available so the rest are unvalidated
-        if 'VRTUAL' in biosinfo.Version: # (not a typo)
+        if 'VRTUAL' in biosinfo.Version:  # (not a typo)
             grains['virtual'] = 'HyperV'
         elif 'A M I' in biosinfo.Version:
             grains['virtual'] = 'VirtualPC'
@@ -930,7 +930,6 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
                 os=grains['osfullname'],
                 ver=grains['osrelease'])
-
 
     return grains
 

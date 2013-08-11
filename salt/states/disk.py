@@ -18,7 +18,7 @@ def status(name, max=None, min=None):
            'result': False,
            'comment': '',
            'changes': {},
-           'data': {}} # Data field for monitoring state
+           'data': {}}  # Data field for monitoring state
 
     data = __salt__['disk.usage']()
     if name not in data:

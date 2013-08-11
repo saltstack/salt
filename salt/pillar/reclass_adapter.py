@@ -79,7 +79,7 @@ def ext_pillar(minion_id, pillar, **kwargs):
         # about, so filter it:
         filter_out_source_path_option(kwargs)
 
-        # if no inventory_base_uri was specified, initialise it to the first
+        # if no inventory_base_uri was specified, initialize it to the first
         # file_roots of class 'base' (if that exists):
         set_inventory_base_uri_default(__opts__, kwargs)
 
@@ -91,14 +91,14 @@ def ext_pillar(minion_id, pillar, **kwargs):
     except TypeError as e:
         if 'unexpected keyword argument' in e.message:
             arg = e.message.split()[-1]
-            raise SaltInvocationError('ext_pillar.reclass: unexpected option: '\
+            raise SaltInvocationError('ext_pillar.reclass: unexpected option: '
                                       + arg)
         else:
             raise
 
     except KeyError as e:
         if 'id' in e.message:
-            raise SaltInvocationError('ext_pillar.reclass: __opts__ does not '\
+            raise SaltInvocationError('ext_pillar.reclass: __opts__ does not '
                                       'define minion ID')
         else:
             raise
