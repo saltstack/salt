@@ -8,6 +8,7 @@ This script is intended to be shell-centric!!
 
 # Import python libs
 import os
+import re
 import sys
 import subprocess
 import hashlib
@@ -67,9 +68,20 @@ def run(platform, provider, commit, clean):
         stream_stds=True
     )
     proc.poll_and_read_until_finish()
-    proc.communicate()
+    stdout, stderr = proc.communicate()
+    if stderr:
+        print(stderr)
+    print(stdout)
 
-    retcode = proc.returncode
+    match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
+    try:
+        retcode = int(match.group('exitcode'))
+    except AttributeError:
+        # No regex matching
+        retcode = 1
+    except ValueError:
+        # Not a number!?
+        retcode = 1
 
     # Clean up the vm
     if clean:
