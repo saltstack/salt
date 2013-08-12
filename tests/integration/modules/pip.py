@@ -75,8 +75,10 @@ class PipModuleTest(integration.ModuleCase):
             f.write('pep8')
 
         this_user = pwd.getpwuid(os.getuid())[0]
-        ret = self.run_function('pip.install', requirements=req1_filename,
-                                user=this_user, no_chown=True)
+        ret = self.run_function(
+            'pip.install', requirements=req1_filename, user=this_user,
+            no_chown=True, bin_env=self.venv_dir
+        )
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
