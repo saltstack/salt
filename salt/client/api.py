@@ -133,9 +133,6 @@ class APIClient(object):
         '''
         return self.localClient.cmd(**kwargs)
     
-    local = local_sync  # backwards compatible alias
-    sync = local_sync # default sync client
-
     def runner_async(self, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
@@ -144,7 +141,6 @@ class APIClient(object):
         '''
         return self.runnerClient.master_call(**kwargs)
     
-    runner = runner_async # default runner client
     runner_sync = runner_async # always runner async, so works in either mode
 
     def wheel_sync(self, **kwargs):
@@ -155,7 +151,6 @@ class APIClient(object):
         '''
         return self.wheelClient.master_call(**kwargs)
     
-    wheel = wheel_sync # default wheel client
     wheel_async = wheel_sync # always wheel_sync, so it works either mode
     
     def signatures(self, **kwargs):
