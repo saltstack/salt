@@ -42,47 +42,78 @@ class APIClient(object):
         self.resolver = salt.auth.Resolver(self.opts)
         self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
 
-    def run(self, low):
+    def run(self, cmd):
         '''
-        Execute the specified function in the specified client by passing the
-        lowstate cmd
-        Change this so pass in data that has mode tgt and low
-        has pargs and kwargs ask about pollution
+        Execute the salt command given by cmd dict.
         
-        New backwards compatible client and fun naming scheme. 
-        In new scheme low['client'] is the client mode either 'sync' or 'async'. 
-        Default is 'async'
-        If 'wheel' or 'runner' prefixes fun then use associated salt client given
-            by prefix in the specified 'sync' or 'async' mode. 
-        Otherwise use local salt client in the given 'sync' or 'async' mode
+        cmd is a dictionary of the following form:
+        
+        {
+            'mode': 'modestring',
+            'fun' : 'modulefunctionstring',
+            'kwarg': functionkeywordargdictionary,
+            'tgt' : 'targetpatternstring',
+            'expr_form' : 'targetpatterntype',
+            'ret' : 'returner namestring',
+            'timeout': 'functiontimeout',
+            'arg' : 'functionpositionalarg sequence',
+            'token': 'salttokenstring',
+            'username': 'usernamestring',
+            'password': 'passwordstring',
+            'eauth': 'eauthtypestring',
+        }
+        
+        Implied by the fun is which client is used to run the command, that is, either
+        the local minion client, the master runner client, or the master wheel client.
+        
+        The cmd dict items are as follows:
+        
+        mode: either 'sync' or 'async'. Defaults to 'async' if missing
+        fun: required. If the function is to be run on the master using either
+            a wheel or runner client then the fun: includes either
+            'wheel.' or 'runner.' as a prefix and has three parts separated by '.'.
+            Otherwise the fun: specifies a module to be run on a minion via the local
+            client.
+            Example:
+                fun of  'wheel.config.values' run with master wheel client
+                fun or 'wheel.foobar' run with with minion local client
+                fun of 'test.ping' run with minion local client
+                fun of 'runnner.manage.status' run with master runner client
+                    tgt,
+        kwarg: A dictionary of keyword function parameters to be passed to the eventual
+               salt function specificed by fun:
+        tgt: Pattern string specifying the targeted minions when the implied client is local
+        expr_form: Optional target pattern type string when client is local.
+            Example: 'glob' defaults to 'glob' if missing
+        ret: Optional name string of returner when local client.
+        arg: Optional positional argument string when local client      
+        token: the salt token. Either token: is required or the set of username:,
+            password: , and eauth:
+        username: the salt username. Required if token is missing.
+        password: the user's password. Required if token is missing.
+        eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
+        
         '''
+        client = 'local' #default to minion local client
+        mode = cmd.get('mode', 'async') #default to 'async'
         
-        if not 'client' in low:
-            low['client'] = 'async'
-            #raise SaltException('No client specified')
-        
-        # check for wheel or runner prefix to fun name
-        funparts = low.get('fun', '').split('.') 
-        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']:
-            if low['client'] not in ['sync', 'async']: #client should be only 'sync' or 'async'
-                raise SaltException('With fun of "{1}", client must be "sync" or "async" not "{0}".'\
-                                    .format(low['client'], low['fun']))
+        # check for wheel or runner prefix to fun name to use wheel or runner client
+        funparts = cmd.get('fun', '').split('.') 
+        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']: #master 
+            client = funparts[0]
+            cmd['fun'] = '.'.join(funparts[1:]) #strip prefix
             
-            low['client'] = '{0}_{1}'.format(funparts[0], low['client'])
-            low['fun'] = '.'.join(funparts[1:]) #strip prefix
+        if not ('token' in cmd  or
+                ('eauth' in cmd and 'password' in cmd and 'username' in cmd) ):
+            raise EauthAuthenticationError('No authentication credentials given')
         
-            
-        if not ('token' in low or 'eauth' in low):
-            raise EauthAuthenticationError(
-                    'No authentication credentials given')
+        executor = getattr(self, '{0}_{1}'.format(client, mode))
+        
 
-        l_fun = getattr(self, low['client'])
-        f_call = salt.utils.format_call(l_fun, low)
-
-        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        ret = executor(**cmd)
         return ret
 
-    def local_async(self, *args, **kwargs):
+    def local_async(self, **kwargs):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         and immediately return the job ID. The results of the job can then be
@@ -90,7 +121,7 @@ class APIClient(object):
 
         .. seealso:: :ref:`python-api`
         '''
-        return self.localClient.run_job(*args, **kwargs)
+        return self.localClient.run_job(**kwargs)
     
     async = local_async # default async client
 
@@ -100,7 +131,7 @@ class APIClient(object):
 
         .. seealso:: :ref:`python-api`
         '''
-        return self.localClient.cmd(*args, **kwargs)
+        return self.localClient.cmd(**kwargs)
     
     local = local_sync  # backwards compatible alias
     sync = local_sync # default sync client
@@ -126,6 +157,14 @@ class APIClient(object):
     
     wheel = wheel_sync # default wheel client
     wheel_async = wheel_sync # always wheel_sync, so it works either mode
+    
+    def signatures(self, **kwargs):
+        '''
+        Returns dict of function signatures for the specified fun.
+        
+        '''
+        return {}
+    
     
     def create_token(self, creds):
         '''
