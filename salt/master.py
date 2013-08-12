@@ -2055,7 +2055,6 @@ class ClearFuncs(object):
                         'minions': minions
                     }
                 }
-        self.event.fire_event({'minions': minions}, clear_load['jid'])
         # Retrieve the jid
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
@@ -2063,6 +2062,7 @@ class ClearFuncs(object):
                     self.opts['hash_type'],
                     extra.get('nocache', False)
                     )
+        self.event.fire_event({'minions': minions}, clear_load['jid'])
         jid_dir = salt.utils.jid_dir(
                 clear_load['jid'],
                 self.opts['cachedir'],
