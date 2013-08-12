@@ -917,7 +917,8 @@ def create(vm_=None, call=None):
             {
                 'volumes': volumes,
                 'zone': ret['placement']['availabilityZone'],
-                'instance_id': ret['instanceId']
+                'instance_id': ret['instanceId'],
+                'set_delvol_on_destroy': set_delvol_on_destroy
             },
             call='action'
         )
@@ -968,6 +969,13 @@ def create_attach_volumes(name, kwargs, call=None):
             for item in created_volume:
                 if 'volumeId' in item:
                     volume_dict['volume_id'] = item['volumeId']
+
+            # Update the delvol parameter for any newly created volumes
+            set_delvol_on_destroy = kwargs.get('set_delvol_on_destroy', None)
+
+            if set_delvol_on_destroy is not None:
+                _toggle_delvol(instance_id=kwargs['instance_id'],
+                               value=set_delvol_on_destroy)
 
         attach = attach_volume(
             name,
@@ -1533,11 +1541,11 @@ def delvol_on_destroy(name, call=None):
 
 def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
     '''
-    Disable termination protection on a node
+    Delete root EBS volume upon instance termination
 
     CLI Example::
 
-        salt-cloud -a disable_term_protect mymachine
+        salt-cloud -a delvol_on_destroy mymachine
     '''
     if not instance_id:
         instances = list_nodes_full()
@@ -1551,12 +1559,19 @@ def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
         data, requesturl = query(params, return_url=True)
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
-    device_name = blockmap['item']['deviceName']
 
     params = {'Action': 'ModifyInstanceAttribute',
-              'InstanceId': instance_id,
-              'BlockDeviceMapping.1.DeviceName': device_name,
-              'BlockDeviceMapping.1.Ebs.DeleteOnTermination': value}
+              'InstanceId': instance_id}
+
+    if type(blockmap['item']) != list:
+        blockmap['item'] = [blockmap['item']]
+
+    dev = 1
+    for item in blockmap['item']:
+        device_name = item['deviceName']
+        params['BlockDeviceMapping.%d.DeviceName' % (dev)] = device_name
+        params['BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % (dev)] = value
+        dev += 1
 
     query(params, return_root=True)
 
