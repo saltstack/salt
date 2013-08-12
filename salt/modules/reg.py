@@ -34,8 +34,8 @@ class Registry(object):
     '''
     def __init__(self):
         self.hkeys = {
-            "HKEY_USERS":         _winreg.HKEY_USERS,
-            "HKEY_CURRENT_USER":  _winreg.HKEY_CURRENT_USER,
+            "HKEY_USERS": _winreg.HKEY_USERS,
+            "HKEY_CURRENT_USER": _winreg.HKEY_CURRENT_USER,
             "HKEY_LOCAL_MACHINE": _winreg.HKEY_LOCAL_MACHINE,
             }
     def __getattr__(self, k):
@@ -91,7 +91,7 @@ def set_key(hkey, path, key, value, vtype='REG_DWORD'):
     registry = Registry()
     hkey2 = getattr(registry, hkey)
     # fullpath = '\\\\'.join([path, key])
-    
+
     try:
         _type = getattr(_winreg, vtype)
     except AttributeError:

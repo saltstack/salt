@@ -142,12 +142,11 @@ class SaltEvent(object):
         Get a single publication.
         IF no publication available THEN block for upto wait seconds
         AND either return publication OR None IF no publication available.
-        
+
         IF wait is 0 then block forever.
-        
         '''
         self.subscribe(tag)
-        socks = dict(self.poller.poll(wait * 1000)) #convert to milliseconds
+        socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
         if self.sub in socks and socks[self.sub] == zmq.POLLIN:
             raw = self.sub.recv()
             # Double check the tag
@@ -160,7 +159,6 @@ class SaltEvent(object):
                 return ret
             return data
         return None
-
 
     def iter_events(self, tag='', full=False):
         '''

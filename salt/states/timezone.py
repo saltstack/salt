@@ -71,7 +71,7 @@ def system(name, utc=''):
     elif utc != '' and utc == myutc:
         messages.append('UTC already set to {0}'.format(name))
 
-    if ret['result'] == True:
+    if ret['result'] is True:
         ret['comment'] = ', '.join(messages)
         return ret
 

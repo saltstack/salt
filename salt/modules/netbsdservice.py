@@ -99,8 +99,8 @@ def _get_svc(rcd, service_status):
     Returns a unique service status
     '''
     ena = None
-    for rcvar in __salt__['cmd.run']('{0} rcvar'.format(rcd)
-                                    ).splitlines():
+    lines = __salt__['cmd.run']('{0} rcvar'.format(rcd)).splitlines()
+    for rcvar in lines:
         if rcvar.startswith('$') and '={0}'.format(service_status) in rcvar:
             ena = 'yes'
         elif rcvar.startswith('#'):
@@ -169,7 +169,7 @@ def _rcconf_status(name, service_status):
     rxname = '^{0}=.*'.format(name)
     newstatus = '{0}={1}'.format(name, service_status)
     ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf))
-    if ret == 0: # service found in rc.conf, modify its status
+    if ret == 0:  # service found in rc.conf, modify its status
         # NetBSD sed does not support -i flag, call sed by hand
         cmd = 'cp -f {0} {0}.bak && sed -E -e s/{1}/{2}/g {0}.bak > {0}'
         ret = __salt__['cmd.run'](cmd.format(rcconf, rxname, newstatus))

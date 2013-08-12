@@ -270,7 +270,8 @@ def check_site_enabled(site):
         return True
     else:
         return False
-  
+
+
 def a2ensite(site):
     '''
     Runs a2ensite for the given site.
@@ -282,27 +283,27 @@ def a2ensite(site):
 
         salt '*' apache.a2ensite example.com
     '''
-  
     ret = {}
     command = 'a2ensite {0}'.format(site)
-  
+
     try:
         status = __salt__['cmd.retcode'](command)
     except Exception as e:
         return e
-  
+
     ret['Name'] = 'Apache2 Enable Site'
     ret['Site'] = site
-  
+
     if status == 1:
         ret['Status'] = 'Site {0} Not found'.format(site)
     elif status == 0:
         ret['Status'] = 'Site {0} enabled'.format(site)
     else:
         ret['Status'] = status
-  
+
     return ret
-  
+
+
 def a2dissite(site):
     '''
     Runs a2dissite for the given site.
@@ -314,41 +315,40 @@ def a2dissite(site):
 
         salt '*' apache.a2dissite example.com
     '''
-  
     ret = {}
     command = 'a2dissite {0}'.format(site)
-  
+
     try:
         status = __salt__['cmd.retcode'](command)
     except Exception as e:
         return e
-  
+
     ret['Name'] = 'Apache2 Disable Site'
     ret['Site'] = site
-  
+
     if status == 256:
         ret['Status'] = 'Site {0} Not found'.format(site)
     elif status == 0:
         ret['Status'] = 'Site {0} disabled'.format(site)
     else:
         ret['Status'] = status
-  
+
     return ret
 
 
 def server_status(profile='default'):
     '''
     Get Information from the Apache server-status handler
-    
+
     NOTE:
     the server-status handler is disabled by default.
     in order for this function to work it needs to be enabled.
     http://httpd.apache.org/docs/2.2/mod/mod_status.html
-    
+
     The following configuration needs to exists in pillar/grains
     each entry nested in apache.server-status is a profile of a vhost/server
     this would give support for multiple apache servers/vhosts
-    
+
     apache.server-status:
       'default':
         'url': http://localhost/server-status
@@ -356,13 +356,12 @@ def server_status(profile='default'):
         'pass': password
         'realm': 'authentication realm for digest passwords'
         'timeout': 5
-    
+
     CLI Examples::
 
         salt '*' apache.server_status
         salt '*' apache.server_status other-profile
     '''
-    
     ret = {
         'Scoreboard': {
             '_': 0,
@@ -378,14 +377,14 @@ def server_status(profile='default'):
             '.': 0,
         },
     }
-    
+
     # Get configuration from pillar
-    url = __salt__['config.get']('apache.server-status:'+profile+':url', 'http://localhost/server-status')
-    user = __salt__['config.get']('apache.server-status:'+profile+':user', '')
-    passwd = __salt__['config.get']('apache.server-status:'+profile+':pass', '')
-    realm = __salt__['config.get']('apache.server-status:'+profile+':realm', '')
-    timeout = __salt__['config.get']('apache.server-status:'+profile+':timeout', 5)
-    
+    url = __salt__['config.get']('apache.server-status:{0}:url'.format(profile), 'http://localhost/server-status')
+    user = __salt__['config.get']('apache.server-status:{0}:user'.format(profile), '')
+    passwd = __salt__['config.get']('apache.server-status:{0}:pass'.format(profile), '')
+    realm = __salt__['config.get']('apache.server-status:{0}:realm'.format(profile), '')
+    timeout = __salt__['config.get']('apache.server-status:{0}:timeout'.format(profile), 5)
+
     # create authentication handler if configuration exists
     if user and passwd:
         basic = urllib2.HTTPBasicAuthHandler()
@@ -393,20 +392,20 @@ def server_status(profile='default'):
         digest = urllib2.HTTPDigestAuthHandler()
         digest.add_password(realm=realm, uri=url, user=user, passwd=passwd)
         urllib2.install_opener(urllib2.build_opener(basic, digest))
-    
+
     # get http data
     url += '?auto'
     try:
         response = urllib2.urlopen(url, timeout=timeout).read().splitlines()
     except urllib2.URLError:
         return 'error'
-    
+
     # parse the data
     for line in response:
         splt = line.split(':', 1)
         splt[0] = splt[0].strip()
         splt[1] = splt[1].strip()
-        
+
         if splt[0] == 'Scoreboard':
             for c in splt[1]:
                 ret['Scoreboard'][c] += 1
@@ -415,8 +414,6 @@ def server_status(profile='default'):
                 ret[splt[0]] = int(splt[1])
             else:
                 ret[splt[0]] = float(splt[1])
-    
+
     # return the good stuff
     return ret
-
-

@@ -266,15 +266,13 @@ def managed(name, type, enabled=True, **kwargs):
 def routes(name, **kwargs):
     '''
     Manage network interface static routes.
-    
+
     name
         Interface name to apply the route to.
-        
+
     kwargs
         Named routes
-        
     '''
-    
     ret = {
         'name': name,
         'changes': {},
@@ -322,8 +320,8 @@ def routes(name, **kwargs):
             return ret
 
     return ret
-                
-                
+
+
 def system(name, **kwargs):
     '''
     Ensure that global network settings are configured properly.
@@ -335,7 +333,6 @@ def system(name, **kwargs):
         The global parameters for the system.
 
     '''
-
     ret = {
         'name': name,
         'changes': {},

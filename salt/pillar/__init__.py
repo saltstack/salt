@@ -15,6 +15,7 @@ import salt.crypt
 from salt._compat import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
+from salt.utils.odict import OrderedDict
 from salt.version import __version__
 
 log = logging.getLogger(__name__)
@@ -209,25 +210,45 @@ class Pillar(object):
         Cleanly merge the top files
         '''
         top = collections.defaultdict(dict)
+        orders = collections.defaultdict(dict)
         for ctops in tops.values():
             for ctop in ctops:
                 for env, targets in ctop.items():
                     if env == 'include':
                         continue
                     for tgt in targets:
-                        if tgt not in top[env]:
-                            top[env][tgt] = ctop[env][tgt]
-                            continue
                         matches = []
                         states = set()
-                        for comp in top[env][tgt]:
+                        orders[env][tgt] = 0
+                        for comp in ctop[env][tgt]:
                             if isinstance(comp, dict):
-                                matches.append(comp)
+                                if 'match' in comp:
+                                    matches.append(comp)
+                                if 'order' in comp:
+                                    order = comp['order']
+                                    if not isinstance(order, int):
+                                        try:
+                                            order = int(order)
+                                        except ValueError:
+                                            order = 0
+                                    orders[env][tgt] = order
                             if isinstance(comp, string_types):
                                 states.add(comp)
                         top[env][tgt] = matches
                         top[env][tgt].extend(list(states))
-        return top
+        return self.sort_top_targets(top, orders)
+
+    def sort_top_targets(self, top, orders):
+        '''
+        Returns the sorted high data from the merged top files
+        '''
+        sorted_top = collections.defaultdict(OrderedDict)
+        for env, targets in top.items():
+            sorted_targets = sorted(targets.keys(),
+                    key=lambda target: orders[env][target])
+            for target in sorted_targets:
+                sorted_top[env][target] = targets[target]
+        return sorted_top
 
     def get_top(self):
         '''

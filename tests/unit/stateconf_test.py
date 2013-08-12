@@ -26,7 +26,7 @@ def render_sls(content, sls='', env='base', argline='-G yaml . jinja', **kws):
     return RENDERERS['stateconf'](
         StringIO(content), env=env, sls=sls,
         argline=argline,
-        renderers=RENDERERS,
+        renderers=salt.loader.render(OPTS, {}),
         **kws
     )
 

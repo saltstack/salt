@@ -118,8 +118,8 @@ def war_deployed(name, war, url='http://localhost:8080/manager',
         return ret
 
     # make sure the webapp is up if deployed
-    if deploy == False:
-        if status == False:
+    if deploy is False:
+        if status is False:
             ret['comment'] = __salt__['tomcat.start'](name, url,
                     timeout=timeout)
             ret['result'] = ret['comment'].startswith('OK')
@@ -191,8 +191,8 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     ret = {'name': name,
        'result': result,
        'changes': {},
-       'comment': 'tomcat manager is ready' if result \
-               else 'tomcat manager is not ready'
+       'comment': ('tomcat manager is ready' if result
+               else 'tomcat manager is not ready')
        }
 
     return ret

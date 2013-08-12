@@ -143,8 +143,8 @@ class Batch(object):
                     # - set it to inactive
                     # - add minions that have not responded to parts{}
 
-                    # check if the tracker contains the iterator 
-                    if( queue in minion_tracker.keys() ):
+                    # check if the tracker contains the iterator
+                    if queue in minion_tracker:
                         minion_tracker[queue]['active'] = False
 
                         # add all minions that belong to this iterator and
@@ -182,4 +182,3 @@ class Batch(object):
                     for minion in minion_tracker[queue]['minions']:
                         if minion in active:
                             active.remove(minion)
-

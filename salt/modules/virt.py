@@ -212,7 +212,7 @@ def init(name, cpu, mem, image, nic='default', emulator='kvm', start=True, **kwa
     define_xml_str(xml)
     if kwargs.get('seed'):
         install = kwargs.get('install', True)
-        __salt__['img.seed'](img_dest, name, kwargs.get('config'), 
+        __salt__['img.seed'](img_dest, name, kwargs.get('config'),
                 install=install)
     elif kwargs.get('seed_cmd'):
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
@@ -466,7 +466,7 @@ def get_disks(vm_):
             elif source.hasAttribute('dev'):
                 qemu_target = source.getAttribute('dev')
             elif source.hasAttribute('protocol') and \
-                    source.hasAttribute('name'): # For rbd network
+                    source.hasAttribute('name'):  # For rbd network
                 qemu_target = '%s:%s' % (
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
@@ -1068,14 +1068,14 @@ def vm_netstats(vm_=None):
         dom = _get_dom(vm_)
         nics = get_nics(vm_)
         ret = {
-                'rx_bytes'  : 0,
+                'rx_bytes': 0,
                 'rx_packets': 0,
-                'rx_errs'   : 0,
-                'rx_drop'   : 0,
-                'tx_bytes'  : 0,
+                'rx_errs': 0,
+                'rx_drop': 0,
+                'tx_bytes': 0,
                 'tx_packets': 0,
-                'tx_errs'   : 0,
-                'tx_drop'   : 0
+                'tx_errs': 0,
+                'tx_drop': 0
                }
         for attrs in nics.values():
             if 'target' in attrs:
@@ -1137,19 +1137,19 @@ def vm_diskstats(vm_=None):
         # and unsuitable for any sort of real time statistics
         disks = get_disk_devs(vm_)
         ret = {
-                'rd_req'  : 0,
+                'rd_req': 0,
                 'rd_bytes': 0,
-                'wr_req'  : 0,
+                'wr_req': 0,
                 'wr_bytes': 0,
-                'errs'    : 0
+                'errs': 0
                }
         for disk in disks:
             stats = dom.blockStats(disk)
-            ret['rd_req']   += stats[0]
+            ret['rd_req'] += stats[0]
             ret['rd_bytes'] += stats[1]
-            ret['wr_req']   += stats[2]
+            ret['wr_req'] += stats[2]
             ret['wr_bytes'] += stats[3]
-            ret['errs']     += stats[4]
+            ret['errs'] += stats[4]
 
         return ret
     info = {}

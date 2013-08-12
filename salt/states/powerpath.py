@@ -31,7 +31,7 @@ def license_present(name):
         ret['comment'] = 'PowerPath is not installed.'
         return ret
 
-    licenses = [ l['key'] for l in __salt__['powerpath.list_licenses']() ]
+    licenses = [l['key'] for l in __salt__['powerpath.list_licenses']()]
 
     if name in licenses:
         ret['result'] = True
@@ -73,7 +73,7 @@ def license_absent(name):
         ret['comment'] = 'PowerPath is not installed.'
         return ret
 
-    licenses = [ l['key'] for l in __salt__['powerpath.list_licenses']() ]
+    licenses = [l['key'] for l in __salt__['powerpath.list_licenses']()]
 
     if name not in licenses:
         ret['result'] = True
@@ -95,4 +95,3 @@ def license_absent(name):
         ret['result'] = False
         ret['comment'] = data['output']
         return ret
-

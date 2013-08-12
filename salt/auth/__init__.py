@@ -232,4 +232,3 @@ class Resolver(object):
         if 'token' not in tdata:
             return tdata
         return tdata
-

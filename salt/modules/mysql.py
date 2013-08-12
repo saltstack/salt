@@ -213,7 +213,13 @@ def query(database, query, **connection_args):
 
     ret = {}
     ret['query time'] = {'human': elapsed_h, 'raw': str(round(elapsed, 5))}
-    if query.upper().strip().startswith("SELECT"):
+    select_keywords = ["SELECT", "SHOW", "DESC"]
+    select_query = False
+    for keyword in select_keywords:
+        if query.upper().strip().startswith(keyword):
+            select_query = True
+            break
+    if select_query:
         ret['rows returned'] = affected
         columns = ()
         for column in cur.description:

@@ -25,7 +25,8 @@ key in one step:
     install. Thus, ``add-apt-repository`` should be able to be used
     out-of-the-box to add the PPA.
 
-Alternately, manually add the repository and import the PPA key with these commands:
+Alternately, manually add the repository and import the PPA key with these
+commands:
 
 .. code-block:: bash
 

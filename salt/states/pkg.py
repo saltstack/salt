@@ -67,13 +67,13 @@ def __gen_rtag():
     return os.path.join(__opts__['cachedir'], 'pkg_refresh')
 
 
-def _fulfills_version_spec(version, oper, desired_version):
+def _fulfills_version_spec(versions, oper, desired_version):
     '''
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
     '''
-    for ver in version:
-        if salt.utils.compare_versions(ver1=version,
+    for ver in versions:
+        if salt.utils.compare_versions(ver1=ver,
                                        oper=oper,
                                        ver2=desired_version,
                                        cmp_func=__salt__.get('version_cmp')):

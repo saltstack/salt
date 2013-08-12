@@ -28,8 +28,8 @@ minions based on matchers in a top file which is laid out in the same way
 as the state top file. Salt pillars can use the same matcher types as the
 standard top file.
 
-The configuration for the ``pillar_roots`` in the master config is identical in
-behavior and function as the ``file_roots`` configuration:
+The configuration for the :conf_master:`pillar_roots` in the master config file
+is identical in behavior and function as :conf_master:`file_roots`:
 
 .. code-block:: yaml
 
@@ -50,8 +50,8 @@ file used for States, and has the same structure:
         - packages
 
 This further example shows how to use other standard top matching types (grain
-matching is used in this example) to deliver specific salt pillar data to minions
-with different 'os' grains:
+matching is used in this example) to deliver specific salt pillar data to
+minions with different ``os`` grains:
 
 .. code-block:: yaml
 
@@ -97,7 +97,7 @@ Pillar namespace flattened
 ==========================
 
 The separate pillar files all share the same namespace. Given 
-a ``top.sls`` of
+a ``top.sls`` of:
 
 .. code-block:: yaml
 
@@ -118,9 +118,9 @@ and a services.sls file of:
 
     bind: named
 
-Then a pillar request for pillar['bind'] will only return "named", the
-'bind9' value is not available. It's better to structure your pillar 
-files with more heirarchy. For example your package files could look like:
+Then a request for the ``bind`` pillar will only return 'named'; the 'bind9'
+value is not available. It is better to structure your pillar files with more
+hierarchy. For example your package files could look like:
 
 .. code-block:: yaml
 
@@ -170,7 +170,7 @@ will return a freshly reloaded pillar and :mod:`pillar.raw
 
 .. code-block:: bash
 
-    # salt '*' pillar.items
+    salt '*' pillar.items
 
 .. note::
     Prior to version 0.16.2, this function is named ``pillar.data``. This
@@ -239,7 +239,9 @@ Like with :doc:`Grains <../targeting/grains>`, it is possible to use globbing
 as well as match nested values in Pillar, by adding colons for each level that
 is being traversed. The below example would match minions with a pillar named
 ``foo``, which is a dict containing a key ``bar``, with a value beginning with
-``baz``::
+``baz``:
+
+.. code-block:: bash
 
     salt -I 'foo:bar:baz*'
 

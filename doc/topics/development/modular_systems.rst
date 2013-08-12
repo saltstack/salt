@@ -24,13 +24,11 @@ detecting information about the system. The only restraint in execution
 modules is that the defined functions always return a JSON serializable
 object.
 
-For a list of all built in execution modules:
+For a list of all built in execution modules, click :doc:`here
+</ref/modules/all/index>`
 
-:doc:`Full List of built in execution modules </ref/modules/all/index>`
-
-For information on writing execution modules, see this document:
-
-:doc:`Execution module development </ref/modules/index>`
+For information on writing execution modules, see :doc:`this page
+</ref/modules/index>`.
 
 State Modules
 =============

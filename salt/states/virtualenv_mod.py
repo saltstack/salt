@@ -32,7 +32,8 @@ def managed(name,
             no_chown=False,
             cwd=None,
             index_url=None,
-            extra_index_url=None):
+            extra_index_url=None,
+            pre_releases=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -146,7 +147,8 @@ def managed(name,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
-            __env__=__env__
+            __env__=__env__,
+            pre_releases=pre_releases
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:

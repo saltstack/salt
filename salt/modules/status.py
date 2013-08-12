@@ -125,8 +125,8 @@ def loadavg():
         salt '*' status.loadavg
     '''
     load_avg = os.getloadavg()
-    return {'1-min':  load_avg[0],
-            '5-min':  load_avg[1],
+    return {'1-min': load_avg[0],
+            '5-min': load_avg[1],
             '15-min': load_avg[2]}
 
 
@@ -186,7 +186,7 @@ def meminfo():
         comps = line.split()
         comps[0] = comps[0].replace(':', '')
         ret[comps[0]] = {
-            'value':    comps[1],
+            'value': comps[1],
         }
         if len(comps) > 2:
             ret[comps[0]]['unit'] = comps[2]

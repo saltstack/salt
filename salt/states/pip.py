@@ -167,34 +167,6 @@ def installed(name,
         else:
             user = runas
 
-    try:
-        pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                        user=user, cwd=cwd)
-        prefix_realname = _find_key(prefix, pip_list)
-    except (CommandNotFoundError, CommandExecutionError) as err:
-        ret['result'] = False
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
-        return ret
-
-    if ignore_installed is False and prefix_realname is not None:
-        if force_reinstall is False and not upgrade:
-            # Check desired version (if any) against currently-installed
-            if (
-                    any(version_spec) and
-                    _fulfills_version_spec(pip_list[prefix_realname],
-                                           version_spec)
-                    ) or (not any(version_spec)):
-                ret['result'] = True
-                ret['comment'] = ('Python package {0} already '
-                                  'installed'.format(name))
-                return ret
-
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = \
-            'Python package {0} is set to be installed'.format(name)
-        return ret
-
     # Replace commas (used for version ranges) with semicolons (which are not
     # supported) in name so it does not treat them as multiple packages.  Comma
     # will be re-added in pip.install call.
@@ -208,9 +180,50 @@ def installed(name,
     # also ignore the "name" parameter.
     if requirements or editable:
         name = ''
+        comments = []
+        if __opts__['test']:
+            ret['result'] = None
+            if requirements:
+                # TODO: Check requirements file against currently-installed
+                # packages to provide more accurate state output.
+                comments.append('Requirements file {0} will be '
+                                'processed.'.format(requirements))
+            if editable:
+                comments.append('Package will be installed from VCS checkout '
+                                '{0}.'.format(editable))
+            ret['comment'] = ' '.join(comments)
+            return ret
+    else:
+        try:
+            pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
+                                            user=user, cwd=cwd)
+            prefix_realname = _find_key(prefix, pip_list)
+        except (CommandNotFoundError, CommandExecutionError) as err:
+            ret['result'] = False
+            ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
+            return ret
+
+        if ignore_installed is False and prefix_realname is not None:
+            if force_reinstall is False and not upgrade:
+                # Check desired version (if any) against currently-installed
+                if (
+                        any(version_spec) and
+                        _fulfills_version_spec(pip_list[prefix_realname],
+                                            version_spec)
+                        ) or (not any(version_spec)):
+                    ret['result'] = True
+                    ret['comment'] = ('Python package {0} already '
+                                    'installed'.format(name))
+                    return ret
+
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = \
+                'Python package {0} is set to be installed'.format(name)
+            return ret
 
     pip_install_call = __salt__['pip.install'](
-        pkgs='"{0}"'.format(name),
+        pkgs='"{0}"'.format(name) if name else '',
         requirements=requirements,
         bin_env=bin_env,
         log=log,
@@ -245,25 +258,51 @@ def installed(name,
     if pip_install_call and (pip_install_call['retcode'] == 0):
         ret['result'] = True
 
-        pkg_list = __salt__['pip.list'](prefix, bin_env, user=user, cwd=cwd)
-        if not pkg_list:
-            ret['comment'] = (
-                'There was no error installing package \'{0}\' although '
-                'it does not show when calling \'pip.freeze\'.'.format(name)
-            )
-            ret['changes']['{0}==???'.format(name)] = 'Installed'
-            return ret
+        if requirements or editable:
+            comments = []
+            if requirements:
+                comments.append('Successfully processed requirements file '
+                                '{0}.'.format(requirements))
+                ret['changes']['requirements'] = True
+            if editable:
+                comments.append('Package successfully installed from VCS '
+                                'checkout {0}.'.format(editable))
+                ret['changes']['editable'] = True
+            ret['comment'] = ' '.join(comments)
+        else:
+            pkg_list = __salt__['pip.list'](prefix, bin_env,
+                                            user=user, cwd=cwd)
+            if not pkg_list:
+                ret['comment'] = (
+                    'There was no error installing package \'{0}\' although '
+                    'it does not show when calling '
+                    '\'pip.freeze\'.'.format(name)
+                )
+                ret['changes']['{0}==???'.format(name)] = 'Installed'
+                return ret
 
-        version = list(pkg_list.values())[0]
-        pkg_name = next(iter(pkg_list))
-        ret['changes']['{0}=={1}'.format(pkg_name, version)] = 'Installed'
-        ret['comment'] = 'Package was successfully installed'
+            version = list(pkg_list.values())[0]
+            pkg_name = next(iter(pkg_list))
+            ret['changes']['{0}=={1}'.format(pkg_name, version)] = 'Installed'
+            ret['comment'] = 'Package was successfully installed'
     elif pip_install_call:
         ret['result'] = False
-        ret['comment'] = ('Failed to install package {0}. '
-                          'Error: {1} {2}').format(name,
-                                                   pip_install_call['stdout'],
-                                                   pip_install_call['stderr'])
+        error = 'Error: {0} {1}'.format(pip_install_call['stdout'],
+                                        pip_install_call['stderr'])
+
+        if requirements or editable:
+            comments = []
+            if requirements:
+                comments.append('Unable to process requirements file '
+                                '{0}.'.format(requirements))
+            if editable:
+                comments.append('Unable to install from VCS checkout'
+                                '{0}.'.format(editable))
+            comments.append(error)
+            ret['comment'] = ' '.join(comments)
+        else:
+            ret['comment'] = ('Failed to install package {0}. '
+                              '{1}'.format(name, error))
     else:
         ret['result'] = False
         ret['comment'] = 'Could not install package'

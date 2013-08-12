@@ -1,4 +1,28 @@
 -------------------------------------------------------------------
+Fri Aug  9 18:08:12 UTC 2013 - aboe76@gmail.com
+
+- Update 0.16.3 bugfix release:
+  - Fixed scheduler config in pillar
+  - Fixed default value for file_recv master config option
+  - Fixed missing master configuration file parameters
+  - Fixed regression in binary package installation on 64-bit systems
+  - Fixed stackgrace when commenting a section in top.sls
+  - Fixed state declarations not formed as a list message.
+  - Fixed infinite loop on minion
+  - Fixed stacktrace in watch when state is 'prereq'
+  - Feature: function filter_by to grains module
+  - Feature: add new "osfinger" grain
+
+-------------------------------------------------------------------
+Sat Aug  3 06:01:32 UTC 2013 - aboe76@gmail.com
+
+- Fixed regression bug in salt 0.16.2
+  - Newly installed salt-minion doesn't create
+    /var/cache/salt/minion/proc
+  - fix let package create this directory
+    next version of Salt doesn't need this.
+
+-------------------------------------------------------------------
 Fri Aug  2 05:36:08 UTC 2013 - aboe76@gmail.com
 
 - Updated to salt 0.16.2

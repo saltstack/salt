@@ -30,14 +30,13 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True):
     Add, replace, or update the A and PTR (reverse) records for a host.
 
     CLI Example::
-        
+
         salt ns1 ddns.add_host example.com host1 60 10.1.1.1
     '''
-
     res = update(zone, name, ttl, 'A', ip, nameserver, replace)
     if res is False:
         return False
-    
+
     fqdn = '{0}.{1}.'.format(name, zone)
     zone = 'in-addr.arpa.'
     parts = ip.split('.')
@@ -62,10 +61,9 @@ def delete_host(zone, name, nameserver='127.0.0.1'):
     Returns true if any records are deleted.
 
     CLI Example::
-        
+
         salt ns1 ddns.delete_host example.com host1
     '''
-
     fqdn = '{}.{}'.format(name, zone)
     request = dns.message.make_query(fqdn, 'A')
     answer = dns.query.udp(request, nameserver)
@@ -76,7 +74,7 @@ def delete_host(zone, name, nameserver='127.0.0.1'):
 
     res = delete(zone, name, nameserver=nameserver)
 
-    fqdn = fqdn + '.' 
+    fqdn = fqdn + '.'
     for ip in ips:
         zone = 'in-addr.arpa.'
         parts = ip.split('.')
@@ -105,7 +103,6 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False)
 
         salt ns1 ddns.update example.com host1 60 A 10.0.0.1
     '''
-
     name = str(name)
     fqdn = '{}.{}'.format(name, zone)
     request = dns.message.make_query(fqdn, rdtype)
@@ -113,7 +110,7 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False)
 
     rdtype = dns.rdatatype.from_text(rdtype)
     rdata = dns.rdata.from_text(dns.rdataclass.IN, rdtype, data)
-    
+
     is_update = False
     for rrset in answer.answer:
         if rdata in rrset.items:

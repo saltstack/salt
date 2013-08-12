@@ -210,7 +210,7 @@ class SSH(object):
                     self.opts)
 
 
-class Single():
+class Single(object):
     '''
     Hold onto a single ssh execution
     '''

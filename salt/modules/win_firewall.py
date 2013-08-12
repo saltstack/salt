@@ -13,7 +13,6 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    
     if salt.utils.is_windows():
         return 'firewall'
     return False
@@ -39,7 +38,7 @@ def get_config():
         elif line.startswith('State'):
             profiles[curr] = line.split()[1] == 'ON'
             curr = None
-    
+
     return profiles
 
 
@@ -54,5 +53,3 @@ def disable():
     return __salt__['cmd.run'](
             'netsh advfirewall set allprofiles state off'
             ) == 'Ok.'
-
-

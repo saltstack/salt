@@ -96,7 +96,7 @@ def _parse_pkg_meta(path):
                     except AttributeError:
                         continue
         if arch:
-            if cpuarch == 'x86_64' and arch != 'amd64':
+            if cpuarch == 'x86_64' and arch not in ('amd64', 'all'):
                 name += ':{0}'.format(arch)
         return name, version
 
