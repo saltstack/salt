@@ -5,9 +5,7 @@ Pillar Walkthrough
 .. note::
 
     This walkthrough assumes that the reader has already completed the initial
-    Salt Stack walkthrough:
-
-        :doc:`Walkthrough </topics/tutorials/walkthrough>`
+    Salt Stack :doc:`walkthrough </topics/tutorials/walkthrough>`.
 
 The pillar interface inside of Salt is one of the most important components
 of a Salt deployment. Pillar is the interface used to generate arbitrary data
@@ -41,7 +39,9 @@ Setting Up Pillar
 The pillar is already running in Salt by default. The data in the minion's
 pillars can be seen via the following command:
 
-    # salt '*' pillar.items
+.. code-block:: bash
+
+    salt '*' pillar.items
 
 .. note::
     Prior to version 0.16.2, this function is named ``pillar.data``. This
@@ -63,7 +63,9 @@ location for the pillar is in /srv/pillar.
 
 To start setting up the pillar, the /srv/pillar directory needs to be present:
 
-    # mkdir /srv/pillar
+.. code-block:: bash
+
+    mkdir /srv/pillar
 
 Now a simple top file, following the same format as the top file used for
 states needs to be created:
@@ -87,18 +89,20 @@ This top file associates the data.sls file to all minions. Now the
 
 Now that the file has been saved the minions' pillars will be updated:
 
-    # salt '*' pillar.items
+.. code-block:: bash
 
-The key `info` should now appear in the returned pillar data.
+    salt '*' pillar.items
+
+The key ``info`` should now appear in the returned pillar data.
 
 More Complex Data
 ~~~~~~~~~~~~~~~~~
 
 Pillar files are sls files, just like states, but unlike states they do not
-need to define `formulas`, the data can be arbitrary, this example for
+need to define :strong:`formulas`, the data can be arbitrary, this example for
 instance sets up user data with a UID:
 
-`/srv/pillar/users/init.sls`
+``/srv/pillar/users/init.sls``:
 
 .. code-block:: yaml
 
@@ -111,11 +115,12 @@ instance sets up user data with a UID:
 .. note::
 
     The same directory lookups that exist in states exist in pillar, so the
-    file users/init.sls can be referenced with `users` in the top file
+    file ``users/init.sls`` can be referenced with ``users`` in the :term:`top
+    file`.
 
 The top file will need to be updated to include this sls file:
 
-`/srv/pillar/top.sls`
+``/srv/pillar/top.sls``:
 
 .. code-block:: yaml
 
@@ -127,7 +132,7 @@ The top file will need to be updated to include this sls file:
 Now the data will be available to the minions. To use the pillar data in a
 state just access the pillar via Jinja:
 
-`/srv/salt/users/init.sls`
+``/srv/salt/users/init.sls``
 
 .. code-block:: jinja
 
@@ -154,7 +159,7 @@ can be directly parameterized without needing to refactor the state tree.
 A simple example is to set up a mapping of package names in pillar for
 separate Linux distributions:
 
-`/srv/pillar/pkg/init.sls`
+``/srv/pillar/pkg/init.sls``:
 
 .. code-block:: jinja
 
@@ -170,9 +175,9 @@ separate Linux distributions:
       vim: vim
       {% endif %}
 
-The new `pkg` sls needs to be added to the top file:
+The new ``pkg`` sls needs to be added to the top file:
 
-`/srv/pillar/top.sls`
+``/srv/pillar/top.sls``:
 
 .. code-block:: yaml
 
@@ -185,7 +190,7 @@ The new `pkg` sls needs to be added to the top file:
 Now the minions will auto map values based on respective operating systems
 inside of the pillar, so sls files can be safely parameterized:
 
-`/srv/salt/apache/init.sls`
+``/srv/salt/apache/init.sls``:
 
 .. code-block:: jinja
 
@@ -200,7 +205,7 @@ Or, if no pillar is available a default can be set as well:
     The function ``pillar.get`` used in this example was added to Salt in
     version 0.14.0
 
-`/srv/salt/apache/init.sls`
+``/srv/salt/apache/init.sls``:
 
 .. code-block:: jinja
 
@@ -208,10 +213,10 @@ Or, if no pillar is available a default can be set as well:
       pkg.installed:
         - name: {{ salt['pillar.get']('pkgs:apache', 'httpd') }}
 
-In the above example, if the pillar value `pillar['pkgs']['apache']` is not
-set in the minion's pillar, then the default of 'httpd' will be used.
+In the above example, if the pillar value ``pillar['pkgs']['apache']`` is not
+set in the minion's pillar, then the default of ``httpd`` will be used.
 
-.. note
+.. note::
 
     Under the hood, pillar is just a python dict, so python dict methods such
     as `get` and `items` can be used.
@@ -224,7 +229,7 @@ into more flexible formulas without refactoring or complicating the states.
 
 A simple formula:
 
-`/srv/salt/edit/vim.sls`
+``/srv/salt/edit/vim.sls``:
 
 .. code-block:: yaml
 
@@ -243,7 +248,7 @@ A simple formula:
 
 Can be easily transformed into a powerful, parameterized formula:
 
-`/srv/salt/edit/vim.sls`
+``/srv/salt/edit/vim.sls``:
 
 .. code-block:: jinja
 
@@ -263,7 +268,7 @@ Can be easily transformed into a powerful, parameterized formula:
 
 Where the vimrc source location can now be changed via pillar:
 
-`/srv/pillar/edit/vim.sls`
+``/srv/pillar/edit/vim.sls``:
 
 .. code-block:: jinja
 

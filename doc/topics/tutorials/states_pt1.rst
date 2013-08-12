@@ -37,8 +37,8 @@ Restart the Salt master in order to pick up this change:
 
 .. code-block:: bash
 
-    % pkill salt-master
-    % salt-master -d
+    pkill salt-master
+    salt-master -d
 
 Preparing the Top File
 ======================
@@ -62,7 +62,9 @@ minion matches is defined; for now simply specify all hosts (``*``).
 
     The expressions can use any of the targeting mechanisms used by Salt —
     minions can be matched by glob, PCRE regular expression, or by :doc:`grains
-    </topics/targeting/grains>`. For example::
+    </topics/targeting/grains>`. For example:
+
+    .. code-block:: yaml
 
         base:
           'os:Fedora':
@@ -76,7 +78,6 @@ In the same directory as the :term:`top file`, create an empty file named
 ``webserver.sls``, containing the following:
 
 .. code-block:: yaml
-    :linenos:
 
     apache:                 # ID declaration
       pkg:                  # state declaration
@@ -156,22 +157,30 @@ and all changes made.
 
     Turn up logging
         Salt can be quite chatty when you change the logging setting to
-        ``debug``::
+        ``debug``:
+
+        .. code-block:: bash
 
             salt-minion -l debug
 
     Run the minion in the foreground
         By not starting the minion in daemon mode (:option:`-d <salt-minion
-        -d>`) one can view any output from the minion as it works::
+        -d>`) one can view any output from the minion as it works:
+
+        .. code-block:: bash
 
             salt-minion &
 
     Increase the default timeout value when running :command:`salt`. For
-    example, to change the default timeout to 60 seconds::
+    example, to change the default timeout to 60 seconds:
+
+    .. code-block:: bash
 
         salt -t 60
 
-    For best results, combine all three::
+    For best results, combine all three:
+
+    .. code-block:: bash
 
         salt-minion -l debug &          # On the minion
         salt '*' state.highstate -t 60  # On the master

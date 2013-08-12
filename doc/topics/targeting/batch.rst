@@ -7,7 +7,7 @@ supported.
 
 .. code-block:: bash
 
-    salt \* -b 10 test.ping
+    salt '*' -b 10 test.ping
 
     salt -G 'os:RedHat' --batch-size 25% apache.signal restart
 

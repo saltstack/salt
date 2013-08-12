@@ -16,7 +16,9 @@ rc.local. The bootstrap script needs to:
 #. Install `Salt`_ with dependencies
 #. Point the minion to the master
 
-Here is a sample script::
+Here is a sample script:
+
+.. code-block:: bash
 
     #!/bin/bash
 
@@ -44,7 +46,9 @@ Used With Boto
 
 `Boto <https://github.com/boto/boto>`_ will accept a string for user data
 which can be used to pass our bootstrap script. If the script is saved to
-a file, you can read it into a string::
+a file, you can read it into a string:
+
+.. code-block:: python
 
     import boto
 
@@ -60,9 +64,10 @@ a file, you can read it into a string::
 Additional Notes
 ----------------
 
-Sometime in the future the ppa will include and install an upstart file. In the 
-meantime, you can use the bootstrap to `build one <https://gist.github.com/1617054>`_.
+Sometime in the future the ppa will include and install an upstart file. In the
+meantime, you can use the bootstrap to `build one
+<https://gist.github.com/1617054>`_.
 
 It may also be useful to set the node's role during this phase. One option
-would be saving the node's role to a file and then using a custom Grain
-to select it.
+would be saving the node's role to a file and then using a custom Grain to
+select it.

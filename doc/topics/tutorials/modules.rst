@@ -9,7 +9,9 @@ Order your minions around
 
 Now that you have a :term:`master` and at least one :term:`minion`
 communicating with each other you can perform commands on the minion via the
-:command:`salt` command. Salt calls are comprised of three main components::
+:command:`salt` command. Salt calls are comprised of three main components:
+
+.. code-block:: bash
 
     salt '<target>' <function> [arguments]
 
@@ -19,28 +21,38 @@ target
 ------
 
 The target component allows you to filter which minions should run the
-following function. The default filter is a glob on the minion id. For example::
+following function. The default filter is a glob on the minion id. For example:
 
-    # salt '*' test.ping
-    # salt '*.example.org' test.ping
+.. code-block:: bash
 
-Targets can be based on minion system information using the Grains system::
+    salt '*' test.ping
+    salt '*.example.org' test.ping
 
-    # salt -G 'os:Ubuntu' test.ping
+Targets can be based on minion system information using the Grains system:
+
+.. code-block:: bash
+
+    salt -G 'os:Ubuntu' test.ping
 
 .. seealso:: :doc:`Grains system </topics/targeting/grains>`
 
-Targets can be filtered by regular expression::
+Targets can be filtered by regular expression:
 
-    # salt -E 'virtmach[0-9]' test.ping
+.. code-block:: bash
 
-Targets can be explicitly specified in a list::
+    salt -E 'virtmach[0-9]' test.ping
 
-    # salt -L 'foo,bar,baz,quo' test.ping
+Targets can be explicitly specified in a list:
 
-Or Multiple target types can be combined in one command::
-    
-    # salt -C 'G@os:Ubuntu and webser* or E@database.*' test.ping
+.. code-block:: bash
+
+    salt -L 'foo,bar,baz,quo' test.ping
+
+Or Multiple target types can be combined in one command:
+
+.. code-block:: bash
+
+    salt -C 'G@os:Ubuntu and webser* or E@database.*' test.ping
 
 
 function
@@ -48,31 +60,41 @@ function
 
 A function is some functionality provided by a module. Salt ships with a large
 collection of available functions. List all available functions on your
-minions::
+minions:
 
-    # salt '*' sys.doc
+.. code-block:: bash
+
+    salt '*' sys.doc
 
 Here are some examples:
 
-Show all currently available minions::
+Show all currently available minions:
 
-    # salt '*' test.ping
+.. code-block:: bash
 
-Run an arbitrary shell command::
+    salt '*' test.ping
 
-    # salt '*' cmd.run 'uname -a'
+Run an arbitrary shell command:
+
+.. code-block:: bash
+
+    salt '*' cmd.run 'uname -a'
 
 .. seealso:: :doc:`the full list of modules </ref/modules/index>`
 
 arguments
 ---------
 
-Space-delimited arguments to the function::
+Space-delimited arguments to the function:
 
-    # salt '*' cmd.exec_code python 'import sys; print sys.version'
+.. code-block:: bash
 
-Optional, keyword arguments are also supported::
+    salt '*' cmd.exec_code python 'import sys; print sys.version'
 
-    # salt '*' pip.install salt timeout=5 upgrade=True
+Optional, keyword arguments are also supported:
+
+.. code-block:: bash
+
+    salt '*' pip.install salt timeout=5 upgrade=True
 
 They are always in the form of ``kwarg=argument``.
