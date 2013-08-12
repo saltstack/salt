@@ -418,10 +418,13 @@ instance.
 delvol_on_destroy
 =================
 This argument overrides the default DeleteOnTermination setting in the AMI for 
-the root EBS volume for an instance. Many AMIs contain 'false' as a default, 
+the EBS volumes for an instance. Many AMIs contain 'false' as a default, 
 resulting in orphaned volumes in the EC2 account, which may unknowingly be 
 charged to the account. This setting can be added to the profile or map file 
 for an instance.
+
+If set, this setting will apply to the root EBS volume and any other volumes
+that were created by salt-cloud using the 'volumes' setting
 
 .. code-block:: yaml
 
@@ -444,6 +447,16 @@ following commands:
 
     salt-cloud -a delvol_on_destroy myinstance
     salt-cloud -a keepvol_on_destroy myinstance
+
+The setting for this may be changed on a volume on an existing instance
+using one of the following commands:
+
+.. code-block:: bash
+
+    salt-cloud -a delvol_on_destroy myinstance device=/dev/sda1
+    salt-cloud -a delvol_on_destroy myinstance volume_id=vol-1a2b3c4d
+    salt-cloud -a keepvol_on_destroy myinstance device=/dev/sda1
+    salt-cloud -a keepvol_on_destroy myinstance volume_id=vol-1a2b3c4d
 
 
 EC2 Termination Protection

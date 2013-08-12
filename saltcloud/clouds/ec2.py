@@ -1507,9 +1507,9 @@ def _toggle_term_protect(name, value):
     return show_term_protect(name=name, instance_id=instance_id, call='action')
 
 
-def keepvol_on_destroy(name, call=None):
+def keepvol_on_destroy(name, device=None, volume_id=None, call=None):
     '''
-    Do not delete root EBS volume upon instance termination
+    Do not delete all/specified EBS volumes upon instance termination
 
     CLI Example::
 
@@ -1520,12 +1520,13 @@ def keepvol_on_destroy(name, call=None):
             'The keepvol_on_destroy action must be called with -a or --action.'
         )
 
-    return _toggle_delvol(name=name, value='false')
+    return _toggle_delvol(name=name, device=device,
+                          volume_id=volume_id, value='false')
 
 
-def delvol_on_destroy(name, call=None):
+def delvol_on_destroy(name, device=None, volume_id=None, call=None):
     '''
-    Delete root EBS volume upon instance termination
+    Delete all/specified EBS volumes upon instance termination
 
     CLI Example::
 
@@ -1536,10 +1537,12 @@ def delvol_on_destroy(name, call=None):
             'The delvol_on_destroy action must be called with -a or --action.'
         )
 
-    return _toggle_delvol(name=name, value='true')
+    return _toggle_delvol(name=name, device=device,
+                          volume_id=volume_id, value='true')
 
 
-def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
+def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
+                   value=None, requesturl=None):
     '''
     Delete root EBS volume upon instance termination
 
@@ -1569,6 +1572,12 @@ def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
     dev = 1
     for item in blockmap['item']:
         device_name = item['deviceName']
+
+        if device is not None and device != device_name:
+            continue
+        if volume_id is not None and volume_id != item['ebs']['volumeId']:
+            continue
+
         params['BlockDeviceMapping.%d.DeviceName' % (dev)] = device_name
         params['BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % (dev)] = value
         dev += 1
