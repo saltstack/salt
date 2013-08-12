@@ -85,7 +85,7 @@ class RunnerClient(object):
         to watch for the return
         '''
         tag = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
-        tag[20] = 'r'
+        tag = tag = '{0}r'.format(tag[:-1])
         proc = multiprocessing.Process(
                 target=self._proc_runner,
                 args=(tag, fun, low))
