@@ -128,31 +128,4 @@ def argspec(module=''):
         salt '*' sys.argspec sys
         salt '*' sys.argspec
     '''
-    ret = {}
-    # TODO: cp.get_file will also match cp.get_file_str. this is the
-    # same logic as sys.doc, and it is not working as expected, see
-    # issue #3614
-    if module:
-        # allow both "sys" and "sys." to match sys, without also matching
-        # sysctl
-        comps = module.split('.')
-        comps = filter(None, comps)
-        if len(comps) < 2:
-            module = module + '.' if not module.endswith('.') else module
-    for fun in __salt__:
-        if fun.startswith(module):
-            try:
-                aspec = salt.utils.get_function_argspec(__salt__[fun])
-            except TypeError:
-                # this happens if not callable
-                continue
-
-            args, varargs, kwargs, defaults = aspec
-
-            ret[fun] = {}
-            ret[fun]['args'] = args if args else None
-            ret[fun]['defaults'] = defaults if defaults else None
-            ret[fun]['varargs'] = True if varargs else None
-            ret[fun]['kwargs'] = True if kwargs else None
-
-    return ret
+    return salt.utils.argspec_report(__salt__, module)
