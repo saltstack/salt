@@ -193,11 +193,13 @@ class LocalClient(object):
             expr_form='glob',
             ret='',
             timeout=None,
+            kwarg=None,
             **kwargs):
         '''
         Prep the job dir and send minions the pub.
         Returns a dict of (checked) pub_data or an empty dict.
         '''
+        arg = condition_kwarg(arg, kwarg)
         jid = ''
 
         self.event.subscribe(jid)
