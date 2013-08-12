@@ -120,10 +120,14 @@ def installed(name,
 
     scheme, netloc, path, query, fragment = urlparse.urlsplit(name)
     if scheme and netloc:
-        # parse as VCS url
-        prefix = path.lstrip('/').split('@', 1)[0]
-        if scheme.startswith('git+'):
-            prefix = prefix.rstrip('.git')
+        if fragment and fragment.startswith('egg='):
+            # This is a VCS based package installation
+            prefix = fragment.split('egg=')[-1]
+        else:
+            # parse as VCS url
+            prefix = path.lstrip('/').split('@', 1)[0]
+            if scheme.startswith('git+'):
+                prefix = prefix.rstrip('.git')
     else:
         # Split the passed string into the prefix and version
         try:
