@@ -61,11 +61,15 @@ This makes it easy to "script" deployments with Salt states without having to
 set up a master, and allows for these SLS modules to be easily moved into a
 Salt master as the deployment grows.
 
-Now the declared state can now be executed with::
-    
-    # salt-call state.highstate
+Now the declared state can now be executed with:
 
-Or the salt-call command can be executed with the `--local` flag, this makes it
-unnecessary to change the configuration file::
+.. code-block:: bash
 
-    # salt-call state.highstate --local
+    salt-call state.highstate
+
+Or the salt-call command can be executed with the ``--local`` flag, this makes
+it unnecessary to change the configuration file:
+
+.. code-block:: bash
+
+    salt-call state.highstate --local

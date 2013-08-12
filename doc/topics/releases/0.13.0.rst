@@ -48,10 +48,12 @@ and ``state.highstate``. This allows for on the fly changes or settings to
 pillar and makes parameterizing state formulas even easier. This is done via
 the keyword argument:
 
-    salt \* state.highstate pillar='{"cheese": "spam"}'
+.. code-block:: bash
 
-The above example will extend the existing pillar to hold the `cheese` key
-with a value of `spam`. If the `cheese` key is already specified in the
+    salt '*' state.highstate pillar='{"cheese": "spam"}'
+
+The above example will extend the existing pillar to hold the ``cheese`` key
+with a value of ``spam``. If the ``cheese`` key is already specified in the
 minion's pillar then it will be overwritten.
 
 CLI Notifications

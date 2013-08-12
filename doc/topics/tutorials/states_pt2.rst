@@ -40,9 +40,7 @@ As you have seen, SLS modules are appended with the file extension ``.sls`` and
 are referenced by name starting at the root of the state tree. An SLS module
 can be also defined as a directory. Demonstrate that now by creating a
 directory named ``webserver`` and moving and renaming ``webserver.sls`` to
-``webserver/init.sls``. Your state directory should now resemble:
-
-::
+``webserver/init.sls``. Your state directory should now look like this::
 
     |- top.sls
     `- webserver/
@@ -123,7 +121,9 @@ directory:
 
 Last, call :func:`state.highstate <salt.modules.state.highstate>` again and the
 minion will fetch and execute the highstate as well as our HTML file from the
-master using Salt's File Server::
+master using Salt's File Server:
+
+.. code-block:: bash
 
     salt '*' state.highstate
 

@@ -34,7 +34,7 @@ glob:
 
 .. code-block:: bash
 
-    salt \*foo.com sys.doc
+    salt '*foo.com' sys.doc
 
 
 Salt can also define the target minions with regular expressions:

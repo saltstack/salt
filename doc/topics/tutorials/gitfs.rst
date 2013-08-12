@@ -11,13 +11,8 @@ from a git repository and serve them to minions.
 
 .. note::
 
-    This walkthrough assumes basic knowledge of Salt:
-
-        :doc:`Walkthrough </topics/tutorials/walkthrough>`
-
-    And a basic knowledge of file roots:
-
-        :doc:`File Roots </ref/file_server/file_roots>`
+    This walkthrough assumes basic knowledge of Salt. To get up to speed, check
+    out the :doc:`walkthrough </topics/tutorials/walkthrough>`.
 
 The gitfs backend hooks into any number of remote git repositories and caches
 the data from the repository on the master. This makes distributing a state
@@ -33,7 +28,8 @@ Simple Configuration
 ====================
 
 To use the gitfs backend only two configuration changes are required on the
-master. The ``fileserver_backend`` option needs to be set with `git`:
+master. The ``fileserver_backend`` option needs to be set with a value of
+``git``:
 
 .. code-block:: yaml
 
@@ -50,8 +46,8 @@ Now the gitfs system needs to be configured with a remote:
       - git://github.com/saltstack/salt-states.git
 
 These changes require a restart of the master, then the git repo will be cached
-on the master and new requests for the `salt://` protocol will send files found
-in the remote git repository via the master.
+on the master and new requests for the ``salt://`` protocol will send files
+found in the remote git repository via the master.
 
 .. note::
 
@@ -83,35 +79,37 @@ Assuming that the ``gitfs_remotes`` option specifies three remotes:
 
 .. note::
 
-    The ``file://`` prefix denotes a git repository in a local directory.
-    However, it will still use the given ``file://`` URL as a remote, rather
-    than copying the git repo to the salt cache.  This means that any refs you
-    want accessible must exist as *local* refs in the specified repo.
+    The :strong:`file://` prefix denotes a git repository in a local directory.
+    However, it will still use the given :strong:`file://` URL as a remote,
+    rather than copying the git repo to the salt cache.  This means that any
+    refs you want accessible must exist as *local* refs in the specified repo.
 
 Assume that each repository contains some files:
 
-first.git:
-    top.sls
-    edit/vim.sls
-    edit/vimrc
-    nginx/init.sls
+.. code-block:: yaml
 
-second.git:
-    edit/dev_vimrc
-    haproxy/init.sls
+    first.git:
+        top.sls
+        edit/vim.sls
+        edit/vimrc
+        nginx/init.sls
 
-third:
-    haproxy/haproxy.conf
-    edit/dev_vimrc
+    second.git:
+        edit/dev_vimrc
+        haproxy/init.sls
+
+    third:
+        haproxy/haproxy.conf
+        edit/dev_vimrc
 
 The repositories will be searched for files by the master in the order in which
 they are defined in the configuration, Therefore the remote
-`git://github.com/example/first.git` will be searched first, if the requested
-file is found then it is served and no further searching is executed. This
-means that if the file `salt://haproxy/init.sls` is requested then it will be
-pulled from the `git://github.com/example/second.git` git repo. If
-`salt://haproxy/haproxy.conf` is requested then it will be pulled from the
-third repo.
+:strong:`git://github.com/example/first.git` will be searched first, if the
+requested file is found then it is served and no further searching is executed.
+This means that if the file :strong:`salt://haproxy/init.sls` is requested then
+it will be pulled from the :strong:`git://github.com/example/second.git` git
+repo. If :strong:`salt://haproxy/haproxy.conf` is requested then it will be
+pulled from the third repo.
 
 Multiple Backends
 =================
@@ -129,8 +127,8 @@ the ``fileserver_backend`` option contains multiple backends:
       - roots
       - git
 
-Then the `roots` backend (the default backend of files in /srv/salt) will be
-searched first for the requested file, then if it is not found on the master
+Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
+be searched first for the requested file, then if it is not found on the master
 the git remotes will be searched.
 
 GitFS Remotes over SSH
