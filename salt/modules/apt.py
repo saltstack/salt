@@ -521,8 +521,8 @@ def list_pkgs(versions_as_list=False, removed=False):
 
     out = __salt__['cmd.run_all'](cmd).get('stdout', '')
     # Typical lines of output:
-    # install ok installed zsh 4.3.17-1ubuntu1
-    # deinstall ok config-files mc 3:4.8.1-2ubuntu1
+    # install ok installed zsh 4.3.17-1ubuntu1 amd64
+    # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64
     for line in out.splitlines():
         cols = line.split()
         try:
@@ -530,9 +530,10 @@ def list_pkgs(versions_as_list=False, removed=False):
                 [cols[x] for x in (0, 2, 3, 4, 5)]
         except ValueError:
             continue
-        if __grains__.get('cpuarch', '') == 'x86_64' \
-                and re.match(r'i\d86', arch):
-            name += ':{0}'.format(arch)
+        if __grains__.get('cpuarch', '') == 'x86_64':
+            osarch = __grains__.get('osarch', '')
+            if arch != 'all' and osarch == 'amd64' and osarch != arch:
+                name += ':{0}'.format(arch)
         if len(cols):
             if ('install' in linetype or 'hold' in linetype) and \
                     'installed' in status:
