@@ -1570,8 +1570,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     if type(blockmap['item']) != list:
         blockmap['item'] = [blockmap['item']]
 
-    dev = 1
-    for item in blockmap['item']:
+    for idx, item in enumerate(blockmap['item']):
         device_name = item['deviceName']
 
         if device is not None and device != device_name:
@@ -1579,9 +1578,8 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
         if volume_id is not None and volume_id != item['ebs']['volumeId']:
             continue
 
-        params['BlockDeviceMapping.%d.DeviceName' % (dev)] = device_name
-        params['BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % (dev)] = value
-        dev += 1
+        params['BlockDeviceMapping.%d.DeviceName' % (idx)] = device_name
+        params['BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % (idx)] = value
 
     query(params, return_root=True)
 
