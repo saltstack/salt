@@ -18,6 +18,7 @@ Grains
 ------
 - Fixed detection of ``virtual`` grain on OpenVZ hardware nodes
 - Gracefully handle lsb_release data when it is enclosed in quotes
+- LSB-Grains are prefixed with ``lsb_distrib_`` instead of ``lsb_``. This renameing is not backward compatible!
 - Improved grains detection on MacOS
 
 Pillar
