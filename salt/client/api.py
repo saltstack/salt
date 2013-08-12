@@ -64,7 +64,7 @@ class APIClient(object):
         }
         
         Implied by the fun is which client is used to run the command, that is, either
-        the local minion client, the master runner client, or the master wheel client.
+        the master local minion client, the master runner client, or the master wheel client.
         
         The cmd dict items are as follows:
         
@@ -73,20 +73,19 @@ class APIClient(object):
             a wheel or runner client then the fun: includes either
             'wheel.' or 'runner.' as a prefix and has three parts separated by '.'.
             Otherwise the fun: specifies a module to be run on a minion via the local
-            client.
+            minion client.
             Example:
-                fun of  'wheel.config.values' run with master wheel client
-                fun or 'wheel.foobar' run with with minion local client
-                fun of 'test.ping' run with minion local client
+                fun of 'wheel.config.values' run with master wheel client
                 fun of 'runnner.manage.status' run with master runner client
-                    tgt,
+                fun of 'test.ping' run with local minion client
+                fun of 'wheel.foobar' run with with local minion client not wheel
         kwarg: A dictionary of keyword function parameters to be passed to the eventual
                salt function specificed by fun:
         tgt: Pattern string specifying the targeted minions when the implied client is local
-        expr_form: Optional target pattern type string when client is local.
-            Example: 'glob' defaults to 'glob' if missing
-        ret: Optional name string of returner when local client.
-        arg: Optional positional argument string when local client      
+        expr_form: Optional target pattern type string when client is local minion.
+            Defaults to 'glob' if missing
+        ret: Optional name string of returner when local minion client.
+        arg: Optional positional argument string when local minion client      
         token: the salt token. Either token: is required or the set of username:,
             password: , and eauth:
         username: the salt username. Required if token is missing.
@@ -94,7 +93,7 @@ class APIClient(object):
         eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
         
         '''
-        client = 'local' #default to minion local client
+        client = 'minion' #default to local minion client
         mode = cmd.get('mode', 'async') #default to 'async'
         
         # check for wheel or runner prefix to fun name to use wheel or runner client
@@ -108,12 +107,10 @@ class APIClient(object):
             raise EauthAuthenticationError('No authentication credentials given')
         
         executor = getattr(self, '{0}_{1}'.format(client, mode))
-        
+        result = executor(**cmd)
+        return result
 
-        ret = executor(**cmd)
-        return ret
-
-    def local_async(self, **kwargs):
+    def minion_async(self, **kwargs):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         and immediately return the job ID. The results of the job can then be
@@ -122,10 +119,8 @@ class APIClient(object):
         .. seealso:: :ref:`python-api`
         '''
         return self.localClient.run_job(**kwargs)
-    
-    async = local_async # default async client
 
-    def local_sync(self, *args, **kwargs):
+    def minion_sync(self, *args, **kwargs):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
 
@@ -153,13 +148,54 @@ class APIClient(object):
     
     wheel_async = wheel_sync # always wheel_sync, so it works either mode
     
-    def signatures(self, **kwargs):
+    def signature(self, cmd):
         '''
-        Returns dict of function signatures for the specified fun.
+        Convenience function that returns dict of function signature(s) specified by cmd.
+        
+        cmd is dict of the form:
+        {
+            'client': 'clienttypestring'
+            'module' : 'modulestring',
+            'tgt' : 'targetpatternstring',
+            'expr_form' : 'targetpatterntype',
+            'token': 'salttokenstring',
+            'username': 'usernamestring',
+            'password': 'passwordstring',
+            'eauth': 'eauthtypestring',
+        }
+        
+        The cmd dict items are as follows:
+        client: Either 'master' or 'minion'. Defaults to 'minion' if missing
+        module: required. This is either a module or module function name for
+            the specified client.
+        tgt: Optional pattern string specifying the targeted minions when client
+          is 'minion'
+        expr_form: Optional target pattern type string when client is 'minion'.
+            Example: 'glob' defaults to 'glob' if missing
+        token: the salt token. Either token: is required or the set of username:,
+            password: , and eauth:
+        username: the salt username. Required if token is missing.
+        password: the user's password. Required if token is missing.
+        eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
         
         '''
-        return {}
-    
+        result =  {}
+        
+        client = cmd.get('client', 'minion')
+        if client == 'minion':
+            cmd['fun'] = 'sys.argspec'
+            cmd['kwarg'] = dict(module=cmd['module']) 
+            result = self.run(cmd)
+        elif client == 'master':
+            parts = cmd['module'].split('.') 
+            client = parts[0]
+            module = '.'.join(parts[1:]) #strip prefix            
+            if client == 'wheel':
+                functions = self.wheelClient.w_funcs
+            elif  client == 'runner':
+                functions = self.runnerClient.functions
+            result =  salt.utils.argspec_report(functions, module)
+        return result
     
     def create_token(self, creds):
         '''
