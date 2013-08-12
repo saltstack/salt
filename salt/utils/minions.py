@@ -265,6 +265,8 @@ class CkMinions(object):
                     return True
                 if ind == '@wheel':
                     return True
+                if ind == '@wheels':
+                    return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
@@ -293,6 +295,8 @@ class CkMinions(object):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@runners':
+                    return True
+                if ind == '@runner':
                     return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
