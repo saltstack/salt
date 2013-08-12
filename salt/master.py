@@ -1778,6 +1778,14 @@ class ClearFuncs(object):
             if token['name'] not in self.opts['external_auth'][token['eauth']]:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
+            good = self.ckminions.wheel_check(
+                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                    clear_load['fun'])
+            if not good:
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                log.warning(msg)
+                return ''
 
             try:
                 fun = clear_load.pop('fun')
