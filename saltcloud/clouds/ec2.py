@@ -624,6 +624,14 @@ def securitygroupid(vm_):
         'securitygroupid', vm_, __opts__, search_global=False
     )
 
+def get_spot_config(vm_):
+    '''
+    Returns the spot instance configuration for the provided vm
+    '''
+    return config.get_config_value(
+        'spot_config', vm_, __opts__, search_global=False
+    )
+
 
 def list_availability_zones():
     '''
@@ -664,32 +672,61 @@ def create(vm_=None, call=None):
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     usernames = ssh_username(vm_)
-    params = {'Action': 'RunInstances',
-              'MinCount': '1',
-              'MaxCount': '1'}
-    params['ImageId'] = vm_['image']
+
+    # do we launch a regular vm or a spot instance?
+    # see http://goo.gl/hYZ13f for more information on EC2 API
+    spot_config = get_spot_config(vm_)
+    if spot_config is not None:
+        if 'spot_price' not in spot_config:
+            raise SaltCloudSystemExit(
+                'Spot instance config for {0} requires a spot_price '
+                'attribute.'.format(vm_['name'])
+            )
+
+        params = {'Action': 'RequestSpotInstances',
+                  'InstanceCount': '1',
+                  'Type': 'one-time',
+                  'SpotPrice': spot_config['spot_price']}
+
+        # All of the necessary launch parameters for a VM when using
+        # spot instances are the same except for the prefix below
+        # being tacked on.
+        spot_prefix = 'LaunchSpecification.'
+
+    # regular EC2 instance
+    else:
+        params = {'Action': 'RunInstances',
+                  'MinCount': '1',
+                  'MaxCount': '1'}
+
+        # Normal instances should have no prefix.
+        spot_prefix = ''
+
+    image_id = vm_['image']
+    params[spot_prefix+'ImageId'] = image_id
 
     vm_size = config.get_config_value(
         'size', vm_, __opts__, search_global=False
     )
     if vm_size in SIZE_MAP:
-        params['InstanceType'] = SIZE_MAP[vm_size]
-    else:
-        params['InstanceType'] = vm_size
+        vm_size = SIZE_MAP[vm_size]
+    params[spot_prefix+'InstanceType'] = vm_size
+
     ex_keyname = keyname(vm_)
     if ex_keyname:
-        params['KeyName'] = ex_keyname
+        params[spot_prefix+'KeyName'] = ex_keyname
+
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
         if not isinstance(ex_securitygroup, list):
-            params['SecurityGroup.1'] = ex_securitygroup
+            params[spot_prefix+'SecurityGroup.1'] = ex_securitygroup
         else:
             for (counter, sg_) in enumerate(ex_securitygroup):
-                params['SecurityGroup.{0}'.format(counter)] = sg_
+                params[spot_prefix+'SecurityGroup.{0}'.format(counter)] = sg_
 
     az_ = get_availability_zone(vm_)
     if az_ is not None:
-        params['Placement.AvailabilityZone'] = az_
+        params[spot_prefix+'Placement.AvailabilityZone'] = az_
 
     subnetid_ = get_subnetid(vm_)
     if subnetid_ is not None:
@@ -698,23 +735,22 @@ def create(vm_=None, call=None):
     ex_securitygroupid = securitygroupid(vm_)
     if ex_securitygroupid:
         if not isinstance(ex_securitygroupid, list):
-            params['SecurityGroupId.1'] = ex_securitygroupid
+            params[spot_prefix+'SecurityGroupId.1'] = ex_securitygroupid
         else:
             for (counter, sg_) in enumerate(ex_securitygroupid):
-                params['SecurityGroupId.{0}'.format(counter)] = sg_
+                params[spot_prefix+'SecurityGroupId.{0}'.format(counter)] = sg_
 
     set_delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False
     )
-
     if set_delvol_on_destroy is not None:
         if not isinstance(set_delvol_on_destroy, bool):
             raise SaltCloudConfigError(
                 '\'delvol_on_destroy\' should be a boolean value.'
             )
-
-        params['BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
-        params['BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
+    if set_delvol_on_destroy is not None:
+        params[spot_prefix+'BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
+        params[spot_prefix+'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
             set_delvol_on_destroy
         ).lower()
 
@@ -733,6 +769,75 @@ def create(vm_=None, call=None):
         )
         raise
 
+    # if we're using spot instances, we need to wait for the spot request
+    # to become active before we continue
+    if spot_config:
+        sir_id = data[0]['spotInstanceRequestId']
+
+        def __query_spot_instance_request(sir_id, location):
+            params = {'Action': 'DescribeSpotInstanceRequests',
+                      'SpotInstanceRequestId.1': sir_id}
+            data = query(params, location=location)
+            if not data:
+                log.error(
+                    'There was an error while querying EC2. Empty response'
+                )
+                # Trigger a failure in the wait for spot instance method
+                return False
+
+            if isinstance(data, dict) and 'error' in data:
+                log.warn(
+                    'There was an error in the query. {0}'.format(data['error'])
+                )
+                # Trigger a failure in the wait for spot instance method
+                return False
+
+            log.debug('Returned query data: {0}'.format(data))
+
+            if 'state' in data[0]:
+                state = data[0]['state']
+
+            if state == 'active':
+                return data
+
+            if state == 'open':
+                # Still waiting for an active state
+                log.info('Spot instance status: {0}'.format(
+                    data[0]['status']['message']
+                ))
+                return None
+
+            if state in ['cancelled', 'failed', 'closed']:
+                # Request will never be active, fail
+                log.error('Spot instance request resulted in state \'{0}\'. '
+                         'Nothing else we can do here.')
+                return False
+
+        try:
+            data = saltcloud.utils.wait_for_spot_instance(
+                __query_spot_instance_request,
+                update_args=(sir_id, location),
+                timeout=10*60,
+                max_failures=5
+            )
+            log.debug('wait_for_spot_instance data {0}'.format(data))
+
+        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+            try:
+                # Cancel the existing spot instance request
+                params = {'Action': 'CancelSpotInstanceRequests',
+                          'SpotInstanceRequestId.1': sir_id}
+                data = query(params, location=location)
+
+                log.debug('Canceled spot instance request {0}. Data '
+                          'returned: {1}'.format(sir_id, data))
+
+            except SaltCloudSystemExit:
+                pass
+            finally:
+                raise SaltCloudSystemExit(exc.message)
+
+    # Pull the instance ID, valid for both spot and normal instances
     instance_id = data[0]['instanceId']
 
     log.debug('The new VM instance_id is {0}'.format(instance_id))
@@ -1163,7 +1268,9 @@ def destroy(name, call=None):
 
         salt-cloud --destroy mymachine
     '''
-    instance_id = _get_node(name)['instanceId']
+    node_metadata = _get_node(name)
+    instance_id = node_metadata['instanceId']
+    sir_id = node_metadata.get('spotInstanceRequestId')
     protected = show_term_protect(
         name=name,
         instance_id=instance_id,
@@ -1199,8 +1306,16 @@ def destroy(name, call=None):
               'InstanceId.1': instance_id}
     result = query(params)
     log.info(result)
-
     ret.update(result[0])
+
+    # If this instance is part of a spot instance request, we
+    # need to cancel it as well
+    if sir_id is not None:
+        params = {'Action': 'CancelSpotInstanceRequests',
+                  'SpotInstanceRequestId.1': sir_id}
+        result = query(params)
+        ret['spotInstance'] = result[0]
+
     return ret
 
 
