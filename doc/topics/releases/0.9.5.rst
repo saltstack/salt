@@ -184,7 +184,9 @@ previous versions the desired minions could only be targeted via a single
 specific target type, but now many target specifications can be declared.
 
 These targets can also be separated by and/or operators, so certain properties
-can be used to omit a node::
+can be used to omit a node:
+
+.. code-block:: bash
 
     salt -C 'webserv* and G@os:Debian or E@db.*' test.ping
 
@@ -199,13 +201,17 @@ Node Groups
 Often the convenience of having a predefined group of minions to execute
 targets on is desired. This can be accomplished with the new nodegroups
 feature. Nodegroups allow for predefined compound targets to be declared in
-the master configuration file::
+the master configuration file:
+
+.. code-block:: yaml
 
     nodegroups:
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
 
-And then used via the ``-N`` option::
+And then used via the ``-N`` option:
+
+.. code-block:: bash
 
     salt -N group1 test.ping
 

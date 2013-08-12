@@ -77,26 +77,36 @@ Turning on the Salt Master is easy, just turn it on! The default configuration
 is suitable for the vast majority of installations. The Salt master can be
 controlled by the local Linux/Unix service manager:
 
-On Systemd based platforms (OpenSuse, Fedora)::
+On Systemd based platforms (OpenSuse, Fedora):
 
-    # systemctl start salt-master
+.. code-block:: bash
 
-On Upstart based systems (Ubuntu, older Fedora/RHEL)::
+    systemctl start salt-master
 
-    # service salt-master start
+On Upstart based systems (Ubuntu, older Fedora/RHEL):
 
-On SysV Init systems (Debian, Gentoo etc.)::
+.. code-block:: bash
 
-    # /etc/init.d/salt-master start
+    service salt-master start
 
-Or the master can be started directly on the command line::
+On SysV Init systems (Debian, Gentoo etc.):
 
-    # salt-master -d
+.. code-block:: bash
+
+    /etc/init.d/salt-master start
+
+Or the master can be started directly on the command line:
+
+.. code-block:: bash
+
+    salt-master -d
 
 The Salt Master can also be started in the foreground in debug mode, thus
-greatly increasing the command output::
+greatly increasing the command output:
 
-    # salt-master -l debug
+.. code-block:: bash
+
+    salt-master -l debug
 
 The Salt Master needs to bind to 2 TCP network ports on the system, these ports
 are 4505 and 4506. For more in depth information on firewalling these ports,
@@ -136,13 +146,17 @@ configuration file will need to be edited, edit the configuration option
 Now that the master can be found, start the minion in the same way as the
 master; with the platform init system, or via the command line directly:
 
-As a daemon::
+As a daemon:
 
-    # salt-minion -d
+.. code-block:: bash
 
-In the foreground in debug mode::
+    salt-minion -d
 
-    # salt-minion -l debug
+In the foreground in debug mode:
+
+.. code-block:: bash
+
+    salt-minion -l debug
 
 Now that the minion is started it will generate cryptographic keys and attempt
 to connect to the master. The next step is to venture back to the master server
@@ -155,14 +169,18 @@ Using salt-key
 Salt authenticates minions using public key encryption and authentication. For
 a minion to start accepting commands from the master the minion keys need to be
 accepted. The ``salt-key`` command is used to manage all of the keys on the
-master. To list the keys that are on the master run a salt-key list command::
+master. To list the keys that are on the master run a salt-key list command:
 
-    # salt-key -L
+.. code-block:: bash
+
+    salt-key -L
 
 The keys that have been rejected, accepted and pending acceptance are listed.
-The easiest way to accept the minion key is to accept all pending keys::
+The easiest way to accept the minion key is to accept all pending keys:
 
-    # salt-key -A
+.. code-block:: bash
+
+    salt-key -A
 
 .. note::
 
@@ -220,9 +238,11 @@ the command is also very usable, and easy to understand.
 
 The ``salt`` command is comprised of command options, target specification,
 the function to execute, and arguments to the function. A simple command to
-start with looks like this::
+start with looks like this:
 
-    # salt '*' test.ping
+.. code-block:: bash
+
+    salt '*' test.ping
 
 The ``*`` is the target, which specifies all minions, and ``test.ping`` tells
 the minion to run the :py:func:`test.ping <salt.modules.test.ping>` function.
@@ -245,9 +265,11 @@ Getting to Know the Functions
 
 Salt comes with a vast library of functions available for execution, and Salt
 functions are self documenting. To see what functions are available on the
-minions execute the :py:func:`sys.doc <salt.modules.sys.doc>` function::
+minions execute the :py:func:`sys.doc <salt.modules.sys.doc>` function:
 
-    # salt '*' sys.doc
+.. code-block:: bash
+
+    salt '*' sys.doc
 
 This will display a very large list of available functions and documentation on
 them, this documentation is also available :doc:`here
@@ -271,21 +293,27 @@ Helpful Functions to Know
 The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module contains
 functions to shell out on minions, such as :mod:`cmd.run
 <salt.modules.cmdmod.run>` and :mod:`cmd.run_all
-<salt.modules.cmdmod.run_all>`::
+<salt.modules.cmdmod.run_all>`:
 
-    # salt '*' cmd.run 'ls -l /etc'
+.. code-block:: bash
+
+    salt '*' cmd.run 'ls -l /etc'
 
 The ``pkg`` functions automatically map local system package managers to the
 same salt functions. This means that ``pkg.install`` will install packages via
-yum on Red Hat based systems, apt on Debian systems, etc.::
+yum on Red Hat based systems, apt on Debian systems, etc.:
 
-    # salt '*' pkg.install vim
+.. code-block:: bash
+
+    salt '*' pkg.install vim
 
 The :mod:`network.interfaces <salt.modules.network.interfaces>` function will
 list all interfaces on a minion, along with their IP addresses, netmasks, MAC
-addresses, etc::
+addresses, etc:
 
-    # salt '*' network.interfaces
+.. code-block:: bash
+
+    salt '*' network.interfaces
 
 
 Grains
@@ -346,16 +374,20 @@ Passing in Arguments
 ~~~~~~~~~~~~~~~~~~~~
 
 Many of the functions available accept arguments, these arguments can be
-passed in on the command line::
+passed in on the command line:
 
-    # salt '*' pkg.install vim
+.. code-block:: bash
+
+    salt '*' pkg.install vim
 
 This example passes the argument ``vim`` to the pkg.install function, since
 many functions can accept more complex input then just a string the arguments
 are parsed through YAML, allowing for more complex data to be sent on the
-command line::
+command line:
 
-    # salt '*' test.echo 'foo: bar'
+.. code-block:: bash
+
+    salt '*' test.echo 'foo: bar'
 
 In this case Salt translates the string 'foo: bar' into the dictionary
 "{'foo': 'bar'}"
@@ -410,9 +442,11 @@ under /srv/salt named vim.sls and get vim installed:
     vim:
       pkg.installed
 
-Now install vim on the minions by calling the sls directly::
+Now install vim on the minions by calling the sls directly:
 
-    # salt '*' state.sls vim
+.. code-block:: bash
+
+    salt '*' state.sls vim
 
 This command will invoke the state system and run the named sls which was just
 created, ``vim``.
@@ -482,9 +516,11 @@ results in success.
 
 Now this new sls formula has a special name, ``init.sls``, when an sls formula is
 named ``init.sls`` it inherits the name of the directory path that contains it,
-so this formula can be referenced via the following command::
+so this formula can be referenced via the following command:
 
-    # salt '*' state.sls nginx
+.. code-block:: bash
+
+    salt '*' state.sls nginx
 
 Now that subdirectories can be used the vim.sls formula can be cleaned up, but
 to make things more flexible (and to illustrate another point of course), move
