@@ -287,7 +287,7 @@ def installed(name,
             ret['comment'] = 'Package was successfully installed'
     elif pip_install_call:
         ret['result'] = False
-        error = 'Error: {1} {2}'.format(pip_install_call['stdout'],
+        error = 'Error: {0} {1}'.format(pip_install_call['stdout'],
                                         pip_install_call['stderr'])
 
         if requirements or editable:
