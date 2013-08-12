@@ -933,7 +933,8 @@ def create_attach_volumes(name, kwargs, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The set_tags action must be called with -a or --action.'
+            'The create_attach_volumes action must be called with '
+            '-a or --action.'
         )
 
     if not 'instance_id' in kwargs:
