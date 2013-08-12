@@ -55,7 +55,7 @@
     <div>
         {%- block sidebarlogo %}{%- endblock %}
 
-        <p>Current Salt release: {{ release }}</p>
+        <p>Current Salt release: <a href="{{ pathto('topics/releases/{0}'.format(release)) }}">{{ release }}</a></p>
 
         {%- for sidebartemplate in sidebars|default(html_default_sidebars, true) %}
             {%- include sidebartemplate %}
