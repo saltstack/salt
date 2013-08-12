@@ -325,6 +325,8 @@ class CkMinions(object):
                     return True
                 if ind == '@wheel':
                     return True
+                if ind == '@wheels':
+                    return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
