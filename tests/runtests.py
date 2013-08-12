@@ -154,7 +154,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 (self.options.runner or
                  self.options.state or
                  self.options.module or
-                 self.options.client):
+                 self.options.client or
+                 self.options.name):
             # We're either not running any of runner, state, module and client
             # tests, or, we're only running unittests by passing --unit or by
             # passing only `unit.<whatever>` to --name.
@@ -197,10 +198,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.runner, self.options.shell,
                     self.options.state, self.options.name]):
             return status
+
         with TestDaemon(self):
             if self.options.name:
                 for name in self.options.name:
-                    results = self.run_suite('', name)
+                    results = self.run_suite('', name, load_from_name=True)
                     status.append(results)
             if self.options.runner:
                 status.append(self.run_integration_suite('runners', 'Runner'))
@@ -225,18 +227,25 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             return [True]
 
         status = []
-        if self.options.name:
-            for name in self.options.name:
-                if not name.startswith('unit.'):
-                    # Let's not run non unit tests
-                    continue
-                results = self.run_suite(os.path.join(TEST_DIR, 'unit'), name)
-                status.append(results)
-        else:
+        if self.options.unit:
             results = self.run_suite(
                 os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py'
             )
             status.append(results)
+            # We executed ALL unittests, we can skip running unittests by name
+            # bellow
+            return status
+
+        if self.options.name and any([n.startswith('unit.') for n in
+                                      self.options.name]):
+            for name in self.options.name:
+                if not name.startswith('unit.'):
+                    # Let's not run non unit tests
+                    continue
+                results = self.run_suite(
+                    os.path.join(TEST_DIR, 'unit'), name, load_from_name=True
+                )
+                status.append(results)
         return status
 
 
