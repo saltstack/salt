@@ -78,7 +78,7 @@ def add(name,
         log.warning('solaris_user module does not support the \'system\' '
                     'argument')
     if kwargs:
-        raise TypeError('Invalid keyword argument(s): {}'.format(kwargs))
+        log.warning('Invalid kwargs passed to user.add')
 
     if isinstance(groups, string_types):
         groups = groups.split(',')
