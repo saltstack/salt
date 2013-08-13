@@ -57,6 +57,9 @@ def run(platform, provider, commit, clean):
     )
     proc.poll_and_read_until_finish()
     proc.communicate()
+    if proc.returncode > 0:
+        print('Failed to bootstrap VM')
+        sys.exit(proc.returncode)
 
     # Run tests here
     cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
