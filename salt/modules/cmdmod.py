@@ -284,11 +284,11 @@ def _run(cmd,
 
     if clean_env:
         run_env = env
-        
+
     else:
         run_env = os.environ.copy()
         run_env.update(env)
-        
+
     kwargs = {'cwd': cwd,
               'shell': True,
               'env': run_env,
