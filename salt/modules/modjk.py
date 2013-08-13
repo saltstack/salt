@@ -62,11 +62,11 @@ def _do_http(opts, profile='default'):
 
     ret = {}
 
-    url = __salt__['config.get']('modjk:' + profile + ':url', '')
-    user = __salt__['config.get']('modjk:' + profile + ':user', '')
-    passwd = __salt__['config.get']('modjk:' + profile + ':pass', '')
-    realm = __salt__['config.get']('modjk:' + profile + ':realm', '')
-    timeout = __salt__['config.get']('modjk:' + profile + ':timeout', 5)
+    url = __salt__['config.get']('modjk:{0}:url'.format(profile), '')
+    user = __salt__['config.get']('modjk:{0}:user'.format(profile), '')
+    passwd = __salt__['config.get']('modjk:{0}:pass'.format(profile), '')
+    realm = __salt__['config.get']('modjk:{0}:realm'.format(profile), '')
+    timeout = __salt__['config.get']('modjk:{0}:timeout'.format(profile), '')
 
     if not url:
         raise Exception('missing url in profile {0}'.format(profile))
@@ -84,7 +84,7 @@ def _do_http(opts, profile='default'):
     return ret
 
 
-def _workerCtl(worker, lb, vwa, profile='default'):
+def _worker_ctl(worker, lbn, vwa, profile='default'):
     '''
     enable/disable/stop a worker
     '''
@@ -92,7 +92,7 @@ def _workerCtl(worker, lb, vwa, profile='default'):
     cmd = {
         'cmd': 'update',
         'mime': 'prop',
-        'w': lb,
+        'w': lbn,
         'sw': worker,
         'vwa': vwa,
     }
@@ -156,11 +156,11 @@ def dump_config(profile='default'):
 
 
 ####################
-### LB Functoins ###
+### LB Functions ###
 ####################
 
 
-def list_configured_members(lb, profile='default'):
+def list_configured_members(lbn, profile='default'):
     '''
     Return a list of member workers from the configuration files
 
@@ -173,14 +173,14 @@ def list_configured_members(lb, profile='default'):
     config = dump_config(profile)
 
     try:
-        ret = config['worker.{0}.balance_workers'.format(lb)].strip().split(',')
+        ret = config['worker.{0}.balance_workers'.format(lbn)]
     except KeyError:
         return []
 
-    return filter(None, ret)
+    return filter(None, ret.strip().split(','))
 
 
-def list_running_members(lb, profile='default'):
+def list_running_members(lbn, profile='default'):
     '''
     Return a list of member workers
 
@@ -192,14 +192,14 @@ def list_running_members(lb, profile='default'):
 
     config = get_running()
     try:
-        return config['worker.{0}.balance_workers'.format(lb)].split(',')
+        return config['worker.{0}.balance_workers'.format(lbn)].split(',')
     except KeyError:
         return []
 
 
-def recover_all(lb, profile='default'):
+def recover_all(lbn, profile='default'):
     '''
-    Set the all the workers in lb to recover and activate them if they are not
+    Set the all the workers in lbn to recover and activate them if they are not
 
     CLI Examples::
 
@@ -209,19 +209,19 @@ def recover_all(lb, profile='default'):
 
     ret = {}
 
-    workers = list_running_members(lb, profile)
+    workers = list_running_members(lbn, profile)
     for worker in workers:
         curr_state = worker_status(worker, profile)
         if curr_state['activation'] != 'ACT':
-            worker_activate(worker, lb, profile)
+            worker_activate(worker, lbn, profile)
         if not curr_state['state'].startswith('OK'):
-            worker_recover(worker, lb, profile)
+            worker_recover(worker, lbn, profile)
         ret[worker] = worker_status(worker, profile)
 
     return ret
 
 
-def reset_stats(lb, profile='default'):
+def reset_stats(lbn, profile='default'):
     '''
     Reset all runtime statistics for the load balancer
 
@@ -234,12 +234,12 @@ def reset_stats(lb, profile='default'):
     cmd = {
         'cmd': 'reset',
         'mime': 'prop',
-        'w': lb,
+        'w': lbn,
     }
     return _do_http(cmd, profile)['worker.result.type'] == 'OK'
 
 
-def lb_edit(lb, settings, profile='default'):
+def lb_edit(lbn, settings, profile='default'):
     '''
     Edit the loadbalancer settings
 
@@ -254,7 +254,7 @@ def lb_edit(lb, settings, profile='default'):
 
     settings['cmd'] = 'update'
     settings['mime'] = 'prop'
-    settings['w'] = lb
+    settings['w'] = lbn
 
     return _do_http(settings, profile)['worker.result.type'] == 'OK'
 
@@ -284,7 +284,7 @@ def worker_status(worker, profile='default'):
         return False
 
 
-def worker_recover(worker, lb, profile='default'):
+def worker_recover(worker, lbn, profile='default'):
     '''
     Set the worker to recover
     this module will fail if it is in OK state
@@ -298,15 +298,15 @@ def worker_recover(worker, lb, profile='default'):
     cmd = {
         'cmd': 'recover',
         'mime': 'prop',
-        'w': lb,
+        'w': lbn,
         'sw': worker,
     }
     return _do_http(cmd, profile)
 
 
-def worker_disable(worker, lb, profile='default'):
+def worker_disable(worker, lbn, profile='default'):
     '''
-    Set the worker to disable state in the lb load balancer
+    Set the worker to disable state in the lbn load balancer
 
     CLI Examples::
 
@@ -314,12 +314,12 @@ def worker_disable(worker, lb, profile='default'):
         salt '*' modjk.worker_disable node1 loadbalancer1 other-profile
     '''
 
-    return _workerCtl(worker, lb, 'd', profile)
+    return _worker_ctl(worker, lbn, 'd', profile)
 
 
-def worker_activate(worker, lb, profile='default'):
+def worker_activate(worker, lbn, profile='default'):
     '''
-    Set the worker to activate state in the lb load balancer
+    Set the worker to activate state in the lbn load balancer
 
     CLI Examples::
 
@@ -327,12 +327,12 @@ def worker_activate(worker, lb, profile='default'):
         salt '*' modjk.worker_activate node1 loadbalancer1 other-profile
     '''
 
-    return _workerCtl(worker, lb, 'a', profile)
+    return _worker_ctl(worker, lbn, 'a', profile)
 
 
-def worker_stop(worker, lb, profile='default'):
+def worker_stop(worker, lbn, profile='default'):
     '''
-    Set the worker to stopped state in the lb load balancer
+    Set the worker to stopped state in the lbn load balancer
 
     CLI Examples::
 
@@ -340,10 +340,10 @@ def worker_stop(worker, lb, profile='default'):
         salt '*' modjk.worker_activate node1 loadbalancer1 other-profile
     '''
 
-    return _workerCtl(worker, lb, 's', profile)
+    return _worker_ctl(worker, lbn, 's', profile)
 
 
-def worker_edit(worker, lb, settings, profile='default'):
+def worker_edit(worker, lbn, settings, profile='default'):
     '''
     Edit the worker settings
 
@@ -352,13 +352,15 @@ def worker_edit(worker, lb, settings, profile='default'):
 
     CLI Examples::
 
-        salt '*' modjk.lb_edit node1 loadbalancer1 "{'vwf': 500, 'vwd': 60}"
-        salt '*' modjk.lb_edit node1 loadbalancer1 "{'vwf': 500, 'vwd': 60}" other-profile
+        salt '*' modjk.worker_edit node1 loadbalancer1 \
+                "{'vwf': 500, 'vwd': 60}"
+        salt '*' modjk.worker_edit node1 loadbalancer1 \
+                "{'vwf': 500, 'vwd': 60}" other-profile
     '''
 
     settings['cmd'] = 'update'
     settings['mime'] = 'prop'
-    settings['w'] = lb
+    settings['w'] = lbn
     settings['sw'] = worker
 
     return _do_http(settings, profile)['worker.result.type'] == 'OK'
