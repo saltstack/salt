@@ -49,13 +49,45 @@ def __get_conn():
     '''
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
+
+    def __esxi_uri():
+        '''
+        Connect to an ESXi host with a configuration like so:
+
+        .. code-block:: yaml
+
+            virt:
+              hypervisor: esxi
+              hostname: 192.168.9.9
+        '''
+        hostname = __salt__['config.get']('virt:hostname', 'localhost')
+        return 'esx://%s/?no_verify=1&auto_answer=1' % hostname
+
+    def __esxi_auth():
+        '''
+        We rely on that the credentials is provided to libvirt through
+        it's built in mechanisms, see
+        http://libvirt.org/auth.html#Auth_client_config
+        '''
+        return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
+
+    conn_func = {
+        'esxi': [libvirt.openAuth, [__esxi_uri(),
+                                    __esxi_auth(),
+                                    0]],
+        'qemu': [libvirt.open, ['qemu:///system']],
+        }
+
+    hypervisor = __salt__['config.get']('virt:hypervisor', 'qemu')
+
     try:
-        conn = libvirt.open('qemu:///system')
+        conn = conn_func[hypervisor][0](*conn_func[hypervisor][1])
     except Exception:
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
-            'software'.format(
-                __grains__['fqdn']
+            'software at {1}'.format(
+                __grains__['fqdn'],
+                conn_func[hypervisor][1][0]
             )
         )
     return conn
