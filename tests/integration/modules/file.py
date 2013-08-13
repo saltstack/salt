@@ -48,7 +48,7 @@ class FileModuleTest(integration.ModuleCase):
         user = getpass.getuser()
         if sys.platform == 'darwin':
             group = 'staff'
-        elif sys.platform.startswith('linux'):
+        elif sys.platform.startswith(('linux', 'freebsd')):
             group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function('file.chown', arg=[self.myfile, user, group])
         self.assertIsNone(ret)
@@ -76,7 +76,7 @@ class FileModuleTest(integration.ModuleCase):
         user = getpass.getuser()
         if sys.platform == 'darwin':
             group = 'staff'
-        elif sys.platform.startswith('linux'):
+        elif sys.platform.startswith(('linux', 'freebsd')):
             group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function('file.chown',
                                 arg=['/tmp/nosuchfile', user, group])
@@ -96,7 +96,7 @@ class FileModuleTest(integration.ModuleCase):
     def test_chgrp(self):
         if sys.platform == 'darwin':
             group = 'everyone'
-        elif sys.platform.startswith('linux'):
+        elif sys.platform.startswith(('linux', 'freebsd')):
             group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function('file.chgrp', arg=[self.myfile, group])
         self.assertIsNone(ret)
