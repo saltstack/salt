@@ -384,8 +384,8 @@ hello blue 3
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_compile_time_state_execution(self):
-        if not os.environ.get('SHELL'):
-            self.skipTest('Unable to get the SHELL environment variable')
+        if not sys.stdin.isatty():
+            self.skipTest('Not attached to a TTY')
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
