@@ -8,6 +8,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.exceptions import CommandNotFoundError
 
 __func_alias__ = {
@@ -27,7 +28,7 @@ def __virtual__():
     return False
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _cmd():
     '''
     Return full path to service command
