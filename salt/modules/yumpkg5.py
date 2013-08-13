@@ -68,6 +68,10 @@ def _parse_pkginfo(line):
     '''
     A small helper to parse package information; returns a namedtuple
     '''
+    # Need to reimport `collections` as this function is re-namespaced into
+    # other modules
+    import collections
+
     pkginfo = collections.namedtuple('PkgInfo', ('name', 'version'))
 
     try:
