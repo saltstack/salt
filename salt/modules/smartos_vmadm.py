@@ -8,8 +8,10 @@ import json
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.utils
+import salt.utils.decorators as decorators
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_vmadm():
     '''
     Looks to see if vmadm is present on the system
@@ -39,8 +41,7 @@ def _exit_status(retcode):
     '''
     ret = {0: 'Successful completion.',
            1: 'An error occurred.',
-           2: 'Usage error.'
-          }[retcode]
+           2: 'Usage error.'}[retcode]
     return ret
 
 
