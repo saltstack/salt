@@ -1098,6 +1098,8 @@ def saltversion():
 def saltversioninfo():
     '''
     Return the version_info of salt
+
+     .. versionadded:: 0.17.0
     '''
     # Provides:
     #   saltversioninfo
