@@ -43,7 +43,7 @@ def run(platform, provider, commit, clean):
     '''
     htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
     vm_name = 'ZZZ{0}{1}'.format(platform, htag)
-    cmd = 'salt-cloud --script-args "git {0}" -p {1}_{2} {3}'.format(
+    cmd = 'salt-cloud --script-args "-n git {0}" -p {1}_{2} {3}'.format(
             commit, provider, platform, vm_name)
     print('Running CMD: {0}'.format(cmd))
     proc = NonBlockingPopen(
