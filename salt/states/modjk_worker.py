@@ -1,15 +1,18 @@
 '''
-Send commands to a modjk loadbalancer via the peer system
+Send commands to a :strong:`modjk` load balancer via the peer system
 
-This module is usefull with the prereq feature to remove/add the worker
-from the loadbalancer before deploying/restarting service
-http://docs.saltstack.com/ref/states/requisites.html#prereq
+This module can be used with the :doc:`prereq </ref/states/requisites>`
+requisite to remove/add the worker from the load balancer before
+deploying/restarting service
 
 Mandatory Settings:
-    - The minion needs to have a peer permission to publish the modjk.*
-      functions !
-    - The modjk loadbalncer needs to be configured as stated in the modjk
-      module !
+
+- The minion needs to have permission to publish the :strong:`modjk.*`
+  functions (see :doc:`here </ref/peer>` here for information on configuring
+  peer publishing permissions)
+
+- The modjk load balancer must be configured as stated in the :strong:`modjk`
+  execution module :mod:`documentation <salt.modules.modjk>`
 '''
 
 
@@ -17,7 +20,6 @@ def __virtual__():
     '''
     Check if we have peer access ?
     '''
-
     return 'modjk_worker'
 
 
