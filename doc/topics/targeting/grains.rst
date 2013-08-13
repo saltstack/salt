@@ -63,6 +63,8 @@ Grains data can be listed by using the 'grains.items' module:
     salt '*' grains.items
 
 
+.. _static-custom-grains:
+
 Grains in the Minion Config
 ===========================
 
@@ -141,6 +143,8 @@ For this example to work, you would need the grain ``node_type`` and the correct
             - {{ self }}
 
 With the JINJA, we simplified the Top file, and allowed SaltStack to work it's magic.
+
+.. _writing-grains:
 
 Writing Grains
 ==============
