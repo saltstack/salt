@@ -1,5 +1,6 @@
 # Import Python libs
 import os
+import sys
 import shutil
 import tempfile
 from cStringIO import StringIO
