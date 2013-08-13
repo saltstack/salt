@@ -1,24 +1,34 @@
 '''
-Control Modjk via the Status worker
-http://tomcat.apache.org/connectors-doc/reference/status.html
+Control Modjk via the Apache Tomcat `Status worker`_
 
-The following configuration needs to exists in pillar/grains
-each entry nested in modjk is a profile of the loadbalancer in question
-this would give support to multiple modjk balancers in different hosts/vhosts
+.. _`Status worker`: http://tomcat.apache.org/connectors-doc/reference/status.html
 
-modjk:
-  'default':
-    'url': http://localhost/jkstatus
-    'user': modjk
-    'pass': secret
-    'realm': 'authentication realm for digest passwords'
-    'timeout': 5
-  'otherVhost:
-    'url': http://otherVhost/jkstatus
-    'user': modjk
-    'pass': secret2
-    'realm': 'authentication realm2 for digest passwords'
-    'timeout': 600
+Below is an example of the configuration needed for this module. This
+configuration data can be placed either in :doc:`grains
+</topics/targeting/grains>` or :doc:`pillar </topics/pillar/index>`.
+
+If using grains, this can be accomplished :ref:`statically
+<static-custom-grains>` or via a :ref:`grain module <writing-grains>`.
+
+If using pillar, the yaml configuration can be placed directly into a pillar
+SLS file, making this both the easier and more dynamic method of configuring
+this module.
+
+.. code-block:: yaml
+
+    modjk:
+      default:
+        url: http://localhost/jkstatus
+        user: modjk
+        pass: secret
+        realm: authentication realm for digest passwords
+        timeout: 5
+      otherVhost:
+        url: http://otherVhost/jkstatus
+        user: modjk
+        pass: secret2
+        realm: authentication realm2 for digest passwords
+        timeout: 600
 '''
 
 # Python libs
@@ -164,11 +174,11 @@ def list_configured_members(lb, profile='default'):
     config = dump_config(profile)
 
     try:
-        ret = config['worker.{0}.balance_workers'.format(lb)].strip().split(',')
+        ret = config['worker.{0}.balance_workers'.format(lb)]
     except KeyError:
         return []
 
-    return filter(None, ret)
+    return filter(None, ret.strip().split(','))
 
 
 def list_running_members(lb, profile='default'):
