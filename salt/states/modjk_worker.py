@@ -23,13 +23,18 @@ def __virtual__():
     return 'modjk_worker'
 
 
-def _send_command(cmd, worker, lb, target, profile='default', expr_form='glob'):
+def _send_command(cmd,
+                  worker,
+                  lbn,
+                  target,
+                  profile='default',
+                  expr_form='glob'):
     '''
     Send a command to the modjk loadbalancer
     The minion need to be able to publish the commands to the load balancer
 
     cmd:
-        worker_stop - won't get any traffic from the lb
+        worker_stop - won't get any traffic from the lbn
         worker_activate - activate the worker
         worker_disable - will get traffic only for current sessions
     '''
@@ -42,7 +47,7 @@ def _send_command(cmd, worker, lb, target, profile='default', expr_form='glob'):
 
     # Send the command to target
     func = 'modjk.{0}'.format(cmd)
-    args = [worker, lb, profile]
+    args = [worker, lbn, profile]
     response = __salt__['publish.publish'](target, func, args, expr_form)
 
     # Get errors and list of affeced minions
@@ -55,7 +60,9 @@ def _send_command(cmd, worker, lb, target, profile='default', expr_form='glob'):
 
     # parse response
     if not response:
-        ret['msg'] = 'no servers answered the published command {0}'.format(cmd)
+        ret['msg'] = 'no servers answered the published command {0}'.format(
+            cmd
+        )
         return ret
     elif len(errors) > 0:
         ret['msg'] = 'the following minions return False'
@@ -68,14 +75,19 @@ def _send_command(cmd, worker, lb, target, profile='default', expr_form='glob'):
         return ret
 
 
-def _worker_status(target, worker, activation, profile='default', expr_form='glob'):
+def _worker_status(target,
+                   worker,
+                   activation,
+                   profile='default',
+                   expr_form='glob'):
     '''
     Check if the worker is in `activation` state in the targeted load balancers
 
     The function will return the following dictionary:
         result - False if no server returned from the published command
         errors - list of servers that couldn't find the worker
-        wrong_state - list of servers that the worker was in the wrong state (not activation)
+        wrong_state - list of servers that the worker was in the wrong state
+                      (not activation)
     '''
 
     ret = {
@@ -85,7 +97,9 @@ def _worker_status(target, worker, activation, profile='default', expr_form='glo
     }
 
     args = [worker, profile]
-    status = __salt__['publish.publish'](target, 'modjk.worker_status', args, expr_form)
+    status = __salt__['publish.publish'](
+        target, 'modjk.worker_status', args, expr_form
+    )
 
     # Did we got any respone from someone ?
     if not status:
@@ -102,7 +116,7 @@ def _worker_status(target, worker, activation, profile='default', expr_form='glo
     return ret
 
 
-def _talk2modjk(name, lb, target, action, profile='default', expr_form='glob'):
+def _talk2modjk(name, lbn, target, action, profile='default', expr_form='glob'):
     '''
     Wrapper function for the stop/disable/activate functions
     '''
@@ -119,20 +133,26 @@ def _talk2modjk(name, lb, target, action, profile='default', expr_form='glob'):
     }
 
     # Check what needs to be done
-    status = _worker_status(target, name, action_map[action], profile, expr_form)
+    status = _worker_status(
+        target, name, action_map[action], profile, expr_form
+    )
     if not status['result']:
         ret['result'] = False
-        ret['comment'] = 'no servers answered the published command modjk.worker_status'
+        ret['comment'] = ('no servers answered the published command '
+                          'modjk.worker_status')
         return ret
     if status['errors']:
         ret['result'] = False
-        ret['comment'] = 'the following balancers could not find the worker {0}: {1}'.format(name, status['errors'])
+        ret['comment'] = ('the following balancers could not find the '
+                          'worker {0}: {1}'.format(name, status['errors']))
         return ret
     if not status['wrong_state']:
-        ret['comment'] = 'the worker is in the desired activation state on all the balancers'
+        ret['comment'] = ('the worker is in the desired activation state on '
+                          'all the balancers')
         return ret
     else:
-        ret['comment'] = 'the action {0} will be sent to the balancers {1}'.format(action, status['wrong_state'])
+        ret['comment'] = ('the action {0} will be sent to the balancers '
+                          '{1}'.format(action, status['wrong_state']))
         ret['changes'] = {action: status['wrong_state']}
 
     if __opts__['test']:
@@ -140,60 +160,63 @@ def _talk2modjk(name, lb, target, action, profile='default', expr_form='glob'):
         return ret
 
     # Send the action command to target
-    response = _send_command(action, name, lb, target, profile, expr_form)
+    response = _send_command(action, name, lbn, target, profile, expr_form)
     ret['comment'] = response['msg']
     ret['result'] = response['code']
     return ret
 
 
-def stop(name, lb, target, profile='default', expr_form='glob'):
+def stop(name, lbn, target, profile='default', expr_form='glob'):
     '''
-    Stop the named worker from the lb load balancers at the targeted minions
-    The worker won't get any traffic from the lb
+    Stop the named worker from the lbn load balancers at the targeted minions
+    The worker won't get any traffic from the lbn
 
     Example::
 
         disable-before-deploy:
           modjk_worker.stop:
             - name: {{ grains['id'] }}
-            - lb: application
+            - lbn: application
             - target: 'roles:balancer'
             - expr_form: grain
     '''
 
-    return _talk2modjk(name, lb, target, 'worker_stop', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_stop', profile, expr_form)
 
 
-def activate(name, lb, target, profile='default', expr_form='glob'):
+def activate(name, lbn, target, profile='default', expr_form='glob'):
     '''
-    Activate the named worker from the lb load balancers at the targeted minions
+    Activate the named worker from the lbn load balancers at the targeted
+    minions
 
     Example::
 
         disable-before-deploy:
           modjk_worker.activate:
             - name: {{ grains['id'] }}
-            - lb: application
+            - lbn: application
             - target: 'roles:balancer'
             - expr_form: grain
     '''
 
-    return _talk2modjk(name, lb, target, 'worker_activate', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_activate', profile, expr_form)
 
 
-def disable(name, lb, target, profile='default', expr_form='glob'):
+def disable(name, lbn, target, profile='default', expr_form='glob'):
     '''
-    Disable the named worker from the lb load balancers at the targeted minions
-    The worker will get traffic only for current sessions and won't get new ones
+    Disable the named worker from the lbn load balancers at the targeted
+    minions.
+    The worker will get traffic only for current sessions and won't get new
+    ones.
 
     Example::
 
         disable-before-deploy:
           modjk_worker.disable:
             - name: {{ grains['id'] }}
-            - lb: application
+            - lbn: application
             - target: 'roles:balancer'
             - expr_form: grain
     '''
 
-    return _talk2modjk(name, lb, target, 'worker_disable', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_disable', profile, expr_form)
