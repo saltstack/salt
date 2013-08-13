@@ -9,6 +9,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 
 log = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def _check_pkgng():
     return os.path.isfile('/var/db/pkg/local.sqlite')
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _cmd(cmd):
     return salt.utils.which(cmd)
 
