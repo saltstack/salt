@@ -1091,8 +1091,18 @@ def saltversion():
     '''
     # Provides:
     #   saltversion
-    from salt import __version__
+    from salt.version import __version__
     return {'saltversion': __version__}
+
+
+def saltversioninfo():
+    '''
+    Return the version_info of salt
+    '''
+    # Provides:
+    #   saltversioninfo
+    from salt.version import __version_info__
+    return {'saltversioninfo': __version_info__}
 
 
 # Relatively complex mini-algorithm to iterate over the various
