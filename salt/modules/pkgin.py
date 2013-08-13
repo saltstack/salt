@@ -9,12 +9,13 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system, return full path
@@ -31,7 +32,7 @@ def _check_pkgin():
     return ppath
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _supports_regex():
     '''
     Get the pkgin version
