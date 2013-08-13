@@ -168,8 +168,7 @@ class SupervisordModuleTest(integration.ModuleCase):
         ret = self.run_function(
             'supervisord.stop', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
-        self.assertEqual(
-            ret, 'sleep_service: stopped\nsleep_service2: stopped')
+        self.assertIn('sleep_service: stopped', ret)
 
     def test_stop_all_not_running(self):
         '''
