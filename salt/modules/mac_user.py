@@ -3,9 +3,6 @@ Manage users with the useradd command
 '''
 
 # Import python libs
-import re
-import sys
-
 try:
     import grp
     import pwd
@@ -16,23 +13,13 @@ import copy
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types, callable as _callable
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
-RETCODE_12_ERROR_REGEX = re.compile(
-    r'userdel(.*)warning(.*)/var/mail(.*)No such file or directory'
-)
 
 
 def __virtual__():
-    '''
-    Set the user module if the kernel is Linux or OpenBSD
-    and remove some of the functionality on OS X
-    '''
-    return (
-        'user' if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD')
-        else False
-    )
+    return 'user' if __grains__.get('kernel') == 'Darwin' else False
 
 
 def _get_gecos(name):
@@ -83,69 +70,64 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    cmd = ['useradd']
+    cmd = 'useradd '
     if shell:
-        cmd.extend(['-s', shell])
+        cmd += '-s {0} '.format(shell)
     if uid not in (None, ''):
-        cmd.extend(['-u', str(uid)])
+        cmd += '-u {0} '.format(uid)
     if gid not in (None, ''):
-        cmd.extend(['-g', str(gid)])
+        cmd += '-g {0} '.format(gid)
     elif groups is not None and name in groups:
-        try:
-            for line in salt.utils.fopen('/etc/login.defs'):
-                if 'USERGROUPS_ENAB' in line[:15]:
-                    continue
-
-                if 'yes' in line:
-                    cmd.extend([
-                        '-g', str(__salt__['file.group_to_gid'](name))
-                    ])
-
-                # We found what we wanted, let's break out of the loop
-                break
-        except OSError:
-            log.debug('Error reading /etc/login.defs', exc_info=True)
+        def usergroups():
+            retval = False
+            try:
+                for line in salt.utils.fopen('/etc/login.defs'):
+                    if 'USERGROUPS_ENAB' in line[:15]:
+                        if "yes" in line:
+                            retval = True
+            except Exception:
+                log.debug('Error reading /etc/login.defs', exc_info=True)
+            return retval
+        if usergroups():
+            cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
 
     if createhome:
-        cmd.append('-m')
+        cmd += '-m '
     elif createhome is False:
-        cmd.append('-M')
+        cmd += '-M '
 
     if home is not None:
-        cmd.extend(['-d', home])
+        cmd += '-d {0} '.format(home)
 
     if not unique:
-        cmd.append('-o')
-
-    if system and __grains__['kernel'] != 'NetBSD':
-        cmd.append('-r')
-
-    cmd.append(name)
-
-    ret = __salt__['cmd.run_all'](' '.join(cmd))
-
-    if ret['retcode'] != 0:
+        cmd += '-o '
+    if system:
+        if not __grains__['kernel'] == 'NetBSD':
+            cmd += '-r '
+    cmd += name
+    ret = __salt__['cmd.run_all'](cmd)['retcode']
+    if ret != 0:
         return False
-
-    # At this point, the user was successfully created, so return true
-    # regardless of the outcome of the below functions. If there is a
-    # problem wth changing any of the user's info below, it will be raised
-    # in a future highstate call. If anyone has a better idea on how to do
-    # this, feel free to change it, but I didn't think it was a good idea
-    # to return False when the user was successfully created since A) the
-    # user does exist, and B) running useradd again would result in a
-    # nonzero exit status and be interpreted as a False result.
-    if groups:
-        chgroups(name, groups)
-    if fullname:
-        chfullname(name, fullname)
-    if roomnumber:
-        chroomnumber(name, roomnumber)
-    if workphone:
-        chworkphone(name, workphone)
-    if homephone:
-        chhomephone(name, homephone)
-    return True
+    else:
+        # At this point, the user was successfully created, so return true
+        # regardless of the outcome of the below functions. If there is a
+        # problem wth changing any of the user's info below, it will be raised
+        # in a future highstate call. If anyone has a better idea on how to do
+        # this, feel free to change it, but I didn't think it was a good idea
+        # to return False when the user was successfully created since A) the
+        # user does exist, and B) running useradd again would result in a
+        # nonzero exit status and be interpreted as a False result.
+        if groups:
+            chgroups(name, groups)
+        if fullname:
+            chfullname(name, fullname)
+        if roomnumber:
+            chroomnumber(name, roomnumber)
+        if workphone:
+            chworkphone(name, workphone)
+        if homephone:
+            chhomephone(name, homephone)
+        return True
 
 
 def delete(name, remove=False, force=False):
@@ -156,38 +138,16 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    cmd = ['userdel']
-
+    cmd = 'userdel '
     if remove:
-        cmd.append('-r')
-
+        cmd += '-r '
     if force:
-        cmd.append('-f')
+        cmd += '-f '
+    cmd += name
 
-    cmd.append(name)
+    ret = __salt__['cmd.run_all'](cmd)
 
-    ret = __salt__['cmd.run_all'](' '.join(cmd))
-
-    if ret['retcode'] == 0:
-        # Command executed with no errors
-        return True
-
-    if ret['retcode'] == 12:
-        # There's a known bug in Debian based distributions, at least, that
-        # makes the command exit with 12, see:
-        #  https://bugs.launchpad.net/ubuntu/+source/shadow/+bug/1023509
-        if __grains__['os_family'] not in ('Debian',):
-            return False
-
-        if RETCODE_12_ERROR_REGEX.match(ret['stderr']) is not None:
-            # We've hit the bug, let's log it and not fail
-            log.debug(
-                'While the userdel exited with code 12, this is a know bug on '
-                'debian based distributions. See http://goo.gl/HH3FzT'
-            )
-            return True
-
-    return False
+    return not ret['retcode']
 
 
 def getent():
