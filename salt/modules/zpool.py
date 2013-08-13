@@ -8,10 +8,12 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_zpool():
     '''
     Looks to see if zpool is present on the system
@@ -19,7 +21,7 @@ def _check_zpool():
     return salt.utils.which('zpool')
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _check_mkfile():
     '''
     Looks to see if mkfile is present on the system
