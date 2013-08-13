@@ -46,6 +46,8 @@ def run(platform, provider, commit, clean):
     cmd = 'salt-cloud --script-args "-n git {0}" -p {1}_{2} {3}'.format(
             commit, provider, platform, vm_name)
     print('Running CMD: {0}'.format(cmd))
+    sys.stdout.flush()
+
     proc = NonBlockingPopen(
         cmd,
         shell=True,
@@ -55,11 +57,14 @@ def run(platform, provider, commit, clean):
     )
     proc.poll_and_read_until_finish()
     proc.communicate()
+
     # Run tests here
     cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
                 vm_name,
                 commit)
     print('Running CMD: {0}'.format(cmd))
+    sys.stdout.flush()
+
     proc = NonBlockingPopen(
         cmd,
         shell=True,
@@ -73,6 +78,8 @@ def run(platform, provider, commit, clean):
         print(stderr)
     if stdout:
         print(stdout)
+
+    sys.stdout.flush()
 
     try:
         match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
@@ -90,13 +97,12 @@ def run(platform, provider, commit, clean):
             # Anything else, raise the exception
             raise
 
-    # Flush any remaining stdout output
-    sys.stdout.flush()
-
     # Clean up the vm
     if clean:
         cmd = 'salt-cloud -d {0} -y'.format(vm_name)
         print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
         proc = NonBlockingPopen(
             cmd,
             shell=True,
