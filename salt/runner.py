@@ -92,7 +92,7 @@ class RunnerClient(object):
         proc.start()
         return tag
 
-    def master_call(self,**kwargs):
+    def master_call(self, **kwargs):
         '''
         Send a function call to a wheel module through the master network interface
         Expects that one of the kwargs is key 'fun' whose value is the namestring
