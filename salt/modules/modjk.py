@@ -1,7 +1,6 @@
 '''
-Control Modjk via the Apache Tomcat `Status worker`_
-
-.. _`Status worker`: http://tomcat.apache.org/connectors-doc/reference/status.html
+Control Modjk via the Apache Tomcat "Status" worker
+(http://tomcat.apache.org/connectors-doc/reference/status.html)
 
 Below is an example of the configuration needed for this module. This
 configuration data can be placed either in :doc:`grains
