@@ -26,8 +26,8 @@ def _parse_pkg_meta(path):
     def parse_rpm(path):
         try:
             from salt.modules.yumpkg5 import __QUERYFORMAT, _parse_pkginfo
-            from salt.utils import namespaced_function
-            _parse_pkginfo = namespaced_function(_parse_pkginfo, globals())
+            from salt.utils import namespaced_function as _namespaced_function
+            _parse_pkginfo = _namespaced_function(_parse_pkginfo, globals())
         except ImportError:
             log.critical('Error importing helper functions. This is almost '
                          'certainly a bug.')
