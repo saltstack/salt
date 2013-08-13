@@ -25,7 +25,7 @@ def __virtual__():
 
 def _send_command(cmd,
                   worker,
-                  lb,
+                  lbn,
                   target,
                   profile='default',
                   expr_form='glob'):
@@ -34,7 +34,7 @@ def _send_command(cmd,
     The minion need to be able to publish the commands to the load balancer
 
     cmd:
-        worker_stop - won't get any traffic from the lb
+        worker_stop - won't get any traffic from the lbn
         worker_activate - activate the worker
         worker_disable - will get traffic only for current sessions
     '''
@@ -47,7 +47,7 @@ def _send_command(cmd,
 
     # Send the command to target
     func = 'modjk.{0}'.format(cmd)
-    args = [worker, lb, profile]
+    args = [worker, lbn, profile]
     response = __salt__['publish.publish'](target, func, args, expr_form)
 
     # Get errors and list of affeced minions
@@ -116,7 +116,7 @@ def _worker_status(target,
     return ret
 
 
-def _talk2modjk(name, lb, target, action, profile='default', expr_form='glob'):
+def _talk2modjk(name, lbn, target, action, profile='default', expr_form='glob'):
     '''
     Wrapper function for the stop/disable/activate functions
     '''
@@ -160,33 +160,33 @@ def _talk2modjk(name, lb, target, action, profile='default', expr_form='glob'):
         return ret
 
     # Send the action command to target
-    response = _send_command(action, name, lb, target, profile, expr_form)
+    response = _send_command(action, name, lbn, target, profile, expr_form)
     ret['comment'] = response['msg']
     ret['result'] = response['code']
     return ret
 
 
-def stop(name, lb, target, profile='default', expr_form='glob'):
+def stop(name, lbn, target, profile='default', expr_form='glob'):
     '''
-    Stop the named worker from the lb load balancers at the targeted minions
-    The worker won't get any traffic from the lb
+    Stop the named worker from the lbn load balancers at the targeted minions
+    The worker won't get any traffic from the lbn
 
     Example::
 
         disable-before-deploy:
           modjk_worker.stop:
             - name: {{ grains['id'] }}
-            - lb: application
+            - lbn: application
             - target: 'roles:balancer'
             - expr_form: grain
     '''
 
-    return _talk2modjk(name, lb, target, 'worker_stop', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_stop', profile, expr_form)
 
 
-def activate(name, lb, target, profile='default', expr_form='glob'):
+def activate(name, lbn, target, profile='default', expr_form='glob'):
     '''
-    Activate the named worker from the lb load balancers at the targeted
+    Activate the named worker from the lbn load balancers at the targeted
     minions
 
     Example::
@@ -194,17 +194,17 @@ def activate(name, lb, target, profile='default', expr_form='glob'):
         disable-before-deploy:
           modjk_worker.activate:
             - name: {{ grains['id'] }}
-            - lb: application
+            - lbn: application
             - target: 'roles:balancer'
             - expr_form: grain
     '''
 
-    return _talk2modjk(name, lb, target, 'worker_activate', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_activate', profile, expr_form)
 
 
-def disable(name, lb, target, profile='default', expr_form='glob'):
+def disable(name, lbn, target, profile='default', expr_form='glob'):
     '''
-    Disable the named worker from the lb load balancers at the targeted
+    Disable the named worker from the lbn load balancers at the targeted
     minions.
     The worker will get traffic only for current sessions and won't get new
     ones.
@@ -214,9 +214,9 @@ def disable(name, lb, target, profile='default', expr_form='glob'):
         disable-before-deploy:
           modjk_worker.disable:
             - name: {{ grains['id'] }}
-            - lb: application
+            - lbn: application
             - target: 'roles:balancer'
             - expr_form: grain
     '''
 
-    return _talk2modjk(name, lb, target, 'worker_disable', profile, expr_form)
+    return _talk2modjk(name, lbn, target, 'worker_disable', profile, expr_form)
