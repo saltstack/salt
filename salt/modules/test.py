@@ -302,6 +302,22 @@ def not_loaded():
     return sorted(ret)
 
 
+def opts_pkg():
+    '''
+    Return an opts package with the grains and opts for this minion.
+    This is primarily used to create the options used for master side
+    state compiling routines
+
+    CLI Example::
+
+        salt '*' test.opts_pkg
+    '''
+    ret = {}
+    ret.update(__opts__)
+    ret['grains'] = __grains__
+    return ret
+
+
 def tty(device, echo=None):
     '''
     Echo a string to a specific tty
