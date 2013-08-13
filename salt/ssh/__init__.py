@@ -438,7 +438,6 @@ class FunctionWrapper(dict):
             if ret.startswith('deploy'):
                 single.deploy()
                 ret = single.cmd_block()
-            #print ret
             return ret
         return caller
 
