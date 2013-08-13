@@ -90,6 +90,9 @@ def run(platform, provider, commit, clean):
             # Anything else, raise the exception
             raise
 
+    # Flush any remaining stdout output
+    sys.stdout.flush()
+
     # Clean up the vm
     if clean:
         cmd = 'salt-cloud -d {0} -y'.format(vm_name)
