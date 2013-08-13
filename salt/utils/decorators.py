@@ -176,3 +176,18 @@ def identical_signature_wrapper(original_function, wrapped_function):
     )
     exec function_def in context
     return wraps(original_function)(context[original_function.__name__])
+
+
+def memoize(func):
+    '''
+    Memoize aka cache the return output of a function
+    given a specific set of arguments
+    '''
+    cache = {}
+
+    @wraps(func)
+    def _memoize(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+    return _memoize
