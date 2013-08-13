@@ -146,6 +146,8 @@ def restore(file_name):
     '''
     Reads archive created by pkg backup -d and recreates the database.
 
+    CLI Example::
+
         salt '*' pkgng.restore /tmp/pkg
     '''
     cmd = 'pkg backup -r {0}'.format(file_name)
