@@ -85,6 +85,7 @@ Full list of builtin execution modules
     match
     mdadm
     mine
+    modjk
     mongodb
     monit
     moosefs
