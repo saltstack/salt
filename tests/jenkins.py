@@ -58,7 +58,8 @@ def run(platform, provider, commit, clean):
     proc.poll_and_read_until_finish()
     proc.communicate()
     if proc.returncode > 0:
-        print('Failed to bootstrap VM')
+        print('Failed to bootstrap VM. Exit code: {0}'.format(proc.returncode))
+        sys.stdout.flush()
         sys.exit(proc.returncode)
 
     # Run tests here
