@@ -7,11 +7,34 @@ This script is intended to be shell-centric!!
 '''
 
 # Import python libs
+import os
+import re
 import sys
 import subprocess
 import hashlib
 import random
 import optparse
+
+try:
+    from salt.utils.nb_popen import NonBlockingPopen
+except ImportError:
+    # Salt not installed, or nb_popen was not yet shipped with it
+    salt_lib = os.path.abspath(
+        os.path.dirname(os.path.dirname(__file__))
+    )
+    if salt_lib not in sys.path:
+        sys.path.insert(0, salt_lib)
+    try:
+        # Let's try using the current checked out code
+        from salt.utils.nb_popen import NonBlockingPopen
+    except ImportError:
+        # Still an ImportError??? Let's use some "brute-force"
+        sys.path.insert(
+            0,
+            os.path.join(salt_lib, 'salt', 'utils')
+        )
+        from nb_popen import NonBlockingPopen
+
 
 
 def run(platform, provider, commit, clean):
@@ -23,31 +46,63 @@ def run(platform, provider, commit, clean):
     cmd = 'salt-cloud --script-args "git {0}" -p {1}_{2} {3}'.format(
             commit, provider, platform, vm_name)
     print('Running CMD: {0}'.format(cmd))
-    subprocess.call(
-            cmd,
-            shell=True)
+    proc = NonBlockingPopen(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stream_stds=True
+    )
+    proc.poll_and_read_until_finish()
+    proc.communicate()
     # Run tests here
-    cmd = 'salt {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
+    cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
                 vm_name,
-                commit),
+                commit)
     print('Running CMD: {0}'.format(cmd))
-    out = subprocess.Popen(
+    proc = NonBlockingPopen(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stream_stds=True
+    )
+    proc.poll_and_read_until_finish()
+    stdout, stderr = proc.communicate()
+    if stderr:
+        print(stderr)
+    if stdout:
+        print(stdout)
+
+    try:
+        match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
+        retcode = int(match.group('exitcode'))
+    except AttributeError:
+        # No regex matching
+        retcode = 1
+    except ValueError:
+        # Not a number!?
+        retcode = 1
+    except TypeError:
+        # No output!?
+        retcode = 1
+        if stdout:
+            # Anything else, raise the exception
+            raise
+
+    # Clean up the vm
+    if clean:
+        cmd = 'salt-cloud -d {0} -y'.format(vm_name)
+        print('Running CMD: {0}'.format(cmd))
+        proc = NonBlockingPopen(
             cmd,
             shell=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE).communicate()[0]
-    print(out)
-    if 'Result:    False' in out:
-        retcode = 1
-    else:
-        retcode = 0
-    # Clean up the vm
-    if clean:
-        cmd = 'salt-cloud -d {0} -y'.format(vm_name),
-        print('Running CMD: {0}'.format(cmd))
-        subprocess.call(
-                cmd,
-                shell=True)
+            stderr=subprocess.PIPE,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
     return retcode
 
 
