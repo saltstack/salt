@@ -43,7 +43,7 @@ def run(platform, provider, commit, clean):
     '''
     htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
     vm_name = 'ZZZ{0}{1}'.format(platform, htag)
-    cmd = 'salt-cloud --script-args "-n git {0}" -p {1}_{2} {3}'.format(
+    cmd = 'salt-cloud -l debug --script-args "-D -n git {0}" -p {1}_{2} {3}'.format(
             commit, provider, platform, vm_name)
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
@@ -66,7 +66,7 @@ def run(platform, provider, commit, clean):
     sys.stdout.flush()
 
     # Run tests here
-    cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
+    cmd = 'salt -l debug -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
                 vm_name,
                 commit)
     print('Running CMD: {0}'.format(cmd))
