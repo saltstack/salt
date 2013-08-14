@@ -1,16 +1,54 @@
 '''
 Manage events
-'''
 
-# Events are all fired off via a zeromq pub socket, and listened to with
-# local subscribers. The event messages are comprised of two parts delimited
-# at the 20 char point. The first 20 characters are used for the zeromq
-# subscriber to match publications and 20 characters were chosen because it is
-# a few more characters than the length of a jid. The 20 characters
-# are padded with "|" chars so that the msgpack component can be predictably
-# extracted. All of the formatting is self contained in the event module, so
-# we should be able to modify the structure in the future since the same module
-# to read is the same module to fire off events.
+Events are all fired off via a zeromq 'pub' socket, and listened to with
+local zeromq 'sub' sockets
+
+
+All of the formatting is self contained in the event module, so
+we should be able to modify the structure in the future since the same module
+used to read events is the same module used to fire off events.
+
+Old style event messages were comprised of two parts delimited
+at the 20 char point. The first 20 characters are used for the zeromq
+subscriber to match publications and 20 characters was chosen because it was at
+the time a few more characters than the length of a jid (Job ID).
+Any tags of length less than 20 characters were padded with "|" chars out to 20 characters.
+Although not explicit, the data for an event comprised a python dict that was serialized by
+msgpack.
+
+
+New style event messages support hierarchical namespacing for event tags while still
+being backwards compatible with old style tags.
+In the new style the tag delimeter is the msgpack dict start character, that is,
+chr(0x81)
+This now imposes a hard constraint that event data must be in the form of a python
+dict and fire-event will now raise a ValueError if data is not. Old style tags
+are no longer padded.
+
+The new style convention uses pipe characters ("|") as the namespace delimeters
+within the over the wire tag, and uses dots (".") as the namespace delimeters
+within the user observable tag. 
+The event module transparently does the substitution between pipes and dots.
+For example:
+User tag
+    'salt.runner.manage.status.start'
+becomes over the wire message tag
+    'salt|runner|manage|status|start'
+
+Using the period in the user observable tag is less confusing to the user as
+periods are already used in Python and elsewhere as name space delimiters whereas
+the pipe could be confusing to the user to interpret.
+Because the pipe was previously used to pad the tag, it works as a
+backwards compatible delimiter within the over the wire tag. 
+
+With the new convention tags can be of any non-zero length and the end of tag is determined by
+the msgpack dict start character. This is because the payload portion
+of an event is the msgpack.dumps() of a python dict so it will always start with
+the msgpack character used to indicate the start of a dict, that is, ord(0x81).
+
+
+'''
 
 # Import python libs
 import time
@@ -22,6 +60,7 @@ import errno
 import logging
 import multiprocessing
 from multiprocessing import Process
+from collections import MutableMapping
 
 # Import third party libs
 try:
@@ -150,12 +189,17 @@ class SaltEvent(object):
         if self.sub in socks and socks[self.sub] == zmq.POLLIN:
             raw = self.sub.recv()
             # Double check the tag
-            if not raw[:20].rstrip('|').startswith(tag):
+            mtag, sep, mdata = raw.partition('||') #split tag from data
+            #mtag = mtag.rstrip('|').replace('|', '.') #substitute namespace delimiter
+            mtag = mtag.rstrip('|') #strip old padding
+            
+            if not mtag.startswith(tag): #tag not match
                 return None
-            data = self.serial.loads(raw[20:])
+            
+            data = self.serial.loads(mdata)
             if full:
                 ret = {'data': data,
-                        'tag': raw[:20].rstrip('|')}
+                        'tag': mtag}
                 return ret
             return data
         return None
@@ -170,14 +214,27 @@ class SaltEvent(object):
                 continue
             yield data
 
-    def fire_event(self, data, tag=''):
+    def fire_event(self, data, tag, flat=True):
         '''
-        Send a single event into the publisher
+        Send a single event into the publisher with paylod dict "data" and event
+        identifier "tag"
+        
+        If not flat use new style hierarchical namespaced tags
+        Otherwise use old style tags
         '''
+        if not str(tag): #no empty tags allowed
+            raise ValueError('Empty tag.')
+        
+        if not isinstance(data, MutableMapping): #data must be dict
+            raise ValueError('Dict object expected, not "{0!r}".'.format(data))
+            
         if not self.cpush:
             self.connect_pull()
-        tag = '{0:|<20}'.format(tag)
-        event = '{0}{1}'.format(tag, self.serial.dumps(data))
+            
+        #if not flat:  #tag = '{0:|<20}'.format(tag)
+            #tag = tag.replace('.', '|')
+        
+        event = '{0}||{1}'.format(tag, self.serial.dumps(data))
         self.push.send(event)
         return True
 
