@@ -1,6 +1,8 @@
 '''
-The default file server backend based on the environments in the file_roots
-configuration option
+The default file server backend
+
+Based on the environments in the :conf_master:`file_roots` configuration
+option.
 '''
 
 # Import python libs
