@@ -74,8 +74,6 @@ import salt.utils
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
-TAGEND = '\n\n' # long tag delimeter
-
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
 SUB_EVENT = set([
@@ -83,6 +81,36 @@ SUB_EVENT = set([
             'state.sls',
             ])
 
+TAGEND = '\n\n' # long tag delimeter
+TAGPARTER = '.' # name spaced tag delimeter
+SALT = 'salt' #base prefix for all salt. events
+# dict map of namespaced base tag prefixes for salt events
+TAGS = \
+{
+    'auth': 'auth', # prefix for all .auth events
+    'job': 'job', # prefix for all .job events
+    'key': 'key', # prefix for all .key events
+    'minion': 'minion', # prefix for all .minion events
+}
+
+def tagify(suffix='', prefix='', base=SALT):
+    '''
+    convenience function to build a namespaced event tag string
+    from joinning with the TABPART character the base, prefix and suffix
+    
+    If string prefix is a valid key in TAGS Then use the value of key prefix
+    Else use prefix string
+    
+    If suffix is a list Then join all string elements of suffix individually
+    Else use string suffix
+    
+    '''
+    parts = [base, TAGS.get(prefix, prefix)]
+    if hasattr(suffix, 'append'): # list so extend parts
+        parts.extend(suffix)
+    else: # string so append
+        parts.append(suffix)
+    return (TAGPARTER.join([part for part in parts if part]))
 
 class SaltEvent(object):
     '''
@@ -272,12 +300,20 @@ class SaltEvent(object):
                 try:
                     for tag, data in load.get('return', {}).items():
                         data['retcode'] = load['retcode']
-                        tag = tag.split('_|-')
+                        tags = tag.split('_|-')
                         if data.get('result') is False:
                             self.fire_event(
                                     data,
-                                    '{0}.{1}'.format(tag[0], tag[-1])
-                                    )
+                                    '{0}.{1}'.format(tags[0], tags[-1])) # old dup event
+                            self.fire_event(
+                                data,
+                                tagify([load['jid'],
+                                        'ret',
+                                        load['id'],
+                                        'error',
+                                        tags[0],
+                                        tags[-1]],
+                                    'job'))                           
                 except Exception:
                     pass
             else:

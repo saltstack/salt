@@ -13,16 +13,17 @@ import salt.runner
 import salt.wheel
 import salt.utils
 from salt.exceptions import SaltException, EauthAuthenticationError
+from salt.utils.event import tagify
 
-def tokenify(low, token=None):
+def tokenify(cmd, token=None):
     '''
-    If token is not None Then assign token to 'token' key of lowstate cmd dict
-        low and return low
-    Otherwise return low
+    If token is not None Then assign token to 'token' key of cmd dict
+        and return cmd
+    Otherwise return cmd
     '''
     if token is not None:
-        low['token'] = token
-    return low
+        cmd['token'] = token
+    return cmd
 
 
 class APIClient(object):
@@ -288,4 +289,4 @@ class APIClient(object):
         Need to convert this to a master call with appropriate authentication
         
         '''
-        return (self.event.fire_event(data, tag))    
+        return (self.event.fire_event(data, tagify(tag, 'wui')))    
