@@ -7,10 +7,12 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_imgadm():
     '''
     Looks to see if imgadm is present on the system
@@ -25,8 +27,7 @@ def _exit_status(retcode):
     ret = {0: 'Successful completion.',
            1: 'An error occurred.',
            2: 'Usage error.',
-           3: 'Image not installed.'
-          }[retcode]
+           3: 'Image not installed.'}[retcode]
     return ret
 
 
