@@ -46,6 +46,7 @@ Full Table of Contents
     ref/runners/index
     ref/runners/all/index
     ref/wheel/all/index
+    ref/auth/all/index
     ref/output/all/index
     ref/clients/index
     ref/peer
@@ -53,6 +54,7 @@ Full Table of Contents
     ref/syndic
     ref/python-api
     ref/file_server/*
+    ref/file_server/all/index
     ref/configuration/*
     ref/internals/index
     ref/topology

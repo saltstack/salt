@@ -1,9 +1,7 @@
 '''
-Module to provide authentication using simple LDAP binds.
+Provide authentication using simple LDAP binds
 
-REQUIREMENT 1:
-
-Required python modules: ldap
+:depends:   - ldap Python module
 '''
 
 # Import python libs

@@ -1,14 +1,15 @@
 '''
-The backend for a fileserver based on Amazon S3 - see
-http://docs.saltstack.com/ref/file_server/index.html
+The backend for a fileserver based on Amazon S3
 
-This backend exposes directories in S3 buckets as salt environments.  This
-feature is managed by the fileserver_backend option in the salt master
-config.
+.. seealso:: :doc:`/ref/file_server/index`
+
+This backend exposes directories in S3 buckets as Salt environments.  This
+feature is managed by the :conf_master:`fileserver_backend` option in the Salt
+Master config.
 
 :configuration: S3 credentials can be either set in the master file using:
 
-    S3 credentials can be set in the master config file with:
+    S3 credentials can be set in the master config file with::
 
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -18,8 +19,8 @@ config.
 
     This fileserver supports two modes of operation for the buckets:
 
-    - A single bucket per environment:
-    eg.
+    - A single bucket per environment::
+
         s3.buckets:
             production:
                 - bucket1
@@ -28,15 +29,17 @@ config.
                 - bucket3
                 - bucket4
 
-    - Or multiple environments per bucket
-    eg.
+    - Or multiple environments per bucket::
+
         s3.buckets:
             - bucket1
             - bucket2
             - bucket3
             - bucket4
 
-    A multiple environment bucket must adhere to the following root directory structure:
+    A multiple environment bucket must adhere to the following root directory
+    structure::
+
         s3://<bucket name>/<environment>/<files>
 '''
 
