@@ -5,7 +5,7 @@ After enabling this backend, branches and tags in a remote git repository
 are exposed to salt as different environments. This feature is managed by
 the fileserver_backend option in the salt master config.
 
-:depends: gitpython Python module
+:depends:   - gitpython Python module
 '''
 
 # Import python libs
