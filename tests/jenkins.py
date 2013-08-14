@@ -66,7 +66,7 @@ def run(platform, provider, commit, clean):
     sys.stdout.flush()
 
     # Run tests here
-    cmd = 'salt -l debug -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
+    cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
                 vm_name,
                 commit)
     print('Running CMD: {0}'.format(cmd))
