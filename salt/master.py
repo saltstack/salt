@@ -2183,7 +2183,7 @@ class ClearFuncs(object):
 
         # Announce the job on the event bus
         self.event.fire_event(new_job_load, 'new_job') # old dup event
-        self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new_job'], 'job'))
+        self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
         # Verify the jid dir
         if not os.path.isdir(jid_dir):
