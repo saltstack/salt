@@ -54,6 +54,7 @@ Full Table of Contents
     ref/syndic
     ref/python-api
     ref/file_server/*
+    ref/file_server/all/index
     ref/configuration/*
     ref/internals/index
     ref/topology
