@@ -309,6 +309,74 @@ def query(params=None, setname=None, requesturl=None, location=None,
     return ret
 
 
+def _wait_for_spot_instance(update_callback,
+                           update_args=None,
+                           update_kwargs=None,
+                           timeout=5 * 60,
+                           interval=5,
+                           max_failures=10):
+    '''
+    Helper function that waits for a spot instance request to become active
+    for a specific maximum amount of time.
+
+    :param update_callback: callback function which queries the cloud provider
+                            for spot instance request. It must return None if the
+                            required data, running instance included, is not
+                            available yet.
+    :param update_args: Arguments to pass to update_callback
+    :param update_kwargs: Keyword arguments to pass to update_callback
+    :param timeout: The maximum amount of time(in seconds) to wait for the IP
+                    address.
+    :param interval: The looping interval, ie, the amount of time to sleep
+                     before the next iteration.
+    :param max_failures: If update_callback returns ``False`` it's considered
+                         query failure. This value is the amount of failures
+                         accepted before giving up.
+    :returns: The update_callback returned data
+    :raises: SaltCloudExecutionTimeout
+
+    '''
+    if update_args is None:
+        update_args = ()
+    if update_kwargs is None:
+        update_kwargs = {}
+
+    duration = timeout
+    while True:
+        log.debug(
+            'Waiting for spot instance reservation. Giving up in '
+            '00:{0:02d}:{1:02d}'.format(
+                int(timeout // 60),
+                int(timeout % 60)
+            )
+        )
+        data = update_callback(*update_args, **update_kwargs)
+        if data is False:
+            log.debug(
+                'update_callback has returned False which is considered a '
+                'failure. Remaining Failures: {0}'.format(max_failures)
+            )
+            max_failures -= 1
+            if max_failures <= 0:
+                raise SaltCloudExecutionFailure(
+                    'Too many failures occurred while waiting for '
+                    'the spot instance reservation to become active.'
+                )
+        elif data is not None:
+            return data
+
+        if timeout < 0:
+            raise SaltCloudExecutionTimeout(
+                'Unable to get an active spot instance request for '
+                '00:{0:02d}:{1:02d}'.format(
+                    int(duration // 60),
+                    int(duration % 60)
+                )
+            )
+        time.sleep(interval)
+        timeout -= interval
+
+
 def avail_sizes():
     '''
     Return a dict of all available VM images on the cloud provider with
@@ -814,7 +882,7 @@ def create(vm_=None, call=None):
                 return False
 
         try:
-            data = saltcloud.utils.wait_for_spot_instance(
+            data = _wait_for_spot_instance(
                 __query_spot_instance_request,
                 update_args=(sir_id, location),
                 timeout=10*60,
