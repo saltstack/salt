@@ -17,36 +17,32 @@ Any tags of length less than 20 characters were padded with "|" chars out to 20 
 Although not explicit, the data for an event comprised a python dict that was serialized by
 msgpack.
 
-
-New style event messages support hierarchical namespacing for event tags while still
+New style event messages support event tags longer than 20 characters while still
 being backwards compatible with old style tags.
-In the new style the tag delimeter is the msgpack dict start character, that is,
-chr(0x81)
-This now imposes a hard constraint that event data must be in the form of a python
-dict and fire-event will now raise a ValueError if data is not. Old style tags
-are no longer padded.
+The longer tags better enable name spaced event tags which tend to be longer.
+Moreover, the constraint that the event data be a python dict is now an explicit
+constraint and fire-event will now raise a ValueError if not. Tags must be
+ascii safe strings, that is, have values less than 0x80
 
-The new style convention uses pipe characters ("|") as the namespace delimeters
-within the over the wire tag, and uses dots (".") as the namespace delimeters
-within the user observable tag. 
-The event module transparently does the substitution between pipes and dots.
+Since the msgpack dict (map) indicators have values greater than or equal to 0x80
+it can be unambiguously determined if the start of data is at char 21 or not.
+
+In the new style:
+When the tag is longer than 20 characters, an end of tag string
+is appended to the tag given by the string constant TAGEND, that is, two line feeds '\n\n'.
+When the tag is less than 20 characters then the tag is padded with pipes
+"|" out to 20 characters as before.
+When the tag is exactly 20 characters no padded is done.
+
+The get_event method intelligently figures out if the tag is longer than 20 characters.
+
+
+The convention for namespacing is to use dot characters "." as the name space delimeter.
+The name space "salt" is reserved by SaltStack for internal events.
+
 For example:
-User tag
+Namspaced tag
     'salt.runner.manage.status.start'
-becomes over the wire message tag
-    'salt|runner|manage|status|start'
-
-Using the period in the user observable tag is less confusing to the user as
-periods are already used in Python and elsewhere as name space delimiters whereas
-the pipe could be confusing to the user to interpret.
-Because the pipe was previously used to pad the tag, it works as a
-backwards compatible delimiter within the over the wire tag. 
-
-With the new convention tags can be of any non-zero length and the end of tag is determined by
-the msgpack dict start character. This is because the payload portion
-of an event is the msgpack.dumps() of a python dict so it will always start with
-the msgpack character used to indicate the start of a dict, that is, ord(0x81).
-
 
 '''
 
@@ -77,6 +73,8 @@ import salt.state
 import salt.utils
 from salt._compat import string_types
 log = logging.getLogger(__name__)
+
+TAGEND = '\n\n' # long tag delimeter
 
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
@@ -188,15 +186,17 @@ class SaltEvent(object):
         socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
         if self.sub in socks and socks[self.sub] == zmq.POLLIN:
             raw = self.sub.recv()
-            # Double check the tag
-            mtag, sep, mdata = raw.partition('||') #split tag from data
-            #mtag = mtag.rstrip('|').replace('|', '.') #substitute namespace delimiter
-            mtag = mtag.rstrip('|') #strip old padding
+            if ord(raw[20]) >= 0x80: #old style
+                mtag = raw[0:20].rstrip('|')
+                mdata = raw[20:]
+            else: #new style   
+                mtag, sep, mdata = raw.partition(TAGEND) #split tag from data
+            
+            data = self.serial.loads(mdata)
             
             if not mtag.startswith(tag): #tag not match
                 return None
             
-            data = self.serial.loads(mdata)
             if full:
                 ret = {'data': data,
                         'tag': mtag}
@@ -214,13 +214,12 @@ class SaltEvent(object):
                 continue
             yield data
 
-    def fire_event(self, data, tag, flat=True):
+    def fire_event(self, data, tag):
         '''
         Send a single event into the publisher with paylod dict "data" and event
         identifier "tag"
         
-        If not flat use new style hierarchical namespaced tags
-        Otherwise use old style tags
+        Supports new style long tags.
         '''
         if not str(tag): #no empty tags allowed
             raise ValueError('Empty tag.')
@@ -230,11 +229,14 @@ class SaltEvent(object):
             
         if not self.cpush:
             self.connect_pull()
-            
-        #if not flat:  #tag = '{0:|<20}'.format(tag)
-            #tag = tag.replace('.', '|')
         
-        event = '{0}||{1}'.format(tag, self.serial.dumps(data))
+        tagend = ""
+        if len(tag) <= 20: #old style compatible tag
+            tag = '{0:|<20}'.format(tag) #pad with pipes '|' to 20 character length
+        else: #new style longer than 20 chars
+            tagend = TAGEND
+            
+        event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
         self.push.send(event)
         return True
 
