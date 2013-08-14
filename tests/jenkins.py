@@ -62,6 +62,9 @@ def run(platform, provider, commit, clean):
         sys.stdout.flush()
         sys.exit(proc.returncode)
 
+    print('VM Bootstrapped. Exit code: {0}'.format(proc.returncode))
+    sys.stdout.flush()
+
     # Run tests here
     cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
                 vm_name,
@@ -78,6 +81,7 @@ def run(platform, provider, commit, clean):
     )
     proc.poll_and_read_until_finish()
     stdout, stderr = proc.communicate()
+
     if stderr:
         print(stderr)
     if stdout:
