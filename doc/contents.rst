@@ -46,6 +46,7 @@ Full Table of Contents
     ref/runners/index
     ref/runners/all/index
     ref/wheel/all/index
+    ref/auth/all/index
     ref/output/all/index
     ref/clients/index
     ref/peer
