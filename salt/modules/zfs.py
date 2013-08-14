@@ -11,6 +11,7 @@ import sys
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
@@ -19,7 +20,8 @@ log = logging.getLogger(__name__)
 # in later on.
 __func_alias__ = {}
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_zfs():
     '''
     Looks to see if zfs is present on the system.

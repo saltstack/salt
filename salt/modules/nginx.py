@@ -4,14 +4,16 @@ Support for nginx
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 
 # Cache the output of running which('nginx') so this module
 # doesn't needlessly walk $PATH looking for the same binary
 # for nginx over and over and over for each function herein
-@salt.utils.memoize
+@decorators.memoize
 def __detect_os():
     return salt.utils.which('nginx')
+
 
 def __virtual__():
     '''
@@ -20,6 +22,7 @@ def __virtual__():
     if __detect_os():
         return 'nginx'
     return False
+
 
 def version():
     '''
@@ -33,6 +36,7 @@ def version():
     out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
     return ret[-1]
+
 
 def configtest():
     '''
