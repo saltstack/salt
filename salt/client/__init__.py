@@ -618,7 +618,7 @@ class LocalClient(object):
         syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
-            if raw is not None:
+            if raw is not None and 'id' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -826,7 +826,7 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, jid)
-            if raw is not None:
+            if raw is not None and 'return' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -899,7 +899,7 @@ class LocalClient(object):
         syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
-            if raw is not None:
+            if raw is not None and 'id' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue

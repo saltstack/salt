@@ -37,7 +37,7 @@ def add(name, gid=None, **kwargs):
         log.warning('solaris_group module does not support the \'system\' '
                     'argument')
     if kwargs:
-        raise TypeError('Invalid keyword argument(s): {}'.format(kwargs))
+        log.warning('Invalid kwargs passed to group.add')
 
     cmd = 'groupadd '
     if gid:

@@ -36,7 +36,7 @@ def add(name, gid=None, **kwargs):
     if salt.utils.is_true(kwargs.pop('system', False)):
         log.warning('pw_group module does not support the \'system\' argument')
     if kwargs:
-        raise TypeError('Invalid keyword argument(s): {}'.format(kwargs))
+        log.warning('Invalid kwargs passed to group.add')
 
     cmd = 'pw groupadd '
     if gid:

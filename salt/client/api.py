@@ -45,9 +45,9 @@ class APIClient(object):
     def run(self, cmd):
         '''
         Execute the salt command given by cmd dict.
-        
+
         cmd is a dictionary of the following form:
-        
+
         {
             'mode': 'modestring',
             'fun' : 'modulefunctionstring',
@@ -62,12 +62,12 @@ class APIClient(object):
             'password': 'passwordstring',
             'eauth': 'eauthtypestring',
         }
-        
+
         Implied by the fun is which client is used to run the command, that is, either
         the master local minion client, the master runner client, or the master wheel client.
-        
+
         The cmd dict items are as follows:
-        
+
         mode: either 'sync' or 'async'. Defaults to 'async' if missing
         fun: required. If the function is to be run on the master using either
             a wheel or runner client then the fun: includes either
@@ -85,27 +85,27 @@ class APIClient(object):
         expr_form: Optional target pattern type string when client is local minion.
             Defaults to 'glob' if missing
         ret: Optional name string of returner when local minion client.
-        arg: Optional positional argument string when local minion client      
+        arg: Optional positional argument string when local minion client
         token: the salt token. Either token: is required or the set of username:,
             password: , and eauth:
         username: the salt username. Required if token is missing.
         password: the user's password. Required if token is missing.
         eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
-        
+
         '''
         client = 'minion' #default to local minion client
         mode = cmd.get('mode', 'async') #default to 'async'
-        
+
         # check for wheel or runner prefix to fun name to use wheel or runner client
-        funparts = cmd.get('fun', '').split('.') 
-        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']: #master 
+        funparts = cmd.get('fun', '').split('.')
+        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']: #master
             client = funparts[0]
             cmd['fun'] = '.'.join(funparts[1:]) #strip prefix
-            
+
         if not ('token' in cmd  or
                 ('eauth' in cmd and 'password' in cmd and 'username' in cmd) ):
             raise EauthAuthenticationError('No authentication credentials given')
-        
+
         executor = getattr(self, '{0}_{1}'.format(client, mode))
         result = executor(**cmd)
         return result
@@ -127,7 +127,7 @@ class APIClient(object):
         .. seealso:: :ref:`python-api`
         '''
         return self.localClient.cmd(**kwargs)
-    
+
     def runner_async(self, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
@@ -135,7 +135,7 @@ class APIClient(object):
         of the function to call
         '''
         return self.runnerClient.master_call(**kwargs)
-    
+
     runner_sync = runner_async # always runner async, so works in either mode
 
     def wheel_sync(self, **kwargs):
@@ -145,13 +145,13 @@ class APIClient(object):
         of the function to call
         '''
         return self.wheelClient.master_call(**kwargs)
-    
+
     wheel_async = wheel_sync # always wheel_sync, so it works either mode
-    
+
     def signature(self, cmd):
         '''
         Convenience function that returns dict of function signature(s) specified by cmd.
-        
+
         cmd is dict of the form:
         {
             'client': 'clienttypestring'
@@ -163,7 +163,7 @@ class APIClient(object):
             'password': 'passwordstring',
             'eauth': 'eauthtypestring',
         }
-        
+
         The cmd dict items are as follows:
         client: Either 'master' or 'minion'. Defaults to 'minion' if missing
         module: required. This is either a module or module function name for
@@ -177,43 +177,43 @@ class APIClient(object):
         username: the salt username. Required if token is missing.
         password: the user's password. Required if token is missing.
         eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
-        
+
         '''
         result =  {}
-        
+
         client = cmd.get('client', 'minion')
         if client == 'minion':
             cmd['fun'] = 'sys.argspec'
-            cmd['kwarg'] = dict(module=cmd['module']) 
+            cmd['kwarg'] = dict(module=cmd['module'])
             result = self.run(cmd)
         elif client == 'master':
-            parts = cmd['module'].split('.') 
+            parts = cmd['module'].split('.')
             client = parts[0]
-            module = '.'.join(parts[1:]) #strip prefix            
+            module = '.'.join(parts[1:]) #strip prefix
             if client == 'wheel':
                 functions = self.wheelClient.w_funcs
             elif  client == 'runner':
                 functions = self.runnerClient.functions
             result =  salt.utils.argspec_report(functions, module)
         return result
-    
+
     def create_token(self, creds):
         '''
         Create token with creds.
         Token authorizes salt access if successful authentication
         with the credentials in creds.
         creds format is as follows:
-        
+
         {
             'username': 'namestring',
             'password': 'passwordstring',
             'eauth': 'eauthtypestring',
         }
-        
+
         examples of valid eauth type strings: 'pam' or 'ldap'
-        
+
         Returns dictionary of token information with the following format:
-        
+
         {
             'token': 'tokenstring',
             'start': starttimeinfractionalseconds,
@@ -233,26 +233,26 @@ class APIClient(object):
             "sys.*",
             "test.*"
         ]
-        
+
         '''
         try:
             tokenage = self.resolver.mk_token(creds)
         except Exception as ex:
             raise EauthAuthenticationError(
                 "Authentication failed with {0}.".format(repr(ex)))
-            
+
         if not 'token' in tokenage:
-            raise EauthAuthenticationError("Authentication failed with provided credentials.") 
-            
+            raise EauthAuthenticationError("Authentication failed with provided credentials.")
+
         # Grab eauth config for the current backend for the current user
         if tokenage['name'] in self.opts['external_auth'][tokenage['eauth']]:
             tokenage['perms'] = self.opts['external_auth'][tokenage['eauth']][tokenage['name']]
         else:
             tokenage['perms'] = self.opts['external_auth'][tokenage['eauth']]['*']
-        
+
         tokenage['user'] = tokenage['name']
         tokenage['username'] = tokenage['name']
-        
+
         return tokenage
 
     def verify_token(self, token):
@@ -265,18 +265,18 @@ class APIClient(object):
         except Exception as ex:
             raise EauthAuthenticationError(
                 "Token validation failed with {0}.".format(repr(ex)))
-        
+
         return result
-    
+
     def get_event(self, wait=0.25, tag='', full=False):
         '''
         Returns next available event with tag tag from event bus
         If any within wait seconds
         Otherwise return None
-        
+
         If tag is empty then return events for all tags
         If full then add tag field to returned data
-        
+
         If wait is 0 then block forever or until next event becomes available.
         '''
         return (self.event.get_event(wait=wait, tag=tag, full=full))

@@ -11,6 +11,7 @@ import sys
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
@@ -19,7 +20,8 @@ log = logging.getLogger(__name__)
 # in later on.
 __func_alias__ = {}
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_zfs():
     '''
     Looks to see if zfs is present on the system.
@@ -73,7 +75,7 @@ def __virtual__():
 
 def _add_doc(func, doc, prefix='\n\n    '):
     if not func.__doc__:
-        func.__doc__ = ""
+        func.__doc__ = ''
     func.__doc__ += '{0}{1}'.format(prefix, doc)
 
 def _make_function(cmd_name, doc):
@@ -103,8 +105,10 @@ def _make_function(cmd_name, doc):
 
         return ret
 
-    _add_doc(_cmd, "This function is dynamically generated.", "\n    ")
+    _add_doc(_cmd, 'This function is dynamically generated.', '\n    ')
     _add_doc(_cmd, doc)
+    _add_doc(_cmd, '\n    CLI Example::\n')
+    _add_doc(_cmd, '\n        salt \'*\' zfs.{0} <args>'.format(cmd_name))
 
     # At this point return the function we've just defined.
     return _cmd

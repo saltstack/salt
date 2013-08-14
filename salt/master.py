@@ -2165,17 +2165,17 @@ class ClearFuncs(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
-        
+
         new_job_load =  {
-                'jid': clear_load['jid'], 
-                'tgt_type':clear_load['tgt_type'], 
-                'tgt': clear_load['tgt'], 
-                'ret': clear_load['ret'], 
-                'user': clear_load['user'], 
+                'jid': clear_load['jid'],
+                'tgt_type':clear_load['tgt_type'],
+                'tgt': clear_load['tgt'],
+                'ret': clear_load['ret'],
+                'user': clear_load['user'],
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg']
             }
-        
+
         # Announce the job on the event bus
         self.event.fire_event(new_job_load, 'new_job')
 

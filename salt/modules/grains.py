@@ -52,14 +52,14 @@ def get(key, default=''):
     available return the passed default. The default return is an empty string.
 
     The value can also represent a value in a nested dict using a ":" delimiter
-    for the dict. This means that if a dict in grains looks like this:
+    for the dict. This means that if a dict in grains looks like this::
 
-    {'pkg': {'apache': 'httpd'}}
+        {'pkg': {'apache': 'httpd'}}
 
     To retrieve the value associated with the apache key in the pkg dict this
-    key can be passed:
+    key can be passed::
 
-    pkg:apache
+        pkg:apache
 
     CLI Example::
 
@@ -123,6 +123,7 @@ def setval(key, val):
     CLI Example::
 
         salt '*' grains.setval key val
+        salt '*' grains.setval key '{'sub-key': 'val', 'sub-key2': 'val2'}'
     '''
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
@@ -164,6 +165,8 @@ def setval(key, val):
 
 def append(key, val):
     '''
+    .. versionadded:: 0.17.0
+
     Append a value to a list in the grains config file
 
     CLI Example::
@@ -181,6 +184,8 @@ def append(key, val):
 
 def remove(key, val):
     '''
+    .. versionadded:: 0.17.0
+
     Remove a value from a list in the grains config file
 
     CLI Example::
@@ -198,6 +203,8 @@ def remove(key, val):
 
 def delval(key):
     '''
+    .. versionadded:: 0.17.0
+
     Delete a grain from the grains config file
 
     CLI Example::
@@ -220,12 +227,16 @@ def ls():  # pylint: disable=C0103
 
 def filter_by(lookup_dict, grain='os_family'):
     '''
+    .. versionadded:: 0.17.0
+
     Look up the given grain in a given dictionary for the current OS and return
     the result
 
     Although this may occasionally be useful at the CLI, the primary intent of
     this function is for use in Jinja to make short work of creating lookup
-    tables for OS-specific data. For example::
+    tables for OS-specific data. For example:
+
+    .. code-block:: jinja
 
         {% set pkg_table = {
             'Debian': {'name': 'apache2'},

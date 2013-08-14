@@ -9,7 +9,8 @@ import os
 import plistlib
 
 # Import salt libs
-import salt.utils
+import salt.utils.decorators as decorators
+
 
 def __virtual__():
     '''
@@ -32,7 +33,7 @@ def _launchd_paths():
     ]
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _available_services():
     '''
     Return a dictionary of all available services on the system
@@ -148,6 +149,7 @@ def status(job_label, runas=None):
     launchctl_data = _get_launchctl_data(lookup_name, runas=runas)
 
     return 'PID' in launchctl_data
+
 
 def stop(job_label, runas=None):
     '''

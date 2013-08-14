@@ -94,7 +94,7 @@ def present(name, gid=None, system=False):
                 ).format(name)
         return ret
 
-    ret['result'] = __salt__['group.add'](name, gid, system)
+    ret['result'] = __salt__['group.add'](name, gid, system=system)
     # Clear cached group data
     sys.modules[
         __salt__['test.ping'].__module__

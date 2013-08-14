@@ -34,6 +34,7 @@ Full list of builtin state modules
     makeconf
     mdadm
     module
+    modjk_worker
     mongodb_database
     mongodb_user
     mount

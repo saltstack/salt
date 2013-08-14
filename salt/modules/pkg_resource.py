@@ -25,8 +25,8 @@ def _parse_pkg_meta(path):
     def parse_rpm(path):
         try:
             from salt.modules.yumpkg5 import __QUERYFORMAT, _parse_pkginfo
-            from salt.utils import namespaced_function
-            _parse_pkginfo = namespaced_function(_parse_pkginfo, globals())
+            from salt.utils import namespaced_function as _namespaced_function
+            _parse_pkginfo = _namespaced_function(_parse_pkginfo, globals())
         except ImportError:
             log.critical('Error importing helper functions. This is almost '
                          'certainly a bug.')
@@ -67,6 +67,9 @@ def _parse_pkg_meta(path):
         cpuarch = sys.modules[
             __salt__['test.ping'].__module__
         ].__grains__.get('cpuarch', '')
+        osarch = sys.modules[
+            __salt__['test.ping'].__module__
+        ].__grains__.get('osarch', '')
 
         result = __salt__['cmd.run_all']('dpkg-deb -I "{0}"'.format(path))
         if result['retcode'] == 0:
@@ -95,8 +98,8 @@ def _parse_pkg_meta(path):
                         ).group(1)
                     except AttributeError:
                         continue
-        if arch:
-            if cpuarch == 'x86_64' and arch not in ('amd64', 'all'):
+        if arch and cpuarch == 'x86_64':
+            if arch != 'all' and osarch == 'amd64' and osarch != arch:
                 name += ':{0}'.format(arch)
         return name, version
 

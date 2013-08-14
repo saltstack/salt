@@ -146,6 +146,7 @@ def kwarg(**kwargs):
     '''
     return kwargs
 
+
 def arg(*args, **kwargs):
     '''
     Print out the data passed into the function ``*args`` and ```kwargs``, this
@@ -159,6 +160,7 @@ def arg(*args, **kwargs):
     '''
     return {"args": args, "kwargs": kwargs}
 
+
 def arg_repr(*args, **kwargs):
     '''
     Print out the data passed into the function ``*args`` and ```kwargs``, this
@@ -171,6 +173,7 @@ def arg_repr(*args, **kwargs):
         salt '*' test.arg_repr 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
     '''
     return {"args": repr(args), "kwargs": repr(kwargs)}
+
 
 def fib(num):
     '''
@@ -297,6 +300,22 @@ def not_loaded():
             if name not in prov:
                 ret.add(name)
     return sorted(ret)
+
+
+def opts_pkg():
+    '''
+    Return an opts package with the grains and opts for this minion.
+    This is primarily used to create the options used for master side
+    state compiling routines
+
+    CLI Example::
+
+        salt '*' test.opts_pkg
+    '''
+    ret = {}
+    ret.update(__opts__)
+    ret['grains'] = __grains__
+    return ret
 
 
 def tty(device, echo=None):

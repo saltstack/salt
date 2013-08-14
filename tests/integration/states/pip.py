@@ -35,12 +35,18 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             # Since we don't have the virtualenv created, pip.installed will
             # thrown and error.
+            # Example error strings:
+            #  * "Error installing 'supervisor': /tmp/pip-installed-errors: not found"
+            #  * "Error installing 'supervisor': /bin/sh: 1: /tmp/pip-installed-errors: not found"
+            #  * "Error installing 'supervisor': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
+            os.environ['SHELL'] = '/bin/sh'
             ret = self.run_function('state.sls', mods='pip-installed-errors')
             self.assertSaltFalseReturn(ret)
             self.assertSaltCommentRegexpMatches(
                 ret,
-                'Error installing \'supervisor\': .* '
-                '[nN]o such file or directory'
+                'Error installing \'supervisor\':(?:.*)'
+                '/tmp/pip-installed-errors(?:.*)'
+                '([nN]o such file or directory|not found)'
             )
 
             # We now create the missing virtualenv

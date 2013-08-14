@@ -7,6 +7,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
 
 
@@ -19,7 +20,7 @@ def __virtual__():
     return False
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _detect_conf():
     '''
     GRUB conf location differs depending on distro

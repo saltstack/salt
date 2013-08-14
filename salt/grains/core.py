@@ -910,6 +910,15 @@ def os_data():
         grains['os_family'] = _OS_FAMILY_MAP.get(grains['os'],
                                                  grains['os'])
 
+    # Build the osarch grain. This grain will be used for platform-specific
+    # considerations such as package management. Fall back to the CPU
+    # architecture.
+    if grains.get('os_family') == 'Debian':
+        osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
+    else:
+        osarch = grains['cpuarch']
+    grains['osarch'] = osarch
+
     grains.update(_memdata(grains))
 
     # Get the hardware and bios data
@@ -1082,8 +1091,20 @@ def saltversion():
     '''
     # Provides:
     #   saltversion
-    from salt import __version__
+    from salt.version import __version__
     return {'saltversion': __version__}
+
+
+def saltversioninfo():
+    '''
+    Return the version_info of salt
+
+     .. versionadded:: 0.17.0
+    '''
+    # Provides:
+    #   saltversioninfo
+    from salt.version import __version_info__
+    return {'saltversioninfo': __version_info__}
 
 
 # Relatively complex mini-algorithm to iterate over the various

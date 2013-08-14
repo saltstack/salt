@@ -43,9 +43,11 @@ def run(platform, provider, commit, clean):
     '''
     htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
     vm_name = 'ZZZ{0}{1}'.format(platform, htag)
-    cmd = 'salt-cloud --script-args "git {0}" -p {1}_{2} {3}'.format(
+    cmd = 'salt-cloud -l debug --script-args "-D -n git {0}" -p {1}_{2} {3}'.format(
             commit, provider, platform, vm_name)
     print('Running CMD: {0}'.format(cmd))
+    sys.stdout.flush()
+
     proc = NonBlockingPopen(
         cmd,
         shell=True,
@@ -55,11 +57,21 @@ def run(platform, provider, commit, clean):
     )
     proc.poll_and_read_until_finish()
     proc.communicate()
+    if proc.returncode > 0:
+        print('Failed to bootstrap VM. Exit code: {0}'.format(proc.returncode))
+        sys.stdout.flush()
+        sys.exit(proc.returncode)
+
+    print('VM Bootstrapped. Exit code: {0}'.format(proc.returncode))
+    sys.stdout.flush()
+
     # Run tests here
     cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
                 vm_name,
                 commit)
     print('Running CMD: {0}'.format(cmd))
+    sys.stdout.flush()
+
     proc = NonBlockingPopen(
         cmd,
         shell=True,
@@ -69,10 +81,13 @@ def run(platform, provider, commit, clean):
     )
     proc.poll_and_read_until_finish()
     stdout, stderr = proc.communicate()
+
     if stderr:
         print(stderr)
     if stdout:
         print(stdout)
+
+    sys.stdout.flush()
 
     try:
         match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
@@ -94,6 +109,8 @@ def run(platform, provider, commit, clean):
     if clean:
         cmd = 'salt-cloud -d {0} -y'.format(vm_name)
         print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
         proc = NonBlockingPopen(
             cmd,
             shell=True,

@@ -7,6 +7,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
 
@@ -30,7 +31,7 @@ def __virtual__():
 
 
 # Cache the SELinux directory to not look it up over and over
-@salt.utils.memoize
+@decorators.memoize
 def selinux_fs_path():
     '''
     Return the location of the SELinux VFS directory
@@ -156,8 +157,7 @@ def list_sebool():
         if not line.strip():
             continue
         comps = line.split()
-        ret[comps[0]] = {
-                         'State': comps[1][1:],
+        ret[comps[0]] = {'State': comps[1][1:],
                          'Default': comps[3][:-1],
                          'Description': ' '.join(comps[4:])}
     return ret

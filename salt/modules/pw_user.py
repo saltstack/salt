@@ -10,7 +10,7 @@ except ImportError:
     pass
 import os
 import logging
-from copy import deepcopy
+import copy
 
 # Import salt libs
 import salt.utils
@@ -76,7 +76,7 @@ def add(name,
     if salt.utils.is_true(kwargs.pop('system', False)):
         log.warning('pw_user module does not support the \'system\' argument')
     if kwargs:
-        raise TypeError('Invalid keyword argument(s): {}'.format(kwargs))
+        log.warning('Invalid kwargs passed to user.add')
 
     if isinstance(groups, string_types):
         groups = groups.split(',')
@@ -260,7 +260,7 @@ def chfullname(name, fullname):
         return False
     if fullname == pre_info['fullname']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['fullname'] = fullname
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
     __salt__['cmd.run'](cmd)
@@ -284,7 +284,7 @@ def chroomnumber(name, roomnumber):
         return False
     if roomnumber == pre_info['roomnumber']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
     __salt__['cmd.run'](cmd)
@@ -308,7 +308,7 @@ def chworkphone(name, workphone):
         return False
     if workphone == pre_info['workphone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['workphone'] = workphone
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
     __salt__['cmd.run'](cmd)
@@ -332,7 +332,7 @@ def chhomephone(name, homephone):
         return False
     if homephone == pre_info['homephone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['homephone'] = homephone
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
     __salt__['cmd.run'](cmd)

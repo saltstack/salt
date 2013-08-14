@@ -371,7 +371,8 @@ class Single(object):
         Create the seed file for a state.sls run
         '''
         wrapper = FunctionWrapper(self.opts, self.id, **self.target)
-        minion_opts = wrapper['test.opts_pkg']()
+        minion_opts = copy.deepcopy(self.opts)
+        minion_opts.update(wrapper['test.opts_pkg']())
         pillar = kwargs.get('pillar', {})
         st_ = SSHHighState(minion_opts, pillar, wrapper)
         if isinstance(mods, str):
@@ -433,7 +434,10 @@ class FunctionWrapper(dict):
             for key, val in kwargs.items():
                 arg_str += '{0}={1} '.format(key, val)
             single = Single(self.opts, arg_str, **self.kwargs)
-            ret = json.loads(single.cmd_block(), object_hook=decode_dict)
+            ret = single.cmd_block()
+            if ret.startswith('deploy'):
+                single.deploy()
+                ret = single.cmd_block()
             return ret
         return caller
 

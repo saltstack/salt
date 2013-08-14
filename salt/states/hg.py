@@ -32,6 +32,7 @@ if utils.is_windows():
 else:
     hg_binary = "hg"
 
+
 def __virtual__():
     '''
     Only load if hg is available
@@ -43,8 +44,7 @@ def latest(name,
            rev=None,
            target=None,
            runas=None,
-           force=False,
-        ):
+           force=False):
     '''
     Make sure the repository is cloned to the given directory and is up to date
 
@@ -133,8 +133,8 @@ def _update_repo(ret, target, runas, rev):
 
 
 def _handle_existing(ret, target, force):
-    is_empty = os.listdir(target)
-    if is_empty:
+    not_empty = os.listdir(target)
+    if not not_empty:
         log.debug(
             'target {0} found, but directory is empty, automatically '
             'deleting'.format(target))
