@@ -1,18 +1,20 @@
 '''
 Salt Stormpath Authentication
+
 Module to provide authentication using Stormpath as the backend.
 
-Required python modules: stormpath-sdk
-This module requires the development branch of the stormpath-sdk
-which can be found here:
+:depends:   - stormpath-sdk Python module
+:configuration: This module requires the development branch of the
+    stormpath-sdk which can be found here:
     https://github.com/stormpath/stormpath-sdk-python
 
-The following config items are required in the master config:
-    stormpath.api_key_file: <path/to/apiKey.properties>
-    stormpath.app_url: <Rest url of your Stormpath application>
+    The following config items are required in the master config::
 
-Ensure that your apiKey.properties is readable by the user the
-Salt Master is running as, but not readable by other system users.
+        stormpath.api_key_file: <path/to/apiKey.properties>
+        stormpath.app_url: <Rest url of your Stormpath application>
+
+    Ensure that your apiKey.properties is readable by the user the Salt Master
+    is running as, but not readable by other system users.
 '''
 try:
     from stormpath import Client
