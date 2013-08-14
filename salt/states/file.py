@@ -1353,10 +1353,8 @@ def recurse(name,
         #we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
-    for fn_ in __salt__['cp.list_master'](env):
+    for fn_ in __salt__['cp.list_master'](env, srcpath):
         if not fn_.strip():
-            continue
-        if not fn_.startswith(srcpath):
             continue
 
         # fn_ here is the absolute (from file_roots) source path of
@@ -1393,10 +1391,8 @@ def recurse(name,
         manage_file(dest, src)
 
     if include_empty:
-        mdirs = __salt__['cp.list_master_dirs'](env)
+        mdirs = __salt__['cp.list_master_dirs'](env, srcpath)
         for mdir in mdirs:
-            if not mdir.startswith(srcpath):
-                continue
             if not _check_include_exclude(os.path.relpath(mdir, srcpath),
                                           include_pat,
                                           exclude_pat):
