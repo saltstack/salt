@@ -360,7 +360,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   minion_pub=None, minion_pem=None, minion_conf=None,
                   keep_tmp=False, script_args=None, script_env=None,
                   ssh_timeout=15, make_syndic=False, make_minion=True,
-                  display_ssh_output=True, preseed_minion_keys=None):
+                  display_ssh_output=True, preseed_minion_keys=None, parallel=False):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -518,7 +518,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
             process = None
             # Consider this code experimental. It causes Salt Cloud to wait
             # for the minion to check in, and then fire a startup event.
-            if start_action:
+            # Disabled if parallel because it doesn't work!
+            if start_action and not parallel:
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
                     target=check_auth, kwargs=dict(
@@ -641,7 +642,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         'Removed {0}'.format(preseed_minion_keys_tempdir)
                     )
 
-            if start_action:
+            if start_action and not parallel:
                 queuereturn = queue.get()
                 process.join()
                 if queuereturn and start_action:

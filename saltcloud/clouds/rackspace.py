@@ -319,6 +319,7 @@ def create(vm_):
             'script': deploy_script.script,
             'name': vm_['name'],
             'start_action': __opts__['start_action'],
+            'parallel': __opts__['parallel'],
             'sock_dir': __opts__['sock_dir'],
             'conf_file': __opts__['conf_file'],
             'minion_pem': vm_['priv_key'],

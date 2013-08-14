@@ -9,6 +9,7 @@ import time
 import signal
 import logging
 import multiprocessing
+from itertools import groupby
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -613,7 +614,21 @@ class Cloud(object):
                     vm_['name'], exc
                 )
             )
-
+        # If it's a map then we need to respect the 'requires'
+        # so we do it later
+        try:
+            opt_map = self.opts['map']
+        except KeyError:
+            opt_map = False 
+        if self.opts['parallel'] and self.opts['start_action'] and not opt_map:
+            log.info(
+                "Running {0} on {1}".format(self.opts['start_action'], vm_['name'])
+            )
+            client = salt.client.LocalClient()
+            action_out = client.cmd(
+                vm_['name'], self.opts['start_action'], timeout=self.opts['timeout'] * 60
+            )
+            output['ret']=action_out
         return output
 
     def run_profile(self, profile, names):
@@ -954,6 +969,51 @@ class Map(Cloud):
                 map_[profile][name] = {'name': name}
         return map_
 
+    def _has_loop(self, dmap, seen=None, val=None):
+        if seen is None:
+            for k,v in dmap['create'].items():
+                seen = []
+                try:
+                    machines = v['requires']
+                except KeyError as e:
+                    machines = []
+                for machine in machines:
+                    if self._has_loop(dmap, seen=list(seen), val=machine):
+                        return True
+        else:
+            if val in seen:
+                return True
+            else:
+                seen.append(val)
+                try:
+                    machines = dmap['create'][val]['requires']
+                except KeyError as e:
+                    machines = []
+                for machine in machines:
+                    if self._has_loop(dmap, seen=list(seen), val=machine):
+                        return True
+        return False
+
+    def _calcdep(self, dmap, machine, data, level):
+        try:
+            deplist = data['requires']
+        except KeyError:
+            return level
+        levels = []
+        for name in deplist:
+            try:
+                data = dmap['create'][name]
+            except KeyError:
+                try:
+                    data = dmap['existing'][name]
+                except KeyError:
+                    msg = 'Missing dependency in cloud map'
+                    log.error(msg)
+                    raise SaltCloudException(msg)
+            levels.append(self._calcdep(dmap, name, data, level))
+        level = max(levels) + 1
+        return level
+
     def map_data(self, cached=False):
         '''
         Create a data map of what to execute on
@@ -983,7 +1043,7 @@ class Map(Cloud):
                 # Get the VM name
                 nodedata = profile_data.copy()
                 # Update profile data with the map overrides
-                for setting in ('grains', 'master', 'minion', 'volumes'):
+                for setting in ('grains', 'master', 'minion', 'volumes', 'requires'):
                     deprecated = 'map_{0}'.format(setting)
                     if deprecated in overrides:
                         log.warn(
@@ -1083,6 +1143,29 @@ class Map(Cloud):
         '''
         Execute the contents of the VM map
         '''
+        if self._has_loop(dmap):
+            msg = 'Uh-oh, that cloud map has a dependency loop!'
+            log.error(msg)
+            raise SaltCloudException(msg)
+        #Go through the create list and calc dependencies
+        for k,v in dmap['create'].items():
+            log.info("Calculating dependencies for {0}".format(k))
+            level = 0
+            level = self._calcdep(dmap, k, v, level)
+            log.debug("Got execution order {0} for {1}".format(level,k))
+            dmap['create'][k]['level'] = level
+        try: 
+            existing_list = dmap['existing'].items()
+        except KeyError:
+            existing_list={}
+        for k,v in existing_list:
+            log.info("Calculating dependencies for {0}".format(k)) 
+            level = 0
+            level = self._calcdep(dmap, k, v, level)
+            log.debug("Got execution order {0} for {1}".format(level,k))
+            dmap['existing'][k]['level'] = level
+        #Now sort the create list based on dependencies
+        create_list = sorted(dmap['create'].items(), key=lambda x: x[1]['level'])
         output = {}
         if self.opts['parallel']:
             parallel_data = []
@@ -1091,7 +1174,7 @@ class Map(Cloud):
         master_finger = None
         try:
             master_name, master_profile = (
-                (name, profile) for name, profile in dmap['create'].items()
+                (name, profile) for name, profile in create_list
                 if profile.get('make_master', False) is True
             ).next()
             log.debug('Creating new master {0!r}'.format(master_name))
@@ -1129,7 +1212,7 @@ class Map(Cloud):
                     master_profile['master_finger'] = master_finger
 
             # Generate the minion keys to pre-seed the master:
-            for name, profile in dmap['create'].iteritems():
+            for name, profile in create_list:
                 make_minion = config.get_config_value(
                     'make_minion', profile, self.opts, default=True
                 )
@@ -1194,7 +1277,7 @@ class Map(Cloud):
             )
             opts['display_ssh_output'] = False
 
-        for name, profile in dmap['create'].items():
+        for name, profile in create_list:
             if name == master_name:
                 # Already deployed, it's the master's minion
                 continue
@@ -1240,7 +1323,28 @@ class Map(Cloud):
                 func=create_multiprocessing,
                 iterable=parallel_data
             )
+            # We have deployed in parallel, now do start action in
+            # correct order based on dependencies.
+            if self.opts['start_action']:
+                actionlist = []
+                grp=-1
+                for k,v in groupby(dmap['create'].values(), lambda x: x['level']):
+                    actionlist.append([]) 
+                    grp +=1
+                    for item in v:
+                        actionlist[grp].append(item['name'])
+                out={}
+                for group in actionlist:
+                    log.info(
+                        "Running {0} on {1}".format(self.opts['start_action'], ', '.join(group))
+                    )
+                    client = salt.client.LocalClient()
+                    out.update(client.cmd(
+                        ','.join(group), self.opts['start_action'],
+                        timeout=self.opts['timeout'] * 60, expr_form='list'
+                    ))
             for obj in output_multip:
+                obj.values()[0]['ret'] = out[obj.keys()[0]] 
                 output.update(obj)
 
         return output
