@@ -1,7 +1,7 @@
-'''Salt Keystone Authentication
-Module to provide authentication using keystone as the backend.
+'''
+Provide authentication using OpenStack Keystone
 
-Required python modules: keystoneclient
+:depends:   - keystoneclient Python module
 '''
 try:
     from keystoneclient.v2_0 import client
