@@ -13,6 +13,7 @@ import salt.runner
 import salt.wheel
 import salt.utils
 from salt.exceptions import SaltException, EauthAuthenticationError
+from salt.utils.event import tagify
 
 def tokenify(low, token=None):
     '''
@@ -288,4 +289,4 @@ class APIClient(object):
         Need to convert this to a master call with appropriate authentication
         
         '''
-        return (self.event.fire_event(data, tag))    
+        return (self.event.fire_event(data, tagify(tag, 'wui')))    

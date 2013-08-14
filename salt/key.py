@@ -12,7 +12,7 @@ import fnmatch
 import salt.crypt
 import salt.utils
 import salt.utils.event
-
+from salt.utils.event import tagify
 
 class KeyCLI(object):
     '''
@@ -404,7 +404,7 @@ class Key(object):
                     eload = {'result': True,
                              'act': 'accept',
                              'id': key}
-                    self.event.fire_event(eload, 'key')
+                    self.event.fire_event(eload, tagify(prefix='key'))
                 except (IOError, OSError):
                     pass
         return self.name_match(match)
@@ -429,7 +429,7 @@ class Key(object):
                 eload = {'result': True,
                          'act': 'accept',
                          'id': key}
-                self.event.fire_event(eload, 'key')
+                self.event.fire_event(eload, tagify(prefix='key'))
             except (IOError, OSError):
                 pass
         return self.list_keys()
@@ -445,7 +445,7 @@ class Key(object):
                     eload = {'result': True,
                              'act': 'delete',
                              'id': key}
-                    self.event.fire_event(eload, 'key')
+                    self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
@@ -463,7 +463,7 @@ class Key(object):
                     eload = {'result': True,
                              'act': 'delete',
                              'id': key}
-                    self.event.fire_event(eload, 'key')
+                    self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
@@ -491,7 +491,7 @@ class Key(object):
                     eload = {'result': True,
                              'act': 'reject',
                              'id': key}
-                    self.event.fire_event(eload, 'key')
+                    self.event.fire_event(eload, tagify(prefix='key'))
                 except (IOError, OSError):
                     pass
         self.check_minion_cache()
@@ -518,7 +518,7 @@ class Key(object):
                 eload = {'result': True,
                          'act': 'reject',
                          'id': key}
-                self.event.fire_event(eload, 'key')
+                self.event.fire_event(eload, tagify(prefix='key'))
             except (IOError, OSError):
                 pass
         self.check_minion_cache()
