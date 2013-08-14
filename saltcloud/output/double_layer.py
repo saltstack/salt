@@ -44,7 +44,8 @@ def output(data):
                         ret.append('      {0}{1}: {2}{3}'.format(
                             colors['LIGHT_GREEN'],
                             ekey,
-                            ekey.encode('ascii', 'salt-cloud-force-ascii'),
+                            val[ekey].encode(
+                                'ascii', 'salt-cloud-force-ascii'),
                             colors['ENDC'])
                         )
     return '\n'.join(ret)
