@@ -268,7 +268,7 @@ class APIClient(object):
         
         return result
     
-    def get_next_event(self, wait=0.25, tag='', full=False):
+    def get_event(self, wait=0.25, tag='', full=False):
         '''
         Returns next available event with tag tag from event bus
         If any within wait seconds
@@ -279,4 +279,13 @@ class APIClient(object):
         
         If wait is 0 then block forever or until next event becomes available.
         '''
-        return (self.event.get_event(wait=wait, tag=tag, full=full))  
+        return (self.event.get_event(wait=wait, tag=tag, full=full))
+    
+    def fire_event(self, data, tag):
+        '''
+        fires event with data and tag
+        This only works if api is running with same user permissions as master
+        Need to convert this to a master call with appropriate authentication
+        
+        '''
+        return (self.event.fire_event(data, tag))    
