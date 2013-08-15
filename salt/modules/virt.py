@@ -146,7 +146,6 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
     Generate the XML string to define a libvirt vm
     '''
     mem = mem * 1024
-    print 'emulator: {}'.format(emulator)
     data = '''
 <domain type='%%EMULATOR%%'>
         <name>%%NAME%%</name>
