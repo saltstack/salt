@@ -99,7 +99,6 @@ def _get_serv(commit=False):
     '''
     _options = _get_options()
     conn = MySQLdb.connect(host=_options['host'], user=_options['user'], passwd=_options['pass'], db=_options['db'], port=_options['port'])
-    log.debug( "FOO" )
     cursor = conn.cursor()
     try:
         yield cursor
@@ -121,15 +120,11 @@ def returner(ret):
     '''
     Return data to a mysql server
     '''
-    log.debug( "Got to this point.." )
     with _get_serv(commit=True) as cur:
-        log.debug( "Didn't get here?" )
         sql = '''INSERT INTO `salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''
-        log.error( "got here" )
-        if len(ret['return']) == str(ret['return']).count("'result': True"):
-            ret['success'] = True
+
         cur.execute(sql, (ret['fun'], ret['jid'],
                             str(ret['return']), ret['id'],
                             ret['success'], json.dumps(ret)))
