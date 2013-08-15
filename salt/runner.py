@@ -14,6 +14,7 @@ import salt.minion
 import salt.utils.event
 from salt.utils.event import tagify
 
+
 class RunnerClient(object):
     '''
     ``RunnerClient`` is the same interface used by the :command:`salt-run`
@@ -39,7 +40,7 @@ class RunnerClient(object):
                 'jid': low['jid'],
                 }
         event.fire_event(data, tagify('new', base=tag))
-        
+
         try:
             data['ret'] = self.low(fun, low)
         except Exception as exc:
@@ -47,7 +48,7 @@ class RunnerClient(object):
                     fun,
                     exc,
                     )
-        
+
         event.fire_event(data, tagify('ret', base=tag))
 
     def _verify_fun(self, fun):
@@ -99,7 +100,7 @@ class RunnerClient(object):
         tag = tagify(jid, prefix='run')
         low['tag'] = tag
         low['jid'] = jid
-        
+
         proc = multiprocessing.Process(
                 target=self._proc_runner,
                 args=(tag, fun, low))
@@ -108,9 +109,10 @@ class RunnerClient(object):
 
     def master_call(self, **kwargs):
         '''
-        Send a function call to a wheel module through the master network interface
-        Expects that one of the kwargs is key 'fun' whose value is the namestring
-        of the function to call
+        Send a function call to a wheel module through the master network
+        interface.
+        Expects that one of the kwargs is key 'fun' whose value is the
+        namestring of the function to call.
         '''
         load = kwargs
         load['cmd'] = 'runner'
