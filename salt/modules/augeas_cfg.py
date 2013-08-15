@@ -56,7 +56,9 @@ def get(path, value=''):
     '''
     Get a value for a specific augeas path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.get /files/etc/hosts/1/ ipaddr
     '''
@@ -84,20 +86,26 @@ def setvalue(*args):
     '''
     Set a value for a specific augeas path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.setvalue /files/etc/hosts/1/canonical localhost
 
     This will set the first entry in /etc/hosts to localhost
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.setvalue /files/etc/hosts/01/ipaddr 192.168.1.1 \\
                                  /files/etc/hosts/01/canonical test
 
     Adds a new host to /etc/hosts the ip address 192.168.1.1 and hostname test
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.setvalue prefix=/files/etc/sudoers/ \\
                  "spec[user = '%wheel']/user" "%wheel" \\
@@ -145,7 +153,9 @@ def match(path, value=''):
     '''
     Get matches for path expression
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.match /files/etc/services/service-name ssh
     '''
@@ -169,7 +179,9 @@ def remove(path):
     '''
     Get matches for path expression
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.remove /files/etc/sysctl.conf/net.ipv4.conf.all.log_martians
     '''
@@ -194,7 +206,9 @@ def ls(path):  # pylint: disable=C0103
     '''
     List the direct children of a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.ls /files/etc/passwd
     '''
@@ -231,7 +245,9 @@ def tree(path):
     '''
     Returns recursively the complete tree of a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' augeas.tree /files/etc/
     '''

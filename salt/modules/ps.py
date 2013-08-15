@@ -44,7 +44,10 @@ def top(num_processes=5, interval=3):
     result = []
     start_usage = {}
     for pid in psutil.get_pid_list():
-        process = psutil.Process(pid)
+        try:
+            process = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            continue
         user, system = process.get_cpu_times()
         start_usage[process] = user + system
     time.sleep(interval)

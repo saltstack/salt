@@ -12,45 +12,12 @@ import copy
 
 # Import salt libs
 import salt.ssh.shell
+import salt.utils
 import salt.utils.thin
 import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
-
-
-def decode_list(data):
-    '''
-    JSON decodes as unicode, Jinja needs bytes...
-    '''
-    rv = []
-    for item in data:
-        if isinstance(item, unicode):
-            item = item.encode('utf-8')
-        elif isinstance(item, list):
-            item = decode_list(item)
-        elif isinstance(item, dict):
-            item = decode_dict(item)
-        rv.append(item)
-    return rv
-
-
-def decode_dict(data):
-    '''
-    JSON decodes as unicode, Jinja needs bytes...
-    '''
-    rv = {}
-    for key, value in data.iteritems():
-        if isinstance(key, unicode):
-            key = key.encode('utf-8')
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-        elif isinstance(value, list):
-            value = decode_list(value)
-        elif isinstance(value, dict):
-            value = decode_dict(value)
-        rv[key] = value
-    return rv
 
 
 class SSH(object):
@@ -315,8 +282,7 @@ class Single(object):
         if self.arg_str.startswith('state.sls'):
             args, kwargs = salt.minion.parse_args_and_kwargs(
                     self.sls_seed, self.arg)
-            trans_tar = self.sls_seed(*args, **kwargs)
-            print trans_tar
+            self.sls_seed(*args, **kwargs)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
@@ -400,7 +366,10 @@ class Single(object):
         chunks = st_.state.compile_high_data(high)
         file_refs = lowstate_file_refs(chunks)
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
-        return trans_tar
+        self.shell.send(
+                trans_tar,
+                '/tmp/salt_state.tgz')
+        self.arg_str = 'state.pkg /tmp/salt_state.tgz test={0}'.format(test)
 
 
 class FunctionWrapper(dict):
@@ -438,7 +407,7 @@ class FunctionWrapper(dict):
             if ret.startswith('deploy'):
                 single.deploy()
                 ret = single.cmd_block()
-            return ret
+            return json.loads(ret, object_hook=salt.utils.decode_dict)
         return caller
 
 
@@ -529,26 +498,45 @@ def prep_trans_tar(opts, chunks, file_refs):
     '''
     gendir = tempfile.mkdtemp()
     trans_tar = salt.utils.mkstemp()
-    fnopts = copy.copy(opts)
-    fnopts['cachedir'] = gendir
-    file_client = salt.fileclient.LocalClient(fnopts)
+    file_client = salt.fileclient.LocalClient(opts)
     lowfn = os.path.join(gendir, 'lowstate.json')
     with open(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
     for env in file_refs:
+        env_root = os.path.join(gendir, env)
+        if not os.path.isdir(env_root):
+            os.makedirs(env_root)
         for ref in file_refs[env]:
             for name in ref:
+                short = name[7:]
                 path = file_client.cache_file(name, env)
                 if path:
+                    tgt = os.path.join(env_root, short)
+                    tgt_dir = os.path.dirname(tgt)
+                    if not os.path.isdir(tgt_dir):
+                        os.makedirs(tgt_dir)
+                    shutil.copy(path, tgt)
                     break
-                if file_client.cache_dir(name, env, True):
+                files = file_client.cache_dir(name, env, True)
+                if files:
+                    for file in files:
+                        tgt = os.path.join(
+                                env_root,
+                                short,
+                                file[file.find(short) + len(short):],
+                                )
+                        tgt_dir = os.path.dirname(tgt)
+                        if not os.path.isdir(tgt_dir):
+                            os.makedirs(tgt_dir)
+                        shutil.copy(path, tgt)
                     break
     cwd = os.getcwd()
     os.chdir(gendir)
     with tarfile.open(trans_tar, 'w:gz') as tfp:
         for root, dirs, files in os.walk(gendir):
             for name in files:
-                tfp.add(os.path.join(root, name))
+                full = os.path.join(root, name)
+                tfp.add(full[len(gendir):].lstrip(os.sep))
     os.chdir(cwd)
     shutil.rmtree(gendir)
     return trans_tar

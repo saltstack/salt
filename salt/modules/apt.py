@@ -111,7 +111,9 @@ def latest_version(*names, **kwargs):
 
     A specific repo can be requested using the ``fromrepo`` keyword argument.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package name> fromrepo=unstable
@@ -174,7 +176,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -189,11 +193,13 @@ def refresh_db():
     Returns a dict, with the keys being package databases and the values being
     the result of the update attempt. Values can be one of the following:
 
-        ``True``: Database updated successfully
-        ``False``: Problem updating database
-        ``None``: Database already up-to-date
+    - ``True``: Database updated successfully
+    - ``False``: Problem updating database
+    - ``None``: Database already up-to-date
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -240,7 +246,10 @@ def install(name=None,
         architecture designation (``:i386``, etc.) to the end of the package
         name.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install <package name>
 
     refresh
@@ -269,7 +278,10 @@ def install(name=None,
         A list of packages to install from a software repository. Must be
         passed as a python list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
             salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-0ubuntu0"}]'
 
@@ -282,7 +294,10 @@ def install(name=None,
         architecture designation (``:i386``, etc.) to the end of the package
         name.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
 
 
@@ -411,7 +426,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -440,7 +457,9 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
@@ -458,7 +477,9 @@ def upgrade(refresh=True, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -503,7 +524,9 @@ def list_pkgs(versions_as_list=False, removed=False):
         Virtual package resolution requires dctrl-tools.
         Without dctrl-tools virtual packages will be reported as not installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
@@ -615,7 +638,9 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
@@ -628,7 +653,9 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
@@ -641,7 +668,9 @@ def version_cmp(pkg1, pkg2):
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     '''
@@ -699,7 +728,9 @@ def list_repos():
     '''
     Lists all repos in the sources.list (and sources.lists.d) files
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
        salt '*' pkg.list_repos
        salt '*' pkg.list_repos disabled=True
@@ -733,7 +764,9 @@ def get_repo(repo, **kwargs):
 
     The repo passwd in needs to be a complete repo entry.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.get_repo "myrepo definition"
     '''
@@ -802,7 +835,9 @@ def del_repo(repo, **kwargs):
     The repo passed in must be a fully formed repository definition
     string.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.del_repo "myrepo definition"
     '''
@@ -914,7 +949,9 @@ def mod_repo(repo, **kwargs):
                 at the same time.  Keys should be properly added on initial
                 configuration.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
@@ -1149,7 +1186,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's package database (not
     generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
@@ -1164,7 +1203,9 @@ def file_dict(*packages):
     specifying any packages will return a list of _every_ file on the system's
     package database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
