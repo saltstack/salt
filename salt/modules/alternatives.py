@@ -46,7 +46,9 @@ def display(name):
     '''
     Display alternatives settings for defined command name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' alternatives.display editor
     '''
@@ -63,7 +65,9 @@ def show_current(name):
     Display the current highest-priority alternative for a given alternatives
     link
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' alternatives.show_current editor
     '''
@@ -82,7 +86,9 @@ def check_installed(name, path):
     Check if the current highest-priority match for a given alternatives link
     is set to the desired path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' alternatives.check_installed name path
     '''
@@ -93,7 +99,9 @@ def install(name, link, path, priority):
     '''
     Install symbolic links determining default commands
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' alternatives.install editor /usr/bin/editor /usr/bin/emacs23 50
     '''
@@ -110,7 +118,9 @@ def remove(name, path):
     '''
     Remove symbolic links determining the default commands.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' alternatives.remove name path
     '''
