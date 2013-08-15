@@ -97,13 +97,13 @@ def tagify(suffix='', prefix='', base=SALT):
     '''
     convenience function to build a namespaced event tag string
     from joinning with the TABPART character the base, prefix and suffix
-    
+
     If string prefix is a valid key in TAGS Then use the value of key prefix
     Else use prefix string
-    
+
     If suffix is a list Then join all string elements of suffix individually
     Else use string suffix
-    
+
     '''
     parts = [base, TAGS.get(prefix, prefix)]
     if hasattr(suffix, 'append'): # list so extend parts
@@ -217,14 +217,14 @@ class SaltEvent(object):
             if ord(raw[20]) >= 0x80: #old style
                 mtag = raw[0:20].rstrip('|')
                 mdata = raw[20:]
-            else: #new style   
+            else: #new style
                 mtag, sep, mdata = raw.partition(TAGEND) #split tag from data
-            
+
             data = self.serial.loads(mdata)
-            
+
             if not mtag.startswith(tag): #tag not match
                 return None
-            
+
             if full:
                 ret = {'data': data,
                         'tag': mtag}
@@ -246,24 +246,24 @@ class SaltEvent(object):
         '''
         Send a single event into the publisher with paylod dict "data" and event
         identifier "tag"
-        
+
         Supports new style long tags.
         '''
         if not str(tag): #no empty tags allowed
             raise ValueError('Empty tag.')
-        
+
         if not isinstance(data, MutableMapping): #data must be dict
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
-            
+
         if not self.cpush:
             self.connect_pull()
-        
+
         tagend = ""
         if len(tag) <= 20: #old style compatible tag
             tag = '{0:|<20}'.format(tag) #pad with pipes '|' to 20 character length
         else: #new style longer than 20 chars
             tagend = TAGEND
-            
+
         event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
         self.push.send(event)
         return True
@@ -313,7 +313,7 @@ class SaltEvent(object):
                                         'error',
                                         tags[0],
                                         tags[-1]],
-                                    'job'))                           
+                                    'job'))
                 except Exception:
                     pass
             else:

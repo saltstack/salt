@@ -32,8 +32,8 @@ class APIClient(object):
     '''
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
-    
-    
+
+
     '''
     def __init__(self, opts=None):
         if not opts:
@@ -284,12 +284,12 @@ class APIClient(object):
         If wait is 0 then block forever or until next event becomes available.
         '''
         return (self.event.get_event(wait=wait, tag=tag, full=full))
-    
+
     def fire_event(self, data, tag):
         '''
         fires event with data and tag
         This only works if api is running with same user permissions as master
         Need to convert this to a master call with appropriate authentication
-        
+
         '''
-        return (self.event.fire_event(data, tagify(tag, 'wui')))    
+        return (self.event.fire_event(data, tagify(tag, 'wui')))
