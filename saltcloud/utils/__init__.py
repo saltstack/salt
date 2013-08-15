@@ -737,9 +737,7 @@ def scp_file(dest_path, contents, kwargs):
                 proc.pid, dest_path
             )
         )
-        while proc.poll() is None:
-            time.sleep(0.25)
-
+        proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
     except Exception as err:
@@ -812,9 +810,7 @@ def root_cmd(command, tty, sudo, **kwargs):
                 proc.pid, command
             )
         )
-        while proc.poll() is None:
-            time.sleep(0.25)
-
+        proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
     except Exception as err:
