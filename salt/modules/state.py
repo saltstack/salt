@@ -6,6 +6,8 @@ Control the state system on the minion
 import os
 import copy
 import logging
+import tarfile
+import tempfile
 
 # Import salt libs
 import salt.utils
@@ -531,3 +533,42 @@ def clear_cache():
             os.remove(path)
             ret.append(fn_)
     return ret
+
+
+def pkg(pkg_path):
+    '''
+    Execute a packaged state run, the packaged state run will exist in a
+    tarball available locally. This packaged state
+    can be generated using salt-ssh.
+
+    CLI Example::
+
+        salt '*' state.pkg /tmp/state_pkg.tgz
+    '''
+    # TODO - Add ability to download from salt master or other source
+    if not os.path.isfile(pkg_path):
+        return {}
+    root = tempfile.mkdtemp()
+    with tarfile.open(pkg_path, 'r:gz') as s_pkg:
+        # Verify that the tarball does not extract outside of the intended
+        # root
+        members = s_pkg.getmembers()
+        for member in members:
+            if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
+                return {}
+            elif '..{0}'.format(os.sep()) in member.path:
+                return {}
+        s_pkg.extractall(s_pkg, root)
+    lowstate_json = os.path.join(root, 'lowstate.json')
+    with salt.utils.fopen(lowstate_json, 'r') as fp_:
+        lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
+    popts = copy.deepcopy(__opts__)
+    popts['fileclient'] = 'local'
+    popts['file_roots'] = {}
+    for fn_ in os.listdir(root):
+        full = os.path.join(root, fn_)
+        if not os.path.isdir(full):
+            continue
+        popts['file_roots'][fn_] = full
+    st_ = salt.state.State(popts)
+    return st_.call_chunks(lowstate)
