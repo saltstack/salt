@@ -254,6 +254,12 @@ class Single(object):
         # 2. check is salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
+        if self.arg_str.startswith('state.highstate'):
+            self.highstate_seed()
+        if self.arg_str.startswith('state.sls'):
+            args, kwargs = salt.minion.parse_args_and_kwargs(
+                    self.sls_seed, self.arg)
+            self.sls_seed(*args, **kwargs)
         cmd = (' << "EOF"\n'
                'if [ `type -p python2` ]\n'
                'then\n'
@@ -277,12 +283,6 @@ class Single(object):
                'fi\n'
                '$PYTHON $SALT --local --out json -l quiet {0}\n'
                'EOF').format(self.arg_str)
-        if self.arg_str.startswith('state.highstate'):
-            self.highstate_seed()
-        if self.arg_str.startswith('state.sls'):
-            args, kwargs = salt.minion.parse_args_and_kwargs(
-                    self.sls_seed, self.arg)
-            self.sls_seed(*args, **kwargs)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
