@@ -5,7 +5,9 @@ Control the state system on the minion
 # Import python libs
 import os
 import copy
+import json
 import logging
+import shutil
 import tarfile
 import tempfile
 
@@ -556,7 +558,7 @@ def pkg(pkg_path, test=False, **kwargs):
         for member in members:
             if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
                 return {}
-            elif '..{0}'.format(os.sep()) in member.path:
+            elif '..{0}'.format(os.sep) in member.path:
                 return {}
         s_pkg.extractall(s_pkg, root)
     lowstate_json = os.path.join(root, 'lowstate.json')
@@ -578,6 +580,6 @@ def pkg(pkg_path, test=False, **kwargs):
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)
-    except IOError, OSError:
+    except (IOError, OSError):
         pass
     return ret
