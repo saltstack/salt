@@ -141,13 +141,13 @@ def _get_target(target, ssh):
     return ' %s://%s/%s' % (proto, target, 'system')
 
 
-def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
+def _gen_xml(name, cpu, mem, vda, nicp, hypervisor, **kwargs):
     '''
     Generate the XML string to define a libvirt vm
     '''
     mem = mem * 1024
     data = '''
-<domain type='%%EMULATOR%%'>
+<domain type='%%HYPERVISOR%%'>
         <name>%%NAME%%</name>
         <vcpu>%%CPU%%</vcpu>
         <memory>%%MEM%%</memory>
@@ -169,7 +169,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
         </features>
 </domain>
 '''
-    data = data.replace('%%EMULATOR%%', emulator)
+    data = data.replace('%%HYPERVISOR%%', hypervisor)
     data = data.replace('%%NAME%%', name)
     data = data.replace('%%CPU%%', str(cpu))
     data = data.replace('%%MEM%%', str(mem))
@@ -221,7 +221,7 @@ def _nic_profile(nic):
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
 
 
-def init(name, cpu, mem, image, nic='default', emulator='kvm', start=True, **kwargs):
+def init(name, cpu, mem, image, nic='default', hypervisor='kvm', start=True, **kwargs):
     '''
     Initialize a new vm
 
@@ -239,7 +239,7 @@ def init(name, cpu, mem, image, nic='default', emulator='kvm', start=True, **kwa
         os.makedirs(img_dir)
     nicp = _nic_profile(nic)
     salt.utils.copyfile(sfn, img_dest)
-    xml = _gen_xml(name, cpu, mem, img_dest, nicp, emulator, **kwargs)
+    xml = _gen_xml(name, cpu, mem, img_dest, nicp, hypervisor, **kwargs)
     define_xml_str(xml)
     if kwargs.get('seed'):
         install = kwargs.get('install', True)
