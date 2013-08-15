@@ -69,8 +69,8 @@ class LocalClient(object):
     '''
     ``LocalClient`` is the same interface used by the :command:`salt`
     command-line tool on the Salt Master. ``LocalClient`` is used to send a
-    command to Salt minions to execute :py:mod:`execution modules
-    <salt.modules>` and return the results to the Salt Master.
+    command to Salt minions to execute :ref:`execution modules
+    <all-salt.modules>` and return the results to the Salt Master.
 
     Importing and using ``LocalClient`` must be done on the same machine as the
     Salt Master and it must be done using the same user that the Salt Master is

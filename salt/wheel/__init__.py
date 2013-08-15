@@ -11,9 +11,9 @@ import salt.exceptions
 
 class Wheel(object):
     '''
-    ``WheelClient`` is an interface to Salt's :py:mod:`~salt.wheel` modules
-
-    Wheel modules interact with various parts of the Salt Master.
+    ``WheelClient`` is an interface to Salt's :ref:`wheel modules
+    <all-salt.wheel>`. Wheel modules interact with various parts of the Salt
+    Master.
 
     Importing and using ``WheelClient`` must be done on the same machine as the
     Salt Master and it must be done using the same user that the Salt Master is

@@ -17,8 +17,8 @@ from salt.utils.event import tagify
 class RunnerClient(object):
     '''
     ``RunnerClient`` is the same interface used by the :command:`salt-run`
-    command-line tool on the Salt Master. It executes :py:mod:`~salt.runner`
-    modules which run on the Salt Master.
+    command-line tool on the Salt Master. It executes :ref:`runner modules
+    <all-salt.runners>` which run on the Salt Master.
 
     Importing and using ``RunnerClient`` must be done on the same machine as
     the Salt Master and it must be done using the same user that the Salt
