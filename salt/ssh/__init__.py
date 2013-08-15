@@ -12,45 +12,12 @@ import copy
 
 # Import salt libs
 import salt.ssh.shell
+import salt.utils
 import salt.utils.thin
 import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
-
-
-def decode_list(data):
-    '''
-    JSON decodes as unicode, Jinja needs bytes...
-    '''
-    rv = []
-    for item in data:
-        if isinstance(item, unicode):
-            item = item.encode('utf-8')
-        elif isinstance(item, list):
-            item = decode_list(item)
-        elif isinstance(item, dict):
-            item = decode_dict(item)
-        rv.append(item)
-    return rv
-
-
-def decode_dict(data):
-    '''
-    JSON decodes as unicode, Jinja needs bytes...
-    '''
-    rv = {}
-    for key, value in data.iteritems():
-        if isinstance(key, unicode):
-            key = key.encode('utf-8')
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-        elif isinstance(value, list):
-            value = decode_list(value)
-        elif isinstance(value, dict):
-            value = decode_dict(value)
-        rv[key] = value
-    return rv
 
 
 class SSH(object):
@@ -402,7 +369,7 @@ class Single(object):
         self.shell.send(
                 trans_tar,
                 '/tmp/salt_state.tgz')
-        self.arg_str = 'state.pkg /tmp/salt._state.tgz test={0}'.format(test)
+        self.arg_str = 'state.pkg /tmp/salt_state.tgz test={0}'.format(test)
 
 
 class FunctionWrapper(dict):
@@ -440,7 +407,7 @@ class FunctionWrapper(dict):
             if ret.startswith('deploy'):
                 single.deploy()
                 ret = single.cmd_block()
-            return json.loads(ret, object_hook=decode_dict)
+            return json.loads(ret, object_hook=salt.utils.decode_dict)
         return caller
 
 
