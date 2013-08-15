@@ -42,7 +42,7 @@ def system(name, utc=''):
         The name of the timezone to use (e.g.: America/Denver)
 
     utc
-        Whether or not to use UTC (default is True)
+        Whether or not to set the hardware clock to UTC (default is True)
     '''
     ret = {'name': name,
            'changes': {},
