@@ -59,6 +59,9 @@ Required python modules: MySQLdb
 from contextlib import contextmanager
 import sys
 import json
+import logging
+
+log  = logging.getLogger( __name__ )
 
 # Import third party libs
 try:
@@ -73,19 +76,30 @@ def __virtual__():
         return False
     return 'mysql'
 
+def _get_options():
+    '''
+    Returns options used for the MySQL connection.
+    '''
+    defaults = { "host": "salt", "user": "salt", "pass": "salt", "db": "salt", "port": 3306 }
+    _options = { }
+    for attr in defaults:
+      _attr = __salt__['config.option']('mysql.{0}'.format(attr))
+      if not _attr:
+        log.debug('Using default for Mysql {0}'.format(attr))
+        _options[attr] = defaults[attr]
+        continue
+      _options[attr] = _attr
+
+    return _options
 
 @contextmanager
 def _get_serv(commit=False):
     '''
     Return a mysql cursor
     '''
-    conn = MySQLdb.connect(
-            host=__salt__['config.option']('mysql.host'),
-            user=__salt__['config.option']('mysql.user'),
-            passwd=__salt__['config.option']('mysql.pass'),
-            db=__salt__['config.option']('mysql.db'),
-            port=__salt__['config.option']('mysql.port'),
-            )
+    _options = _get_options()
+    conn = MySQLdb.connect(host=_options['host'], user=_options['user'], passwd=_options['pass'], db=_options['db'], port=_options['port'])
+    log.debug( "FOO" )
     cursor = conn.cursor()
     try:
         yield cursor
@@ -107,11 +121,13 @@ def returner(ret):
     '''
     Return data to a mysql server
     '''
+    log.debug( "Got to this point.." )
     with _get_serv(commit=True) as cur:
-
+        log.debug( "Didn't get here?" )
         sql = '''INSERT INTO `salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''
+        log.error( "got here" )
         if len(ret['return']) == str(ret['return']).count("'result': True"):
             ret['success'] = True
         cur.execute(sql, (ret['fun'], ret['jid'],
