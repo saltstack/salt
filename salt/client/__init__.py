@@ -393,6 +393,7 @@ class LocalClient(object):
             Authentication credentials may be passed when using
             :conf_master:`external_auth`.
 
+            * ``eauth`` - the external_auth backend
             * ``username`` and ``password``
             * ``token``
 
