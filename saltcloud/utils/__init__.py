@@ -360,7 +360,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   minion_pub=None, minion_pem=None, minion_conf=None,
                   keep_tmp=False, script_args=None, script_env=None,
                   ssh_timeout=15, make_syndic=False, make_minion=True,
-                  display_ssh_output=True, preseed_minion_keys=None, parallel=False):
+                  display_ssh_output=True, preseed_minion_keys=None,
+                  parallel=False):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -666,14 +667,19 @@ def deploy_script(host, port=22, timeout=900, username='root',
                             start_action
                         )
                     )
-            #Fire deploy action
-            event = salt.utils.event.SaltEvent(
-                'master',
-                sock_dir
-            )
-            event.fire_event(
-                '{0} has been created at {1}'.format(name, host), 'salt-cloud'
-            )
+            # Fire deploy action
+            event = salt.utils.event.SaltEvent('master', sock_dir)
+            try:
+                event.fire_event(
+                    '{0} has been created at {1}'.format(name, host),
+                    'salt-cloud'
+                )
+            except ValueError:
+                # We're using develop or a 0.17.x version of salt
+                event.fire_event(
+                    {name: '{0} has been created at {1}'.format(name, host)},
+                    'salt-cloud'
+                )
             return True
     return False
 
