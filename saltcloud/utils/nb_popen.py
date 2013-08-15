@@ -37,9 +37,8 @@ log = logging.getLogger(__name__)
 
 class CloudNonBlockingPopen(subprocess.Popen):
 
-    #_stdin_logger_name_ = 'salt.utils.nb_popen.STDIN.PID-{pid}'
-    _stdout_logger_name_ = 'salt.utils.nb_popen.STDOUT.PID-{pid}'
-    _stderr_logger_name_ = 'salt.utils.nb_popen.STDERR.PID-{pid}'
+    _stdout_logger_name_ = 'saltcloud.utils.nb_popen.STDOUT.PID-{pid}'
+    _stderr_logger_name_ = 'saltcloud.utils.nb_popen.STDERR.PID-{pid}'
 
     def __init__(self, *args, **kwargs):
         self.stream_stds = kwargs.pop('stream_stds', False)
@@ -74,7 +73,6 @@ class CloudNonBlockingPopen(subprocess.Popen):
         self._stderr_logger = logging.getLogger(
             self._stderr_logger_name_.format(pid=self.pid)
         )
-
         log.info(
             'Running command under pid {0}: {1!r}'.format(self.pid, *args)
         )
