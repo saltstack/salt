@@ -21,7 +21,6 @@ try:
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
-    log.warning('Failed to load ldap python module')
 
 # Defaults, override in master config
 __defopts__ = {'auth.ldap.server': 'localhost',
