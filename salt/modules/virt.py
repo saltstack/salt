@@ -507,6 +507,10 @@ def get_disks(vm_):
                     'file': qemu_target}
     for dev in disks:
         try:
+            hypervisor = __salt__['config.get']('virt:hypervisor', 'qemu')
+            if hypervisor != 'qemu':
+                break
+
             output = []
             qemu_output = subprocess.Popen(['qemu-img', 'info',
                 disks[dev]['file']],
