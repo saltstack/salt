@@ -504,7 +504,7 @@ def ip_addrs(interface=None, include_loopback=False):
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     '''
-    ret = []
+    ret = set()
     ifaces = interfaces()
     if interface is None:
         target_ifaces = ifaces
@@ -518,8 +518,15 @@ def ip_addrs(interface=None, include_loopback=False):
             if include_loopback \
                     or (not include_loopback
                         and ipv4['address'] != '127.0.0.1'):
-                ret.append(ipv4['address'])
-    return ret
+                ret.add(ipv4['address'])
+        for secondary in ipv4_info.get('secondary', []):
+            addr = secondary.get('address')
+            if addr and secondary.get('type') == 'inet':
+                if include_loopback \
+                        or (not include_loopback
+                            and address != '127.0.0.1'):
+                    ret.add(addr)
+    return sorted(list(ret))
 
 
 def ip_addrs6(interface=None, include_loopback=False):
@@ -528,7 +535,7 @@ def ip_addrs6(interface=None, include_loopback=False):
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
     '''
-    ret = []
+    ret = set()
     ifaces = interfaces()
     if interface is None:
         target_ifaces = ifaces
@@ -541,8 +548,14 @@ def ip_addrs6(interface=None, include_loopback=False):
         for ipv6 in ipv6_info.get('inet6', []):
             if include_loopback \
                     or (not include_loopback and ipv6['address'] != '::1'):
-                ret.append(ipv6['address'])
-    return ret
+                ret.add(ipv6['address'])
+        for secondary in ipv6_info.get('secondary', []):
+            addr = secondary.get('address')
+            if addr and secondary.get('type') == 'inet6':
+                if include_loopback \
+                        or (not include_loopback and address != '::1'):
+                    ret.add(addr)
+    return sorted(list(ret))
 
 
 def hex2ip(hex_ip):
