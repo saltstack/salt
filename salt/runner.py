@@ -12,7 +12,7 @@ import salt.exceptions
 import salt.utils
 import salt.minion
 import salt.utils.event
-
+from salt.utils.event import tagify
 
 class RunnerClient(object):
     '''
@@ -28,7 +28,12 @@ class RunnerClient(object):
         multiprocess and fire the return data on the event bus
         '''
         salt.utils.daemonize()
-        data = {}
+        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        data = {'fun': fun,
+                'jid': low['jid'],
+                }
+        event.fire_event(data, tagify('new', base=tag))
+        
         try:
             data['ret'] = self.low(fun, low)
         except Exception as exc:
@@ -36,8 +41,8 @@ class RunnerClient(object):
                     fun,
                     exc,
                     )
-        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-        event.fire_event(data, tag)
+        
+        event.fire_event(data, tagify('ret', base=tag))
 
     def _verify_fun(self, fun):
         '''
@@ -84,8 +89,11 @@ class RunnerClient(object):
         Execute the runner in a multiprocess and return the event tag to use
         to watch for the return
         '''
-        tag = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
-        tag = tag = '{0}r'.format(tag[:-1])
+        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        tag = tagify(jid, prefix='run')
+        low['tag'] = tag
+        low['jid'] = jid
+        
         proc = multiprocessing.Process(
                 target=self._proc_runner,
                 args=(tag, fun, low))
