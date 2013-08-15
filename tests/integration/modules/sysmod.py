@@ -66,7 +66,7 @@ class SysModuleTest(integration.ModuleCase):
                 continue
             if not isinstance(docs[fun], basestring):
                 nodoc.add(fun)
-            elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::', docs[fun]):
+            elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::?', docs[fun]):
                 noexample.add(fun)
 
         if not nodoc and not noexample:
