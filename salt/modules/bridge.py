@@ -11,6 +11,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+
 def __virtual__():
     '''
     Confirm this module is supported by the OS and the system has
@@ -233,7 +234,9 @@ def show(br=None):
     no interface is given, all bridges are shown, else only the specified
     bridge values are returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.show
         salt '*' bridge.show br0
@@ -245,7 +248,9 @@ def list_():
     '''
     Returns the machine's bridges list
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.list
     '''
@@ -263,7 +268,9 @@ def interfaces(br=None):
     '''
     Returns interfaces attached to a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.interfaces br0
     '''
@@ -279,7 +286,9 @@ def find_interfaces(*args):
     '''
     Returns the bridge to which the interfaces are bond to
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.find_interfaces eth0 [eth1...]
     '''
@@ -304,7 +313,9 @@ def add(br=None):
     '''
     Creates a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.add br0
     '''
@@ -315,7 +326,9 @@ def delete(br=None):
     '''
     Deletes a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.delete br0
     '''
@@ -326,7 +339,9 @@ def addif(br=None, iface=None):
     '''
     Adds an interface to a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.addif br0 eth0
     '''
@@ -337,7 +352,9 @@ def delif(br=None, iface=None):
     '''
     Removes an interface from a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.delif br0 eth0
     '''
@@ -348,7 +365,9 @@ def stp(br=None, state='disable', iface=None):
     '''
     Sets Spanning Tree Protocol state for a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.stp br0 enable
         salt '*' bridge.stp br0 disable
@@ -356,7 +375,9 @@ def stp(br=None, state='disable', iface=None):
     For the NetBSD operating system, it is required to add the interface on
     which to enable the STP.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.stp bridge0 enable fxp0
         salt '*' bridge.stp bridge0 disable fxp0
