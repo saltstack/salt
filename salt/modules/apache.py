@@ -41,7 +41,9 @@ def version():
     '''
     Return server version from apachectl -v
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' apache.version
     '''
@@ -55,7 +57,9 @@ def fullversion():
     '''
     Return server version from apachectl -V
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' apache.fullversion
     '''
@@ -82,7 +86,9 @@ def modules():
     '''
     Return list of static and shared modules from apachectl -M
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' apache.modules
     '''
@@ -106,7 +112,9 @@ def servermods():
     '''
     Return list of modules compiled into the server (apachectl -l)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' apache.servermods
     '''
@@ -126,7 +134,9 @@ def directives():
     Return list of directives together with expected arguments
     and places where the directive is valid (``apachectl -L``)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' apache.directives
     '''
@@ -150,7 +160,9 @@ def vhosts():
     Because each additional virtual host adds to the execution
     time, this command may require a long timeout be specified.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt -t 10 '*' apache.vhosts
     '''
@@ -182,7 +194,9 @@ def signal(signal=None):
     '''
     Signals httpd to start, restart, or stop.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' apache.signal restart
     '''
@@ -224,7 +238,9 @@ def useradd(pwfile, user, password, opts=''):
         p  Do not encrypt the password (plaintext).
         s  Force SHA encryption of the password.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' apache.useradd /etc/httpd/htpasswd larry badpassword
         salt '*' apache.useradd /etc/httpd/htpasswd larry badpass opts=ns
@@ -241,7 +257,9 @@ def userdel(pwfile, user):
     '''
     Delete an HTTP user from the specified htpasswd file.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' apache.userdel /etc/httpd/htpasswd larry
     '''
@@ -260,7 +278,9 @@ def check_site_enabled(site):
     This will only be functional on Debian-based operating systems (Ubuntu,
     Mint, etc).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' apache.check_site_enabled example.com
     '''
@@ -279,7 +299,9 @@ def a2ensite(site):
     This will only be functional on Debian-based operating systems (Ubuntu,
     Mint, etc).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' apache.a2ensite example.com
     '''
@@ -311,7 +333,9 @@ def a2dissite(site):
     This will only be functional on Debian-based operating systems (Ubuntu,
     Mint, etc).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' apache.a2dissite example.com
     '''
@@ -357,7 +381,9 @@ def server_status(profile='default'):
         'realm': 'authentication realm for digest passwords'
         'timeout': 5
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' apache.server_status
         salt '*' apache.server_status other-profile

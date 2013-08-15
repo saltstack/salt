@@ -42,7 +42,9 @@ def version():
     '''
     Return Bluez version from bluetoothd -v
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetoothd.version
     '''
@@ -61,7 +63,9 @@ def address_():
     '''
     Get the many addresses of the Bluetooth adapter
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.address
     '''
@@ -91,7 +95,9 @@ def power(dev, mode):
     '''
     Power a bluetooth device on or off
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.power hci0 on
         salt '*' bluetooth.power hci0 off
@@ -114,7 +120,9 @@ def discoverable(dev):
     '''
     Enable this bluetooth device to be discovrable.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.discoverable hci0
     '''
@@ -131,7 +139,9 @@ def noscan(dev):
     '''
     Turn off scanning modes on this device.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.noscan hci0
     '''
@@ -148,7 +158,9 @@ def scan():
     '''
     Scan for bluetooth devices in the area
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.scan
     '''
@@ -163,7 +175,9 @@ def block(bdaddr):
     '''
     Block a specific bluetooth device by BD Address
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.block DE:AD:BE:EF:CA:FE
     '''
@@ -175,7 +189,9 @@ def unblock(bdaddr):
     '''
     Unblock a specific bluetooth device by BD Address
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.unblock DE:AD:BE:EF:CA:FE
     '''
@@ -187,7 +203,9 @@ def pair(address, key):
     '''
     Pair the bluetooth adapter with a device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.pair DE:AD:BE:EF:CA:FE 1234
 
@@ -209,7 +227,9 @@ def unpair(address):
     '''
     Unpair the bluetooth adapter from a device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.unpair DE:AD:BE:EF:CA:FE
 
@@ -227,7 +247,9 @@ def start():
     '''
     Start the bluetooth service.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.start
     '''
@@ -239,7 +261,9 @@ def stop():
     '''
     Stop the bluetooth service.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.stop
     '''

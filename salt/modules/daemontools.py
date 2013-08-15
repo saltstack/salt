@@ -45,7 +45,9 @@ def start(name):
     '''
     Starts service via daemontools
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.start <service name>
     '''
@@ -59,7 +61,9 @@ def stop(name):
     '''
     Stops service via daemontools
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.stop <service name>
     '''
@@ -72,7 +76,9 @@ def term(name):
     '''
     Send a TERM to service via daemontools
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.term <service name>
     '''
@@ -85,7 +91,9 @@ def reload_(name):
     '''
     Wrapper for term()
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.reload <service name>
     '''
@@ -97,7 +105,9 @@ def restart(name):
     '''
     Restart service via daemontools. This will stop/start service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.restart <service name>
     '''
@@ -112,7 +122,9 @@ def full_restart(name):
     '''
     Calls daemontools.restart() function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.full_restart <service name>
     '''
@@ -124,7 +136,9 @@ def status(name, sig=None):
     '''
     Return the status for a service via daemontools, return pid if running
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.status <service name>
     '''
@@ -142,7 +156,9 @@ def get_all():
     '''
     Return a list of all available services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.get_all
     '''

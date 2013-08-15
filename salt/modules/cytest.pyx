@@ -10,7 +10,10 @@ def echo(text):
     Return a string - used for testing the connection
 
     CLI Example:
-    salt '*' test.echo 'foo bar baz quo qux'
+
+    .. code-block:: bash
+
+        salt '*' test.echo 'foo bar baz quo qux'
     '''
     return text
 
@@ -21,7 +24,10 @@ def ping():
     Return True
 
     CLI Example:
-    salt '*' test.ping
+
+    .. code-block:: bash
+
+        salt '*' test.ping
     '''
     return True
 
@@ -32,7 +38,8 @@ def fib(long num):
     to compute in seconds. Used for performance tests
 
     CLI Example:
-    salt '*' test.fib 3
+
+        salt '*' test.fib 3
     '''
     cdef float start = time.time()
     cdef long a = 0
@@ -51,7 +58,10 @@ def collatz(long start):
     the sequence and the time it took to compute. Used for performance tests.
 
     CLI Example:
-    salt '*' test.collatz 3
+
+    .. code-block:: bash
+
+        salt '*' test.collatz 3
     '''
     cdef float begin = time.time()
     steps = []
