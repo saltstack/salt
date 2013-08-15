@@ -560,7 +560,7 @@ def pkg(pkg_path, test=False, **kwargs):
                 return {}
             elif '..{0}'.format(os.sep) in member.path:
                 return {}
-        s_pkg.extractall(s_pkg, root)
+        s_pkg.extractall(root)
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
