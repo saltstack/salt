@@ -5,8 +5,10 @@ The purpose is to have a simplified consistent interface for various client appl
 '''
 # Import Python libs
 import inspect
+import os
 
 # Import Salt libs
+import salt.config
 import salt.auth
 import salt.client
 import salt.runner
@@ -30,12 +32,13 @@ class APIClient(object):
     '''
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
-
-    >>> client = APIClient(__opts__)
-    >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
-    >>> client.run(lowstate)
+    
+    
     '''
-    def __init__(self, opts):
+    def __init__(self, opts=None):
+        if not opts:
+            opts = salt.config.client_config(os.environ.get('SALT_MASTER_CONFIG',
+                                                            '/etc/salt/master'))
         self.opts = opts
         self.localClient = salt.client.LocalClient(self.opts['conf_file'])
         self.runnerClient = salt.runner.RunnerClient(self.opts)
