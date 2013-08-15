@@ -575,7 +575,7 @@ def pkg(pkg_path, test=False, **kwargs):
         full = os.path.join(root, fn_)
         if not os.path.isdir(full):
             continue
-        popts['file_roots'][fn_] = full
+        popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts)
     ret = st_.call_chunks(lowstate)
     try:
