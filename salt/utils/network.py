@@ -524,7 +524,7 @@ def ip_addrs(interface=None, include_loopback=False):
             if addr and secondary.get('type') == 'inet':
                 if include_loopback \
                         or (not include_loopback
-                            and address != '127.0.0.1'):
+                            and addr != '127.0.0.1'):
                     ret.add(addr)
     return sorted(list(ret))
 
@@ -553,7 +553,7 @@ def ip_addrs6(interface=None, include_loopback=False):
             addr = secondary.get('address')
             if addr and secondary.get('type') == 'inet6':
                 if include_loopback \
-                        or (not include_loopback and address != '::1'):
+                        or (not include_loopback and addr != '::1'):
                     ret.add(addr)
     return sorted(list(ret))
 
