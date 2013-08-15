@@ -91,7 +91,7 @@ This directory is prepended to the following options: :conf_minion:`pki_dir`,
 ``pki_dir``
 -----------
 
-Default: :file:`/etc/salt/pki`
+Default: ``/etc/salt/pki``
 
 The directory used to store the minion's public and private keys.
 
@@ -104,8 +104,12 @@ The directory used to store the minion's public and private keys.
 ``id``
 ------
 
-Default: the system's hostname (as returned by the Python function 
-``socket.getfqdn()``)
+Default: the system's hostname
+
+.. seealso:: :ref:`Salt Walkthrough <minion-id-generation>`
+
+    The :strong:`Setting up a Salt Minion` section contains detailed
+    information on how the hostname is determined.
 
 Explicitly declare the id for this minion to use. Since Salt uses detached ids
 it is possible to run multiple minions on the same machine but with different
@@ -135,7 +139,7 @@ FQDN (for instance, Solaris).
 ``cachedir``
 ------------
 
-Default: :file:`/var/cache/salt`
+Default: ``/var/cache/salt``
 
 The location for minion cache data.
 
