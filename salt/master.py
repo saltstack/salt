@@ -1597,7 +1597,7 @@ class ClearFuncs(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth')) 
+            self.event.fire_event(eload, tagify(prefix = 'auth'))
             return ret
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
