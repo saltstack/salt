@@ -25,7 +25,9 @@ def version():
     '''
     Shows installed version of dnsmasq
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' dnsmasq.version
     '''
@@ -39,7 +41,9 @@ def fullversion():
     '''
     Shows installed version of dnsmasq, and compile options
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' dnsmasq.version
     '''
@@ -65,7 +69,9 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
     to the end of the main config file (and not to any includes). If you need
     an option added to a specific include file, specify it as the config_file.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' dnsmasq.set_config domain=mydomain.com
         salt '*' dnsmasq.set_config follow=False domain=mydomain.com
@@ -104,7 +110,9 @@ def get_config(config_file='/etc/dnsmasq.conf'):
     '''
     Dumps all options from the config file
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' dnsmasq.get_config
         salt '*' dnsmasq.get_config file=/etc/dnsmasq.conf
