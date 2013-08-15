@@ -535,7 +535,7 @@ def clear_cache():
     return ret
 
 
-def pkg(pkg_path):
+def pkg(pkg_path, test=False, **kwargs):
     '''
     Execute a packaged state run, the packaged state run will exist in a
     tarball available locally. This packaged state
@@ -565,10 +565,19 @@ def pkg(pkg_path):
     popts = copy.deepcopy(__opts__)
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
+    if salt.utils.test_mode(test=test, **kwargs):
+        popts['test'] = True
+    else:
+        popts['test'] = __opts__.get('test', None)
     for fn_ in os.listdir(root):
         full = os.path.join(root, fn_)
         if not os.path.isdir(full):
             continue
         popts['file_roots'][fn_] = full
     st_ = salt.state.State(popts)
-    return st_.call_chunks(lowstate)
+    ret = st_.call_chunks(lowstate)
+    try:
+        shutil.rmtree(root)
+    except IOError, OSError:
+        pass
+    return ret
