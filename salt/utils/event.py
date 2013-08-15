@@ -88,9 +88,10 @@ SALT = 'salt' #base prefix for all salt. events
 TAGS = \
 {
     'auth': 'auth', # prefix for all .auth events
-    'job': 'job', # prefix for all .job events
+    'job': 'job', # prefix for all .job events (minion jobs)
     'key': 'key', # prefix for all .key events
-    'minion': 'minion', # prefix for all .minion events
+    'minion': 'minion', # prefix for all .minion events (minion sourced events)
+    'run': 'run', #prefis for all .run events (salt runners)
 }
 
 def tagify(suffix='', prefix='', base=SALT):
