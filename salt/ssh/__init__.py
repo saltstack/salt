@@ -315,8 +315,7 @@ class Single(object):
         if self.arg_str.startswith('state.sls'):
             args, kwargs = salt.minion.parse_args_and_kwargs(
                     self.sls_seed, self.arg)
-            trans_tar = self.sls_seed(*args, **kwargs)
-            print trans_tar
+            self.sls_seed(*args, **kwargs)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
@@ -400,7 +399,10 @@ class Single(object):
         chunks = st_.state.compile_high_data(high)
         file_refs = lowstate_file_refs(chunks)
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
-        return trans_tar
+        self.shell.send(
+                trans_tar,
+                '/tmp/salt_state.tgz')
+        self.arg_str = 'state.pkg /tmp/salt._state.tgz test={0}'.format(test)
 
 
 class FunctionWrapper(dict):
@@ -567,8 +569,6 @@ def prep_trans_tar(opts, chunks, file_refs):
         for root, dirs, files in os.walk(gendir):
             for name in files:
                 full = os.path.join(root, name)
-                print full
-                print full[len(gendir):].lstrip(os.sep)
                 tfp.add(full[len(gendir):].lstrip(os.sep))
     os.chdir(cwd)
     shutil.rmtree(gendir)
