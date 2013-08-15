@@ -18,8 +18,9 @@ from jinja2 import Environment
 try:
     import ldap
     import ldap.modlist
+    HAS_LDAP = True
 except ImportError:
-    pass
+    HAS_LDAP = False
 
 # Defaults, override in master config
 __defopts__ = {'auth.ldap.server': 'localhost',
@@ -72,6 +73,9 @@ class _LDAPConnection(object):
         self.binddn = binddn
         self.bindpw = bindpw
         schema = 'ldap'
+        if not HAS_LDAP:
+            raise CommandExecutionError('Failed to connect to LDAP, module '
+                                        'not loaded')
         try:
             if no_verify:
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT,
