@@ -46,7 +46,7 @@ def _set_retcode(ret):
 
 def _check_pillar(kwargs):
     '''
-    Check the pillar for errors, refuse to run the state it there are errors
+    Check the pillar for errors, refuse to run the state if there are errors
     in the pillar and return the pillar errors
     '''
     if kwargs.get('force'):
@@ -163,7 +163,7 @@ def template_str(tem):
 
 def highstate(test=None, **kwargs):
     '''
-    Retrive the state data from the salt master for this minion and execute it
+    Retrieve the state data from the salt master for this minion and execute it
 
     CLI Example::
 
