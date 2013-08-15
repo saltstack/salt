@@ -19,7 +19,7 @@ try:
     import ldap
     import ldap.modlist
 except ImportError:
-    pass
+    log.warning('Failed to load ldap python module')
 
 # Defaults, override in master config
 __defopts__ = {'auth.ldap.server': 'localhost',
