@@ -52,7 +52,9 @@ def backup_mode(backup=''):
     '''
     Return the backup mode
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.backup_mode
     '''
@@ -65,7 +67,9 @@ def manage_mode(mode):
     '''
     Return a mode value, normalized to a string
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.manage_mode
     '''
@@ -79,7 +83,9 @@ def valid_fileproto(uri):
     Returns a boolean value based on whether or not the URI passed has a valid
     remote file protocol designation
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.valid_fileproto salt://path/to/file
     '''
@@ -98,7 +104,9 @@ def option(
     '''
     Pass in a generic option and receive the value that will be assigned
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.option redis.host
     '''
@@ -127,7 +135,9 @@ def merge(value,
     Same as ``option()`` except that it merges all matches, rather than taking
     the first match.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.merge schedule
     '''
@@ -177,23 +187,25 @@ def get(key, default=''):
     The default return is an empty string.
 
     The value can also represent a value in a nested dict using a ":" delimiter
-    for the dict. This means that if a dict looks like this:
+    for the dict. This means that if a dict looks like this::
 
-    {'pkg': {'apache': 'httpd'}}
+        {'pkg': {'apache': 'httpd'}}
 
     To retrieve the value associated with the apache key in the pkg dict this
-    key can be passed:
+    key can be passed::
 
-    pkg:apache
+        pkg:apache
 
     This routine traverses these data stores in this order:
 
-        Local minion config (opts)
-        Minion's grains
-        Minion's pillar
-        Master config
+    - Local minion config (opts)
+    - Minion's grains
+    - Minion's pillar
+    - Master config
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.get pkg:apache
     '''
@@ -217,7 +229,9 @@ def dot_vals(value):
     Pass in a configuration value that should be preceded by the module name
     and a dot, this will return a list of all read key/value pairs
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.dot_vals host
     '''
@@ -236,7 +250,9 @@ def gather_bootstrap_script(replace=False):
     Download the salt-bootstrap script, set replace to True to refresh the
     script if it has already been downloaded
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' qemu.gather_bootstrap_script True
     '''

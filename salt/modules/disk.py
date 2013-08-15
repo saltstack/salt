@@ -24,7 +24,9 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.usage
     '''
@@ -77,7 +79,9 @@ def inodeusage(args=None):
     '''
     Return inode usage information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.inodeusage
     '''

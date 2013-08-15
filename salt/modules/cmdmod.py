@@ -420,23 +420,31 @@ def run(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
-    Specify an alternate shell with the shell parameter::
+    Specify an alternate shell with the shell parameter:
+
+    .. code-block:: bash
 
         salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
-    information must be read from standard input.::
+    information must be read from standard input.:
+
+    .. code-block:: bash
 
         salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
@@ -477,19 +485,25 @@ def run_stdout(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
-    information must be read from standard input.::
+    information must be read from standard input.:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
@@ -529,19 +543,25 @@ def run_stderr(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
-    information must be read from standard input.::
+    information must be read from standard input.:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
@@ -581,19 +601,25 @@ def run_all(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_all "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
-    information must be read from standard input.::
+    information must be read from standard input.:
+
+    .. code-block:: bash
 
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
@@ -646,19 +672,25 @@ def retcode(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.retcode "file /bin/bash"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' cmd.retcode template=jinja "file {{grains.pythonpath[0]}}/python"
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
-    information must be read from standard input.::
+    information must be read from standard input.:
+
+    .. code-block:: bash
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
@@ -699,7 +731,9 @@ def script(
     The script can also be formated as a template, the default is jinja.
     Arguments for the script can be specified as well.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.script salt://scripts/runme.sh
         salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
@@ -707,7 +741,9 @@ def script(
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
-    information must be read from standard input.::
+    information must be read from standard input.:
+
+    .. code-block:: bash
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
@@ -772,13 +808,17 @@ def script_retcode(
 
     Only evaluate the script return code and do not block for terminal output
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
-    information must be read from standard input.::
+    information must be read from standard input.:
+
+    .. code-block:: bash
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
@@ -799,7 +839,9 @@ def which(cmd):
     '''
     Returns the path of an executable available on the minion, None otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.which cat
     '''
@@ -810,7 +852,9 @@ def which_bin(cmds):
     '''
     Returns the first command found in a list of commands
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.which_bin '[pip2, pip, pip-python]'
     '''
@@ -821,7 +865,9 @@ def has_exec(cmd):
     '''
     Returns true if the executable is available on the minion, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.has_exec cat
     '''
@@ -834,7 +880,9 @@ def exec_code(lang, code, cwd=None):
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. The stdout and stderr will be returned
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''

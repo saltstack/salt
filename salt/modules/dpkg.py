@@ -27,7 +27,9 @@ def list_pkgs(*packages):
         Virtual package resolution requires aptitude. Because this function
         uses dpkg, virtual packages will be reported as not installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.list_pkgs
         salt '*' lowpkg.list_pkgs httpd
@@ -54,7 +56,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's package database (not
     generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix
@@ -94,7 +98,9 @@ def file_dict(*packages):
     specifying any packages will return a list of _every_ file on the system's
     package database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' lowpkg.file_list httpd
         salt '*' lowpkg.file_list httpd postfix
