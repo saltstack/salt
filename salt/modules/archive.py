@@ -28,16 +28,19 @@ def tar(options, tarfile, sources, cwd=None, template=None):
     '''
     Uses the tar command to pack, unpack, etc tar files
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    For example:
 
-        salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 \
-                {{grains.saltpath}}
+    .. code-block:: bash
+
+        salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 {{grains.saltpath}}
 
     '''
     if isinstance(sources, salt._compat.string_types):
@@ -52,13 +55,18 @@ def gzip(sourcefile, template=None):
     '''
     Uses the gzip command to create gzip files
 
-    CLI Example to create ``/tmp/sourcefile.txt.gz``::
+    CLI Example to create ``/tmp/sourcefile.txt.gz``:
+
+    .. code-block:: bash
 
         salt '*' archive.gzip /tmp/sourcefile.txt
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    CLI Example::
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' archive.gzip template=jinja /tmp/{{grains.id}}.txt
 
@@ -72,13 +80,18 @@ def gunzip(gzipfile, template=None):
     '''
     Uses the gunzip command to unpack gzip files
 
-    CLI Example to create ``/tmp/sourcefile.txt``::
+    CLI Example to create ``/tmp/sourcefile.txt``:
+
+    .. code-block:: bash
 
         salt '*' archive.gunzip /tmp/sourcefile.txt.gz
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    CLI Example::
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' archive.gunzip template=jinja /tmp/{{grains.id}}.txt.gz
 
@@ -92,16 +105,20 @@ def zip_(zipfile, sources, template=None):
     '''
     Uses the zip command to create zip files
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
 
-        salt '*' archive.zip template=jinja /tmp/zipfile.zip \
-                /tmp/sourcefile1,/tmp/{{grains.id}}.txt
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
     '''
     if isinstance(sources, salt._compat.string_types):
@@ -115,17 +132,20 @@ def unzip(zipfile, dest, excludes=None, template=None):
     '''
     Uses the unzip command to unpack zip files
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ \
-                excludes=file_1,file_2
+    .. code-block:: bash
+
+        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
 
-        salt '*' archive.unzip template=jinja /tmp/zipfile.zip \
-                /tmp/{{grains.id}}/ excludes=file_1,file_2
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
     if isinstance(excludes, salt._compat.string_types):
@@ -143,16 +163,20 @@ def rar(rarfile, sources, template=None):
     Uses the rar command to create rar files
     Uses rar for Linux from http://www.rarlab.com/
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1,/tmp/sourcefile2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
 
-        salt '*' archive.rar template=jinja /tmp/rarfile.rar \
-                /tmp/sourcefile1,/tmp/{{grains.id}}.txt
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' archive.rar template=jinja /tmp/rarfile.rar /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
 
     '''
@@ -168,17 +192,20 @@ def unrar(rarfile, dest, excludes=None, template=None):
     Uses the unrar command to unpack rar files
     Uses rar for Linux from http://www.rarlab.com/
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ \
-                excludes=file_1,file_2
+    .. code-block:: bash
+
+        salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ excludes=file_1,file_2
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
 
-        salt '*' archive.unrar template=jinja /tmp/rarfile.rar \
-                /tmp/{{grains.id}}/ excludes=file_1,file_2
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' archive.unrar template=jinja /tmp/rarfile.rar /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
     if isinstance(excludes, salt._compat.string_types):

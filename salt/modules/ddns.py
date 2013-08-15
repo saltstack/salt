@@ -16,6 +16,7 @@ try:
 except ImportError as e:
     dns_support = False
 
+
 def __virtual__():
     '''
     Confirm dnspython is available.
@@ -29,7 +30,9 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True):
     '''
     Add, replace, or update the A and PTR (reverse) records for a host.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 ddns.add_host example.com host1 60 10.1.1.1
     '''
@@ -60,7 +63,9 @@ def delete_host(zone, name, nameserver='127.0.0.1'):
 
     Returns true if any records are deleted.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 ddns.delete_host example.com host1
     '''
@@ -99,7 +104,9 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False)
     must have update privileges on that server.
     If replace is true, first deletes all records for this name and type.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 ddns.update example.com host1 60 A 10.0.0.1
     '''
@@ -139,7 +146,9 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1'):
     '''
     Delete a DNS record.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 ddns.delete example.com host1 A
     '''
