@@ -661,7 +661,7 @@ def get_id():
     try:
         with salt.utils.fopen('/etc/hostname') as hfl:
             name = hfl.read().strip()
-        if re.search('\s', name):
+        if re.search(r'\s', name):
             log.warning('Whitespace character detected in /etc/hostname. '
                         'This file should not contain any whitespace.')
         else:
