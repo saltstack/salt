@@ -58,7 +58,7 @@ def pillar(tgt, delim=':'):
         salt '*' match.pillar 'cheese:foo'
         salt '*' match.pillar 'clone_url|https://github.com/saltstack/salt.git' delim='|'
 
-    ..versionchanged:: 0.16.4
+    .. versionchanged:: 0.16.4
         ``delim`` argument added
     '''
     matcher = salt.minion.Matcher({'pillar': __pillar__}, __salt__)
@@ -95,7 +95,7 @@ def grain_pcre(tgt, delim=':'):
         salt '*' match.grain_pcre 'os:Fedo.*'
         salt '*' match.grain_pcre 'ipv6|2001:.*' delim='|'
 
-    ..versionchanged:: 0.16.4
+    .. versionchanged:: 0.16.4
         ``delim`` argument added
     '''
     matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
@@ -116,7 +116,7 @@ def grain(tgt, delim=':'):
         salt '*' match.grain 'os:Ubuntu'
         salt '*' match.grain_pcre 'ipv6|2001:db8::ff00:42:8329' delim='|'
 
-    ..versionchanged:: 0.16.4
+    .. versionchanged:: 0.16.4
         ``delim`` argument added
     '''
     matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
