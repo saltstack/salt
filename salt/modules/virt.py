@@ -56,18 +56,56 @@ def __get_conn():
 
         .. code-block:: yaml
 
-            virt:
+            libvirt:
               hypervisor: esxi
-              hostname: 192.168.9.9
+              connection: esx01
+
+        The connection setting can either be an explicit libvirt URI,
+        or a libvirt URI alias as in this example. No, it cannot be
+        just a hostname.
+
+
+        Example libvirt `/etc/libvirt/libvirt.conf`:
+
+        .. code-block::
+
+            uri_aliases = [
+              "esx01=esx://10.1.1.101/?no_verify=1&auto_answer=1",
+              "esx02=esx://10.1.1.102/?no_verify=1&auto_answer=1",
+            ]
+
+        Reference:
+
+         - http://libvirt.org/drvesx.html#uriformat
+         - http://libvirt.org/uri.html#URI_config
         '''
-        hostname = __salt__['config.get']('virt:hostname', 'localhost')
-        return 'esx://%s/?no_verify=1&auto_answer=1' % hostname
+        connection = __salt__['config.get']('libvirt:connection', 'esx')
+        if connection.startswith('esx://'):
+            return connection
+        return '%s' % connection
 
     def __esxi_auth():
         '''
         We rely on that the credentials is provided to libvirt through
-        it's built in mechanisms, see
-        http://libvirt.org/auth.html#Auth_client_config
+        it's built in mechanisms.
+
+        Example libvirt `/etc/libvirt/auth.conf`:
+
+        .. code-block::
+
+            [credentials-myvirt]
+            username=user
+            password=secret
+
+            [auth-esx-10.1.1.101]
+            credentials=myvirt
+
+            [auth-esx-10.1.1.102]
+            credentials=myvirt
+
+        Reference:
+
+          - http://libvirt.org/auth.html#Auth_client_config
         '''
         return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
 
@@ -78,7 +116,7 @@ def __get_conn():
         'qemu': [libvirt.open, ['qemu:///system']],
         }
 
-    hypervisor = __salt__['config.get']('virt:hypervisor', 'qemu')
+    hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
 
     try:
         conn = conn_func[hypervisor][0](*conn_func[hypervisor][1])
@@ -506,7 +544,7 @@ def get_disks(vm_):
                     'file': qemu_target}
     for dev in disks:
         try:
-            hypervisor = __salt__['config.get']('virt:hypervisor', 'qemu')
+            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
             if hypervisor != 'qemu':
                 break
 
