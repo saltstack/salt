@@ -703,20 +703,30 @@ def create(vm_=None, call=None):
             for (counter, sg_) in enumerate(ex_securitygroupid):
                 params['SecurityGroupId.{0}'.format(counter)] = sg_
 
-    set_delvol_on_destroy = config.get_config_value(
-        'delvol_on_destroy', vm_, __opts__, search_global=False
+    set_del_root_vol_on_destroy = config.get_config_value(
+        'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
 
-    if set_delvol_on_destroy is not None:
-        if not isinstance(set_delvol_on_destroy, bool):
+    if set_del_root_vol_on_destroy is not None:
+        if not isinstance(set_del_root_vol_on_destroy, bool):
             raise SaltCloudConfigError(
-                '\'delvol_on_destroy\' should be a boolean value.'
+                '\'del_root_vol_on_destroy\' should be a boolean value.'
             )
 
         params['BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
         params['BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
-            set_delvol_on_destroy
+            set_del_root_vol_on_destroy
         ).lower()
+
+    set_del_all_vols_on_destroy = config.get_config_value(
+        'del_all_vols_on_destroy', vm_, __opts__, search_global=False
+    )
+
+    if set_del_all_vols_on_destroy is not None:
+        if not isinstance(set_del_all_vols_on_destroy, bool):
+            raise SaltCloudConfigError(
+                '\'del_all_vols_on_destroy\' should be a boolean value.'
+            )
 
     try:
         data = query(params, 'instancesSet', location=location)
@@ -918,7 +928,7 @@ def create(vm_=None, call=None):
                 'volumes': volumes,
                 'zone': ret['placement']['availabilityZone'],
                 'instance_id': ret['instanceId'],
-                'set_delvol_on_destroy': set_delvol_on_destroy
+                'del_all_vols_on_destroy': set_del_all_vols_on_destroy
             },
             call='action'
         )
@@ -972,11 +982,11 @@ def create_attach_volumes(name, kwargs, call=None):
                     volume_dict['volume_id'] = item['volumeId']
 
             # Update the delvol parameter for any newly created volumes
-            set_delvol_on_destroy = kwargs.get('set_delvol_on_destroy', None)
+            delvols_on_destroy = kwargs.get('del_all_vols_on_destroy', None)
 
-            if set_delvol_on_destroy is not None:
+            if delvols_on_destroy is not None:
                 _toggle_delvol(instance_id=kwargs['instance_id'],
-                               value=set_delvol_on_destroy)
+                               value=delvols_on_destroy)
 
         attach = attach_volume(
             name,
@@ -1544,13 +1554,6 @@ def delvol_on_destroy(name, device=None, volume_id=None, call=None):
 
 def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
                    value=None, requesturl=None):
-    '''
-    Delete root EBS volume upon instance termination
-
-    CLI Example::
-
-        salt-cloud -a delvol_on_destroy mymachine
-    '''
     if not instance_id:
         instances = list_nodes_full()
         instance_id = instances[name]['instanceId']
