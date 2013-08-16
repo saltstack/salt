@@ -68,7 +68,7 @@ def create(vm_):
             }
         }
     key_filename = config.get_config_value(
-        'ssh_keyfile', vm_, __opts__, search_global=False, default=None
+        'key_filename', vm_, __opts__, search_global=False, default=None
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
@@ -109,7 +109,7 @@ def create(vm_):
         'password': config.get_config_value(
             'password', vm_, __opts__, search_global=False
         ),
-        'ssh_keyfile': key_filename,
+        'key_filename': key_filename,
         'script_args': config.get_config_value('script_args', vm_, __opts__),
         'script_env': config.get_config_value('script_env', vm_, __opts__),
         'minion_conf': saltcloud.utils.minion_config(__opts__, vm_),
@@ -165,3 +165,14 @@ def script(vm_):
             saltcloud.utils.minion_config(__opts__, vm_)
         )
     )
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__,
+        __active_provider_name__ or 'aws',
+        ()
+    )
+
