@@ -238,16 +238,18 @@ def filter_by(lookup_dict, grain='os_family'):
 
     .. code-block:: jinja
 
-        {% set pkg_table = {
-            'Debian': {'name': 'apache2'},
-            'RedHat': {'name': 'httpd'},
-        } %}
-        {% set pkg = salt['grains.filter_by'](pkg_table) %}
+        {% set apache = salt['grains.filter_by']({
+            'Debian': {'pkg': 'apache2', 'srv': 'apache2'},
+            'RedHat': {'pkg': 'httpd', 'srv': 'httpd'},
+        }) %}
 
         myapache:
           pkg:
             - installed
-            - name: {{ pkg.name }}
+            - name: {{ apache.pkg }}
+          service:
+            - running
+            - name: {{ apache.srv }}
 
     :param lookup_dict: A dictionary, keyed by a grain, containing a value or
         values relevant to systems matching that grain. For example, a key
