@@ -67,7 +67,15 @@ def condition_kwarg(arg, kwarg):
 
 class LocalClient(object):
     '''
-    Connect to the salt master via the local server and via root
+    ``LocalClient`` is the same interface used by the :command:`salt`
+    command-line tool on the Salt Master. ``LocalClient`` is used to send a
+    command to Salt minions to execute :ref:`execution modules
+    <all-salt.modules>` and return the results to the Salt Master.
+
+    Importing and using ``LocalClient`` must be done on the same machine as the
+    Salt Master and it must be done using the same user that the Salt Master is
+    running as (unless :conf_master:`external_auth` is configured and
+    authentication credentials are included in the execution.
     '''
     def __init__(self, c_path='/etc/salt/master', mopts=None):
         if mopts:
@@ -227,6 +235,11 @@ class LocalClient(object):
             **kwargs):
         '''
         Execute a command and get back the jid, don't wait for anything
+
+        The function signature is the same as :py:meth:`cmd` with the
+        following exceptions.
+
+        :returns: A job ID
         '''
         arg = condition_kwarg(arg, kwarg)
         pub_data = self.run_job(tgt,
@@ -315,7 +328,78 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Execute a salt command and return.
+        The cmd method will execute and wait for the timeout period for all
+        minions to reply, then it will return all minion data at once.
+
+        Usage:
+
+        .. code:: python
+
+            import salt.client
+            client = salt.client.LocalClient()
+            ret = client.cmd('*', 'cmd.run', ['whoami'])
+
+        Compound command usage:
+
+        .. code:: python
+
+            ret = client.cmd('*', ['grains.items', 'cmd.run'], [[], ['whoami']])
+
+        :param tgt: Which minions to target for the execution. Default is shell
+            glob. Modified by the ``expr_form`` option.
+        :type tgt: string or list
+
+        :param fun: The module and function to call on the specified minions of
+            the form ``module.function``. For example ``test.ping`` or
+            ``grains.items``.
+
+            Compound commands
+                Multiple functions may be called in a single publish by
+                passing a list of commands. This can dramatically lower
+                overhead and speed up the application communicating with Salt.
+
+                This requires that the ``arg`` param is a list of lists. The
+                ``fun`` list and the ``arg`` list must correlate by index
+                meaning a function that does not take arguments must still have
+                a corresponding empty list at the expected index.
+        :type fun: string or list of strings
+
+        :param arg: A list of arguments to pass to the remote function. If the
+            function takes no arguments ``arg`` may be omitted except when
+            executing a compound command.
+        :type arg: list or list-of-lists
+
+        :param timeout: Seconds to wait after the last minion returns but
+            before all minions return.
+
+        :param expr_form: The type of ``tgt``. Allowed values:
+
+            * ``glob`` - Bash glob completion - Default
+            * ``pcre`` - Perl style regular expression
+            * ``list`` - Python list of hosts
+            * ``grain`` - Match based on a grain comparison
+            * ``grain_pcre`` - Grain comparison with a regex
+            * ``pillar`` - Pillar data comparison
+            * ``nodegroup`` - Match on nodegroup
+            * ``range`` - Use a Range server for matching
+            * ``compound`` - Pass a compound match string
+
+        :param ret: The returner to use. The value passed can be single
+            returner, or a comma delimited list of returners to call in order
+            on the minions
+
+        :param kwargs: Optional keyword arguments.
+
+            Authentication credentials may be passed when using
+            :conf_master:`external_auth`.
+
+            * ``eauth`` - the external_auth backend
+            * ``username`` and ``password``
+            * ``token``
+
+        :returns: A dictionary with the result of the execution, keyed by
+            minion ID. A compound command will return a sub-dictionary keyed by
+            function name.
         '''
         arg = condition_kwarg(arg, kwarg)
         pub_data = self.run_job(tgt,
@@ -345,8 +429,14 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Execute a salt command and return data conditioned for command line
-        output
+        Used by the :command:`salt` CLI. This method returns minion returns as
+        the come back and attempts to block until all minions return.
+
+        The function signature is the same as :py:meth:`cmd` with the
+        following exceptions.
+
+        :param verbose: Print extra information about the running command
+        :returns: A generator
         '''
         arg = condition_kwarg(arg, kwarg)
         pub_data = self.run_job(
@@ -394,8 +484,10 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Execute a salt command and return an iterator to return data as it is
-        received
+        Yields the individual minion returns as they come in
+
+        The function signature is the same as :py:meth:`cmd` with the
+        following exceptions.
         '''
         arg = condition_kwarg(arg, kwarg)
         pub_data = self.run_job(
@@ -431,7 +523,13 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Execute a salt command and return
+        Blocks while waiting for individual minions to return.
+
+        The function signature is the same as :py:meth:`cmd` with the
+        following exceptions.
+
+        :returns: None until the next minion returns. This allows for actions
+            to be injected in between minion returns.
         '''
         arg = condition_kwarg(arg, kwarg)
         pub_data = self.run_job(
@@ -1165,7 +1263,23 @@ class FunctionWrapper(dict):
 
 class Caller(object):
     '''
-    Create an object used to call salt functions directly on a minion
+    ``Caller`` is the same interface used by the :command:`salt-call`
+    command-line tool on the Salt Minion.
+
+    Importing and using ``LocalClient`` must be done on the same machine as a
+    Salt Minion and it must be done using the same user that the Salt Minion is
+    running as.
+
+    Usage:
+
+    .. code-block:: python
+
+        import salt.client
+        caller = salt.client.Caller()
+        caller.function('test.ping')
+
+        # Or call objects directly
+        caller.sminion.functions['cmd.run']('ls -l')
     '''
     def __init__(self, c_path='/etc/salt/minion'):
         self.opts = salt.config.minion_config(c_path)

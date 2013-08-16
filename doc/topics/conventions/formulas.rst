@@ -2,6 +2,8 @@
 Salt Formulas
 =============
 
+.. note:: Many Formulas require Salt 0.16.3 or later
+
 Formulas are pre-written Salt States and optional Pillar configuration. They
 are as open-ended as Salt States themselves and can be used for tasks such as
 installing a package, configuring and starting a service, setting up users or

@@ -44,6 +44,7 @@ import salt.master
 import salt.minion
 import salt.runner
 import salt.output
+import salt.version
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
@@ -241,9 +242,8 @@ class TestDaemon(object):
         self.setup_minions()
 
         if self.parser.options.sysinfo:
-            from salt import version
             print_header('~~~~~~~ Versions Report ', inline=True)
-            print('\n'.join(version.versions_report()))
+            print('\n'.join(salt.version.versions_report()))
 
             print_header(
                 '~~~~~~~ Minion Grains Information ', inline=True,
@@ -925,3 +925,110 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
+
+
+# ----- salt 0.16.x network tests wrapper ----------------------------------->
+# If you're removing this code because we're already in salt 0.17, please also
+# switch the `requires_network` import in `tests/unit/utils/verify_test.py`
+if salt.version.__version_info__ >= (0, 17):
+    raise RuntimeError(
+        'Detected salt >= 0.17.0. Please remove this `requires_network` '
+        'function which was only meant to be used in salt < 0.17'
+    )
+
+try:
+    from salttesting.helpers import requires_network
+except ImportError:
+    if salt.version.__version_info__ >= (0, 17):
+        # If you're removing this code because we're already in salt 0.17,
+        # please also switch the `requires_network` import line in
+        # `tests/unit/utils/verify_test.py`
+        raise RuntimeError(
+            'Detected salt >= 0.17.0. Please remove this `requires_network` '
+            'function which was only meant to be used in salt < 0.17'
+        )
+
+    import socket
+    from functools import wraps
+
+    def requires_network(only_local_network=False):
+        '''
+        Simple decorator which is supposed to skip a test case in case there's
+        no network connection to the internet.
+        '''
+        def decorator(func):
+            @wraps(func)
+            def wrap(cls):
+                has_local_network = False
+                # First lets try if we have a local network. Inspired in
+                # verify_socket
+                try:
+                    pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    pubsock.setsockopt(
+                        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+                    )
+                    pubsock.bind(('', 18000))
+                    pubsock.close()
+                    retsock.setsockopt(
+                        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+                    )
+                    retsock.bind(('', 18001))
+                    retsock.close()
+                    has_local_network = True
+                except socket.error:
+                    # I wonder if we just have IPV6 support?
+                    try:
+                        pubsock = socket.socket(
+                            socket.AF_INET, socket.SOCK_STREAM
+                        )
+                        retsock = socket.socket(
+                            socket.AF_INET, socket.SOCK_STREAM
+                        )
+                        pubsock.setsockopt(
+                            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+                        )
+                        pubsock.bind(('', 18000))
+                        pubsock.close()
+                        retsock.setsockopt(
+                            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+                        )
+                        retsock.bind(('', 18001))
+                        retsock.close()
+                        has_local_network = True
+                    except socket.error:
+                        # Let's continue
+                        pass
+
+                if only_local_network is True:
+                    if has_local_network is False:
+                        # Since we're only supposed to check local network, and
+                        # no local network was detected, skip the test
+                        cls.skipTest('No local network was detected')
+                    return func(cls)
+
+                # We are using the google.com DNS records as numerical IPs to
+                # avoid DNS lookups which could greatly slow down this check
+                for addr in ('173.194.41.198', '173.194.41.199',
+                             '173.194.41.200', '173.194.41.201',
+                             '173.194.41.206', '173.194.41.192',
+                             '173.194.41.193', '173.194.41.194',
+                             '173.194.41.195', '173.194.41.196',
+                             '173.194.41.197'):
+                    try:
+                        sock = socket.socket(socket.AF_INET,
+                                             socket.SOCK_STREAM)
+                        sock.settimeout(0.25)
+                        sock.connect((addr, 80))
+                        sock.close()
+                        # We connected? Stop the loop
+                        break
+                    except socket.error:
+                        # Let's check the next IP
+                        continue
+                else:
+                    cls.skipTest('No internet network connection was detected')
+                return func(cls)
+            return wrap
+        return decorator
+# <---- salt 0.16.x network tests wrapper ------------------------------------

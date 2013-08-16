@@ -52,7 +52,6 @@ Full Table of Contents
     ref/peer
     ref/clientacl
     ref/syndic
-    ref/python-api
     ref/file_server/*
     ref/file_server/all/index
     ref/configuration/*

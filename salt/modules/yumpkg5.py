@@ -10,7 +10,7 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt.utils import namespaced_function
+from salt.utils import namespaced_function as _namespaced_function
 from salt.modules.yumpkg import (mod_repo, _parse_repo_file, list_repos,
                                  get_repo, expand_repo_def, del_repo)
 
@@ -52,12 +52,12 @@ def __virtual__():
     if valid:
         global mod_repo, _parse_repo_file, list_repos, get_repo
         global expand_repo_def, del_repo
-        mod_repo = namespaced_function(mod_repo, globals())
-        _parse_repo_file = namespaced_function(_parse_repo_file, globals())
-        list_repos = namespaced_function(list_repos, globals())
-        get_repo = namespaced_function(get_repo, globals())
-        expand_repo_def = namespaced_function(expand_repo_def, globals())
-        del_repo = namespaced_function(del_repo, globals())
+        mod_repo = _namespaced_function(mod_repo, globals())
+        _parse_repo_file = _namespaced_function(_parse_repo_file, globals())
+        list_repos = _namespaced_function(list_repos, globals())
+        get_repo = _namespaced_function(get_repo, globals())
+        expand_repo_def = _namespaced_function(expand_repo_def, globals())
+        del_repo = _namespaced_function(del_repo, globals())
         return 'pkg'
     return False
 

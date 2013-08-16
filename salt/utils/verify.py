@@ -95,8 +95,9 @@ def lookup_family(hostname):
     # If lookups fail, fall back to AF_INET sockets (and v4 addresses).
     fallback = socket.AF_INET
     try:
-        hostnames = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC,
-                                       socket.SOCK_STREAM)
+        hostnames = socket.getaddrinfo(
+            hostname or None, None, socket.AF_UNSPEC, socket.SOCK_STREAM
+        )
         if not hostnames:
             return fallback
         h = hostnames[0]
