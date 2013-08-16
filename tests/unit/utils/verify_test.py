@@ -15,7 +15,7 @@ import socket
 # Import Salt libs
 import salt.utils
 from saltunittest import skipIf, TestCase, TestsLoggingHandler
-
+from integration import requires_network
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -74,6 +74,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
+    @requires_network(only_local_network=True)
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
         if socket.has_ipv6:
