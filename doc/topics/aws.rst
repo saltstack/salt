@@ -298,6 +298,16 @@ each cloud profile.
           VirtualName: ephemeral1
 
 
+Tags can be set once an instance has been launched.
+
+.. code.block:: yaml
+
+    my-ec2-config:
+        tag:
+            tag0: value
+            tag2: value
+
+
 Modify EC2 Tags
 ===============
 One of the features of EC2 is the ability to tag resources. In fact, under the 

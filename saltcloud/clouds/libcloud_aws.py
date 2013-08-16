@@ -333,6 +333,11 @@ def create(vm_):
     ex_blockdevicemappings = block_device_mappings(vm_)
     if ex_blockdevicemappings:
         kwargs['ex_blockdevicemappings'] = ex_blockdevicemappings
+    tags = config.get_config_value('tag', vm_, __opts__, {}, search_global=False)
+    if not isinstance(tags, dict):
+        raise SaltCloudConfigError(
+                '\'tag\' should be a dict.'
+            )
 
     try:
         data = conn.create_node(**kwargs)
@@ -377,6 +382,9 @@ def create(vm_):
             pass
         finally:
             raise SaltCloudSystemExit(exc.message)
+
+    if tags:
+        set_tags(vm_['name'], tags, call='action')
 
     if ssh_interface(vm_) == 'private_ips':
         log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
