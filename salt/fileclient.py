@@ -347,7 +347,8 @@ class Client(object):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
-        if url_data.username is not None:
+        if url_data.username is not None \
+                and url_data.scheme in ('http', 'https'):
             _, netloc = url_data.netloc.split('@', 1)
             fixed_url = urlunparse((url_data.scheme, netloc, url_data.path,
                 url_data.params, url_data.query, url_data.fragment ))
