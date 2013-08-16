@@ -869,8 +869,8 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         splits = expr.split(delim)
         key = delim.join(splits[:idx])
         matchstr = delim.join(splits[idx:])
-        log.debug('Attempting to match \'{0}\' in '
-                    '\'{1}\''.format(matchstr, key))
+        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
+                  '\'{2}\''.format(matchstr, key, delim))
         match = traverse_dict(data, key, {}, delim=delim)
         if match == {}:
             continue
