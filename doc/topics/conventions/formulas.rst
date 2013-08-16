@@ -2,7 +2,12 @@
 Salt Formulas
 =============
 
-.. note:: Many Formulas require Salt 0.16.3 or later
+.. note:: Salt version requirements
+
+    Many Formulas require Salt 0.16.4 or later although this can currently be
+    side-stepped by copying the newer version of :blob:`salt/modules/grains.py`
+    into the :file:`/srv/salt/_modules` directory and it will be automatically
+    distributed to all minions.
 
 Formulas are pre-written Salt States and optional Pillar configuration. They
 are as open-ended as Salt States themselves and can be used for tasks such as
