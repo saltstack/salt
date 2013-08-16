@@ -249,6 +249,15 @@ def filter_by(lookup_dict, grain='os_family'):
             - installed
             - name: {{ pkg.name }}
 
+    :param lookup_dict: A dictionary, keyed by a grain, containing a value or
+        values relevant to systems matching that grain. For example, a key
+        could be the grain for an OS and the value could the name of a package
+        on that particular OS.
+    :param grain: The name of a grain to match with the current system's
+        grains. For example, the value of the "os_family" grain for the current
+        system could be used to pull values from the ``lookup_dict``
+        dictionary.
+
     CLI Example::
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
