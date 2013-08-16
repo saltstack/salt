@@ -143,7 +143,10 @@ def set(name, data):
                 ret['changes'][key] = ('New value: {0}').format(args['value'])
             else:
                 if __salt__['debconf.set'](name, key, args['type'], args['value']):
-                    ret['changes'][key] = ('{0}').format(args['value'])
+                    if args['type'] == 'password':
+                        ret['changes'][key] = '(password hidden)'
+                    else:
+                        ret['changes'][key] = ('{0}').format(args['value'])
                 else:
                     ret['result'] = False
                     ret['comment'] = 'Some settings failed to be applied.'
