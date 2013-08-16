@@ -4,7 +4,9 @@ Control the state system on the minion
 
 # Import python libs
 import os
+import json
 import copy
+import shutil
 import logging
 import tarfile
 import tempfile
@@ -556,9 +558,9 @@ def pkg(pkg_path, test=False, **kwargs):
         for member in members:
             if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
                 return {}
-            elif '..{0}'.format(os.sep()) in member.path:
+            elif '..{0}'.format(os.sep) in member.path:
                 return {}
-        s_pkg.extractall(s_pkg, root)
+        s_pkg.extractall(root)
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
@@ -573,11 +575,11 @@ def pkg(pkg_path, test=False, **kwargs):
         full = os.path.join(root, fn_)
         if not os.path.isdir(full):
             continue
-        popts['file_roots'][fn_] = full
+        popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts)
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)
-    except IOError, OSError:
+    except (IOError, OSError):
         pass
     return ret

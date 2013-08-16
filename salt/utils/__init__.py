@@ -1333,6 +1333,7 @@ def warn_until(version_info,
                message,
                category=DeprecationWarning,
                stacklevel=None,
+               _version_info_=None,
                _dont_call_warnings=False):
     '''
     Helper function to raise a warning, by default, a ``DeprecationWarning``,
@@ -1347,6 +1348,9 @@ def warn_until(version_info,
                      ``DeprecationWarning``
     :param stacklevel: There should be no need to set the value of
                        ``stacklevel`` salt should be able to do the right thing
+    :param _version_info_: In order to reuse this function for other SaltStack
+                           projects, they need to be able to provide the
+                           version info to compare to.
     :param _dont_call_warnings: This parameter is used just to get the
                                 functionality until the actual error is to be
                                 issued. When we're only after the salt version
@@ -1361,17 +1365,20 @@ def warn_until(version_info,
         # Attribute the warning to the calling function, not to warn_until()
         stacklevel = 2
 
-    if salt.version.__version_info__ >= version_info:
+    if _version_info_ is None:
+        _version_info_ = salt.version.__version_info__
+
+    if _version_info_ >= version_info:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
-            '{lineno}, is supposed to be shown until salt {until_version!r} '
-            'is released. Salt version is now {salt_version!r}. Please '
-            'remove the warning.'.format(
+            '{lineno}, is supposed to be shown until version '
+            '{until_version!r} is released. Current version is now '
+            '{salt_version!r}. Please remove the warning.'.format(
                 filename=caller.filename,
                 lineno=caller.lineno,
                 until_version='.'.join(map(str, version_info)),
-                salt_version='.'.join(map(str, salt.version.__version_info__))
+                salt_version='.'.join(map(str, _version_info_))
             ),
         )
 

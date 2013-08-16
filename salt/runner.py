@@ -14,9 +14,16 @@ import salt.minion
 import salt.utils.event
 from salt.utils.event import tagify
 
+
 class RunnerClient(object):
     '''
-    A client for accessing runners
+    ``RunnerClient`` is the same interface used by the :command:`salt-run`
+    command-line tool on the Salt Master. It executes :ref:`runner modules
+    <all-salt.runners>` which run on the Salt Master.
+
+    Importing and using ``RunnerClient`` must be done on the same machine as
+    the Salt Master and it must be done using the same user that the Salt
+    Master is running as.
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -33,7 +40,7 @@ class RunnerClient(object):
                 'jid': low['jid'],
                 }
         event.fire_event(data, tagify('new', base=tag))
-        
+
         try:
             data['ret'] = self.low(fun, low)
             data['success'] = True
@@ -42,7 +49,7 @@ class RunnerClient(object):
                             fun,
                             exc,
                             )
-        
+
         event.fire_event(data, tagify('ret', base=tag))
 
     def _verify_fun(self, fun):
@@ -94,7 +101,7 @@ class RunnerClient(object):
         tag = tagify(jid, prefix='run')
         low['tag'] = tag
         low['jid'] = jid
-        
+
         proc = multiprocessing.Process(
                 target=self._proc_runner,
                 args=(tag, fun, low))
@@ -103,9 +110,10 @@ class RunnerClient(object):
 
     def master_call(self, **kwargs):
         '''
-        Send a function call to a wheel module through the master network interface
-        Expects that one of the kwargs is key 'fun' whose value is the namestring
-        of the function to call
+        Send a function call to a wheel module through the master network
+        interface.
+        Expects that one of the kwargs is key 'fun' whose value is the
+        namestring of the function to call.
         '''
         load = kwargs
         load['cmd'] = 'runner'
