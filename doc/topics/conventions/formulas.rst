@@ -29,8 +29,8 @@ Installation
 ============
 
 Each Salt Formula is an individual Git repository designed as a drop-in
-addition to an existing Salt State tree either by using Salt's GitFS fileserver
-backend or by cloning the repository manually.
+addition to an existing Salt State tree. Formulas can be installed in the
+following ways.
 
 Adding a Formula as a GitFS remote
 ----------------------------------
@@ -50,6 +50,12 @@ Adding a Formula directory manually
 Since Formulas are simply directories they can be copied onto the local file
 system by using Git to clone the repository or by downloading and expanding a
 tarball or zip file of the directory.
+
+* Clone the repository manually and add a new entry to
+  :conf_master:`file_roots` pointing to the clone's directory.
+
+* Clone the repository manually and then copy or link the Formula directory
+  into ``file_roots``.
 
 Usage
 =====
