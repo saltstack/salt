@@ -36,7 +36,7 @@ class RunnerClient(object):
         '''
         salt.utils.daemonize()
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-        data = {'fun': fun,
+        data = {'fun': "runner.{0}".format(fun),
                 'jid': low['jid'],
                 }
         event.fire_event(data, tagify('new', base=tag))
