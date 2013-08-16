@@ -545,7 +545,7 @@ def get_disks(vm_):
     for dev in disks:
         try:
             hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
-            if hypervisor != 'qemu':
+            if hypervisor not in ['qemu', 'kvm']:
                 break
 
             output = []
