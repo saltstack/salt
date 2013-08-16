@@ -149,7 +149,7 @@ def yamlify_arg(arg):
     yaml.safe_load the arg unless it has a newline in it.
     '''
     try:
-        original_arg = arg
+        original_arg = str(arg)
         if isinstance(arg, string_types):
             if '\n' not in arg:
                 arg = yaml.safe_load(arg)
@@ -161,13 +161,21 @@ def yamlify_arg(arg):
             else:
                 return arg
         elif isinstance(arg, (int, list, string_types)):
-            return arg
+            # yaml.safe_load will load '|' as '', don't let it do that.
+            if arg == '' and original_arg in ('|',):
+                return original_arg
+            # yaml.safe_load will treat '#' as a comment, so a value of '#'
+            # will become None. Keep this value from being stomped as well.
+            elif arg is None and original_arg.strip().startswith('#'):
+                return original_arg
+            else:
+                return arg
         else:
             # we don't support this type
-            return str(original_arg)
+            return original_arg
     except Exception:
         # In case anything goes wrong...
-        return str(original_arg)
+        return original_arg
 
 
 class SMinion(object):
