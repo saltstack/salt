@@ -835,7 +835,50 @@ def fopen(*args, **kwargs):
     return fhandle
 
 
-def traverse_dict(data, target, default, delim=':'):
+def subdict_match(data, expr, delim=':', regex_match=False):
+    '''
+    Check for a match in a dictionary using a delimiter character to denote
+    levels of subdicts, and also allowing the delimiter character to be
+    matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
+    data['foo']['bar'] == 'baz'. The former would take priority over the
+    latter.
+    '''
+    def _match(target, pattern, regex_match=False):
+        if regex_match:
+            try:
+                return re.match(pattern.lower(), str(target).lower())
+            except Exception:
+                log.error('Invalid regex \'{0}\' in match'.format(pattern))
+                return False
+        else:
+            return fnmatch.fnmatch(str(target).lower(), pattern.lower())
+
+    for idx in range(1, expr.count(delim) + 1):
+        splits = expr.split(delim)
+        key = delim.join(splits[:idx])
+        matchstr = delim.join(splits[idx:])
+        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
+                  '\'{2}\''.format(matchstr, key, delim))
+        match = traverse_dict(data, key, {}, delim=delim)
+        if match == {}:
+            continue
+        if isinstance(match, dict):
+            if matchstr == '*':
+                # We are just checking that the key exists
+                return True
+            continue
+        if isinstance(match, list):
+            # We are matching a single component to a single list member
+            for member in match:
+                if _match(member, matchstr, regex_match=regex_match):
+                    return True
+            continue
+        if _match(match, matchstr, regex_match=regex_match):
+            return True
+    return False
+
+
+def traverse_dict(data, key, default, delim=':'):
     '''
     Traverse a dict using a colon-delimited (or otherwise delimited, using
     the "delim" param) target string. The target 'foo:bar:baz' will return
