@@ -9,6 +9,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
+import salt.utils.dictupdate
 
 # Seed the grains dict so cython will build
 __grains__ = {}
@@ -225,7 +226,7 @@ def ls():  # pylint: disable=C0103
     return sorted(__grains__)
 
 
-def filter_by(lookup_dict, grain='os_family'):
+def filter_by(lookup_dict, grain='os_family', merge=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -251,6 +252,26 @@ def filter_by(lookup_dict, grain='os_family'):
             - running
             - name: {{ apache.srv }}
 
+    Values in the lookup table may be overridden by values in Pillar. An
+    example Pillar to override values in the example above could be as follows:
+
+    .. code-block:: yaml
+
+        apache:
+          lookup:
+            pkg: apache_13
+            srv: apache
+
+    The call to ``filter_by()`` would be modified as follows to reference those
+    Pillar values:
+
+    .. code-block:: jinja
+
+        {% set apache = salt['grains.filter_by']({
+            ...
+        }, merge=salt['pillar.get']('apache:lookup')) %}
+
+
     :param lookup_dict: A dictionary, keyed by a grain, containing a value or
         values relevant to systems matching that grain. For example, a key
         could be the grain for an OS and the value could the name of a package
@@ -259,9 +280,20 @@ def filter_by(lookup_dict, grain='os_family'):
         grains. For example, the value of the "os_family" grain for the current
         system could be used to pull values from the ``lookup_dict``
         dictionary.
+    :param merge: A dictionary to merge with the ``lookup_dict`` before doing
+        the lookup. This allows Pillar to override the values in the
+        ``lookup_dict``. This could be useful, for example, to override the
+        values for non-standard package names such as when using a different
+        Python version from the default Python version provided by the OS
+        (e.g., ``python26-mysql`` instead of ``python-mysql``).
 
     CLI Example::
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
     '''
-    return lookup_dict.get(__grains__[grain], None)
+    ret = lookup_dict.get(__grains__[grain], None)
+
+    if merge:
+        salt.utils.dictupdate.update(ret, merge)
+
+    return ret
