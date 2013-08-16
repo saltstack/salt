@@ -2174,7 +2174,6 @@ class ClearFuncs(object):
                 'jid': clear_load['jid'],
                 'tgt_type':clear_load['tgt_type'],
                 'tgt': clear_load['tgt'],
-                'ret': clear_load['ret'],
                 'user': clear_load['user'],
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
