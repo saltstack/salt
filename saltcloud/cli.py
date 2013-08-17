@@ -109,7 +109,7 @@ class SaltCloud(parsers.SaltCloudParser):
             if self.selected_query_option == 'list_providers':
                 try:
                     display_output = salt.output.get_printout(
-                        self.options.output or 'double_layer', self.config
+                        self.options.output, self.config
                     )
                     print(display_output(mapper.provider_list()))
                     self.exit(0)
@@ -138,7 +138,7 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.list_locations is not None:
             try:
                 display_output = salt.output.get_printout(
-                    self.options.output or 'double_layer', self.config
+                    self.options.output, self.config
                 )
                 print(
                     display_output(
@@ -155,7 +155,7 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.list_images is not None:
             try:
                 display_output = salt.output.get_printout(
-                    self.options.output or 'double_layer', self.config
+                    self.options.output, self.config
                 )
                 print(
                     display_output(
@@ -172,7 +172,7 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.list_sizes is not None:
             try:
                 display_output = salt.output.get_printout(
-                    self.options.output or 'double_layer', self.config
+                    self.options.output, self.config
                 )
                 print(
                     display_output(
