@@ -44,7 +44,7 @@ def run(platform, provider, commit, clean):
     htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
     vm_name = 'ZZZ-{0}-{1}'.format(platform, htag)
     cmd = ('salt-cloud -l debug --script-args "-D -n git {0}" '
-           '--start-action "-l debug state.sls testrun '
+           '--start-action "state.sls testrun '
            'pillar=\'{{git_commit: {0}}}\' --no-color" -p {1}_{2} {3}'.format(
                 commit, provider, platform, vm_name)
            )
