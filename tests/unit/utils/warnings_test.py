@@ -65,8 +65,8 @@ class WarnUntilTestCase(TestCase):
         with self.assertRaisesRegexp(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)warnings_test.py\', '
-                r'line number ([\d]+), is supposed to be shown until salt '
-                r'\'0.17\' is released. Salt version is now \'0.17\'. Please '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'\'0.17\' is released. Current version is now \'0.17\'. Please '
                 r'remove the warning.'):
             raise_warning()
 
@@ -75,8 +75,8 @@ class WarnUntilTestCase(TestCase):
         with self.assertRaisesRegexp(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)warnings_test.py\', '
-                r'line number ([\d]+), is supposed to be shown until salt '
-                r'\'0.17\' is released. Salt version is now \'0.17\'. Please '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'\'0.17\' is released. Current version is now \'0.17\'. Please '
                 r'remove the warning.'):
             warn_until(
                 (0, 17), 'Foo', _dont_call_warnings=True
