@@ -178,7 +178,6 @@ setup(name=NAME,
       packages=['saltcloud',
                 'saltcloud/utils',
                 'saltcloud/clouds',
-                'saltcloud/output',
                 ],
       package_data={
           'saltcloud': ['deploy/*.sh'],
