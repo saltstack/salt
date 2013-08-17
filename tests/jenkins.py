@@ -42,33 +42,12 @@ def run(platform, provider, commit, clean):
     RUN!
     '''
     htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
-    vm_name = 'ZZZ{0}{1}'.format(platform, htag)
-    cmd = 'salt-cloud -l debug --script-args "-D -n git {0}" -p {1}_{2} {3}'.format(
-            commit, provider, platform, vm_name)
-    print('Running CMD: {0}'.format(cmd))
-    sys.stdout.flush()
-
-    proc = NonBlockingPopen(
-        cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stream_stds=True
-    )
-    proc.poll_and_read_until_finish()
-    proc.communicate()
-    if proc.returncode > 0:
-        print('Failed to bootstrap VM. Exit code: {0}'.format(proc.returncode))
-        sys.stdout.flush()
-        sys.exit(proc.returncode)
-
-    print('VM Bootstrapped. Exit code: {0}'.format(proc.returncode))
-    sys.stdout.flush()
-
-    # Run tests here
-    cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
-                vm_name,
-                commit)
+    vm_name = 'ZZZ-{0}-{1}'.format(platform, htag)
+    cmd = ('salt-cloud -l debug --script-args "-D -n git {0}" '
+           '--start-action "-t 1800 state.sls testrun '
+           'pillar=\'{{git_commit: {0}}}\' --no-color" -p {1}_{2} {3}'.format(
+                commit, provider, platform, vm_name)
+           )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -81,13 +60,10 @@ def run(platform, provider, commit, clean):
     )
     proc.poll_and_read_until_finish()
     stdout, stderr = proc.communicate()
-
-    if stderr:
-        print(stderr)
-    if stdout:
-        print(stdout)
-
-    sys.stdout.flush()
+    if proc.returncode > 0:
+        print('Failed to bootstrap VM. Exit code: {0}'.format(proc.returncode))
+        sys.stdout.flush()
+        sys.exit(proc.returncode)
 
     try:
         match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
@@ -104,6 +80,50 @@ def run(platform, provider, commit, clean):
         if stdout:
             # Anything else, raise the exception
             raise
+
+
+    print('VM Bootstrapped. Exit code: {0}'.format(proc.returncode))
+    sys.stdout.flush()
+#
+#    # Run tests here
+#    cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
+#                vm_name,
+#                commit)
+#    print('Running CMD: {0}'.format(cmd))
+#    sys.stdout.flush()
+#
+#    proc = NonBlockingPopen(
+#        cmd,
+#        shell=True,
+#        stdout=subprocess.PIPE,
+#        stderr=subprocess.PIPE,
+#        stream_stds=True
+#    )
+#    proc.poll_and_read_until_finish()
+#    stdout, stderr = proc.communicate()
+#
+#    if stderr:
+#        print(stderr)
+#    if stdout:
+#        print(stdout)
+#
+#    sys.stdout.flush()
+#
+#    try:
+#        match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
+#        retcode = int(match.group('exitcode'))
+#    except AttributeError:
+#        # No regex matching
+#        retcode = 1
+#    except ValueError:
+#        # Not a number!?
+#        retcode = 1
+#    except TypeError:
+#        # No output!?
+#        retcode = 1
+#        if stdout:
+#            # Anything else, raise the exception
+#            raise
 
     # Clean up the vm
     if clean:
