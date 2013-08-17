@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the user module if the kernel is FreeBSD
     '''
     return 'user' if __grains__['kernel'] == 'FreeBSD' else False
 
@@ -58,13 +58,14 @@ def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=True,
+        home=None,
         shell=None,
         unique=True,
         fullname='',
         roomnumber='',
         workphone='',
         homephone='',
+        createhome=True,
         **kwargs):
     '''
     Add a user to the minion
@@ -87,11 +88,10 @@ def add(name,
         cmd += '-g {0} '.format(gid)
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
-    if home:
-        if home is True:
-            cmd += '-m '
-        else:
-            cmd += '-m -b {0} '.format(os.path.dirname(home))
+    if home is not None:
+        cmd += '-b {0} '.format(os.path.dirname(home))
+    if createhome is True:
+        cmd += '-m '
     if shell:
         cmd += '-s {0} '.format(shell)
     if not salt.utils.is_true(unique):
