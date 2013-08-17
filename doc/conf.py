@@ -47,14 +47,15 @@ class Mock(object):
 
 MOCK_MODULES = [
     'salt',
-    'salt.config',
-    'salt.utils',
-    'salt.utils.event',
     'salt.client',
+    'salt.config',
     'salt.crypt',
     'salt.exceptions',
-    'yaml',
     'salt.loader',
+    'salt.utils',
+    'salt.utils.event',
+    'salt.utils.verify',
+    'yaml',
 ]
 
 for mod_name in MOCK_MODULES:
