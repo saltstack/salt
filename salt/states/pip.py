@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
-    return 'pip' if 'pip.list' in __salt__ else False
+    return 'pip.list' in __salt__
 
 
 def _find_key(prefix, pip_list):
