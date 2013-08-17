@@ -1393,28 +1393,28 @@ class Matcher(object):
             tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
-    def grain_match(self, tgt):
+    def grain_match(self, tgt, delim=':'):
         '''
         Reads in the grains glob match
         '''
         log.debug('grains target: {0}'.format(tgt))
-        if ':' not in tgt:
+        if delim not in tgt:
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts['grains'], tgt, delim=':')
+        return salt.utils.subdict_match(self.opts['grains'], tgt, delim=delim)
 
-    def grain_pcre_match(self, tgt):
+    def grain_pcre_match(self, tgt, delim=':'):
         '''
         Matches a grain based on regex
         '''
         log.debug('grains pcre target: {0}'.format(tgt))
-        if ':' not in tgt:
+        if delim not in tgt:
             log.error('Got insufficient arguments for grains pcre match '
                       'statement from master')
             return False
         return salt.utils.subdict_match(self.opts['grains'], tgt,
-                                        delim=':', regex_match=True)
+                                        delim=delim, regex_match=True)
 
     def data_match(self, tgt):
         '''
@@ -1450,16 +1450,16 @@ class Matcher(object):
             return False
         return(self.functions[tgt]())
 
-    def pillar_match(self, tgt):
+    def pillar_match(self, tgt, delim=':'):
         '''
         Reads in the pillar glob match
         '''
         log.debug('pillar target: {0}'.format(tgt))
-        if ':' not in tgt:
+        if delim not in tgt:
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts['pillar'], tgt, delim=':')
+        return salt.utils.subdict_match(self.opts['pillar'], tgt, delim=delim)
 
     def ipcidr_match(self, tgt):
         '''
