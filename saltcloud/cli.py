@@ -20,7 +20,7 @@ import logging
 import salt.config
 import salt.output
 import salt.utils
-from salt.utils.verify import verify_env, verify_files
+from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import saltcloud libs
 import saltcloud.cloud
@@ -44,18 +44,26 @@ class SaltCloud(parsers.SaltCloudParser):
         # Parse shell arguments
         self.parse_args()
 
+        salt_master_user = self.config.get('user', getpass.getuser())
+        if salt_master_user is not None and not check_user(salt_master_user):
+            self.error(
+                'salt-cloud needs to run as the same user as salt-master, '
+                '{0!r}, but was unable to switch credentials. Please run '
+                'salt-cloud as root or as {0!r}'.format(salt_master_user)
+            )
+
         try:
             if self.config['verify_env']:
                 verify_env(
                     [os.path.dirname(self.config['conf_file'])],
-                    getpass.getuser()
+                    salt_master_user
                 )
                 logfile = self.config['log_file']
                 if logfile is not None and not logfile.startswith('tcp://') \
                         and not logfile.startswith('udp://') \
                         and not logfile.startswith('file://'):
                     # Logfile is not using Syslog, verify
-                    verify_files([logfile], getpass.getuser())
+                    verify_files([logfile], salt_master_user)
         except (IOError, OSError) as err:
             log.error('Error while verifying the environment: {0}'.format(err))
             sys.exit(err.errno)
@@ -99,7 +107,6 @@ class SaltCloud(parsers.SaltCloudParser):
                     continue
             self.error('Failed to update the bootstrap script')
 
-        # Late imports so logging works as expected
         log.info('salt-cloud starting')
         mapper = saltcloud.cloud.Map(self.config)
 
