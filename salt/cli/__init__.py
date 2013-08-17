@@ -18,7 +18,7 @@ import salt.key
 import salt.ssh
 
 from salt.utils import parsers
-from salt.utils.verify import verify_env, verify_files
+from salt.utils.verify import check_user, verify_env, verify_files
 from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
@@ -247,7 +247,8 @@ class SaltKey(parsers.SaltKeyOptionParser):
         self.setup_logfile_logger()
 
         key = salt.key.KeyCLI(self.config)
-        key.run()
+        if check_user(self.config['user']):
+            key.run()
 
 
 class SaltCall(parsers.SaltCallOptionParser):
@@ -297,7 +298,8 @@ class SaltCall(parsers.SaltCallOptionParser):
             caller.print_grains()
             self.exit(0)
 
-        caller.run()
+        if check_user(self.config['user']):
+            caller.run()
 
 
 class SaltRun(parsers.SaltRunOptionParser):
@@ -339,7 +341,8 @@ class SaltRun(parsers.SaltRunOptionParser):
         # Run this here so SystemExit isn't raised anywhere else when
         # someone tries to use the runners via the python API
         try:
-            runner.run()
+            if check_user(self.config['user']):
+                runner.run()
         except SaltClientError as exc:
             raise SystemExit(str(exc))
 
