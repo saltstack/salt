@@ -25,7 +25,6 @@ from salt.utils.verify import verify_env, verify_files
 # Import saltcloud libs
 import saltcloud.cloud
 import saltcloud.config
-import saltcloud.output
 from saltcloud.utils import parsers
 from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 from saltcloud.libcloudfuncs import libcloud_version

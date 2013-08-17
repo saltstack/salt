@@ -12,7 +12,6 @@ import salt.config
 import salt.utils
 
 # Import salt cloud libs
-import saltcloud.output
 import saltcloud.exceptions
 
 
