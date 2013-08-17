@@ -46,7 +46,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         salt_master_user = self.config.get('user', getpass.getuser())
         if salt_master_user is not None and not check_user(salt_master_user):
-            raise SaltCloudSystemExit(
+            self.error(
                 'salt-cloud needs to run as the same user as salt-master, '
                 '{0!r}, but was unable to switch credentials. Please run '
                 'salt-cloud as root or as {0!r}'.format(salt_master_user)
