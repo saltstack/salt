@@ -25,6 +25,7 @@ from saltcloud.exceptions import (
 # Import salt libs
 import salt.client
 import salt.utils
+from salt.utils.verify import check_user
 
 # Import third party libs
 import yaml
@@ -49,6 +50,7 @@ class Cloud(object):
     def __init__(self, opts):
         self.opts = opts
         self.clouds = saltcloud.loader.clouds(self.opts)
+        self.__switch_credentials()
         self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
 
@@ -619,7 +621,7 @@ class Cloud(object):
         try:
             opt_map = self.opts['map']
         except KeyError:
-            opt_map = False 
+            opt_map = False
         if self.opts['parallel'] and self.opts['start_action'] and not opt_map:
             log.info(
                 "Running {0} on {1}".format(self.opts['start_action'], vm_['name'])
@@ -777,6 +779,15 @@ class Cloud(object):
                     driver: self.clouds[fun](call='function')
                 }
             }
+
+    def __switch_credentials(self):
+        user = self.opts.get('user', None)
+        if user is not None and check_user(user) is not True:
+            raise SaltCloudSystemExit(
+                'salt-cloud needs to run as the same user as salt-master, '
+                '{0!r}, but was unable to switch credentials. Please run '
+                'salt-cloud as root or as {0!r}'.format(user)
+            )
 
     def __filter_non_working_providers(self):
         '''
@@ -1154,12 +1165,12 @@ class Map(Cloud):
             level = self._calcdep(dmap, k, v, level)
             log.debug("Got execution order {0} for {1}".format(level,k))
             dmap['create'][k]['level'] = level
-        try: 
+        try:
             existing_list = dmap['existing'].items()
         except KeyError:
             existing_list={}
         for k,v in existing_list:
-            log.info("Calculating dependencies for {0}".format(k)) 
+            log.info("Calculating dependencies for {0}".format(k))
             level = 0
             level = self._calcdep(dmap, k, v, level)
             log.debug("Got execution order {0} for {1}".format(level,k))
@@ -1329,7 +1340,7 @@ class Map(Cloud):
                 actionlist = []
                 grp=-1
                 for k,v in groupby(dmap['create'].values(), lambda x: x['level']):
-                    actionlist.append([]) 
+                    actionlist.append([])
                     grp +=1
                     for item in v:
                         actionlist[grp].append(item['name'])
@@ -1344,7 +1355,7 @@ class Map(Cloud):
                         timeout=self.opts['timeout'] * 60, expr_form='list'
                     ))
             for obj in output_multip:
-                obj.values()[0]['ret'] = out[obj.keys()[0]] 
+                obj.values()[0]['ret'] = out[obj.keys()[0]]
                 output.update(obj)
 
         return output
