@@ -677,7 +677,6 @@ class LocalClient(object):
                             or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found.intersection(minions)) >= len(minions):
                             fail = sorted(list(minions.difference(found)))
-                            print fail
                             for minion in fail:
                                 yield({
                                     minion: {
@@ -1053,11 +1052,9 @@ class LocalClient(object):
                 if more_time:
                     timeout += inc_timeout
                     continue
-                if verbose:
+                if verbose or show_timeout:
                     if self.opts.get('minion_data_cache', False) \
                             or tgt_type in ('glob', 'pcre', 'list'):
-                if verbose or show_timeout:
-                    if tgt_type in ('glob', 'pcre', 'list'):
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
