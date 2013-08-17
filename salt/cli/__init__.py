@@ -69,7 +69,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 'tgt': self.config['tgt'],
                 'fun': self.config['fun'],
                 'arg': self.config['arg'],
-                'timeout': self.options.timeout}
+                'timeout': self.options.timeout,
+                'show_timeout': self.options.show_timeout}
 
             if 'token' in self.config:
                 kwargs['token'] = self.config['token']

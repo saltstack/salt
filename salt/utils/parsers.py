@@ -986,6 +986,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'queries')
         )
         self.add_option(
+           '--show-timeout',
+           default=False,
+           action='store_true',
+           help=('Display minions that timeout')
+       )
+        self.add_option(
             '-b', '--batch',
             '--batch-size',
             default='',
