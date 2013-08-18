@@ -27,7 +27,7 @@ update to remove the old entry.
 '''
 
 
-def present(name, ip):  # pylint: disable=C0103
+def present(name, ip, replace=False):  # pylint: disable=C0103
     '''
     Ensures that the named host is present with the given ip
 
@@ -36,6 +36,9 @@ def present(name, ip):  # pylint: disable=C0103
 
     ip
         The ip addr to apply to the host
+    
+    replace
+        Replace any existing matching entries for this hostname
     '''
     ret = {'name': name,
            'changes': {},
@@ -46,8 +49,11 @@ def present(name, ip):  # pylint: disable=C0103
         ret['comment'] = 'Host {0} already present'.format(name)
         return ret
     if __opts__['test']:
-        ret['comment'] = 'Host {0} needs to be added'.format(name)
+        ret['comment'] = 'Host {0} needs to be added/updated'.format(name)
         return ret
+    current_ip = __salt__['hosts.get_ip'](name)
+    if replace and current_ip and current_ip != ip:
+        __salt__['hosts.rm_host'](current_ip, name)
     if __salt__['hosts.add_host'](ip, name):
         ret['changes'] = {'host': name}
         ret['result'] = True
