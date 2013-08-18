@@ -440,9 +440,10 @@ def install(pkgs=None,
 
         # It's possible we replaced version-range commas with semicolons so
         # they would survive the previous line (in the pip.installed state).
-        # Put the commas back in
+        # Put the commas back in while making sure the names are contained in
+        # quotes, this allows for proper version spec passing salt>=0.17.0
         cmd.extend(
-            [p.replace(';', ',') for p in pkgs]
+            ['{0!r}'.format(p.replace(';', ',')) for p in pkgs]
         )
 
     if editable:
