@@ -103,7 +103,9 @@ def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.gid_to_group 0
     '''
@@ -127,7 +129,9 @@ def group_to_gid(group):
     '''
     Convert the group to the gid on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.group_to_gid root
     '''
@@ -143,7 +147,9 @@ def get_gid(path):
     '''
     Return the id of the group that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_gid /etc/passwd
     '''
@@ -156,7 +162,9 @@ def get_group(path):
     '''
     Return the group that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_group /etc/passwd
     '''
@@ -170,7 +178,9 @@ def uid_to_user(uid):
     '''
     Convert a uid to a user name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.uid_to_user 0
     '''
@@ -184,7 +194,9 @@ def user_to_uid(user):
     '''
     Convert user name to a uid
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.user_to_uid root
     '''
@@ -200,7 +212,9 @@ def get_uid(path):
     '''
     Return the id of the user that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_uid /etc/passwd
     '''
@@ -213,7 +227,9 @@ def get_user(path):
     '''
     Return the user that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_user /etc/passwd
     '''
@@ -227,7 +243,9 @@ def get_mode(path):
     '''
     Return the mode of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_mode /etc/passwd
     '''
@@ -243,7 +261,9 @@ def set_mode(path, mode):
     '''
     Set the mode of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.set_mode /etc/passwd 0644
     '''
@@ -263,7 +283,9 @@ def chown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.chown /etc/passwd root root
     '''
@@ -291,7 +313,9 @@ def chgrp(path, group):
     '''
     Change the group of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.chgrp /etc/passwd root
     '''
@@ -304,7 +328,9 @@ def get_sum(path, form='md5'):
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
     sha384, sha512 are supported
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_sum /etc/passwd sha512
     '''
@@ -333,7 +359,9 @@ def get_hash(path, form='md5', chunk_size=4096):
             ``get_sum`` cannot really be trusted since it is vulnerable to
             collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_hash /etc/shadow
     '''
@@ -353,7 +381,9 @@ def check_hash(path, hash):
         A string in the form <hash_type>=<hash_value>. For example:
         ``md5=e138491e9d5b97023cea823fe17bac22``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.check_hash /etc/fstab md5=<md5sum>
     '''
@@ -366,7 +396,7 @@ def check_hash(path, hash):
 
 def find(path, **kwargs):
     '''
-    Approximate the Unix find(1) command and return a list of paths that
+    Approximate the Unix ``find(1)`` command and return a list of paths that
     meet the specified criteria.
 
     The options include match criteria::
@@ -449,7 +479,9 @@ def find(path, **kwargs):
         type:  file type
         user:  user name
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' file.find / type=f name=\\*.bak size=+10m
         salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
@@ -507,7 +539,9 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
 
@@ -548,7 +582,9 @@ def sed_contains(path, text, limit='', flags='g'):
 
     Note: the ``p`` flag will be added to any flags you pass in.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
     '''
@@ -611,7 +647,9 @@ def psed(path, before, after, limit='', backup='.bak', flags='gMS',
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
 
@@ -694,7 +732,9 @@ def uncomment(path, regex, char='#', backup='.bak'):
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
 
@@ -732,7 +772,9 @@ def comment(path, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.comment /etc/modules pcspkr
 
@@ -766,7 +808,9 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     options
         Options to pass to patch.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
 
@@ -788,7 +832,9 @@ def contains(path, text):
     '''
     Return True if the file at ``path`` contains ``text``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
 
@@ -816,7 +862,9 @@ def contains_regex(path, regex, lchar=''):
     If the lchar argument (leading char) is specified, it
     will strip `lchar` from the left side of each line before trying to match
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains_regex /etc/crontab
     '''
@@ -843,7 +891,9 @@ def contains_regex_multiline(path, regex):
     Traverses multiple lines at a time, via the salt BufferedReader (reads in
     chunks)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains_regex_multiline /etc/crontab '^maint'
     '''
@@ -864,7 +914,9 @@ def contains_glob(path, glob):
     '''
     Return True if the given glob matches a string in the named file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains_glob /etc/foobar '*cheese*'
     '''
@@ -885,10 +937,12 @@ def append(path, *args):
     '''
     Append text to the end of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.append /etc/motd \\
-                "With all thine offerings thou shalt offer salt."\\
+                "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
 
     .. versionadded:: 0.9.5
@@ -913,7 +967,9 @@ def touch(name, atime=None, mtime=None):
     mtime:
         Last modification in Unix epoch time
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.touch /var/log/emptyfile
 
@@ -949,7 +1005,9 @@ def symlink(src, link):
     '''
     Create a symbolic link to a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.symlink /path/to/file /path/to/link
     '''
@@ -968,7 +1026,9 @@ def rename(src, dst):
     '''
     Rename a file or directory
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.rename /path/to/src /path/to/dst
     '''
@@ -987,7 +1047,9 @@ def copy(src, dst):
     '''
     Copy a file or directory
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.copy /path/to/src /path/to/dst
     '''
@@ -1006,7 +1068,9 @@ def stats(path, hash_type='md5', follow_symlink=False):
     '''
     Return a dict containing the stats for a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.stats /etc/passwd
     '''
@@ -1051,7 +1115,9 @@ def remove(path):
     '''
     Remove the named file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.remove /tmp/foo
     '''
@@ -1074,7 +1140,9 @@ def directory_exists(path):
     '''
     Tests to see if path is a valid directory.  Returns True/False.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.directory_exists /etc
 
@@ -1086,7 +1154,9 @@ def file_exists(path):
     '''
     Tests to see if path is a valid file.  Returns True/False.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.file_exists /etc/passwd
 
@@ -1098,7 +1168,9 @@ def restorecon(path, recursive=False):
     '''
     Reset the SELinux context on a given path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
          salt '*' file.restorecon /home/user/.ssh/authorized_keys
     '''
@@ -1113,7 +1185,9 @@ def get_selinux_context(path):
     '''
     Get an SELinux context from a given path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_selinux_context /etc/hosts
     '''
@@ -1125,7 +1199,9 @@ def set_selinux_context(path, user=None, role=None, type=None, range=None):
     '''
     Set a specific SELinux label on a given path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.set_selinux_context path <role> <type> <range>
     '''
@@ -1154,7 +1230,9 @@ def source_list(source, source_hash, env):
     '''
     Check the source list and return the source to use
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.source_list salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' base
     '''
@@ -1218,7 +1296,9 @@ def get_managed(
     '''
     Return the managed file data for file.managed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base None None
     '''
@@ -1314,7 +1394,9 @@ def check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.check_perms /etc/sudoers '{}' root root 400
     '''
@@ -1414,7 +1496,9 @@ def check_managed(
     '''
     Check to see what changes need to be made for a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.check_managed /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
     '''
@@ -1466,7 +1550,9 @@ def check_file_meta(
     '''
     Check for the changes in the file metadata.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
     '''
@@ -1540,7 +1626,9 @@ def get_diff(
     '''
     Return unified diff of file compared to file on master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
     '''
@@ -1587,7 +1675,9 @@ def manage_file(name,
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
     '''
@@ -1803,7 +1893,9 @@ def mkdir(dir_path, user=None, group=None, mode=None):
     '''
     Ensure that a directory is available.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.mkdir /opt/jetty/context
     '''
@@ -1820,7 +1912,9 @@ def makedirs(path, user=None, group=None, mode=None):
     '''
     Ensure that the directory containing this path is available.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.makedirs /opt/code
     '''
@@ -1857,7 +1951,9 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
     Taken and modified from os.makedirs to set user, group and mode for each
     directory created.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.makedirs_perms /opt/code
     '''
@@ -1895,7 +1991,9 @@ def list_backups(path, limit=None):
     limit
         Limit the number of results to the most recent N backups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.list_backups /foo/bar/baz.txt
     '''
@@ -1950,7 +2048,9 @@ def restore_backup(path, backup_id):
         The numeric id for the backup you wish to restore, as found using
         :mod:`file.list_backups <salt.modules.file.list_backups>`
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.restore_backup /foo/bar/baz.txt 0
     '''
@@ -2008,7 +2108,9 @@ def delete_backup(path, backup_id):
         The numeric id for the backup you wish to delete, as found using
         :mod:`file.list_backups <salt.modules.file.list_backups>`
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.restore_backup /foo/bar/baz.txt 0
     '''

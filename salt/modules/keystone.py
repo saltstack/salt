@@ -26,6 +26,7 @@ try:
 except ImportError:
     pass
 
+
 def __virtual__():
     '''
     Only load this module if keystone
@@ -78,7 +79,9 @@ def ec2_credentials_get(id=None,       # pylint: disable=C0103
     '''
     Return ec2_credentials for a user (keystone ec2-credentials-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.ec2_credentials_get c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
         salt '*' keystone.ec2_credentials_get id=c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
@@ -109,7 +112,9 @@ def ec2_credentials_list(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a list of ec2_credentials for a specific user (keystone ec2-credentials-list)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.ec2_credentials_list 298ce377245c4ec9b70e1c639c89e654
         salt '*' keystone.ec2_credentials_list id=298ce377245c4ec9b70e1c639c89e654
@@ -138,7 +143,9 @@ def endpoint_get(service):
     '''
     Return a specific endpoint (keystone endpoint-get)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.endpoint_get ec2
     '''
@@ -150,7 +157,9 @@ def endpoint_list():
     '''
     Return a list of available endpoints (keystone endpoints-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.endpoint_list
     '''
@@ -172,7 +181,9 @@ def role_get(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a specific roles (keystone role-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.role_get c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.role_get id=c965f79c4f864eaaa9c3b41904e67082
@@ -199,7 +210,9 @@ def role_list():
     '''
     Return a list of available roles (keystone role-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.role_list
     '''
@@ -217,7 +230,9 @@ def service_get(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a specific services (keystone service-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.service_get c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_get id=c965f79c4f864eaaa9c3b41904e67082
@@ -246,7 +261,9 @@ def service_list():
     '''
     Return a list of available services (keystone services-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.service_list
     '''
@@ -266,7 +283,9 @@ def tenant_get(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a specific tenants (keystone tenant-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.tenant_get c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.tenant_get id=c965f79c4f864eaaa9c3b41904e67082
@@ -295,7 +314,9 @@ def tenant_list():
     '''
     Return a list of available tenants (keystone tenants-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.tenant_list
     '''
@@ -315,7 +336,9 @@ def token_get():
     '''
     Return the configured tokens (keystone token-get)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.token_get c965f79c4f864eaaa9c3b41904e67082
     '''
@@ -333,7 +356,9 @@ def user_list():
     '''
     Return a list of available users (keystone user-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_list
     '''
@@ -354,7 +379,9 @@ def user_get(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a specific users (keystone user-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_get c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_get id=c965f79c4f864eaaa9c3b41904e67082
@@ -384,7 +411,9 @@ def user_create(name, password, email, tenant_id=None, enabled=True):
     '''
     Create a user (keystone user-create)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_create name=jack password=zero email=jack@halloweentown.org tenant_id=a28a7b5a999a455f84b1f5210264375e enabled=True
     '''
@@ -403,7 +432,9 @@ def user_delete(id=None, name=None):  # pylint: disable=C0103
     '''
     Delete a user (keystone user-delete)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082
@@ -433,7 +464,9 @@ def user_update(id=None,        # pylint: disable=C0103
     The following fields may be updated: name, email, enabled.
     Because the name is one of the fields, a valid user id is required.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_update id=c965f79c4f864eaaa9c3b41904e67082 name=newname
         salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
@@ -452,7 +485,9 @@ def user_password_update(id=None,         # pylint: disable=C0103
     '''
     Update a user's password (keystone user-password-update)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082 password=12345
         salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082 password=12345
@@ -480,7 +515,9 @@ def user_role_list(user_id=None,
     '''
     Return a list of available user_roles (keystone user_roles-list)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_role_list \
             user_id=298ce377245c4ec9b70e1c639c89e654 \
@@ -516,7 +553,9 @@ def _item_list():
     Template for writing list functions
     Return a list of available items (keystone items-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.item_list
     '''

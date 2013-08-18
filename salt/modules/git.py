@@ -113,7 +113,9 @@ def revision(cwd, rev='HEAD', short=False, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.revision /path/to/repo mybranch
     '''
@@ -142,7 +144,9 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
     identity : None
         A path to a private key to use over SSH
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.clone /path/to/repo git://github.com/saltstack/salt.git
 
@@ -173,7 +177,9 @@ def describe(cwd, rev='HEAD', user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' git.describe /path/to/repo
 
@@ -208,7 +214,9 @@ def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
     If ``prefix`` is not specified it defaults to the basename of the repo
     directory.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.archive /path/to/repo /path/to/archive.tar.gz
     '''
@@ -242,7 +250,9 @@ def fetch(cwd, opts=None, user=None, identity=None):
     identity : None
         A path to a private key to use over SSH
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.fetch /path/to/repo '--all'
 
@@ -273,7 +283,9 @@ def pull(cwd, opts=None, user=None, identity=None):
     identity : None
         A path to a private key to use over SSH
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.pull /path/to/repo opts='--rebase origin master'
     '''
@@ -303,12 +315,16 @@ def rebase(cwd, rev='master', opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.rebase /path/to/repo master
         salt '*' git.rebase /path/to/repo 'origin master'
 
     That is the same as:
+
+    .. code-block:: bash
 
         git rebase master
         git rebase origin master
@@ -341,7 +357,9 @@ def checkout(cwd, rev, force=False, opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' git.checkout /path/to/repo somebranch user=jeff
 
@@ -373,7 +391,9 @@ def merge(cwd, branch='@{upstream}', opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.fetch /path/to/repo
         salt '*' git.merge /path/to/repo @{upstream}
@@ -401,7 +421,9 @@ def init(cwd, opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.init /path/to/repo.git opts='--bare'
     '''
@@ -430,7 +452,9 @@ def submodule(cwd, init=True, opts=None, user=None, identity=None):
     identity : None
         A path to a private key to use over SSH
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.submodule /path/to/repo.git/sub/repo
     '''
@@ -453,7 +477,9 @@ def status(cwd, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.status /path/to/git/repo
     '''
@@ -484,7 +510,9 @@ def add(cwd, file_name, user=None, opts=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.add /path/to/git/repo /path/to/file
 
@@ -512,7 +540,9 @@ def rm(cwd, file_name, user=None, opts=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.rm /path/to/git/repo /path/to/file
     '''
@@ -539,7 +569,9 @@ def commit(cwd, message, user=None, opts=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.commit /path/to/git/repo 'The commit message'
     '''
@@ -574,7 +606,9 @@ def push(cwd, remote_name, branch='master', user=None, opts=None,
         A path to a private key to use over SSH
 
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.push /path/to/git/repo remote-name
     '''
@@ -595,7 +629,9 @@ def remotes(cwd, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.remotes /path/to/repo
     '''
@@ -618,7 +654,9 @@ def remote_get(cwd, remote='origin', user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.remote_get /path/to/repo
         salt '*' git.remote_get /path/to/repo upstream
@@ -651,7 +689,9 @@ def remote_set(cwd, name='origin', url=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.remote_set /path/to/repo remote_url=git@github.com:saltstack/salt.git
         salt '*' git.remote_set /path/to/repo origin git@github.com:saltstack/salt.git
@@ -677,7 +717,9 @@ def reset(cwd, opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.reset /path/to/repo master
     '''
@@ -701,7 +743,9 @@ def stash(cwd, opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.stash /path/to/repo master
     '''
@@ -728,7 +772,9 @@ def config_set(cwd, setting_name, setting_value, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.config_set /path/to/repo user.email me@example.com
     '''
@@ -750,7 +796,9 @@ def config_get(cwd, setting_name, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' git.config_get /path/to/repo user.email
     '''
