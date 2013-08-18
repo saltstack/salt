@@ -111,6 +111,31 @@ it will be pulled from the :strong:`git://github.com/example/second.git` git
 repo. If :strong:`salt://haproxy/haproxy.conf` is requested then it will be
 pulled from the third repo.
 
+Serving from a Subdirectory
+===========================
+
+The ``gitfs_root`` option gives the ability to serve files from a subdirectory
+within the repository. The path is defined relative to the root of the
+repository.
+
+With this repository structure:
+
+.. code-block:: yaml
+
+    repository.git:
+        somefolder
+            otherfolder
+                top.sls
+                edit/vim.sls
+                edit/vimrc
+                nginx/init.sls
+
+Configuration and files can be accessed normally with:
+
+.. code-block:: yaml
+
+    gitfs_root: somefolder/otherfolder
+
 Multiple Backends
 =================
 
