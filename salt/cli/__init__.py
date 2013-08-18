@@ -298,8 +298,7 @@ class SaltCall(parsers.SaltCallOptionParser):
             caller.print_grains()
             self.exit(0)
 
-        if check_user(self.config['user']):
-            caller.run()
+        caller.run()
 
 
 class SaltRun(parsers.SaltRunOptionParser):
