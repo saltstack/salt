@@ -876,7 +876,7 @@ class SaltReturnAssertsMixIn(object):
                     'Failed to get result. Salt Returned: {0}'.format(ret)
                 )
 
-    def assertInSaltComment(self, ret, in_comment):
+    def assertInSaltComment(self, in_comment, ret):
         return self.assertIn(
             in_comment, self.__getWithinSaltReturn(ret, 'comment')
         )
