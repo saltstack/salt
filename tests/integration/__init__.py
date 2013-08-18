@@ -904,7 +904,7 @@ class SaltReturnAssertsMixIn(object):
             item_to_check, self.__getWithinSaltReturn(ret, keys)
         )
 
-    def assertNotInSaltReturn(self, ret, item_to_check, keys):
+    def assertNotInSaltReturn(self, item_to_check, ret, keys):
         return self.assertNotIn(
             item_to_check, self.__getWithinSaltReturn(ret, keys)
         )
