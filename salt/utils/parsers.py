@@ -1409,6 +1409,13 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             action='store_true',
             help='Run salt-call locally, as if there was no master running.'
         )
+        self.add_option(
+            '--retcode-passthrough',
+            default=False,
+            action='store_true',
+            help=('Exit with the salt call retcode and not the salt binary '
+                  'retcode')
+        )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run \
