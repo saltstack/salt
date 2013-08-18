@@ -633,7 +633,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 'state.template_str', [template], timeout=120
             )
             self.assertSaltTrueReturn(ret)
-            self.assertNotInSaltComment(ret, 'Pattern already commented')
+            self.assertNotInSaltComment('Pattern already commented', ret)
             self.assertInSaltComment('Commented lines successfully', ret)
 
             # This next time, it is already commented.
@@ -701,9 +701,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 ret
             )
             self.assertNotInSaltComment(
-                ret,
                 'TypeError: managed() got multiple values for keyword '
-                'argument \'mode\''
+                'argument \'mode\'',
+                ret
             )
         finally:
             if os.path.isdir(testcase_temp_dir):

@@ -881,7 +881,7 @@ class SaltReturnAssertsMixIn(object):
             in_comment, self.__getWithinSaltReturn(ret, 'comment')
         )
 
-    def assertNotInSaltComment(self, ret, not_in_comment):
+    def assertNotInSaltComment(self, not_in_comment, ret):
         return self.assertNotIn(
             not_in_comment, self.__getWithinSaltReturn(ret, 'comment')
         )
