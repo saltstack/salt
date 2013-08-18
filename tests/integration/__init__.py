@@ -899,7 +899,7 @@ class SaltReturnAssertsMixIn(object):
             not_in_comment, self.__getWithinSaltReturn(ret, 'warnings')
         )
 
-    def assertInSaltReturn(self, ret, item_to_check, keys):
+    def assertInSaltReturn(self, item_to_check, ret, keys):
         return self.assertIn(
             item_to_check, self.__getWithinSaltReturn(ret, keys)
         )
