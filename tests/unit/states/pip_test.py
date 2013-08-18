@@ -208,6 +208,37 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                     {'test': ret}
                 )
 
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
+        pip_install = MagicMock(return_value={
+            'retcode': 0,
+            'stderr' :'',
+            'stdout': 'Downloading/unpacking https://pypi.python.org/packages'
+                      '/source/S/SaltTesting/SaltTesting-0.5.0.tar.gz\n  '
+                      'Downloading SaltTesting-0.5.0.tar.gz\n  Running '
+                      'setup.py egg_info for package from '
+                      'https://pypi.python.org/packages/source/S/SaltTesting/'
+                      'SaltTesting-0.5.0.tar.gz\n    \nCleaning up...'
+        })
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list,
+                                       'pip.install': pip_install}):
+            ret = pip.installed(
+                'https://pypi.python.org/packages/source/S/SaltTesting/'
+                'SaltTesting-0.5.0.tar.gz'
+                '#md5=e6760af92b7165f8be53b5763e40bc24'
+            )
+            self.assertSaltTrueReturn({'test': ret})
+            self.assertInSaltComment(
+                'Package was successfully installed',
+                {'test': ret}
+            )
+            self.assertInSaltReturn(
+                'Installed',
+                {'test': ret},
+                ('changes', 'SaltTesting==0.5.0')
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
