@@ -1,9 +1,10 @@
 '''
 Support for Eix
-
 '''
 
+# Import salt libs
 import salt.utils
+
 
 def __virtual__():
     '''
@@ -18,7 +19,9 @@ def sync():
     '''
     Sync portage/overlay trees and update the eix database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' eix.sync
     '''
@@ -40,11 +43,14 @@ def sync():
             cmd += ' -w'
         return __salt__['cmd.retcode'](cmd) == 0
 
+
 def update():
     '''
     Update the eix database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' eix.update
     '''
