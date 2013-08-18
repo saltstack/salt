@@ -279,8 +279,12 @@ def installed(name,
                 ret['changes']['editable'] = True
             ret['comment'] = ' '.join(comments)
         else:
-            pkg_list = __salt__['pip.list'](prefix, bin_env,
-                                            user=user, cwd=cwd)
+            if not prefix:
+                pkg_list = []
+            else:
+                pkg_list = __salt__['pip.list'](
+                    prefix, bin_env, user=user, cwd=cwd
+                )
             if not pkg_list:
                 ret['comment'] = (
                     'There was no error installing package \'{0}\' although '
