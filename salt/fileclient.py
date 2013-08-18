@@ -610,8 +610,8 @@ class RemoteClient(Client):
                 dest2check = cache_dest
 
         if dest2check and os.path.isfile(dest2check):
-            hash_local = self.hash_file(dest2check,env)
-            hash_server = self.hash_file(path,env)
+            hash_local = self.hash_file(dest2check, env)
+            hash_server = self.hash_file(path, env)
             if hash_local == hash_server:
                 log.info('Fetching file ** skipped **, latest already in cache \'{0}\''.format(path))
                 return dest2check
@@ -686,7 +686,7 @@ class RemoteClient(Client):
             fn_.write(data)
         if fn_:
             fn_.close()
-            log.info('Fetching file ** done ** \'{0}\''.format(path)
+            log.info('Fetching file ** done ** \'{0}\''.format(path))
         return dest
 
     def file_list(self, env='base', prefix=''):
