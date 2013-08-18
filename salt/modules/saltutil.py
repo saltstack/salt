@@ -18,6 +18,7 @@ import sys
 # Import salt libs
 import salt.payload
 import salt.state
+import salt.client
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
 
@@ -481,3 +482,33 @@ def revoke_auth():
     except SaltReqTimeoutError:
         return False
     return False
+
+
+def cmd(tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        expr_form='glob',
+        ret='',
+        kwarg=None,
+        **kwargs):
+    '''
+    Assuming this minion is a master, execute a salt command
+
+    CLI Example::
+
+        salt '*' saltutil.cmd
+    '''
+    local = salt.client.LocalClient(os.path.dirname(__opts__['conf_path']))
+    ret = {}
+    for ret_comp in local.cmd_iter(
+            tgt,
+            fun,
+            arg,
+            timeout,
+            expr_form,
+            ret,
+            kwarg,
+            **kwargs):
+        ret.update(ret_comp)
+    return ret
