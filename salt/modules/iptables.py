@@ -39,7 +39,9 @@ def version():
     '''
     Return version from iptables --version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.version
     '''
@@ -65,7 +67,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
 
     If `connstate` is passed in, it will automatically be changed to `state`.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' iptables.build_rule match=state connstate=RELATED,ESTABLISHED \\
             jump=ACCEPT
@@ -119,7 +123,9 @@ def get_saved_rules(conf_file=None):
     '''
     Return a data structure of the rules in the conf file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.get_saved_rules
     '''
@@ -130,7 +136,9 @@ def get_rules():
     '''
     Return a data structure of the current, in-memory rules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.get_rules
     '''
@@ -141,7 +149,9 @@ def get_saved_policy(table='filter', chain=None, conf_file=None):
     '''
     Return the current policy for the specified table/chain
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' iptables.get_saved_policy filter INPUT
         salt '*' iptables.get_saved_policy filter INPUT conf_file=/etc/iptables.saved
@@ -157,7 +167,9 @@ def get_policy(table='filter', chain=None):
     '''
     Return the current policy for the specified table/chain
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.get_policy filter INPUT
     '''
@@ -172,7 +184,9 @@ def set_policy(table='filter', chain=None, policy=None):
     '''
     Set the current policy for the specified table/chain
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.set_policy filter INPUT ACCEPT
     '''
@@ -190,7 +204,9 @@ def save(filename=None):
     '''
     Save the current in-memory rules to disk
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.save /etc/sysconfig/iptables
     '''
@@ -214,7 +230,9 @@ def check(table='filter', chain=None, rule=None):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.check filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
@@ -239,7 +257,9 @@ def append(table='filter', chain=None, rule=None):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.append filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
@@ -262,7 +282,9 @@ def insert(table='filter', chain=None, position=None, rule=None):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' iptables.insert filter INPUT position=3 rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
@@ -288,7 +310,9 @@ def delete(table, chain=None, position=None, rule=None):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' iptables.delete filter INPUT position=3
         salt '*' iptables.delete filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
@@ -309,7 +333,9 @@ def flush(table='filter'):
     '''
     Flush all chains in the specified table.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' iptables.flush filter
     '''

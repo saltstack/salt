@@ -62,7 +62,9 @@ def get(key, default=''):
 
         pkg:apache
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.get pkg:apache
     '''
@@ -73,11 +75,15 @@ def items(sanitize=False):
     '''
     Return all of the minion's grains
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.items
 
-    Sanitized CLI output::
+    Sanitized CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.items sanitize=True
     '''
@@ -95,12 +101,16 @@ def item(*args, **kwargs):
     '''
     Return one or more grains
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.item os
         salt '*' grains.item os osrelease oscodename
 
-    Sanitized CLI Example::
+    Sanitized CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.item host sanitize=True
     '''
@@ -121,10 +131,12 @@ def setval(key, val):
     '''
     Set a grains value in the grains config file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.setval key val
-        salt '*' grains.setval key '{'sub-key': 'val', 'sub-key2': 'val2'}'
+        salt '*' grains.setval key '{"sub-key": "val", "sub-key2": "val2"}'
     '''
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
@@ -170,7 +182,9 @@ def append(key, val):
 
     Append a value to a list in the grains config file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.append key val
     '''
@@ -189,7 +203,9 @@ def remove(key, val):
 
     Remove a value from a list in the grains config file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.remove key val
     '''
@@ -208,7 +224,9 @@ def delval(key):
 
     Delete a grain from the grains config file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.delval key
     '''
@@ -219,7 +237,9 @@ def ls():  # pylint: disable=C0103
     '''
     Return a list of all available grains
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.ls
     '''
@@ -287,7 +307,9 @@ def filter_by(lookup_dict, grain='os_family', merge=None):
         Python version from the default Python version provided by the OS
         (e.g., ``python26-mysql`` instead of ``python-mysql``).
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
     '''
