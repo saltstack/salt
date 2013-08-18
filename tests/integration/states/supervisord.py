@@ -89,7 +89,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_running_started(self):
         '''
@@ -121,7 +121,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_running_notexists(self):
         '''
@@ -147,7 +147,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_restart_stopped(self):
         '''
@@ -161,7 +161,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_restart_needsupdate(self):
         '''
@@ -181,7 +181,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_restart_notexists(self):
         '''
