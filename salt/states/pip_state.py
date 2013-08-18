@@ -232,7 +232,7 @@ def installed(name,
             return ret
 
     pip_install_call = __salt__['pip.install'](
-        pkgs='{0!r}'.format(name) if name else '',
+        pkgs='{0}'.format(name) if name else '',
         requirements=requirements,
         bin_env=bin_env,
         log=log,
