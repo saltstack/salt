@@ -9,6 +9,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+
 def _gem(command, ruby=None, runas=None):
     cmdline = 'gem {command}'.format(command=command)
     if __salt__['rvm.is_installed']():
@@ -35,7 +36,7 @@ def install(gems,           # pylint: disable=C0103
     Installs one or several gems.
 
     gems
-        The gems to install.
+        The gems to install
     ruby : None
         If RVM is installed, the ruby version and gemset to use.
     runas : None
@@ -48,7 +49,9 @@ def install(gems,           # pylint: disable=C0103
     ri : False
         Generate RI documentation for the gem(s).
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gem.install vagrant
     '''
@@ -76,7 +79,9 @@ def uninstall(gems, ruby=None, runas=None):
     runas : None
         The user to run gem as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gem.uninstall vagrant
     '''
@@ -94,7 +99,9 @@ def update(gems, ruby=None, runas=None):
     runas : None
         The user to run gem as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gem.update vagrant
     '''
@@ -112,7 +119,9 @@ def update_system(version='', ruby=None, runas=None):
     runas : None
         The user to run gem as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gem.update_system
     '''
@@ -131,9 +140,11 @@ def list_(prefix='', ruby=None, runas=None):
     runas : None
         The user to run gem as.
 
-    CLI Example::
+    CLI Example:
 
-        gem.list
+    .. code-block:: bash
+
+        salt '*' gem.list
     '''
     gems = {}
     stdout = _gem('list {prefix}'.format(prefix=prefix),
@@ -161,7 +172,9 @@ def sources_add(source_uri, ruby=None, runas=None):
     runas : None
         The user to run gem as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gem.sources_add http://rubygems.org/
     '''
@@ -180,7 +193,9 @@ def sources_remove(source_uri, ruby=None, runas=None):
     runas : None
         The user to run gem as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gem.sources_remove http://rubygems.org/
     '''
@@ -197,7 +212,9 @@ def sources_list(ruby=None, runas=None):
     runas : None
         The user to run gem as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gem.sources_list
     '''
