@@ -96,7 +96,9 @@ def ex_mod_init(low):
     '''
     Enforce a nice tree structure for /etc/portage/package.* configuration files.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.ex_mod_init
     '''
@@ -113,7 +115,9 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
@@ -182,7 +186,9 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
@@ -195,7 +201,9 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
@@ -208,7 +216,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -236,7 +246,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
@@ -270,7 +282,9 @@ def refresh_db():
     '''
     Updates the portage tree (emerge --sync). Uses eix-sync if available.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -314,7 +328,10 @@ def install(name=None,
         portage tree. To install a tbz2 package manually, use the "sources"
         option described below.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install <package name>
 
     refresh
@@ -329,7 +346,10 @@ def install(name=None,
         will install the latest available version in the specified slot.
         Ignored if "pkgs" or "sources" or "version" is passed.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sys-devel/gcc slot='4.4'
 
     fromrepo
@@ -338,14 +358,20 @@ def install(name=None,
         specified repository.
         Ignored if "pkgs" or "sources" or "version" is passed.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install salt fromrepo='gentoo'
 
     uses
         Similar to slot, but specifies a list of use flag.
         Ignored if "pkgs" or "sources" or "version" is passed.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sys-devel/gcc uses='["nptl","-nossp"]'
 
 
@@ -355,7 +381,10 @@ def install(name=None,
         A list of packages to install from the portage tree. Must be passed as
         a python list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo","bar","~category/package:slot::repository[use]"]'
 
     sources
@@ -363,7 +392,10 @@ def install(name=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sources='[{"foo": "salt://foo.tbz2"},{"bar": "salt://bar.tbz2"}]'
 
 
@@ -487,7 +519,9 @@ def update(pkg, slot=None, fromrepo=None, refresh=False):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.update <package name>
     '''
@@ -521,7 +555,9 @@ def upgrade(refresh=True):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -561,7 +597,9 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package name> slot=4.4 fromrepo=gentoo
@@ -616,7 +654,9 @@ def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package name> slot=4.4
@@ -649,7 +689,9 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
 
     Return a list containing the removed packages:
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.depclean <package name>
     '''
@@ -679,7 +721,9 @@ def version_cmp(pkg1, pkg2):
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     '''
@@ -696,7 +740,9 @@ def version_clean(version):
     '''
     Clean the version string removing extra data.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version_clean <version_string>
     '''
@@ -707,7 +753,9 @@ def check_extra_requirements(pkgname, pkgver):
     '''
     Check if the installed package already has the given requirements.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.check_extra_requirements 'sys-devel/gcc' '~>4.1.2:4.1::gentoo[nls,fortran]'
     '''

@@ -53,15 +53,15 @@ def image_create(**kwargs):
     '''
     Create an image (glance image-create)
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' glance.image_create name=f16-jeos is_public=true \
-                 disk_format=qcow2 container_format=ovf \
+    .. code-block:: bash
+
+        salt '*' glance.image_create name=f16-jeos is_public=true \\
+                 disk_format=qcow2 container_format=ovf \\
                  copy_from=http://berrange.fedorapeople.org/images/2012-02-29/f16-x86_64-openstack-sda.qcow2
 
-    For all possible values, run::
-
-        glance help image-create
+    For all possible values, run ``glance help image-create`` on the minion.
     '''
     nt_ks = _auth()
     fields = dict(
@@ -80,7 +80,9 @@ def image_delete(id=None, name=None):  # pylint: disable=C0103
     '''
     Delete an image (glance image-delete)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' glance.image_delete c2eb2eb0-53e1-4a80-b990-8ec887eae7df
         salt '*' glance.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
@@ -105,7 +107,9 @@ def image_show(id=None, name=None):  # pylint: disable=C0103
     '''
     Return details about a specific image (glance image-show)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' glance.image_get
     '''
@@ -143,7 +147,9 @@ def image_list(id=None):  # pylint: disable=C0103
     '''
     Return a list of available images (glance image-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' glance.image_list
     '''
@@ -177,7 +183,9 @@ def _item_list():
     Template for writing list functions
     Return a list of available items (glance items-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' glance.item_list
     '''

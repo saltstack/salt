@@ -24,7 +24,9 @@ def mount_image(location):
     '''
     Mount the named image and return the mount point
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' img.mount_image /tmp/foo
     '''
@@ -47,7 +49,9 @@ def umount_image(mnt):
     '''
     Unmount an image mountpoint
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' img.umount_image /mnt/foo
     '''
@@ -63,7 +67,9 @@ def seed(location, id_, config=None, approve_key=True, install=True):
     Make sure that the image at the given location is mounted, salt is
     installed, keys are seeded, and execute a state run
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' img.seed /tmp/image.qcow2 host1
     '''
@@ -221,7 +227,10 @@ def bootstrap(location, size, fmt):
     fmt:
         The image format, raw or qcow2
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
+
         salt '*' qemu_nbd.bootstrap /srv/salt-images/host.qcow 4096 qcow2
     '''
     location = __salt__['img.make_image'](location, size, fmt)

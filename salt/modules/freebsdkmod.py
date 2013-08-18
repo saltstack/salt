@@ -45,7 +45,9 @@ def available():
     '''
     Return a list of all available kernel modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.available
     '''
@@ -63,7 +65,9 @@ def check_available(mod):
     '''
     Check to see if the specified kernel module is available
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.check_available kvm
     '''
@@ -74,7 +78,9 @@ def lsmod():
     '''
     Return a dict containing information about currently loaded modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.lsmod
     '''
@@ -101,7 +107,9 @@ def load(mod):
     '''
     Load the specified kernel module
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.load kvm
     '''
@@ -115,7 +123,9 @@ def remove(mod):
     '''
     Remove the specified kernel module
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.remove kvm
     '''
