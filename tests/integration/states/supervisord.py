@@ -102,7 +102,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltTrueReturn(ret)
-        self.assertNotInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertNotInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_running_needsupdate(self):
         '''
@@ -195,7 +195,7 @@ class SupervisordTest(integration.ModuleCase,
             bin_env=self.venv_dir, conf_file=self.supervisor_conf
         )
         self.assertSaltFalseReturn(ret)
-        self.assertNotInSaltReturn(ret, 'sleep_service', ['changes'])
+        self.assertNotInSaltReturn('sleep_service', ret, ['changes'])
 
     def test_dead_started(self):
         '''
