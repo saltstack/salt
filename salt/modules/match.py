@@ -20,7 +20,9 @@ def compound(tgt):
     '''
     Return True if the minion matches the given compound target
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.compound 'L@cheese,foo and *'
     '''
@@ -36,7 +38,9 @@ def ipcidr(tgt):
     '''
     Return True if the minion matches the given ipcidr target
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.ipcidr '192.168.44.0/24'
     '''
@@ -53,7 +57,9 @@ def pillar(tgt, delim=':'):
     Return True if the minion matches the given pillar target. The
     ``delim`` argument can be used to specify a different delimiter.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.pillar 'cheese:foo'
         salt '*' match.pillar 'clone_url|https://github.com/saltstack/salt.git' delim='|'
@@ -73,7 +79,9 @@ def data(tgt):
     '''
     Return True if the minion matches the given data target
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.data 'spam:eggs'
     '''
@@ -90,7 +98,9 @@ def grain_pcre(tgt, delim=':'):
     Return True if the minion matches the given grain_pcre target. The
     ``delim`` argument can be used to specify a different delimiter.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.grain_pcre 'os:Fedo.*'
         salt '*' match.grain_pcre 'ipv6|2001:.*' delim='|'
@@ -111,7 +121,9 @@ def grain(tgt, delim=':'):
     Return True if the minion matches the given grain target. The ``delim``
     argument can be used to specify a different delimiter.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.grain 'os:Ubuntu'
         salt '*' match.grain_pcre 'ipv6|2001:db8::ff00:42:8329' delim='|'
@@ -131,7 +143,9 @@ def list_(tgt):
     '''
     Return True if the minion matches the given list target
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.list 'server1,server2'
     '''
@@ -147,7 +161,9 @@ def pcre(tgt):
     '''
     Return True if the minion matches the given pcre target
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.pcre '.*'
     '''
@@ -163,7 +179,9 @@ def glob(tgt):
     '''
     Return True if the minion matches the given glob target
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' match.glob '*'
     '''

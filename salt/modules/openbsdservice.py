@@ -25,7 +25,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -37,7 +39,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -49,7 +53,9 @@ def restart(name, **kwargs):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -62,7 +68,9 @@ def status(name, sig=None):
     Return the status for a service, returns a bool whether the service is
     running.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name>
     '''
