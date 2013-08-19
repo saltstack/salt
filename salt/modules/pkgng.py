@@ -184,9 +184,17 @@ def audit():
     return __salt__['cmd.run'](cmd)
 
 
-def install(pkg_name, orphan=False, force=False, glob=False, local=False,
-            dryrun=False, quiet=False, require=False, reponame=None,
-            regex=False, pcre=False):
+def install(pkg_name,
+            orphan=False,
+            force=False,
+            glob=False,
+            local=False,
+            dryrun=False,
+            quiet=False,
+            require=False,
+            reponame=None,
+            regex=False,
+            pcre=False):
     '''
     Install package from repositories
 
@@ -305,8 +313,14 @@ def install(pkg_name, orphan=False, force=False, glob=False, local=False,
     return __salt__['cmd.run'](cmd)
 
 
-def delete(pkg_name, all_installed=False, force=False, glob=False,
-           dryrun=False, recurse=False, regex=False, pcre=False):
+def delete(pkg_name,
+           all_installed=False,
+           force=False,
+           glob=False,
+           dryrun=False,
+           recurse=False,
+           regex=False,
+           pcre=False):
     '''
     Delete a package from the database and system
 
@@ -603,9 +617,19 @@ def which(file_name, origin=False, quiet=False):
     return __salt__['cmd.run'](cmd)
 
 
-def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
-           comment=False, desc=False, full=False, depends=False,
-           size=False, quiet=False, origin=False, prefix=False):
+def search(pkg_name,
+           exact=False,
+           glob=False,
+           regex=False,
+           pcre=False,
+           comment=False,
+           desc=False,
+           full=False,
+           depends=False,
+           size=False,
+           quiet=False,
+           origin=False,
+           prefix=False):
     '''
     Searches in remote package repositories
 
@@ -731,8 +755,15 @@ def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
     return __salt__['cmd.run'](cmd)
 
 
-def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
-          regex=False, pcre=False, local=False, depends=False):
+def fetch(pkg_name,
+          all=False,
+          quiet=False,
+          reponame=None,
+          glob=True,
+          regex=False,
+          pcre=False,
+          local=False,
+          depends=False):
     '''
     Fetches remote packages
 
