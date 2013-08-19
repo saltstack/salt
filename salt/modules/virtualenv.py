@@ -3,6 +3,7 @@ Create virtualenv environments
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import glob
 import shutil
 import logging

@@ -314,10 +314,10 @@ of Salt.
 Helpful Functions to Know
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module contains
+The :doc:`cmd </ref/modules/all/salt.modules.cmd>` module contains
 functions to shell out on minions, such as :mod:`cmd.run
-<salt.modules.cmdmod.run>` and :mod:`cmd.run_all
-<salt.modules.cmdmod.run_all>`:
+<salt.modules.cmd.run>` and :mod:`cmd.run_all
+<salt.modules.cmd.run_all>`:
 
 .. code-block:: bash
 

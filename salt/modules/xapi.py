@@ -29,8 +29,9 @@ except ImportError:
     HAS_IMPORTLIB = False
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError
 import salt.utils
+import salt.modules.cmd
+from salt.exceptions import CommandExecutionError
 
 
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
@@ -42,7 +43,7 @@ def _check_xenapi():
         debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
         if os.path.isfile(debian_xen_version):
             # __salt__ is not available in __virtual__
-            xenversion = salt.modules.cmdmod._run_quiet(debian_xen_version)
+            xenversion = salt.modules.cmd._run_quiet(debian_xen_version)
             xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
             if os.path.isdir(xapipath):
                 sys.path.append(xapipath)

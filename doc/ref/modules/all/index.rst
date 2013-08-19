@@ -29,7 +29,7 @@ Full list of builtin execution modules
     bridge
     bsd_shadow
     cassandra
-    cmdmod
+    cmd
     config
     cp
     cron
@@ -37,7 +37,7 @@ Full list of builtin execution modules
     darwin_sysctl
     data
     ddns
-    debconfmod
+    debconf
     debian_service
     dig
     disk
@@ -163,7 +163,7 @@ Full list of builtin execution modules
     upstart
     useradd
     virt
-    virtualenv_mod
+    virtualenv
     win_disk
     win_file
     win_groupadd
