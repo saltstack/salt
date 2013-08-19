@@ -119,7 +119,8 @@ exclude_patterns = [
     'ref/modules/all/salt.modules.virtualenv_mod.rst',
     'ref/states/all/salt.states.debconfmod.rst',
     'ref/states/all/salt.states.virtualenv_mod.rst',
-    'ref/modules/all/salt.modules.gentoolkitmod.rst'
+    'ref/modules/all/salt.modules.gentoolkitmod.rst',
+    'ref/modules/all/salt.modules.ldapmod.rst'
 ]
 
 extensions = [
