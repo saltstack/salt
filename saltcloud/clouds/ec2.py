@@ -848,7 +848,7 @@ def create(vm_=None, call=None):
             'host': ip_address,
             'username': username,
             'key_filename': key_filename,
-            'deploy_command': 'sh /tmp/deploy.sh',
+            'deploy_command': '/tmp/deploy.sh',
             'tty': True,
             'script': deploy_script,
             'name': vm_['name'],
