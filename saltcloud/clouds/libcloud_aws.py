@@ -406,7 +406,7 @@ def create(vm_):
             'host': ip_address,
             'username': username,
             'key_filename': key_filename,
-            'deploy_command': 'sh /tmp/deploy.sh',
+            'deploy_command': '/tmp/deploy.sh',
             'tty': True,
             'script': deploy_script.script,
             'name': vm_['name'],
