@@ -14,7 +14,7 @@ Full list of builtin state modules
     alternatives
     cmd
     cron
-    debconfmod
+    debconf
     disk
     eselect
     file
@@ -68,4 +68,4 @@ Full list of builtin state modules
     timezone
     tomcat
     user
-    virtualenv_mod
+    virtualenv
