@@ -107,7 +107,20 @@ release = '0.16.3'
 
 master_doc = 'contents'
 templates_path = ['_templates']
-exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
+exclude_patterns = [
+    '_build',
+    '_incl/*',
+    'ref/cli/_includes/*.rst',
+    # The references below are just for documents which contain redirect links
+    # and are not present in any doctree.
+    'ref/modules/all/salt.modules.cmdmod.rst',
+    'ref/modules/all/salt.modules.debconfmod.rst',
+    'ref/modules/all/salt.modules.djangomod.rst',
+    'ref/modules/all/salt.modules.virtualenv_mod.rst',
+    'ref/states/all/salt.states.debconfmod.rst',
+    'ref/states/all/salt.states.virtualenv_mod.rst',
+    'ref/modules/all/salt.modules.gentoolkitmod.rst'
+]
 
 extensions = [
     'saltdocs',

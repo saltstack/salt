@@ -57,7 +57,7 @@ Full list of builtin execution modules
     freebsdservice
     freebsd_sysctl
     gem
-    gentoolkitmod
+    gentoolkit
     gentoo_service
     git
     glance
