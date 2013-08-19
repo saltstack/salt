@@ -36,6 +36,9 @@ set_file
     dict must be indented four spaces instead of two.
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 
 def __virtual__():
     '''
@@ -43,11 +46,12 @@ def __virtual__():
     '''
     if __grains__['os_family'] != 'Debian':
         return False
+
     # Check that debconf was loaded
     if 'debconf.show' not in __salt__:
         return False
 
-    return 'debconf'
+    return True
 
 
 def set_file(name, source, **kwargs):
