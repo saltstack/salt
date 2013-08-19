@@ -87,7 +87,7 @@ def locate(pattern, database='', limit=0, **kwargs):
         database=<locate's default database>
         limit=<integer, not set by default>
 
-    See the manpage for locate for further explanation of these options.
+    See the manpage for ``locate(1)`` for further explanation of these options.
 
     CLI Example:
 

@@ -134,15 +134,21 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example, Install one package::
+    CLI Example, Install one package:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package name>
 
-    CLI Example, Install more than one package::
+    CLI Example, Install more than one package:
+
+    .. code-block:: bash
 
         salt '*' pkg.install pkgs='["<package name>", "<package name>"]'
 
-    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, HTTP, FTP, local filesystem)::
+    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, HTTP, FTP, local filesystem):
+
+    .. code-block:: bash
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
     '''

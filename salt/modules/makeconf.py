@@ -220,7 +220,7 @@ def set_cflags(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.set_cflags '\\-march=native \\-O2 \\-pipe'
+        salt '*' makeconf.set_cflags '-march=native -O2 -pipe'
     '''
     return set_var('CFLAGS', value)
 
@@ -254,7 +254,7 @@ def append_cflags(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.append_cflags '\\-pipe'
+        salt '*' makeconf.append_cflags '-pipe'
     '''
     return append_var('CFLAGS', value)
 
@@ -272,7 +272,7 @@ def trim_cflags(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.trim_cflags '\\-pipe'
+        salt '*' makeconf.trim_cflags '-pipe'
     '''
     return trim_var('CFLAGS', value)
 
@@ -287,7 +287,7 @@ def cflags_contains(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.cflags_contains '\\-pipe'
+        salt '*' makeconf.cflags_contains '-pipe'
     '''
     return var_contains('CFLAGS', value)
 
@@ -305,7 +305,7 @@ def set_cxxflags(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.set_cxxflags '\\-march=native \\-O2 \\-pipe'
+        salt '*' makeconf.set_cxxflags '-march=native -O2 -pipe'
     '''
     return set_var('CXXFLAGS', value)
 
@@ -339,7 +339,7 @@ def append_cxxflags(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.append_cxxflags '\\-pipe'
+        salt '*' makeconf.append_cxxflags '-pipe'
     '''
     return append_var('CXXFLAGS', value)
 
@@ -357,7 +357,7 @@ def trim_cxxflags(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.trim_cxxflags '\\-pipe'
+        salt '*' makeconf.trim_cxxflags '-pipe'
     '''
     return trim_var('CXXFLAGS', value)
 
@@ -372,7 +372,7 @@ def cxxflags_contains(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.cxxflags_contains '\\-pipe'
+        salt '*' makeconf.cxxflags_contains '-pipe'
     '''
     return var_contains('CXXFLAGS', value)
 
@@ -439,7 +439,7 @@ def set_makeopts(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.set_makeopts '\\-j3'
+        salt '*' makeconf.set_makeopts '-j3'
     '''
     return set_var('MAKEOPTS', value)
 
@@ -473,7 +473,7 @@ def append_makeopts(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.append_makeopts '\\-j3'
+        salt '*' makeconf.append_makeopts '-j3'
     '''
     return append_var('MAKEOPTS', value)
 
@@ -491,7 +491,7 @@ def trim_makeopts(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.trim_makeopts '\\-j3'
+        salt '*' makeconf.trim_makeopts '-j3'
     '''
     return trim_var('MAKEOPTS', value)
 
@@ -506,7 +506,7 @@ def makeopts_contains(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.makeopts_contains '\\-j3'
+        salt '*' makeconf.makeopts_contains '-j3'
     '''
     return var_contains('MAKEOPTS', value)
 
@@ -524,7 +524,7 @@ def set_emerge_default_opts(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.set_emerge_default_opts '\\-\\-jobs'
+        salt '*' makeconf.set_emerge_default_opts '--jobs'
     '''
     return set_var('EMERGE_DEFAULT_OPTS', value)
 
@@ -558,7 +558,7 @@ def append_emerge_default_opts(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.append_emerge_default_opts '\\-\\-jobs'
+        salt '*' makeconf.append_emerge_default_opts '--jobs'
     '''
     return append_var('EMERGE_DEFAULT_OPTS', value)
 
@@ -576,7 +576,7 @@ def trim_emerge_default_opts(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.trim_emerge_default_opts '\\-\\-jobs'
+        salt '*' makeconf.trim_emerge_default_opts '--jobs'
     '''
     return trim_var('EMERGE_DEFAULT_OPTS', value)
 
@@ -591,7 +591,7 @@ def emerge_default_opts_contains(value):
 
     .. code-block:: bash
 
-        salt '*' makeconf.emerge_default_opts_contains '\\-\\-jobs'
+        salt '*' makeconf.emerge_default_opts_contains '--jobs'
     '''
     return var_contains('EMERGE_DEFAULT_OPTS', value)
 

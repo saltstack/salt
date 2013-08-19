@@ -152,9 +152,9 @@ def create(*args):
 
     CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde test_mode=True
+        salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde test_mode=True
 
     .. note:: Test mode
 

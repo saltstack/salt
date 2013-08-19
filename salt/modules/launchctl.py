@@ -92,7 +92,7 @@ def get_all():
 
     CLI Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -131,7 +131,7 @@ def available(job_label):
 
     CLI Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' service.available com.openssh.sshd
     '''
@@ -145,7 +145,7 @@ def status(job_label, runas=None):
 
     CLI Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' service.status <service label>
     '''
@@ -163,7 +163,7 @@ def stop(job_label, runas=None):
 
     CLI Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' service.stop <service label>
         salt '*' service.stop org.ntp.ntpd
@@ -183,7 +183,7 @@ def start(job_label, runas=None):
 
     CLI Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' service.start <service label>
         salt '*' service.start org.ntp.ntpd
@@ -203,7 +203,7 @@ def restart(job_label, runas=None):
 
     CLI Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' service.restart <service label>
     '''
