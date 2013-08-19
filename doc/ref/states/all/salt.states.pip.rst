@@ -2,5 +2,5 @@
 salt.states.pip
 ===============
 
-.. automodule:: salt.states.pip_state
+.. automodule:: salt.states.pip
     :members:
