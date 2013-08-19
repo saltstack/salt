@@ -18,7 +18,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from salt.states import pip_state as pip
+from salt.states import pip
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
