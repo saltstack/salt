@@ -336,8 +336,12 @@ class Loader(object):
     also be used to only load specific functions from a directory, or to
     call modules in an arbitrary directory directly.
     '''
-    def __init__(self, module_dirs, opts=None, tag='module',
-                 loaded_base_name=None, mod_type_check=None):
+    def __init__(self,
+                 module_dirs,
+                 opts=None,
+                 tag='module',
+                 loaded_base_name=None,
+                 mod_type_check=None):
         self.module_dirs = module_dirs
         if opts is None:
             opts = {}
