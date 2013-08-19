@@ -1,6 +1,4 @@
-===================
-salt.modules.sysmod
-===================
+salt.modules.sysmod -> salt.modules.sys
+---------------------------------------
 
-.. automodule:: salt.modules.sysmod
-    :members:
+Please see :doc:`salt.modules.sys`.

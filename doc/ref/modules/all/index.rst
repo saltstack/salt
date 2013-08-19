@@ -9,7 +9,7 @@ Full list of builtin execution modules
     .. toctree::
 
         salt.modules.pkg
-        salt.modules.sys
+        salt.modules.virtual-sys
 
 
 .. currentmodule:: salt.modules
@@ -154,7 +154,7 @@ Full list of builtin execution modules
     supervisord
     svn
     sysbench
-    sysmod
+    sys
     system
     systemd
     test
@@ -198,3 +198,4 @@ Full list of builtin execution modules
         salt.modules.gentoolkitmod
         salt.modules.ldapmod
         salt.modules.localemod
+        salt.modules.sysmod
