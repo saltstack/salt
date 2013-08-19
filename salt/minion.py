@@ -632,10 +632,9 @@ class Minion(object):
             sdata.update(data)
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write(minion_instance.serial.dumps(sdata))
-        ret = {}
+        ret = {'success': False}
         function_name = data['fun']
         if function_name in minion_instance.functions:
-            ret['success'] = False
             try:
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
