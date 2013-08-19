@@ -29,7 +29,7 @@ Full list of builtin execution modules
     bridge
     bsd_shadow
     cassandra
-    cmdmod
+    cmd
     config
     cp
     cron
