@@ -509,8 +509,14 @@ def _sed_esc(string, escape_all=False):
     return string
 
 
-def sed(path, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g', escape_all=False):
+def sed(path,
+        before,
+        after,
+        limit='',
+        backup='.bak',
+        options='-r -e',
+        flags='g',
+        escape_all=False):
     '''
     Make a simple edit to a file
 
@@ -575,7 +581,10 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     return __salt__['cmd.run_all'](cmd)
 
 
-def sed_contains(path, text, limit='', flags='g'):
+def sed_contains(path,
+                 text,
+                 limit='',
+                 flags='g'):
     '''
     Return True if the file at ``path`` contains ``text``. Utilizes sed to
     perform the search (line-wise search).
@@ -611,8 +620,14 @@ def sed_contains(path, text, limit='', flags='g'):
     return bool(result)
 
 
-def psed(path, before, after, limit='', backup='.bak', flags='gMS',
-         escape_all=False, multi=False):
+def psed(path,
+         before,
+         after,
+         limit='',
+         backup='.bak',
+         flags='gMS',
+         escape_all=False,
+         multi=False):
     '''
     Make a simple edit to a file (pure Python version)
 
@@ -689,7 +704,11 @@ RE_FLAG_TABLE = {'I': re.I,
                  'X': re.X}
 
 
-def _psed(text, before, after, limit, flags):
+def _psed(text,
+          before,
+          after,
+          limit,
+          flags):
     '''
     Does the actual work for file.psed, so that single lines can be passed in
     '''
@@ -714,7 +733,10 @@ def _psed(text, before, after, limit, flags):
     return text
 
 
-def uncomment(path, regex, char='#', backup='.bak'):
+def uncomment(path,
+              regex,
+              char='#',
+              backup='.bak'):
     '''
     Uncomment specified commented lines in a file
 
@@ -749,7 +771,10 @@ def uncomment(path, regex, char='#', backup='.bak'):
                backup=backup)
 
 
-def comment(path, regex, char='#', backup='.bak'):
+def comment(path,
+            regex,
+            char='#',
+            backup='.bak'):
     '''
     Comment out specified lines in a file
 
@@ -1195,7 +1220,11 @@ def get_selinux_context(path):
     return out.split(' ')[4]
 
 
-def set_selinux_context(path, user=None, role=None, type=None, range=None):
+def set_selinux_context(path,
+                        user=None,
+                        role=None,
+                        type=None,
+                        range=None):
     '''
     Set a specific SELinux label on a given path
 
@@ -1390,7 +1419,11 @@ def get_managed(
     return sfn, source_sum, ''
 
 
-def check_perms(name, ret, user, group, mode):
+def check_perms(name,
+                ret,
+                user,
+                group,
+                mode):
     '''
     Check the permissions on files and chown if needed
 
@@ -1889,7 +1922,10 @@ def manage_file(name,
         return ret
 
 
-def mkdir(dir_path, user=None, group=None, mode=None):
+def mkdir(dir_path,
+          user=None,
+          group=None,
+          mode=None):
     '''
     Ensure that a directory is available.
 
@@ -1908,7 +1944,10 @@ def mkdir(dir_path, user=None, group=None, mode=None):
         makedirs_perms(directory, user, group, mode)
 
 
-def makedirs(path, user=None, group=None, mode=None):
+def makedirs(path,
+             user=None,
+             group=None,
+             mode=None):
     '''
     Ensure that the directory containing this path is available.
 
@@ -1946,7 +1985,10 @@ def makedirs(path, user=None, group=None, mode=None):
         mkdir(directory_to_create, user=user, group=group, mode=mode)
 
 
-def makedirs_perms(name, user=None, group=None, mode='0755'):
+def makedirs_perms(name,
+                   user=None,
+                   group=None,
+                   mode='0755'):
     '''
     Taken and modified from os.makedirs to set user, group and mode for each
     directory created.
