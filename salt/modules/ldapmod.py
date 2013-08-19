@@ -94,13 +94,13 @@ def search(filter,      # pylint: disable=C0103
     '''
     Run an arbitrary LDAP query and return the results.
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'ldaphost' ldap.search "filter=cn=myhost"
 
-    returns:
+    Return data:
 
     .. code-block:: python
 
