@@ -39,7 +39,8 @@ def add(name,
         fullname=False,
         roomnumber=False,
         workphone=False,
-        homephone=False
+        homephone=False,
+        createhome=False
         # pylint: enable=W0613
         ):
     '''
