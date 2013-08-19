@@ -68,4 +68,4 @@ Full list of builtin state modules
     timezone
     tomcat
     user
-    virtualenv_mod
+    virtualenv
