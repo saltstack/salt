@@ -51,11 +51,15 @@ def add_host(mac, name=None, ip=None, ddns=False, group=None,
     '''
     Add a host object for the given mac.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt dhcp-server omapi.add_host ab:ab:ab:ab:ab:ab name=host1
 
-    Add ddns-hostname and a fixed-ip statements::
+    Add ddns-hostname and a fixed-ip statements:
+
+    .. code-block:: bash
 
         salt dhcp-server omapi.add_host ab:ab:ab:ab:ab:ab name=host1 ip=10.1.1.1 ddns=true
     '''
@@ -88,7 +92,9 @@ def delete_host(mac=None, name=None):
     '''
     Delete the host with the given mac or name.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt dhcp-server omapi.delete_host name=host1
         salt dhcp-server omapi.delete_host mac=ab:ab:ab:ab:ab:ab
