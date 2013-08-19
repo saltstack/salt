@@ -179,7 +179,13 @@ def _get_target(target, ssh):
     return ' %s://%s/%s' % (proto, target, 'system')
 
 
-def _gen_xml(name, cpu, mem, vda, nicp, hypervisor, **kwargs):
+def _gen_xml(name,
+             cpu,
+             mem,
+             vda,
+             nicp,
+             hypervisor,
+             **kwargs):
     '''
     Generate the XML string to define a libvirt vm
     '''
@@ -259,7 +265,14 @@ def _nic_profile(nic):
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
 
 
-def init(name, cpu, mem, image, nic='default', hypervisor='kvm', start=True, **kwargs):
+def init(name,
+         cpu,
+         mem,
+         image,
+         nic='default',
+         hypervisor='kvm',
+         start=True,
+         **kwargs):
     '''
     Initialize a new vm
 
