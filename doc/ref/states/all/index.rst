@@ -33,8 +33,8 @@ Full list of builtin state modules
     lvm
     makeconf
     mdadm
-    modjk_worker
     module
+    modjk_worker
     mongodb_database
     mongodb_user
     mount
@@ -45,8 +45,8 @@ Full list of builtin state modules
     npm
     pecl
     pip
-    pkg
     pkgng
+    pkg
     pkgrepo
     portage_config
     postgres_database
@@ -69,16 +69,3 @@ Full list of builtin state modules
     tomcat
     user
     virtualenv
-
-
-
-.. admonition:: Renamed modules
-
-    The following state modules were renamed but the renaming itself is only 
-    important from a developers perspective. They do not change the regular 
-    user's work-flow.
-
-    .. toctree::
-
-        salt.states.debconfmod
-        salt.states.virtualenv_mod
