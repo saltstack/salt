@@ -59,16 +59,16 @@ class CMDModuleTest(integration.ModuleCase):
 
         loads_mock.return_value = {'data': {'USER': 'foo'}}
 
-        from salt.modules import cmd
+        from salt.modules import cmdmod
 
-        cmd.__grains__ = {'os': 'darwin'}
+        cmdmod.__grains__ = {'os': 'darwin'}
         if sys.platform.startswith('freebsd'):
             shell = '/bin/sh'
         else:
             shell = '/bin/bash'
 
         try:
-            cmd._run('ls',
+            cmdmod._run('ls',
                         cwd=tempfile.gettempdir(),
                         runas='foobar',
                         shell=shell)
@@ -80,7 +80,7 @@ class CMDModuleTest(integration.ModuleCase):
             getpwnam_mock.assert_called_with('foobar')
             loads_mock.assert_called_with('{}')
         finally:
-            delattr(cmd, '__grains__')
+            delattr(cmdmod, '__grains__')
 
     def test_stdout(self):
         '''
