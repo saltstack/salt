@@ -9,8 +9,7 @@ Full list of builtin execution modules
     .. toctree::
 
         salt.modules.pkg
-        salt.modules.virtual-sys
-
+        salt.modules.sys
 
 .. currentmodule:: salt.modules
 
@@ -30,7 +29,7 @@ Full list of builtin execution modules
     bridge
     bsd_shadow
     cassandra
-    cmd
+    cmdmod
     config
     cp
     cron
@@ -38,11 +37,11 @@ Full list of builtin execution modules
     darwin_sysctl
     data
     ddns
-    debconf
+    debconfmod
     debian_service
     dig
     disk
-    django
+    djangomod
     dnsmasq
     dnsutil
     dpkg
@@ -59,7 +58,7 @@ Full list of builtin execution modules
     freebsdservice
     gem
     gentoo_service
-    gentoolkit
+    gentoolkitmod
     git
     glance
     grains
@@ -76,11 +75,11 @@ Full list of builtin execution modules
     kmod
     launchctl
     layman
-    ldap
+    ldapmod
     linux_acl
     linux_lvm
     linux_sysctl
-    locale
+    localemod
     locate
     logrotate
     makeconf
@@ -154,7 +153,7 @@ Full list of builtin execution modules
     supervisord
     svn
     sysbench
-    sys
+    sysmod
     system
     systemd
     test
@@ -164,7 +163,7 @@ Full list of builtin execution modules
     upstart
     useradd
     virt
-    virtualenv
+    virtualenv_mod
     win_disk
     win_file
     win_groupadd
@@ -181,21 +180,3 @@ Full list of builtin execution modules
     zfs
     zpool
     zypper
-
-
-.. admonition:: Renamed modules
-
-    The following modules were renamed but the renaming itself is only 
-    important from a developers perspective. They do not change the regular 
-    user's work-flow.
-
-    .. toctree::
-
-        salt.modules.cmdmod
-        salt.modules.debconfmod
-        salt.modules.djangomod
-        salt.modules.virtualenv_mod
-        salt.modules.gentoolkitmod
-        salt.modules.ldapmod
-        salt.modules.localemod
-        salt.modules.sysmod

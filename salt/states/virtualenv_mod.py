@@ -5,7 +5,6 @@ Setup of Python virtualenv sandboxes.
 '''
 
 # Import python libs
-from __future__ import absolute_import
 import logging
 import os
 import salt.utils

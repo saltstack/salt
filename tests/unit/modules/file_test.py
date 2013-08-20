@@ -9,11 +9,11 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import file as filemod
-from salt.modules import cmd
+from salt.modules import cmdmod
 
 filemod.__salt__ = {
-    'cmd.run': cmd.run,
-    'cmd.run_all': cmd.run_all
+    'cmd.run': cmdmod.run,
+    'cmd.run_all': cmdmod.run_all
 }
 
 SED_CONTENT = """test

@@ -3,16 +3,16 @@ Support for Gentoolkit
 
 '''
 
-# Import python libs
-from __future__ import absolute_import
 import os
+
+HAS_GENTOOLKIT = False
 
 # Import third party libs
 try:
     from gentoolkit.eclean import search, clean, cli, exclude as excludemod
     HAS_GENTOOLKIT = True
 except ImportError:
-    HAS_GENTOOLKIT = False
+    pass
 
 
 def __virtual__():
@@ -20,7 +20,7 @@ def __virtual__():
     Only work on Gentoo systems with gentoolkit installed
     '''
     if __grains__['os'] == 'Gentoo' and HAS_GENTOOLKIT:
-        return True
+        return 'gentoolkit'
     return False
 
 
@@ -122,8 +122,8 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     else:
         try:
             exclude = _parse_exclude(exclude_file)
-        except excludemod.ParseExcludeFileException as exc:
-            ret = {exc: 'Invalid exclusion file: {0}'.format(exclude_file)}
+        except excludemod.ParseExcludeFileException as e:
+            ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
             return ret
 
     if time_limit != 0:
@@ -194,8 +194,8 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
     else:
         try:
             exclude = _parse_exclude(exclude_file)
-        except excludemod.ParseExcludeFileException as exc:
-            ret = {exc: 'Invalid exclusion file: {0}'.format(exclude_file)}
+        except excludemod.ParseExcludeFileException as e:
+            ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
             return ret
 
     if time_limit != 0:

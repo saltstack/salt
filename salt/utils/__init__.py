@@ -494,6 +494,9 @@ def check_or_die(command):
     '''
     Simple convenience function for modules to use for gracefully blowing up
     if a required tool is not available in the system path.
+
+    Lazily import `salt.modules.cmdmod` to avoid any sort of circular
+    dependencies.
     '''
     if command is None:
         raise CommandNotFoundError('\'None\' is not a valid command.')

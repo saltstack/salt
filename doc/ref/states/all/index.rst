@@ -14,7 +14,7 @@ Full list of builtin state modules
     alternatives
     cmd
     cron
-    debconf
+    debconfmod
     disk
     eselect
     file
@@ -68,17 +68,4 @@ Full list of builtin state modules
     timezone
     tomcat
     user
-    virtualenv
-
-
-
-.. admonition:: Renamed modules
-
-    The following state modules were renamed but the renaming itself is only 
-    important from a developers perspective. They do not change the regular 
-    user's work-flow.
-
-    .. toctree::
-
-        salt.states.debconfmod
-        salt.states.virtualenv_mod
+    virtualenv_mod

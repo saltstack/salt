@@ -6,7 +6,6 @@ access to the master root execution access to all salt minions
 '''
 
 # Import python libs
-from __future__ import absolute_import
 import logging
 import os
 import shutil
@@ -44,7 +43,7 @@ def __virtual__():
     Overwriting the cmd python module makes debugging modules
     with pdb a bit harder so lets do it this way instead.
     '''
-    return True
+    return 'cmd'
 
 
 def _chugid(runas):
@@ -54,14 +53,14 @@ def _chugid(runas):
 
     # No logging can happen on this function
     #
-    # 08:46:32,161 [salt.loaded.int.module.cmd:276 ][DEBUG   ] stderr: Traceback (most recent call last):
+    # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
     #   File "/usr/lib/python2.7/logging/__init__.py", line 870, in emit
     #     self.flush()
     #   File "/usr/lib/python2.7/logging/__init__.py", line 832, in flush
     #     self.stream.flush()
     # IOError: [Errno 9] Bad file descriptor
-    # Logged from file cmd.py, line 59
-    # 08:46:17,481 [salt.loaded.int.module.cmd:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
+    # Logged from file cmdmod.py, line 59
+    # 08:46:17,481 [salt.loaded.int.module.cmdmod:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
     #
     # apparently because we closed fd's on Popen, though if not closed, output
     # would also go to its stderr
