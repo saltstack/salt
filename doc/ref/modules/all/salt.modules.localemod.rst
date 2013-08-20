@@ -1,1 +1,6 @@
-Please see :doc:`salt.modules.locale`.
+======================
+salt.modules.localemod
+======================
+
+.. automodule:: salt.modules.localemod
+    :members:

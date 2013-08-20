@@ -3,7 +3,6 @@ Module for managing locales on POSIX-like systems.
 '''
 
 # Import python libs
-from __future__ import absolute_import
 import logging
 import re
 
@@ -19,7 +18,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return True
+    return 'locale'
 
 
 def _parse_localectl():
@@ -35,7 +34,7 @@ def _parse_localectl():
             try:
                 key, val = re.match('^([A-Z_]+)=(.*)$', cols[0]).groups()
             except AttributeError:
-                log.error('Odd locale parameter {0!r} detected in localectl '
+                log.error('Odd locale parameter "{0}" detected in localectl '
                           'output. This should not happen. localectl should '
                           'catch this. You should probably investigate what '
                           'caused this.'.format(cols[0]))
