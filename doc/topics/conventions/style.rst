@@ -157,7 +157,7 @@ instance:
 .. note::
 
     Making function and class definitions vertical is only required if the
-    arguments are longer then 80 charachters. Otherwise the formatting is
+    arguments are longer then 80 characters. Otherwise, the formatting is
     optional and both are acceptable.
 
 Indenting
