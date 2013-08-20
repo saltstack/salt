@@ -57,15 +57,15 @@ def set_(name, target):
     else:
         result = __salt__['eselect.set_target'](name, target)
         if result:
+            ret['changes'][name] = {'old': old_target, 'new': target}
+            ret['comment'] = 'Target {0!r} set on {1!r} module.'.format(
+                target, name
+            )
+        else:
             ret['comment'] = (
                 'Target {0!r} failed to be set on {1!r} module.'.format(
                     target, name
                 )
             )
             ret['result'] = False
-        else:
-            ret['changes'][name] = {'old': old_target, 'new': target}
-            ret['comment'] = 'Target {0!r} set on {1!r} module.'.format(
-                target, name
-            )
     return ret
