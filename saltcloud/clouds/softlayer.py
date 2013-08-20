@@ -13,6 +13,7 @@ configuration at:
 
     my-softlayer-config:
       # SoftLayer account api key
+      user: MYLOGIN
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       provider: softlayer
 
