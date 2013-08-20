@@ -124,10 +124,12 @@ def pack_pkgs(pkgs):
     not a dict, then the dict returned will use None as the value for that
     package.
 
-    Example: '["foo", {"bar": 1.2}, "baz"]' would become
-             {'foo': None, 'bar': 1.2, 'baz': None}
+    ``'["foo", {"bar": 1.2}, "baz"]'`` would become
+    ``{'foo': None, 'bar': 1.2, 'baz': None}``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.pack_pkgs '["foo", {"bar": 1.2}, "baz"]'
     '''
@@ -163,10 +165,12 @@ def pack_sources(sources):
     Accepts list of dicts (or a string representing a list of dicts) and packs
     the key/value pairs into a single dict.
 
-    Example: '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]' would
-    become {"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}
+    ``'[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'`` would become
+    ``{"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
@@ -219,7 +223,9 @@ def check_desired(desired=None):
     Examines desired package names to make sure they were formatted properly.
     Returns a list of problems encountered.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.check_desired
     '''
@@ -250,7 +256,9 @@ def parse_targets(name=None, pkgs=None, sources=None, **kwargs):
     installed. Returns a list of packages, as well as a string noting whether
     the packages are to come from a repository or a binary package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.parse_targets
     '''
@@ -315,7 +323,9 @@ def version(*names, **kwargs):
     '''
     Common interface for obtaining the version of installed packages.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.version vim
         salt '*' pkg_resource.version foo bar baz
@@ -350,7 +360,9 @@ def add_pkg(pkgs, name, version):
     '''
     Add a package to a dict of installed packages.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.add_pkg '{}' bind 9
     '''
@@ -366,7 +378,9 @@ def sort_pkglist(pkgs):
     versions for any packages that have multiple versions installed, so that
     two package lists can be compared to one another.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.sort_pkglist '["3.45", "2.13"]'
     '''
@@ -384,7 +398,9 @@ def stringify(pkgs):
     Takes a dict of package name/version information and joins each list of
     installed versions into a string.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.stringify 'vim: 7.127'
     '''
@@ -400,7 +416,9 @@ def find_changes(old=None, new=None):
     Compare before and after results from pkg.list_pkgs() to determine what
     changes were made to the packages installed on the minion.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.find_changes
     '''
@@ -426,7 +444,9 @@ def version_clean(version):
     Clean the version string removing extra data.
     This function will simply try to call ``pkg.version_clean``.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.version_clean <version_string>
     '''
@@ -441,7 +461,9 @@ def check_extra_requirements(pkgname, pkgver):
     Check if the installed package already has the given requirements.
     This function will simply try to call "pkg.check_extra_requirements".
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg_resource.check_extra_requirements <pkgname> <extra_requirements>
     '''

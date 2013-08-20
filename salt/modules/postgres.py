@@ -87,7 +87,9 @@ def version(user=None, host=None, port=None, maintenance_db=None,
     '''
     Return the version of a Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.version
     '''
@@ -173,7 +175,9 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
     Run an SQL-Query and return the results as a list. This command
     only supports SELECT statements.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.psql_query 'select * from pg_stat_activity'
     '''
@@ -215,7 +219,9 @@ def db_list(user=None, host=None, port=None, maintenance_db=None,
     '''
     Return dictionary with information about databases of a Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_list
     '''
@@ -247,7 +253,9 @@ def db_exists(name, user=None, host=None, port=None, maintenance_db=None,
     '''
     Checks if a database exists on the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_exists 'dbname'
     '''
@@ -274,7 +282,9 @@ def db_create(name,
     '''
     Adds a databases to the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_create 'dbname'
 
@@ -319,7 +329,9 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
     '''
     Change tablesbase or/and owner of databse.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_alter dbname owner=otheruser
     '''
@@ -350,7 +362,9 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
     '''
     Removes a databases from the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.db_remove 'dbname'
     '''
@@ -370,7 +384,9 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
     '''
     Return a dict with information about users of a Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.user_list
     '''
@@ -445,7 +461,9 @@ def user_exists(name, user=None, host=None, port=None, maintenance_db=None,
     '''
     Checks if a user exists on the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.user_exists 'username'
     '''
@@ -532,7 +550,9 @@ def user_create(username,
     '''
     Creates a Postgres user.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' postgres.user_create 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
@@ -619,7 +639,9 @@ def user_update(username,
     '''
     Creates a Postgres user.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' postgres.user_create 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
@@ -677,7 +699,9 @@ def user_remove(username,
     '''
     Removes a user from the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.user_remove 'username'
     '''
@@ -705,7 +729,9 @@ def group_create(groupname,
     Creates a Postgres group. A group is postgres is similar to a user, but
     cannot login.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.group_create 'groupname' user='user' \\
                 host='hostname' port='port' password='password' \\
@@ -744,7 +770,9 @@ def group_update(groupname,
     '''
     Updated a postgres group
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' postgres.group_update 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
@@ -775,7 +803,9 @@ def group_remove(groupname,
     '''
     Removes a group from the Postgres server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.group_remove 'groupname'
     '''
@@ -794,7 +824,9 @@ def owner_to(dbname,
     Set the owner of all schemas, functions, tables, views and sequences to
     the given username.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' postgres.owner_to 'dbname' 'username'
     '''
