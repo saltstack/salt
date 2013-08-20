@@ -163,7 +163,7 @@ Full list of builtin execution modules
     upstart
     useradd
     virt
-    virtualenv
+    virtualenv_mod
     win_disk
     win_file
     win_groupadd
