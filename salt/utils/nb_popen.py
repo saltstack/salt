@@ -204,8 +204,8 @@ class NonBlockingPopen(subprocess.Popen):
 
             time.sleep(0.01)
 
-    def communicate(self, input_):
-        super(NonBlockingPopen, self).communicate(input_)
+    def communicate(self, input=None):
+        super(NonBlockingPopen, self).communicate(input)
         self.stdout_buff.seek(0)
         self.stderr_buff.seek(0)
         if self.universal_newlines:
