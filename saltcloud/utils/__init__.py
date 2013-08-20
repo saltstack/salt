@@ -258,6 +258,33 @@ def salt_config_to_yaml(configuration):
     return yaml.safe_dump(configuration, default_flow_style=False)
 
 
+def wait_for_fun(fun, timeout=900, **kwargs):
+    '''
+    Wait until a function finishes, or times out
+    '''
+    start = time.time()
+    log.debug('Attempting function {0}'.format(fun))
+    trycount = 0
+    while True:
+        trycount += 1
+        try:
+            response = fun(**kwargs)
+            if type(response) is not bool:
+                return response
+        except Exception as exc:
+            log.debug('Caught exception in wait_for_fun: {0}'.format(exc))
+            time.sleep(1)
+            if time.time() - start > timeout:
+                log.error('Function timed out: {0}'.format(timeout))
+                return False
+
+            log.debug(
+                'Retrying function {0} on  (try {1})'.format(
+                    fun, trycount
+                )
+            )
+
+
 def wait_for_ssh(host, port=22, timeout=900):
     '''
     Wait until an ssh connection can be made on a specified host
