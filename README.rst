@@ -8,7 +8,6 @@ providers. Currently supported providers are:
 .. code-block:: yaml
 
     - Amazon EC2
-    - Eucalyptus (using EC2)
     - GoGrid
     - HP Cloud (using OpenStack)
     - Joyent
@@ -17,6 +16,8 @@ providers. Currently supported providers are:
     - Rackspace (using OpenStack)
     - Parallels
     - DigitalOcean
+    - IBM Smart Cloud Enterprise
+    - SoftLayer
 
 The salt-cloud command can be used to query configured providers, create VMs on
 them, deploy salt-minion on those VMs and destroy them when no longer needed.
