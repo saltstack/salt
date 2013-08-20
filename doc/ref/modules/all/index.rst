@@ -9,7 +9,8 @@ Full list of builtin execution modules
     .. toctree::
 
         salt.modules.pkg
-        salt.modules.sys
+        salt.modules.virtual-sys
+
 
 .. currentmodule:: salt.modules
 
@@ -41,7 +42,7 @@ Full list of builtin execution modules
     debian_service
     dig
     disk
-    djangomod
+    django
     dnsmasq
     dnsutil
     dpkg
@@ -51,14 +52,14 @@ Full list of builtin execution modules
     event
     extfs
     file
+    freebsd_sysctl
     freebsdjail
     freebsdkmod
     freebsdpkg
     freebsdservice
-    freebsd_sysctl
     gem
-    gentoolkitmod
     gentoo_service
+    gentoolkit
     git
     glance
     grains
@@ -69,17 +70,17 @@ Full list of builtin execution modules
     hosts
     img
     iptables
-    keyboard
     key
+    keyboard
     keystone
     kmod
     launchctl
     layman
-    ldapmod
+    ldap
     linux_acl
     linux_lvm
     linux_sysctl
-    localemod
+    locale
     locate
     logrotate
     makeconf
@@ -93,8 +94,8 @@ Full list of builtin execution modules
     mount
     munin
     mysql
-    netbsdservice
     netbsd_sysctl
+    netbsdservice
     network
     nfs3
     nginx
@@ -110,9 +111,9 @@ Full list of builtin execution modules
     pecl
     pillar
     pip
+    pkg_resource
     pkgin
     pkgng
-    pkg_resource
     pkgutil
     portage_config
     postgres
@@ -142,9 +143,9 @@ Full list of builtin execution modules
     smartos_vmadm
     smf
     solaris_group
-    solarispkg
     solaris_shadow
     solaris_user
+    solarispkg
     solr
     sqlite3
     ssh
@@ -153,9 +154,9 @@ Full list of builtin execution modules
     supervisord
     svn
     sysbench
-    sysmod
-    systemd
+    sys
     system
+    systemd
     test
     timezone
     tls
@@ -175,8 +176,26 @@ Full list of builtin execution modules
     win_system
     win_useradd
     xapi
-    yumpkg5
     yumpkg
+    yumpkg5
     zfs
     zpool
     zypper
+
+
+.. admonition:: Renamed modules
+
+    The following modules were renamed but the renaming itself is only 
+    important from a developers perspective. They do not change the regular 
+    user's work-flow.
+
+    .. toctree::
+
+        salt.modules.cmdmod
+        salt.modules.debconfmod
+        salt.modules.djangomod
+        salt.modules.virtualenv_mod
+        salt.modules.gentoolkitmod
+        salt.modules.ldapmod
+        salt.modules.localemod
+        salt.modules.sysmod

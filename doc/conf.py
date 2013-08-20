@@ -107,7 +107,11 @@ release = '0.16.3'
 
 master_doc = 'contents'
 templates_path = ['_templates']
-exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
+exclude_patterns = [
+    '_build',
+    '_incl/*',
+    'ref/cli/_includes/*.rst',
+]
 
 extensions = [
     'saltdocs',

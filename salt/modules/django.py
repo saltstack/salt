@@ -3,11 +3,12 @@ Manage Django sites
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 
 def __virtual__():
-    return 'django'
+    return True
 
 
 def _get_django_admin(bin_env):
@@ -83,7 +84,7 @@ def syncdb(settings_module,
         args.append('noinput')
 
     return command(settings_module,
-                  'syncdb',
+                   'syncdb',
                    bin_env,
                    pythonpath,
                    env,

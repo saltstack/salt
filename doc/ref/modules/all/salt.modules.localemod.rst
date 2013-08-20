@@ -1,6 +1,4 @@
-======================
-salt.modules.localemod
-======================
+salt.modules.localemod -> salt.modules.locale
+---------------------------------------------
 
-.. automodule:: salt.modules.localemod
-    :members:
+Please see :doc:`salt.modules.locale`.
