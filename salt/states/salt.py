@@ -1,7 +1,27 @@
 '''
 The Salt state is used to control the salt command interface. This state is
-intended for use primarily from the state runner from the master
+intended for use primarily from the state runner from the master.
+
+The salt.state declaration can call out a highstate or a list of sls:
+
+    webservers:
+      salt.state:
+        - tgt: 'web*'
+        - sls:
+          - apache
+          - django
+          - core
+        - env: prod
+
+    databasees:
+      salt.state:
+        - tgt: role:database
+        - tgt_type: grain
+        - highstate: True
 '''
+
+# Import salt libs
+import salt.utils
 
 
 def state(
@@ -33,7 +53,7 @@ def state(
     highstate
         Defaults to None, if set to True the target systems will ignore any
         sls references specified in the sls option and call state.highstate
-        on the targetted minions
+        on the targeted minions
 
     sls
         A group of sls files to execute. This can be defined as a single string
@@ -43,7 +63,7 @@ def state(
         The default environment to pull sls files from
 
     fail_minions
-        An optional list of targetted minions where failure is an option
+        An optional list of targeted minions where failure is an option
     '''
     ret = {'name': name,
            'changes': {},
@@ -94,5 +114,5 @@ def state(
         ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
         return ret
-    ret['comment'] = 'States ran sucessully on {0}'.format(', '.join(cmd_ret))
+    ret['comment'] = 'States ran successfully on {0}'.format(', '.join(cmd_ret))
     return ret
