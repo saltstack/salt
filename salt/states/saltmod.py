@@ -46,7 +46,7 @@ def state(
     Invoke a state run on a given target
 
     name
-        An arbirairy name used to track the state execution
+        An arbitrary name used to track the state execution
 
     tgt
         The target specification for the state run.
