@@ -4,7 +4,6 @@ minion.
 '''
 
 # Import python libs
-from __future__ import absolute_import
 import logging
 
 # Import salt libs
@@ -17,7 +16,7 @@ def __virtual__():
     '''
     Return as sys
     '''
-    return True
+    return 'sys'
 
 
 def doc(*args, **kwargs):
