@@ -1,4 +1,7 @@
-salt.states.virtualenv_mod -> salt.states.virtualenv
-----------------------------------------------------
+======================
+salt.states.virtualenv
+======================
 
-Please see :doc:`salt.states.virtualenv`.
+.. automodule:: salt.states.virtualenv_mod
+    :members:
+    :exclude-members: manage

@@ -1,4 +1,6 @@
-salt.modules.ldapmod -> salt.modules.ldap
------------------------------------------
+====================
+salt.modules.ldapmod
+====================
 
-Please see :doc:`salt.modules.ldap`.
+.. automodule:: salt.modules.ldapmod
+    :members:

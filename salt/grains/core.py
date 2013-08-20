@@ -31,11 +31,11 @@ import salt.utils.network
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
-import salt.modules.cmd
+import salt.modules.cmdmod
 
 __salt__ = {
-    'cmd.run': salt.modules.cmd._run_quiet,
-    'cmd.run_all': salt.modules.cmd._run_all_quiet
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet
 }
 
 log = logging.getLogger(__name__)

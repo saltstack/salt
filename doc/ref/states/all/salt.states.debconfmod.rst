@@ -1,4 +1,6 @@
-salt.states.debconfmod -> salt.states.debconf
----------------------------------------------
+======================
+salt.states.debconfmod
+======================
 
-Please see :doc:`salt.states.debconf`.
+.. automodule:: salt.states.debconfmod
+    :members:

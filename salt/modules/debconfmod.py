@@ -3,7 +3,6 @@ Support for Debconf
 '''
 
 # Import python libs
-from __future__ import absolute_import
 import logging
 import os
 import re
@@ -30,7 +29,7 @@ def __virtual__():
         log.info('Package debconf-utils is not installed.')
         return False
 
-    return True
+    return 'debconf'
 
 
 def _unpack_lines(out):
