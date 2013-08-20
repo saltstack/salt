@@ -7,6 +7,7 @@ data
 # some time in the future
 
 # Import python libs
+from __future__ import absolute_import
 import contextlib  # For < 2.7 compat
 import datetime
 import difflib

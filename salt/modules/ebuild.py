@@ -8,6 +8,7 @@ i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import re

@@ -25,6 +25,7 @@ Module to provide MySQL compatibility to salt.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import logging
 import re

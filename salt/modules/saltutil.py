@@ -6,6 +6,7 @@ is used to manage minion modules as well as automate updates to the salt minion
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import hashlib
 import shutil

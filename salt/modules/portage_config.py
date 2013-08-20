@@ -1,4 +1,5 @@
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 

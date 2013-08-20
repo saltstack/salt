@@ -8,6 +8,16 @@ A module to manage software on Windows
             - pywintypes
 '''
 
+# Import python libs
+from __future__ import absolute_import
+import copy
+import logging
+import msgpack
+import os
+import locale
+from distutils.version import LooseVersion  # pylint: disable=E0611
+
+
 # Import third party libs
 try:
     import pythoncom
@@ -18,14 +28,6 @@ try:
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
-
-# Import python libs
-import copy
-import logging
-import msgpack
-import os
-import locale
-from distutils.version import LooseVersion  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
