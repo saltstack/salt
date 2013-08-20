@@ -51,7 +51,9 @@ def is_jail(name):
     '''
     Return True if jail exists False if not
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' poudriere.is_jail <jail name>
     '''
@@ -66,7 +68,9 @@ def make_pkgng_aware(jname):
     '''
     Make jail ``jname`` pkgng aware
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' poudriere.make_pkgng_aware <jail name>
     '''
@@ -102,7 +106,9 @@ def parse_config(config_file=None):
     '''
     Returns a dict of poudriere main configuration definitions
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' poudriere.parse_config
     '''
@@ -123,7 +129,9 @@ def version():
     '''
     Return poudriere version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' poudriere.version
     '''
@@ -135,7 +143,9 @@ def list_jails():
     '''
     Return a list of current jails managed by poudriere
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' poudriere.list_jails
     '''
@@ -149,7 +159,9 @@ def list_ports():
     '''
     Return a list of current port trees managed by poudriere
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' poudriere.list_ports
     '''
@@ -165,7 +177,9 @@ def create_jail(name, arch, version="9.0-RELEASE"):
 
     *NOTE* creating a new jail will take some time the master is not hanging
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
         salt '*' poudriere.create_jail 90amd64 amd64
     '''
     # Config file must be on system to create a poudriere jail
@@ -192,7 +206,9 @@ def delete_jail(name):
     '''
     Deletes poudriere jail with `name`
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' poudriere.delete_jail 90amd64
     '''
@@ -238,7 +254,9 @@ def bulk_build(jail, pkg_file, keep=False):
 
     Return number of pkg builds, failures, and errors, on error dump to CLI
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt -N buildbox_group poudriere.bulk_build 90amd64 /root/pkg_list
 
