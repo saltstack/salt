@@ -33,8 +33,8 @@ Full list of builtin state modules
     lvm
     makeconf
     mdadm
-    module
     modjk_worker
+    module
     mongodb_database
     mongodb_user
     mount
@@ -45,8 +45,8 @@ Full list of builtin state modules
     npm
     pecl
     pip
-    pkgng
     pkg
+    pkgng
     pkgrepo
     portage_config
     postgres_database
