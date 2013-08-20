@@ -3,7 +3,6 @@ Manage users with the useradd command
 '''
 
 # Import python libs
-from __future__ import absolute_import
 try:
     import grp
     import pwd

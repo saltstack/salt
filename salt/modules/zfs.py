@@ -2,8 +2,10 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
 import logging
+
+# Some std libraries that are made
+# use of.
 import re
 import sys
 

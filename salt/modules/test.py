@@ -3,7 +3,6 @@ Module for running arbitrary tests
 '''
 
 # Import Python libs
-from __future__ import absolute_import
 import os
 import sys
 import time

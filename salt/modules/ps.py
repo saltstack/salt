@@ -6,7 +6,6 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
-from __future__ import absolute_import
 import sys
 import time
 
