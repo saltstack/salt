@@ -136,7 +136,7 @@ def setval(key, val):
     .. code-block:: bash
 
         salt '*' grains.setval key val
-        salt '*' grains.setval key '{"sub-key": "val", "sub-key2": "val2"}'
+        salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
     '''
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
