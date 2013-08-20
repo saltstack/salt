@@ -1,1 +1,6 @@
-Please see :doc:`salt.modules.django`.
+======================
+salt.modules.djangomod
+======================
+
+.. automodule:: salt.modules.djangomod
+    :members:

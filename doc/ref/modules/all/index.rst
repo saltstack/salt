@@ -41,7 +41,7 @@ Full list of builtin execution modules
     debian_service
     dig
     disk
-    django
+    djangomod
     dnsmasq
     dnsutil
     dpkg
