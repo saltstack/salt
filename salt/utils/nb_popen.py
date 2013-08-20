@@ -203,3 +203,12 @@ class NonBlockingPopen(subprocess.Popen):
                 self.recv_err()
 
             time.sleep(0.01)
+
+    def communicate(self):
+        super(NonBlockingPopen, self).communicate()
+        self.stdout_buff.seek(0)
+        self.stderr_buff.seek(0)
+        if self.universal_newlines:
+            return (self._translate_newlines(self.stderr_buff.read()),
+                    self._translate_newlines(self.stdout_buff.read()))
+        return self.stderr_buff.read(), self.stdout_buff.read()
