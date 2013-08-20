@@ -218,14 +218,13 @@ def install(pkgs=None,
         Include pre-releases in the available versions
 
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.install <package name>,<package2 name>
-
         salt '*' pip.install requirements=/path/to/requirements.txt
-
         salt '*' pip.install <package name> bin_env=/path/to/virtualenv
-
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
 
     Complicated CLI example::
@@ -527,14 +526,13 @@ def uninstall(pkgs=None,
     cwd
         Current working directory to run pip from
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.uninstall <package name>,<package2 name>
-
         salt '*' pip.uninstall requirements=/path/to/requirements.txt
-
         salt '*' pip.uninstall <package name> bin_env=/path/to/virtualenv
-
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
 
     '''
@@ -658,7 +656,9 @@ def freeze(bin_env=None,
     cwd
         Current working directory to run pip from
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
@@ -702,7 +702,9 @@ def list_(prefix=None,
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.list salt
     '''
