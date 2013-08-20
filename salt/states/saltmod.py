@@ -24,6 +24,13 @@ The salt.state declaration can call out a highstate or a list of sls:
 import salt.utils
 
 
+def __virtual__():
+    '''
+    Named salt
+    '''
+    return 'salt'
+
+
 def state(
         name,
         tgt,
