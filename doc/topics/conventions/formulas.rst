@@ -349,8 +349,8 @@ and must provide a default value:
 .. code:: jinja
 
     {% if salt['pillar.get']('horizon:use_ssl', False) %}
-    ssl_crt: {{ salt['pillar.get']('horizon:ssl_crt', '/etc/ssl/certs/hozizon.crt') }}
-    ssl_key: {{ salt['pillar.get']('horizon:ssl_key', '/etc/ssl/certs/hozizon.key') }}
+    ssl_crt: {{ salt['pillar.get']('horizon:ssl_crt', '/etc/ssl/certs/horizon.crt') }}
+    ssl_key: {{ salt['pillar.get']('horizon:ssl_key', '/etc/ssl/certs/horizon.key') }}
     {% endif %}
 
 Any default values used in the Formula must also be documented in the
