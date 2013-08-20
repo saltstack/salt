@@ -1703,8 +1703,10 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
 
         log.info('Authentication accepted from {id}'.format(**load))
-        with salt.utils.fopen(pubfn, 'w+') as fp_:
-            fp_.write(load['pub'])
+        # only write to disk if you are adding the file
+        if not os.path.isfile(pubfn):
+            with salt.utils.fopen(pubfn, 'w+') as fp_:
+                fp_.write(load['pub'])
         pub = None
 
         # The key payload may sometimes be corrupt when using auto-accept
