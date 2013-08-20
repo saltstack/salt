@@ -729,8 +729,7 @@ _OS_FAMILY_MAP = {
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
     'GCEL': 'Debian',
-    'Linaro': 'Debian',
-    'Pidora': 'RedHat'
+    'Linaro': 'Debian'
 }
 
 
