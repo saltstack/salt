@@ -37,7 +37,7 @@ Full list of builtin execution modules
     darwin_sysctl
     data
     ddns
-    debconf
+    debconfmod
     debian_service
     dig
     disk

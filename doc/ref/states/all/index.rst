@@ -14,7 +14,7 @@ Full list of builtin state modules
     alternatives
     cmd
     cron
-    debconf
+    debconfmod
     disk
     eselect
     file
