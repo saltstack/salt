@@ -22,7 +22,9 @@ def refresh_db():
     '''
     Updates the pkgutil repo database (pkgutil -U)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.refresh_db
     '''
@@ -33,7 +35,9 @@ def upgrade_available(name):
     '''
     Check if there is an upgrade available for a certain package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.upgrade_available CSWpython
     '''
@@ -55,7 +59,9 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.list_upgrades
     '''
@@ -83,7 +89,9 @@ def upgrade(refresh=True, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.upgrade
     '''
@@ -107,7 +115,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
@@ -150,7 +160,9 @@ def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.version CSWpython
     '''
@@ -166,7 +178,9 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.latest_version CSWpython
         salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
@@ -213,7 +227,9 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     '''
     Install packages using the pkgutil tool.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package_name>
         salt '*' pkg.install SMClgcc346
@@ -225,7 +241,10 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
         A list of packages to install from OpenCSW. Must be passed as a python
         list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
             salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3"}]'
 
@@ -283,7 +302,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -321,7 +342,9 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>

@@ -23,10 +23,13 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
     '''
     Return dict of uncommented global variables.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.parse_config
-        *NOTE* not working right
+
+    ``NOTE:`` not working properly right now
     '''
     ret = {}
     if not os.path.isfile(file_name):
@@ -47,7 +50,9 @@ def version():
     '''
     Displays the current version of pkg
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.version
     '''
@@ -60,7 +65,9 @@ def latest_version(pkg_name, **kwargs):
     '''
     The available version of the package in the repository
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.latest_version <package name>
     '''
@@ -79,7 +86,9 @@ def update_package_site(new_url):
 
     Must be using http://, ftp://, or https// protos
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.update_package_site http://127.0.0.1/
     '''
@@ -96,23 +105,29 @@ def stats(local=False, remote=False):
     '''
     Return pkgng stats.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.stats
 
-        local
-            Display stats only for the local package database.
+    local
+        Display stats only for the local package database.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.stats local=True
+        .. code-block:: bash
 
-        remote
-            Display stats only for the remote package database(s).
+            salt '*' pkgng.stats local=True
 
-            CLI Example::
+    remote
+        Display stats only for the remote package database(s).
 
-                salt '*' pkgng.stats remote=True
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.stats remote=True
     '''
 
     opts = ''
@@ -133,7 +148,9 @@ def backup(file_name):
     '''
     Export installed packages into yaml+mtree file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.backup /tmp/pkg
     '''
@@ -146,7 +163,9 @@ def restore(file_name):
     '''
     Reads archive created by pkg backup -d and recreates the database.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.restore /tmp/pkg
     '''
@@ -159,7 +178,9 @@ def add(pkg_path):
     '''
     Install a package from either a local source or remote one
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.add /tmp/package.txz
     '''
@@ -175,7 +196,9 @@ def audit():
     '''
     Audits installed packages against known vulnerabilities
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.audit
     '''
@@ -198,86 +221,108 @@ def install(pkg_name,
     '''
     Install package from repositories
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.install <package name>
 
-        orphan
-            Mark the installed package as orphan. Will be automatically removed
-            if no other packages depend on them. For more information please
-            refer to pkg-autoremove(8).
+    orphan
+        Mark the installed package as orphan. Will be automatically removed
+        if no other packages depend on them. For more information please
+        refer to pkg-autoremove(8).
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.install <package name> orphan=True
+        .. code-block:: bash
 
-        force
-            Force the reinstallation of the package if already installed.
+            salt '*' pkgng.install <package name> orphan=True
 
-            CLI Example::
+    force
+        Force the reinstallation of the package if already installed.
 
-                salt '*' pkgng.install <package name> force=True
+        CLI Example:
 
-        glob
-            Treat the package names as shell glob patterns.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.install <package name> force=True
 
-                salt '*' pkgng.install <package name> glob=True
+    glob
+        Treat the package names as shell glob patterns.
 
-        local
-            Skip updating the repository catalogues with pkg-update(8). Use the
-            locally cached copies only.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.install <package name> local=True
+            salt '*' pkgng.install <package name> glob=True
 
-        dryrun
-            Dru-run mode. The list of changes to packages is always printed,
-            but no changes are actually made.
+    local
+        Skip updating the repository catalogues with pkg-update(8). Use the
+        locally cached copies only.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.install <package name> dryrun=True
+        .. code-block:: bash
 
-        quiet
-            Force quiet output, except when dryrun is used, where pkg install
-            will always show packages to be installed, upgraded or deleted.
+            salt '*' pkgng.install <package name> local=True
 
-            CLI Example::
+    dryrun
+        Dru-run mode. The list of changes to packages is always printed,
+        but no changes are actually made.
 
-                salt '*' pkgng.install <package name> quiet=True
+        CLI Example:
 
-        require
-            When used with force, reinstalls any packages that require the
-            given package.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.install <package name> dryrun=True
 
-                salt '*' pkgng.install <package name> require=True force=True
+    quiet
+        Force quiet output, except when dryrun is used, where pkg install
+        will always show packages to be installed, upgraded or deleted.
 
-        reponame
-            In multi-repo mode, override the pkg.conf ordering and only attempt
-            to download packages from the named repository.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.install <package name> reponame=repo
+            salt '*' pkgng.install <package name> quiet=True
 
-        regex
-            Treat the package names as a regular expression
+    require
+        When used with force, reinstalls any packages that require the
+        given package.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.install <regular expression> regex=True
+        .. code-block:: bash
 
-        pcre
-            Treat the package names as extended regular expressions.
+            salt '*' pkgng.install <package name> require=True force=True
 
-            CLI Example::
+    reponame
+        In multi-repo mode, override the pkg.conf ordering and only attempt
+        to download packages from the named repository.
 
-                salt '*' pkgng.install <extended regular expression> pcre=True
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.install <package name> reponame=repo
+
+    regex
+        Treat the package names as a regular expression
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.install <regular expression> regex=True
+
+    pcre
+        Treat the package names as extended regular expressions.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.install <extended regular expression> pcre=True
     '''
 
     opts = ''
@@ -324,61 +369,77 @@ def delete(pkg_name,
     '''
     Delete a package from the database and system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.delete <package name>
 
-        all_installed
-            Deletes all installed packages from the system and empties the
-            database. USE WITH CAUTION!
+    all_installed
+        Deletes all installed packages from the system and empties the
+        database. USE WITH CAUTION!
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.delete all all_installed=True force=True
+        .. code-block:: bash
 
-        force
-            Forces packages to be removed despite leaving unresolved
-            dependencies.
+            salt '*' pkgng.delete all all_installed=True force=True
 
-            CLI Example::
+    force
+        Forces packages to be removed despite leaving unresolved
+        dependencies.
 
-                salt '*' pkgng.delete <package name> force=True
+        CLI Example:
 
-        glob
-            Treat the package names as shell glob patterns.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.delete <package name> force=True
 
-                salt '*' pkgng.delete <package name> glob=True
+    glob
+        Treat the package names as shell glob patterns.
 
-        dryrun
-            Dry run mode. The list of packages to delete is always printed, but
-            no packages are actually deleted.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.delete <package name> dryrun=True
+            salt '*' pkgng.delete <package name> glob=True
 
-        recurse
-            Delete all packages that require the listed package as well.
+    dryrun
+        Dry run mode. The list of packages to delete is always printed, but
+        no packages are actually deleted.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.delete <package name> recurse=True
+        .. code-block:: bash
 
-        regex
-            Treat the package names as regular expressions.
+            salt '*' pkgng.delete <package name> dryrun=True
 
-            CLI Example::
+    recurse
+        Delete all packages that require the listed package as well.
 
-                salt '*' pkgng.delete <regular expression> regex=True
+        CLI Example:
 
-        pcre
-            Treat the package names as extended regular expressions.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.delete <package name> recurse=True
 
-                salt '*' pkgng.delete <extended regular expression> pcre=True
+    regex
+        Treat the package names as regular expressions.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.delete <regular expression> regex=True
+
+    pcre
+        Treat the package names as extended regular expressions.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.delete <extended regular expression> pcre=True
     '''
 
     opts = ''
@@ -409,7 +470,9 @@ def info(pkg_name=None):
     '''
     Returns info on packages installed on system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.info
         salt '*' pkgng.info sudo
@@ -431,18 +494,21 @@ def update(force=False):
     '''
     Refresh PACKAGESITE contents
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.update
 
-        force
-            Force a full download of the repository catalogue without regard to
-            the respective ages of the local and remote copies of the
-            catalogue.
+    force
+        Force a full download of the repository catalogue without regard to the
+        respective ages of the local and remote copies of the catalogue.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.update force=True
+        .. code-block:: bash
+
+            salt '*' pkgng.update force=True
     '''
     opts = ''
     if force:
@@ -458,33 +524,41 @@ def upgrade(force=False, local=False, dryrun=False):
     '''
     Upgrade all packages
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.upgrade
 
-        force
-            Force reinstalling/upgrading the whole set of packages.
+    force
+        Force reinstalling/upgrading the whole set of packages.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.upgrade force=True
+        .. code-block:: bash
 
-        local
-            Skip updating the repository catalogues with pkg-update(8). Use the
-            local cache only.
+            salt '*' pkgng.upgrade force=True
 
-            CLI Example::
+    local
+        Skip updating the repository catalogues with ``pkg-update(8)``. Use the
+        local cache only.
 
-                salt '*' pkgng.update local=True
+        CLI Example:
 
-        dryrun
-            Dry-run mode: show what packages have updates available, but do not
-            perform any upgrades. Repository catalogues will be updated as
-            usual unless the local option is also given.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.update local=True
 
-                salt '*' pkgng.update dryrun=True
+    dryrun
+        Dry-run mode: show what packages have updates available, but do not
+        perform any upgrades. Repository catalogues will be updated as usual
+        unless the local option is also given.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.update dryrun=True
     '''
     opts = ''
     if force:
@@ -506,7 +580,9 @@ def clean():
     '''
     Cleans the local cache of fetched remote packages
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.clean
     '''
@@ -520,11 +596,13 @@ def autoremove(dryrun=False):
     Delete packages which were automatically installed as dependencies and are
     not required anymore.
 
-        dryrun
-            Dry-run mode. The list of changes to packages is always printed,
-            but no changes are actually made.
+    dryrun
+        Dry-run mode. The list of changes to packages is always printed,
+        but no changes are actually made.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
          salt '*' pkgng.autoremove
          salt '*' pkgng.autoremove dryrun=True
@@ -549,21 +627,27 @@ def check(depends=False, recompute=False, checksum=False):
         depends
             Check for and install missing dependencies.
 
-            CLI Example::
+            CLI Example:
+
+            .. code-block:: bash
 
                 salt '*' pkgng.check recompute=True
 
         recompute
             Recompute sizes and checksums of installed packages.
 
-            CLI Example::
+            CLI Example:
+
+            .. code-block:: bash
 
                 salt '*' pkgng.check depends=True
 
         checksum
             Find invalid checksums for installed packages.
 
-            CLI Example::
+            CLI Example:
+
+            .. code-block:: bash
 
                 salt '*' pkgng.check checksum=True
     '''
@@ -586,23 +670,29 @@ def which(file_name, origin=False, quiet=False):
     '''
     Displays which package installed a specific file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.which <file name>
 
-        origin
-            Shows the origin of the package instead of name-version.
+    origin
+        Shows the origin of the package instead of name-version.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.which <file name> origin=True
+        .. code-block:: bash
 
-        quiet
-            Quiet output.
+            salt '*' pkgng.which <file name> origin=True
 
-            CLI Example::
+    quiet
+        Quiet output.
 
-                salt '*' pkgng.which <file name> quiet=True
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.which <file name> quiet=True
     '''
 
     opts = ''
@@ -633,94 +723,120 @@ def search(pkg_name,
     '''
     Searches in remote package repositories
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.search pattern
 
-        exact
-            Treat pattern as exact pattern.
+    exact
+        Treat pattern as exact pattern.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.search pattern exact=True
+        .. code-block:: bash
 
-        glob
-            Treat pattern as a shell glob pattern.
+            salt '*' pkgng.search pattern exact=True
 
-            CLI Example::
+    glob
+        Treat pattern as a shell glob pattern.
 
-                salt '*' pkgng.search pattern glob=True
+        CLI Example:
 
-        regex
-            Treat pattern as a regular expression.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.search pattern glob=True
 
-                salt '*' pkgng.search pattern regex=True
+    regex
+        Treat pattern as a regular expression.
 
-        pcre
-            Treat pattern as an extended regular expression.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.search pattern pcre=True
+            salt '*' pkgng.search pattern regex=True
 
-        comment
-            Search for pattern in the package comment one-line description.
+    pcre
+        Treat pattern as an extended regular expression.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.search pattern comment=True
+        .. code-block:: bash
 
-        desc
-            Search for pattern in the package description.
+            salt '*' pkgng.search pattern pcre=True
 
-            CLI Example::
+    comment
+        Search for pattern in the package comment one-line description.
 
-                salt '*' pkgng.search pattern desc=True
+        CLI Example:
 
-        full
-            Displays full information about the matching packages.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.search pattern comment=True
 
-                salt '*' pkgng.search pattern full=True
+    desc
+        Search for pattern in the package description.
 
-        depends
-            Displays the dependencies of pattern.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.search pattern depends=True
+            salt '*' pkgng.search pattern desc=True
 
-        size
-            Displays the size of the package
+    full
+        Displays full information about the matching packages.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.search pattern size=True
+        .. code-block:: bash
 
-        quiet
-            Be quiet. Prints only the requested information without displaying
-            many hints.
+            salt '*' pkgng.search pattern full=True
 
-            CLI Example::
+    depends
+        Displays the dependencies of pattern.
 
-                salt '*' pkgng.search pattern quiet=True
+        CLI Example:
 
-        origin
-            Displays pattern origin.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.search pattern depends=True
 
-                salt '*' pkgng.search pattern origin=True
+    size
+        Displays the size of the package
 
-        prefix
-            Displays the installation prefix for each package matching pattern.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.search pattern prefix=True
+            salt '*' pkgng.search pattern size=True
+
+    quiet
+        Be quiet. Prints only the requested information without displaying
+        many hints.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.search pattern quiet=True
+
+    origin
+        Displays pattern origin.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.search pattern origin=True
+
+    prefix
+        Displays the installation prefix for each package matching pattern.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.search pattern prefix=True
     '''
 
     opts = ''
@@ -767,67 +883,85 @@ def fetch(pkg_name,
     '''
     Fetches remote packages
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.fetch <package name>
 
-        all
-            Fetch all packages.
+    all
+        Fetch all packages.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.fetch <package name> all=True
+        .. code-block:: bash
 
-        quiet
-            Quiet mode. Show less output.
+            salt '*' pkgng.fetch <package name> all=True
 
-            CLI Example::
+    quiet
+        Quiet mode. Show less output.
 
-                salt '*' pkgng.fetch <package name> quiet=True
+        CLI Example:
 
-        reponame
-            Fetches packages from the given reponame if multiple repo support
-            is enabled. See pkg.conf(5).
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.fetch <package name> quiet=True
 
-                salt '*' pkgng.fetch <package name> reponame=repo
+    reponame
+        Fetches packages from the given reponame if multiple repo support
+        is enabled. See pkg.conf(5).
 
-        glob
-            Treat pkg_name as a shell glob pattern.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.fetch <package name> glob=True
+            salt '*' pkgng.fetch <package name> reponame=repo
 
-        regex
-            Treat pkg_name as a regular expression.
+    glob
+        Treat pkg_name as a shell glob pattern.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.fetch <regular expression> regex=True
+        .. code-block:: bash
 
-        pcre
-            Treat pkg_name is an extended regular expression.
+            salt '*' pkgng.fetch <package name> glob=True
 
-            CLI Example::
+    regex
+        Treat pkg_name as a regular expression.
 
-                salt '*' pkgng.fetch <extended regular expression> pcre=True
+        CLI Example:
 
-        local
-            Skip updating the repository catalogues with pkg-update(8). Use the
-            local cache only.
+        .. code-block:: bash
 
-            CLI Example::
+            salt '*' pkgng.fetch <regular expression> regex=True
 
-                salt '*' pkgng.fetch <package name> local=True
+    pcre
+        Treat pkg_name is an extended regular expression.
 
-        depends
-            Fetch the package and its dependencies as well.
+        CLI Example:
 
-            CLI Example::
+        .. code-block:: bash
 
-                salt '*' pkgng.fetch <package name> depends=True
+            salt '*' pkgng.fetch <extended regular expression> pcre=True
+
+    local
+        Skip updating the repository catalogues with pkg-update(8). Use the
+        local cache only.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.fetch <package name> local=True
+
+    depends
+        Fetch the package and its dependencies as well.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.fetch <package name> depends=True
     '''
 
     opts = ''
@@ -861,23 +995,29 @@ def updating(pkg_name, filedate=None, filename=None):
     ''''
     Displays UPDATING entries of software packages
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgng.updating foo
 
-        filedate
-            Only entries newer than date are shown. Use a YYYYMMDD date format.
+    filedate
+        Only entries newer than date are shown. Use a YYYYMMDD date format.
 
-            CLI Example::
+        CLI Example:
 
-                salt '*' pkgng.updating foo filedate=20130101
+        .. code-block:: bash
 
-        filename
-            Defines an alternative location of the UPDATING file.
+            salt '*' pkgng.updating foo filedate=20130101
 
-            CLI Example::
+    filename
+        Defines an alternative location of the UPDATING file.
 
-                salt '*' pkgng.updating foo filename=/tmp/UPDATING
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkgng.updating foo filename=/tmp/UPDATING
     '''
 
     opts = ''
