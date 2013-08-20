@@ -31,6 +31,7 @@ Salt interface to LDAP commands
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import logging
 
@@ -50,12 +51,9 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load this module if the ldap config is set
+    Load the module if the ldap package is installed
     '''
-    # These config items must be set in the minion config
-    if HAS_LDAP:
-        return 'ldap'
-    return False
+    return HAS_LDAP
 
 
 def _config(name, key=None, **kwargs):

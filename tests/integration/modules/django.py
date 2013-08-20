@@ -8,7 +8,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from salt.modules import djangomod as django
+from salt.modules import django
 
 try:
     from mock import MagicMock, patch
