@@ -33,7 +33,7 @@ def create(name, profile):
     cmd = 'salt-cloud --out json -p {0} {1}'.format(profile, name)
     out = __salt__['cmd.run_stdout'](cmd)
     try:
-        ret = json.loads(out, object_hook=salt.utils.decode_dict())
+        ret = json.loads(out, object_hook=salt.utils.decode_dict)
     except ValueError:
         ret = {}
     return ret
