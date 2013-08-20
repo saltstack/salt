@@ -19,7 +19,7 @@ def __virtual__():
     Only load if salt cloud is installed
     '''
     if HAS_CLOUD:
-        return True
+        return 'saltcloud'
     return False
 
 def create(name, profile):
