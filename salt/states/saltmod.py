@@ -116,7 +116,7 @@ def state(
             continue
         m_state = salt.utils.check_state_result(m_ret)
         if not m_state:
-            fail.add(minon)
+            fail.add(minion)
     if fail:
         ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
