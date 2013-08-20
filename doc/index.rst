@@ -31,6 +31,7 @@ Parallels.
 * :doc:`Getting Started With AWS <topics/aws>`
 * :doc:`Getting Started With Rackspace <topics/rackspace>`
 * :doc:`Getting Started With Parallels <topics/parallels>`
+* :doc:`Getting Started With SoftLayer <topics/softlayer>`
 
 Core Configuration
 ==================

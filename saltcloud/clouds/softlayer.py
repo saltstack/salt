@@ -13,6 +13,7 @@ configuration at:
 
     my-softlayer-config:
       # SoftLayer account api key
+      user: MYLOGIN
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       provider: softlayer
 
@@ -255,6 +256,7 @@ def create(vm_):
 
     passwd = saltcloud.utils.wait_for_fun(get_passwd)
     response['password'] = passwd
+    response['public_ip'] = ip_address
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
@@ -315,11 +317,11 @@ def create(vm_):
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(response.__dict__)
+            vm_, pprint.pformat(response)
         )
     )
 
-    ret.update(response.__dict__)
+    ret.update(response)
     return ret
 
 
