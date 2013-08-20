@@ -9,16 +9,16 @@ fashion where things are executed in the order in which they are defined, or
 in a declarative fashion where dependencies need to be mapped between objects.
 
 Imperative ordering is finite and generally considered easier to write, but
-declarative ordering is much more powerful, flexible but generally considered
+declarative ordering is much more powerful and flexible but generally considered
 more difficult to create.
 
-Salt has been creted to get the best of both worlds, states are evaluated in
-a finite order which garentees that states are always executed in the same
-order and the states runtime is declarative, making Salt fully aware of
+Salt has been created to get the best of both worlds. States are evaluated in
+a finite order, which guarantees that states are always executed in the same
+order, and the states runtime is declarative, making Salt fully aware of
 dependencies via the requisite system.
 
-Also, in Salt 0.17.0 the ``state_auto_order`` option was added to Salt
-which makes states get evaluated in the order in which they are defined.
+Also, in Salt 0.17.0, the ``state_auto_order`` option was added to Salt.
+It makes states get evaluated in the order in which they are defined.
 
 State Auto Ordering
 ===================
@@ -26,17 +26,17 @@ State Auto Ordering
 ..versionadded: 0.17.0
 
 Salt always executes states in a finite manner, meaning that they will always
-execute in the same order regardless of the systems that is executing them.
-But in Salt 0.17.0 the ``state_auto_order`` option was added. This option
+execute in the same order regardless of the system that is executing them.
+But in Salt 0.17.0, the ``state_auto_order`` option was added. This option
 makes states get evaluated in the order in which they are defined in sls
 files.
 
 The evaluation order makes it easy to know what order the states will be
 executed in, but it is important to note that the requisite system will
-over ride the ordering defined in the files, and the order option described
-below will also over ride the order in which states are defined in sls files.
+override the ordering defined in the files, and the ``order`` option described
+below will also override the order in which states are defined in sls files.
 
-If the classic ordering is preferred (lexicographic) then set ``state_auto_order``
+If the classic ordering is preferred (lexicographic), then set ``state_auto_order``
 to ``False`` in the master configuration file.
 
 Requisite Statements
