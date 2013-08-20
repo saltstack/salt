@@ -21,6 +21,7 @@ configuration at:
 # Import python libs
 import pprint
 import logging
+import time
 
 # Import libcloud
 from libcloud.compute.base import NodeAuthPassword
@@ -75,12 +76,12 @@ def get_configured_provider():
     )
 
 
-def get_conn():
+def get_conn(service='SoftLayer_Virtual_Guest'):
     '''
     Return a conn object for the passed VM data
     '''
     client = SoftLayer.API.Client(
-        'SoftLayer_Virtual_Guest',
+        service,
         None,
         config.get_config_value(
             'user', get_configured_provider(), __opts__, search_global=False
@@ -213,16 +214,55 @@ def create(vm_):
         )
         return False
 
-    nodes = list_nodes_full()
-    data = nodes[name]
+    def wait_for_ip():
+        '''
+        Wait for the IP address to become available
+        '''
+        nodes = list_nodes_full()
+        if 'primaryIpAddress' in nodes[vm_['name']]:
+            return nodes[vm_['name']]['primaryIpAddress']
+        time.sleep(1)
+        return False
+
+    ip_address = saltcloud.utils.wait_for_fun(wait_for_ip)
+
+    if not saltcloud.utils.wait_for_ssh(ip_address):
+        raise SaltCloudSystemExit(
+            'Failed to authenticate against remote ssh'
+        )
+
+    pass_conn = get_conn(service='SoftLayer_Account')
+    mask = {
+        'virtualGuests': {
+            'powerState': '',
+            'operatingSystem': {
+                'passwords': ''
+            },
+        },
+    }
+
+    def get_passwd():
+        '''
+        Wait for the password to become available
+        '''
+        node_info = pass_conn.getVirtualGuests(id=response['id'], mask=mask)
+        for node in node_info:
+            if node['id'] == response['id']:
+                if 'passwords' in node['operatingSystem'] and len(node['operatingSystem']['passwords']) > 0:
+                    return node['operatingSystem']['passwords'][0]['password']
+        time.sleep(5)
+        return False
+
+    passwd = saltcloud.utils.wait_for_fun(get_passwd)
+    response['password'] = passwd
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
-            'host': primaryIpAddress,
+            'host': ip_address,
             'username': 'root',
-            'password': get_password(vm_),
+            'password': passwd,
             'script': deploy_script.script,
             'name': vm_['name'],
             'deploy_command': '/tmp/deploy.sh',
@@ -275,21 +315,21 @@ def create(vm_):
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
+            vm_, pprint.pformat(response.__dict__)
         )
     )
 
-    ret.update(data.__dict__)
+    ret.update(response.__dict__)
     return ret
 
 
-def list_nodes_full():
+def list_nodes_full(mask='id'):
     '''
     Return a list of the VMs that are on the provider
     '''
     ret = {}
     conn = get_conn()
-    response = conn['Account'].getVirtualGuests(mask="id")
+    response = conn['Account'].getVirtualGuests(mask=mask)
     for node_id in response:
         node_info = conn.getObject(id=node_id['id'])
         ret[node_info['hostname']] = node_info
