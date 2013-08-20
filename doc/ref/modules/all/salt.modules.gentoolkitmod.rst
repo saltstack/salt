@@ -1,1 +1,6 @@
-Please see :doc:`salt.modules.gentoolkit`.
+==========================
+salt.modules.gentoolkitmod
+==========================
+
+.. automodule:: salt.modules.gentoolkitmod
+    :members:
