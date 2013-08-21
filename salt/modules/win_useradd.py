@@ -221,20 +221,22 @@ def chgroups(name, groups, append=False):
     if isinstance(groups, string_types):
         groups = groups.split(',')
 
+    groups = [x.strip(' *') for x in groups]
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
 
     if not append:
         for group in ugrps:
-            if __salt__['cmd.retcode'](
-                    'net localgroup {0} {1} /delete'.format(group, name)) != 0:
-                return False
+            if group not in groups:
+                __salt__['cmd.retcode'](
+                        'net localgroup {0} {1} /delete'.format(group, name))
 
     for group in groups:
-        if __salt__['cmd.retcode'](
-                'net localgroup {0} {1} /add'.format(group, name)) != 0:
-            return False
+        if group in ugrps:
+            continue
+        __salt__['cmd.retcode'](
+                'net localgroup {0} {1} /add'.format(group, name))
     agrps = set(list_groups(name))
     return len(ugrps - agrps) == 0
 
