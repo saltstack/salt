@@ -311,7 +311,7 @@ def remove(cwd, targets, msg=None, user=None, username=None, password=None, *opt
     return _run_svn('remove', cwd, user, username, password, opts)
 
 
-def status(cwd, targets=None, user=None, username=None, password=None *opts):
+def status(cwd, targets=None, user=None, username=None, password=None, *opts):
     '''
     Display the status of the current directory, files, or
     directories in the Subversion repository
