@@ -75,7 +75,18 @@ def run(platform, provider, commit, clean):
         stream_stds=True
     )
     proc.poll_and_read_until_finish()
-    proc.communicate()
+    stdout, stderr = proc.communicate()
+    if stdout:
+        print '--------- recorded stdout ----------'
+        print(stdout)
+        print '------------------------------------'
+
+    if stderr:
+        print '--------- recorded stderr ----------'
+        print(stderr)
+        print '------------------------------------'
+
+
     if proc.returncode > 0:
         print('Failed to bootstrap VM. Exit code: {0}'.format(proc.returncode))
         sys.stdout.flush()
