@@ -854,7 +854,7 @@ class State(object):
             ret['kwargs'] = {}
             for key in data:
                 # Passing kwargs the conflict with args == stack trace
-                if key in aspec.keywords:
+                if key in aspec.args:
                     continue
                 ret['kwargs'][key] = data[key]
         kwargs = {}
