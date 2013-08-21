@@ -291,7 +291,7 @@ def list_groups(name):
     except KeyError:
         return False
     for group in user:
-        ugrp.add(group)
+        ugrp.add(group.strip(' *'))
 
     return sorted(list(ugrp))
 
