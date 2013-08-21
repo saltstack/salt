@@ -11,14 +11,14 @@ import os
 import re
 import shutil
 import subprocess
-from xml.dom import minidom
 
 # Import third party libs
 try:
     import libvirt
-    HAS_LIBVIRT = True
+    from xml.dom import minidom
+    HAS_ALL_IMPORTS= True
 except ImportError:
-    HAS_LIBVIRT = False
+    HAS_ALL_IMPORTS= False
 import yaml
 
 # Import salt libs
@@ -37,7 +37,7 @@ VIRT_STATE_NAME_MAP = {0: 'running',
 
 
 def __virtual__():
-    if not HAS_LIBVIRT:
+    if not HAS_ALL_IMPORTS:
         return False
     return 'virt'
 
