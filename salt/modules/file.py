@@ -56,7 +56,8 @@ def __clean_tmp(sfn):
     '''
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any env)
-        all_roots = itertools.chain.from_iterable(__opts__['file_roots'].itervalues())
+        all_roots = itertools.chain.from_iterable(
+                __opts__['file_roots'].itervalues())
         in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
         if os.path.exists(sfn) and not in_roots:
@@ -651,10 +652,12 @@ def psed(path,
         Flags to modify the search. Valid values are :
             ``g``: Replace all occurrences of the pattern, not just the first.
             ``I``: Ignore case.
-            ``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S`` dependent on the locale.
+            ``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S``
+                   dependent on the locale.
             ``M``: Treat multiple lines as a single line.
             ``S``: Make `.` match all characters, including newlines.
-            ``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``, ``\\s`` and ``\\S`` dependent on Unicode.
+            ``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``,
+                   ``\\s`` and ``\\S`` dependent on Unicode.
             ``X``: Verbose (whitespace is ignored).
     multi: ``False``
         If True, treat the entire file as a single line
@@ -868,7 +871,7 @@ def contains(path, text):
     if not os.path.exists(path):
         return False
 
-    stripped_text = text.strip()
+    stripped_text = str(text).strip()
     try:
         with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
@@ -1064,7 +1067,8 @@ def rename(src, dst):
         os.rename(src, dst)
         return True
     except OSError:
-        raise CommandExecutionError('Could not rename "{0}" to "{1}"'.format(src, dst))
+        raise CommandExecutionError('Could not rename "{0}" to "{1}"'
+                                    .format(src, dst))
     return False
 
 
@@ -1085,7 +1089,8 @@ def copy(src, dst):
         shutil.copyfile(src, dst)
         return True
     except OSError:
-        raise CommandExecutionError('Could not copy "{0}" to "{1}"'.format(src, dst))
+        raise CommandExecutionError('Could not copy "{0}" to "{1}"'
+                                    .format(src, dst))
     return False
 
 
@@ -1564,7 +1569,8 @@ def check_managed(
     if changes:
         log.info(changes)
         comments = ['The following values are set to be changed:\n']
-        comments.extend('{0}: {1}\n'.format(key, val) for key, val in changes.iteritems())
+        comments.extend('{0}: {1}\n'.format(key, val)
+                        for key, val in changes.iteritems())
         return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
