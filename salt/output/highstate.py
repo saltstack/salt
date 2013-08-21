@@ -146,8 +146,8 @@ def output(data):
             # Append result counts to end of output
             colorfmt = '{0}{1}{2[ENDC]}'
             rlabel = {True: 'Succeeded', False: 'Failed', None: 'Not Run'}
-            count_max_len = max([len(str(x)) for x in rcounts.values()])
-            label_max_len = max([len(x) for x in rlabel.values()])
+            count_max_len = max([len(str(x)) for x in rcounts.values()] or [0])
+            label_max_len = max([len(x) for x in rlabel.values()] or [0])
             line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
             hstrs.append(
                 colorfmt.format(
