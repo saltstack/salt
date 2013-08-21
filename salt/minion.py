@@ -494,12 +494,13 @@ class Minion(object):
         returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
-    def _fire_master(self, data=None, tag=None, events=None):
+    def _fire_master(self, data=None, tag=None, events=None, kind=None):
         '''
         Fire an event on the master
         '''
         load = {'id': self.opts['id'],
-                'cmd': '_minion_event'}
+                'cmd': '_minion_event',
+                'kind': kind}
         if events:
             load['events'] = events
         elif data and tag:
@@ -1026,6 +1027,14 @@ class Minion(object):
             ),
             'minion_start'
         )
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'start',
+            kind='minion'
+        )        
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -1123,6 +1132,15 @@ class Minion(object):
             ),
             'minion_start'
         )
+        # dup name spaced event
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'start',
+            kind='minion'
+        )        
         loop_interval = int(self.opts['loop_interval'])
         while True:
             try:
@@ -1283,6 +1301,14 @@ class Syndic(Minion):
             ),
             'syndic_start'
         )
+        self._fire_master(
+            'Syndic {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'start',
+            kind='syndic'
+        )        
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -1322,7 +1348,7 @@ class Syndic(Minion):
                         if not 'retcode' in event['data']:
                             raw_events.append(event)
                 if raw_events:
-                    self._fire_master(events=raw_events)
+                    self._fire_master(events=raw_events, kind='syndic')
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:

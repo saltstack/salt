@@ -998,11 +998,13 @@ class AESFuncs(object):
         if 'events' in load:
             for event in load['events']:
                 self.event.fire_event(event, event['tag']) # old dup event
-                self.event.fire_event(event, tagify([load['id'], event['tag']], 'minion'))
+                if load.get('kind') != None:
+                     self.event.fire_event(event, tagify([load['id'], event['tag']], load['kind']))
         else:
             tag = load['tag']
             self.event.fire_event(load, tag) #old dup event
-            self.event.fire_event(load, tagify([load['id'], tag], 'minion'))
+            if load.get('kind') != None:
+                self.event.fire_event(load, tagify([load['id'], tag], load['kind']))
         return True
 
     def _return(self, load):
