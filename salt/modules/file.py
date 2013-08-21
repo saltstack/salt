@@ -871,7 +871,7 @@ def contains(path, text):
     if not os.path.exists(path):
         return False
 
-    stripped_text = text.strip()
+    stripped_text = str(text).strip()
     try:
         with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
