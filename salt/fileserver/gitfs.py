@@ -186,7 +186,8 @@ def find_file(path, short='base', **kwargs):
         return fnd
 
     local_path = path
-    path = os.path.join(__opts__['gitfs_root'], local_path)
+    if __opts__['gitfs_root']:
+        path = os.path.join(__opts__['gitfs_root'], local_path)
 
     if short == 'base':
         short = 'master'
@@ -325,14 +326,19 @@ def file_list(load):
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
-        try:
-            tree = ref.commit.tree / __opts__['gitfs_root']
-        except KeyError:
-            continue
+        tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Blob):
                 continue
-            ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+            if __opts__['gitfs_root']:
+                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+                continue
+            ret.append(blob.path)
     return ret
 
 
@@ -350,15 +356,23 @@ def file_list_emptydirs(load):
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
-        try:
-            tree = ref.commit.tree / __opts__['gitfs_root']
-        except KeyError:
-            continue
+
+        tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Tree):
                 continue
             if not blob.blobs:
-                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+                if __opts__['gitfs_root']:
+                    ret.append(
+                        os.path.relpath(blob.path, __opts__['gitfs_root'])
+                    )
+                    continue
+                ret.append(blob.path)
     return ret
 
 
@@ -376,12 +390,18 @@ def dir_list(load):
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
-        try:
-            tree = ref.commit.tree / __opts__['gitfs_root']
-        except KeyError:
-            continue
+
+        tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Tree):
                 continue
-            ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+            if __opts__['gitfs_root']:
+                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+                continue
+            ret.append(blob.path)
     return ret
