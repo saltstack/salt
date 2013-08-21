@@ -206,7 +206,9 @@ class NonBlockingPopen(subprocess.Popen):
 
     def communicate(self, input=None):
         super(NonBlockingPopen, self).communicate(input)
+        self.stdout_buff.flush()
         self.stdout_buff.seek(0)
+        self.stderr_buff.flush()
         self.stderr_buff.seek(0)
         if self.universal_newlines:
             return (self._translate_newlines(self.stderr_buff.read()),
