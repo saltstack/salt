@@ -37,6 +37,9 @@ def __virtual__():
     # Fedora <= 10 need to use this module
     if os_grain == 'Fedora' and os_major_version < 11:
         valid = True
+    # Parallels Bare Metal Server
+    elif os_grain == 'Parallels Server Bare Metal':
+        valid = True
     # XCP == 1.x uses a CentOS 5 base
     elif os_grain == 'XCP':
         if os_major_version == 1:
