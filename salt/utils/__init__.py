@@ -1208,7 +1208,7 @@ def get_hash(path, form='md5', chunk_size=4096):
     with salt.utils.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
         # read the file in in chunks, not the entire file
-        for chunk in iter(lambda: ifile.read(chunk_size)):
+        for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
