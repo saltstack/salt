@@ -20,12 +20,16 @@ Module to provide Postgres compatibility to salt.
 # Import python libs
 import datetime
 import distutils
-import pipes
 import logging
 import csv
 import StringIO
 import os
 import tempfile
+try:
+    import pipes
+    HAS_PIPES = True
+except ImportError:
+    HAS_PIPES = False
 
 # Import salt libs
 import salt.utils
@@ -37,7 +41,7 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if salt.utils.which('psql'):
+    if all((salt.utils.which('psql'), HAS_PIPES)):
         return 'postgres'
     return False
 
