@@ -51,6 +51,9 @@ def add(name,
         salt '*' user.add name password
     '''
     ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
+    if groups:
+        for group in groups:
+            __salt__['user.addgroup'](name, group)
     return ret['retcode'] == 0
 
 
