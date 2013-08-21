@@ -42,7 +42,7 @@ def __virtual__():
         return False
     if not HAS_HG:
         log.error('Mercurial fileserver backend is enabled in configuration '
-                  'but could not be loaded, is hgapi installed?')
+                  'but could not be loaded, is hglib installed?')
         return False
 
 
