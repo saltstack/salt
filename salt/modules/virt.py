@@ -11,11 +11,11 @@ import os
 import re
 import shutil
 import subprocess
-from xml.dom import minidom
 
 # Import third party libs
 try:
     import libvirt
+    from xml.dom import minidom
     HAS_LIBVIRT = True
 except ImportError:
     HAS_LIBVIRT = False
