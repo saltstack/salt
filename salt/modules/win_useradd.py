@@ -262,7 +262,7 @@ def info(name):
     for group in groups:
         if not group:
             continue
-        grouplist.append(group.strip('*'))
+        grouplist.append(group.strip(' *'))
 
     ret['fullname'] = items['Full Name']
     ret['name'] = items['User name']
