@@ -1,64 +1,50 @@
 '''
 Return cached data from minions
 '''
-# Import python libs
-import os
-
 # Import salt libs
-import salt.utils
+import salt.utils.master
 import salt.output
 import salt.payload
-
-
-def _cdata():
-    '''
-    Return the cached data from the minions
-    '''
-    ret = {}
-    serial = salt.payload.Serial(__opts__)
-    mdir = os.path.join(__opts__['cachedir'], 'minions')
-    try:
-        for minion in os.listdir(mdir):
-            path = os.path.join(mdir, minion, 'data.p')
-            if os.path.isfile(path):
-                with salt.utils.fopen(path) as fp_:
-                    ret[minion] = serial.loads(fp_.read())
-    except (OSError, IOError):
-        return ret
-    return ret
-
 
 def grains(minion=None):
     '''
     Return cached grains for all minions or a specific minion
     '''
-    data = _cdata()
+    pillar_util = salt.utils.master.MasterPillarUtil('*', 'glob',
+                                                use_cached_grains=True,
+                                                grains_fallback=False,
+                                                opts=__opts__)
+    cached_grains = pillar_util.get_minion_grains()
+
     if minion:
-        if minion in data:
-            salt.output.display_output({minion: data[minion]['grains']},
+        if minion in cached_grains:
+            salt.output.display_output({minion: cached_grains[minion]},
                                        None, __opts__)
-            return {minion: data[minion]['grains']}
-    ret = {}
-    for minion in data:
-        ret[minion] = data[minion]['grains']
-        salt.output.display_output({minion: data[minion]['grains']},
+            return {minion: cached_grains[minion]}
+    for minion_id in cached_grains:
+        salt.output.display_output({minion_id: cached_grains[minion_id]},
                                    None, __opts__)
-    return ret
+    return cached_grains
 
 
 def pillar(minion=None):
     '''
     Return cached grains for all minions or a specific minion
     '''
-    data = _cdata()
+    pillar_util = salt.utils.master.MasterPillarUtil('*', 'glob',
+                                                use_cached_grains=True,
+                                                grains_fallback=False,
+                                                use_cached_pillar=True,
+                                                pillar_fallback=False,
+                                                opts=__opts__)
+    cached_pillar = pillar_util.get_minion_pillar()
+
     if minion:
-        if minion in data:
-            salt.output.display_output({minion: data[minion]['pillar']},
+        if minion in cached_pillar:
+            salt.output.display_output({minion: cached_pillar[minion]},
                                        None, __opts__)
-            return {minion: data[minion]['pillar']}
-    ret = {}
-    for minion in data:
-        ret[minion] = data[minion]['pillar']
-        salt.output.display_output({minion: data[minion]['pillar']},
+            return {minion: cached_pillar[minion]}
+    for minion_id in cached_pillar:
+        salt.output.display_output({minion_id: cached_pillar[minion_id]},
                                    None, __opts__)
-    return ret
+    return cached_pillar
