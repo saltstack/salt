@@ -716,15 +716,15 @@ def arg_lookup(fun):
     aspec = get_function_argspec(fun)
     arglen = 0
     deflen = 0
-    if isinstance(aspec[0], list):
-        arglen = len(aspec[0])
-    if isinstance(aspec[3], tuple):
-        deflen = len(aspec[3])
+    if isinstance(aspec.args, list):
+        arglen = len(aspec.args)
+    if isinstance(aspec.defaults, tuple):
+        deflen = len(aspec.defaults)
     for ind in range(arglen - 1, 0, -1):
         minus = arglen - ind
         if deflen - minus > -1:
-            ret['kwargs'][aspec[0][ind]] = aspec[3][-minus]
-    for arg in aspec[0]:
+            ret['kwargs'][aspec.args[ind]] = aspec.defaults[-minus]
+    for arg in aspec.args:
         if arg in ret:
             continue
         else:
