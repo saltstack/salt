@@ -44,6 +44,7 @@ def __virtual__():
         log.error('Mercurial fileserver backend is enabled in configuration '
                   'but could not be loaded, is hglib installed?')
         return False
+    return 'hg'
 
 
 def _get_ref(repo, name):
@@ -134,7 +135,7 @@ def update():
     repos = init()
     for repo in repos:
         repo.open()
-        lk_fn = os.path.join(repo.path, 'update.lk')
+        lk_fn = os.path.join(repo.root(), 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         repo.pull()
