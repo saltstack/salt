@@ -69,11 +69,15 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
 
     if retcode == 0:
         return result['stdout']
-    else:
-        raise exceptions.CommandExecutionError(result['stderr'] + '\n\n' + cmd)
+    raise exceptions.CommandExecutionError(result['stderr'] + '\n\n' + cmd)
 
 
-def info(cwd, targets=None, user=None, username=None, password=None, fmt='str'):
+def info(cwd,
+         targets=None,
+         user=None,
+         username=None,
+         password=None,
+         fmt='str'):
     '''
     Display the Subversion information from the checkout.
 
@@ -121,7 +125,13 @@ def info(cwd, targets=None, user=None, username=None, password=None, fmt='str'):
         return [dict(tmp) for tmp in info_list]
 
 
-def checkout(cwd, remote, target=None, user=None, username=None, password=None, *opts):
+def checkout(cwd,
+             remote,
+             target=None,
+             user=None,
+             username=None,
+             password=None,
+             *opts):
     '''
     Download a working copy of the remote Subversion repository
     directory or file
@@ -212,10 +222,16 @@ def diff(cwd, targets=None, user=None, username=None, password=None, *opts):
     '''
     if targets:
         opts += tuple(shlex.split(targets))
-    return _run_svn('diff', cwd, user, username, opts)
+    return _run_svn('diff', cwd, user, username, password, opts)
 
 
-def commit(cwd, targets=None, msg=None, user=None, username=None, password=None, *opts):
+def commit(cwd,
+           targets=None,
+           msg=None,
+           user=None,
+           username=None,
+           password=None,
+           *opts):
     '''
     Commit the current directory, files, or directories to
     the remote Subversion repository
@@ -278,7 +294,13 @@ def add(cwd, targets, user=None, username=None, password=None, *opts):
     return _run_svn('add', cwd, user, username, password, opts)
 
 
-def remove(cwd, targets, msg=None, user=None, username=None, password=None, *opts):
+def remove(cwd,
+           targets,
+           msg=None,
+           user=None,
+           username=None,
+           password=None,
+           *opts):
     '''
     Remove files and directories from the Subversion repository
 
