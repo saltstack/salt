@@ -95,8 +95,8 @@ freebsdservice          FreeBSD-based OSes using ``service(8)``
 gentoo_service          Gentoo Linux using :program:`sysvinit` and
                         ``rc-update(8)``
 launchctl               Mac OS hosts using ``launchctl(1)``
-netbsdservice           
-openbsdservice          
+netbsdservice           NetBSD-based OSes
+openbsdservice          OpenBSD-based OSes
 rh_service              RedHat-based distros and derivatives using
                         ``service(8)`` and ``chkconfig(8)``. Supports both
                         pure sysvinit and mixed sysvinit/upstart systems.
