@@ -93,7 +93,7 @@ def output(data):
                 elif __opts__.get('state_output', 'full').lower() == 'changes':
                     # Print terse if no error and no changes, otherwise, be
                     # verbose
-                    if ret['result'] is not False and not ret['changes']:
+                    if ret['result'] and not ret['changes']:
                         msg = _format_terse(tcolor, comps, ret, colors)
                         hstrs.append(msg)
                         continue
