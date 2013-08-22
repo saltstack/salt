@@ -2016,6 +2016,9 @@ class BaseHighState(object):
         if self.opts['state_auto_order']:
             for name in state:
                 for s_dec in state[name]:
+                    if not isinstance(s_dec, string_types):
+                        # PyDSL OrderedDict?
+                        continue
                     found = False
                     if s_dec.startswith('_'):
                         continue
