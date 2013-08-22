@@ -649,16 +649,16 @@ def psed(path,
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
     flags : ``gMS``
-        Flags to modify the search. Valid values are :
-            ``g``: Replace all occurrences of the pattern, not just the first.
-            ``I``: Ignore case.
-            ``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S``
-                   dependent on the locale.
-            ``M``: Treat multiple lines as a single line.
-            ``S``: Make `.` match all characters, including newlines.
-            ``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``,
-                   ``\\s`` and ``\\S`` dependent on Unicode.
-            ``X``: Verbose (whitespace is ignored).
+        Flags to modify the search. Valid values are:
+          - ``g``: Replace all occurrences of the pattern, not just the first.
+          - ``I``: Ignore case.
+          - ``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S``
+            dependent on the locale.
+          - ``M``: Treat multiple lines as a single line.
+          - ``S``: Make `.` match all characters, including newlines.
+          - ``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``,
+            ``\\s`` and ``\\S`` dependent on Unicode.
+          - ``X``: Verbose (whitespace is ignored).
     multi: ``False``
         If True, treat the entire file as a single line
 
