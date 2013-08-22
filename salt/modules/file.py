@@ -138,6 +138,11 @@ def get_gid(path):
         salt '*' file.get_gid /etc/passwd
     '''
     if not os.path.exists(path):
+        try:
+            # Broken symlinks will return false, but still have a uid and gid
+            return os.lstat(path).st_gid
+        except OSError:
+            pass
         return -1
     return os.stat(path).st_gid
 
@@ -195,6 +200,11 @@ def get_uid(path):
         salt '*' file.get_uid /etc/passwd
     '''
     if not os.path.exists(path):
+        try:
+            # Broken symlinks will return false, but still have a uid and gid
+            return os.lstat(path).st_uid
+        except OSError:
+            pass
         return False
     return os.stat(path).st_uid
 
@@ -271,6 +281,11 @@ def chown(path, user, group):
         else:
             gid = -1
     if not os.path.exists(path):
+        try:
+            # Broken symlinks will return false, but still need to be chowned
+            return os.lchown(path, uid, gid)
+        except OSError:
+            pass
         err += 'File not found'
     if err:
         return err
