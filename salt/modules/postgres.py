@@ -27,9 +27,9 @@ import tempfile
 try:
     import pipes
     import csv
-    HAS_ALL_IMPORTS= True
+    HAS_ALL_IMPORTS = True
 except ImportError:
-    HAS_ALL_IMPORTS= False
+    HAS_ALL_IMPORTS = False
 
 # Import salt libs
 import salt.utils
