@@ -211,6 +211,6 @@ class NonBlockingPopen(subprocess.Popen):
         self.stderr_buff.flush()
         self.stderr_buff.seek(0)
         if self.universal_newlines:
-            return (self._translate_newlines(self.stderr_buff.read()),
-                    self._translate_newlines(self.stdout_buff.read()))
-        return self.stderr_buff.read(), self.stdout_buff.read()
+            return (self._translate_newlines(self.stdout_buff.read()),
+                    self._translate_newlines(self.stderr_buff.read()))
+        return self.stdout_buff.read(), self.stderr_buff.read()
