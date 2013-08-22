@@ -75,6 +75,11 @@ def serve_file(load, fnd):
         ret['data'] = data
     return ret
 
+def update():
+    '''
+    When we are asked to update (regular interval) lets reap the cache
+    '''
+    _reap_cache()
 
 def file_hash(load, fnd):
     '''
@@ -84,12 +89,66 @@ def file_hash(load, fnd):
         return ''
     path = fnd['path']
     ret = {}
-    if not path:
+
+    # if the file doesn't exist, we can't get a hash
+    if not path or not os.path.isfile(path):
         return ret
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+
+    # set the hash_type as it is determined by config-- so mechanism won't change that
     ret['hash_type'] = __opts__['hash_type']
+
+    # check if the hash is cached
+    # cache file's contents should be "hash:mtime"
+    cache_path = os.path.join(__opts__['cachedir'],
+                              'roots/hash',
+                              load['env'],
+                              '{0}.hash.{1}'.format(fnd['rel'],
+                              __opts__['hash_type']))
+    # if we have a cache, serve that if the mtime hasn't changed
+    if os.path.exists(cache_path):
+        with salt.utils.fopen(cache_path, 'rb') as fp_:
+            hsum, mtime = fp_.read().split(':')
+            if os.path.getmtime(path) == mtime:
+                # check if mtime changed
+                ret['hsum'] = hsum
+                return ret
+
+    # if we don't have a cache entry-- lets make one
+    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    cache_dir = os.path.dirname(cache_path)
+    # make cache directory if it doesn't exist
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+    # save the cache object "hash:mtime"
+    with salt.utils.fopen(cache_path, 'w') as fp_:
+        fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
+
     return ret
 
+def _reap_cache():
+    '''
+    Remove unused cache items
+    '''
+    cache_base = os.path.join(__opts__['cachedir'], 'roots/hash')
+    for env in os.listdir(cache_base):
+        env_base = os.path.join(cache_base, env)
+        for root, dirs, files in os.walk(env_base):
+            # if we have an empty directory, lets cleanup
+            # This will only remove the directory on the second time "_reap_cache" is called (which is intentional)
+            if len(dirs) == 0 and len (files) == 0:
+                os.rmdir(root)
+                continue
+            # if not, lets check the files in the directory
+            for file_ in files:
+                file_path = os.path.join(root, file_)
+                file_rel_path = os.path.relpath(file_path, env_base)
+                filename, _, hash_type = file_rel_path.rsplit('.', 2)
+                # do we have the file?
+                ret = find_file(filename, env=env)
+                # if we don't actually have the file, lets clean up the cache object
+                if ret['path'] == '':
+                    print 'removing cache for file {0}'.format(file_path)
+                    os.unlink(file_path)
 
 def file_list(load):
     '''
