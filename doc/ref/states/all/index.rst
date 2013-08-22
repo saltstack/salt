@@ -44,7 +44,7 @@ Full list of builtin state modules
     network
     npm
     pecl
-    pip
+    pip_state
     pkg
     pkgng
     pkgrepo

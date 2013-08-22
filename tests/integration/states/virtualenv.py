@@ -91,7 +91,7 @@ class VirtualenvTest(integration.ModuleCase,
             )
 
             self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(ret, 'Created new virtualenv')
+            self.assertInSaltComment('Created new virtualenv', ret)
             self.assertSaltStateChangesEqual(
                 ret, ['pep8==1.3.3'], keys=('packages', 'new')
             )
@@ -118,7 +118,7 @@ class VirtualenvTest(integration.ModuleCase,
             )
 
             self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(ret, 'virtualenv exists')
+            self.assertInSaltComment('virtualenv exists', ret)
             self.assertSaltStateChangesEqual(
                 ret, ['zope.interface==4.0.1'], keys=('packages', 'new')
             )

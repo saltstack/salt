@@ -87,7 +87,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(pkgs=pkgs, editable=editables)
             mock.assert_called_once_with(
-                'pip install pep8 salt '
+                'pip install \'pep8\' \'salt\' '
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 runas=None,
@@ -99,7 +99,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(pkgs=','.join(pkgs), editable=','.join(editables))
             mock.assert_called_once_with(
-                'pip install pep8 salt '
+                'pip install \'pep8\' \'salt\' '
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 runas=None,
@@ -111,7 +111,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(pkgs=pkgs[0], editable=editables[0])
             mock.assert_called_once_with(
-                'pip install pep8 '
+                'pip install \'pep8\' '
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker',
                 runas=None,
                 cwd=None
@@ -176,7 +176,7 @@ class PipTestCase(TestCase):
                 'pip install '
                 '--find-links=http://g.pypi.python.org '
                 '--find-links=http://c.pypi.python.org '
-                '--find-links=http://pypi.crate.io pep8',
+                '--find-links=http://pypi.crate.io \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -189,7 +189,7 @@ class PipTestCase(TestCase):
                 'pip install '
                 '--find-links=http://g.pypi.python.org '
                 '--find-links=http://c.pypi.python.org '
-                '--find-links=http://pypi.crate.io pep8',
+                '--find-links=http://pypi.crate.io \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -199,7 +199,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', find_links=find_links[0])
             mock.assert_called_once_with(
-                'pip install --find-links=http://g.pypi.python.org pep8',
+                'pip install --find-links=http://g.pypi.python.org \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -210,7 +210,7 @@ class PipTestCase(TestCase):
             self.assertRaises(
                 CommandExecutionError,
                 pip.install,
-                'pep8',
+                '\'pep8\'',
                 find_links='sftp://pypi.crate.io'
             )
 
@@ -228,7 +228,7 @@ class PipTestCase(TestCase):
                 'pip install '
                 '--find-links=ftp://g.pypi.python.org '
                 '--find-links=http://c.pypi.python.org '
-                '--find-links=https://pypi.crate.io pep8',
+                '--find-links=https://pypi.crate.io \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -278,7 +278,8 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('mock', bin_env='/test_env', activate=True)
             mock.assert_called_once_with(
-                '. /test_env/bin/activate && /test_env/bin/pip install mock',
+                '. /test_env/bin/activate && /test_env/bin/pip install '
+                '\'mock\'',
                 env={'VIRTUAL_ENV': '/test_env'},
                 runas=None,
                 cwd=None)
@@ -289,7 +290,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', log='/tmp/pip-install.log')
             mock.assert_called_once_with(
-                'pip install --log=/tmp/pip-install.log pep8',
+                'pip install --log=/tmp/pip-install.log \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -311,7 +312,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', timeout=10)
             mock.assert_called_once_with(
-                'pip install --timeout=10 pep8',
+                'pip install --timeout=10 \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -321,7 +322,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', timeout='10')
             mock.assert_called_once_with(
-                'pip install --timeout=10 pep8',
+                'pip install --timeout=10 \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -341,7 +342,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', index_url='http://foo.tld')
             mock.assert_called_once_with(
-                'pip install --index-url=\'http://foo.tld\' pep8',
+                'pip install --index-url=\'http://foo.tld\' \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -351,7 +352,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', extra_index_url='http://foo.tld')
             mock.assert_called_once_with(
-                'pip install --extra-index-url=\'http://foo.tld\' pep8',
+                'pip install --extra-index-url=\'http://foo.tld\' \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -361,7 +362,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', no_index=True)
             mock.assert_called_once_with(
-                'pip install --no-index pep8',
+                'pip install --no-index \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -371,7 +372,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', build='/tmp/foo')
             mock.assert_called_once_with(
-                'pip install --build=/tmp/foo pep8',
+                'pip install --build=/tmp/foo \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -381,7 +382,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', target='/tmp/foo')
             mock.assert_called_once_with(
-                'pip install --target=/tmp/foo pep8',
+                'pip install --target=/tmp/foo \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -391,7 +392,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', download='/tmp/foo')
             mock.assert_called_once_with(
-                'pip install --download=/tmp/foo pep8',
+                'pip install --download=/tmp/foo \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -401,7 +402,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', no_download=True)
             mock.assert_called_once_with(
-                'pip install --no-download pep8',
+                'pip install --no-download \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -411,7 +412,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', download_cache='/tmp/foo')
             mock.assert_called_once_with(
-                'pip install --download-cache=/tmp/foo pep8',
+                'pip install --download-cache=/tmp/foo \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -421,7 +422,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', source='/tmp/foo')
             mock.assert_called_once_with(
-                'pip install --source=/tmp/foo pep8',
+                'pip install --source=/tmp/foo \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -432,7 +433,7 @@ class PipTestCase(TestCase):
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
                 pip.install('pep8', exists_action=action)
                 mock.assert_called_once_with(
-                    'pip install --exists-action={0} pep8'.format(action),
+                    'pip install --exists-action={0} \'pep8\''.format(action),
                     runas=None,
                     cwd=None
                 )
@@ -460,7 +461,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install '
                 '--install-option=\'--exec-prefix=/foo/bar\' '
-                '--install-option=\'--install-scripts=/foo/bar/bin\' pep8',
+                '--install-option=\'--install-scripts=/foo/bar/bin\' \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -472,7 +473,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install '
                 '--install-option=\'--exec-prefix=/foo/bar\' '
-                '--install-option=\'--install-scripts=/foo/bar/bin\' pep8',
+                '--install-option=\'--install-scripts=/foo/bar/bin\' \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -482,7 +483,8 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', install_options=install_options[0])
             mock.assert_called_once_with(
-                'pip install --install-option=\'--exec-prefix=/foo/bar\' pep8',
+                'pip install --install-option=\'--exec-prefix=/foo/bar\' '
+                '\'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -500,7 +502,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install '
                 '--global-option=\'--quiet\' '
-                '--global-option=\'--no-user-cfg\' pep8',
+                '--global-option=\'--no-user-cfg\' \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -512,7 +514,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install '
                 '--global-option=\'--quiet\' '
-                '--global-option=\'--no-user-cfg\' pep8',
+                '--global-option=\'--no-user-cfg\' \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -522,7 +524,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', global_options=global_options[0])
             mock.assert_called_once_with(
-                'pip install --global-option=\'--quiet\' pep8',
+                'pip install --global-option=\'--quiet\' \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -532,7 +534,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', upgrade=True)
             mock.assert_called_once_with(
-                'pip install --upgrade pep8',
+                'pip install --upgrade \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -542,7 +544,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', force_reinstall=True)
             mock.assert_called_once_with(
-                'pip install --force-reinstall pep8',
+                'pip install --force-reinstall \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -552,7 +554,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', ignore_installed=True)
             mock.assert_called_once_with(
-                'pip install --ignore-installed pep8',
+                'pip install --ignore-installed \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -562,7 +564,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', no_deps=True)
             mock.assert_called_once_with(
-                'pip install --no-deps pep8',
+                'pip install --no-deps \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -572,7 +574,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install('pep8', no_install=True)
             mock.assert_called_once_with(
-                'pip install --no-install pep8',
+                'pip install --no-install \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -583,7 +585,7 @@ class PipTestCase(TestCase):
             pip.install('pep8', proxy='salt-user:salt-passwd@salt-proxy:3128')
             mock.assert_called_once_with(
                 'pip install '
-                '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' pep8',
+                '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -858,7 +860,7 @@ class PipTestCase(TestCase):
                 'pep8', pre_releases=True
             )
             mock.assert_called_with(
-                'pip install pep8',
+                'pip install \'pep8\'',
                 runas=None,
                 cwd=None
             )
@@ -872,7 +874,7 @@ class PipTestCase(TestCase):
                 'pep8', pre_releases=True
             )
             mock.assert_called_with(
-                'pip install --pre pep8',
+                'pip install --pre \'pep8\'',
                 runas=None,
                 cwd=None
             )
