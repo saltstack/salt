@@ -79,7 +79,7 @@ def update():
     '''
     When we are asked to update (regular interval) lets reap the cache
     '''
-    _reap_cache()
+    salt.fileserver.reap_fileserver_cache_dir(os.path.join(__opts__['cachedir'], 'roots/hash'), find_file)
 
 def file_hash(load, fnd):
     '''
