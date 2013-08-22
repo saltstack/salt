@@ -19,7 +19,6 @@ requisite to a pkg.installed state for the package which provides pip
 '''
 
 # Import salt libs
-from __future__ import absolute_import
 import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
