@@ -118,10 +118,10 @@ def init():
         if not refs:
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
             with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
-                hgconfig.write('[paths]')
-                hgconfig.write('default = {0}'.format(
+                hgconfig.write('[paths]\n')
+                hgconfig.write('default = {0}\n'.format(
                     __opts__['hgfs_remotes'][ind]))
-            repos.append(repo)
+        repos.append(repo)
         repo.close()
 
     return repos
@@ -225,6 +225,10 @@ def find_file(path, short='base', **kwargs):
                     fnd['rel'] = local_path
                     fnd['path'] = dest
                     return fnd
+        try:
+            repo.cat(['path:{0}'.format(local_path)], rev=ref[2], output=dest)
+        except hglib.error.CommandError:
+            continue
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write('')
         for filename in glob.glob(hashes_glob):
@@ -232,7 +236,6 @@ def find_file(path, short='base', **kwargs):
                 os.remove(filename)
             except Exception:
                 pass
-        repo.cat(local_path, rev=ref[1], output=dest)
         with salt.utils.fopen(blobshadest, 'w+') as fp_:
             fp_.write(ref[2])
         try:
@@ -314,7 +317,7 @@ def file_list(load):
         if ref:
             manifest = repo.manifest(rev=ref[1])
             for tup in manifest:
-                ret.append(os.path.relpath(tup[4]), __opts__['hgfs_root'])
+                ret.append(os.path.relpath(tup[4], __opts__['hgfs_root']))
         repo.close()
     return ret
 
