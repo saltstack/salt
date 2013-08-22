@@ -20,14 +20,6 @@ def reap_fileserver_cache_dir(cache_base, find_func):
 
     cache_base -> env -> relpath
     '''
-    print 'running reap_fileserver_cache_dir'
-    print find_func
-    print
-    print
-    print
-    print
-    print
-    open('/export/apps/salt/cache/gitfs/testout', 'a+').write(cache_base + '\n')
     for env in os.listdir(cache_base):
         env_base = os.path.join(cache_base, env)
         for root, dirs, files in os.walk(env_base):
@@ -45,7 +37,6 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 ret = find_func(filename, env=env)
                 # if we don't actually have the file, lets clean up the cache object
                 if ret['path'] == '':
-                    print 'removing cache for file {0}'.format(file_path)
                     os.unlink(file_path)
 
 def is_file_ignored(opts, fname):
