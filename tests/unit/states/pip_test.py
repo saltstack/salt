@@ -230,13 +230,18 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn({'test': ret})
             self.assertInSaltComment(
-                'Package was successfully installed',
+                'There was no error installing package '
+                '\'https://pypi.python.org/packages/source/S/SaltTesting/'
+                'SaltTesting-0.5.0.tar.gz#md5=e6760af92b7165f8be53b5763e40bc24\' '
+                'although it does not show when calling \'pip.freeze\'.',
                 {'test': ret}
             )
             self.assertInSaltReturn(
                 'Installed',
                 {'test': ret},
-                ('changes', 'SaltTesting==0.5.0')
+                ('changes', 'https://pypi.python.org/packages/source/S/'
+                            'SaltTesting/SaltTesting-0.5.0.tar.gz'
+                            '#md5=e6760af92b7165f8be53b5763e40bc24==???')
             )
 
 
