@@ -89,6 +89,7 @@ def install(pkgs=None,
             requirements=None,
             env=None,
             bin_env=None,
+            use_wheel=False,
             log=None,
             proxy=None,
             timeout=None,
@@ -300,6 +301,9 @@ def install(pkgs=None,
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
             cmd.append('--requirement={0!r}'.format(treq or requirement))
+
+    if use_wheel:
+        cmd.append('--use-wheel')
 
     if log:
         try:
