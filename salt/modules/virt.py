@@ -782,6 +782,17 @@ def start(vm_):
     return create(vm_)
 
 
+def stop(vm_):
+    '''
+    Alias for the obscurely named 'destroy' function
+
+    CLI Example::
+
+        salt '*' virt.stop <vm name>
+    '''
+    return destroy(vm_)
+
+
 def reboot(vm_):
     '''
     Reboot a domain via ACPI request
