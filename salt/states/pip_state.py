@@ -112,7 +112,7 @@ def installed(name,
     pip_bin : None
         Deprecated, use bin_env
     use_wheel : False
-        Prefer wheel archives (requires pip>1.4)
+        Prefer wheel archives (requires pip>=1.4)
     env : None
         Deprecated, use bin_env
     bin_env : None
