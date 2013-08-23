@@ -538,6 +538,7 @@ class State(object):
         '''
         Refresh all the modules
         '''
+        log.debug('Refreshing modules...')
         self.load_modules()
         self.functions['saltutil.refresh_modules']()
 
