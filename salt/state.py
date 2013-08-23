@@ -15,6 +15,7 @@ The data sent to the state calls is as follows:
 import os
 import sys
 import copy
+import site
 import fnmatch
 import logging
 import collections
@@ -538,6 +539,11 @@ class State(object):
         '''
         Refresh all the modules
         '''
+        log.debug('Refreshing modules...')
+        # In case a package has been installed into the current python
+        # process 'site-packages', the 'site' module needs to be reloaded in
+        # order for the newly installed package to be importable.
+        reload(site)
         self.load_modules()
         self.functions['saltutil.refresh_modules']()
 
@@ -549,8 +555,14 @@ class State(object):
         possible module type, e.g. a python, pyx, or .so. Always refresh if the
         function is recurse, since that can lay down anything.
         '''
+        if data.get('reload_modules', False) is True:
+            # User explicitly requests a reload
+            self.module_refresh()
+            return
+
         if not ret['changes']:
             return
+
         if data['state'] == 'file':
             if data['fun'] == 'managed':
                 if data['name'].endswith(
@@ -854,7 +866,7 @@ class State(object):
             ret['kwargs'] = {}
             for key in data:
                 # Passing kwargs the conflict with args == stack trace
-                if key in aspec.keywords:
+                if key in aspec.args:
                     continue
                 ret['kwargs'][key] = data[key]
         kwargs = {}
@@ -1226,6 +1238,7 @@ class State(object):
                         data
                         )
                     )
+
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
@@ -2016,9 +2029,18 @@ class BaseHighState(object):
         if self.opts['state_auto_order']:
             for name in state:
                 for s_dec in state[name]:
+                    if not isinstance(s_dec, string_types):
+                        # PyDSL OrderedDict?
+                        continue
+
+                    if not isinstance(state[name], dict):
+                        # Include's or excludes as lists?
+                        continue
+
                     found = False
                     if s_dec.startswith('_'):
                         continue
+
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:

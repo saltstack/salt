@@ -1210,11 +1210,11 @@ def get_hash(path, form='md5', chunk_size=4096):
         raise ValueError('Invalid hash type: {0}'.format(form))
     with salt.utils.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
-        while True:
-            chunk = ifile.read(chunk_size)
-            if not chunk:
-                return hash_obj.hexdigest()
+        # read the file in in chunks, not the entire file
+        for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
+        return hash_obj.hexdigest()
+
 
 
 def namespaced_function(function, global_dict, defaults=None):

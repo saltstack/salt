@@ -36,7 +36,6 @@ except ImportError:
         from nb_popen import NonBlockingPopen
 
 
-
 def cleanup(clean, vm_name):
     if not clean:
         return
@@ -49,7 +48,7 @@ def cleanup(clean, vm_name):
         cmd,
         shell=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         stream_stds=True
     )
     proc.poll_and_read_until_finish()
@@ -71,11 +70,12 @@ def run(platform, provider, commit, clean):
         cmd,
         shell=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         stream_stds=True
     )
     proc.poll_and_read_until_finish()
     proc.communicate()
+
     if proc.returncode > 0:
         print('Failed to bootstrap VM. Exit code: {0}'.format(proc.returncode))
         sys.stdout.flush()
@@ -92,21 +92,19 @@ def run(platform, provider, commit, clean):
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
-    proc = NonBlockingPopen(
+    #proc = NonBlockingPopen(
+    proc = subprocess.Popen(
         cmd,
         shell=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stream_stds=True
+        stderr=subprocess.STDOUT,
+    #    stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    #proc.poll_and_read_until_finish()
     stdout, stderr = proc.communicate()
 
-    if stderr:
-        print(stderr)
     if stdout:
         print(stdout)
-
     sys.stdout.flush()
 
     try:
