@@ -17,7 +17,6 @@ import time
 import traceback
 import sys
 import signal
-import site
 from random import randint
 
 # Import third party libs
@@ -490,10 +489,6 @@ class Minion(object):
         Return the functions and the returners loaded up from the loader
         module
         '''
-        # In case a package has been installed into the current python
-        # process 'site-packages', the 'site' module needs to be reloaded in
-        # order for the newly installed package to be importable.
-        reload(site)
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts, functions)
