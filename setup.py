@@ -12,7 +12,6 @@ from datetime import datetime
 from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
-from distutils.sysconfig import get_python_lib, PREFIX
 
 # Change to salt source's directory prior to running any command
 try:
@@ -158,15 +157,6 @@ NAME = 'salt'
 VER = __version__
 DESC = ('Portable, distributed, remote execution and '
         'configuration management system')
-mod_path = os.path.join(get_python_lib(), 'salt/modules')
-doc_path = os.path.join(PREFIX, 'share/doc', NAME + '-' + VER)
-example_path = os.path.join(doc_path, 'examples')
-template_path = os.path.join(example_path, 'templates')
-
-if 'SYSCONFDIR' in os.environ:
-    etc_path = os.environ['SYSCONFDIR']
-else:
-    etc_path = os.path.join(os.path.dirname(PREFIX), 'etc')
 
 with open(salt_reqs) as f:
     lines = f.read().split('\n')
