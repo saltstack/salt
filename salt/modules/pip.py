@@ -303,7 +303,17 @@ def install(pkgs=None,
             cmd.append('--requirement={0!r}'.format(treq or requirement))
 
     if use_wheel:
-        cmd.append('--use-wheel')
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            log.error(
+                ('The --use-wheel option is only supported in pip {0} and '
+                 'newer. The version of pip detected is {1}. This option '
+                 'will be ignored.'.format(min_version, cur_version))
+            )
+        else:
+            cmd.append('--use-wheel')
 
     if log:
         try:
