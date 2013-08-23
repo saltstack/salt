@@ -89,6 +89,7 @@ def install(pkgs=None,
             requirements=None,
             env=None,
             bin_env=None,
+            use_wheel=False,
             log=None,
             proxy=None,
             timeout=None,
@@ -300,6 +301,19 @@ def install(pkgs=None,
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
             cmd.append('--requirement={0!r}'.format(treq or requirement))
+
+    if use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            log.error(
+                ('The --use-wheel option is only supported in pip {0} and '
+                 'newer. The version of pip detected is {1}. This option '
+                 'will be ignored.'.format(min_version, cur_version))
+            )
+        else:
+            cmd.append('--use-wheel')
 
     if log:
         try:
@@ -759,3 +773,19 @@ def list_(prefix=None,
         else:
             packages[name] = version
     return packages
+
+
+def version(bin_env=None):
+    '''
+    .. versionadded:: 0.17.0
+
+    Returns the version of pip. Use ``bin_env`` to specify the path to a
+    virtualenv and get the version of pip in that virtualenv.
+
+    If unable to detect the pip version, returns ``None``.
+    '''
+    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
+    try:
+        return re.match('^pip (\S+)', output).group(1)
+    except AttributeError:
+        return None
