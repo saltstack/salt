@@ -311,7 +311,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
 def avail_sizes():
     '''
-    Return a dict of all available VM images on the cloud provider with
+    Return a dict of all available VM sizes on the cloud provider with
     relevant data. Latest version can be found at:
 
     http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html
@@ -848,7 +848,7 @@ def create(vm_=None, call=None):
             'host': ip_address,
             'username': username,
             'key_filename': key_filename,
-            'deploy_command': 'sh /tmp/deploy.sh',
+            'deploy_command': '/tmp/deploy.sh',
             'tty': True,
             'script': deploy_script,
             'name': vm_['name'],
@@ -856,6 +856,7 @@ def create(vm_=None, call=None):
                 'sudo', vm_, __opts__, default=(username != 'root')
             ),
             'start_action': __opts__['start_action'],
+            'parallel': __opts__['parallel'],
             'conf_file': __opts__['conf_file'],
             'sock_dir': __opts__['sock_dir'],
             'minion_pem': vm_['priv_key'],

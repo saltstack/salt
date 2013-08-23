@@ -23,12 +23,15 @@ cloud management platform and can be used to manage non Salt centric clouds.
 Getting Started
 ===============
 
+* :doc:`Installing salt cloud <topics/install/index>`
+
 Some quick guides covering getting started with Amazon AWS, Rackspace, and
 Parallels.
 
 * :doc:`Getting Started With AWS <topics/aws>`
 * :doc:`Getting Started With Rackspace <topics/rackspace>`
 * :doc:`Getting Started With Parallels <topics/parallels>`
+* :doc:`Getting Started With SoftLayer <topics/softlayer>`
 
 Core Configuration
 ==================

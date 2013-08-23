@@ -258,6 +258,33 @@ def salt_config_to_yaml(configuration):
     return yaml.safe_dump(configuration, default_flow_style=False)
 
 
+def wait_for_fun(fun, timeout=900, **kwargs):
+    '''
+    Wait until a function finishes, or times out
+    '''
+    start = time.time()
+    log.debug('Attempting function {0}'.format(fun))
+    trycount = 0
+    while True:
+        trycount += 1
+        try:
+            response = fun(**kwargs)
+            if type(response) is not bool:
+                return response
+        except Exception as exc:
+            log.debug('Caught exception in wait_for_fun: {0}'.format(exc))
+            time.sleep(1)
+            if time.time() - start > timeout:
+                log.error('Function timed out: {0}'.format(timeout))
+                return False
+
+            log.debug(
+                'Retrying function {0} on  (try {1})'.format(
+                    fun, trycount
+                )
+            )
+
+
 def wait_for_ssh(host, port=22, timeout=900):
     '''
     Wait until an ssh connection can be made on a specified host
@@ -360,7 +387,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   minion_pub=None, minion_pem=None, minion_conf=None,
                   keep_tmp=False, script_args=None, script_env=None,
                   ssh_timeout=15, make_syndic=False, make_minion=True,
-                  display_ssh_output=True, preseed_minion_keys=None):
+                  display_ssh_output=True, preseed_minion_keys=None,
+                  parallel=False):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -412,6 +440,10 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 )
                 root_cmd(subsys_command, tty, sudo, **kwargs)
                 root_cmd('service sshd restart', tty, sudo, **kwargs)
+
+            # Update hostname on the minion
+            hostname_cmd = 'test `hostname` == {0} || hostname {0}'.format(name)
+            root_cmd(hostname_cmd, tty, sudo, **kwargs)
 
             # Minion configuration
             if minion_pem:
@@ -514,7 +546,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
             process = None
             # Consider this code experimental. It causes Salt Cloud to wait
             # for the minion to check in, and then fire a startup event.
-            if start_action:
+            # Disabled if parallel because it doesn't work!
+            if start_action and not parallel:
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
                     target=check_auth, kwargs=dict(
@@ -637,7 +670,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         'Removed {0}'.format(preseed_minion_keys_tempdir)
                     )
 
-            if start_action:
+            if start_action and not parallel:
                 queuereturn = queue.get()
                 process.join()
                 if queuereturn and start_action:
@@ -661,14 +694,19 @@ def deploy_script(host, port=22, timeout=900, username='root',
                             start_action
                         )
                     )
-            #Fire deploy action
-            event = salt.utils.event.SaltEvent(
-                'master',
-                sock_dir
-            )
-            event.fire_event(
-                '{0} has been created at {1}'.format(name, host), 'salt-cloud'
-            )
+            # Fire deploy action
+            event = salt.utils.event.SaltEvent('master', sock_dir)
+            try:
+                event.fire_event(
+                    '{0} has been created at {1}'.format(name, host),
+                    'salt-cloud'
+                )
+            except ValueError:
+                # We're using develop or a 0.17.x version of salt
+                event.fire_event(
+                    {name: '{0} has been created at {1}'.format(name, host)},
+                    'salt-cloud'
+                )
             return True
     return False
 
@@ -726,9 +764,7 @@ def scp_file(dest_path, contents, kwargs):
                 proc.pid, dest_path
             )
         )
-        while proc.poll() is None:
-            time.sleep(0.25)
-
+        proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
     except Exception as err:
@@ -801,9 +837,7 @@ def root_cmd(command, tty, sudo, **kwargs):
                 proc.pid, command
             )
         )
-        while proc.poll() is None:
-            time.sleep(0.25)
-
+        proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
     except Exception as err:

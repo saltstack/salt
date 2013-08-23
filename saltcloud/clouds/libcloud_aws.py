@@ -406,7 +406,7 @@ def create(vm_):
             'host': ip_address,
             'username': username,
             'key_filename': key_filename,
-            'deploy_command': 'sh /tmp/deploy.sh',
+            'deploy_command': '/tmp/deploy.sh',
             'tty': True,
             'script': deploy_script.script,
             'name': vm_['name'],
@@ -414,6 +414,7 @@ def create(vm_):
                 'sudo', vm_, __opts__, default=(username != 'root')
             ),
             'start_action': __opts__['start_action'],
+            'parallel': __opts__['parallel'],
             'conf_file': __opts__['conf_file'],
             'sock_dir': __opts__['sock_dir'],
             'minion_pem': vm_['priv_key'],

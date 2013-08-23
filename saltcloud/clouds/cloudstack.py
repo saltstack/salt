@@ -190,6 +190,7 @@ def create(vm_):
             'name': vm_['name'],
             'deploy_command': '/tmp/deploy.sh',
             'start_action': __opts__['start_action'],
+            'parallel': __opts__['parallel'],
             'sock_dir': __opts__['sock_dir'],
             'conf_file': __opts__['conf_file'],
             'minion_pem': vm_['priv_key'],
