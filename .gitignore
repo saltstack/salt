@@ -38,3 +38,6 @@ htmlcov/
 
 # ignore ctags file
 tags
+
+# ignore Vagrant file
+Vagrantfile
