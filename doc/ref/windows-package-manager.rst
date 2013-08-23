@@ -103,7 +103,6 @@ will be automatically renamed to their package name during the next update
 
 Add ``msiexec: True`` if using an MSI installer requiring the use of ``msiexec
 /i`` to install and ``msiexec /x`` to uninstall.
-``/srv/salt/win/repo/7zip/init.sls``
 
 The ``install_flags`` and ``uninstall_flags`` are flags passed to the software
 installer to cause it to perform a silent install. These can often be found by
