@@ -549,8 +549,14 @@ class State(object):
         possible module type, e.g. a python, pyx, or .so. Always refresh if the
         function is recurse, since that can lay down anything.
         '''
+        if data.get('reload_modules', False) is True:
+            # User explicitly requests a reload
+            self.module_refresh()
+            return
+
         if not ret['changes']:
             return
+
         if data['state'] == 'file':
             if data['fun'] == 'managed':
                 if data['name'].endswith(
@@ -1226,6 +1232,7 @@ class State(object):
                         data
                         )
                     )
+
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
