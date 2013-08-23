@@ -72,6 +72,7 @@ def installed(name,
               requirements=None,
               env=None,
               bin_env=None,
+              use_wheel=False,
               log=None,
               proxy=None,
               timeout=None,
@@ -110,11 +111,15 @@ def installed(name,
         The user under which to run pip
     pip_bin : None
         Deprecated, use bin_env
+    use_wheel : False
+        Prefer wheel archives (requires pip>1.4)
     env : None
         Deprecated, use bin_env
     bin_env : None
         the pip executable or virtualenv to use
 
+    .. versionchanged:: 0.17.0
+        ``use_wheel`` option added.
     '''
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -122,6 +127,17 @@ def installed(name,
         bin_env = env
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'use_wheel\' option is only supported in '
+                              'pip {0} and newer. The version of pip detected '
+                              'was {1}.').format(min_version, cur_version)
+            return ret
 
     if repo is not None:
         msg = ('The \'repo\' argument to pip.installed is deprecated and will '
@@ -235,6 +251,7 @@ def installed(name,
         pkgs='{0}'.format(name) if name else '',
         requirements=requirements,
         bin_env=bin_env,
+        use_wheel=use_wheel,
         log=log,
         proxy=proxy,
         timeout=timeout,
