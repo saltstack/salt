@@ -27,7 +27,8 @@ def add(name,
         fullname=False,
         roomnumber=False,
         workphone=False,
-        homephone=False):
+        homephone=False,
+        createhome=False):
     '''
     Add a user to the minion
 
