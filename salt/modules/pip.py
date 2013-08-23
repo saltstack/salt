@@ -786,6 +786,6 @@ def version(bin_env=None):
     '''
     output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
     try:
-        return re.match('^pip (\S+)', output).group(1)
+        return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:
         return None
