@@ -763,3 +763,19 @@ def list_(prefix=None,
         else:
             packages[name] = version
     return packages
+
+
+def version(bin_env=None):
+    '''
+    .. versionadded:: 0.17.0
+
+    Returns the version of pip. Use ``bin_env`` to specify the path to a
+    virtualenv and get the version of pip in that virtualenv.
+
+    If unable to detect the pip version, returns ``None``.
+    '''
+    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
+    try:
+        return re.match('^pip (\S+)', output).group(1)
+    except AttributeError:
+        return None
