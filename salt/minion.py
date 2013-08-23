@@ -47,6 +47,7 @@ import salt.payload
 import salt.utils.schedule
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
+from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
@@ -494,13 +495,13 @@ class Minion(object):
         returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
-    def _fire_master(self, data=None, tag=None, events=None, kind=None):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None):
         '''
         Fire an event on the master
         '''
         load = {'id': self.opts['id'],
                 'cmd': '_minion_event',
-                'kind': kind}
+                'pretag': pretag}
         if events:
             load['events'] = events
         elif data and tag:
@@ -1032,10 +1033,9 @@ class Minion(object):
             self.opts['id'],
             time.asctime()
             ),
-            'start',
-            kind='minion'
-        )        
-
+            tagify([self.opts['id'], 'start'], 'minion'),
+        )
+        
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
@@ -1138,8 +1138,7 @@ class Minion(object):
             self.opts['id'],
             time.asctime()
             ),
-            'start',
-            kind='minion'
+            tagify([self.opts['id'], 'start'], 'minion'),
         )        
         loop_interval = int(self.opts['loop_interval'])
         while True:
@@ -1306,8 +1305,7 @@ class Syndic(Minion):
             self.opts['id'],
             time.asctime()
             ),
-            'start',
-            kind='syndic'
+            tagify([self.opts['id'], 'start'], 'syndic'),
         )        
 
         # Make sure to gracefully handle SIGUSR1
@@ -1348,7 +1346,7 @@ class Syndic(Minion):
                         if not 'retcode' in event['data']:
                             raw_events.append(event)
                 if raw_events:
-                    self._fire_master(events=raw_events, kind='syndic')
+                    self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], 'syndic'))
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:

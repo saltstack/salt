@@ -91,6 +91,7 @@ TAGS = \
     'job': 'job', # prefix for all .job events (minion jobs)
     'key': 'key', # prefix for all .key events
     'minion': 'minion', # prefix for all .minion events (minion sourced events)
+    'syndic': 'syndic', # prefix for all .syndic events (syndic minion sourced events)
     'run': 'run', #prefis for all .run events (salt runners)
 }
 
