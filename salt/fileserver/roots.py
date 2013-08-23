@@ -75,11 +75,20 @@ def serve_file(load, fnd):
         ret['data'] = data
     return ret
 
+
 def update():
     '''
     When we are asked to update (regular interval) lets reap the cache
     '''
-    salt.fileserver.reap_fileserver_cache_dir(os.path.join(__opts__['cachedir'], 'roots/hash'), find_file)
+    try:
+        salt.fileserver.reap_fileserver_cache_dir(
+            os.path.join(__opts__['cachedir'], 'roots/hash'),
+            find_file
+        )
+    except os.error:
+        # Hash file won't exist if no files have yet been served up
+        pass
+
 
 def file_hash(load, fnd):
     '''
@@ -124,6 +133,7 @@ def file_hash(load, fnd):
         fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
 
     return ret
+
 
 def file_list(load):
     '''
