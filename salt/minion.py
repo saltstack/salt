@@ -1346,7 +1346,7 @@ class Syndic(Minion):
                         if not 'retcode' in event['data']:
                             raw_events.append(event)
                 if raw_events:
-                    self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], 'syndic'))
+                    self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], base='syndic'))
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:
