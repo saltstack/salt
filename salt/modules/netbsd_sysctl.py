@@ -19,7 +19,9 @@ def show():
     '''
     Return a list of sysctl parameters for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.show
     '''
@@ -56,7 +58,9 @@ def get(name):
     '''
     Return a single sysctl parameter for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.get hw.physmem
     '''
@@ -69,7 +73,9 @@ def assign(name, value):
     '''
     Assign a single sysctl parameter for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.assign net.inet.icmp.icmplim 50
     '''
@@ -89,7 +95,9 @@ def persist(name, value):
     '''
     Assign and persist a simple sysctl parameter for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysctl.persist net.inet.icmp.icmplim 50
     '''

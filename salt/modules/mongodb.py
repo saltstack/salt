@@ -69,7 +69,9 @@ def db_list(user=None, password=None, host=None, port=None):
     '''
     List all Mongodb databases
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mongodb.db_list <user> <password> <host> <port>
     '''
@@ -89,7 +91,9 @@ def db_exists(name, user=None, password=None, host=None, port=None):
     '''
     Checks if a database exists in Mongodb
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mongodb.db_exists <name> <user> <password> <host> <port>
     '''
@@ -105,7 +109,9 @@ def db_remove(name, user=None, password=None, host=None, port=None):
     '''
     Remove a Mongodb database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mongodb.db_remove <name> <user> <password> <host> <port>
     '''
@@ -131,7 +137,9 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
     '''
     List users of a Mongodb database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mongodb.user_list <name> <user> <password> <host> <port> <database>
     '''
@@ -166,7 +174,9 @@ def user_exists(name, user=None, password=None, host=None, port=None,
     '''
     Checks if a user exists in Mongodb
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database>
     '''
@@ -183,7 +193,9 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
     '''
     Create a Mongodb user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mongodb.user_create <name> <user> <password> <host> <port> <database>
     '''
@@ -210,7 +222,9 @@ def user_remove(name, user=None, password=None, host=None, port=None,
     '''
     Remove a Mongodb user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database>
     '''

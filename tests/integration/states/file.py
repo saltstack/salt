@@ -607,15 +607,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         src_file, ret = self.do_patch('hello_dolly')
         self.assertSaltFalseReturn(ret)
         self.assertInSaltComment(
-            ret, 'File {0} hash mismatch after patch was applied'.format(
-                src_file
-            )
+            'File {0} hash mismatch after patch was applied'.format(src_file),
+            ret
         )
 
     def test_patch_already_applied(self):
         src_file, ret = self.do_patch(src='Hello world\n')
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment(ret, 'Patch is already applied')
+        self.assertInSaltComment('Patch is already applied', ret)
 
     def test_issue_2401_file_comment(self):
         # Get a path to the temporary file
@@ -634,8 +633,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 'state.template_str', [template], timeout=120
             )
             self.assertSaltTrueReturn(ret)
-            self.assertNotInSaltComment(ret, 'Pattern already commented')
-            self.assertInSaltComment(ret, 'Commented lines successfully')
+            self.assertNotInSaltComment('Pattern already commented', ret)
+            self.assertInSaltComment('Commented lines successfully', ret)
 
             # This next time, it is already commented.
             ret = self.run_function(
@@ -643,7 +642,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
 
             self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(ret, 'Pattern already commented')
+            self.assertInSaltComment('Pattern already commented', ret)
         except AssertionError:
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
@@ -671,7 +670,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             ret = self.run_function('state.template_str', [template])
 
             self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(ret, 'Appended 1 lines')
+            self.assertInSaltComment('Appended 1 lines', ret)
         except AssertionError:
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
@@ -697,14 +696,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltFalseReturn(ret)
             self.assertInSaltComment(
-                ret,
                 '\'mode\' is not allowed in \'file.recurse\'. Please use '
-                '\'file_mode\' and \'dir_mode\'.'
+                '\'file_mode\' and \'dir_mode\'.',
+                ret
             )
             self.assertNotInSaltComment(
-                ret,
                 'TypeError: managed() got multiple values for keyword '
-                'argument \'mode\''
+                'argument \'mode\'',
+                ret
             )
         finally:
             if os.path.isdir(testcase_temp_dir):

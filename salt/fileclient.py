@@ -755,8 +755,7 @@ class RemoteClient(Client):
                 return {}
             else:
                 ret = {}
-                with salt.utils.fopen(path, 'rb') as ifile:
-                    ret['hsum'] = hashlib.md5(ifile.read()).hexdigest()
+                ret['hsum'] = salt.utils.get_hash(path, form='md5', chunk_size=4096)
                 ret['hash_type'] = 'md5'
                 return ret
         load = {'path': path,

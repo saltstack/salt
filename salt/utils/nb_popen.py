@@ -59,6 +59,8 @@ class NonBlockingPopen(subprocess.Popen):
             'stderr_logger_name', self._stderr_logger_name_
         )
 
+        stderr = kwargs.get('stderr', None)
+
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
 
         #self._stdin_logger = logging.getLogger(
@@ -70,7 +72,18 @@ class NonBlockingPopen(subprocess.Popen):
             self._stdout_logger_name_.format(pid=self.pid)
         )
 
-        self.stderr_buff = tempfile.SpooledTemporaryFile(self.max_size_in_mem)
+        if stderr is subprocess.STDOUT:
+            self.stderr_buff = self.stdout_buff
+            self._stderr_logger = self._stdout_logger
+        else:
+            self.stderr_buff = tempfile.SpooledTemporaryFile(
+                self.max_size_in_mem
+            )
+            self._stderr_logger = logging.getLogger(
+                self._stderr_logger_name_.format(pid=self.pid)
+            )
+
+
         self._stderr_logger = logging.getLogger(
             self._stderr_logger_name_.format(pid=self.pid)
         )
@@ -203,3 +216,11 @@ class NonBlockingPopen(subprocess.Popen):
                 self.recv_err()
 
             time.sleep(0.01)
+
+    def communicate(self, input=None):
+        super(NonBlockingPopen, self).communicate(input)
+        self.stdout_buff.flush()
+        self.stdout_buff.seek(0)
+        self.stderr_buff.flush()
+        self.stderr_buff.seek(0)
+        return self.stdout_buff.read(), self.stderr_buff.read()

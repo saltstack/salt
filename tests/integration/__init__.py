@@ -876,12 +876,12 @@ class SaltReturnAssertsMixIn(object):
                     'Failed to get result. Salt Returned: {0}'.format(ret)
                 )
 
-    def assertInSaltComment(self, ret, in_comment):
+    def assertInSaltComment(self, in_comment, ret):
         return self.assertIn(
             in_comment, self.__getWithinSaltReturn(ret, 'comment')
         )
 
-    def assertNotInSaltComment(self, ret, not_in_comment):
+    def assertNotInSaltComment(self, not_in_comment, ret):
         return self.assertNotIn(
             not_in_comment, self.__getWithinSaltReturn(ret, 'comment')
         )
@@ -899,12 +899,12 @@ class SaltReturnAssertsMixIn(object):
             not_in_comment, self.__getWithinSaltReturn(ret, 'warnings')
         )
 
-    def assertInSaltReturn(self, ret, item_to_check, keys):
+    def assertInSaltReturn(self, item_to_check, ret, keys):
         return self.assertIn(
             item_to_check, self.__getWithinSaltReturn(ret, keys)
         )
 
-    def assertNotInSaltReturn(self, ret, item_to_check, keys):
+    def assertNotInSaltReturn(self, item_to_check, ret, keys):
         return self.assertNotIn(
             item_to_check, self.__getWithinSaltReturn(ret, keys)
         )

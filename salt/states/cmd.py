@@ -219,11 +219,19 @@ def _run_check(cmd_kwargs, onlyif, unless, group):
                     'result': False}
 
     if onlyif:
+        if not isinstance(onlyif, str):
+            if not onlyif:
+                return {'comment': 'onlyif execution succeeded',
+                        'result': True}
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
             return {'comment': 'onlyif execution failed',
                     'result': True}
 
     if unless:
+        if not isinstance(unless, str):
+            if unless:
+                return {'comment': 'unless execution succeeded',
+                        'result': True}
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
             return {'comment': 'unless execution succeeded',
                     'result': True}

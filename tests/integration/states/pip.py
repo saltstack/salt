@@ -145,8 +145,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             ret = self.run_function('state.sls', mods='issue-2087-missing-pip')
             self.assertSaltFalseReturn(ret)
             self.assertInSaltComment(
-                ret,
-                'Error installing \'pep8\': Could not find a `pip` binary'
+                'Error installing \'pep8\': Could not find a `pip` binary',
+                ret
             )
         finally:
             if os.path.isdir(venv_dir):

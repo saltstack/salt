@@ -5,11 +5,23 @@ Support for the Git SCM
 # Import python libs
 import os
 import tempfile
-import pipes
+try:
+    import pipes
+    HAS_PIPES = True
+except ImportError:
+    HAS_PIPES = False
 
 # Import salt libs
 from salt import utils, exceptions
 
+
+def __virtual__():
+    '''
+    Only load if git exists on the system
+    '''
+    if not all((utils.which('git'), HAS_PIPES)):
+        return False
+    return 'git'
 
 def _git_ssh_helper(identity):
     '''

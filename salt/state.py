@@ -620,14 +620,18 @@ class State(object):
             aspec = salt.utils.get_function_argspec(self.states[full])
             arglen = 0
             deflen = 0
-            if isinstance(aspec[0], list):
-                arglen = len(aspec[0])
-            if isinstance(aspec[3], tuple):
-                deflen = len(aspec[3])
+            if isinstance(aspec.args, list):
+                arglen = len(aspec.args)
+            if isinstance(aspec.defaults, tuple):
+                deflen = len(aspec.defaults)
             for ind in range(arglen - deflen):
-                if aspec[0][ind] not in data:
-                    errors.append('Missing parameter ' + aspec[0][ind]
-                                + ' for state ' + full)
+                if aspec.args[ind] not in data:
+                    errors.append(
+                        'Missing parameter {0} for state {1}'.format(
+                            aspec.args[ind],
+                            full
+                        )
+                    )
         # If this chunk has a recursive require, then it will cause a
         # recursive loop when executing, check for it
         reqdec = ''
@@ -841,27 +845,27 @@ class State(object):
         aspec = salt.utils.get_function_argspec(self.states[ret['full']])
         arglen = 0
         deflen = 0
-        if isinstance(aspec[0], list):
-            arglen = len(aspec[0])
-        if isinstance(aspec[3], tuple):
-            deflen = len(aspec[3])
-        if aspec[2]:
-            # This state accepts kwargs
+        if isinstance(aspec.args, list):
+            arglen = len(aspec.args)
+        if isinstance(aspec.defaults, tuple):
+            deflen = len(aspec.defaults)
+        if aspec.keywords:
+            # This state accepts **kwargs
             ret['kwargs'] = {}
             for key in data:
                 # Passing kwargs the conflict with args == stack trace
-                if key in aspec[0]:
+                if key in aspec.args:
                     continue
                 ret['kwargs'][key] = data[key]
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
             minus = arglen - ind
             if deflen - minus > -1:
-                kwargs[aspec[0][ind]] = aspec[3][-minus]
+                kwargs[aspec.args[ind]] = aspec.defaults[-minus]
         for arg in kwargs:
             if arg in data:
                 kwargs[arg] = data[arg]
-        for arg in aspec[0]:
+        for arg in aspec.args:
             if arg in kwargs:
                 ret['args'].append(kwargs[arg])
             else:
@@ -2012,9 +2016,18 @@ class BaseHighState(object):
         if self.opts['state_auto_order']:
             for name in state:
                 for s_dec in state[name]:
+                    if not isinstance(s_dec, string_types):
+                        # PyDSL OrderedDict?
+                        continue
+
+                    if not isinstance(state[name], dict):
+                        # Include's or excludes as lists?
+                        continue
+
                     found = False
                     if s_dec.startswith('_'):
                         continue
+
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:

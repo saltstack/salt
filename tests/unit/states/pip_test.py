@@ -18,7 +18,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from salt.states import pip
+from salt.states import pip_state as pip
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -109,6 +109,139 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 'pep8',
                 user='Me!',
                 runas='Not Me!'
+            )
+
+    def test_install_requirements_parsing(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.3'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list}):
+            with patch.dict(pip.__opts__, {'test': True}):
+                ret = pip.installed('pep8=1.3.2')
+                self.assertSaltFalseReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Invalid version specification in package pep8=1.3.2. '
+                    '\'=\' is not supported, use \'==\' instead.',
+                    {'test': ret}
+                )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.3'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list}):
+            with patch.dict(pip.__opts__, {'test': True}):
+                ret = pip.installed('pep8>=1.3.2')
+                self.assertSaltTrueReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Python package pep8>=1.3.2 already installed',
+                    {'test': ret}
+                )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.3'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list}):
+            with patch.dict(pip.__opts__, {'test': True}):
+                ret = pip.installed('pep8<1.3.2')
+                self.assertSaltNoneReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Python package pep8<1.3.2 is set to be installed',
+                    {'test': ret}
+                )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.2'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list}):
+            with patch.dict(pip.__opts__, {'test': True}):
+                ret = pip.installed('pep8>1.3.1,<1.3.3')
+                self.assertSaltTrueReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Python package pep8>1.3.1;<1.3.3 already installed',
+                    {'test': ret}
+                )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list}):
+            with patch.dict(pip.__opts__, {'test': True}):
+                ret = pip.installed('pep8>1.3.1,<1.3.3')
+                self.assertSaltNoneReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Python package pep8>1.3.1;<1.3.3 is set to be installed',
+                    {'test': ret}
+                )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list}):
+            with patch.dict(pip.__opts__, {'test': True}):
+                ret = pip.installed(
+                    'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.1'
+                )
+                self.assertSaltNoneReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Python package git+https://github.com/saltstack/'
+                    'salt-testing.git#egg=SaltTesting>=0.5.1 is set to be '
+                    'installed',
+                    {'test': ret}
+                )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list}):
+            with patch.dict(pip.__opts__, {'test': True}):
+                ret = pip.installed(
+                    'https://pypi.python.org/packages/source/S/SaltTesting/'
+                    'SaltTesting-0.5.0.tar.gz'
+                    '#md5=e6760af92b7165f8be53b5763e40bc24'
+                )
+                self.assertSaltNoneReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Python package https://pypi.python.org/packages/source/'
+                    'S/SaltTesting/SaltTesting-0.5.0.tar.gz'
+                    '#md5=e6760af92b7165f8be53b5763e40bc24 is set to be '
+                    'installed',
+                    {'test': ret}
+                )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
+        pip_install = MagicMock(return_value={
+            'retcode': 0,
+            'stderr' :'',
+            'stdout': 'Downloading/unpacking https://pypi.python.org/packages'
+                      '/source/S/SaltTesting/SaltTesting-0.5.0.tar.gz\n  '
+                      'Downloading SaltTesting-0.5.0.tar.gz\n  Running '
+                      'setup.py egg_info for package from '
+                      'https://pypi.python.org/packages/source/S/SaltTesting/'
+                      'SaltTesting-0.5.0.tar.gz\n    \nCleaning up...'
+        })
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list,
+                                       'pip.install': pip_install}):
+            ret = pip.installed(
+                'https://pypi.python.org/packages/source/S/SaltTesting/'
+                'SaltTesting-0.5.0.tar.gz'
+                '#md5=e6760af92b7165f8be53b5763e40bc24'
+            )
+            self.assertSaltTrueReturn({'test': ret})
+            self.assertInSaltComment(
+                'There was no error installing package '
+                '\'https://pypi.python.org/packages/source/S/SaltTesting/'
+                'SaltTesting-0.5.0.tar.gz#md5=e6760af92b7165f8be53b5763e40bc24\' '
+                'although it does not show when calling \'pip.freeze\'.',
+                {'test': ret}
+            )
+            self.assertInSaltReturn(
+                'Installed',
+                {'test': ret},
+                ('changes', 'https://pypi.python.org/packages/source/S/'
+                            'SaltTesting/SaltTesting-0.5.0.tar.gz'
+                            '#md5=e6760af92b7165f8be53b5763e40bc24==???')
             )
 
 

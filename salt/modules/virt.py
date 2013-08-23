@@ -11,15 +11,15 @@ import os
 import re
 import shutil
 import subprocess
-from xml.dom import minidom
 
 # Import third party libs
+import yaml
 try:
     import libvirt
-    HAS_LIBVIRT = True
+    from xml.dom import minidom
+    HAS_ALL_IMPORTS = True
 except ImportError:
-    HAS_LIBVIRT = False
-import yaml
+    HAS_ALL_IMPORTS = False
 
 # Import salt libs
 import salt.utils
@@ -37,7 +37,7 @@ VIRT_STATE_NAME_MAP = {0: 'running',
 
 
 def __virtual__():
-    if not HAS_LIBVIRT:
+    if not HAS_ALL_IMPORTS:
         return False
     return 'virt'
 
@@ -179,7 +179,13 @@ def _get_target(target, ssh):
     return ' %s://%s/%s' % (proto, target, 'system')
 
 
-def _gen_xml(name, cpu, mem, vda, nicp, hypervisor, **kwargs):
+def _gen_xml(name,
+             cpu,
+             mem,
+             vda,
+             nicp,
+             hypervisor,
+             **kwargs):
     '''
     Generate the XML string to define a libvirt vm
     '''
@@ -259,7 +265,14 @@ def _nic_profile(nic):
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
 
 
-def init(name, cpu, mem, image, nic='default', hypervisor='kvm', start=True, **kwargs):
+def init(name,
+         cpu,
+         mem,
+         image,
+         nic='default',
+         hypervisor='kvm',
+         start=True,
+         **kwargs):
     '''
     Initialize a new vm
 

@@ -60,6 +60,10 @@
         {%- for sidebartemplate in sidebars|default(html_default_sidebars, true) %}
             {%- include sidebartemplate %}
         {%- endfor %}
+
+        <h3>Upcoming SaltStack Events</h3>
+        <script src="http://cdn.lanyrd.net/badges/person-v1.min.js"></script>
+        <div class="lanyrd-target-splat"><a href="http://lanyrd.com/profile/saltstackinc/" class="lanyrd-splat lanyrd-number-3 lanyrd-context-future" rel="me">My conferences on Lanyrd</a></div>
     </div>
     {%- endif %}
 {%- endmacro %}

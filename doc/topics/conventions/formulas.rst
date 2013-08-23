@@ -1,3 +1,5 @@
+.. _conventions-formula:
+
 =============
 Salt Formulas
 =============
@@ -168,6 +170,7 @@ A basic Formula repository should have the following layout::
 
     foo-formula
     |-- foo/
+    |   |-- package-map.jinja
     |   |-- init.sls
     |   `-- bar.sls
     |-- LICENSE
@@ -202,6 +205,67 @@ A sample skeleton for the ``README.rst`` file:
         Install the ``foo`` package and enable the service.
     ``foo.bar``
         Install the ``bar`` package.
+
+``package-map.jinja``
+---------------------
+
+It is useful to have a single source for platform-specific or other
+parameterized information that can be reused throughout a Formula. See
+":ref:`conventions-formula-parameterization`" below for more information. Such
+a file should be named :file:`package-map.jinja` and live alongside the state
+files.
+
+The following is an example from the MySQL Formula.
+
+:file:`package-map.jinja`:
+
+.. code:: jinja
+
+    {% set mysql = salt['grains.filter_by']({
+        'Debian': {
+            'server': 'mysql-server',
+            'client': 'mysql-client',
+            'service': 'mysql',
+            'config': '/etc/mysql/my.cnf',
+        },
+        'RedHat': {
+            'server': 'mysql-server',
+            'client': 'mysql',
+            'service': 'mysqld',
+            'config': '/etc/my.cnf',
+        },
+        'Gentoo': {
+            'server': 'dev-db/mysql',
+            'mysql-client': 'dev-db/mysql',
+            'service': 'mysql',
+            'config': '/etc/mysql/my.cnf',
+        },
+    }, merge=salt['pillar.get']('mysql:lookup')) %}
+
+Any of the values defined above can be fetched for the current platform in any
+state file using the following syntax:
+
+.. code:: yaml
+
+    {% from "mysql/package-map.jinja" import mysql with context %}
+
+    mysql-server:
+      pkg:
+        - installed
+        - name: {{ mysql.server }}
+      service:
+        - running
+        - name: {{ mysql.service }}
+        - require:
+          - pkg: mysql-server
+
+    mysql-config:
+      file:
+        - managed
+        - name: {{ mysql.config }}
+        - source: salt://mysql/conf/my.cnf
+        - watch:
+          - service: mysql-server
 
 SLS files
 ---------
@@ -273,6 +337,8 @@ using the :py:func:`~salt.modules.grains.filter_by` function:
         - managed
         - name: {{ apache.conf }}/myconf.conf
 
+.. _conventions-formula-parameterization:
+
 Configuration and parameterization
 ----------------------------------
 
@@ -283,8 +349,8 @@ and must provide a default value:
 .. code:: jinja
 
     {% if salt['pillar.get']('horizon:use_ssl', False) %}
-    ssl_crt: {{ salt['pillar.get']('horizon:ssl_crt', '/etc/ssl/certs/hozizon.crt') }}
-    ssl_key: {{ salt['pillar.get']('horizon:ssl_key', '/etc/ssl/certs/hozizon.key') }}
+    ssl_crt: {{ salt['pillar.get']('horizon:ssl_crt', '/etc/ssl/certs/horizon.crt') }}
+    ssl_key: {{ salt['pillar.get']('horizon:ssl_key', '/etc/ssl/certs/horizon.key') }}
     {% endif %}
 
 Any default values used in the Formula must also be documented in the
