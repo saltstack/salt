@@ -183,12 +183,12 @@ def _gen_xml(name, cpu, mem, vda, nicp, hypervisor, **kwargs):
     '''
     Generate the XML string to define a libvirt vm
     '''
-    mem = mem * 1024
+    mem = mem * 1024 # MB
     data = '''
 <domain type='%%HYPERVISOR%%'>
         <name>%%NAME%%</name>
         <vcpu>%%CPU%%</vcpu>
-        <memory>%%MEM%%</memory>
+        <memory unit='KiB'>%%MEM%%</memory>
         <os>
                 <type>hvm</type>
                 <boot dev='hd'/>
@@ -544,7 +544,7 @@ def get_disks(vm_):
                     'file': qemu_target}
     for dev in disks:
         try:
-            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
+            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
             if hypervisor not in ['qemu', 'kvm']:
                 break
 
@@ -826,7 +826,7 @@ def create_xml_str(xml):
 
 def create_xml_path(path):
     '''
-    Start a defined domain
+    Start a domain based on the XML-file path passed to the function
 
     CLI Example::
 
@@ -847,6 +847,49 @@ def define_xml_str(xml):
     '''
     conn = __get_conn()
     return conn.defineXML(xml) is not None
+
+
+def define_xml_path(path):
+    '''
+    Define a domain based on the XML-file path passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_xml_path <path to XML file on the node>
+
+    '''
+    if not os.path.isfile(path):
+        return False
+    return define_xml_str(salt.utils.fopen(path, 'r').read())
+
+
+def define_vol_xml_str(xml):
+    '''
+    Define a volume based on the XML passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_vol_xml_str <XML in string format>
+    '''
+    poolname = __salt__['config.get']('libvirt:storagepool', 'default')
+    conn = __get_conn()
+    pool = conn.storagePoolLookupByName(str(poolname))
+    return pool.createXML(xml, 0) is not None
+
+
+def define_vol_xml_path(path):
+    '''
+    Define a volume based on the XML-file path passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_vol_xml_path <path to XML file on the node>
+
+    '''
+    if not os.path.isfile(path):
+        return False
+    return define_vol_xml_str(salt.utils.fopen(path, 'r').read())
+
 
 def migrate_non_shared(vm_, target, ssh=False):
     '''
