@@ -28,6 +28,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+
 def __virtual__():
     '''
     Only load this module if nova
@@ -58,7 +59,9 @@ def flavor_list():
     '''
     Return a list of available flavors (nova flavor-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_list
     '''
@@ -96,7 +99,9 @@ def flavor_create(name,      # pylint: disable=C0103
     <disk>   Disk size in GB
     <vcpus>  Number of vcpus
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_create myflavor id=6 ram=4096 disk=10 vcpus=1
     '''
@@ -115,7 +120,9 @@ def flavor_delete(id):  # pylint: disable=C0103
     '''
     Delete a flavor from nova by id (nova flavor-delete)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_delete 7'
     '''
@@ -128,7 +135,9 @@ def keypair_list():
     '''
     Return a list of available keypairs (nova keypair-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.keypair_list
     '''
@@ -147,7 +156,9 @@ def keypair_add(name, pubfile=None, pubkey=None):
     '''
     Add a keypair to nova (nova keypair-add)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' nova.keypair_add mykey pubfile='/home/myuser/.ssh/id_rsa.pub'
         salt '*' nova.keypair_add mykey pubkey='ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAuGj4A7HcPLPl/etc== myuser@mybox'
@@ -167,7 +178,9 @@ def keypair_delete(name):
     '''
     Add a keypair to nova (nova keypair-delete)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.keypair_delete mykey'
     '''
@@ -181,7 +194,9 @@ def image_list(name=None):
     Return a list of available images (nova images-list + nova image-show)
     If a name is provided, only that image will be displayed.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' nova.image_list
         salt '*' nova.image_list myimage
@@ -213,7 +228,9 @@ def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable=C0103
     '''
     Sets a key=value pair in the metadata for an image (nova image-meta set)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
@@ -235,7 +252,9 @@ def image_meta_delete(id=None,     # pylint: disable=C0103
     '''
     Delete a key=value pair from the metadata for an image (nova image-meta set)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' nova.image_meta_delete id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
@@ -264,7 +283,9 @@ def server_list():
     '''
     Return detailed information for an active server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.show
     '''
@@ -291,7 +312,9 @@ def server_show(server_id):
     '''
     Return detailed information for an active server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.show
     '''
@@ -336,7 +359,9 @@ def secgroup_create(name, description):
     '''
     Add a secgroup to nova (nova secgroup-create)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.secgroup_create mygroup 'This is my security group'
     '''
@@ -350,7 +375,9 @@ def secgroup_delete(name):
     '''
     Delete a secgroup to nova (nova secgroup-delete)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.secgroup_delete mygroup
     '''
@@ -366,7 +393,9 @@ def secgroup_list():
     '''
     Return a list of available security groups (nova items-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.secgroup_list
     '''
@@ -388,7 +417,9 @@ def _item_list():
     Template for writing list functions
     Return a list of available items (nova items-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.item_list
     '''
