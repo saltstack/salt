@@ -783,6 +783,12 @@ def version(bin_env=None):
     virtualenv and get the version of pip in that virtualenv.
 
     If unable to detect the pip version, returns ``None``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.version
     '''
     output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
     try:
