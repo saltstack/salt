@@ -1374,7 +1374,7 @@ def set_selections(path=None, selection=None, clear=False):
 
     if type(selection) in StringTypes:
         try:
-            selection = yaml.safe(selection)
+            selection = yaml.safe_load(selection)
         except yaml.parser.ParserError as e:
             log.error(e)
             selection = {}
