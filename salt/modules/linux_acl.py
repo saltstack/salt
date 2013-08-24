@@ -19,7 +19,9 @@ def version():
     '''
     Return facl version from getfacl --version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' acl.version
     '''
@@ -32,7 +34,10 @@ def version():
 def getfacl(*args):
     '''
     Return (extremely verbose) map of FACLs on specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.getfacl /tmp/house/kitchen
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
@@ -69,12 +74,12 @@ def getfacl(*args):
                               user=ret[dentry]['comments']['owner'],
                               group=ret[dentry]['comments']['group'])
             acl_type = vals['type']
-            del(vals['type'])
+            del vals['type']
             for entity in ('user', 'group'):
                 plural = entity + 's'
                 if entity in vals.keys():
                     usergroup = vals[entity]
-                    del(vals[entity])
+                    del vals[entity]
                     if acl_type == 'acl':
                         ret[dentry][plural].append({usergroup: vals})
                     elif acl_type == 'default':
@@ -85,7 +90,7 @@ def getfacl(*args):
                         ret[dentry]['defaults'][plural].append({usergroup: vals})
             for entity in ('other', 'mask'):
                 if entity in vals.keys():
-                    del(vals[entity])
+                    del vals[entity]
                     ret[dentry][entity] = vals
     return ret
 
@@ -136,7 +141,10 @@ def _parse_acl(acl, user, group):
 def wipefacls(*args):
     '''
     Remove all FACLs from the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.wipefacls /tmp/house/kitchen
         salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom
@@ -151,7 +159,10 @@ def wipefacls(*args):
 def modfacl(acl_type, acl_name, perms, *args):
     '''
     Add or modify a FACL for the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.addfacl user myuser rwx /tmp/house/kitchen
         salt '*' acl.addfacl default:group mygroup rx /tmp/house/kitchen
@@ -180,7 +191,10 @@ def modfacl(acl_type, acl_name, perms, *args):
 def delfacl(acl_type, acl_name, *args):
     '''
     Remove specific FACL from the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.delfacl user myuser /tmp/house/kitchen
         salt '*' acl.delfacl default:group mygroup /tmp/house/kitchen
@@ -204,4 +218,3 @@ def delfacl(acl_type, acl_name, *args):
         cmd += ' {0}'.format(dentry)
     __salt__['cmd.run'](cmd)
     return True
-

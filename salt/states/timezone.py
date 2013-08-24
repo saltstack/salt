@@ -7,8 +7,23 @@ The timezone can be managed for the system:
 .. code-block:: yaml
 
     America/Denver:
+      timezone.system
+
+The system and the hardware clock are not necessarily set to the same time.
+By default, the hardware clock is set to localtime, meaning it is set to the
+same time as the system clock. If `utc` is set to True, then the hardware clock
+will be set to UTC, and the system clock will be an offset of that.
+
+.. code-block:: yaml
+
+    America/Denver:
       timezone.system:
         - utc: True
+
+The Ubuntu community documentation contains an explanation of this setting, as
+it applies to systems that dual-boot with Windows.
+
+http://tinyurl.com/5fjzmn
 '''
 
 
@@ -27,7 +42,7 @@ def system(name, utc=''):
         The name of the timezone to use (e.g.: America/Denver)
 
     utc
-        Whether or not to use UTC (default is True)
+        Whether or not to set the hardware clock to UTC (default is True)
     '''
     ret = {'name': name,
            'changes': {},
@@ -56,7 +71,7 @@ def system(name, utc=''):
     elif utc != '' and utc == myutc:
         messages.append('UTC already set to {0}'.format(name))
 
-    if ret['result'] == True:
+    if ret['result'] is True:
         ret['comment'] = ', '.join(messages)
         return ret
 

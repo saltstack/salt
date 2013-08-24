@@ -1,13 +1,19 @@
+# Import python libs
 import tempfile
 
-from saltunittest import TestCase, TestLoader, TextTestRunner
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
 
-from salt import config as sconfig
+ensure_in_syspath('../../')
+
+# Import Salt libs
 from salt.modules import file as filemod
 from salt.modules import cmdmod
 
 filemod.__salt__ = {
     'cmd.run': cmdmod.run,
+    'cmd.run_all': cmdmod.run_all
 }
 
 SED_CONTENT = """test
@@ -32,10 +38,12 @@ class FileModuleTestCase(TestCase):
             filemod.sed(path, before, after, limit=limit)
 
             with open(path, 'rb') as newfile:
-                self.assertEquals(SED_CONTENT.replace(before, ''), newfile.read())
+                self.assertEquals(
+                    SED_CONTENT.replace(before, ''),
+                    newfile.read()
+                )
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(FileModuleTestCase)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(FileModuleTestCase, needs_daemon=False)

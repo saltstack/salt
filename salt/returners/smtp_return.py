@@ -31,6 +31,7 @@ There are a few things to keep in mind:
 import pprint
 import logging
 import smtplib
+from email.utils import formatdate
 
 log = logging.getLogger(__name__)
 
@@ -60,13 +61,15 @@ def returner(ret):
     content = pprint.pformat(ret['return'])
     message = ('From: {0}\r\n'
                'To: {1}\r\n'
-               'Subject: {2}\r\n'
+               'Date: {2}\r\n'
+               'Subject: {3}\r\n'
                '\r\n'
-               'id: {3}\r\n'
-               'function: {4}\r\n'
-               'jid: {5}\r\n'
-               '{6}').format(from_addr,
+               'id: {4}\r\n'
+               'function: {5}\r\n'
+               'jid: {6}\r\n'
+               '{7}').format(from_addr,
                              to_addrs,
+                             formatdate(localtime=True),
                              subject,
                              ret['id'],
                              ret['fun'],
@@ -80,4 +83,3 @@ def returner(ret):
         server.login(user, passwd)
     server.sendmail(from_addr, to_addrs, message)
     server.quit()
-

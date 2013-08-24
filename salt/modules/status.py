@@ -74,7 +74,7 @@ def procs():
 
 def custom():
     '''
-    Return a custom composite of status data and info for this minon,
+    Return a custom composite of status data and info for this minion,
     based on the minion config file. An example config like might be::
 
         status.cpustats.custom: [ 'cpu', 'ctxt', 'btime', 'processes' ]
@@ -124,19 +124,15 @@ def loadavg():
 
         salt '*' status.loadavg
     '''
-    procf = '/proc/loadavg'
-    if not os.path.isfile(procf):
-        return {}
-    comps = salt.utils.fopen(procf, 'r').read().strip()
-    load_avg = comps.split()
-    return {'1-min':  _number(load_avg[0]),
-            '5-min':  _number(load_avg[1]),
-            '15-min': _number(load_avg[2])}
+    load_avg = os.getloadavg()
+    return {'1-min': load_avg[0],
+            '5-min': load_avg[1],
+            '15-min': load_avg[2]}
 
 
 def cpustats():
     '''
-    Return the CPU stats for this minon
+    Return the CPU stats for this minion
 
     CLI Example::
 
@@ -190,7 +186,7 @@ def meminfo():
         comps = line.split()
         comps[0] = comps[0].replace(':', '')
         ret[comps[0]] = {
-            'value':    comps[1],
+            'value': comps[1],
         }
         if len(comps) > 2:
             ret[comps[0]]['unit'] = comps[2]
@@ -412,7 +408,7 @@ def netdev():
     return ret
 
 
-def w():  # pylint: disable-msg=C0103
+def w():  # pylint: disable=C0103
     '''
     Return a list of logged in users for this minion, using the w command
 
@@ -449,6 +445,7 @@ def all_status():
     return {'cpuinfo': cpuinfo(),
             'cpustats': cpustats(),
             'diskstats': diskstats(),
+            'diskusage': diskusage(),
             'loadavg': loadavg(),
             'meminfo': meminfo(),
             'netdev': netdev(),
@@ -467,6 +464,12 @@ def pid(sig):
 
         salt '*' status.pid <sig>
     '''
+    # Check whether the sig is already quoted (we check at the end in case they
+    # send a sig like `-E 'someregex'` to use egrep) and doesn't begin with a
+    # dash (again, like `-E someregex`).  Quote sigs that qualify.
+    if (not sig.endswith('"') and not sig.endswith("'") and
+            not sig.startswith('-')):
+        sig = "'" + sig + "'"
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-            __grains__, sig)
+        __grains__, sig)
     return (__salt__['cmd.run_stdout'](cmd) or '')

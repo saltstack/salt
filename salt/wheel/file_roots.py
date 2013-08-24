@@ -34,7 +34,7 @@ def list_env(env='base'):
     Return all of the file paths found in an environment
     '''
     ret = {}
-    if not env in __opts__['file_roots']:
+    if env not in __opts__['file_roots']:
         return ret
     for f_root in __opts__['file_roots'][env]:
         ret[f_root] = {}
@@ -91,9 +91,9 @@ def write(data, path, env='base', index=0):
     Write the named file, by default the first file found is written, but the
     index of the file can be specified to write to a lower priority file root
     '''
-    if not env in __opts__['file_roots']:
+    if env not in __opts__['file_roots']:
         return 'Named environment {0} is not present'.format(env)
-    if not len(__opts__['file_roots'][env]) > index:
+    if len(__opts__['file_roots'][env]) <= index:
         return 'Specified index {0} in environment {1} is not present'.format(
                 index, env)
     if os.path.isabs(path):

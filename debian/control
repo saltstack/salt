@@ -1,7 +1,7 @@
 Source: salt
 Section: admin
 Priority: optional
-Maintainer: Sean Channel <pentabular@gmail.com>
+Maintainer: Corey Quinn <corey@sequestered.net>
 Build-Depends: debhelper (>= 7.0.50),
                cython,
                python | python-all | python-dev | python-all-dev,
@@ -15,7 +15,7 @@ Build-Depends: debhelper (>= 7.0.50),
                msgpack-python
 Standards-Version: 3.9.3
 Homepage: http://saltstack.org
-#X-Python-Version: >= 2.6, <= 2.7
+XS-Python-Version: >= 2.6, <= 2.7
 
 
 Package: salt-common
@@ -27,7 +27,9 @@ Depends: ${python:Depends}, ${misc:Depends}, ${shlibs:Depends},
          python-m2crypto,
          python-yaml,
          python-zmq,
+         dctrl-tools,
          msgpack-python
+Recommends: dmidecode, pciutils
 Description: Shared libraries that salt requires for all packages
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -72,7 +74,7 @@ Package: salt-minion
 Architecture: all
 Depends: ${misc:Depends}, python, python-support, python-pkg-resources,
 Pre-Depends: salt-common (= ${source:Version})
-Recommends: dmidecode, pciutils
+Recommends: debconf-utils
 Description: This package represents the client package for salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.

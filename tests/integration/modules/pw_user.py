@@ -3,9 +3,13 @@ import os
 import string
 import random
 
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import destructiveTest, ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
-from saltunittest import destructiveTest, skipIf
 
 
 class UseraddModuleTest(integration.ModuleCase):
@@ -27,7 +31,7 @@ class UseraddModuleTest(integration.ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the
         # name

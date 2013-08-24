@@ -67,10 +67,10 @@ template, using the ``defaults`` and ``context`` mappings of the
         - source: salt://motd
         - template: jinja
         - defaults:
-          message: 'Foo'
+            message: 'Foo'
         {% if grains['os'] == 'FreeBSD' %}
         - context:
-          message: 'Bar'
+            message: 'Bar'
         {% endif %}
 
 The template will receive a variable ``message``, which would be accessed in the
@@ -98,6 +98,105 @@ the context into the included file is required:
     {% from 'lib.sls' import test with context %}
 
 .. _imports: http://jinja.pocoo.org/docs/templates/#import
+
+Variable and block Serializers
+==============================
+
+Salt allows to serialize any variable into **json** or **yaml**. For example
+this variable::
+
+    data:
+      foo: True
+      bar: 42
+      baz:
+        - 1
+        - 2
+        - 3
+      qux: 2.0
+
+with this template::
+
+    yaml -> {{ data|yaml }}
+
+    json -> {{ data|json }}
+
+will be rendered has::
+
+    yaml -> {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
+
+    json -> {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
+
+
+Strings and variables can be deserialized with **load_yaml** and **load_json**
+tags and filters. It allows to manipulate data directly in templates, easily:
+
+.. code-block:: yaml
+
+    {%- set json_var = '{"foo": "bar", "baz": "qux"}'|load_json %}
+    My json_var foo is {{ json_var.foo }}
+
+    {%- set yaml_var = "{bar: baz: qux}"|load_yaml %}
+    My yaml_var bar.baz is {{ yaml_var.bar.baz }}
+
+    {%- load_json as json_block %}
+      {
+        "qux": {{ yaml_var|json }},
+      }
+    {% endload %}
+    My json_block qux.bar.baz is {{ json_block.qux.bar.baz }}
+
+    {%- load_yaml as yaml_block %}
+      bar:
+        baz:
+          qux
+    {% endload %}
+    My yaml_block bar.baz is {{ yaml2.bar.baz }}
+
+will be rendered has::
+
+    My json_var foo is bar
+
+    My yaml_var bar.baz is qux
+
+    My json_block foo is quz
+
+    My yaml_block bar.baz is qux
+
+Template Serializers
+====================
+
+Salt implements **import_yaml** and **import_json** tags. They work like the
+`import tag`_, except that the document is also deserialized.
+
+Imagine you have a generic state file in which you have the complete data of
+your infrastucture:
+
+.. code-block:: yaml
+
+    # everything.sls
+    users:
+      foo:
+        - john
+      bar:
+        - bob
+      baz:
+        - smith
+
+But you don't want to expose everything to a minion. This state file:
+
+.. code-block:: yaml
+
+    # specialized.sls
+    {% import_yaml "everything.sls" as all %}
+    my_admins:
+      my_foo: {{ all.users.foo|yaml }}
+
+will be rendered has::
+
+    my_admins:
+      my_foo: [john]
+
+.. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
 
 Macros
 ======
@@ -135,9 +234,38 @@ depending on the packaging system's naming convention. The whitespace of the
 macro was eliminated, so that the macro would return a string without line
 breaks, using `whitespace control`_.
 
+Template Inheritance
+====================
+
+`Template inheritance`_ works fine from state files and files. The search path
+starts at the root of the state tree or pillar.
+
+.. _`Template inheritance`: http://jinja.pocoo.org/docs/templates/#template-inheritance
 .. _`Macros`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`macro`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`whitespace control`: http://jinja.pocoo.org/docs/templates/#whitespace-control
+
+Filters
+=======
+
+Saltstack extends `builtin filters`_ with his custom filters:
+
+strftime
+  Converts any time related object into a time based string. It requires a
+  valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
+  :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
+  the official Python documentation. Fuzzy dates are parsed by `timelib`_ python
+  module. Some exemples are available on this pages.
+
+  .. code-block:: yaml
+
+      {{ "2002/12/25"|strftime("%y") }}
+      {{ "1040814000"|strftime("%Y-%m-%d") }}
+      {{ datetime|strftime("%u") }}
+      {{ "now"|strftime }}
+
+.. _`builtin filters`: http://jinja.pocoo.org/docs/templates/##builtin-filters
+.. _`timelib`: https://github.com/pediapress/timelib/
 
 Jinja in Files
 ==============
@@ -168,6 +296,13 @@ Jinja_ can be used in the same way in managed files:
 
 As an example, configuration was pulled from the file context and from an
 external template file.
+
+.. note::
+
+    Macros and variables can be shared across templates. They should not be
+    starting with one or more underscores, and should be managed by one of the
+    following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
+    `import_json`.
 
 
 .. automodule:: salt.renderers.jinja

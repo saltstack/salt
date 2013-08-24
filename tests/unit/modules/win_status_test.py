@@ -1,14 +1,11 @@
+# Import python libs
 import new
 import sys
-import os
 
-if __name__ == '__main__':
-    sys.path.insert(
-        0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    )
-
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
-
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # wmi and pythoncom modules are platform specific...
 wmi = new.module('wmi')
@@ -34,13 +31,14 @@ try:
 except ImportError:
     has_mock = False
 
+# This is imported late so mock can do it's job
 import salt.modules.win_status as status
 
 
 @skipIf(has_mock is False,
         wrong_version and
-        "you need to upgrade your mock version to >= 0.8.0" or
-        "mock python module is unavailable")
+        'you need to upgrade your mock version to >= 0.8.0' or
+        'mock python module is unavailable')
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
@@ -55,7 +53,9 @@ class TestProcsBase(TestCase):
             user_domain='domain',
             get_owner_result=0):
         process = Mock()
-        process.GetOwner = Mock(return_value=(user_domain, get_owner_result, user))
+        process.GetOwner = Mock(
+            return_value=(user_domain, get_owner_result, user)
+        )
         process.ProcessId = pid
         process.CommandLine = cmd
         process.Name = name
@@ -137,8 +137,8 @@ class TestProcsUnicodeAttributes(TestProcsBase):
 
 class TestProcsWMIGetOwnerAccessDeniedWorkaround(TestProcsBase):
     def setUp(self):
-        self.expected_user = "SYSTEM"
-        self.expected_domain = "NT AUTHORITY"
+        self.expected_user = 'SYSTEM'
+        self.expected_domain = 'NT AUTHORITY'
         self.add_process(pid=0, get_owner_result=2)
         self.add_process(pid=4, get_owner_result=2)
         self.call_procs()
@@ -161,7 +161,10 @@ class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
         with patch('salt.modules.win_status.log') as log:
             self.call_procs()
         log.warning.assert_called_once_with(ANY)
-        self.assertIn(str(self.expected_error_code), log.warning.call_args[0][0])
+        self.assertIn(
+            str(self.expected_error_code),
+            log.warning.call_args[0][0]
+        )
 
 
 class TestEmptyCommandLine(TestProcsBase):
@@ -183,17 +186,20 @@ class TestEmptyCommandLine(TestProcsBase):
 #            self.call_procs()
 #        self.expected_calls = [call()] * call_count
 #
-#    def test_initialize_and_unintialize_called(self):
+#    def test_initialize_and_uninitialize_called(self):
 #        pythoncom.CoInitialize.assert_has_calls(self.expected_calls)
 #        pythoncom.CoUninitialize.assert_has_calls(self.expected_calls)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestProcsCount)
-    tests = loader.loadTestsFromTestCase(TestProcsAttributes)
-    tests = loader.loadTestsFromTestCase(TestProcsUnicodeAttributes)
-    tests = loader.loadTestsFromTestCase(
-                TestProcsWMIGetOwnerAccessDeniedWorkaround)
-    tests = loader.loadTestsFromTestCase(TestProcsWMIGetOwnerErrorsAreLogged)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(
+        [
+            TestProcsCount,
+            TestProcsAttributes,
+            TestProcsUnicodeAttributes,
+            TestProcsWMIGetOwnerErrorsAreLogged,
+            TestProcsWMIGetOwnerAccessDeniedWorkaround,
+        ],
+        needs_daemon=False
+    )

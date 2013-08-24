@@ -105,7 +105,7 @@ def _main():
 
         breader = BufferedReader(fpath, max_size, chunk_size)
         for chunk in breader:
-            chunk
+            chunk  # pylint: disable=W0104
         return
 
     def sizeof_fmt(num):
@@ -115,7 +115,8 @@ def _main():
             num /= 1024.0
         return '{0:3.1f}{1}'.format(num, 'TB')
 
-    import os, timeit
+    import os
+    import timeit
     fpath = os.path.normpath(os.path.join(
         os.path.dirname(__file__),
         "../../doc/topics/tutorials/starting_states.rst"

@@ -3,7 +3,7 @@ Installation of Ruby modules packaged as gems.
 ==============================================
 
 A state module to manage rubygems. Gems can be set up to be installed
-or removed. This module will use RVM if it is installed. In that case
+or removed. This module will use RVM if it is installed. In that case,
 you can specify what ruby version and gemset to target.
 
 .. code-block:: yaml
@@ -17,17 +17,17 @@ you can specify what ruby version and gemset to target.
 
 def __virtual__():
     '''
-    Only load is gem module is available in __salt__
+    Only load if gem module is available in __salt__
     '''
     return 'gem' if 'gem.list' in __salt__ else False
 
 
-def installed(name,          # pylint: disable-msg=C0103
+def installed(name,          # pylint: disable=C0103
               ruby=None,
               runas=None,
               version=None,
               rdoc=False,
-              ri=False):     # pylint: disable-msg=C0103
+              ri=False):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 

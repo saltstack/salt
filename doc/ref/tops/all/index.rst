@@ -10,4 +10,7 @@ Full list of builtin master tops modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cobbler
     ext_nodes
+    mongo
+    reclass_adapter

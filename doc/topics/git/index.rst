@@ -74,4 +74,4 @@ if there is a security fix they can be made sooner.
 The point release is only designated by tagging the commit on the release
 branch with release number using the existing convention (version 0.11.1 is
 tagged with v0.11.1). From the tag point a new source tarball is generated
-and published to Pypi, and a release announcement is made.
+and published to PyPI, and a release announcement is made.

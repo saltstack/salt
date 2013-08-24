@@ -98,17 +98,15 @@ def list_aliases():
     '''
     Return the aliases found in the aliases file in this format::
 
-        {'<alias>': '<target>'}
+        {'alias': 'target'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' aliases.list_aliases
     '''
-    ret = {}
-    for alias, target, comment in __parse_aliases():
-        if not alias:
-            continue
-        ret[alias] = target
+    ret = dict((alias, target) for alias, target, comment in __parse_aliases() if alias)
     return ret
 
 
@@ -116,9 +114,11 @@ def get_target(alias):
     '''
     Return the target associated with an alias
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' aliases.get_target <alias>
+    .. code-block:: bash
+
+        salt '*' aliases.get_target alias
     '''
     aliases = list_aliases()
     if alias in aliases:
@@ -130,9 +130,11 @@ def has_target(alias, target):
     '''
     Return true if the alias/target is set
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' aliases.has_target <alias> <target>
+    .. code-block:: bash
+
+        salt '*' aliases.has_target alias target
     '''
     aliases = list_aliases()
     return alias in aliases and target == aliases[alias]
@@ -144,9 +146,11 @@ def set_target(alias, target):
     any previous entry for the given alias or create a new one if it does not
     exist.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' aliases.set_target <alias> <target>
+    .. code-block:: bash
+
+        salt '*' aliases.set_target alias target
     '''
 
     if get_target(alias) == target:
@@ -173,9 +177,11 @@ def rm_alias(alias):
     '''
     Remove an entry from the aliases file
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' aliases.rm_alias <alias>
+    .. code-block:: bash
+
+        salt '*' aliases.rm_alias alias
     '''
     if not get_target(alias):
         return True

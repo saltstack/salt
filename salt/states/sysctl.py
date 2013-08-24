@@ -11,10 +11,14 @@ Control the kernel sysctl system
       - value: 20
 '''
 
+# Import python libs
+import re
 
 def present(name, value, config='/etc/sysctl.conf'):
     '''
-    Ensure that the named sysctl value is set
+    Ensure that the named sysctl value is set in memory and persisted to the
+    named configuration file. The default sysctl configuration file is
+    /etc/sysctl.conf
 
     name
         The name of the sysctl value to edit
@@ -33,17 +37,18 @@ def present(name, value, config='/etc/sysctl.conf'):
     current = __salt__['sysctl.show']()
     if __opts__['test']:
         if name in current:
-            if current[name] != str(value):
+            if re.sub(' +|\t+', ' ', current[name]) != re.sub(' +|\t+', ' ', str(value)):
                 ret['result'] = None
                 ret['comment'] = (
                         'Sysctl option {0} set to be changed to {1}'
                         ).format(name, value)
                 return ret
+            else:
+                ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(name, value)
+                return ret
         else:
-            ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(
-                    name,
-                    value
-                    )
+            ret['result'] = False
+            ret['comment'] = 'Invalid sysctl option {0} = {1}'.format(name, value)
             return ret
 
     update = __salt__['sysctl.persist'](name, value, config)

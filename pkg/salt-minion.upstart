@@ -5,9 +5,13 @@ start on (net-device-up
           and runlevel [2345])
 stop on runlevel [!2345]
 
-# work-around for unpredictable exit codes
-normal exit 0 1 2 6 9 15 143 SIGKILL SIGINT SIGABRT
-respawn
-respawn limit 10 5
+# The respawn in the minion is known to cause problems
+# because if the main minion process dies it has done
+# so most likely for a good reason. Uncomment these
+# two lines to enable respawn
+#respawn
+#respawn limit 10 5
 
-exec /usr/bin/salt-minion >/dev/null 2>&1
+script
+exec salt-minion
+end script

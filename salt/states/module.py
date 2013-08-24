@@ -5,17 +5,16 @@ Execution of Salt modules from within states.
 Individual module calls can be made via states. to call a single module
 function use the run function.
 
-One issue exists, since the name argument is present in the state call and is
-present in many modules, this argument will need to be replaced in the sls
-data with the argument m_name.
+One issue exists, since the name and fun arguments are present in the state
+call data structure and is present in many modules, this argument will need
+to be replaced in the sls data with the arguments m_name and m_fun.
 '''
 # Import python libs
-
 import datetime
 
 # Import salt libs
-import salt.state
 import salt.loader
+import salt.utils
 
 
 def wait(name, **kwargs):
@@ -27,6 +26,10 @@ def wait(name, **kwargs):
 
     ``**kwargs``
         Pass any arguments needed to execute the function
+
+    Note that this function actually does nothing -- however, if the `watch`
+    is satisfied, then `mod_watch` (defined at the bottom of this file) will be
+    run.  In this case, `mod_watch` is an alias for `run()`.
     '''
     return {'name': name,
             'changes': {},
@@ -51,7 +54,7 @@ def run(name, **kwargs):
            'changes': {},
            'comment': '',
            'result': None}
-    if not name in __salt__:
+    if name not in __salt__:
         ret['comment'] = 'Module function {0} is not available'.format(name)
         ret['result'] = False
         return ret
@@ -60,47 +63,45 @@ def run(name, **kwargs):
         ret['comment'] = 'Module function {0} is set to execute'.format(name)
         return ret
 
-    aspec = salt.state._getargs(__salt__[name])
+    aspec = salt.utils.get_function_argspec(__salt__[name])
 
     args = []
     defaults = {}
 
     arglen = 0
     deflen = 0
-    if isinstance(aspec[0], list):
-        arglen = len(aspec[0])
-    if isinstance(aspec[3], tuple):
-        deflen = len(aspec[3])
-    if aspec[2]:
-        # This state accepts kwargs
-        for key in kwargs:
-            # Passing kwargs the conflict with args == stack trace
-            if key in aspec[0]:
-                continue
-            defaults[key] = kwargs[key]
+    if isinstance(aspec.args, list):
+        arglen = len(aspec.args)
+    if isinstance(aspec.defaults, tuple):
+        deflen = len(aspec.defaults)
     # Match up the defaults with the respective args
-    for ind in range(arglen - 1, 0, -1):
+    for ind in range(arglen - 1, -1, -1):
         minus = arglen - ind
         if deflen - minus > -1:
-            defaults[aspec[0][ind]] = aspec[3][-minus]
+            defaults[aspec.args[ind]] = aspec.defaults[-minus]
     # overwrite passed default kwargs
     for arg in defaults:
         if arg == 'name':
             if 'm_name' in kwargs:
                 defaults[arg] = kwargs.pop('m_name')
+        elif arg == 'fun':
+            if 'm_fun' in kwargs:
+                defaults[arg] = kwargs.pop('m_fun')
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
-    for arg in aspec[0]:
+    for arg in aspec.args:
         if arg == 'name':
             rarg = 'm_name'
+        elif arg == 'fun':
+            rarg = 'm_fun'
         else:
             rarg = arg
-        if rarg not in kwargs and rarg not in defaults:
+        if rarg not in kwargs and arg not in defaults:
             missing.add(rarg)
             continue
-        if rarg in defaults:
-            args.append(defaults[rarg])
+        if arg in defaults:
+            args.append(defaults[arg])
         else:
             args.append(kwargs.pop(rarg))
     if missing:
@@ -111,9 +112,30 @@ def run(name, **kwargs):
         ret['result'] = False
         return ret
 
+    if aspec.varargs and aspec.varargs in kwargs:
+        varargs = kwargs.pop(aspec.varargs)
+
+        if not isinstance(varargs, list):
+            msg = "'{0}' must be a list."
+            ret['comment'] = msg.format(aspec.varargs)
+            ret['result'] = False
+            return ret
+
+        args.extend(varargs)
+
+    nkwargs = {}
+    if aspec.keywords and aspec.keywords in kwargs:
+        nkwargs = kwargs.pop(aspec.keywords)
+
+        if not isinstance(nkwargs, dict):
+            msg = "'{0}' must be a dict."
+            ret['comment'] = msg.format(aspec.keywords)
+            ret['result'] = False
+            return ret
+
     try:
-        if aspec[2]:
-            mret = __salt__[name](*args, **kwargs)
+        if aspec.keywords:
+            mret = __salt__[name](*args, **nkwargs)
         else:
             mret = __salt__[name](*args)
     except Exception:
@@ -134,6 +156,8 @@ def run(name, **kwargs):
             returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
     ret['result'] = True
+    if ret['changes'].get('retcode', 0) != 0:
+        ret['result'] = False
     return ret
 
-mod_watch = run  # pylint: disable-msg=C0103
+mod_watch = run  # pylint: disable=C0103

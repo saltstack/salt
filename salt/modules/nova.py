@@ -2,8 +2,8 @@
 Module for handling openstack nova calls.
 
 :depends:   - novaclient Python module
-:configuration: This module is not usable until the user, password, tenant and
-    auth url are specified either in a pillar or in the minion's config file.
+:configuration: This module is not usable until the user, password, tenant, and
+    auth URL are specified either in a pillar or in the minion's config file.
     For example::
 
         keystone.user: admin
@@ -22,6 +22,11 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+
+# Function alias to not shadow built-in's
+__func_alias__ = {
+    'list_': 'list'
+}
 
 
 def __virtual__():
@@ -54,7 +59,9 @@ def flavor_list():
     '''
     Return a list of available flavors (nova flavor-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_list
     '''
@@ -77,8 +84,8 @@ def flavor_list():
     return ret
 
 
-def flavor_create(name,      # pylint: disable-msg=C0103
-                  id=0,      # pylint: disable-msg=C0103
+def flavor_create(name,      # pylint: disable=C0103
+                  id=0,      # pylint: disable=C0103
                   ram=0,
                   disk=0,
                   vcpus=1):
@@ -92,7 +99,9 @@ def flavor_create(name,      # pylint: disable-msg=C0103
     <disk>   Disk size in GB
     <vcpus>  Number of vcpus
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_create myflavor id=6 ram=4096 disk=10 vcpus=1
     '''
@@ -107,11 +116,13 @@ def flavor_create(name,      # pylint: disable-msg=C0103
             'vcpus': vcpus}
 
 
-def flavor_delete(id):  # pylint: disable-msg=C0103
+def flavor_delete(id):  # pylint: disable=C0103
     '''
     Delete a flavor from nova by id (nova flavor-delete)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_delete 7'
     '''
@@ -124,7 +135,9 @@ def keypair_list():
     '''
     Return a list of available keypairs (nova keypair-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.keypair_list
     '''
@@ -143,7 +156,9 @@ def keypair_add(name, pubfile=None, pubkey=None):
     '''
     Add a keypair to nova (nova keypair-add)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' nova.keypair_add mykey pubfile='/home/myuser/.ssh/id_rsa.pub'
         salt '*' nova.keypair_add mykey pubkey='ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAuGj4A7HcPLPl/etc== myuser@mybox'
@@ -163,7 +178,9 @@ def keypair_delete(name):
     '''
     Add a keypair to nova (nova keypair-delete)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.keypair_delete mykey'
     '''
@@ -177,7 +194,9 @@ def image_list(name=None):
     Return a list of available images (nova images-list + nova image-show)
     If a name is provided, only that image will be displayed.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' nova.image_list
         salt '*' nova.image_list myimage
@@ -205,11 +224,13 @@ def image_list(name=None):
     return ret
 
 
-def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable-msg=C0103
+def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable=C0103
     '''
     Sets a key=value pair in the metadata for an image (nova image-meta set)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
@@ -218,20 +239,22 @@ def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable-msg=C0103
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id  # pylint: disable-msg=C0103
+                id = image.id  # pylint: disable=C0103
     if not id:
         return {'Error': 'A valid image name or id was not specified'}
     nt_ks.images.set_meta(id, kwargs)
     return {id: kwargs}
 
 
-def image_meta_delete(id=None,     # pylint: disable-msg=C0103
+def image_meta_delete(id=None,     # pylint: disable=C0103
                       name=None,
                       keys=None):
     '''
     Delete a key=value pair from the metadata for an image (nova image-meta set)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' nova.image_meta_delete id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
@@ -240,7 +263,7 @@ def image_meta_delete(id=None,     # pylint: disable-msg=C0103
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id  # pylint: disable-msg=C0103
+                id = image.id  # pylint: disable=C0103
     pairs = keys.split(',')
     if not id:
         return {'Error': 'A valid image name or id was not specified'}
@@ -248,7 +271,7 @@ def image_meta_delete(id=None,     # pylint: disable-msg=C0103
     return {id: 'Deleted: {0}'.format(pairs)}
 
 
-def list():
+def list_():
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_list function.
@@ -260,7 +283,9 @@ def server_list():
     '''
     Return detailed information for an active server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.show
     '''
@@ -287,7 +312,9 @@ def server_show(server_id):
     '''
     Return detailed information for an active server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.show
     '''
@@ -332,7 +359,9 @@ def secgroup_create(name, description):
     '''
     Add a secgroup to nova (nova secgroup-create)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.secgroup_create mygroup 'This is my security group'
     '''
@@ -346,7 +375,9 @@ def secgroup_delete(name):
     '''
     Delete a secgroup to nova (nova secgroup-delete)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.secgroup_delete mygroup
     '''
@@ -362,7 +393,9 @@ def secgroup_list():
     '''
     Return a list of available security groups (nova items-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.secgroup_list
     '''
@@ -384,7 +417,9 @@ def _item_list():
     Template for writing list functions
     Return a list of available items (nova items-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nova.item_list
     '''
@@ -410,7 +445,7 @@ def _item_list():
 #aggregate-details   Show details of the specified aggregate.
 #aggregate-list      Print a list of all aggregates.
 #aggregate-remove-host
-#                    Remove the specified host from the specfied aggregate.
+#                    Remove the specified host from the specified aggregate.
 #aggregate-set-metadata
 #                    Update the metadata associated with the aggregate.
 #aggregate-update    Update the aggregate's name and optionally

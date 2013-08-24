@@ -1,24 +1,32 @@
 # Import Python libs
-import sys, os
+import os
+import sys
 import shutil
 import tempfile
 from cStringIO import StringIO
 
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../')
+
 # Import Salt libs
-from saltunittest import TestCase
+import integration
 import salt.loader
 import salt.config
-from salt.state import State, HighState
+from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.minion_config(None, check_dns=False)
+OPTS = salt.config.minion_config(None)
 OPTS['id'] = 'whatever'
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])
 OPTS['test'] = False
 OPTS['grains'] = salt.loader.grains(OPTS)
+
 
 class PyDSLRendererTestCase(TestCase):
 
@@ -31,9 +39,8 @@ class PyDSLRendererTestCase(TestCase):
 
     def render_sls(self, content, sls='', env='base', **kws):
         return self.HIGHSTATE.state.rend['pydsl'](
-                    StringIO(content), env=env, sls=sls,
-                    **kws)
-
+            StringIO(content), env=env, sls=sls, **kws
+        )
 
     def test_state_declarations(self):
         result = self.render_sls('''
@@ -76,7 +83,6 @@ state('A').service.running(name='apache')
         self.assertEqual(s[1]['name'], 'myfile.txt')
         self.assertEqual(s[2]['source'], 'salt://path/to/file')
 
-
     def test_requisite_declarations(self):
         result = self.render_sls('''
 state('X').cmd.run('echo hello')
@@ -101,8 +107,9 @@ state('H').cmd.run('echo world')
         self.assertEqual(b[4]['require'][0]['cmd'], 'A')
         self.assertEqual(b[5]['watch'][0]['service'], 'G')
         self.assertEqual(result['G']['service'][2]['watch_in'][0]['cmd'], 'A')
-        self.assertEqual(result['H']['cmd'][1]['require_in'][0]['cmd'], 'echo hello')
-
+        self.assertEqual(
+            result['H']['cmd'][1]['require_in'][0]['cmd'], 'echo hello'
+        )
 
     def test_include_extend(self):
         result = self.render_sls('''
@@ -122,8 +129,11 @@ extend(
 )
 ''')
         self.assertEqual(len(result), 4)
-        self.assertEqual(result['include'],
-                [{'base': sls} for sls in 'some.sls.file another.sls.file more.sls.file'.split()])
+        self.assertEqual(
+            result['include'],
+            [{'base': sls} for sls in
+             ('some.sls.file', 'another.sls.file', 'more.sls.file')]
+        )
         extend = result['extend']
         self.assertEqual(extend['X']['cmd'][0], 'run')
         self.assertEqual(extend['X']['cmd'][1]['cwd'], '/a/b/c')
@@ -135,7 +145,6 @@ extend(
         self.assertEqual(result['B']['cmd'][0], 'run')
         self.assertTrue('A' not in result)
         self.assertEqual(extend['A']['cmd'][0], 'run')
-
 
     def test_cmd_call(self):
         result = self.HIGHSTATE.state.call_template_str('''#!pydsl
@@ -153,11 +162,13 @@ state('G').cmd.wait('echo this is state G', cwd='/') \
 ''')
         ret = (result[k] for k in result.keys() if 'do_something' in k).next()
         changes = ret['changes']
-        self.assertEqual(changes, dict(a=1, b=2, args=(3,), kws=dict(x=1, y=2), some_var=12345))
+        self.assertEqual(
+            changes,
+            dict(a=1, b=2, args=(3,), kws=dict(x=1, y=2), some_var=12345)
+        )
 
         ret = (result[k] for k in result.keys() if '-G_' in k).next()
         self.assertEqual(ret['changes']['stdout'], 'this is state G')
-
 
     def test_multiple_state_func_in_state_mod(self):
         with self.assertRaisesRegexp(PyDslError, 'Multiple state functions'):
@@ -166,13 +177,11 @@ state('A').cmd.run('echo hoho')
 state('A').cmd.wait('echo hehe')
 ''')
 
-
     def test_no_state_func_in_state_mod(self):
         with self.assertRaisesRegexp(PyDslError, 'No state function specified'):
             self.render_sls('''
 state('B').cmd.require(cmd='hoho')
 ''')
-
 
     def test_load_highstate(self):
         result = self.render_sls('''
@@ -208,10 +217,7 @@ state('A').cmd.run(name='echo hello world')
         self.assertEqual(result['B']['service'][1]['require'][0]['pkg'], 'B')
         self.assertEqual(result['B']['service'][2]['watch'][0]['cmd'], 'A')
 
-
     def test_ordered_states(self):
-        if sys.version_info < (2, 7):
-            self.skipTest('OrderedDict is not available')
         result = self.render_sls('''
 __pydsl__.set(ordered=True)
 A = state('A')
@@ -226,11 +232,14 @@ state('B').file.managed(source='/a/b/c')
         self.assertEqual(result['C']['cmd'][1]['require'][0]['cmd'], 'A')
         self.assertEqual(result['B']['file'][1]['require'][0]['cmd'], 'C')
 
-
     def test_pipe_through_stateconf(self):
-        if sys.version_info < (2, 7):
-            self.skipTest('OrderedDict is not available')
-        dirpath = tempfile.mkdtemp()
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         output = os.path.join(dirpath, 'output')
         try:
             write_to(os.path.join(dirpath, 'xxx.sls'),
@@ -282,11 +291,14 @@ state('.C').cmd.run('echo C >> {2}', cwd='/')
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
-
     def test_rendering_includes(self):
-        if sys.version_info < (2, 7):
-            self.skipTest('OrderedDict is not available')
-        dirpath = tempfile.mkdtemp()
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         output = os.path.join(dirpath, 'output')
         try:
             write_to(os.path.join(dirpath, 'aaa.sls'),
@@ -339,7 +351,7 @@ extend:
 
 '''.format(output, output, output, output))
 
-            write_to(os.path.join(dirpath, 'yyy.sls'), 
+            write_to(os.path.join(dirpath, 'yyy.sls'),
 '''#!pydsl|stateconf -ps
 
 include('xxx')
@@ -365,19 +377,23 @@ hello red 1
 hello green 2
 hello blue 3
 '''.lstrip()
-             
+
             with open(output, 'r') as f:
-                self.assertEqual(f.read(), expected)
+                self.assertEqual(sorted(f.read()), sorted(expected))
 
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
-
     def test_compile_time_state_execution(self):
-        if sys.version_info < (2, 7):
-            self.skipTest('OrderedDict is not available')
-        dirpath = tempfile.mkdtemp()
-        output = os.path.join(dirpath, 'output')
+        if not sys.stdin.isatty():
+            self.skipTest('Not attached to a TTY')
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         try:
             write_to(os.path.join(dirpath, 'aaa.sls'),
 '''#!pydsl
@@ -403,9 +419,14 @@ A()
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
-
     def test_nested_high_state_execution(self):
-        dirpath = tempfile.mkdtemp()
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         output = os.path.join(dirpath, 'output')
         try:
             write_to(os.path.join(dirpath, 'aaa.sls'),
@@ -431,8 +452,6 @@ state().cmd.run('echo ccccc', cwd='/')
             shutil.rmtree(dirpath, ignore_errors=True)
 
 
-
-
 def write_to(fpath, content):
     with open(fpath, 'w') as f:
         f.write(content)
@@ -453,3 +472,8 @@ def state_highstate(matches, dirpath):
         # pprint.pprint(out)
     finally:
         HIGHSTATE.pop_active()
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PyDSLRendererTestCase, needs_daemon=False)

@@ -1,9 +1,13 @@
 # Import python libs
 import sys
 
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import integration
-from saltunittest import skipIf
 
 
 class SysctlModuleTest(integration.ModuleCase):
@@ -30,6 +34,14 @@ class SysctlModuleTest(integration.ModuleCase):
         self.assertGreater(ret.get('vm.vmtotal').splitlines(),
                            1,
                            'Multiline value was parsed wrong')
+
+    @skipIf(not sys.platform.startswith('darwin'), 'Darwin (OS X) specific')
+    def test_show_darwin(self):
+        ret = self.run_function('sysctl.show')
+        self.assertIn('kern.ostype', ret, 'kern.ostype absent')
+        self.assertEqual(
+            ret.get('kern.ostype'), 'Darwin', 'Incorrect kern.ostype'
+        )
 
 
 if __name__ == '__main__':

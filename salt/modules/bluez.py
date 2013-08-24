@@ -1,17 +1,39 @@
 '''
-Support for Bluetooth (using Bluez in Linux)
+Support for Bluetooth (using BlueZ in Linux).
+
+The following packages are required packages for this module:
+
+    bluez >= 5.7
+    bluez-libs >= 5.7
+    bluez-utils >= 5.7
+    pybluez >= 0.18
 '''
+
+# Import python libs
+import logging
 
 # Import salt libs
 import salt.utils
 import salt.modules.service
+
+log = logging.getLogger(__name__)
+HAS_PYBLUEZ = False
+try:
+    import bluetooth
+    HAS_PYBLUEZ = True
+except Exception as exc:
+    HAS_PYBLUEZ = False
+
+__func_alias__ = {
+    'address_': 'address'
+}
 
 
 def __virtual__():
     '''
     Only load the module if bluetooth is installed
     '''
-    if salt.utils.which('bluetoothd'):
+    if HAS_PYBLUEZ:
         return 'bluetooth'
     return False
 
@@ -20,75 +42,182 @@ def version():
     '''
     Return Bluez version from bluetoothd -v
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetoothd.version
     '''
-    cmd = 'bluetoothd -v'
+    cmd = 'bluetoothctl -v'
     out = __salt__['cmd.run'](cmd).splitlines()
-    return out[0]
+    bluez_version = out[0]
+    pybluez_version = '<= 0.18 (Unknown, but installed)'
+    try:
+        pybluez_version = bluetooth.__version__
+    except Exception as exc:
+        pass
+    return {'Bluez': bluez_version, 'PyBluez': pybluez_version}
 
 
-def address():
+def address_():
     '''
     Get the many addresses of the Bluetooth adapter
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.address
     '''
-    cmd = ('dbus-send --system --print-reply --dest=org.bluez / '
-           'org.bluez.Manager.DefaultAdapter|awk \'/object path/ '
-           '{print $3}\' | sed \'s/"//g\'')
-    path = __salt__['cmd.run'](cmd).splitlines()
-    devname = path[0].split('/')
-    syspath = '/sys/class/bluetooth/{0}/address'.format(devname[-1])
-    sysfile = salt.utils.fopen(syspath, 'r')
-    address = sysfile.read().strip()
-    sysfile.close()
-    return {
-                'path': path[0],
-                'devname': devname[-1],
-                'address': address,
-           }
+    ret = {}
+    cmd = 'hciconfig'
+    out = __salt__['cmd.run'](cmd).splitlines()
+    dev = ''
+    for line in out:
+        if line.startswith('hci'):
+            comps = line.split(':')
+            dev = comps[0]
+            ret[dev] = {
+                'device': dev,
+                'path': '/sys/class/bluetooth/{0}'.format(dev),
+            }
+        if 'BD Address' in line:
+            comps = line.split()
+            ret[dev]['address'] = comps[2]
+        if 'DOWN' in line:
+            ret[dev]['power'] = 'off'
+        if 'UP RUNNING' in line:
+            ret[dev]['power'] = 'on'
+    return ret
+
+
+def power(dev, mode):
+    '''
+    Power a bluetooth device on or off
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' bluetooth.power hci0 on
+        salt '*' bluetooth.power hci0 off
+    '''
+    if mode == 'on' or mode is True:
+        state = 'up'
+        mode = 'on'
+    else:
+        state = 'down'
+        mode = 'off'
+    cmd = 'hciconfig {0} {1}'.format(dev, state)
+    __salt__['cmd.run'](cmd).splitlines()
+    info = address_()
+    if info[dev]['power'] == mode:
+        return True
+    return False
+
+
+def discoverable(dev):
+    '''
+    Enable this bluetooth device to be discovrable.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' bluetooth.discoverable hci0
+    '''
+    cmd = 'hciconfig {0} iscan'.format(dev)
+    __salt__['cmd.run'](cmd).splitlines()
+    cmd = 'hciconfig {0}'.format(dev)
+    out = __salt__['cmd.run'](cmd)
+    if 'UP RUNNING ISCAN' in out:
+        return True
+    return False
+
+
+def noscan(dev):
+    '''
+    Turn off scanning modes on this device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' bluetooth.noscan hci0
+    '''
+    cmd = 'hciconfig {0} noscan'.format(dev)
+    __salt__['cmd.run'](cmd).splitlines()
+    cmd = 'hciconfig {0}'.format(dev)
+    out = __salt__['cmd.run'](cmd)
+    if 'SCAN' in out:
+        return False
+    return True
 
 
 def scan():
     '''
     Scan for bluetooth devices in the area
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.scan
     '''
-    cmd = 'hcitool scan'
-    ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
-    for line in out:
-        if not line:
-            continue
-        if 'Scanning' in line:
-            continue
-        comps = line.strip().split()
-        devname = ' '.join(comps[1:])
-        ret[comps[0]] = devname
+    ret = []
+    devices = bluetooth.discover_devices(lookup_names=True)
+    for device in devices:
+        ret.append({device[0]: device[1]})
     return ret
+
+
+def block(bdaddr):
+    '''
+    Block a specific bluetooth device by BD Address
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' bluetooth.block DE:AD:BE:EF:CA:FE
+    '''
+    cmd = 'hciconfig {0} block'.format(bdaddr)
+    __salt__['cmd.run'](cmd).splitlines()
+
+
+def unblock(bdaddr):
+    '''
+    Unblock a specific bluetooth device by BD Address
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' bluetooth.unblock DE:AD:BE:EF:CA:FE
+    '''
+    cmd = 'hciconfig {0} unblock'.format(bdaddr)
+    __salt__['cmd.run'](cmd).splitlines()
 
 
 def pair(address, key):
     '''
     Pair the bluetooth adapter with a device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.pair DE:AD:BE:EF:CA:FE 1234
 
-    Where DE:AD:BE:EF:CA:FE is the address of the device
-    to pair with, and 1234 is the passphrase.
+    Where DE:AD:BE:EF:CA:FE is the address of the device to pair with, and 1234
+    is the passphrase.
+
+    TODO: This function is currently broken, as the bluez-simple-agent program
+    no longer ships with BlueZ >= 5.0. It needs to be refactored.
     '''
-    address = address()
+    addy = address_()
     cmd = 'echo "{0}" | bluez-simple-agent {1} {2}'.format(
-        address['devname'], address, key
+        addy['device'], address, key
     )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
@@ -98,14 +227,17 @@ def unpair(address):
     '''
     Unpair the bluetooth adapter from a device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.unpair DE:AD:BE:EF:CA:FE
 
-    Where DE:AD:BE:EF:CA:FE is the address of the device
-    to unpair.
+    Where DE:AD:BE:EF:CA:FE is the address of the device to unpair.
+
+    TODO: This function is currently broken, as the bluez-simple-agent program
+    no longer ships with BlueZ >= 5.0. It needs to be refactored.
     '''
-    address = address()
     cmd = 'bluez-test-device remove {0}'.format(address)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
@@ -115,7 +247,9 @@ def start():
     '''
     Start the bluetooth service.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.start
     '''
@@ -127,7 +261,9 @@ def stop():
     '''
     Stop the bluetooth service.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bluetooth.stop
     '''

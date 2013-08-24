@@ -1,7 +1,7 @@
 '''
 Salt's pluggable authentication system
 
-This sysetm allows for authentication to be managed in a module pluggable way
+This system allows for authentication to be managed in a module pluggable way
 so that any external authentication system can be used inside of Salt
 '''
 
@@ -43,10 +43,10 @@ class LoadAuth(object):
         Return the primary name associate with the load, if an empty string
         is returned then the load does not match the function
         '''
-        if not 'eauth' in load:
+        if 'eauth' not in load:
             return ''
         fstr = '{0}.auth'.format(load['eauth'])
-        if not fstr in self.auth:
+        if fstr not in self.auth:
             return ''
         fcall = salt.utils.format_call(self.auth[fstr], load)
         try:
@@ -61,10 +61,10 @@ class LoadAuth(object):
         Do not call this directly! Use the time_auth method to overcome timing
         attacks
         '''
-        if not 'eauth' in load:
+        if 'eauth' not in load:
             return False
         fstr = '{0}.auth'.format(load['eauth'])
-        if not fstr in self.auth:
+        if fstr not in self.auth:
             return False
         fcall = salt.utils.format_call(self.auth[fstr], load)
         try:
@@ -122,7 +122,7 @@ class LoadAuth(object):
 
     def get_tok(self, tok):
         '''
-        Return the name associate with the token, or False if the token is
+        Return the name associated with the token, or False if the token is
         not valid
         '''
         t_path = os.path.join(self.opts['token_dir'], tok)
@@ -131,7 +131,7 @@ class LoadAuth(object):
         with salt.utils.fopen(t_path, 'r') as fp_:
             tdata = self.serial.loads(fp_.read())
         rm_tok = False
-        if not 'expire' in tdata:
+        if 'expire' not in tdata:
             # invalid token, delete it!
             rm_tok = True
         if tdata.get('expire', '0') < time.time():
@@ -147,7 +147,7 @@ class LoadAuth(object):
 
 class Resolver(object):
     '''
-    The class used to resolve options for the command line and for genric
+    The class used to resolve options for the command line and for generic
     interactive interfaces
     '''
     def __init__(self, opts):
@@ -156,7 +156,7 @@ class Resolver(object):
 
     def cli(self, eauth):
         '''
-        Execute the cli options to fill in the extra data needed for the
+        Execute the CLI options to fill in the extra data needed for the
         defined eauth system
         '''
         ret = {}
@@ -164,7 +164,7 @@ class Resolver(object):
             print('External authentication system has not been specified')
             return ret
         fstr = '{0}.auth'.format(eauth)
-        if not fstr in self.auth:
+        if fstr not in self.auth:
             print(('The specified external authentication system "{0}" is '
                    'not available').format(eauth))
             return ret
@@ -187,7 +187,7 @@ class Resolver(object):
 
     def token_cli(self, eauth, load):
         '''
-        Create the token from the cli and request the correct data to
+        Create the token from the CLI and request the correct data to
         authenticate via the passed authentication mechanism
         '''
         load['cmd'] = 'mk_token'
@@ -196,11 +196,39 @@ class Resolver(object):
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
         tdata = sreq.send('clear', load)
-        if not 'token' in tdata:
+        if 'token' not in tdata:
             return tdata
         try:
             with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])
         except (IOError, OSError):
             pass
+        return tdata
+
+    def mk_token(self, load):
+        '''
+        Request a token fromt he master
+        '''
+        load['cmd'] = 'mk_token'
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        tdata = sreq.send('clear', load)
+        if 'token' not in tdata:
+            return tdata
+        return tdata
+
+    def get_token(self, token):
+        '''
+        Request a token fromt he master
+        '''
+        load = {}
+        load['token'] = token
+        load['cmd'] = 'get_token'
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        tdata = sreq.send('clear', load)
+        if 'token' not in tdata:
+            return tdata
         return tdata

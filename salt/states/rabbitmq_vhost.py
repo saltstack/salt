@@ -32,8 +32,7 @@ def present(name,
             conf=None,
             write=None,
             read=None,
-            runas=None,
-        ):
+            runas=None):
     '''
     Ensure the RabbitMQ VHost exists.
 
@@ -99,8 +98,7 @@ def present(name,
 
 
 def absent(name,
-           runas=None,
-        ):
+           runas=None):
     '''
     Ensure the RabbitMQ Virtual Host is absent
 

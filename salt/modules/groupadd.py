@@ -13,14 +13,19 @@ def __virtual__():
     '''
     Set the user module if the kernel is Linux or OpenBSD
     '''
-    return 'group' if __grains__['kernel'] in ('Linux', 'OpenBSD') else False
+    return (
+        'group' if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD')
+        else False
+    )
 
 
 def add(name, gid=None, system=False):
     '''
     Add the specified group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.add foo 3456
     '''
@@ -40,7 +45,9 @@ def delete(name):
     '''
     Remove the named group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.delete foo
     '''
@@ -53,7 +60,9 @@ def info(name):
     '''
     Return information about a group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.info foo
     '''
@@ -75,22 +84,23 @@ def _format_info(data):
             'members': data.gr_mem}
 
 
-def getent():
+def getent(refresh=False):
     '''
     Return info on all groups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.getent
     '''
-    if 'groupadd_getent' in __context__:
-      return __context__['groupadd_getent']
+    if 'group.getent' in __context__ and not refresh:
+        return __context__['group.getent']
 
     ret = []
     for grinfo in grp.getgrall():
         ret.append(_format_info(grinfo))
-    __context__['groupadd_getent'] = ret
-
+    __context__['group.getent'] = ret
     return ret
 
 
@@ -98,7 +108,9 @@ def chgid(name, gid):
     '''
     Change the gid for a named group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.chgid foo 4376
     '''

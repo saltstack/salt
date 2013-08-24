@@ -1,25 +1,26 @@
-import sys
-import os
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
+# Import external libs
 try:
     from mock import MagicMock, patch
     has_mock = True
 except ImportError:
     has_mock = False
 
+# Late import so mock can do it's job
 import salt.states.gem as gem
 gem.__salt__ = {}
 gem.__opts__ = {'test': False}
 
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+@skipIf(has_mock is False, 'mock python module is unavailable')
 class TestGemState(TestCase):
 
     def test_installed(self):
-        gems = {'foo' : ['1.0'], 'bar' : ['2.0']}
+        gems = {'foo': ['1.0'], 'bar': ['2.0']}
         gem_list = MagicMock(return_value=gems)
         gem_install_succeeds = MagicMock(return_value=True)
         gem_install_fails = MagicMock(return_value=False)
@@ -32,14 +33,18 @@ class TestGemState(TestCase):
                 ret = gem.installed('quux')
                 self.assertEqual(True, ret['result'])
                 gem_install_succeeds.assert_called_once_with(
-                    'quux', ruby=None, runas=None, version=None, rdoc=False, ri=False)
+                    'quux', ruby=None, runas=None, version=None, rdoc=False,
+                    ri=False
+                )
 
             with patch.dict(gem.__salt__,
                             {'gem.install': gem_install_fails}):
                 ret = gem.installed('quux')
                 self.assertEqual(False, ret['result'])
                 gem_install_fails.assert_called_once_with(
-                    'quux', ruby=None, runas=None, version=None, rdoc=False, ri=False)
+                    'quux', ruby=None, runas=None, version=None, rdoc=False,
+                    ri=False
+                )
 
     def test_removed(self):
         gems = ['foo', 'bar']
@@ -63,7 +68,7 @@ class TestGemState(TestCase):
                 gem_uninstall_fails.assert_called_once_with(
                     'bar', None, runas=None)
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestGemState)
-    TextTestRunner(verbosity=1).run(tests)
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestGemState, needs_daemon=False)

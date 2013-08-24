@@ -4,33 +4,36 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
 import re
 
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-from saltunittest import TestCase, TestLoader, TextTestRunner
-from salt.utils import build_whitepace_splited_regex
+from salt.utils import build_whitespace_split_regex
 
-
-DOUBLE_TXT = """\
+DOUBLE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
-SINGLE_TXT = """\
+SINGLE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
-SINGLE_DOUBLE_TXT = """\
+SINGLE_DOUBLE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -40,16 +43,16 @@ fi
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
-SINGLE_DOUBLE_SAME_LINE_TXT = """\
+SINGLE_DOUBLE_SAME_LINE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
-MATCH = """\
+MATCH = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -78,29 +81,28 @@ fi
 if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-"""
+'''
 
 
 class TestRuntimeWhitespaceRegex(TestCase):
 
     def test_single_quotes(self):
-        regex = build_whitepace_splited_regex(SINGLE_TXT)
+        regex = build_whitespace_split_regex(SINGLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
     def test_double_quotes(self):
-        regex = build_whitepace_splited_regex(DOUBLE_TXT)
+        regex = build_whitespace_split_regex(DOUBLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
     def test_single_and_double_quotes(self):
-        regex = build_whitepace_splited_regex(SINGLE_DOUBLE_TXT)
+        regex = build_whitespace_split_regex(SINGLE_DOUBLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
     def test_issue_2227(self):
-        regex = build_whitepace_splited_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
+        regex = build_whitespace_split_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestRuntimeWhitespaceRegex)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestRuntimeWhitespaceRegex, needs_daemon=False)

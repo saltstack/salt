@@ -8,11 +8,11 @@ salt.renderers.stateconf
 :maturity: new
 :platform: all
 
-This module provides a custom renderer that process a salt file with a
-specified templating engine(eg, jinja) and a chosen data renderer(eg, yaml),
-extract arguments for any ``stateconf.set`` state and provide the extracted
-arguments (including salt specific args, such as 'require', etc) as template
-context. The goal is to make writing reusable/configurable/ parameterized
+This module provides a custom renderer that processes a salt file with a
+specified templating engine (e.g., Jinja) and a chosen data renderer (e.g., YAML),
+extracts arguments for any ``stateconf.set`` state, and provides the extracted
+arguments (including Salt-specific args, such as ``require``, etc) as template
+context. The goal is to make writing reusable/configurable/parameterized
 salt files easier and cleaner.
 
 To use this renderer, either set it as the default renderer via the
@@ -22,191 +22,204 @@ renderer works, it must be specified as the first renderer in a render
 pipeline. That is, you cannot specify ``#!mako|yaml|stateconf``, for example.
 Instead, you specify them as renderer arguments: ``#!stateconf mako . yaml``.
 
-Here's a list of features enabled by this renderer:
+Here's a list of features enabled by this renderer.
 
-  - Recognizes the special state function, ``stateconf.set``, that configures a
-    default list of named arguments useable within the template context of
-    the salt file. Example::
+- Prefixes any state id (declaration or reference) that starts with a dot (``.``)
+  to avoid duplicated state ids when the salt file is included by other salt
+  files.
 
-        sls_params:
+  For example, in the `salt://some/file.sls`, a state id such as ``.sls_params``
+  will be turned into ``some.file::sls_params``. Example::
+
+      #!stateconf yaml . jinja
+
+      .vim:
+        pkg.installed
+
+  Above will be translated into::
+
+      some.file::vim:
+        pkg.installed:
+          - name: vim
+  
+  Notice how that if a state under a dot-prefixed state id has no ``name``
+  argument then one will be added automatically by using the state id with
+  the leading dot stripped off.
+
+  The leading dot trick can be used with extending state ids as well,
+  so you can include relatively and extend relatively. For example, when
+  extending a state in `salt://some/other_file.sls`, e.g.,::
+
+      #!stateconf yaml . jinja
+
+      include:
+        - .file
+
+      extend:
+        .file::sls_params:
           stateconf.set:
-            - name1: value1
-            - name2: value2
-            - name3:
-              - value1
-              - value2
-              - value3
-            - require_in:
-              - cmd: output
+            - name1: something
 
-        # --- end of state config ---
+  Above will be pre-processed into::
 
-        output:
-          cmd.run:
-            - name: |
-                echo 'name1={{sls_params.name1}}
-                      name2={{sls_params.name2}}
-                      name3[1]={{sls_params.name3[1]}}
-                '
+      include:
+        - some.file
 
-    This even works with ``include`` + ``extend`` so that you can override
-    the default configured arguments by including the salt file and then
-    ``extend`` the ``stateconf.set`` states that come from the included salt
-    file.
-
-    Notice that the end of configuration marker(``# --- end of state config --``)
-    is needed to separate the use of 'stateconf.set' form the rest of your salt
-    file. The regex that matches such marker can be configured via the
-    ``stateconf_end_marker`` option in your master or minion config file.
-
-    Sometimes, you'd like to set a default argument value that's based on
-    earlier arguments in the same ``stateconf.set``. For example, you may be
-    tempted to do something like this::
-
-        apache:
+      extend:
+        some.file::sls_params:
           stateconf.set:
-            - host: localhost
-            - port: 1234
-            - url: 'http://{{host}}:{{port}}/'
+            - name1: something
 
-        # --- end of state config ---
+- Adds a ``sls_dir`` context variable that expands to the directory containing
+  the rendering salt file. So, you can write ``salt://{{sls_dir}}/...`` to
+  reference templates files used by your salt file.
 
-        test:
-          cmd.run:
-            - name: echo '{{apache.url}}'
-            - cwd: /
+- Recognizes the special state function, ``stateconf.set``, that configures a
+  default list of named arguments usable within the template context of
+  the salt file. Example::
 
-    However, this won't work, but can be worked around like so::
+      #!stateconf yaml . jinja
 
-        apache:
-          stateconf.set:
-            - host: localhost
-            - port: 1234
-        {#  - url: 'http://{{host}}:{{port}}/' #}
+      .sls_params:
+        stateconf.set:
+          - name1: value1
+          - name2: value2
+          - name3:
+            - value1
+            - value2
+            - value3
+          - require_in:
+            - cmd: output
 
-        # --- end of state config ---
-        # {{ apache.setdefault('url', "http://%(host)s:%(port)s/" % apache) }}
+      # --- end of state config ---
 
-        test:
-          cmd.run:
-            - name: echo '{{apache.url}}'
-            - cwd: /
+      .output:
+        cmd.run:
+          - name: |
+              echo 'name1={{sls_params.name1}}
+                    name2={{sls_params.name2}}
+                    name3[1]={{sls_params.name3[1]}}
+              '
 
-  - Adds support for relative include and exclude of .sls files. Example::
+  This even works with ``include`` + ``extend`` so that you can override
+  the default configured arguments by including the salt file and then
+  ``extend`` the ``stateconf.set`` states that come from the included salt
+  file. (*IMPORTANT: Both the included and the extending sls files must use the
+  stateconf renderer for this ``extend`` to work!*)
 
-        include:
-          - .apache
-          - .db.mysql
+  Notice that the end of configuration marker (``# --- end of state config --``)
+  is needed to separate the use of 'stateconf.set' form the rest of your salt
+  file. The regex that matches such marker can be configured via the
+  ``stateconf_end_marker`` option in your master or minion config file.
 
-        exclude:
-          - sls: .users
+  Sometimes, you'd like to set a default argument value that's based on
+  earlier arguments in the same ``stateconf.set``. For example, you may be
+  tempted to do something like this::
 
-    If the above is written in a salt file at `salt://some/where.sls` then
-    it will include `salt://some/apache.sls` and `salt://some/db/mysql.sls`,
-    and exclude `salt://some/users.ssl`. Actually, it does that by rewriting
-    the above ``include`` and ``exclude`` into::
+      #!stateconf yaml . jinja
 
-        include:
-          - some.apache
-          - some.db.mysql
+      .apache:
+        stateconf.set:
+          - host: localhost
+          - port: 1234
+          - url: 'http://{{host}}:{{port}}/'
 
-        exclude:
-          - sls: some.users
+      # --- end of state config ---
+
+      .test:
+        cmd.run:
+          - name: echo '{{apache.url}}'
+          - cwd: /
+
+  However, this won't work, but can be worked around like so::
+
+      #!stateconf yaml . jinja
+
+      .apache:
+        stateconf.set:
+          - host: localhost
+          - port: 1234
+      {#  - url: 'http://{{host}}:{{port}}/' #}
+
+      # --- end of state config ---
+      # {{ apache.setdefault('url', "http://%(host)s:%(port)s/" % apache) }}
+
+      .test:
+        cmd.run:
+          - name: echo '{{apache.url}}'
+          - cwd: /
+
+- Adds support for relative include and exclude of .sls files. Example::
+
+      #!stateconf yaml . jinja
+
+      include:
+        - .apache
+        - .db.mysql
+
+      exclude:
+        - sls: .users
+
+  If the above is written in a salt file at `salt://some/where.sls` then
+  it will include `salt://some/apache.sls` and `salt://some/db/mysql.sls`,
+  and exclude `salt://some/users.ssl`. Actually, it does that by rewriting
+  the above ``include`` and ``exclude`` into::
+
+      include:
+        - some.apache
+        - some.db.mysql
+
+      exclude:
+        - sls: some.users
 
 
-  - Adds a ``sls_dir`` context variable that expands to the directory containing
-    the rendering salt file. So, you can write ``salt://${sls_dir}/...`` to
-    reference templates files used by your salt file.
+- Optionally (enabled by default, *disable* via the `-G` renderer option,
+  e.g., in the shebang line: ``#!stateconf -G``), generates a
+  ``stateconf.set`` goal state (state id named as ``.goal`` by default,
+  configurable via the master/minion config option, ``stateconf_goal_state``)
+  that requires all other states in the salt file. Note, the ``.goal``
+  state id is subject to dot-prefix rename rule mentioned earlier.
 
-  - Prefixes any state id(declaration or reference) that starts with a dot(``.``)
-    to avoid duplicated state ids when the salt file is included by other salt
-    files.
+  Such goal state is intended to be required by some state in an including
+  salt file. For example, in your webapp salt file, if you include a
+  sls file that is supposed to setup Tomcat, you might want to make sure that
+  all states in the Tomcat sls file will be executed before some state in
+  the webapp sls file.
 
-    For example, in the `salt://some/file.sls`, a state id such as ``.sls_params``
-    will be turned into ``some.file::sls_params``. Example::
+- Optionally (enable via the `-o` renderer option, e.g., in the shebang line:
+  ``#!stateconf -o``), orders the states in a sls file by adding a
+  ``require`` requisite to each state such that every state requires the
+  state defined just before it. The order of the states here is the order
+  they are defined in the sls file. (Note: this feature is only available
+  if your minions are using Python >= 2.7. For Python2.6, it should also
+  work if you install the `ordereddict` module from PyPI)
 
-        .vim:
-          package.installed
+  By enabling this feature, you are basically agreeing to author your sls
+  files in a way that gives up the explicit (or implicit?) ordering imposed
+  by the use of ``require``, ``watch``, ``require_in`` or ``watch_in``
+  requisites, and instead, you rely on the order of states you define in
+  the sls files. This may or may not be a better way for you. However, if
+  there are many states defined in a sls file, then it tends to be easier
+  to see the order they will be executed with this feature.
 
-    Above will be translated into::
+  You are still allowed to use all the requisites, with a few restrictions.
+  You cannot ``require`` or ``watch`` a state defined *after* the current
+  state. Similarly, in a state, you cannot ``require_in`` or ``watch_in``
+  a state defined *before* it. Breaking any of the two restrictions above
+  will result in a state loop. The renderer will check for such incorrect
+  uses if this feature is enabled.
 
-        some.file::vim:
-          package.installed:
-            - name: vim
-    
-    Notice how that if a state under a dot-prefixed state id has no ``name``
-    argument then one will be added automatically by using the state id with
-    the leading dot stripped off.
+  Additionally, ``names`` declarations cannot be used with this feature
+  because the way they are compiled into low states make it impossible to
+  guarantee the order in which they will be executed. This is also checked
+  by the renderer. As a workaround for not being able to use ``names``,
+  you can achieve the same effect, by generate your states with the
+  template engine available within your sls file.
 
-    The leading dot trick can be used with extending state ids as well,
-    so you can include relatively and extend relatively. For example, when
-    extending a state in `salt://some/other_file.sls`, eg,::
-
-        include:
-          - .file
-
-        extend:
-          .file::sls_params:
-            stateconf.set:
-              - name1: something
-
-    Above will be pre-processed into::
-
-        include:
-          - some.file
-
-        extend:
-          some.file::sls_params:
-            stateconf.set:
-              - name1: something
-
-  - Optionally(enabled by default, *disable* via the `-G` renderer option,
-    eg, in the shebang line: ``#!stateconf -G``), generates a
-    ``stateconf.set`` goal state(state id named as ``.goal`` by default,
-    configurable via the master/minion config option, ``stateconf_goal_state``)
-    that requires all other states in the salt file. Note, the ``.goal``
-    state id is subject to dot-prefix rename rule mentioned earlier.
-
-    Such goal state is intended to be required by some state in an including
-    salt file. For example, in your webapp salt file, if you include a
-    sls file that is supposed to setup Tomcat, you might want to make sure that
-    all states in the Tomcat sls file will be executed before some state in
-    the webapp sls file.
-
-  - Optionally(enable via the `-o` renderer option, eg, in the shebang line:
-    ``#!stateconf -o``), orders the states in a sls file by adding a
-    ``require`` requisite to each state such that every state requires the
-    state defined just before it. The order of the states here is the order
-    they are defined in the sls file.(Note: this feature is only available
-    if your minions are using Python >= 2.7. For Python2.6, it should also
-    work if you install the `ordereddict` module from PyPI)
-
-    By enabling this feature, you are basically agreeing to author your sls
-    files in a way that gives up the explicit(or implicit?) ordering imposed
-    by the use of ``require``, ``watch``, ``require_in`` or ``watch_in``
-    requisites, and instead, you rely on the order of states you define in
-    the sls files. This may or may not be a better way for you. However, if
-    there are many states defined in a sls file, then it tends to be easier
-    to see the order they will be executed with this feature.
-
-    You are still allowed to use all the requisites, with a few restricitons.
-    You cannot ``require`` or ``watch`` a state defined *after* the current
-    state. Similarly, in a state, you cannot ``require_in`` or ``watch_in``
-    a state defined *before* it. Breaking any of the two restrictions above
-    will result in a state loop. The renderer will check for such incorrect
-    uses if this feature is enabled.
-
-    Additionally, ``names`` declarations cannot be used with this feature
-    because the way they are compiled into low states make it impossible to
-    guarantee the order in which they will be executed. This is also checked
-    by the renderer. As a workaround for not being able to use ``names``,
-    you can achieve the same effect, by generate your states with the
-    template engine available within your sls file.
-
-    Finally, with the use of this feature, it becomes possible to easily make
-    an included sls file execute all its states *after* some state(say, with
-    id ``X``) in the including sls file.  All you have to do is to make state,
-    ``X``, ``require_in`` the first state defined in the included sls file.
+  Finally, with the use of this feature, it becomes possible to easily make
+  an included sls file execute all its states *after* some state (say, with
+  id ``X``) in the including sls file.  All you have to do is to make state,
+  ``X``, ``require_in`` the first state defined in the included sls file.
 
 
 When writing sls files with this renderer, you should avoid using what can be
@@ -225,7 +238,7 @@ writing your states like this::
 
 Instead, you should define the state id and the ``name`` argument separately
 for each state, and the id should be something meaningful and easy to reference
-within a requisite(which I think is a good habit anyway, and such extra
+within a requisite (which I think is a good habit anyway, and such extra
 indirection would also makes your sls file easier to modify later). Thus, the
 above states should be written like this::
 

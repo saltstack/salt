@@ -36,6 +36,7 @@ def latest(name,
            rev=None,
            user=None,
            username=None,
+           password=None,
            force=False,
            externals=True):
     '''
@@ -59,6 +60,9 @@ def latest(name,
     username : None
         The user to access the name repository with. The svn default is the
         current user
+
+    password
+        Connect to the Subversion server with this password
 
     force : False
         Continue if conflicts are encountered
@@ -84,14 +88,14 @@ def latest(name,
             return _neutral_test(
                     ret,
                     ('{0} doesn\'t exist and is set to be checked out.').format(target))
-        svn_cmd = 'svn.diff' 
-        opts += ('-r',  'HEAD')
-        out = __salt__[svn_cmd](cwd, target, user, username, *opts)
+        svn_cmd = 'svn.diff'
+        opts += ('-r', 'HEAD')
+        out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
         return _neutral_test(
                 ret,
                 ('{0}').format(out))
     try:
-        __salt__['svn.info'](cwd, target, user=user)
+        current_info = __salt__['svn.info'](cwd, target, user=user, username=username, password=password, fmt='dict')
         svn_cmd = 'svn.update'
     except exceptions.CommandExecutionError:
         pass
@@ -106,9 +110,28 @@ def latest(name,
         opts += ('--ignore-externals',)
 
     if svn_cmd == 'svn.update':
-        out = __salt__[svn_cmd](cwd, basename, user, *opts)
+        out = __salt__[svn_cmd](cwd, basename, user, username, password, *opts)
+
+        current_rev = current_info[0]['Revision']
+        new_rev = __salt__['svn.info'](cwd=target,
+                                       targets=None,
+                                       user=user,
+                                       username=username,
+                                       password=password,
+                                       fmt='dict')[0]['Revision']
+        if current_rev != new_rev:
+            ret['changes']['revision'] = "{0} => {1}".format(current_rev, new_rev)
     else:
-        out = __salt__[svn_cmd](cwd, name, basename, user, username, *opts)
+        out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
+
+        ret['changes']['new'] = name
+        ret['changes']['revision'] = __salt__['svn.info'](cwd=target,
+                                                          targets=None,
+                                                          user=user,
+                                                          username=username,
+                                                          password=password,
+                                                          fmt='dict')[0]['Revision']
+
     ret['comment'] = out
     return ret
 
@@ -116,6 +139,8 @@ def latest(name,
 def dirty(name,
           target,
           user=None,
+          username=None,
+          password=None,
           ignore_unversioned=False):
     '''
     Determine if the working directory has been changed.

@@ -14,17 +14,17 @@ import random
 
 CAN_RENAME_OPEN_FILE = False
 if os.name == 'nt':  # pragma: no cover
-    _rename = lambda src, dst: False            # pylint: disable-msg=C0103
-    _rename_atomic = lambda src, dst: False     # pylint: disable-msg=C0103
+    _rename = lambda src, dst: False            # pylint: disable=C0103
+    _rename_atomic = lambda src, dst: False     # pylint: disable=C0103
 
     try:
         import ctypes
 
         _MOVEFILE_REPLACE_EXISTING = 0x1
         _MOVEFILE_WRITE_THROUGH = 0x8
-        _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable-msg=C0103
+        _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable=C0103
 
-        def _rename(src, dst):
+        def _rename(src, dst):  # pylint: disable=E0102
             if not isinstance(src, unicode):
                 src = unicode(src, sys.getfilesystemencoding())
             if not isinstance(dst, unicode):
@@ -42,15 +42,15 @@ if os.name == 'nt':  # pragma: no cover
             return rval
 
         # new in Vista and Windows Server 2008
-        # pylint: disable-msg=C0103
+        # pylint: disable=C0103
         _CreateTransaction = ctypes.windll.ktmw32.CreateTransaction
         _CommitTransaction = ctypes.windll.ktmw32.CommitTransaction
         _MoveFileTransacted = ctypes.windll.kernel32.MoveFileTransactedW
         _CloseHandle = ctypes.windll.kernel32.CloseHandle
-        # pylint: enable-msg=C0103
+        # pylint: enable=C0103
         CAN_RENAME_OPEN_FILE = True
 
-        def _rename_atomic(src, dst):
+        def _rename_atomic(src, dst):  # pylint: disable=E0102
             tra = _CreateTransaction(None, 0, 0, 0, 0, 1000, 'Atomic rename')
             if tra == -1:
                 return False
@@ -80,7 +80,7 @@ if os.name == 'nt':  # pragma: no cover
         # Fall back to "move away and replace"
         try:
             os.rename(src, dst)
-        except OSError, err:
+        except OSError as err:
             if err.errno != errno.EEXIST:
                 raise
             old = '{0}-{1:08x}'.format(dst, random.randint(0, sys.maxint))
@@ -91,7 +91,7 @@ if os.name == 'nt':  # pragma: no cover
             except Exception:
                 pass
 else:
-    atomic_rename = os.rename  # pylint: disable-msg=C0103
+    atomic_rename = os.rename  # pylint: disable=C0103
     CAN_RENAME_OPEN_FILE = True
 
 

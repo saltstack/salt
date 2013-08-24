@@ -1,9 +1,8 @@
-import sys
-import os
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 try:
     from mock import MagicMock, patch
     has_mock = True
@@ -22,7 +21,7 @@ if has_mock:
     }
 
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+@skipIf(has_mock is False, 'mock python module is unavailable')
 class TestRvmState(TestCase):
 
     def test__check_rvm(self):
@@ -40,7 +39,7 @@ class TestRvmState(TestCase):
             return_value={'changes': {}, 'result': True})
         mock_check_ruby = MagicMock(
             return_value={'changes': {}, 'result': False})
-        mock_install_ruby = MagicMock(return_value="")
+        mock_install_ruby = MagicMock(return_value='')
         with patch.object(rvm, '_check_rvm', new=mock_check_rvm):
             with patch.object(rvm, '_check_ruby', new=mock_check_ruby):
                 with patch.dict(rvm.__salt__,
@@ -91,12 +90,11 @@ class TestRvmState(TestCase):
         with patch.object(rvm, '_check_rvm') as mock_method:
             mock_method.return_value = {'result': True}
             with patch.object(rvm, '_check_and_install_ruby', new=mock):
-                rvm.installed("1.9.3", default=True)
+                rvm.installed('1.9.3', default=True)
         mock.assert_called_once_with(
             {'result': True}, '1.9.3', True, runas=None)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestRvmState)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestRvmState, needs_daemon=False)

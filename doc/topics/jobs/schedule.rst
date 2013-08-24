@@ -12,6 +12,12 @@ config file.
 To set up the scheduler on the minion add the schedule option to
 the minion config file or to the minion's pillar.
 
+.. note::
+
+    The scheduler executes different functions on the master and minions. When
+    running on the master the functions reference runner functions, when
+    running on the minion the functions specify execution functions.
+
 The schedule option defines jobs which execute at certain intervals. To set up a highstate
 to run on a minion every 60 minutes set this in the minion config or pillar:
 
@@ -37,6 +43,9 @@ file:
 
 The above configuration will execute the state.over runner every 3 hours,
 30 minutes and 35 seconds, or every 12,635 seconds.
+
+Scheduler With Returner
+=======================
 
 The scheduler is also useful for tasks like gathering monitoring data about
 a minion, this schedule option will gather status data and send it to a mysql

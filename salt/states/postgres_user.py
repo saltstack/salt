@@ -11,6 +11,13 @@ The postgres_users module is used to create and manage Postgres users.
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the postgres module is present
+    '''
+    return 'postgres_user' if 'postgres.user_exists' in __salt__ else False
+
+
 def present(name,
             createdb=False,
             createuser=False,
@@ -42,13 +49,13 @@ def present(name,
         Should the new user be allowed to initiate streaming replication
 
     password
-        The user's pasword
+        The user's password
 
     groups
-        A string of comma seperated groups the user should be in
+        A string of comma separated groups the user should be in
 
     runas
-        System user all operation should be preformed on behalf of
+        System user all operations should be performed on behalf of
     '''
     ret = {'name': name,
            'changes': {},
@@ -70,7 +77,7 @@ def present(name,
                                         encrypted=encrypted,
                                         superuser=superuser,
                                         replication=replication,
-                                        password=password,
+                                        rolepassword=password,
                                         groups=groups,
                                         runas=runas):
         ret['comment'] = 'The user {0} has been created'.format(name)
@@ -90,7 +97,7 @@ def absent(name, runas=None):
         The username of the user to remove
 
     runas
-        System user all operation should be preformed on behalf of
+        System user all operations should be performed on behalf of
     '''
     ret = {'name': name,
            'changes': {},
@@ -106,6 +113,10 @@ def absent(name, runas=None):
         if __salt__['postgres.user_remove'](name, runas=runas):
             ret['comment'] = 'User {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
+            return ret
+        else:
+            ret['result'] = False
+            ret['comment'] = 'User {0} failed to be removed'.format(name)
             return ret
     else:
         ret['comment'] = 'User {0} is not present, so it cannot ' \

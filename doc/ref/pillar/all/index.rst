@@ -12,6 +12,11 @@ Full list of builtin pillar modules
 
     cmd_json
     cmd_yaml
+    cobbler
+    git_pillar
     hiera
+    libvirt
     mongo
     pillar_ldap
+    puppet
+    reclass_adapter

@@ -1,18 +1,17 @@
 # Import python libs
 import os
-import sys
 import shutil
 import tempfile
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-from salt import version
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
-class KeyTest(integration.ShellCase,
-              integration.ShellCaseCommonTestsMixIn):
+class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test salt-key script
     '''
@@ -37,14 +36,6 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --json-out
         '''
-        data = self.run_key('-L --json-out', catch_stderr=True)
-        if version.__version_info__ >= (0, 12):
-            self.assertIn(
-                'salt-key: error: The option --json-out was deprecated. '
-                'Please use \'--out json\' instead.',
-                data[1]
-            )
-
         data = self.run_key('-L --out json')
 
         expect = [
@@ -63,14 +54,6 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --yaml-out
         '''
-        data = self.run_key('-L --yaml-out', catch_stderr=True)
-        if version.__version_info__ >= (0, 12):
-            self.assertIn(
-                'salt-key: error: The option --yaml-out was deprecated. '
-                'Please use \'--out yaml\' instead.',
-                data[1]
-            )
-
         data = self.run_key('-L --out yaml')
 
         expect = [
@@ -86,14 +69,6 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --raw-out
         '''
-        data = self.run_key('-L --raw-out', catch_stderr=True)
-        if version.__version_info__ >= (0, 12):
-            self.assertIn(
-                'salt-key: error: The option --raw-out was deprecated. '
-                'Please use \'--out raw\' instead.',
-                data[1]
-            )
-
         data = self.run_key('-L --out raw')
 
         expect = [
@@ -157,16 +132,13 @@ class KeyTest(integration.ShellCase,
                 arg_str + ' --keysize=32769', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The maximum value for keysize is 32768', error
+                'salt-key: error: The maximum value for keysize is 32768',
+                error
             )
         finally:
             shutil.rmtree(tempdir)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(KeyTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(KeyTest)

@@ -35,7 +35,9 @@ def top(num_processes=5, interval=3):
     num_processes = return the top N CPU consuming processes
     interval = the number of seconds to sample CPU usage over
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' ps.top
 
@@ -44,7 +46,10 @@ def top(num_processes=5, interval=3):
     result = []
     start_usage = {}
     for pid in psutil.get_pid_list():
-        process = psutil.Process(pid)
+        try:
+            process = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            continue
         user, system = process.get_cpu_times()
         start_usage[process] = user + system
     time.sleep(interval)
@@ -78,7 +83,9 @@ def get_pid_list():
     '''
     Return a list of process ids (PIDs) for all running processes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.get_pid_list
     '''
@@ -95,14 +102,14 @@ def cpu_percent(interval=0.1, per_cpu=False):
         if True return an array of CPU percent busy for each CPU, otherwise
         aggregate all percents into one number
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.cpu_percent
     '''
     if per_cpu:
-        result = []
-        for cpu_percent in psutil.cpu_percent(interval, True):
-            result.append(cpu_percent)
+        result = list(psutil.cpu_percent(interval, True))
     else:
         result = psutil.cpu_percent(interval)
     return result
@@ -117,14 +124,14 @@ def cpu_times(per_cpu=False):
         if True return an array of percents for each CPU, otherwise aggregate
         all percents into one number
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.cpu_times
     '''
     if per_cpu:
-        result = []
-        for cpu_times in psutil.cpu_times(True):
-            result.append(dict(cpu_times._asdict()))
+        result = [dict(times._asdict()) for times in psutil.cpu_times(True)]
     else:
         result = dict(psutil.cpu_times(per_cpu)._asdict())
     return result
@@ -134,7 +141,9 @@ def physical_memory_usage():
     '''
     Return a dict that describes free and available physical memory.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' ps.physical_memory_usage
     '''
@@ -146,7 +155,9 @@ def virtual_memory_usage():
     Return a dict that describes free and available memory, both physical
     and virtual.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.virtual_memory_usage
     '''
@@ -157,7 +168,9 @@ def cached_physical_memory():
     '''
     Return the amount cached memory.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.cached_physical_memory
     '''
@@ -168,7 +181,9 @@ def physical_memory_buffers():
     '''
     Return the amount of physical memory buffers.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.physical_memory_buffers
     '''
@@ -184,13 +199,13 @@ def disk_partitions(all=False):
         if set to False, only return local, physical partitions (hard disk,
         USB, CD/DVD partitions).  If True, return all filesystems.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.disk_partitions
     '''
-    result = []
-    for partition in psutil.disk_partitions(all):
-        result.append(dict(partition._asdict()))
+    result = [dict(partition._asdict()) for partition in psutil.disk_partitions(all)]
     return result
 
 
@@ -199,7 +214,9 @@ def disk_usage(path):
     Given a path, return a dict listing the total available space as well as
     the free space, and used space.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.disk_usage /home
     '''
@@ -211,7 +228,9 @@ def disk_partition_usage(all=False):
     Return a list of disk partitions plus the mount point, filesystem and usage
     statistics.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.disk_partition_usage
     '''
@@ -225,7 +244,9 @@ def total_physical_memory():
     '''
     Return the total number of bytes of physical memory.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.total_physical_memory
     '''
@@ -236,7 +257,9 @@ def num_cpus():
     '''
     Return the number of CPUs.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.num_cpus
     '''
@@ -247,7 +270,9 @@ def boot_time():
     '''
     Return the boot time in number of seconds since the epoch began.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.boot_time
     '''
@@ -258,7 +283,9 @@ def network_io_counters():
     '''
     Return network I/O statisitics.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.network_io_counters
     '''
@@ -269,7 +296,9 @@ def disk_io_counters():
     '''
     Return disk I/O statisitics.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.disk_io_counters
     '''

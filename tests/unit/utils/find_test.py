@@ -5,10 +5,14 @@ import shutil
 import tempfile
 import stat
 
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
 import salt.utils
 import salt.utils.find
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
 
 class TestFind(TestCase):
@@ -206,7 +210,7 @@ class TestFind(TestCase):
             ValueError, salt.utils.find.GroupOption, 'group', 'notexist'
         )
 
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -215,7 +219,7 @@ class TestFind(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_group_option_match(self):
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -391,7 +395,7 @@ class TestPrintOption(TestCase):
     @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
     def test_print_group(self):
         option = salt.utils.find.PrintOption('print', 'group')
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -485,7 +489,7 @@ class TestFinder(TestCase):
             str(finder.criteria[0].__class__)[-13:-2], 'OwnerOption'
         )
 
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -554,10 +558,9 @@ class TestFinder(TestCase):
         )
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestFind)
-    tests.addTests(loader.loadTestsFromTestCase(TestGrepOption))
-    tests.addTests(loader.loadTestsFromTestCase(TestPrintOption))
-    tests.addTests(loader.loadTestsFromTestCase(TestFinder))
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(
+        [TestFind, TestGrepOption, TestPrintOption, TestFinder],
+        needs_daemon=False
+    )

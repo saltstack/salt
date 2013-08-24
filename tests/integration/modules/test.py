@@ -1,5 +1,11 @@
 # Import python libs
 import os
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 import integration
 
 

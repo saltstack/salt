@@ -2,14 +2,10 @@
 virt.query outputter
 '''
 
-# Import Salt libs
-import salt.utils
-
 def output(data):
     '''
     Display output for the salt-run virt.query function
     '''
-    colors = salt.utils.get_colors(__opts__.get('color'))
     out = ''
     for id_ in data:
         out += '{0}\n'.format(id_)

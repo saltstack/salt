@@ -72,7 +72,7 @@ seeing on the console(and then salt-master crashes)::
   Too many open files (tcp_listener.cpp:335)
   Aborted (core dumped)
 
-By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
 max open files.
 
 If you wish to set a different value than the default one, uncomment and
@@ -96,6 +96,9 @@ Default: ``5``
 The number of threads to start for receiving commands and replies from minions.
 If minions are stalling on replies because you have many minions, raise the
 worker_threads value.
+
+Worker threads should not be put below 3 when using the peer system, but can
+drop down to 1 worker otherwise.
 
 .. code-block:: yaml
 
@@ -208,6 +211,37 @@ local job cache on the master
 
     ext_job_cache: redis
 
+.. conf_master:: minion_data_cache
+
+``minion_data_cache``
+---------------------
+
+Default: True
+
+The minion data cache is a cache of information about the minions stored on the
+master, this information is primarily the pillar and grains data. The data is
+cached in the Master cachedir under the name of the minion and used to pre
+determine what minions are expected to reply from executions.
+
+.. code-block:: yaml
+
+    minion_cache_dir: True
+
+.. conf_master:: enforce_mine_cache
+
+``enforce_mine_cache``
+----------------------
+
+Default: False
+
+By-default when disabling the minion_data_cache mine will stop working since
+it is based on cached data, by enabling this option we explicitly enabling
+only the cache for the mine system.
+
+.. code-block:: yaml
+
+    enforce_mine_cache: False
+
 .. conf_master:: sock_dir
 
 ``sock_dir``
@@ -261,16 +295,17 @@ public keys from the minions
 
 Default ``not defined``
 
-If the autosign_file is specified incoming keys specified in
-the autosign_file will be automatically accepted. Regular expressions as
-well as globbing can be used. This is insecure!
+If the autosign_file is specified incoming keys specified in the autosign_file
+will be automatically accepted.  Matches will be searched for first by string
+comparison, then by globbing, then by full-string regex matching.  This is
+insecure!
 
 .. conf_master:: client_acl
 
 ``client_acl``
 --------------
 
-Default: {}
+Default: ``{}``
 
 Enable user accounts on the master to execute specific modules. These modules
 can be expressed as regular expressions
@@ -281,6 +316,74 @@ can be expressed as regular expressions
       fred:
         - test.ping
         - pkg.*
+
+.. conf_master:: client_acl_blacklist
+
+``client_acl_blacklist``
+------------------------
+
+Default: ``{}``
+
+Blacklist users or modules
+
+This example would blacklist all non sudo users, including root from
+running any commands. It would also blacklist any use of the "cmd"
+module.
+
+This is completely disabled by default.
+
+.. code-block:: yaml
+
+    client_acl_blacklist:
+      users:
+        - root
+        - '^(?!sudo_).*$'   #  all non sudo users
+      modules:
+        - cmd
+
+.. conf_master:: external_auth
+
+``external_auth``
+-----------------
+
+Default: ``{}``
+
+The external auth system uses the Salt auth modules to authenticate and
+validate users to access areas of the Salt system.
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        fred:
+          - test.*
+
+.. conf_master:: token_expire
+
+``token_expire``
+----------------
+
+Default: ``43200``
+
+Time (in seconds) for a newly generated token to live. Default: 12 hours
+
+.. code-block:: yaml
+
+    token_expire: 43200
+
+.. conf_master:: file_recv
+
+``file_recv``
+-------------
+
+Default: ``False``
+
+Allow minions to push files to the master. This is disabled by default, for
+security purposes.
+
+.. code-block:: yaml
+
+    file_recv: False 
 
 
 Master Module Management
@@ -337,7 +440,9 @@ Default: ``full``
 
 The state_output setting changes if the output is the full multi line
 output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.
+the output will be shortened to a single line.  If set to 'mixed', the output
+will be terse unless a state failed, in which case that output will be full.
+If set to 'changes', the output will be full unless the state didn't change.
 
 .. code-block:: yaml
 
@@ -409,7 +514,7 @@ at the moment a single state fails
 
 Default:: ``False``
 
-Set all state calls to only test if they are going to acctually make changes
+Set all state calls to only test if they are going to actually make changes
 or just post what changes are going to be made
 
 .. code-block:: yaml
@@ -424,9 +529,14 @@ Master File Server Settings
 ``file_roots``
 --------------
 
-Default: ``base: [/srv/salt]``
+Default:
 
-Salt runs a lightweight file server written in zeromq to deliver files to
+.. code-block:: yaml
+
+    base:
+      - /srv/salt
+
+Salt runs a lightweight file server written in ZeroMQ to deliver files to
 minions. This file server is built into the master daemon and does not
 require a dedicated port.
 
@@ -448,11 +558,6 @@ Example:
         - /srv/salt/prod/services
         - /srv/salt/prod/states
 
-.. code-block:: yaml
-
-    base:
-      - /srv/salt
-
 .. conf_master:: hash_type
 
 ``hash_type``
@@ -461,7 +566,7 @@ Example:
 Default: ``md5``
 
 The hash_type is the hash to use when discovering the hash of a file on
-the master server, the default is md5, but sha1, sha224, sha256, sha384
+the master server. The default is md5, but sha1, sha224, sha256, sha384
 and sha512 are also supported.
 
 .. code-block:: yaml
@@ -491,25 +596,25 @@ Pillar Configuration
 ``pillar_roots``
 ----------------
 
-Set the environments and directories used to hold pillar sls data. This
-configuration is the same as file_roots:
-
-Default: ``base: [/srv/pillar]``
-
-.. code-block:: yaml
-
-    pillar_roots:
-      base:
-        - /srv/pillar/
-      dev:
-        - /srv/pillar/dev/
-      prod:
-        - /srv/pillar/prod/
+Default:
 
 .. code-block:: yaml
 
     base:
       - /srv/pillar
+
+Set the environments and directories used to hold pillar sls data. This
+configuration is the same as :conf_master:`file_roots`:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      base:
+        - /srv/pillar
+      dev:
+        - /srv/pillar/dev
+      prod:
+        - /srv/pillar/prod
 
 .. conf_master:: ext_pillar
 
@@ -528,6 +633,8 @@ Default:: ``None``
     ext_pillar:
       - hiera: /etc/hiera.yaml
       - cmd_yaml: cat /etc/salt/yaml
+      - reclass:
+          inventory_base_uri: /etc/reclass
 
 There are additional details at :ref:`salt-pillars`
 
@@ -539,6 +646,8 @@ minions below the syndic. Using the syndic is simple. If this is a master that
 will have syndic servers(s) below it, set the "order_masters" setting to True. If this
 is a master that will be running a syndic daemon for passthrough the
 "syndic_master" setting needs to be set to the location of the master server
+
+Do not not forget that in other word it means that it shares with the local minion it's ID and PKI_DIR.
 
 .. conf_master:: order_masters
 
@@ -568,6 +677,48 @@ master, specify the higher level master with this configuration value
 .. code-block:: yaml
 
     syndic_master: masterofmasters
+
+.. conf_master:: syndic_master_port
+
+``syndic_master_port``
+-----------------------
+
+Default: ``4506``
+
+If this master will be running a salt-syndic to connect to a higher level
+master, specify the higher level master port with this configuration value
+
+.. code-block:: yaml
+
+    syndic_master_port: 4506
+
+.. conf_master:: syndic_log_file
+
+``syndic_log_file``
+-------------------
+
+Default: ``syndic.log``
+
+If this master will be running a salt-syndic to connect to a higher level
+master, specify the log_file of the syndic daemon.
+
+.. code-block:: yaml
+
+    syndic_log_file: salt-syndic.log
+
+.. conf_master:: syndic_master_log_file
+
+``syndic_pidfile``
+------------------
+
+Default: ``salt-syndic.pid``
+
+If this master will be running a salt-syndic to connect to a higher level
+master, specify the pidfile of the syndic daemon.
+
+.. code-block:: yaml
+
+    syndic_pidfile: syndic.pid
 
 Peer Publish Settings
 ---------------------
@@ -641,7 +792,7 @@ A group consists of a group name and a compound target.
 .. code-block:: yaml
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
 
 Master Logging Settings
@@ -706,8 +857,8 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 Default: ``%H:%M:%S``
 
-The date and time format used in console log messages. Allowed date/time formating
-can be seen on http://docs.python.org/library/time.html#time.strftime
+The date and time format used in console log messages. Allowed date/time formatting
+can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 .. code-block:: yaml
 
@@ -720,8 +871,8 @@ can be seen on http://docs.python.org/library/time.html#time.strftime
 
 Default: ``%Y-%m-%d %H:%M:%S``
 
-The date and time format used in log file messages. Allowed date/time formating
-can be seen on http://docs.python.org/library/time.html#time.strftime
+The date and time format used in log file messages. Allowed date/time formatting
+can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 .. code-block:: yaml
 
@@ -735,7 +886,7 @@ can be seen on http://docs.python.org/library/time.html#time.strftime
 Default: ``[%(levelname)-8s] %(message)s``
 
 The format of the console logging messages. Allowed formatting options can
-be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 .. code-block:: yaml
 
@@ -749,7 +900,7 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. Allowed formatting options can
-be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 .. code-block:: yaml
 
@@ -762,8 +913,8 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 
 Default: ``{}``
 
-This can be used to control logging levels more specificically.  The
-example sets the main salt library at the 'warning' level, but sets 
+This can be used to control logging levels more specifically.  The
+example sets the main salt library at the 'warning' level, but sets
 'salt.modules' to log at the 'debug' level:
 
 .. code-block:: yaml

@@ -1,9 +1,9 @@
-import sys
-import os
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
+# Import external libs
 try:
     from mock import MagicMock, patch
     has_mock = True
@@ -14,30 +14,30 @@ if has_mock:
     import salt.modules.rvm as rvm
     rvm.__salt__ = {
         'cmd.has_exec': MagicMock(return_value=True),
-        'config.option' : MagicMock(return_value=None)
+        'config.option': MagicMock(return_value=None)
     }
 
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+@skipIf(has_mock is False, 'mock python module is unavailable')
 class TestRvmModule(TestCase):
 
     def test__rvm(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
-            rvm._rvm("install", "1.9.3")
+            rvm._rvm('install', '1.9.3')
             mock.assert_called_once_with(
-                "/usr/local/rvm/bin/rvm install 1.9.3", runas=None
+                '/usr/local/rvm/bin/rvm install 1.9.3', runas=None
             )
 
     def test__rvm_do(self):
         mock = MagicMock(return_value=None)
         with patch.object(rvm, '_rvm', new=mock):
-            rvm._rvm_do("1.9.3", "gemset list")
-            mock.assert_called_once_with("1.9.3 do gemset list", runas=None)
+            rvm._rvm_do('1.9.3', 'gemset list')
+            mock.assert_called_once_with('1.9.3 do gemset list', runas=None)
 
     def test_install(self):
-        mock = MagicMock(return_value=0)
-        with patch.dict(rvm.__salt__, {'cmd.retcode': mock}):
+        mock = MagicMock(return_value={'retcode': 0})
+        with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm.install()
 
     def test_list(self):
@@ -67,7 +67,7 @@ rvm rubies
                  ['ruby', '1.9.2-p180', False],
                  ['ruby', '1.9.3-p125', False],
                  ['ruby', 'head', False]],
-                rvm.list())
+                rvm.list_())
 
     def test_gemset_list(self):
         output = '''
@@ -118,7 +118,7 @@ gemsets for ruby-1.9.2-p180 (found in /usr/local/rvm/gems/ruby-1.9.2-p180)
                  'ruby-head': ['global', 'headbar', 'headfoo']},
                 rvm.gemset_list_all())
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestRvmModule)
-    TextTestRunner(verbosity=1).run(tests)
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestRvmModule, needs_daemon=False)

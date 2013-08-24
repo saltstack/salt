@@ -1,7 +1,7 @@
 '''
 This pillar module parses a config file (specified in the salt master config),
 and executes a series of LDAP searches based on that config.  Data returned by
-these searches is aggregrated, with data items found later in the LDAP search
+these searches is aggregated, with data items found later in the LDAP search
 order overriding data found earlier on.
 The final result set is merged with the pillar data.
 '''
@@ -9,7 +9,6 @@ The final result set is merged with the pillar data.
 # Import python libs
 import os
 import logging
-import traceback
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
@@ -139,17 +138,14 @@ def _do_search(conf):
     except IndexError:  # we got no results for this search
         result = {}
     except Exception:
-        trace = traceback.format_exc()
         log.critical(
-            'Failed to retrieve pillar data from LDAP: {0}'.format(
-                trace
-            )
+            'Failed to retrieve pillar data from LDAP:\n', exc_info=True
         )
         return {}
     return result
 
 
-def ext_pillar(pillar, config_file):
+def ext_pillar(minion_id, pillar, config_file):
     '''
     Execute LDAP searches and return the aggregated data
     '''

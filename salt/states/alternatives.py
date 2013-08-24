@@ -6,19 +6,25 @@ Control the alternatives system
 
 .. code-block:: yaml
 
+  {% set my_hadoop_conf = '/opt/hadoop/conf' %}
+
+  {{ my_hadoop_conf }}:
+    file.directory
+
   hadoop-0.20-conf:
     alternatives.install:
       - name: hadoop-0.20-conf
       - link: /etc/hadoop-0.20/conf
-      - path: /opt/hadoop/conf
+      - path: {{ my_hadoop_conf }}
       - priority: 30
+      - require:
+        - file: {{ my_hadoop_conf }}
 
   hadoop-0.20-conf:
-    alternatives:
-        - remove
+    alternatives.remove:
         - name: hadoop-0.20-conf
-        - path: /opt/hadoop/conf
-    
+        - path: {{ my_hadoop_conf }}
+
 '''
 
 def install(name, link, path, priority):
@@ -34,8 +40,9 @@ def install(name, link, path, priority):
         (e.g. /usr/bin/pager)
 
     path
-        is the location of one of the alternative target files.
-        (e.g. /usr/bin/less) 
+        is the location of the new alternative target.
+        NB: This file / directory must already exist.
+        (e.g. /usr/bin/less)
 
     priority
         is an integer; options with higher numbers have higher priority in
@@ -55,16 +62,13 @@ def install(name, link, path, priority):
         ret['comment'] = (
             'Setting alternative for {0} to {1} with priority {2}'
         ).format(name, path, priority)
-        ret['changes'] =  {'name': name,
+        ret['changes'] = {'name': name,
                           'link': link,
                           'path': path,
                           'priority': priority}
-
         return ret
 
-
     ret['comment'] = 'Alternatives for {0} is already set to {1}'.format(name, path)
-
     return ret
 
 
@@ -79,7 +83,7 @@ def remove(name, path):
 
     path
         is the location of one of the alternative target files.
-        (e.g. /usr/bin/less) 
+        (e.g. /usr/bin/less)
     '''
     ret = {'name': name,
            'path': path,
@@ -96,7 +100,7 @@ def remove(name, path):
             ret['comment'] = (
                 'Alternative for {0} removed. Falling back to path {1}'
             ).format(name, current)
-            ret['changes'] =  {'path': current}
+            ret['changes'] = {'path': current}
             return ret
 
         ret['comment'] = 'Alternative for {0} removed'.format(name)
@@ -111,11 +115,9 @@ def remove(name, path):
         ).format(name, current)
         return ret
 
-   
     ret['result'] = False
     ret['comment'] = (
-	'Alternative for {0} doesn\'t exist'
+        'Alternative for {0} doesn\'t exist'
     ).format(name)
 
     return ret
-

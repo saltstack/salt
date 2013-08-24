@@ -61,7 +61,9 @@ def compactionstats():
     '''
     Return compactionstats info
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.compactionstats
     '''
@@ -72,7 +74,9 @@ def version():
     '''
     Return the cassandra version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.version
     '''
@@ -83,7 +87,9 @@ def netstats():
     '''
     Return netstats info
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.netstats
     '''
@@ -94,7 +100,9 @@ def tpstats():
     '''
     Return tpstats info
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.tpstats
     '''
@@ -105,7 +113,9 @@ def info():
     '''
     Return cassandra node info
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.info
     '''
@@ -116,7 +126,9 @@ def ring():
     '''
     Return cassandra ring info
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.ring
     '''
@@ -127,7 +139,9 @@ def keyspaces():
     '''
     Return existing keyspaces
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.keyspaces
     '''
@@ -140,7 +154,9 @@ def column_families(keyspace=None):
     Return existing column families for all keyspaces
     or just the provided one.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.column_families
         salt '*' cassandra.column_families <keyspace>
@@ -166,7 +182,9 @@ def column_family_definition(keyspace=None, column_family=None):
     Return a dictionary of column family definitions for the given
     keyspace/column_family
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cassandra.column_family_definition <keyspace> <column_family>
 
@@ -175,6 +193,6 @@ def column_family_definition(keyspace=None, column_family=None):
 
     try:
         return vars(sys.get_keyspace_column_families(keyspace)[column_family])
-    except:
+    except Exception:
         log.debug('Invalid Keyspace/CF combination')
         return None

@@ -91,6 +91,19 @@ def salt_run():
         raise SystemExit('\nExiting gracefully on Ctrl-c')
 
 
+def salt_ssh():
+    '''
+    Execute the salt-ssh system
+    '''
+    if '' in sys.path:
+        sys.path.remove('')
+    try:
+        client = salt.cli.SaltSSH()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
+
+
 def salt_main():
     '''
     Publish commands to the salt system from the command line on the
@@ -98,5 +111,8 @@ def salt_main():
     '''
     if '' in sys.path:
         sys.path.remove('')
-    client = salt.cli.SaltCMD()
-    client.run()
+    try:
+        client = salt.cli.SaltCMD()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')

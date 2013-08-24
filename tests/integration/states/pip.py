@@ -4,13 +4,17 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
 import os
 import shutil
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -31,12 +35,18 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             # Since we don't have the virtualenv created, pip.installed will
             # thrown and error.
+            # Example error strings:
+            #  * "Error installing 'supervisor': /tmp/pip-installed-errors: not found"
+            #  * "Error installing 'supervisor': /bin/sh: 1: /tmp/pip-installed-errors: not found"
+            #  * "Error installing 'supervisor': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
+            os.environ['SHELL'] = '/bin/sh'
             ret = self.run_function('state.sls', mods='pip-installed-errors')
             self.assertSaltFalseReturn(ret)
             self.assertSaltCommentRegexpMatches(
                 ret,
-                'Error installing \'supervisor\': .* '
-                '[nN]o such file or directory'
+                'Error installing \'supervisor\':(?:.*)'
+                '/tmp/pip-installed-errors(?:.*)'
+                '([nN]o such file or directory|not found)'
             )
 
             # We now create the missing virtualenv
@@ -59,7 +69,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
         try:
             os.makedirs(ographite)
-        except OSError, err:
+        except OSError as err:
             if err.errno == 13:
                 # Permission denied
                 self.skipTest(
@@ -135,9 +145,32 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             ret = self.run_function('state.sls', mods='issue-2087-missing-pip')
             self.assertSaltFalseReturn(ret)
             self.assertInSaltComment(
-                ret,
-                'Error installing \'pep8\': Could not find a `pip` binary'
+                'Error installing \'pep8\': Could not find a `pip` binary',
+                ret
             )
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
+
+    def test_issue_5940_multiple_pip_mirrors(self):
+        ret = self.run_function(
+            'state.sls', mods='issue-5940-multiple-pip-mirrors'
+        )
+
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, '5940-multiple-pip-mirrors'
+        )
+
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PipStateTest)

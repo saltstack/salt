@@ -1,7 +1,7 @@
-'''Salt Keystone Authentication
-Module to provide authentication using keystone as the backend.
+'''
+Provide authentication using OpenStack Keystone
 
-Required python modules: keystoneclient
+:depends:   - keystoneclient Python module
 '''
 try:
     from keystoneclient.v2_0 import client
@@ -12,7 +12,7 @@ except ImportError:
 
 def get_auth_url():
     '''
-    Try and get the url from the config, else return localhost
+    Try and get the URL from the config, else return localhost
     '''
     try:
         return __opts__['keystone.auth_url']

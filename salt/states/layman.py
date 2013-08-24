@@ -1,6 +1,6 @@
 '''
-Mangement of Gentoo Overlays using layman
-=========================================
+Management of Gentoo Overlays using layman
+==========================================
 
 A state module to manage Gentoo package overlays via layman
 
@@ -43,7 +43,7 @@ def present(name):
         if len(changes) < 1:
             ret['comment'] = 'Overlay {0} failed to add'.format(name)
             ret['result'] = False
-        # Sucess
+        # Success
         else:
             ret['changes']['added'] = changes
             ret['comment'] = 'Overlay {0} added.'.format(name)
@@ -77,7 +77,7 @@ def absent(name):
         if len(changes) < 1:
             ret['comment'] = 'Overlay {0} failed to delete'.format(name)
             ret['result'] = False
-        # Sucess
+        # Success
         else:
             ret['changes']['deleted'] = changes
             ret['comment'] = 'Overlay {0} deleted.'.format(name)

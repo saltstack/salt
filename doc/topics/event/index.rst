@@ -16,7 +16,7 @@ Listening for Events
 The event system is accessed via the event library and can only be accessed
 by the same system user that Salt is running as. To listen to events a
 SaltEvent object needs to be created and then the get_event function needs to
-be run. The SaltEvent object needs to know the location that the Salt unix
+be run. The SaltEvent object needs to know the location that the Salt Unix
 sockets are kept. In the configuration this is the ``sock_dir`` option. The
 ``sock_dir`` option defaults to "/var/run/salt/master" on most systems.
 

@@ -15,7 +15,7 @@ to the minion config files::
     mongo.port: 27017
 
 This mongo returner is being developed to replace the default mongodb returner
-in the future and should not be considered api stable yet.
+in the future and should not be considered API stable yet.
 
 '''
 
@@ -95,7 +95,7 @@ def save_load(jid, load):
 
 def get_load(jid):
     '''
-    Returnt he load asociated with a given job id
+    Return the load associated with a given job id
     '''
     conn, mdb = _get_conn()
     return mdb[jid].find_one()

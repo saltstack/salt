@@ -8,12 +8,36 @@ Package repositories can be managed with the pkgrepo state:
 
     base:
       pkgrepo.managed:
-        - human_name: CentOS-$releasever - Base
+        - humanname: CentOS-$releasever - Base
         - mirrorlist: http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os
         - comments:
-            - #http://mirror.centos.org/centos/$releasever/os/$basearch/
+            - '#http://mirror.centos.org/centos/$releasever/os/$basearch/'
         - gpgcheck: 1
         - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+.. code-block::yaml
+    base:
+      pkgrepo.managed:
+        - humanname: Logstash PPA
+        - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
+        - dist: precise
+        - file: /etc/apt/sources.list.d/logstash.list
+        - keyid: 28B04E4A
+        - keyserver: keyserver.ubuntu.com
+        - require_in:
+          - pkg: logstash
+
+      pkg.latest:
+        - name: logstash
+        - refresh: True
+
+.. code-block::yaml
+    base:
+      pkgrepo.managed:
+        - ppa: wolfnet/logstash
+      pkg.latest:
+        - name: logstash
+        - refresh: True
 '''
 
 
@@ -61,17 +85,33 @@ def managed(name, **kwargs):
 
     For apt-based systems, take note of the following configuration values:
 
-    name:
-        on apt-based systems this must be the complete entry as it would be
+    ppa
+        On Ubuntu, you can take advantage of Personal Package Archives on
+        Launchpad simply by specifying the user and archive name. The keyid
+        will be queried from launchpad and everything else is set
+        automatically. You can override any of the below settings by simply
+        setting them as you would normally.
+
+          EXAMPLE: ppa: wolfnet/logstash
+
+    ppa_auth
+        For Ubuntu PPAs there can be private PPAs that require authentication
+        to access. For these PPAs the username/password can be passed as an
+        HTTP Basic style username/password combination.
+
+          EXAMPLE: ppa_auth: username:password
+
+    name
+        On apt-based systems this must be the complete entry as it would be
         seen in the sources.list file.  This can have a limited subset of
         components (i.e. 'main') which can be added/modified with the
         "comps" option.
 
-          EXAMPLE: deb http://us.archive.ubuntu.com/ubuntu/ precise main
+          EXAMPLE: name: deb http://us.archive.ubuntu.com/ubuntu/ precise main
 
     disabled
         On apt-based systems, disabled toggles whether or not the repo is
-        used for resolving dependancies and/or installing packages
+        used for resolving dependencies and/or installing packages
 
     comps
         On apt-based systems, comps dictate the types of packages to be
@@ -96,56 +136,100 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       A web url to retreive the GPG key from.
+       A web URL to retrieve the GPG key from.
 
-    consolidate:
+    consolidate
        If set to true, this will consolidate all sources definitions to
        the sources.list file, cleanup the now unused files, consolidate
-       components (e.g. main) for the same uri, type, and architecture
+       components (e.g. main) for the same URI, type, and architecture
        to a single line, and finally remove comments from the sources.list
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
 
+    require_in
+        Set this to a list of pkg.installed or pkg.latest to trigger the
+        running of apt-get update prior to attempting to install these
+        packages. Setting a require in the pkg will not work for this.
     '''
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
     repo = {}
-    try:
-        repo = __salt__['pkg.get_repo'](name)
-    except:
-        pass
+    repokwargs = {}
 
     # pkg.mod_repo has conflicting kwargs, so move 'em around
-    repokwargs = {}
+
     for kwarg in kwargs.keys():
         if kwarg == 'name':
+            if 'ppa' in kwargs:
+                ret['result'] = False
+                ret['comment'] = 'You may not use both the "name" argument ' \
+                                 'and the "ppa" argument.'
+                return ret
             repokwargs['repo'] = kwargs[kwarg]
+        elif kwarg == 'ppa' and __grains__['os'] == 'Ubuntu':
+            # overload the name/repo value for PPAs cleanly
+            # this allows us to have one code-path for PPAs
+            repo_name = 'ppa:{0}'.format(kwargs[kwarg])
+            repokwargs['repo'] = repo_name
         elif kwarg == 'humanname':
             repokwargs['name'] = kwargs[kwarg]
-        elif kwarg in ('__id__', 'fun', 'state', '__env__', '__sls__', 'order'):
+        elif kwarg in ('__id__', 'fun', 'state', '__env__', '__sls__',
+                       'order', 'watch', 'watch_in', 'require', 'require_in',
+                       'prereq', 'prereq_in'):
             pass
         else:
             repokwargs[kwarg] = kwargs[kwarg]
 
+    if 'repo' not in repokwargs:
+        repokwargs['repo'] = name
+
+    try:
+        repo = __salt__['pkg.get_repo'](
+                repokwargs['repo'],
+                ppa_auth=repokwargs.get('ppa_auth', None)
+        )
+    except Exception:
+        pass
+
+    # this is because of how apt-sources works.  This pushes distro logic
+    # out of the state itself and into a module that it makes more sense
+    # to use.  Most package providers will simply return the data provided
+    # it doesn't require any "specialized" data massaging.
+    sanitizedkwargs = __salt__['pkg.expand_repo_def'](repokwargs)
+
     if repo:
         notset = False
-        for kwarg in repokwargs:
-            if kwarg not in repo.keys():
+        for kwarg in sanitizedkwargs:
+            if kwarg == 'repo':
+                pass
+            elif kwarg not in repo.keys():
                 notset = True
+            elif kwarg == 'comps':
+                if sorted(sanitizedkwargs[kwarg]) != sorted(repo[kwarg]):
+                    notset = True
+            elif kwarg == 'line' and __grains__['os_family'] == 'Debian':
+                # split the line and sort everything after the URL
+                sanitizedsplit = sanitizedkwargs[kwarg].split()
+                sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
+                reposplit = repo[kwarg].split()
+                reposplit[3:] = sorted(reposplit[3:])
+                if sanitizedsplit != reposplit:
+                    notset = True
             else:
-                if repokwargs[kwarg] != repo[kwarg]:
+                if str(sanitizedkwargs[kwarg]) != str(repo[kwarg]):
                     notset = True
         if notset is False:
+            ret['result'] = True
             ret['comment'] = 'Package repo {0} already configured'.format(name)
             return ret
     if __opts__['test']:
         ret['comment'] = 'Package repo {0} needs to be configured'.format(name)
         return ret
     try:
-        __salt__['pkg.mod_repo'](repo=name, **repokwargs)
-    except Exception, e:
+        __salt__['pkg.mod_repo'](**repokwargs)
+    except Exception as e:
         # This is another way to pass information back from the mod_repo
         # function.
         ret['result'] = False
@@ -153,25 +237,28 @@ def managed(name, **kwargs):
                                                                       str(e))
         return ret
     try:
-        repodict = __salt__['pkg.get_repo'](name)
+        repodict = __salt__['pkg.get_repo'](repokwargs['repo'],
+                                            ppa_auth=repokwargs.get('ppa_auth',
+                                                                    None))
         if repo:
-            for kwarg in repokwargs:
+            for kwarg in sanitizedkwargs:
                 if repodict.get(kwarg) != repo.get(kwarg):
-                    change = { 'new': repodict[kwarg],
-                               'old': repo.get(kwarg) }
+                    change = {'new': repodict[kwarg],
+                              'old': repo.get(kwarg)}
                     ret['changes'][kwarg] = change
         else:
-            ret['changes'] = { 'repo': name }
+            ret['changes'] = {'repo': repokwargs['repo']}
+
         ret['result'] = True
         ret['comment'] = 'Configured package repo {0}'.format(name)
-    except Exception, e:
+    except Exception as e:
         ret['result'] = False
         ret['comment'] = 'Failed to confirm config of repo {0}: {1}'.format(
             name, str(e))
     return ret
 
 
-def absent(name):
+def absent(name, **kwargs):
     '''
     This function deletes the specified repo on the system, if it exists. It
     is essentially a wrapper around pkg.del_repo.
@@ -179,15 +266,34 @@ def absent(name):
     name
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
+
+    ppa
+        On Ubuntu, you can take advantage of Personal Package Archives on
+        Launchpad simply by specifying the user and archive name.
+
+          EXAMPLE: ppa: wolfnet/logstash
+
+    ppa_auth
+        For Ubuntu PPAs there can be private PPAs that require authentication
+        to access. For these PPAs the username/password can be specified.  This
+        is required for matching if the name format uses the "ppa:" specifier
+        and is private (requires username/password to access, which is encoded
+        in the URI)
+
+          EXAMPLE: ppa_auth: username:password
     '''
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
     repo = {}
+    if 'ppa' in kwargs and __grains__['os'] == 'Ubuntu':
+        kwargs['name'] = kwargs.pop('ppa')
+
     try:
-        repo = __salt__['pkg.get_repo'](name)
-    except:
+        repo = __salt__['pkg.get_repo'](name,
+                                        ppa_auth=kwargs.get('ppa_auth', None))
+    except Exception:
         pass
     if not repo:
         ret['comment'] = 'Package repo {0} is absent'.format(name)
@@ -196,7 +302,7 @@ def absent(name):
     if __opts__['test']:
         ret['comment'] = 'Package repo {0} needs to be removed'.format(name)
         return ret
-    __salt__['pkg.del_repo'](repo=name)
+    __salt__['pkg.del_repo'](repo=name, **kwargs)
     repos = __salt__['pkg.list_repos']()
     if name not in repos.keys():
         ret['changes'] = {'repo': name}
@@ -206,4 +312,3 @@ def absent(name):
     ret['result'] = False
     ret['comment'] = 'Failed to remove repo {0}'.format(name)
     return ret
-

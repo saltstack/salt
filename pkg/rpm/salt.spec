@@ -1,16 +1,17 @@
 %if ! (0%{?rhel} >= 6 || 0%{?fedora} > 12)
 %global with_python26 1
-%global include_tests 0
 %define pybasever 2.6
 %define __python_ver 26
 %define __python %{_bindir}/python%{?pybasever}
 %endif
 
+%global include_tests 1
+
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.13.0
+Version: 0.16.3
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -35,6 +36,7 @@ Requires: dmidecode
 %endif
 
 Requires: pciutils
+Requires: yum-utils
 
 %if 0%{?with_python26}
 BuildRequires: python26-zmq
@@ -54,6 +56,15 @@ Requires: python26-msgpack
 
 %else
 
+%if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
+BuildRequires: python-unittest2
+# this BR causes windows tests to happen
+# clearly, that's not desired
+# https://github.com/saltstack/salt/issues/3749
+BuildRequires: python-mock
+BuildRequires: git
+%endif
+
 BuildRequires: python-zmq
 BuildRequires: python-crypto
 BuildRequires: python-devel
@@ -61,9 +72,7 @@ BuildRequires: PyYAML
 BuildRequires: m2crypto
 BuildRequires: python-msgpack
 
-%if 0%{?include_tests}
-BuildRequires: python-unittest2
-%endif
+
 BuildRequires: python-jinja2
 
 Requires: python-crypto
@@ -95,8 +104,6 @@ Requires(postun): systemd-units
 BuildRequires: systemd-units
 
 %endif
-
-#Requires: MySQL-python libvirt-python yum
 
 %description
 Salt is a distributed remote execution system used to execute commands and 
@@ -150,9 +157,9 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
 install -p -m 0640 conf/master $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
 
-%if 0%{?include_tests}
+%if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
 %check
-%{__python} setup.py test
+%{__python} setup.py test --runtests-opts=-u
 %endif
 
 %clean
@@ -303,6 +310,48 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Thu Aug 15 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.16.3-1
+- Update to patch release 0.16.3
+
+* Thu Aug 8 2013 Clint Savage <herlo1@gmail.com> - 0.16.2-1
+- Update to patch release 0.16.2
+
+* Sun Aug 04 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0.16.0-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
+
+* Tue Jul 9 2013 Clint Savage <herlo1@gmail.com> - 0.16.0-1
+- Update to feature release 0.16.0
+
+* Sat Jun 1 2013 Clint Savage <herlo1@gmail.com> - 0.15.3-1
+- Update to patch release 0.15.3
+- Removed OrderedDict patch
+
+* Fri May 31 2013 Clint Savage <herlo1@gmail.com> - 0.15.2-1
+- Update to patch release 0.15.2
+- Patch OrderedDict for failed tests (SaltStack#4912)
+
+* Wed May 8 2013 Clint Savage <herlo1@gmail.com> - 0.15.1-1
+- Update to patch release 0.15.1
+
+* Sat May 4 2013 Clint Savage <herlo1@gmail.com> - 0.15.0-1
+- Update to upstream feature release 0.15.0
+
+* Fri Apr 19 2013 Clint Savage <herlo1@gmail.com> - 0.14.1-1
+- Update to upstream patch release 0.14.1
+
+* Sat Mar 23 2013 Clint Savage <herlo1@gmail.com> - 0.14.0-1
+- Update to upstream feature release 0.14.0
+
+* Fri Mar 22 2013 Clint Savage <herlo1@gmail.com> - 0.13.3-1
+- Update to upstream patch release 0.13.3
+
+* Wed Mar 13 2013 Clint Savage <herlo1@gmail.com> - 0.13.2-1
+- Update to upstream patch release 0.13.2
+
+* Fri Feb 15 2013 Clint Savage <herlo1@gmail.com> - 0.13.1-1
+- Update to upstream patch release 0.13.1
+- Add unittest support
+
 * Sat Feb 02 2013 Clint Savage <herlo1@gmail.com> - 0.12.1-1
 - Remove patches and update to upstream patch release 0.12.1
 
@@ -328,7 +377,7 @@ rm -rf $RPM_BUILD_ROOT
 - Moved to upstream release 0.10.5
 - Added pciutils as Requires
 
-* Tue Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
+* Wed Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
 - Moved to upstream release 0.10.4
 - Patched jcollie/systemd-service-status (SALT@GH#2335) (RHBZ#869669)
 
@@ -339,7 +388,7 @@ rm -rf $RPM_BUILD_ROOT
 * Thu Aug 2 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-2
 - Fix upstream bug #1730 per RHBZ#845295
 
-* Sat Jul 31 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-1
+* Tue Jul 31 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-1
 - Moved to upstream release 0.10.2
 - Removed PyXML as a dependency
 
@@ -382,7 +431,7 @@ rm -rf $RPM_BUILD_ROOT
 * Thu Dec 1 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-2
 - Removing requirement for Cython. Optional only for salt-minion
 
-* Thu Nov 30 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-1
+* Wed Nov 30 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-1
 - New upstream release with new features and bugfixes
 
 * Thu Nov 17 2011 Clint Savage <herlo1@gmail.com> - 0.9.3-1

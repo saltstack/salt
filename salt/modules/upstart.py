@@ -40,13 +40,17 @@ import os
 # Import salt libs
 import salt.utils
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 
 def __virtual__():
     '''
     Only work on Ubuntu
     '''
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] == 'Ubuntu':
+    if __grains__['os'] in ('Ubuntu', 'Linaro'):
         return 'service'
     return False
 
@@ -61,7 +65,7 @@ def _find_utmp():
     for utmp in ('/var/run/utmp', '/run/utmp'):
         try:
             result[os.stat(utmp).st_mtime] = utmp
-        except:
+        except Exception:
             pass
     return result[sorted(result.keys()).pop()]
 
@@ -79,7 +83,7 @@ def _default_runlevel():
             for line in fp_:
                 if line.startswith('env DEFAULT_RUNLEVEL'):
                     runlevel = line.split('=')[-1].strip()
-    except:
+    except Exception:
         return '2'
 
     # Look for an optional "legacy" override in /etc/inittab
@@ -88,22 +92,21 @@ def _default_runlevel():
             for line in fp_:
                 if not line.startswith('#') and 'initdefault' in line:
                     runlevel = line.split(':')[1]
-    except:
+    except Exception:
         pass
 
     # The default runlevel can also be set via the kernel command-line.
     # Kinky.
     try:
         valid_strings = set(
-                ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single')
-                )
+            ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
         with salt.utils.fopen('/proc/cmdline') as fp_:
             for line in fp_:
                 for arg in line.strip().split():
                     if arg in valid_strings:
                         runlevel = arg
                         break
-    except:
+    except Exception:
         pass
 
     return runlevel
@@ -113,16 +116,20 @@ def _runlevel():
     '''
     Return the current runlevel
     '''
+    if 'upstart._runlevel' in __context__:
+        return __context__['upstart._runlevel']
     out = __salt__['cmd.run']('runlevel {0}'.format(_find_utmp()))
     try:
-        return out.split()[1]
+        ret = out.split()[1]
     except IndexError:
         # The runlevel is unknown, return the default
-        return _default_runlevel()
+        ret = _default_runlevel()
+    __context__['upstart._runlevel'] = ret
+    return ret
 
 
 def _is_symlink(name):
-    return not os.path.abspath(name) == os.path.realpath(name)
+    return os.path.abspath(name) != os.path.realpath(name)
 
 
 def _service_is_upstart(name):
@@ -139,11 +146,11 @@ def _service_is_upstart(name):
 def _upstart_is_disabled(name):
     '''
     An Upstart service is assumed disabled if a manual stanza is
-    placed in /etc/init/[name].conf.override.
+    placed in /etc/init/[name].override.
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
     '''
-    return os.access('/etc/init/{0}.conf.override'.format(name), os.R_OK)
+    return os.access('/etc/init/{0}.override'.format(name), os.R_OK)
 
 
 def _upstart_is_enabled(name):
@@ -274,7 +281,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name):
+def restart(name, **kwargs):
     '''
     Restart the named service
 
@@ -282,13 +289,11 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
     cmd = 'service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
-def full_restart(name):
+def full_restart(name, **kwargs):
     '''
     Do a full restart (stop/start) of the named service
 
@@ -296,13 +301,11 @@ def full_restart(name):
 
         salt '*' service.full_restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
     cmd = 'service {0} --full-restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name):
+def reload_(name):
     '''
     Reload the named service
 
@@ -357,7 +360,7 @@ def _upstart_disable(name):
     '''
     Disable an Upstart service.
     '''
-    override = '/etc/init/{0}.conf.override'.format(name)
+    override = '/etc/init/{0}.override'.format(name)
     with file(override, 'w') as ofile:
         ofile.write('manual')
     return _upstart_is_disabled(name)
@@ -367,7 +370,7 @@ def _upstart_enable(name):
     '''
     Enable an Upstart service.
     '''
-    override = '/etc/init/{0}.conf.override'.format(name)
+    override = '/etc/init/{0}.override'.format(name)
     if os.access(override, os.R_OK):
         os.unlink(override)
     return _upstart_is_enabled(name)

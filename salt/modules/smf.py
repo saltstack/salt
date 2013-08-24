@@ -3,15 +3,19 @@ Service support for Solaris 10 and 11, should work with other systems
 that use SMF also. (e.g. SmartOS)
 '''
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 
 def __virtual__():
     '''
     Only work on systems which default to SMF
     '''
     # Don't let this work on Solaris 9 since SMF doesn't exist on it.
-    enable = [
+    enable = set((
                'Solaris',
-              ]
+              ))
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == "5.9":
             return False
@@ -111,6 +115,18 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/usr/sbin/svcadm restart {0}'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def reload_(name):
+    '''
+    Reload the named service
+
+    CLI Example::
+
+        salt '*' service.reload <service name>
+    '''
+    cmd = '/usr/sbin/svcadm refresh {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 

@@ -2,10 +2,10 @@
 Client ACL system
 =================
 
-The salt client acl system is a means to allow system users other than root to
+The salt client ACL system is a means to allow system users other than root to
 have access to execute select salt commands on minions from the master.
 
-The client acl system is configured in the master configuration file via the
+The client ACL system is configured in the master configuration file via the
 ``client_acl`` configuration option. Under the ``client_acl`` configuration
 option the users open to send commands are specified and then a list of regular
 expressions which specify the minion functions which will be made available to

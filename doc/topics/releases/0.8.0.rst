@@ -2,7 +2,7 @@
 Salt 0.8.0 release notes
 ========================
 Salt 0.8.0 is ready for general consumption!
-The source tarball is available on github for download:
+The source tarball is available on GitHub for download:
 
 :download:`salt-0.8.0.tar.gz`
 
@@ -64,7 +64,7 @@ it to a specific module. The returner modules work like minion modules, so any
 returner can be added to the minions.
 
 This means that a custom data returner can be added to communicate the return
-data so anything from MySQL, redis, mongodb and more!
+data so anything from MySQL, Redis, MongoDB and more!
 
 There are 2 simple stock returners in the returners directory:
 
@@ -93,7 +93,7 @@ In 0.7.0 the minion would block after receiving a command from the master, now
 the minion will spawn a thread or multiprocess. By default Python threads are
 used because for general use they have proved to be faster, but the minion can
 now be configured to use the Python multiprocessing module instead. Using
-multiprocessing will cause executions that are cpu bound or would otherwise
+multiprocessing will cause executions that are CPU bound or would otherwise
 exploit the negative aspects of the Python GIL to run faster and more reliably,
 but simple calls will still be faster with Python threading.
 The configuration option can be found in the minion configuration file:
@@ -104,7 +104,7 @@ Lowered Supported Python to 2.6 -
 
 The requirement for Python 2.7 has been removed to support Python 2.6. I have
 received requests to take the minimum Python version back to 2.4, but
-unfortunately this will not be possible, since the zeromq Python bindings do
+unfortunately this will not be possible, since the ZeroMQ Python bindings do
 not support Python 2.4.
 
 Salt 0.8.0 is a very major update, it also changes the network protocol slightly
@@ -114,7 +114,7 @@ I could use some help bringing salt to the people! Right now I only have
 packages for Arch Linux, Fedora 14 and Gentoo. We need packages for Debian and
 people willing to help test on more platforms. We also need help writing more
 minion modules and returner modules. If you want to contribute to salt please
-hop on the mailing list and send in patches, make a fork on github and send in
+hop on the mailing list and send in patches, make a fork on GitHub and send in
 pull requests! If you want to help but are not sure where you can, please email
 me directly or post tot he mailing list!
 

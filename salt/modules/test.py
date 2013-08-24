@@ -2,8 +2,16 @@
 Module for running arbitrary tests
 '''
 
-# Import salt libs
+# Import Python libs
+import os
+import sys
 import time
+import random
+
+# Import Salt libs
+import salt
+import salt.version
+import salt.loader
 
 
 def echo(text):
@@ -42,6 +50,19 @@ def sleep(length):
     return True
 
 
+def rand_sleep(max=60):
+    '''
+    Sleep for a random number of seconds, used to test long-running commands
+    and minions returning at differing intervals
+
+    CLI Example::
+
+        salt '*' test.rand_sleep 60
+    '''
+    time.sleep(random.randint(0, max))
+    return True
+
+
 def version():
     '''
     Return the version of salt on the minion
@@ -50,8 +71,29 @@ def version():
 
         salt '*' test.version
     '''
-    import salt
     return salt.__version__
+
+
+def versions_information():
+    '''
+    Returns versions of components used by salt as a dict
+
+    CLI Example::
+
+        salt '*' test.versions_information
+    '''
+    return dict(salt.version.versions_information())
+
+
+def versions_report():
+    '''
+    Returns versions of components used by salt
+
+    CLI Example::
+
+        salt '*' test.versions_report
+    '''
+    return '\n'.join(salt.version.versions_report())
 
 
 def conf_test():
@@ -100,9 +142,37 @@ def kwarg(**kwargs):
 
     CLI Example::
 
-        salt '*' test.kwarg
+        salt '*' test.kwarg num=1 txt="two" env='{a: 1, b: "hello"}'
     '''
     return kwargs
+
+
+def arg(*args, **kwargs):
+    '''
+    Print out the data passed into the function ``*args`` and ```kwargs``, this
+    is used to both test the publication data and cli argument passing, but
+    also to display the information available within the publication data.
+    Returns {"args": args, "kwargs": kwargs}.
+
+    CLI Example::
+
+        salt '*' test.arg 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
+    '''
+    return {"args": args, "kwargs": kwargs}
+
+
+def arg_repr(*args, **kwargs):
+    '''
+    Print out the data passed into the function ``*args`` and ```kwargs``, this
+    is used to both test the publication data and cli argument passing, but
+    also to display the information available within the publication data.
+    Returns {"args": repr(args), "kwargs": repr(kwargs)}.
+
+    CLI Example::
+
+        salt '*' test.arg_repr 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
+    '''
+    return {"args": repr(args), "kwargs": repr(kwargs)}
 
 
 def fib(num):
@@ -156,3 +226,123 @@ def outputter(data):
         salt '*' test.outputter foobar
     '''
     return data
+
+
+def retcode(code=42):
+    '''
+    Test that the returncode system is functioning correctly
+
+    CLI Example::
+
+        salt '*' test.retcode 42
+    '''
+    __context__['retcode'] = code
+    return True
+
+
+def provider(module):
+    '''
+    Pass in a function name to discover what provider is being used
+
+    CLI Example::
+
+        salt '*' test.provider service
+    '''
+    func = ''
+    for key in __salt__:
+        if not key.startswith('{0}.'.format(module)):
+            continue
+        func = key
+        break
+    if not func:
+        return ''
+    pfn = sys.modules[__salt__[func].__module__].__file__
+    pfn = os.path.basename(pfn)
+    return pfn[:pfn.rindex('.')]
+
+
+def providers():
+    '''
+    Return a dict of the provider names and the files that provided them
+
+    CLI Example::
+
+        salt '*' test.providers
+    '''
+    ret = {}
+    for funcname in __salt__:
+        modname = funcname.split('.')[0]
+        if modname not in ret:
+            ret[provider(modname)] = modname
+    return ret
+
+
+def not_loaded():
+    '''
+    List the modules that were not loaded by the salt loader system
+
+    CLI Example::
+
+        salt '*' test.not_loaded
+    '''
+    prov = providers()
+    ret = set()
+    loader = salt.loader._create_loader(__opts__, 'modules', 'module')
+    for mod_dir in loader.module_dirs:
+        if not os.path.isabs(mod_dir):
+            continue
+        if not os.path.isdir(mod_dir):
+            continue
+        for fn_ in os.listdir(mod_dir):
+            if fn_.startswith('_'):
+                continue
+            name = fn_.split('.')[0]
+            if name not in prov:
+                ret.add(name)
+    return sorted(ret)
+
+
+def opts_pkg():
+    '''
+    Return an opts package with the grains and opts for this minion.
+    This is primarily used to create the options used for master side
+    state compiling routines
+
+    CLI Example::
+
+        salt '*' test.opts_pkg
+    '''
+    ret = {}
+    ret.update(__opts__)
+    ret['grains'] = __grains__
+    return ret
+
+
+def tty(device, echo=None):
+    '''
+    Echo a string to a specific tty
+
+    CLI Example::
+
+        salt '*' test.tty tty0 'This is a test'
+        salt '*' test.tty pts3 'This is a test'
+    '''
+    if device.startswith('tty'):
+        teletype = '/dev/{0}'.format(device)
+    elif device.startswith('pts'):
+        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
+    else:
+        return {'Error': 'The specified device is not a valid TTY'}
+
+    cmd = 'echo {0} > {1}'.format(echo, teletype)
+    ret = __salt__['cmd.run_all'](cmd)
+    if ret['retcode'] == 0:
+        return {
+            'Success': 'Message was successfully echoed to {0}'.format(teletype)
+        }
+    else:
+        return {
+            'Error': 'Echoing to {0} returned error code {1}'.format(
+                teletype,
+                ret['retcode'])
+        }

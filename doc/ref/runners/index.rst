@@ -5,6 +5,8 @@ Salt Runners
 .. seealso:: :ref:`The full list of runners <all-salt.runners>`
 
 Salt runners are convenience applications executed with the salt-run command.
+Where as salt modules are sent out to minions for execution, salt runners are
+executed on the salt master.
 
 A Salt runner can be a simple client call, or a complex application.
 
@@ -46,7 +48,7 @@ responding to Salt calls would look like this:
         '''
         Print a list of all of the minions that are up
         '''
-        client = salt.client.LocalClient(__opts__['config'])
+        client = salt.client.LocalClient(__opts__['conf_file'])
         minions = client.cmd('*', 'test.ping', timeout=1)
         for minion in sorted(minions):
             print minion

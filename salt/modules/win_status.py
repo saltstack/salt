@@ -56,6 +56,9 @@ def procs():
 
 
 def _get_process_info(proc):
+    '''
+    Return  process information
+    '''
     cmd = (proc.CommandLine or '').encode('utf-8')
     name = proc.Name.encode('utf-8')
     info = dict(
@@ -68,8 +71,14 @@ def _get_process_info(proc):
 
 def _get_process_owner(process):
     owner = {}
-    domain, error_code, user = process.GetOwner()
-    if not error_code:
+    domain, error_code, user = None, None, None
+    try:
+        domain, error_code, user = process.GetOwner()
+        owner['user'] = user.encode('utf-8')
+        owner['user_domain'] = domain.encode('utf-8')
+    except Exception as exc:
+        pass
+    if not error_code and all((user, domain)):
         owner['user'] = user.encode('utf-8')
         owner['user_domain'] = domain.encode('utf-8')
     elif process.ProcessId in [0, 4] and error_code == 2:
@@ -79,5 +88,4 @@ def _get_process_owner(process):
     else:
         log.warning('Error getting owner of process; PID=\'{0}\'; Error: {1}'
                     .format(process.ProcessId, error_code))
-
     return owner

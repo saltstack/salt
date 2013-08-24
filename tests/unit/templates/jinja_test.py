@@ -1,15 +1,30 @@
+# -*- coding: utf-8 -*-
+
 # Import python libs
 import os
 import tempfile
+import json
+import datetime
+import textwrap
 
-# Import 3rd party libs
-from jinja2 import Environment
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
-from salt.utils.jinja import SaltCacheLoader
+from salt.utils.jinja import SaltCacheLoader, SerializerExtension
 from salt.utils.templates import render_jinja_tmpl
-from saltunittest import TestCase
+
+# Import 3rd party libs
+import yaml
+from jinja2 import Environment, DictLoader, exceptions
+try:
+    import timelib
+    HAS_TIMELIB = True
+except ImportError:
+    HAS_TIMELIB = False
 
 TEMPLATES_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -54,7 +69,7 @@ class TestSaltCacheLoader(TestCase):
         self.assertEqual(str(res[0]), 'world' + os.linesep)
         tmpl_dir = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
-        assert res[2](), "Template up to date?"
+        assert res[2](), 'Template up to date?'
         assert len(fc.requests)
         self.assertEqual(fc.requests[0]['path'], 'salt://hello_simple')
 
@@ -152,3 +167,205 @@ class TestGetTemplate(TestCase):
         self.assertEqual(out, 'Hey world !Hi Salt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
+
+    def test_non_ascii_encoding(self):
+        fc = MockFileClient()
+        # monkey patch file client
+        _fc = SaltCacheLoader.file_client
+        SaltCacheLoader.file_client = lambda loader: fc
+        filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
+        out = render_jinja_tmpl(
+                salt.utils.fopen(filename).read(),
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                     a='Hi', b='Sàlt', env='test'))
+        self.assertEqual(out, 'Hey world !Hi Sàlt !\n')
+        self.assertEqual(fc.requests[0]['path'], 'salt://macro')
+        SaltCacheLoader.file_client = _fc
+
+    @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
+    def test_strftime(self):
+        response = render_jinja_tmpl('{{ "2002/12/25"|strftime }}',
+                dict(opts=self.local_opts, env='other'))
+        self.assertEqual(response, '2002-12-25')
+
+        objects = (
+            datetime.datetime(2002, 12, 25, 12, 00, 00, 00),
+            '2002/12/25',
+            1040814000,
+            '1040814000'
+        )
+
+        for object in objects:
+            response = render_jinja_tmpl('{{ object|strftime }}',
+                    dict(object=object, opts=self.local_opts, env='other'))
+            self.assertEqual(response, '2002-12-25')
+
+            response = render_jinja_tmpl('{{ object|strftime("%b %d, %Y") }}',
+                    dict(object=object, opts=self.local_opts, env='other'))
+            self.assertEqual(response, 'Dec 25, 2002')
+
+            response = render_jinja_tmpl('{{ object|strftime("%y") }}',
+                    dict(object=object, opts=self.local_opts, env='other'))
+            self.assertEqual(response, '02')
+
+
+class TestCustomExtensions(TestCase):
+    def test_serialize_json(self):
+        dataset = {
+            "foo": True,
+            "bar": 42,
+            "baz": [1, 2, 3],
+            "qux": 2.0
+        }
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
+        self.assertEquals(dataset, json.loads(rendered))
+
+    def test_serialize_yaml(self):
+        dataset = {
+            "foo": True,
+            "bar": 42,
+            "baz": [1, 2, 3],
+            "qux": 2.0
+        }
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
+        self.assertEquals(dataset, yaml.load(rendered))
+
+    def test_load_yaml(self):
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{% set document = "{foo: it works}"|load_yaml %}{{ document.foo }}').render()
+        self.assertEquals(rendered, u"it works")
+
+        rendered = env.from_string('{% set document = document|load_yaml %}'
+                                   '{{ document.foo }}').render(document="{foo: it works}")
+        self.assertEquals(rendered, u"it works")
+
+        with self.assertRaises(exceptions.TemplateRuntimeError):
+            env.from_string('{% set document = document|load_yaml %}'
+                                       '{{ document.foo }}').render(document={"foo": "it works"})
+
+    def test_load_tag(self):
+        env = Environment(extensions=[SerializerExtension])
+
+        source = '{{ bar }}, ' + \
+                 '{% load_yaml as docu %}{foo: it works, {{ bar }}: baz}{% endload %}' + \
+                                        '{{ docu.foo }}'
+
+        rendered = env.from_string(source).render(bar="barred")
+        self.assertEquals(rendered, u"barred, it works")
+
+        source = '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}": "baz"}{% endload %}' + \
+                                        '{{ docu.foo }}'
+
+        rendered = env.from_string(source).render(bar="barred")
+        self.assertEquals(rendered, u"barred, it works")
+
+        with self.assertRaises(exceptions.TemplateSyntaxError):
+            env.from_string('{% load_yamle as document %}{foo, bar: it works}{% endload %}').render()
+
+        with self.assertRaises(exceptions.TemplateRuntimeError):
+            env.from_string('{% load_json as document %}{foo, bar: it works}{% endload %}').render()
+
+
+    def test_load_json(self):
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{% set document = \'{"foo": "it works"}\'|load_json %}'
+                                   '{{ document.foo }}').render()
+        self.assertEquals(rendered, u"it works")
+
+        rendered = env.from_string('{% set document = document|load_json %}'
+                                   '{{ document.foo }}').render(document='{"foo": "it works"}')
+        self.assertEquals(rendered, u"it works")
+
+        # bad quotes
+        with self.assertRaises(exceptions.TemplateRuntimeError):
+            env.from_string("{{ document|load_json }}").render(document="{'foo': 'it works'}")
+
+        # not a string
+        with self.assertRaises(exceptions.TemplateRuntimeError):
+            env.from_string('{{ document|load_json }}').render(document={"foo": "it works"})
+
+    def test_load_yaml_template(self):
+        loader = DictLoader({'foo': '{bar: "my god is blue", foo: [1, 2, 3]}'})
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+        rendered = env.from_string('{% import_yaml "foo" as doc %}{{ doc.bar }}').render()
+        self.assertEquals(rendered, u"my god is blue")
+
+        with self.assertRaises(exceptions.TemplateNotFound):
+            env.from_string('{% import_yaml "does not exists" as doc %}').render()
+
+    def test_load_json_template(self):
+        loader = DictLoader({'foo': '{"bar": "my god is blue", "foo": [1, 2, 3]}'})
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+        rendered = env.from_string('{% import_json "foo" as doc %}{{ doc.bar }}').render()
+        self.assertEquals(rendered, u"my god is blue")
+
+        with self.assertRaises(exceptions.TemplateNotFound):
+            env.from_string('{% import_json "does not exists" as doc %}').render()
+
+    def test_catalog(self):
+        loader = DictLoader({
+            'doc1': '{bar: "my god is blue"}',
+            'doc2': '{% import_yaml "doc1" as local2 %} never exported',
+            'doc3': '{% load_yaml as local3 %}{"foo": "it works"}{% endload %} me neither',
+            'main1': '{% from "doc2" import local2 %}{{ local2.bar }}',
+            'main2': '{% from "doc3" import local3 %}{{ local3.foo }}',
+            'main3': '''
+                {% import "doc2" as imported2 %}
+                {% import "doc3" as imported3 %}
+                {{ imported2.local2.bar }}
+            ''',
+            'main4': '''
+                {% import "doc2" as imported2 %}
+                {% import "doc3" as imported3 %}
+                {{ imported3.local3.foo }}
+            ''',
+            'main5': '''
+                {% from "doc2" import local2 as imported2 %}
+                {% from "doc3" import local3 as imported3 %}
+                {{ imported2.bar }}
+            ''',
+            'main6': '''
+                {% from "doc2" import local2 as imported2 %}
+                {% from "doc3" import local3 as imported3 %}
+                {{ imported3.foo }}
+            '''
+
+        })
+
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+        rendered = env.get_template('main1').render()
+        self.assertEquals(rendered, u"my god is blue")
+
+        rendered = env.get_template('main2').render()
+        self.assertEquals(rendered, u"it works")
+
+        rendered = env.get_template('main3').render().strip()
+        self.assertEquals(rendered, u"my god is blue")
+
+        rendered = env.get_template('main4').render().strip()
+        self.assertEquals(rendered, u"it works")
+
+        rendered = env.get_template('main5').render().strip()
+        self.assertEquals(rendered, u"my god is blue")
+
+        rendered = env.get_template('main6').render().strip()
+        self.assertEquals(rendered, u"it works")
+
+    # def test_print(self):
+    #     env = Environment(extensions=[SerializerExtension])
+    #     source = '{% import_yaml "toto.foo" as docu %}'
+    #     name, filename = None, '<filename>'
+    #     parsed = env._parse(source, name, filename)
+    #     print parsed
+    #     print
+    #     compiled = env._generate(parsed, name, filename)
+    #     print compiled
+    #     return
+
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests([TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions], needs_daemon=False)

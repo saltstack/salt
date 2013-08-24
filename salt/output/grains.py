@@ -34,4 +34,3 @@ def output(grains):
             else:
                 ret += ' {0}{1}{2}\n'.format(colors['LIGHT_GREEN'], minion[key], colors['ENDC'])
     return ret
-

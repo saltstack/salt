@@ -2,7 +2,7 @@
 Manage package remote repo using FreeBSD pkgng.
 ==========================================================================
 
-Salt can manage the url pkgng pulls packages from.
+Salt can manage the URL pkgng pulls packages from.
 ATM the state and module are small so use cases are
 typically rather simple:
 

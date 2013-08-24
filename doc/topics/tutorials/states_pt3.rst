@@ -4,7 +4,7 @@ States tutorial, part 3
 
 .. note::
 
-  This tutorial builds on the topic covered in :doc:`part1 <states_pt1>` and
+  This tutorial builds on topics covered in :doc:`part 1 <states_pt1>` and
   :doc:`part 2 <states_pt2>`. It is recommended that you begin there.
 
 This part of the tutorial will cover more advanced templating and
@@ -24,7 +24,7 @@ All states are passed through a templating system when they are initially read.
 To make use of the templating system, simply add some templating markup.
 An example of an sls module with templating markup may look like this:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% for usr in 'moe','larry','curly' %}
     {{ usr }}:
@@ -42,6 +42,21 @@ This templated sls file once generated will look like this:
     curly:
       user.present
 
+Here's a more complex example:
+
+.. code-blocK:: jinja
+
+    {% for usr in 'moe','larry','curly' %}
+    {{ usr }}:
+      group:
+        - present
+      user:
+        - present
+        - gid_from_name: True
+        - require:
+          - group: {{ usr }}
+    {% endfor %}
+
 Using Grains in SLS modules
 ===========================
 
@@ -49,7 +64,7 @@ Often times a state will need to behave differently on different systems.
 :doc:`Salt grains </topics/targeting/grains>` objects are made available
 in the template context. The `grains` can be used from within sls modules:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
@@ -68,25 +83,24 @@ system. It also allows for shell commands to be run easily from within the sls
 modules.
 
 The Salt module functions are also made available in the template context as
-``salt``:
+``salt:``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
-    {% for usr in 'moe','larry','curly' %}
-    {{ usr }}:
-      group:
-        - present
+    moe:
       user:
         - present
-        - gid: {{ salt['file.group_to_gid'](usr) }}
-        - require:
-          - group: {{ usr }}
-    {% endfor %}
+        - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
 
-Below is an example that uses the ``network.hwaddr`` function to retrieve the
-MAC address for eth0::
+Note that for the above example to work, ``some_group_that_exists`` must exist
+before the state file is processed by the templating engine.
 
-    salt['network.hwaddr']('eth0')
+Below is an example that uses the ``network.hw_addr`` function to retrieve the
+MAC address for eth0:
+
+.. code-block:: python
+
+    salt['network.hw_addr']('eth0')
 
 Advanced SLS module syntax
 ==========================
@@ -98,22 +112,22 @@ trees.
 ---------------------------
 
 A previous example showed how to spread a Salt tree across several files.
-Similarly, :term:`requisite references <requisite references>` span multiple
-files by using an :term:`include declaration`. For example:
+Similarly, :doc:`requisites </ref/states/requisites>` span multiple files by
+using an :term:`include declaration`. For example:
 
-``python/python-libs.sls``:
+``python/python-libs.sls:``
 
 .. code-block:: yaml
 
     python-dateutil:
       pkg.installed
 
-``python/django.sls``:
+``python/django.sls:``
 
 .. code-block:: yaml
 
     include:
-      - python-libs
+      - python.python-libs
 
     django:
       pkg.installed:
@@ -127,14 +141,14 @@ You can modify previous declarations by using an :term:`extend declaration`. For
 example the following modifies the Apache tree to also restart Apache when the
 vhosts file is changed:
 
-``apache/apache.sls``:
+``apache/apache.sls:``
 
 .. code-block:: yaml
 
     apache:
       pkg.installed
 
-``apache/mywebsite.sls``:
+``apache/mywebsite.sls:``
 
 .. code-block:: yaml
 
@@ -161,7 +175,7 @@ You can override the :term:`ID declaration` by using a :term:`name
 declaration`. For example, the previous example is a bit more maintainable if
 rewritten as follows:
 
-``apache/mywebsite.sls``:
+``apache/mywebsite.sls:``
 
 .. code-block:: yaml
     :emphasize-lines: 8,10,12
@@ -198,16 +212,9 @@ can be rewritten without the loop:
           - larry
           - curly
 
-Continue learning
-=================
+Next steps
+==========
 
-The best way to continue learning about Salt States is to read through the
-:doc:`reference documentation </ref/states/index>` and to look through examples
-of existing :term:`state trees <state tree>`. You can find examples in the
-`salt-states repository`_ and please send a pull-request on GitHub with any
-state trees that you build and want to share!
-
-.. _`salt-states repository`: https://github.com/saltstack/salt-states
-
-If you have any questions, suggestions, or just want to chat with other people
-who are using Salt we have an :doc:`active community </topics/community>`.
+In :doc:`part 4 <states_pt4>` we will discuss how to use salt's
+:conf_master:`file_roots` to set up a workflow in which states can be
+"promoted" from dev, to QA, to production.

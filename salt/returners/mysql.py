@@ -59,6 +59,9 @@ Required python modules: MySQLdb
 from contextlib import contextmanager
 import sys
 import json
+import logging
+
+log  = logging.getLogger( __name__ )
 
 # Import third party libs
 try:
@@ -73,19 +76,33 @@ def __virtual__():
         return False
     return 'mysql'
 
+def _get_options():
+    '''
+    Returns options used for the MySQL connection.
+    '''
+    defaults = {'host': 'salt',
+                'user': 'salt',
+                'pass': 'salt',
+                'db': 'salt',
+                'port': 3306}
+    _options = {}
+    for attr in defaults:
+        _attr = __salt__['config.option']('mysql.{0}'.format(attr))
+        if not _attr:
+            log.debug('Using default for MySQL {0}'.format(attr))
+            _options[attr] = defaults[attr]
+            continue
+        _options[attr] = _attr
+
+    return _options
 
 @contextmanager
 def _get_serv(commit=False):
     '''
     Return a mysql cursor
     '''
-    conn = MySQLdb.connect(
-            host=__salt__['config.option']('mysql.host'),
-            user=__salt__['config.option']('mysql.user'),
-            passwd=__salt__['config.option']('mysql.pass'),
-            db=__salt__['config.option']('mysql.db'),
-            port=__salt__['config.option']('mysql.port'),
-            )
+    _options = _get_options()
+    conn = MySQLdb.connect(host=_options['host'], user=_options['user'], passwd=_options['pass'], db=_options['db'], port=_options['port'])
     cursor = conn.cursor()
     try:
         yield cursor
@@ -108,10 +125,10 @@ def returner(ret):
     Return data to a mysql server
     '''
     with _get_serv(commit=True) as cur:
-
-        sql = '''INSERT INTO `salt`.`salt_returns`
+        sql = '''INSERT INTO `salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''
+
         cur.execute(sql, (ret['fun'], ret['jid'],
                             str(ret['return']), ret['id'],
                             ret['success'], json.dumps(ret)))
@@ -123,7 +140,7 @@ def save_load(jid, load):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''INSERT INTO `salt`.`jids`
+        sql = '''INSERT INTO `jids`
                (`jid`, `load`)
                 VALUES (%s, %s)'''
 
@@ -136,7 +153,7 @@ def get_load(jid):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''SELECT load FROM `salt`.`jids`
+        sql = '''SELECT load FROM `jids`
                 WHERE `jid` = '%s';'''
 
         cur.execute(sql, (jid,))
@@ -152,7 +169,7 @@ def get_jid(jid):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''SELECT id, full_ret FROM `salt`.`salt_returns`
+        sql = '''SELECT id, full_ret FROM `salt_returns`
                 WHERE `jid` = %s'''
 
         cur.execute(sql, (jid,))
@@ -171,9 +188,9 @@ def get_fun(fun):
     with _get_serv(commit=True) as cur:
 
         sql = '''SELECT s.id,s.jid, s.full_ret
-                FROM `salt`.`salt_returns` s
+                FROM `salt_returns` s
                 JOIN ( SELECT MAX(`jid`) as jid
-                    from `salt`.`salt_returns` GROUP BY fun, id) max
+                    from `salt_returns` GROUP BY fun, id) max
                 ON s.jid = max.jid
                 WHERE s.fun = %s
                 '''
@@ -195,7 +212,7 @@ def get_jids():
     with _get_serv(commit=True) as cur:
 
         sql = '''SELECT DISTINCT jid
-                FROM `salt`.`jids`'''
+                FROM `jids`'''
 
         cur.execute(sql)
         data = cur.fetchall()
@@ -212,7 +229,7 @@ def get_minions():
     with _get_serv(commit=True) as cur:
 
         sql = '''SELECT DISTINCT id
-                FROM `salt`.`salt_returns`'''
+                FROM `salt_returns`'''
 
         cur.execute(sql)
         data = cur.fetchall()

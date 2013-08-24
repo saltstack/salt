@@ -9,20 +9,20 @@ import ctypes
 import string
 
 # Import salt libs
+import salt.utils
+
 try:
     import win32api
-    IS_WINDOWS = True
 except ImportError:
-    IS_WINDOWS = False
-
+    pass
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if not IS_WINDOWS:
-        return False
-    return 'disk'
+    if salt.utils.is_windows():
+        return 'disk'
+    return False
 
 
 def usage():
@@ -33,41 +33,40 @@ def usage():
 
         salt '*' disk.usage
     '''
-    if __grains__['kernel'] == 'Windows':
-        drives = []
-        ret = {}
-        drive_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
-        for letter in string.uppercase:
-            if drive_bitmask & 1:
-                drives.append(letter)
-            drive_bitmask >>= 1
-        for drive in drives:
-            try:
-                (sectorspercluster,
-                 bytespersector,
-                 freeclusters,
-                 totalclusters) = win32api.GetDiskFreeSpace(
-                     '{0}:\\'.format(drive)
-                 )
-                totalsize = sectorspercluster * bytespersector * totalclusters
-                available_space = (
-                    sectorspercluster * bytespersector * freeclusters
-                )
-                used = totalsize - available_space
-                capacity = int(used / float(totalsize) * 100)
-                ret['{0}:\\'.format(drive)] = {
-                    'filesystem': '{0}:\\'.format(drive),
-                    '1K-blocks': totalsize,
-                    'used': used,
-                    'available': available_space,
-                    'capacity': '{0}%'.format(capacity),
-                }
-            except Exception:
-                ret['{0}:\\'.format(drive)] = {
-                    'filesystem': '{0}:\\'.format(drive),
-                    '1K-blocks': None,
-                    'used': None,
-                    'available': None,
-                    'capacity': None,
-                }
-        return ret
+    drives = []
+    ret = {}
+    drive_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
+    for letter in string.uppercase:
+        if drive_bitmask & 1:
+            drives.append(letter)
+        drive_bitmask >>= 1
+    for drive in drives:
+        try:
+            (sectorspercluster,
+             bytespersector,
+             freeclusters,
+             totalclusters) = win32api.GetDiskFreeSpace(
+                 '{0}:\\'.format(drive)
+             )
+            totalsize = sectorspercluster * bytespersector * totalclusters
+            available_space = (
+                sectorspercluster * bytespersector * freeclusters
+            )
+            used = totalsize - available_space
+            capacity = int(used / float(totalsize) * 100)
+            ret['{0}:\\'.format(drive)] = {
+                'filesystem': '{0}:\\'.format(drive),
+                '1K-blocks': totalsize,
+                'used': used,
+                'available': available_space,
+                'capacity': '{0}%'.format(capacity),
+            }
+        except Exception:
+            ret['{0}:\\'.format(drive)] = {
+                'filesystem': '{0}:\\'.format(drive),
+                '1K-blocks': None,
+                'used': None,
+                'available': None,
+                'capacity': None,
+            }
+    return ret

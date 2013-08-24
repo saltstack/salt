@@ -38,8 +38,8 @@ Master Finger Option
 The `master_finger` option has been added to improve the security of minion
 provisioning. The `master_finger` option allows for the fingerprint of the
 master public key to be set in the configuration file to double verify that the
-master is valid. This option was added in response to a motivation to pre
-authenticate the master when provisioning new minions to help prevent
+master is valid. This option was added in response to a motivation to
+pre-authenticate the master when provisioning new minions to help prevent
 man in the middle attacks in some situations.
 
 Salt Key Fingerprint Generation

@@ -60,6 +60,9 @@ class _Puppet(object):
 
         self.vardir = '/var/lib/puppet'
         self.confdir = '/etc/puppet'
+        if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
+            self.vardir = '/var/opt/lib/pe-puppet'
+            self.confdir = '/etc/puppetlabs/puppet'
 
     def __repr__(self):
         '''
@@ -115,20 +118,16 @@ def run(*args, **kwargs):
     Tags are specified by a tag keyword and comma separated list of values. --
     http://projects.puppetlabs.com/projects/1/wiki/Using_Tags
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' puppet.run
-
         salt '*' puppet.run tags=basefiles::edit,apache::server
-
         salt '*' puppet.run debug
-
         salt '*' puppet.run apply /a/b/manifest.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
     '''
     _check_puppet()
-
-    salt.utils.daemonize_if(__opts__)
-
     puppet = _Puppet()
 
     if args:
@@ -152,14 +151,13 @@ def noop(*args, **kwargs):
     Execute a puppet noop run and return a dict with the stderr, stdout,
     return code, etc. Usage is the same as for puppet.run.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' puppet.noop
-
         salt '*' puppet.noop tags=basefiles::edit,apache::server
-
         salt '*' puppet.noop debug
-
         salt '*' puppet.noop apply /a/b/manifest.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
     '''
     args += ('noop',)
@@ -170,7 +168,9 @@ def facts():
     '''
     Run facter and return the results
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' puppet.facts
     '''
@@ -196,7 +196,9 @@ def fact(name):
     '''
     Run facter for a specific fact
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' puppet.fact kernel
     '''

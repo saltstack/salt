@@ -1,4 +1,4 @@
-from saltunittest import TestCase, expectedFailure
+from salttesting import TestCase, expectedFailure
 
 
 class SimpleTest(TestCase):

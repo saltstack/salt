@@ -21,6 +21,12 @@ class SaltMasterError(SaltException):
     '''
 
 
+class MasterExit(SystemExit):
+    '''
+    Rise when the master exits
+    '''
+
+
 class AuthenticationError(SaltException):
     '''
     If sha256 signature fails during decryption
@@ -77,6 +83,11 @@ class SaltReqTimeoutError(SaltException):
     Thrown when a salt master request call fails to return within the timeout
     '''
 
+class TimedProcTimeoutError(SaltException):
+    '''
+    Thrown when a timed subprocess does not terminate within the timeout,
+    or if the specified timeout is not an int or a float
+    '''
 
 class EauthAuthenticationError(SaltException):
     '''
@@ -89,3 +100,7 @@ class SaltSystemExit(SystemExit):
     This exception is raised when an unsolvable problem is found. There's
     nothing else to do, salt should just exit.
     '''
+    def __init__(self, code=0, msg=None):
+        SystemExit.__init__(self, code)
+        if msg:
+            self.message = msg

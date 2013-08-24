@@ -19,15 +19,12 @@ import salt.utils
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')
 
-# Known not to work
-BAD = ('Windows',)
-
 
 def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    if __grains__['os'] in BAD or not salt.utils.which('at'):
+    if salt.utils.is_windows() or not salt.utils.which('at'):
         return False
     return 'at'
 
@@ -48,7 +45,9 @@ def atq(tag=None):
     List all queued and running jobs or only those with
     an optional 'tag'.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' at.atq
         salt '*' at.atq [tag]
@@ -79,7 +78,7 @@ def atq(tag=None):
 
         # Jobs created with at.at() will use the following
         # comment to denote a tagged job.
-        job_kw_regex = re.compile('^### SALT: (\w+)')
+        job_kw_regex = re.compile(r'^### SALT: (\w+)')
 
         # Redhat/CentOS
         if __grains__['os_family'] == 'RedHat':
@@ -137,7 +136,9 @@ def atrm(*args):
     '''
     Remove jobs from the queue.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' at.atrm <jobid> <jobid> .. <jobid>
         salt '*' at.atrm all
@@ -172,14 +173,16 @@ def atrm(*args):
     return ret
 
 
-def at(*args, **kwargs):  # pylint: disable-msg=C0103
+def at(*args, **kwargs):  # pylint: disable=C0103
     '''
     Add a job to the queue.
 
     The 'timespec' follows the format documented in the
     at(1) manpage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' at.at <timespec> <cmd> [tag=<tag>] [runas=<user>]
         salt '*' at.at 12:05am '/sbin/reboot' tag=reboot
@@ -239,7 +242,9 @@ def atc(jobid):
     id. This is mostly for debugging so the output will
     just be text.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' at.atc <jobid>
     '''

@@ -27,4 +27,3 @@ def output(data):
         ret += '{0}\n'.format(pprint.pformat(data))
 
     return ret
-

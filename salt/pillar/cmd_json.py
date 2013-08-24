@@ -11,7 +11,7 @@ import json
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(pillar, command):
+def ext_pillar(minion_id, pillar, command):
     '''
     Execute a command and read the output as JSON
     '''

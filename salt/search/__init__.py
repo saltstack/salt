@@ -20,15 +20,15 @@ def iter_ret(opts, ret):
     get_load = '{0}.get_load'.format(opts['ext_job_cache'])
     get_jid = '{0}.get_jid'.format(opts['ext_job_cache'])
     get_jids = '{0}.get_jids'.format(opts['ext_job_cache'])
-    if not get_load in ret:
+    if get_load not in ret:
         raise StopIteration
     else:
         get_load = ret[get_load]
-    if not get_jid in ret:
+    if get_jid not in ret:
         raise StopIteration
     else:
         get_jid = ret[get_jid]
-    if not get_jids in ret:
+    if get_jids not in ret:
         raise StopIteration
     else:
         get_jids = ret[get_jids]
@@ -47,7 +47,7 @@ def _iter_dir(dir_, env):
         if os.path.isdir(path):
             yield _iter_dir(path, env)
         elif os.path.isfile(path):
-            with open(path) as fp_:
+            with salt.utils.fopen(path) as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append(
                         {'path': unicode(path),
@@ -61,7 +61,7 @@ def _iter_dir(dir_, env):
                          'content': u'bin'}
                         )
     yield ret
-                    
+
 
 def iter_roots(roots):
     '''
@@ -76,6 +76,7 @@ def iter_roots(roots):
                 continue
             for ret in _iter_dir(dir_, env):
                 yield ret
+
 
 class Search(object):
     '''
@@ -95,7 +96,7 @@ class Search(object):
         Execute a search index run
         '''
         ifun = '{0}.index'.format(self.opts.get('search', ''))
-        if not ifun in self.search:
+        if ifun not in self.search:
             return
         return self.search[ifun]()
 
@@ -104,6 +105,6 @@ class Search(object):
         Search the index for the given term
         '''
         qfun = '{0}.query'.format(self.opts.get('search', ''))
-        if not qfun in self.search:
+        if qfun not in self.search:
             return
         return self.search[qfun](term)

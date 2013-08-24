@@ -39,7 +39,7 @@ DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
 if [ -f $DEBIAN_VERSION ]; then
-   break   
+   break
 elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
     . /etc/rc.status
 else
@@ -59,16 +59,21 @@ start() {
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
-            echo -n "already started, lock file found" 
+            echo -n "already started, lock file found"
             RETVAL=1
-        elif $PYTHON $SALTMINION -d; then
+        elif $PYTHON $SALTMINION -d >& /dev/null; then
             echo -n "OK"
             RETVAL=0
         fi
     else
-        daemon --check $SERVICE $SALTMINION -d $CONFIG_ARGS
+        if [ $(pidofproc $PROCESS) ]; then
+	          RETVAL=$?
+	          echo -n "already running"
+        else
+	          daemon --check $SERVICE $SALTMINION -d $CONFIG_ARGS
+	          RETVAL=$?
+        fi
     fi
-    RETVAL=$?
     echo
     return $RETVAL
 }
@@ -135,4 +140,3 @@ case "$1" in
         ;;
 esac
 exit $RETVAL
-

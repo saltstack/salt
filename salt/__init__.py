@@ -6,22 +6,40 @@ Make me some salt!
 import os
 import sys
 import logging
+import warnings
 
-# Import salt libs, the try block below bypasses an issue at build time so
-# that modules don't cause the build to fail
-from salt.version import __version__  # pylint: disable-msg=W402
+# All salt related deprecation warnings should be shown once each!
+warnings.filterwarnings(
+    'once',                 # Show once
+    '',                     # No deprecation message match
+    DeprecationWarning,     # This filter is for DeprecationWarnings
+    r'^(salt|salt\.(.*))$'  # Match module(s) 'salt' and 'salt.<whatever>'
+)
+
+# Import salt libs
+# We import log ASAP because we NEED to make sure that any logger instance salt
+# instantiates is using salt.log.SaltLoggingClass
+import salt.log
+
+
+# the try block below bypasses an issue at build time so that modules don't
+# cause the build to fail
+from salt.version import __version__
 from salt.utils import migrations
 
 try:
-    from salt.utils import parsers
+    from salt.utils import parsers, ip_bracket
     from salt.utils.verify import check_user, verify_env, verify_socket
     from salt.utils.verify import verify_files
 except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
-from salt.exceptions import SaltSystemExit
+from salt.exceptions import SaltSystemExit, MasterExit
 
-logger = logging.getLogger(__name__)
+
+# Let's instantiate logger using salt.log.logging.getLogger() so pylint leaves
+# us alone and stops complaining about an un-used import
+logger = salt.log.logging.getLogger(__name__)
 
 
 class Master(parsers.MasterOptionParser):
@@ -58,25 +76,22 @@ class Master(parsers.MasterOptionParser):
                     pki_dir=self.config['pki_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and (
-                        not logfile.startswith('tcp://') or
-                        not logfile.startswith('udp://') or
-                        not logfile.startswith('file://')):
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
                     # Logfile is not using Syslog, verify
-                        verify_files(
-                            [logfile],
-                            self.config['user']
-                        )
+                    verify_files([logfile], self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logger.warn('Setting up the Salt Master')
+        logger.info('Setting up the Salt Master')
 
         if not verify_socket(self.config['interface'],
                              self.config['publish_port'],
                              self.config['ret_port']):
             self.exit(4, 'The ports are not available to bind\n')
+        self.config['interface'] = ip_bracket(self.config['interface'])
         migrations.migrate_paths(self.config)
 
         # Late import so logging works correctly
@@ -99,7 +114,7 @@ class Master(parsers.MasterOptionParser):
         if check_user(self.config['user']):
             try:
                 self.master.start()
-            except salt.master.MasterExit:
+            except MasterExit:
                 self.shutdown()
             finally:
                 sys.exit()
@@ -126,10 +141,18 @@ class Minion(parsers.MinionOptionParser):
 
         try:
             if self.config['verify_env']:
-                confd = os.path.join(
-                    os.path.dirname(self.config['conf_file']),
-                    'minion.d'
-                )
+                confd = self.config.get('default_include')
+                if confd:
+                    # If 'default_include' is specified in config, then use it
+                    if '*' in confd:
+                        # Value is of the form "minion.d/*.conf"
+                        confd = os.path.dirname(confd)
+                    if not os.path.isabs(confd):
+                        # If configured 'default_include' is not an absolute path,
+                        # consider it relative to folder of 'conf_file' (/etc/salt by default)
+                        confd = os.path.join(os.path.dirname(self.config['conf_file']), confd)
+                else:
+                    confd = os.path.join(os.path.dirname(self.config['conf_file']), 'minion.d')
                 verify_env(
                     [
                         self.config['pki_dir'],
@@ -142,22 +165,17 @@ class Minion(parsers.MinionOptionParser):
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+                logfile = self.config['log_file']
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
                     # Logfile is not using Syslog, verify
-                    verify_files(
-                        [self.config['log_file']],
-                        self.config['user']
-                    )
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user'])
+                    verify_files([logfile], self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logger.warn(
+        logger.info(
             'Setting up the Salt Minion "{0}"'.format(
                 self.config['id']
             )
@@ -170,8 +188,11 @@ class Minion(parsers.MinionOptionParser):
         # the boot process waiting for a key to be accepted on the master.
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
-        self.minion = salt.minion.Minion(self.config)
         self.set_pidfile()
+        if isinstance(self.config.get('master'), list):
+            self.minion = salt.minion.MultiMinion(self.config)
+        else:
+            self.minion = salt.minion.Minion(self.config)
 
     def start(self):
         '''
@@ -229,19 +250,17 @@ class Syndic(parsers.SyndicOptionParser):
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+                logfile = self.config['log_file']
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
                     # Logfile is not using Syslog, verify
-                    verify_files(
-                        [self.config['log_file']],
-                        self.config['user']
-                    )
+                    verify_files([logfile], self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logger.warn(
+        logger.info(
             'Setting up the Salt Syndic Minion "{0}"'.format(
                 self.config['id']
             )

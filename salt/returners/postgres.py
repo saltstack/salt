@@ -2,7 +2,7 @@
 Return data to a postgresql server
 
 :maintainer:    None
-:maturity:      New 
+:maturity:      New
 :depends:       psycopg2
 :platform:      all
 
@@ -40,12 +40,14 @@ correctly::
 
     DROP TABLE IF EXISTS salt_returns;
     CREATE TABLE salt_returns (
+      added     TIMESTAMP WITH TIME ZONE DEFAULT now(),
       fun       text NOT NULL,
       jid       varchar(20) NOT NULL,
       return    text NOT NULL,
       id        text NOT NULL,
       success   boolean
     );
+    CREATE INDEX ON salt_returns (added);
     CREATE INDEX ON salt_returns (id);
     CREATE INDEX ON salt_returns (jid);
     CREATE INDEX ON salt_returns (fun);

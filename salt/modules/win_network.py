@@ -7,22 +7,25 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt.utils.socket_util import sanitize_host
+
+try:
+    import salt.utils.winapi
+    HAS_DEPENDENCIES = True
+except ImportError:
+    HAS_DEPENDENCIES = False
 
 # Import 3rd party libraries
-HAS_WMI = False
 try:
     import wmi
-    HAS_WMI = True
 except ImportError:
-    pass
+    HAS_DEPENDENCIES = False
 
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return 'network'
     return False
 
@@ -35,7 +38,7 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -n 4 {0}'.format(sanitize_host(host))
+    cmd = 'ping -n 4 {0}'.format(salt.utils.network.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -76,7 +79,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'tracert {0}'.format(sanitize_host(host))
+    cmd = 'tracert {0}'.format(salt.utils.network.sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if not ' ' in line:
@@ -128,14 +131,25 @@ def nslookup(host):
         salt '*' network.nslookup archlinux.org
     '''
     ret = []
-    cmd = 'nslookup {0}'.format(sanitize_host(host))
+    addresses = []
+    cmd = 'nslookup {0}'.format(salt.utils.network.sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
+        if addresses:
+            # We're in the last block listing addresses
+            addresses.append(line.strip())
+            continue
         if line.startswith('Non-authoritative'):
             continue
+        if 'Addresses' in line:
+            comps = line.split(":", 1)
+            addresses.append(comps[1].strip())
+            continue
         if ":" in line:
-            comps = line.split(":")
+            comps = line.split(":", 1)
             ret.append({comps[0].strip(): comps[1].strip()})
+    if addresses:
+        ret.append({'Addresses': addresses})
     return ret
 
 
@@ -149,91 +163,84 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig {0}'.format(sanitize_host(host))
+    cmd = 'dig {0}'.format(salt.utils.network.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
-def _cidr_to_ipv4_netmask(cidr_bits):
-    '''
-    Returns an IPv4 netmask
-    '''
-    netmask = ''
-    for idx in range(4):
-        if idx:
-            netmask += '.'
-        if cidr_bits >= 8:
-            netmask += '255'
-            cidr_bits -= 8
-        else:
-            netmask += '{0:d}'.format(256 - (2 ** (8 - cidr_bits)))
-            cidr_bits = 0
-    return netmask
-
-
-def _interfaces_ipconfig(out):
-    '''
-    Returns a dictionary of interfaces with various information about each
-    (up/down state, ip address, netmask, and hwaddr)
-    '''
-    ifaces = dict()
-    iface = None
-
-    for line in out.splitlines():
-        if not line:
-            continue
-        # TODO what does Windows call Infiniband and 10/40gige adapters
-        if line.startswith('Ethernet'):
-            iface = ifaces[re.search('adapter (\S.+):$').group(1)]
-            iface['up'] = True
-            addr = None
-            continue
-        if iface:
-            key, val = line.split(',', 1)
-            key = key.strip(' .')
-            val = val.strip()
-            if addr and key in ('Subnet Mask'):
-                addr['netmask'] = val
-            elif key in ('IP Address', 'IPv4 Address'):
-                if 'inet' not in iface:
-                    iface['inet'] = list()
-                addr = {'address': val.rstrip('(Preferred)'),
-                        'netmask': None,
-                        'broadcast': None}  # TODO find the broadcast
-                iface['inet'].append(addr)
-            elif 'IPv6 Address' in key:
-                if 'inet6' not in iface:
-                    iface['inet'] = list()
-                # XXX What is the prefixlen!?
-                addr = {'address': val.rstrip('(Preferred)'),
-                        'prefixlen': None}
-                iface['inet6'].append(addr)
-            elif key in ('Physical Address'):
-                iface['hwaddr'] = val
-            elif key in ('Media State'):
-                # XXX seen used for tunnel adaptors
-                # might be useful
-                iface['up'] = (val != 'Media disconnected')
-
-
 def interfaces():
-    with salt.utils.winapi.Com():
-        c = wmi.WMI()
-        ifaces = {}
-        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
-            ifaces[iface.Description] = dict()
-            if iface.MACAddress:
-                ifaces[iface.Description]['hwaddr'] = iface.MACAddress
-            if iface.IPEnabled:
-                ifaces[iface.Description]['up'] = True
-                ifaces[iface.Description]['inet'] = []
-                for ip in iface.IPAddress:
-                    item = {}
-                    item['broadcast'] = iface.DefaultIPGateway[0]
-                    item['netmask'] = iface.IPSubnet[0]
-                    item['label'] = iface.Description
-                    item['address'] = ip
-                    ifaces[iface.Description]['inet'].append(item)
-            else:
-                ifaces[iface.Description]['up'] = False
-    return ifaces
+    '''
+    Return a dictionary of information about all the interfaces on the minion
 
+    CLI Example::
+
+        salt '*' network.interfaces
+    '''
+    return salt.utils.network.interfaces()
+
+
+def hw_addr(iface):
+    '''
+    Return the hardware address (a.k.a. MAC address) for a given interface
+
+    CLI Example::
+
+        salt '*' network.hw_addr 'Wireless Connection #1'
+    '''
+    return salt.utils.network.hw_addr(iface)
+
+# Alias hwaddr to preserve backward compat
+hwaddr = hw_addr
+
+
+def subnets():
+    '''
+    Returns a list of subnets to which the host belongs
+
+    CLI Example::
+
+        salt '*' network.subnets
+    '''
+    return salt.utils.network.subnets()
+
+
+def in_subnet(cidr):
+    '''
+    Returns True if host is within specified subnet, otherwise False
+
+    CLI Example::
+
+        salt '*' network.in_subnet 10.0.0.0/16
+    '''
+    return salt.utils.network.in_subnet(cidr)
+
+
+def ip_addrs(interface=None, include_loopback=False):
+    '''
+    Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
+    ignored, unless 'include_loopback=True' is indicated. If 'interface' is
+    provided, then only IP addresses from that interface will be returned.
+
+    CLI Example::
+
+        salt '*' network.ip_addrs
+    '''
+    return salt.utils.network.ip_addrs(interface=interface,
+                                       include_loopback=include_loopback)
+
+ipaddrs = ip_addrs
+
+
+def ip_addrs6(interface=None, include_loopback=False):
+    '''
+    Returns a list of IPv6 addresses assigned to the host. ::1 is ignored,
+    unless 'include_loopback=True' is indicated. If 'interface' is provided,
+    then only IP addresses from that interface will be returned.
+
+    CLI Example::
+
+        salt '*' network.ip_addrs6
+    '''
+    return salt.utils.network.ip_addrs6(interface=interface,
+                                        include_loopback=include_loopback)
+
+ipaddrs6 = ip_addrs6

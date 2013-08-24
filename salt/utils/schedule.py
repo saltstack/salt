@@ -1,7 +1,7 @@
 '''
-Sceduling routines are located here. To activate the scheduler make the schedule
-option available to the master or minion configurations (master config file or
-for the minion via config or pillar)
+Scheduling routines are located here. To activate the scheduler make the
+schedule option available to the master or minion configurations (master config
+file or for the minion via config or pillar)
 
 code-block:: yaml
 
@@ -14,7 +14,7 @@ code-block:: yaml
         kwargs:
           test: True
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds 
+This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour)
 '''
 
@@ -24,11 +24,17 @@ import datetime
 import multiprocessing
 import threading
 import sys
+import logging
+
+# Import Salt libs
+import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 class Schedule(object):
     '''
-    Create a Schedule object, pass in the opts and the functions dict to use 
+    Create a Schedule object, pass in the opts and the functions dict to use
     '''
     def __init__(self, opts, functions, returners=None, intervals=None):
         self.opts = opts
@@ -49,17 +55,21 @@ class Schedule(object):
         '''
         Return the schedule data structure
         '''
-        if 'config.option' in self.functions:
-            return self.functions['config.option'](opt, {}, omit_master=True)
+        if 'config.merge' in self.functions:
+            return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
     def handle_func(self, func, data):
         '''
         Execute this method in a multiprocess or thread
         '''
+        if salt.utils.is_windows():
+            self.functions = salt.loader.minion_mods(self.opts)
+            self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+        salt.utils.daemonize_if(self.opts)
         if 'args' in data:
             if 'kwargs' in data:
                 ret['return'] = self.functions[func](
@@ -76,18 +86,25 @@ class Schedule(object):
                 rets.append(data['returner'])
             elif isinstance(data['returner'], list):
                 for returner in data['returner']:
-                    if not returner in rets:
+                    if returner not in rets:
                         rets.append(returner)
             if isinstance(self.schedule_returner, list):
                 for returner in self.schedule_returner:
-                    if not returner in rets:
+                    if returner not in rets:
                         rets.append(returner)
             if isinstance(self.schedule_returner, str):
-                if not self.schedule_returner in rets:
+                if self.schedule_returner not in rets:
                     rets.append(self.schedule_returner)
             for returner in rets:
-                if returner in self.returners:
-                    self.returners[returner](ret)
+                ret_str = '{0}.returner'.format(returner)
+                if ret_str in self.returners:
+                    self.returners[ret_str](ret)
+                else:
+                    log.info(
+                        'Job {0} using invalid returner: {1} Ignoring.'.format(
+                        func, returner
+                        )
+                    )
 
     def eval(self):
         '''
@@ -106,6 +123,11 @@ class Schedule(object):
             else:
                 func = None
             if func not in self.functions:
+                log.info(
+                    'Invalid function: {0} in job {1}. Ignoring.'.format(
+                        job, func
+                    )
+                )
                 continue
             # Add up how many seconds between now and then
             seconds = 0
@@ -122,15 +144,21 @@ class Schedule(object):
             now = int(time.time())
             run = False
             if job in self.intervals:
-                if now - self.intervals[job] > seconds:
+                if now - self.intervals[job] >= seconds:
                     run = True
             else:
                 run = True
             if not run:
                 continue
+            else:
+                log.debug('Running scheduled job: {0}'.format(job))
+
             if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
             else:
                 thread_cls = threading.Thread
-            thread_cls(target=self.handle_func, args=(func, data)).start()
+            proc = thread_cls(target=self.handle_func, args=(func, data))
+            proc.start()
+            if self.opts.get('multiprocessing', True):
+                proc.join()
             self.intervals[job] = int(time.time())

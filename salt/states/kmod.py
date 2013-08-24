@@ -16,7 +16,7 @@ module:
 
 def __virtual__():
     '''
-    only load if kmod is available
+    Only load if the kmod module is available in __salt__
     '''
     return 'kmod' if 'kmod.available' in __salt__ else False
 
@@ -42,7 +42,7 @@ def present(name, persist=False):
         # Intersection of persist and non persist module
         mods_set = list(set(mods) & set(persist_mods))
     else:
-        mods_set = mods 
+        mods_set = mods
     if name in mods_set:
         ret['comment'] = ('Kernel module {0} is already present'
                               .format(name))

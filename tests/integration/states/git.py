@@ -1,9 +1,17 @@
 '''
 Tests for the Git state
 '''
+
+# Import python libs
 import os
 import shutil
 import socket
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 import integration
 
 

@@ -4,7 +4,7 @@
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license.php
 '''
-PAM module for python
+Authenticate against PAM
 
 Provides an authenticate function that will allow the caller to authenticate
 a user against the Pluggable Authentication Modules (PAM) on the system.
@@ -26,7 +26,7 @@ CALLOC.argtypes = [c_uint, c_uint]
 
 STRDUP = LIBC.strdup
 STRDUP.argstypes = [c_char_p]
-STRDUP.restype = POINTER(c_char) # NOT c_char_p !!!!
+STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
 
 # Various constants
 PAM_PROMPT_ECHO_OFF = 1
@@ -89,14 +89,29 @@ class PamConv(Structure):
             ]
 
 
-PAM_START = LIBPAM.pam_start
-PAM_START.restype = c_int
-PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
-        POINTER(PamHandle)]
+try:
+    PAM_START = LIBPAM.pam_start
+    PAM_START.restype = c_int
+    PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
+            POINTER(PamHandle)]
 
-PAM_AUTHENTICATE = LIBPAM.pam_authenticate
-PAM_AUTHENTICATE.restype = c_int
-PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
+    PAM_AUTHENTICATE = LIBPAM.pam_authenticate
+    PAM_AUTHENTICATE.restype = c_int
+    PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
+except Exception:
+    HAS_PAM = False
+else:
+    HAS_PAM = True
+
+
+def __virtual__():
+    '''
+    Only load on Linux systems
+    '''
+    if HAS_PAM:
+        return 'pam'
+    else:
+        return False
 
 
 def authenticate(username, password, service='login'):

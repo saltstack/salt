@@ -10,7 +10,7 @@ or use Self-Signed certificates.
         ca.cert_base_path: '/etc/pki'
 '''
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 # Import python libs
 import os
@@ -50,7 +50,7 @@ def _cert_base_path():
 
 def _new_serial(ca_name, CN):
     '''
-    Return a serial number in hex using md5sum, based upon the the ca_name and
+    Return a serial number in hex using md5sum, based upon the ca_name and
     CN values
 
     ca_name
@@ -191,7 +191,7 @@ def create_ca(
         os.makedirs('{0}/{1}'.format(_cert_base_path(), ca_name))
 
     key = OpenSSL.crypto.PKey()
-    key.generate_key(OpenSSL.crypto.TYPE_RSA, 2048)
+    key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
 
     ca = OpenSSL.crypto.X509()
     ca.set_version(3)
@@ -515,7 +515,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     CN
         common name matching the certificate signing request
     days
-        number of days certficate is valid, default is 365 (1 year)
+        number of days certificate is valid, default is 365 (1 year)
 
     Writes out a Certificate (CERT) If the file already
     exists, the function just returns assuming the CERT already exists.
@@ -603,7 +603,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     ca_name
         name of the CA
     CN
-        common name matching the the certificate signing request
+        common name matching the certificate signing request
     passphrase
         used to unlock the PKCS#12 certificate when loaded into the browser
 

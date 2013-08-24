@@ -69,7 +69,7 @@ The location of the daemon's process ID file
 
 .. code-block:: yaml
 
-    pidfie: /var/run/salt-minion.pid
+    pidfile: /var/run/salt-minion.pid
 
 .. conf_minion:: root_dir
 
@@ -91,7 +91,7 @@ This directory is prepended to the following options: :conf_minion:`pki_dir`,
 ``pki_dir``
 -----------
 
-Default: :file:`/etc/salt/pki`
+Default: ``/etc/salt/pki``
 
 The directory used to store the minion's public and private keys.
 
@@ -104,13 +104,16 @@ The directory used to store the minion's public and private keys.
 ``id``
 ------
 
-Default: hostname (as returned by the Python call: ``socket.getfqdn()``)
+Default: the system's hostname
 
-Explicitly declare the id for this minion to use, if left commented the id
-will be the hostname as returned by the Python call: ``socket.getfqdn()``
-Since Salt uses detached ids it is possible to run multiple minions on the
-same machine but with different ids, this can be useful for Salt compute
-clusters.
+.. seealso:: :ref:`Salt Walkthrough <minion-id-generation>`
+
+    The :strong:`Setting up a Salt Minion` section contains detailed
+    information on how the hostname is determined.
+
+Explicitly declare the id for this minion to use. Since Salt uses detached ids
+it is possible to run multiple minions on the same machine but with different
+ids. This can be useful for Salt compute clusters.
 
 .. code-block:: yaml
 
@@ -136,7 +139,7 @@ FQDN (for instance, Solaris).
 ``cachedir``
 ------------
 
-Default: :file:`/var/cache/salt`
+Default: ``/var/cache/salt``
 
 The location for minion cache data.
 
@@ -180,7 +183,7 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
 Default: ``/var/run/salt/minion``
 
-The directory where unix sockets will be kept.
+The directory where Unix sockets will be kept.
 
 .. code-block:: yaml
 
@@ -213,6 +216,37 @@ master.
 
     acceptance_wait_time: 10
 
+.. conf_minion:: random_reauth_delay
+
+``random_reauth_delay``
+------------------------
+
+When the master key changes, the minion will try to re-auth itself to
+receive the new master key. In larger environments this can cause a syn-flood
+on the master because all minions try to re-auth immediately. To prevent this
+and have a minion wait for a random amount of time, use this optional
+parameter. The wait-time will be a random number of seconds between
+0 and the defined value.
+
+.. code-block:: yaml
+
+    random_reauth_delay: 60
+
+.. conf_minion:: acceptance_wait_time_max
+
+``acceptance_wait_time_max``
+----------------------------
+
+Default: ``None``
+
+The maximum number of seconds to wait until attempting to re\-authenticate
+with the master. If set, the wait will increase by acceptance_wait_time
+seconds each iteration.
+
+.. code-block:: yaml
+
+    acceptance_wait_time_max: None
+
 .. conf_minion:: dns_check
 
 ``dns_check``
@@ -235,7 +269,7 @@ environment, set this value to ``False``.
 
 Default: ``ipc``
 
-Windows platforms lack posix IPC and must rely on slower TCP based inter-
+Windows platforms lack POSIX IPC and must rely on slower TCP based inter-
 process communications. Set ipc_mode to ``tcp`` on such systems.
 
 .. code-block:: yaml
@@ -450,7 +484,7 @@ Default: ``True``
 
 autoload_dynamic_modules Turns on automatic loading of modules found in the
 environments on the master. This is turned on by default, to turn of
-autoloading modules when states run set this value to ``False``
+auto-loading modules when states run set this value to ``False``
 
 .. code-block:: yaml
 
@@ -484,6 +518,91 @@ environments is to isolate via the top file.
 .. code-block:: yaml
 
     environment: None
+
+File Directory Settings
+-----------------------
+
+.. conf_minion:: file_client
+
+``file_client``
+---------------
+
+Default: ``remote``
+
+The client defaults to looking on the master server for files, but can be
+directed to look on the minion by setting this parameter to ``local``.
+
+.. code-block:: yaml
+
+    file_client: remote
+
+.. conf_minion:: file_roots
+
+``file_roots``
+--------------
+
+Default:
+
+.. code-block:: yaml
+
+    base:
+      - /srv/salt
+
+When using a local :conf_minion:`file_client`, this parameter is used to setup
+the fileserver's environments. This parameter operates identically to the
+:conf_master:`master config parameter of the same name <file_roots>`.
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt
+      dev:
+        - /srv/salt/dev/services
+        - /srv/salt/dev/states
+      prod:
+        - /srv/salt/prod/services
+        - /srv/salt/prod/states
+
+.. conf_master:: hash_type
+
+``hash_type``
+-------------
+
+Default: ``md5``
+
+The hash_type is the hash to use when discovering the hash of a file on the
+local fileserver. The default is md5, but sha1, sha224, sha256, sha384 and
+sha512 are also supported.
+
+.. code-block:: yaml
+
+    hash_type: md5
+
+.. conf_minion:: pillar_roots
+
+``pillar_roots``
+----------------
+
+Default:
+
+.. code-block:: yaml
+
+    base:
+      - /srv/pillar
+
+When using a local :conf_minion:`file_client`, this parameter is used to setup
+the pillar environments.
+
+.. code-block:: yaml
+
+    pillar_roots:
+      base:
+        - /srv/pillar
+      dev:
+        - /srv/pillar/dev
+      prod:
+        - /srv/pillar/prod
 
 Security Settings
 -----------------
@@ -579,8 +698,8 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 Default: ``%H:%M:%S``
 
-The date and time format used in console log messages. Allowed date/time formating
-can be seen on http://docs.python.org/library/time.html#time.strftime
+The date and time format used in console log messages. Allowed date/time formatting
+can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 .. code-block:: yaml
 
@@ -593,8 +712,8 @@ can be seen on http://docs.python.org/library/time.html#time.strftime
 
 Default: ``%Y-%m-%d %H:%M:%S``
 
-The date and time format used in log file messages. Allowed date/time formating
-can be seen on http://docs.python.org/library/time.html#time.strftime
+The date and time format used in log file messages. Allowed date/time formatting
+can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 .. code-block:: yaml
 
@@ -608,7 +727,7 @@ can be seen on http://docs.python.org/library/time.html#time.strftime
 Default: ``[%(levelname)-8s] %(message)s``
 
 The format of the console logging messages. Allowed formatting options can
-be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 .. code-block:: yaml
 
@@ -622,7 +741,7 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. Allowed formatting options can
-be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 .. code-block:: yaml
 
@@ -635,7 +754,7 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 
 Default: ``{}``
 
-This can be used to control logging levels more specificically.  This
+This can be used to control logging levels more specifically.  This
 example sets the main salt library at the 'warning' level, but sets 
 'salt.modules' to log at the 'debug' level:
 

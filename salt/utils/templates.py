@@ -11,6 +11,7 @@ import imp
 import logging
 import tempfile
 import traceback
+import sys
 
 # Import third party libs
 import jinja2
@@ -20,6 +21,7 @@ import jinja2.ext
 import salt.utils
 import salt.exceptions
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
+from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +40,9 @@ def wrap_tmpl_func(render_str):
                     context=None, tmplpath=None, **kws):
         if context is None:
             context = {}
-        context.update(kws)
+        # We want explicit context to overwrite the **kws
+        kws.update(context)
+        context = kws
         assert 'opts' in context
         assert 'env' in context
 
@@ -46,14 +50,23 @@ def wrap_tmpl_func(render_str):
             if from_str:
                 tmplstr = tmplsrc
             else:
-                with codecs.open(tmplsrc, 'r', SLS_ENCODING) as tmplsrc:
-                    tmplstr = tmplsrc.read()
+                try:
+                    with codecs.open(tmplsrc, 'r', SLS_ENCODING) as _tmplsrc:
+                        tmplstr = _tmplsrc.read()
+                except (UnicodeDecodeError, ValueError) as exc:
+                    log.error('Exception ocurred while reading file {0}: {1}'
+                              .format(tmplsrc, exc))
+                    raise exc
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
-        except SaltTemplateRenderError, exc:
+            if salt.utils.is_windows():
+                # Write out with Windows newlines
+                output = os.linesep.join(output.splitlines())
+
+        except SaltTemplateRenderError as exc:
             return dict(result=False, data=str(exc))
         except Exception:
             return dict(result=False, data=traceback.format_exc())
@@ -83,21 +96,54 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if not env:
         if tmplpath:
             # ie, the template is from a file outside the state tree
-            loader = jinja2.FileSystemLoader(context, os.path.dirname(tmplpath))
+            loader = jinja2.FileSystemLoader(
+                context, os.path.dirname(tmplpath))
     else:
         loader = JinjaSaltCacheLoader(opts, context['env'])
     env_args = {'extensions': [], 'loader': loader}
+
     if hasattr(jinja2.ext, 'with_'):
         env_args['extensions'].append('jinja2.ext.with_')
+    if hasattr(jinja2.ext, 'do'):
+        env_args['extensions'].append('jinja2.ext.do')
+    if hasattr(jinja2.ext, 'loopcontrols'):
+        env_args['extensions'].append('jinja2.ext.loopcontrols')
+    env_args['extensions'].append(JinjaSerializerExtension)
+
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
     else:
         jinja_env = jinja2.Environment(
-                        undefined=jinja2.StrictUndefined,**env_args)
+                        undefined=jinja2.StrictUndefined, **env_args)
+    jinja_env.filters['strftime'] = salt.utils.date_format
+
+    unicode_context = {}
+    for key, value in context.iteritems():
+        if not isinstance(value, basestring):
+            unicode_context[key] = value
+            continue
+
+        # Let's try UTF-8 and fail if this still fails, that's why this is not
+        # wrapped in a try/except
+        unicode_context[key] = unicode(value, 'utf-8')
+
     try:
-        output = jinja_env.from_string(tmplstr).render(**context)
-    except jinja2.exceptions.TemplateSyntaxError, exc:
-        raise SaltTemplateRenderError(str(exc))
+        output = jinja_env.from_string(tmplstr).render(**unicode_context)
+        if isinstance(output, unicode):
+            # Let's encode the output back to utf-8 since that's what's assumed
+            # in salt
+            output = output.encode('utf-8')
+    except jinja2.exceptions.TemplateSyntaxError as exc:
+        error = '{0}; line {1} in template'.format(
+                exc,
+                traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        )
+        raise SaltTemplateRenderError(error)
+    except jinja2.exceptions.UndefinedError:
+        error = 'Undefined jinja variable; line {0} in template'.format(
+                traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        )
+        raise SaltTemplateRenderError(error)
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
@@ -138,7 +184,7 @@ def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     return Template(tmplstr).render(**context)
 
 
-def py(sfn, string=False, **kwargs):  # pylint: disable-msg=C0103
+def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     '''
     Render a template from a python source file
 

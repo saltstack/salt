@@ -11,7 +11,7 @@ Module for handling openstack keystone calls.
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.insecure: False   #(optional)
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
-        
+
         OR (for token based authentication)
 
         keystone.token: 'ADMIN'
@@ -25,6 +25,7 @@ try:
     HAS_KEYSTONE = True
 except ImportError:
     pass
+
 
 def __virtual__():
     '''
@@ -72,13 +73,15 @@ def auth():
     return client.Client(**kwargs)
 
 
-def ec2_credentials_get(id=None,       # pylint: disable-msg=C0103
+def ec2_credentials_get(id=None,       # pylint: disable=C0103
                         name=None,
-                        access=None):  # pylint: disable-msg=C0103
+                        access=None):  # pylint: disable=C0103
     '''
     Return ec2_credentials for a user (keystone ec2-credentials-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.ec2_credentials_get c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
         salt '*' keystone.ec2_credentials_get id=c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
@@ -89,7 +92,7 @@ def ec2_credentials_get(id=None,       # pylint: disable-msg=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable-msg=C0103
+                id = user.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
@@ -105,11 +108,13 @@ def ec2_credentials_get(id=None,       # pylint: disable-msg=C0103
     return ret
 
 
-def ec2_credentials_list(id=None, name=None):  # pylint: disable-msg=C0103
+def ec2_credentials_list(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a list of ec2_credentials for a specific user (keystone ec2-credentials-list)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.ec2_credentials_list 298ce377245c4ec9b70e1c639c89e654
         salt '*' keystone.ec2_credentials_list id=298ce377245c4ec9b70e1c639c89e654
@@ -120,7 +125,7 @@ def ec2_credentials_list(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable-msg=C0103
+                id = user.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
@@ -138,7 +143,9 @@ def endpoint_get(service):
     '''
     Return a specific endpoint (keystone endpoint-get)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.endpoint_get ec2
     '''
@@ -150,7 +157,9 @@ def endpoint_list():
     '''
     Return a list of available endpoints (keystone endpoints-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.endpoint_list
     '''
@@ -168,11 +177,13 @@ def endpoint_list():
     return ret
 
 
-def role_get(id=None, name=None):  # pylint: disable-msg=C0103
+def role_get(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a specific roles (keystone role-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.role_get c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.role_get id=c965f79c4f864eaaa9c3b41904e67082
@@ -183,7 +194,7 @@ def role_get(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for role in kstone.roles.list():
             if role.name == name:
-                id = role.id  # pylint: disable-msg=C0103
+                id = role.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve role id'}
@@ -199,7 +210,9 @@ def role_list():
     '''
     Return a list of available roles (keystone role-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.role_list
     '''
@@ -213,11 +226,13 @@ def role_list():
     return ret
 
 
-def service_get(id=None, name=None):  # pylint: disable-msg=C0103
+def service_get(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a specific services (keystone service-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.service_get c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_get id=c965f79c4f864eaaa9c3b41904e67082
@@ -228,7 +243,7 @@ def service_get(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for service in kstone.services.list():
             if service.name == name:
-                id = service.id  # pylint: disable-msg=C0103
+                id = service.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve service id'}
@@ -246,7 +261,9 @@ def service_list():
     '''
     Return a list of available services (keystone services-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.service_list
     '''
@@ -262,11 +279,13 @@ def service_list():
     return ret
 
 
-def tenant_get(id=None, name=None):  # pylint: disable-msg=C0103
+def tenant_get(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a specific tenants (keystone tenant-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.tenant_get c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.tenant_get id=c965f79c4f864eaaa9c3b41904e67082
@@ -277,7 +296,7 @@ def tenant_get(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for tenant in kstone.tenants.list():
             if tenant.name == name:
-                id = tenant.id  # pylint: disable-msg=C0103
+                id = tenant.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve tenant id'}
@@ -295,7 +314,9 @@ def tenant_list():
     '''
     Return a list of available tenants (keystone tenants-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.tenant_list
     '''
@@ -315,7 +336,9 @@ def token_get():
     '''
     Return the configured tokens (keystone token-get)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.token_get c965f79c4f864eaaa9c3b41904e67082
     '''
@@ -333,7 +356,9 @@ def user_list():
     '''
     Return a list of available users (keystone user-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_list
     '''
@@ -350,11 +375,13 @@ def user_list():
     return ret
 
 
-def user_get(id=None, name=None):  # pylint: disable-msg=C0103
+def user_get(id=None, name=None):  # pylint: disable=C0103
     '''
     Return a specific users (keystone user-get)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_get c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_get id=c965f79c4f864eaaa9c3b41904e67082
@@ -365,7 +392,7 @@ def user_get(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable-msg=C0103
+                id = user.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
@@ -384,7 +411,9 @@ def user_create(name, password, email, tenant_id=None, enabled=True):
     '''
     Create a user (keystone user-create)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_create name=jack password=zero email=jack@halloweentown.org tenant_id=a28a7b5a999a455f84b1f5210264375e enabled=True
     '''
@@ -399,11 +428,13 @@ def user_create(name, password, email, tenant_id=None, enabled=True):
     return user_get(item.id)
 
 
-def user_delete(id=None, name=None):  # pylint: disable-msg=C0103
+def user_delete(id=None, name=None):  # pylint: disable=C0103
     '''
     Delete a user (keystone user-delete)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082
@@ -413,7 +444,7 @@ def user_delete(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable-msg=C0103
+                id = user.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
@@ -424,16 +455,18 @@ def user_delete(id=None, name=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def user_update(id=None,        # pylint: disable-msg=C0103
+def user_update(id=None,        # pylint: disable=C0103
                 name=None,
                 email=None,
-                enabled=None):  # pylint: disable-msg=C0103
+                enabled=None):  # pylint: disable=C0103
     '''
     Update a user's information (keystone user-update)
     The following fields may be updated: name, email, enabled.
     Because the name is one of the fields, a valid user id is required.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_update id=c965f79c4f864eaaa9c3b41904e67082 name=newname
         salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
@@ -446,23 +479,25 @@ def user_update(id=None,        # pylint: disable-msg=C0103
     return ret
 
 
-def user_password_update(id=None,         # pylint: disable-msg=C0103
+def user_password_update(id=None,         # pylint: disable=C0103
                          name=None,
-                         password=None):  # pylint: disable-msg=C0103
+                         password=None):  # pylint: disable=C0103
     '''
     Update a user's password (keystone user-password-update)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082 password=12345
         salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete name=nova pasword=12345
+        salt '*' keystone.user_delete name=nova password=12345
     '''
     kstone = auth()
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable-msg=C0103
+                id = user.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
@@ -480,7 +515,9 @@ def user_role_list(user_id=None,
     '''
     Return a list of available user_roles (keystone user_roles-list)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' keystone.user_role_list \
             user_id=298ce377245c4ec9b70e1c639c89e654 \
@@ -516,7 +553,9 @@ def _item_list():
     Template for writing list functions
     Return a list of available items (keystone items-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keystone.item_list
     '''
@@ -535,9 +574,9 @@ def _item_list():
     #keystone module. This list should be updated as functions are added.
     #
     #ec2-credentials-create
-    #                    Create EC2-compatibile credentials for user per tenant
+    #                    Create EC2-compatible credentials for user per tenant
     #ec2-credentials-delete
-    #                    Delete EC2-compatibile credentials
+    #                    Delete EC2-compatible credentials
     #endpoint-create     Create a new endpoint associated with a service
     #endpoint-delete     Delete a service endpoint
     #role-create         Create new role

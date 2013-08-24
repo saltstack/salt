@@ -11,6 +11,13 @@ The postgres_group module is used to create and manage Postgres groups.
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the postgres module is present
+    '''
+    return 'postgres_group' if 'postgres.user_exists' in __salt__ else False
+
+
 def present(name,
             createdb=False,
             createuser=False,
@@ -42,13 +49,13 @@ def present(name,
         Should the new group be allowed to initiate streaming replication
 
     password
-        The group's pasword
+        The group's password
 
     groups
-        A string of comma seperated groups the group should be in
+        A string of comma separated groups the group should be in
 
     runas
-        System user all operation should be preformed on behalf of
+        System user all operations should be performed on behalf of
     '''
     ret = {'name': name,
            'changes': {},
@@ -70,7 +77,7 @@ def present(name,
                                          encrypted=encrypted,
                                          superuser=superuser,
                                          replication=replication,
-                                         password=password,
+                                         rolepassword=password,
                                          groups=groups,
                                          runas=runas):
         ret['comment'] = 'The group {0} has been created'.format(name)
@@ -90,7 +97,7 @@ def absent(name, runas=None):
         The groupname of the group to remove
 
     runas
-        System user all operation should be preformed on behalf of
+        System user all operations should be performed on behalf of
     '''
     ret = {'name': name,
            'changes': {},

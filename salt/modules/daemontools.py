@@ -11,26 +11,43 @@ service state via provider interface:
 import os
 import re
 
+# Import salt libs
+from salt.exceptions import CommandExecutionError
 
-if os.path.exists('/service'):
-    SERVICE_DIR = "/service"
-elif os.path.exists('/var/service'):
-    SERVICE_DIR = "/var/service"
+# Function alias to not shadow built-ins.
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
+VALID_SERVICE_DIRS = [
+    '/service',
+    '/var/service',
+    '/etc/service',
+]
+SERVICE_DIR = None
+for service_dir in VALID_SERVICE_DIRS:
+    if os.path.exists(service_dir):
+        SERVICE_DIR = service_dir
+        break
 
 
 def _service_path(name):
     '''
     build service path
     '''
+    if not SERVICE_DIR:
+        raise CommandExecutionError("Could not find service directory.")
     return '{0}/{1}'.format(SERVICE_DIR, name)
 
 
 #-- states.service  compatible args
-def start(name, enable=None, sig=None):
+def start(name):
     '''
     Starts service via daemontools
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.start <service name>
     '''
@@ -39,12 +56,14 @@ def start(name, enable=None, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-#-- states.service compatible
-def stop(name, enable=None, sig=None):
+#-- states.service compatible args
+def stop(name):
     '''
     Stops service via daemontools
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.stop <service name>
     '''
@@ -57,7 +76,9 @@ def term(name):
     '''
     Send a TERM to service via daemontools
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.term <service name>
     '''
@@ -66,12 +87,14 @@ def term(name):
 
 
 #-- states.service compatible
-def reload(name):
+def reload_(name):
     '''
     Wrapper for term()
 
-    CLI Example::
-    
+    CLI Example:
+
+    .. code-block:: bash
+
         salt '*' daemontools.reload <service name>
     '''
     term(name)
@@ -82,7 +105,9 @@ def restart(name):
     '''
     Restart service via daemontools. This will stop/start service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.restart <service name>
     '''
@@ -96,8 +121,10 @@ def restart(name):
 def full_restart(name):
     '''
     Calls daemontools.restart() function
-    
-    CLI Example::
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.full_restart <service name>
     '''
@@ -109,16 +136,18 @@ def status(name, sig=None):
     '''
     Return the status for a service via daemontools, return pid if running
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.status <service name>
     '''
     cmd = 'svstat {0}'.format(_service_path(name))
     ret = __salt__['cmd.run_stdout'](cmd)
-    match = re.search('\(pid (\d+)\)', ret)
+    match = re.search(r'\(pid (\d+)\)', ret)
     try:
         pid = match.group(1)
-    except:
+    except Exception:
         pid = ''
     return pid
 
@@ -127,9 +156,13 @@ def get_all():
     '''
     Return a list of all available services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' daemontools.get_all
     '''
+    if not SERVICE_DIR:
+        raise CommandExecutionError("Could not find service directory.")
     #- List all daemontools services in
     return sorted(os.listdir(SERVICE_DIR))

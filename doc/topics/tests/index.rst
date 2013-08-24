@@ -1,3 +1,15 @@
+Running The Tests
+=================
+
+To run the tests, use ``tests/runtests.py``, see ``--help`` for more info.
+
+Examples:
+
+* To run all tests: ``sudo ./tests/runtests.py``
+* Run unit tests only: ``sudo ./tests/runtests.py --unit-tests``
+
+You will need 'mock' (https://pypi.python.org/pypi/mock) in addition to salt requirements in order to run the tests.
+
 =============
 Writing Tests
 =============

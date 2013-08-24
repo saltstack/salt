@@ -31,15 +31,15 @@ def active():
                                    'Function': job['fun'],
                                    'Arguments': list(job['arg']),
                                    'Target': job['tgt'],
-                                   'Target-type': job['tgt_type']}
+                                   'Target-type': job['tgt_type'],
+                                   'User': job.get('user', 'root')}
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
     for jid in ret:
         jid_dir = salt.utils.jid_dir(
                 jid,
                 __opts__['cachedir'],
-                __opts__['hash_type']
-                )
+                __opts__['hash_type'])
         if not os.path.isdir(jid_dir):
             continue
         for minion in os.listdir(jid_dir):
@@ -55,15 +55,25 @@ def lookup_jid(jid, ext_source=None):
     '''
     Return the printout from a previously executed job
     '''
+    ret = {}
     if __opts__['ext_job_cache'] or ext_source:
+        out = 'nested'
         returner = ext_source if ext_source else __opts__['ext_job_cache']
         mminion = salt.minion.MasterMinion(__opts__)
-        return mminion.returners['{0}.get_jid'.format(returner)](jid)
+        data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+        for minion in data:
+            if u'return' in data[minion]:
+                ret[minion] = data[minion].get(u'return')
+            else:
+                ret[minion] = data[minion].get('return')
+            if 'out' in data[minion]:
+                out = data[minion]['out']
+        salt.output.display_output(ret, out, __opts__)
+        return ret
 
     # Fall back to the local job cache
     client = salt.client.LocalClient(__opts__['conf_file'])
 
-    ret = {}
     for mid, data in client.get_full_returns(jid, [], 0).items():
         ret[mid] = data.get('ret')
         salt.output.display_output(
@@ -93,7 +103,8 @@ def list_jobs():
                         'Function': load['fun'],
                         'Arguments': list(load['arg']),
                         'Target': load['tgt'],
-                        'Target-type': load['tgt_type']}
+                        'Target-type': load['tgt_type'],
+                        'User': load.get('user', 'root')}
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
@@ -131,6 +142,7 @@ def print_job(job_id):
                                     'Arguments': list(load['arg']),
                                     'Target': load['tgt'],
                                     'Target-type': load['tgt_type'],
+                                    'User': load.get('user', 'root'),
                                     'Result': hosts_return}
                         salt.output.display_output(ret, 'yaml', __opts__)
     return ret
