@@ -7,11 +7,11 @@ import copy
 import os
 import re
 import logging
+import urllib2
+import json
 from types import StringTypes
 
 # Import third party libs
-import urllib2
-import json
 import yaml
 
 # Import salt libs
