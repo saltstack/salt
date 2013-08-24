@@ -391,8 +391,6 @@ def show_lowstate():
         ret = st_.compile_low_chunks()
     finally:
         st_.pop_active()
-    if isinstance(ret, list):
-        __context__['retcode'] = 1
     return ret
 
 
