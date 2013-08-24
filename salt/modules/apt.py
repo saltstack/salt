@@ -1328,6 +1328,7 @@ def get_selections(pattern=None, state=None):
 # TODO: allow state=None to be set, and that *args will be set to that state
 # TODO: maybe use something similar to pkg_resources.pack_pkgs to allow a list passed to selection, with the default state set to whatever is passed by the above, but override that if explicitly specified
 # TODO: creat a pkg.hold alias, instead of the above?
+# TODO: handle path to selection file from local fs as well as from salt file server
 def set_selections(path=None, selection=None, clear=False):
     '''
     Change package state in the dpkg database.
