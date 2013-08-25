@@ -426,7 +426,7 @@ def mod_watch(name, sig=None, reload=False, full_restart=False):
             action = 'reload'
         elif 'service.full_restart' in __salt__ and full_restart:
             restart_func = __salt__['service.full_restart']
-            action = 'full restart'
+            action = 'fully restart'
         else:
             restart_func = __salt__['service.restart']
             action = 'restart'
