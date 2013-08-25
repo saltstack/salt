@@ -1292,7 +1292,9 @@ def get_selections(pattern=None, state=None):
     '''
     View package state from the dpkg database.
 
-    Returns a dict of dicts containing the state, and package names::
+    Returns a dict of dicts containing the state, and package names:
+
+    .. code-block:: python
 
         {'<host>':
             {'<state>': ['pkg1',
@@ -1302,7 +1304,9 @@ def get_selections(pattern=None, state=None):
             ...
         }
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.get_selections
         salt '*' pkg.get_selections 'python-*'
@@ -1349,7 +1353,9 @@ def set_selections(path=None, selection=None, clear=False):
     with setting all packages to deinstall state.
 
     Returns a dict of dicts containing the package names, and the new and old
-    versions::
+    versions:
+
+    .. code-block:: python
 
         {'<host>':
             {'<package>': {'new': '<new-state>',
@@ -1358,7 +1364,9 @@ def set_selections(path=None, selection=None, clear=False):
             ...
         }
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.set_selections selection='{"install": ["netcat"]}'
         salt '*' pkg.set_selections selection='{"hold": ["openssh-server", "openssh-client"]}'
