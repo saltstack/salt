@@ -91,6 +91,7 @@ TAGS = \
     'job': 'job', # prefix for all .job events (minion jobs)
     'key': 'key', # prefix for all .key events
     'minion': 'minion', # prefix for all .minion events (minion sourced events)
+    'syndic': 'syndic', # prefix for all .syndic events (syndic minion sourced events)
     'run': 'run', #prefis for all .run events (salt runners)
 }
 
@@ -306,19 +307,30 @@ class SaltEvent(object):
                             self.fire_event(
                                     data,
                                     '{0}.{1}'.format(tags[0], tags[-1])) # old dup event
+                            data['jid'] = load['jid']
+                            data['id'] = load['id']
+                            data['success'] = false
+                            data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
+                            data['fun'] = load['fun']
                             self.fire_event(
                                 data,
                                 tagify([load['jid'],
-                                        'ret',
+                                        'sub',
                                         load['id'],
-                                        'error',
-                                        tags[0],
-                                        tags[-1]],
-                                    'job'))
+                                        'error', 
+                                        load['fun']], 
+                                       'job'))
                 except Exception:
                     pass
             else:
-                self.fire_event(load, load['fun'])
+                self.fire_event(load, load['fun']) # old dup event
+                self.fire_event(load,
+                                tagify([load['jid'],
+                                        'sub',
+                                        load['id'],
+                                        'ret',
+                                        load['fun']],
+                                       'job')) 
 
     def __del__(self):
         self.destroy()
