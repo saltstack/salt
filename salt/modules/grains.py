@@ -26,7 +26,7 @@ def _serial_sanitizer(instr):
     '''Replaces the last 1/4 of a string with X's'''
     length = len(instr)
     index = int(math.floor(length * .75))
-    return "{0}{1}".format(instr[:index], 'X' * (length - index))
+    return '{0}{1}'.format(instr[:index], 'X' * (length - index))
 
 
 _FQDN_SANITIZER = lambda x: 'MINION.DOMAINNAME'
