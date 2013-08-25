@@ -17,11 +17,12 @@ import os.path
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
-    from salt._syspaths import (
-        ROOT_DIR,
-        CONFIG_DIR,
+    from salt._syspaths import (  # pylint: disable=E0611
+        ROOT_DIR,                 # because pylint thinks that _syspaths is an
+        CONFIG_DIR,               # attribute of salt.__init__
         CACHE_DIR,
         SOCK_DIR,
+        SRV_ROOT_DIR,
         BASE_FILE_ROOTS_DIR,
         BASE_PILLAR_ROOTS_DIR,
         BASE_MASTER_ROOTS_DIR,
@@ -38,8 +39,9 @@ except ImportError:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
     CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')
     SOCK_DIR = os.path.join(ROOT_DIR, 'var', 'run', 'salt')
-    BASE_FILE_ROOTS_DIR = os.path.join(ROOT_DIR, 'srv', 'salt')
-    BASE_PILLAR_ROOTS_DIR = os.path.join(ROOT_DIR, 'srv', 'pillar')
-    BASE_MASTER_ROOTS_DIR = os.path.join(ROOT_DIR, 'srv', 'salt-master')
+    SRV_ROOT_DIR = os.path.join(ROOT_DIR, 'srv')
+    BASE_FILE_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt')
+    BASE_PILLAR_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'pillar')
+    BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
     LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'logs', 'salt')
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')

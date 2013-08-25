@@ -141,6 +141,7 @@ ROOT_DIR = {root_dir!r}
 CONFIG_DIR = {config_dir!r}
 CACHE_DIR = {cache_dir!r}
 SOCK_DIR = {sock_dir!r}
+SRV_ROOT_DIR= {srv_root_dir!r}
 BASE_FILE_ROOTS_DIR = {base_file_roots_dir!r}
 BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
@@ -180,6 +181,7 @@ class Build(build):
                     config_dir=self.salt_config_dir,
                     cache_dir=self.salt_cache_dir,
                     sock_dir=self.salt_sock_dir,
+                    srv_root_dir=self.salt_srv_root_dir,
                     base_file_roots_dir=self.salt_base_file_roots_dir,
                     base_pillar_roots_dir=self.salt_base_pillar_roots_dir,
                     base_master_roots_dir=self.salt_base_master_roots_dir,
@@ -199,6 +201,8 @@ class Install(install):
          'Salt\'s pre-configured cache directory'),
         ('salt-sock-dir=', None,
          'Salt\'s pre-configured socket directory'),
+        ('salt-srv-root-dir=', None,
+         'Salt\'s pre-configured service directory'),
         ('salt-base-file-roots-dir=', None,
          'Salt\'s pre-configured file roots directory'),
         ('salt-base-pillar-roots-dir=', None,
@@ -217,6 +221,7 @@ class Install(install):
         self.salt_config_dir = CONFIG_DIR
         self.salt_cache_dir = CACHE_DIR
         self.salt_sock_dir = SOCK_DIR
+        self.salt_srv_root_dir = SRV_ROOT_DIR
         self.salt_base_file_roots_dir = BASE_FILE_ROOTS_DIR
         self.salt_base_pillar_roots_dir = BASE_PILLAR_ROOTS_DIR
         self.salt_base_master_roots_dir = BASE_MASTER_ROOTS_DIR
