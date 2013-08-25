@@ -172,4 +172,4 @@ for the user running the salt-master.
 
 .. note::
 
-    GitFS requires library ``gitpython`` > 0.3.0.
+    GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
