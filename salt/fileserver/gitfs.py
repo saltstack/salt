@@ -153,7 +153,15 @@ def update():
         except (OSError, IOError):
             pass
 
-    salt.fileserver.reap_fileserver_cache_dir(os.path.join(__opts__['cachedir'], 'gitfs/hash'), find_file)
+    try:
+        salt.fileserver.reap_fileserver_cache_dir(
+            os.path.join(__opts__['cachedir'], 'gitfs/hash'),
+            find_file
+        )
+    except os.error:
+        # Hash file won't exist if no files have yet been served up
+        pass
+
 
 def envs():
     '''
