@@ -22,6 +22,12 @@ the bootstrap script:
 
     wget -O - http://bootstrap.saltstack.org | sudo sh
 
+Run the following script to install just the Salt Master:
+
+.. code-block:: bash
+
+    curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M -N
+
 The script should also make it simple to install a salt master, if desired.
 
 Currently the install script has been tested to work on:
