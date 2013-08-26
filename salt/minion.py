@@ -1035,7 +1035,7 @@ class Minion(object):
             ),
             tagify([self.opts['id'], 'start'], 'minion'),
         )
-        
+
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
@@ -1139,7 +1139,7 @@ class Minion(object):
             time.asctime()
             ),
             tagify([self.opts['id'], 'start'], 'minion'),
-        )        
+        )
         loop_interval = int(self.opts['loop_interval'])
         while True:
             try:
@@ -1306,7 +1306,7 @@ class Syndic(Minion):
             time.asctime()
             ),
             tagify([self.opts['id'], 'start'], 'syndic'),
-        )        
+        )
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
