@@ -147,7 +147,11 @@ def update():
         lk_fn = os.path.join(repo.working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
-        origin.fetch()
+        try:
+            origin.fetch()
+        except Exception as exc:
+            log.warning('GitPython exception caught while fetching: '
+                        '{0}'.format(exc))
         try:
             os.remove(lk_fn)
         except (OSError, IOError):
