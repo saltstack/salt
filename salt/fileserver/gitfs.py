@@ -147,13 +147,25 @@ def update():
         lk_fn = os.path.join(repo.working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
-        origin.fetch()
+        try:
+            origin.fetch()
+        except Exception as exc:
+            log.warning('GitPython exception caught while fetching: '
+                        '{0}'.format(exc))
         try:
             os.remove(lk_fn)
         except (OSError, IOError):
             pass
 
-    salt.fileserver.reap_fileserver_cache_dir(os.path.join(__opts__['cachedir'], 'gitfs/hash'), find_file)
+    try:
+        salt.fileserver.reap_fileserver_cache_dir(
+            os.path.join(__opts__['cachedir'], 'gitfs/hash'),
+            find_file
+        )
+    except os.error:
+        # Hash file won't exist if no files have yet been served up
+        pass
+
 
 def envs():
     '''
