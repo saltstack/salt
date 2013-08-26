@@ -5,6 +5,11 @@ After enabling this backend, branches, bookmarks, and tags in a remote
 mercurial repository are exposed to salt as different environments. This
 feature is managed by the fileserver_backend option in the salt master config.
 
+This fileserver has an additional option ``hgfs_branch_method`` that will set
+the desired branch method. Possible values are: ``branches``, ``bookmarks``, or
+``mixed``. If using ``branches`` or ``mixed``, the ``default`` branch will be
+mapped to ``base``.
+
 :depends:   - mercurial
 '''
 
@@ -37,6 +42,8 @@ def __virtual__():
     if not isinstance(__opts__['hgfs_remotes'], list):
         return False
     if not isinstance(__opts__['hgfs_root'], str):
+        return False
+    if not isinstance(__opts__['hgfs_branch_method'], str):
         return False
     if not 'hg' in __opts__['fileserver_backend']:
         return False
@@ -154,12 +161,18 @@ def envs():
     repos = init()
     for repo in repos:
         repo.open()
-        branches = repo.branches()
-        for branch in branches:
-            branch_name = branch[0]
-            if branch_name == 'default':
-                branch = 'base'
-            ret.add(branch_name)
+        if __opts__['hgfs_branch_method'] != 'bookmarks':
+            branches = repo.branches()
+            for branch in branches:
+                branch_name = branch[0]
+                if branch_name == 'default':
+                    branch = 'base'
+                ret.add(branch_name)
+        if __opts__['hgfs_branch_method'] != 'branches':
+            bookmarks = repo.bookmarks()
+            for bookmark in bookmarks:
+                bookmark_name = bookmark[0]
+                ret.add(bookmark_name)
         tags = repo.get_tags()
         for tag in tags.keys():
             tag_name = tag[0]
@@ -180,7 +193,7 @@ def find_file(path, short='base', **kwargs):
     local_path = path
     path = os.path.join(__opts__['hgfs_root'], local_path)
 
-    if short == 'base':
+    if __opts__['hgfs_branch_method'] != 'bookmarks' and short == 'base':
         short = 'default'
     dest = os.path.join(__opts__['cachedir'], 'hgfs/refs', short, path)
     hashes_glob = os.path.join(__opts__['cachedir'],
@@ -278,7 +291,7 @@ def file_hash(load, fnd):
         return ''
     ret = {'hash_type': __opts__['hash_type']}
     short = load['env']
-    if short == 'base':
+    if __opts__['hgfs_branch_method'] != 'bookmarks' and short == 'base':
         short = 'default'
     relpath = fnd['rel']
     path = fnd['path']
@@ -308,7 +321,7 @@ def file_list(load):
     ret = []
     if 'env' not in load:
         return ret
-    if load['env'] == 'base':
+    if __opts__['hgfs_branch_method'] != 'bookmarks' and load['env'] == 'base':
         load['env'] = 'default'
     repos = init()
     for repo in repos:
@@ -337,7 +350,7 @@ def dir_list(load):
     ret = set()
     if 'env' not in load:
         return ret
-    if load['env'] == 'base':
+    if __opts__['hgfs_branch_method'] != 'bookmarks' and load['env'] == 'base':
         load['env'] = 'default'
     repos = init()
     for repo in repos:
