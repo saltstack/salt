@@ -11,5 +11,6 @@ Full list of builtin fileserver modules
     :template: autosummary.rst.tmpl
 
     gitfs
+    hgfs
     roots
     s3fs
