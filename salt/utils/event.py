@@ -322,15 +322,6 @@ class SaltEvent(object):
                                        'job'))
                 except Exception:
                     pass
-            else:
-                self.fire_event(load, load['fun']) # old dup event
-                self.fire_event(load,
-                                tagify([load['jid'],
-                                        'sub',
-                                        load['id'],
-                                        'ret',
-                                        load['fun']],
-                                       'job')) 
 
     def __del__(self):
         self.destroy()
