@@ -244,8 +244,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %postun -n salt-minion
   if [ "$1" -ge "1" ] ; then
-      /sbin/service salt-master condrestart >/dev/null 2>&1 || :
-      /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
+      /sbin/service salt-minion condrestart >/dev/null 2>&1 || :
   fi
 
 %else
@@ -270,8 +269,8 @@ rm -rf $RPM_BUILD_ROOT
 %else
   if [ $1 -eq 0 ] ; then
       # Package removal, not upgrade
-      /bin/systemctl --no-reload disable salt-master.service > /dev/null 2>&1 || :
-      /bin/systemctl stop salt-master.service > /dev/null 2>&1 || :
+      /bin/systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
+      /bin/systemctl stop salt-minion.service > /dev/null 2>&1 || :
   fi
 %endif
 
@@ -303,13 +302,15 @@ rm -rf $RPM_BUILD_ROOT
   %systemd_postun salt-minion.service
 %else
   /bin/systemctl daemon-reload &>/dev/null
-  [ $1 -gt 0 ] && /bin/systemctl try-restart salt-master.service &>/dev/null || :
-  [ $1 -gt 0 ] && /bin/systemctl try-restart salt-syndic.service &>/dev/null || :
+  [ $1 -gt 0 ] && /bin/systemctl try-restart salt-minion.service &>/dev/null || :
 %endif
 
 %endif
 
 %changelog
+* Sun Aug 25 2013 Florian La Roche <Florian.LaRoche@gmx.net>
+- fixed preun/postun scripts for salt-minion
+
 * Thu Aug 15 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.16.3-1
 - Update to patch release 0.16.3
 
