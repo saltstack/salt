@@ -85,7 +85,7 @@ class MasterPillarUtil(object):
                     if not salt.utils.verify.valid_id(self.opts, minion_id):
                         continue
                 else:
-                    if not salt.utils.verify.valid_id(minion_id):
+                    if not salt.utils.verify.valid_id(self.opts, minion_id):
                         continue
                 path = os.path.join(mdir, minion_id, 'data.p')
                 if os.path.isfile(path):
@@ -110,7 +110,7 @@ class MasterPillarUtil(object):
                         expr_form='list')
         return ret
 
-    def _get_live_minion_pillar(self, minion_id=None, minion_grains={}):
+    def _get_live_minion_pillar(self, minion_id=None, minion_grains=None):
         # Returns a dict of pillar data for one minion
         if minion_id == None:
             return {}
