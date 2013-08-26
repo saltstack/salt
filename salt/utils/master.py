@@ -110,7 +110,7 @@ class MasterPillarUtil(object):
                         expr_form='list')
         return ret
 
-    def _get_live_minion_pillar(self, minion_id=None, minion_grains={}):
+    def _get_live_minion_pillar(self, minion_id=None, minion_grains=None):
         # Returns a dict of pillar data for one minion
         if minion_id == None:
             return {}
