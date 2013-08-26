@@ -37,7 +37,9 @@ def list_users(runas=None):
     '''
     Return a list of users based off of rabbitmqctl user_list.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.list_users
     '''
@@ -58,7 +60,9 @@ def list_vhosts(runas=None):
     '''
     Return a list of vhost based on rabbitmqctl list_vhosts.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.list_vhosts
     '''
@@ -73,7 +77,9 @@ def user_exists(name, runas=None):
     '''
     Return whether the user exists based on rabbitmqctl list_users.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.user_exists rabbit_user
     '''
@@ -87,7 +93,9 @@ def vhost_exists(name, runas=None):
     '''
     Return whether the vhost exists based on rabbitmqctl list_vhosts.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.vhost_exists rabbit_host
     '''
@@ -98,7 +106,9 @@ def add_user(name, password, runas=None):
     '''
     Add a rabbitMQ user via rabbitmqctl user_add <user> <password>
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.add_user rabbit_user password
     '''
@@ -114,7 +124,9 @@ def delete_user(name, runas=None):
     '''
     Deletes a user via rabbitmqctl delete_user.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.delete_user rabbit_user
     '''
@@ -129,7 +141,9 @@ def change_password(name, password, runas=None):
     '''
     Changes a user's password.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.change_password rabbit_user password
     '''
@@ -145,7 +159,9 @@ def clear_password(name, runas=None):
     '''
     Removes a user's password.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.clear_password rabbit_user
     '''
@@ -160,7 +176,9 @@ def add_vhost(vhost, runas=None):
     '''
     Adds a vhost via rabbitmqctl add_vhost.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq add_vhost '<vhost_name>'
     '''
@@ -175,7 +193,9 @@ def delete_vhost(vhost, runas=None):
     '''
     Deletes a vhost rabbitmqctl delete_vhost.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.delete_vhost '<vhost_name>'
     '''
@@ -190,7 +210,9 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
     '''
     Sets permissions for vhost via rabbitmqctl set_permissions
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.set_permissions 'myvhost' 'myuser'
     '''
@@ -206,7 +228,9 @@ def list_user_permissions(name, user=None):
     '''
     List permissions for a user via rabbitmqctl list_user_permissions
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.list_user_permissions 'user'.
     '''
@@ -220,7 +244,9 @@ def status(user=None):
     '''
     return rabbitmq status
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.status
     '''
@@ -235,7 +261,9 @@ def cluster_status(user=None):
     '''
     return rabbitmq cluster_status
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.cluster_status
     '''
@@ -251,7 +279,9 @@ def stop_app(runas=None):
     '''
     Stops the RabbitMQ application, leaving the Erlang node running.
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.stop_app
     '''
@@ -266,7 +296,9 @@ def start_app(runas=None):
     '''
     Start the RabbitMQ application.
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.start_app
     '''
@@ -281,7 +313,9 @@ def reset(runas=None):
     '''
     Return a RabbitMQ node to its virgin state
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.reset
     '''
@@ -296,7 +330,9 @@ def force_reset(runas=None):
     '''
     Forcefully Return a RabbitMQ node to its virgin state
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.force_reset
     '''
@@ -306,11 +342,14 @@ def force_reset(runas=None):
 
     return res
 
+
 def list_queues(*kwargs):
     '''
     Returns queue details of the / virtual host
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
@@ -318,14 +357,17 @@ def list_queues(*kwargs):
         'rabbitmqctl list_queues {0}'.format(' '.join(list(kwargs))))
     return res
 
+
 def list_queues_vhost(vhost, *kwargs):
     '''
-    Returns queue details of specified virtual host.
-    This command will consider first parameter as the vhost name and rest will be treated as queueinfoitem.
-    Also rabbitmqctl's -p parameter will be passed by salt, it should not be provided by salt command
-    For getting details on vhost '/', use list_queues instead).
+    Returns queue details of specified virtual host. This command will consider
+    first parameter as the vhost name and rest will be treated as
+    queueinfoitem. For getting details on vhost ``/``, use :mod:`list_queues
+    <salt.modules.rabbitmq.list_queues>` instead).
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rabbitmq.list_queues messages consumers
     '''

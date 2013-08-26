@@ -102,7 +102,9 @@ def install(runas=None, path=None):
     '''
     Install Rbenv systemwide
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rbenv.install
     '''
@@ -116,7 +118,9 @@ def update(runas=None, path=None):
     '''
     Updates the current versions of Rbenv and Ruby-Build
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rbenv.update
     '''
@@ -131,7 +135,9 @@ def is_installed(runas=None):
     '''
     Check if Rbenv is installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rbenv.is_installed
     '''
@@ -146,7 +152,9 @@ def install_ruby(ruby, runas=None):
         The version of Ruby to install, should match one of the
         versions listed by rbenv.list
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rbenv.install_ruby 2.0.0-p0
     '''
@@ -172,10 +180,12 @@ def uninstall_ruby(ruby, runas=None):
     Uninstall a ruby implementation.
 
     ruby
-        The version of ruby to uninstall. Should match one of
-        the versions listed by rbenv.versions
+        The version of ruby to uninstall. Should match one of the versions
+        listed by :mod:`rbenv.versions <salt.modules.rbenv.versions>`
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rbenv.uninstall_ruby 2.0.0-p0
     '''
@@ -191,7 +201,9 @@ def versions(runas=None):
     '''
     List the installed versions of ruby.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rbenv.versions
     '''
@@ -205,15 +217,15 @@ def default(ruby=None, runas=None):
     Returns or sets the currently defined default ruby.
 
     ruby=None
-        The version to set as the default. Should match one of
-        the versions listed by rbenv.versions.
-        Leave blank to return the current default.
+        The version to set as the default. Should match one of the versions
+        listed by :mod:`rbenv.versions <salt.modules.rbenv.versions>`. Leave
+        blank to return the current default.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rbenv.default
-        # 2.0.0-p0
-
         salt '*' rbenv.default 2.0.0-p0
     '''
 
@@ -229,7 +241,9 @@ def list_(runas=None):
     '''
     List the installable versions of ruby.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rbenv.list
     '''
