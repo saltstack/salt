@@ -139,7 +139,7 @@ def install(pkgs=None,
     env
         deprecated, use bin_env now
     use_wheel
-        Prefer wheel archives (requires pip>=1.4)        
+        Prefer wheel archives (requires pip>=1.4)
     log
         Log file where a complete (maximum verbosity) record will be kept
     proxy
