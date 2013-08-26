@@ -194,7 +194,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 self.assertSaltNoneReturn({'test': ret})
                 self.assertInSaltComment(
                     'Python package git+https://github.com/saltstack/'
-                    'salt-testing.git#egg=SaltTesting>=0.5.1 is set to be '
+                    'salt-testing.git#egg=SaltTesting is set to be '
                     'installed',
                     {'test': ret}
                 )
@@ -253,6 +253,26 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                             'SaltTesting/SaltTesting-0.5.0.tar.gz'
                             '#md5=e6760af92b7165f8be53b5763e40bc24==???')
             )
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_install = MagicMock(return_value={
+            'retcode': 0,
+            'stderr' :'',
+            'stdout': 'Cloned!'
+        })
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
+                                       'pip.list': pip_list,
+                                       'pip.install': pip_install}):
+            with patch.dict(pip.__opts__, {'test': False}):
+                ret = pip.installed(
+                    'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
+                )
+                self.assertSaltTrueReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Package was successfully installed',
+                    {'test': ret}
+                )
 
 
 if __name__ == '__main__':
