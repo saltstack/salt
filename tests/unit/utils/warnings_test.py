@@ -22,7 +22,6 @@ ensure_in_syspath('../../')
 # Import salt libs
 from salt.utils import warn_until
 
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WarnUntilTestCase(TestCase):
 
