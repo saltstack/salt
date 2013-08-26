@@ -718,6 +718,14 @@ def create(vm_=None, call=None):
             set_delvol_on_destroy
         ).lower()
 
+    tags = config.get_config_value('tag', vm_, __opts__, {}, search_global=False)
+    if not isinstance(tags, dict):
+        raise SaltCloudConfigError(
+                '\'tag\' should be a dict.'
+            )
+
+    tags['Name'] = vm_['name']
+
     try:
         data = query(params, 'instancesSet', location=location)
         if 'error' in data:
@@ -809,7 +817,7 @@ def create(vm_=None, call=None):
             raise SaltCloudSystemExit(exc.message)
 
     set_tags(
-        vm_['name'], {'Name': vm_['name']},
+        vm_['name'], tags,
         instance_id=instance_id, call='action', location=location
     )
     log.info('Created node {0}'.format(vm_['name']))
