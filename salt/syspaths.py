@@ -43,5 +43,5 @@ except ImportError:
     BASE_FILE_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt')
     BASE_PILLAR_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'pillar')
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
-    LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'logs', 'salt')
+    LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'log', 'salt')
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
