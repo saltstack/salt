@@ -138,6 +138,8 @@ def install(pkgs=None,
         (/home/code/path/to/virtualenv/)
     env
         deprecated, use bin_env now
+    use_wheel
+        Prefer wheel archives (requires pip>=1.4)        
     log
         Log file where a complete (maximum verbosity) record will be kept
     proxy
