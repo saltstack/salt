@@ -28,6 +28,7 @@ import salt.minion
 import salt.pillar
 import salt.fileclient
 import salt.utils.event
+import salt.syspaths as syspaths
 from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltReqTimeoutError, SaltException
@@ -1684,7 +1685,7 @@ class BaseHighState(object):
             opts['failhard'] = False
             opts['state_top'] = 'salt://top.sls'
             opts['nodegroups'] = {}
-            opts['file_roots'] = {'base': ['/srv/salt']}
+            opts['file_roots'] = {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
         else:
             opts['renderer'] = mopts['renderer']
             opts['failhard'] = mopts.get('failhard', False)

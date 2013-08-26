@@ -14,6 +14,7 @@ import salt.client
 import salt.runner
 import salt.wheel
 import salt.utils
+import salt.syspaths as syspaths
 from salt.exceptions import SaltException, EauthAuthenticationError
 from salt.utils.event import tagify
 
@@ -37,8 +38,12 @@ class APIClient(object):
     '''
     def __init__(self, opts=None):
         if not opts:
-            opts = salt.config.client_config(os.environ.get('SALT_MASTER_CONFIG',
-                                                            '/etc/salt/master'))
+            opts = salt.config.client_config(
+                os.environ.get(
+                    'SALT_MASTER_CONFIG',
+                    os.path.join(syspaths.CONFIG_DIR, 'master')
+                )
+            )
         self.opts = opts
         self.localClient = salt.client.LocalClient(self.opts['conf_file'])
         self.runnerClient = salt.runner.RunnerClient(self.opts)

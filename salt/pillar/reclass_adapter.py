@@ -42,8 +42,12 @@ setting the configuration option, like in the example above.
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
-from salt.utils.reclass import prepend_reclass_source_path, \
-        filter_out_source_path_option, set_inventory_base_uri_default
+from salt.utils.reclass import (
+    prepend_reclass_source_path,
+    filter_out_source_path_option,
+    set_inventory_base_uri_default
+)
+
 
 def __virtual__(retry=False):
     try:
@@ -104,4 +108,4 @@ def ext_pillar(minion_id, pillar, **kwargs):
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError('ext_pillar.reclass: ' + e.message)
+        raise SaltInvocationError('ext_pillar.reclass: {0}'.format(e.message))
