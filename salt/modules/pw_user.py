@@ -65,6 +65,7 @@ def add(name,
         roomnumber='',
         workphone='',
         homephone='',
+        createhome=True,
         **kwargs):
     '''
     Add a user to the minion
