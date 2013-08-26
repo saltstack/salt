@@ -13,6 +13,7 @@ import os
 # Import salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only load if qemu-img is installed
@@ -27,7 +28,9 @@ def make_image(location, size, fmt):
     Create a blank virtual machine image file of the specified size in
     megabytes. The image can be created in any format supported by qemu
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' qemu_img.make_image /tmp/image.qcow 2048 qcow2
         salt '*' qemu_img.make_image /tmp/image.raw 10240 raw
