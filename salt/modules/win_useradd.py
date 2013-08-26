@@ -8,15 +8,27 @@ NOTE: This currently only works with local user accounts, not domain accounts
 import salt.utils
 from salt._compat import string_types
 
+try:
+    import win32net
+    import win32netcon
+    HAS_WIN32NET_MODS = True
+except ImportError:
+    HAS_WIN32NET_MODS = False
+
 
 def __virtual__():
     '''
     Set the user module if the kernel is Windows
     '''
-    return 'user' if salt.utils.is_windows() else False
+    if HAS_WIN32NET_MODS is True and salt.utils.is_windows():
+        return 'user'
+    return False
 
 
 def add(name,
+        # Disable pylint checking on the next options. They exist to match the
+        # user modules of other distributions.
+        # pylint: disable=W0613
         uid=None,
         gid=None,
         groups=None,
@@ -28,7 +40,9 @@ def add(name,
         roomnumber=False,
         workphone=False,
         homephone=False,
-        createhome=False):
+        createhome=False
+        # pylint: enable=W0613
+        ):
     '''
     Add a user to the minion
 
@@ -36,13 +50,22 @@ def add(name,
 
         salt '*' user.add name password
     '''
-    cmd = 'net user {0} /add'.format(name)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
+    if groups:
+        chgroups(name, groups)
+    if fullname:
+        chfullname(name, fullname)
+    return ret['retcode'] == 0
 
-    return not ret['retcode']
 
-
-def delete(name, purge=False, force=False):
+def delete(name,
+           # Disable pylint checking on the next options. They exist to match
+           # the user modules of other distributions.
+           # pylint: disable=W0613
+           purge=False,
+           force=False
+           # pylint: enable=W0613
+           ):
     '''
     Remove a user from the minion
     NOTE: purge and force have not been implemented on Windows yet
@@ -51,10 +74,8 @@ def delete(name, purge=False, force=False):
 
         salt '*' user.delete name
     '''
-    cmd = 'net user {0} /delete'.format(name)
-    ret = __salt__['cmd.run_all'](cmd)
-
-    return not ret['retcode']
+    ret = __salt__['cmd.run_all']('net user {0} /delete'.format(name))
+    return ret['retcode'] == 0
 
 
 def setpassword(name, password):
@@ -65,10 +86,8 @@ def setpassword(name, password):
 
         salt '*' user.setpassword name password
     '''
-    cmd = 'net user {0} {1}'.format(name, password)
-    ret = __salt__['cmd.run_all'](cmd)
-
-    return not ret['retcode']
+    ret = __salt__['cmd.run_all']('net user {0} {1}'.format(name, password))
+    return ret['retcode'] == 0
 
 
 def addgroup(name, group):
@@ -84,10 +103,10 @@ def addgroup(name, group):
         return False
     if group in user['groups']:
         return True
-    cmd = 'net localgroup {0} {1} /add'.format(group, name)
-    ret = __salt__['cmd.run_all'](cmd)
-
-    return not ret['retcode']
+    ret = __salt__['cmd.run_all'](
+        'net localgroup {0} {1} /add'.format(group, name)
+    )
+    return ret['retcode'] == 0
 
 
 def removegroup(name, group):
@@ -99,14 +118,17 @@ def removegroup(name, group):
         salt '*' user.removegroup username groupname
     '''
     user = info(name)
+
     if not user:
         return False
+
     if group not in user['groups']:
         return True
-    cmd = 'net localgroup {0} {1} /delete'.format(group, name)
-    ret = __salt__['cmd.run_all'](cmd)
 
-    return not ret['retcode']
+    ret = __salt__['cmd.run_all'](
+        'net localgroup {0} {1} /delete'.format(group, name)
+    )
+    return ret['retcode'] == 0
 
 
 def chhome(name, home):
@@ -118,15 +140,21 @@ def chhome(name, home):
         salt '*' user.chhome foo \\\\fileserver\\home\\foo
     '''
     pre_info = info(name)
+
     if not pre_info:
         return False
+
     if home == pre_info['home']:
         return True
-    cmd = 'net user {0} /homedir:{1}'.format(name, home)
-    __salt__['cmd.run'](cmd)
+
+    if __salt__['cmd.retcode']('net user {0} /homedir:{1}'.format(
+            name, home)) != 0:
+        return False
+
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
         return post_info['home'] == home
+
     return False
 
 
@@ -139,16 +167,22 @@ def chprofile(name, profile):
         salt '*' user.chprofile foo \\\\fileserver\\profiles\\foo
     '''
     pre_info = info(name)
+
     if not pre_info:
         return False
+
     if profile == pre_info['profile']:
         return True
-    cmd = 'net user {0} /profilepath:{1}'.format(name, profile)
-    __salt__['cmd.run'](cmd)
+    if __salt__['cmd.retcode']('net user {0} /profilepath:{1}'.format(
+            name, profile)) != 0:
+        return False
+
     post_info = info(name)
     if post_info['profile'] != pre_info['profile']:
         return post_info['profile'] == profile
+
     return False
+
 
 def chfullname(name, fullname):
     '''
@@ -159,15 +193,20 @@ def chfullname(name, fullname):
         salt '*' user.chfullname user 'First Last'
     '''
     pre_info = info(name)
+
     if not pre_info:
         return False
+
     if fullname == pre_info['fullname']:
         return True
-    cmd = 'net user {0} /fullname:"{1}"'.format(name, fullname)
-    __salt__['cmd.run'](cmd)
+    if __salt__['cmd.retcode']('net user {0} /fullname:"{1}"'.format(
+            name, fullname)) != 0:
+        return False
+
     post_info = info(name)
     if post_info['fullname'] != pre_info['fullname']:
         return post_info['fullname'] == fullname
+
     return False
 
 
@@ -182,16 +221,23 @@ def chgroups(name, groups, append=False):
     '''
     if isinstance(groups, string_types):
         groups = groups.split(',')
+
+    groups = [x.strip(' *') for x in groups]
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
+
     if not append:
-        for group in list_groups(name):
-            cmd = 'net localgroup {0} {1} /delete'.format(group, name)
-            __salt__['cmd.run'](cmd)
+        for group in ugrps:
+            if group not in groups:
+                __salt__['cmd.retcode'](
+                        'net localgroup {0} {1} /delete'.format(group, name))
+
     for group in groups:
-        cmd = 'net localgroup {0} {1} /add'.format(group, name)
-        __salt__['cmd.run'](cmd)
+        if group in ugrps:
+            continue
+        __salt__['cmd.retcode'](
+                'net localgroup {0} {1} /add'.format(group, name))
     agrps = set(list_groups(name))
     return len(ugrps - agrps) == 0
 
@@ -206,9 +252,7 @@ def info(name):
     '''
     ret = {}
     items = {}
-    cmd = 'net user {0}'.format(name)
-    lines = __salt__['cmd.run'](cmd).splitlines()
-    for line in lines:
+    for line in __salt__['cmd.run']('net user {0}'.format(name)).splitlines():
         if 'name could not be found' in line:
             return {}
         if 'successfully' not in line:
@@ -221,7 +265,7 @@ def info(name):
     for group in groups:
         if not group:
             continue
-        grouplist.append(group.strip('*'))
+        grouplist.append(group.strip(' *'))
 
     ret['fullname'] = items['Full Name']
     ret['name'] = items['User name']
@@ -250,7 +294,7 @@ def list_groups(name):
     except KeyError:
         return False
     for group in user:
-        ugrp.add(group)
+        ugrp.add(group.strip(' *'))
 
     return sorted(list(ugrp))
 
@@ -269,8 +313,7 @@ def getent():
     ret = []
     users = []
     startusers = False
-    cmd = 'net user'
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run']('net user').splitlines()
     for line in lines:
         if '----------' in line:
             startusers = True
@@ -300,3 +343,26 @@ def getent():
 
     __context__['user.getent'] = ret
     return ret
+
+
+def list_users():
+    '''
+    Return a list of users on Windows
+    '''
+    res = 1
+    users = []
+    user_list = []
+    try:
+        while res:
+            (users, _, res) = win32net.NetUserEnum(
+                'localhost',
+                3,
+                win32netcon.FILTER_NORMAL_ACCOUNT,
+                res,
+                win32netcon.MAX_PREFERRED_LENGTH
+            )
+            for user in users:
+                user_list.append(user['name'])
+        return user_list
+    except win32net.error:
+        pass
