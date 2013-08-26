@@ -11,22 +11,17 @@
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+
 ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import alternatives
 
-# Import 3rd party libs
-try:
-    from mock import MagicMock, patch
-    HAS_MOCK = True
-except ImportError:
-    HAS_MOCK = False
-
 alternatives.__salt__ = alternatives.__grains__ = {}
 
 
-@skipIf(HAS_MOCK is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AlternativesTestCase(TestCase):
 
     def test_display(self):

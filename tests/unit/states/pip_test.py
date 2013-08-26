@@ -14,6 +14,7 @@ import warnings
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -21,18 +22,11 @@ import integration
 from salt.states import pip_state as pip
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd-party libs
-try:
-    from mock import MagicMock, patch
-    HAS_MOCK = True
-except ImportError:
-    HAS_MOCK = False
-
 pip.__opts__ = {'test': False}
 pip.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 
 
-@skipIf(HAS_MOCK is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
     def test_installed_deprecated_runas(self):
