@@ -133,6 +133,21 @@ class CkMinions(object):
         minions = set(
             os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
         )
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                if id_ not in minions:
+                    continue
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                pillar = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('pillar')
+                if not salt.utils.subdict_match(pillar, expr):
+                    minions.remove(id_)
         return list(minions)
 
     def _check_compound_minions(self, expr):
