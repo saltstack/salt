@@ -45,7 +45,7 @@ class ConfigTestCase(TestCase):
                 os.unlink(fpath)
 
     def test_common_prefix_stripping(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         try:
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
@@ -63,7 +63,7 @@ class ConfigTestCase(TestCase):
     def test_load_master_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -105,7 +105,7 @@ class ConfigTestCase(TestCase):
     def test_load_minion_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -146,7 +146,7 @@ class ConfigTestCase(TestCase):
     def test_load_client_config_from_environ_var(self):
         original_environ = os.environ.copy()
         try:
-            tempdir = tempfile.mkdtemp()
+            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
 
@@ -200,7 +200,7 @@ class ConfigTestCase(TestCase):
 
     def test_issue_5970_minion_confd_inclusion(self):
         try:
-            tempdir = tempfile.mkdtemp()
+            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
             minion_config = os.path.join(tempdir, 'minion')
             minion_confd = os.path.join(tempdir, 'minion.d')
             os.makedirs(minion_confd)
@@ -235,7 +235,7 @@ class ConfigTestCase(TestCase):
 
     def test_master_confd_inclusion(self):
         try:
-            tempdir = tempfile.mkdtemp()
+            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
             master_config = os.path.join(tempdir, 'master')
             master_confd = os.path.join(tempdir, 'master.d')
             os.makedirs(master_confd)
