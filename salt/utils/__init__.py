@@ -582,7 +582,7 @@ def path_join(*parts):
     if not parts:
         return root
 
-    if platform.system().lower() == 'windows':
+    if is_windows():
         if len(root) == 1:
             root += ':'
         root = root.rstrip(os.sep) + os.sep

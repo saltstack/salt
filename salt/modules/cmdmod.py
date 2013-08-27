@@ -169,7 +169,8 @@ def _run(cmd,
          rstrip=True,
          template=None,
          umask=None,
-         timeout=None):
+         timeout=None,
+         with_communicate=True):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -294,7 +295,8 @@ def _run(cmd,
               'env': run_env,
               'stdin': str(stdin) if stdin is not None else stdin,
               'stdout': stdout,
-              'stderr': stderr}
+              'stderr': stderr,
+              'with_communicate' : with_communicate}
 
     if umask:
         try:
@@ -705,7 +707,8 @@ def retcode(cmd,
             template=template,
             umask=umask,
             quiet=quiet,
-            timeout=timeout)['retcode']
+            timeout=timeout,
+            with_communicate=False)['retcode']
 
 
 def script(

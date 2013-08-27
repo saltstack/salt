@@ -372,11 +372,11 @@ class Publisher(multiprocessing.Process):
         pub_sock = context.socket(zmq.PUB)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
-            pub_sock.setsockopt(zmq.HWM, 1)
+            pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1))
         # in zmq >= 3.0, there are separate send and receive HWM settings
         except AttributeError:
-            pub_sock.setsockopt(zmq.SNDHWM, 1)
-            pub_sock.setsockopt(zmq.RCVHWM, 1)
+            pub_sock.setsockopt(zmq.SNDHWM, self.opts.get('pub_hwm', 1))
+            pub_sock.setsockopt(zmq.RCVHWM, self.opts.get('pub_hwm', 1))
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
@@ -998,11 +998,11 @@ class AESFuncs(object):
         if 'events' in load:
             for event in load['events']:
                 self.event.fire_event(event, event['tag']) # old dup event
-                self.event.fire_event(event, tagify([load['id'], event['tag']], 'minion'))
+                if load.get('pretag') != None:
+                    self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
-            self.event.fire_event(load, tag) #old dup event
-            self.event.fire_event(load, tagify([load['id'], tag], 'minion'))
+            self.event.fire_event(load, tag)
         return True
 
     def _return(self, load):

@@ -418,26 +418,31 @@ def mod_watch(name, sig=None, reload=False, full_restart=False):
            'changes': {},
            'result': True,
            'comment': ''}
+    action = ''
 
     if __salt__['service.status'](name, sig):
         if 'service.reload' in __salt__ and reload:
             restart_func = __salt__['service.reload']
+            action = 'reload'
         elif 'service.full_restart' in __salt__ and full_restart:
             restart_func = __salt__['service.full_restart']
+            action = 'fully restart'
         else:
             restart_func = __salt__['service.restart']
+            action = 'restart'
     else:
         restart_func = __salt__['service.start']
+        action = 'start'
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Service is set to be restarted'
+        ret['comment'] = 'Service is set to be {0}ed'.format(action)
         return ret
 
     result = restart_func(name)
 
     ret['changes'] = {name: result}
     ret['result'] = result
-    ret['comment'] = 'Service restarted' if result else \
-                     'Failed to restart the service'
+    ret['comment'] = 'Service {0}ed'.format(action) if result else \
+                     'Failed to {0} the service'.format(action)
     return ret
