@@ -105,7 +105,9 @@ class CkMinions(object):
         '''
         Return the minions found by looking via grains with PCRE
         '''
-        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
@@ -163,10 +165,11 @@ class CkMinions(object):
                        'grain_pcre': self._check_grain_pcre_minions,
                        'pillar': self._check_pillar_minions,
                        'compound': self._check_compound_minions,
-                      }[expr_form](expr)
+                       }[expr_form](expr)
         except Exception:
-            log.exception(('Failed matching available minions with {0} pattern: {1}'
-                           ).format(expr_form, expr))
+            log.exception(
+                    'Failed matching available minions with {0} pattern: {1}'
+                    .format(expr_form, expr))
             minions = expr
         return minions
 
