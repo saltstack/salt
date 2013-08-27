@@ -24,9 +24,12 @@ def __virtual__():
     # The python 2.6 version of psutil lacks several functions
     # used in this salt module so instead of spaghetti  string
     # code to try to bring sanity to everything, disable it.
-    if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+    try:
+        if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+            return False
+    except Exception:
         return False
-    return "ps"
+    return 'ps'
 
 
 def top(num_processes=5, interval=3):
