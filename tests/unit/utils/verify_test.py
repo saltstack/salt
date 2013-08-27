@@ -67,7 +67,7 @@ class TestVerify(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
-        root_dir = tempfile.mkdtemp()
+        root_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
         verify_env([var_dir], getpass.getuser())
         self.assertTrue(os.path.exists(var_dir))

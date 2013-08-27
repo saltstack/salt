@@ -264,7 +264,7 @@ class TestGrepOption(TestCase):
 
     def setUp(self):
         super(TestGrepOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -310,7 +310,7 @@ class TestPrintOption(TestCase):
 
     def setUp(self):
         super(TestPrintOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -415,7 +415,7 @@ class TestFinder(TestCase):
 
     def setUp(self):
         super(TestFinder, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
