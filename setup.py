@@ -177,16 +177,16 @@ class Build(build):
             open(system_paths_file_path, 'w').write(
                 install_syspaths_template.format(
                     date=datetime.utcnow(),
-                    root_dir=self.salt_root_dir,
-                    config_dir=self.salt_config_dir,
-                    cache_dir=self.salt_cache_dir,
-                    sock_dir=self.salt_sock_dir,
-                    srv_root_dir=self.salt_srv_root_dir,
-                    base_file_roots_dir=self.salt_base_file_roots_dir,
-                    base_pillar_roots_dir=self.salt_base_pillar_roots_dir,
-                    base_master_roots_dir=self.salt_base_master_roots_dir,
-                    logs_dir=self.salt_logs_dir,
-                    pidfile_dir=self.salt_pidfile_dir,
+                    root_dir=self.distribution.salt_root_dir,
+                    config_dir=self.distribution.salt_config_dir,
+                    cache_dir=self.distribution.salt_cache_dir,
+                    sock_dir=self.distribution.salt_sock_dir,
+                    srv_root_dir=self.distribution.salt_srv_root_dir,
+                    base_file_roots_dir=self.distribution.salt_base_file_roots_dir,
+                    base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
+                    base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
+                    logs_dir=self.distribution.salt_logs_dir,
+                    pidfile_dir=self.distribution.salt_pidfile_dir,
                 )
             )
 
@@ -231,14 +231,17 @@ class Install(install):
     def finalize_options(self):
         install.finalize_options(self)
         for optname in ('root_dir', 'config_dir', 'cache_dir', 'sock_dir',
-                        'base_file_roots_dir', 'base_pillar_roots_dir',
-                        'base_master_roots_dir', 'logs_dir', 'pidfile_dir'):
-            if not getattr(self, 'salt_{0}'.format(optname)):
+                        'srv_root_dir', 'base_file_roots_dir',
+                        'base_pillar_roots_dir', 'base_master_roots_dir',
+                        'logs_dir', 'pidfile_dir'):
+            optvalue = getattr(self, 'salt_{0}'.format(optname))
+            if not optvalue:
                 raise RuntimeError(
                     'The value of --salt-{0} needs a proper path value'.format(
                         optname.replace('_', '-')
                     )
                 )
+            setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
 
     def run(self):
         # Let's set the running_salt_install attribute so we can add
