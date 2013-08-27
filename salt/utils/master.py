@@ -2,7 +2,7 @@
 '''
     salt.utils.master
     -----------------
-    
+
     Utilities that can only be used on a salt master.
 
 '''
@@ -189,7 +189,7 @@ class MasterPillarUtil(object):
         return ret
 
     def _tgt_to_list(self):
-        # Return a list of minion ids that match the target and expr_form 
+        # Return a list of minion ids that match the target and expr_form
         minion_ids = []
         ckminions = salt.utils.minions.CkMinions(self.opts)
         minion_ids = ckminions.check_minions(self.tgt, self.expr_form)
@@ -243,7 +243,7 @@ class MasterPillarUtil(object):
         Get grains data for the targeted minions, either by fetching the
         cached minion data on the master, or by fetching the grains
         directly on the minion.
-  
+
         By default, this function tries hard to get the pillar data:
             - Try to get the cached minion grains if the master
                 has minion_data_cache: True
