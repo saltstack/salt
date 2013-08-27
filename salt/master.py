@@ -1892,7 +1892,7 @@ class ClearFuncs(object):
             # if this a compound function
             else:
                 funs_to_check = clear_load['fun']
-            for func in funs_to_check:
+            for fun in funs_to_check:
                 if re.match(module_re, fun):
                     good = False
                     break
