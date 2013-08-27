@@ -11,6 +11,7 @@ import logging
 
 # Import salt libs
 import salt.payload
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -150,6 +151,50 @@ class CkMinions(object):
                     minions.remove(id_)
         return list(minions)
 
+    def _check_ipcidr_minions(self, expr):
+        '''
+        Return the minions found by looking via ipcidr
+        '''
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                if id_ not in minions:
+                    continue
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                grains = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('grains')
+
+                num_parts = len(expr.split('/'))
+                if num_parts > 2:
+                    # Target is not valid CIDR, no minions match
+                    return []
+                elif num_parts == 2:
+                    # Target is CIDR
+                    if not salt.utils.network.in_subnet(
+                            expr,
+                            addrs=grains.get('ipv4', [])):
+                        minions.remove(id_)
+                else:
+                    # Target is an IPv4 address
+                    import socket
+                    try:
+                        socket.inet_aton(expr)
+                    except socket.error:
+                        # Not a valid IPv4 address, no minions match
+                        return []
+                    else:
+                        if not expr in grains.get('ipv4', []):
+                            minions.remove(id_)
+        return list(minions)
+
     def _check_compound_minions(self, expr):
         '''
         Return the minions found by looking via compound matcher
@@ -180,6 +225,7 @@ class CkMinions(object):
                        'grain_pcre': self._check_grain_pcre_minions,
                        'pillar': self._check_pillar_minions,
                        'compound': self._check_compound_minions,
+                       'ipcidr': self._check_ipcidr_minions,
                        }[expr_form](expr)
         except Exception:
             log.exception(
