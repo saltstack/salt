@@ -79,7 +79,7 @@ class CkMinions(object):
 
     def _check_grain_minions(self, expr):
         '''
-        Return the minions found by looking via a list
+        Return the minions found by looking via grains
         '''
         minions = set(
             os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
@@ -103,7 +103,7 @@ class CkMinions(object):
 
     def _check_grain_pcre_minions(self, expr):
         '''
-        Return the minions found by looking via a list
+        Return the minions found by looking via grains with PCRE
         '''
         minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
         if self.opts.get('minion_data_cache', False):
@@ -122,6 +122,24 @@ class CkMinions(object):
                 if not salt.utils.subdict_match(grains, expr,
                                                 delim=':', regex_match=True):
                     minions.remove(id_)
+        return list(minions)
+
+    def _check_pillar_minions(self, expr):
+        '''
+        Return the minions found by looking via pillar
+        '''
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
+        return list(minions)
+
+    def _check_compound_minions(self, expr):
+        '''
+        Return the minions found by looking via compound matcher
+        '''
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
         return list(minions)
 
     def _all_minions(self, expr=None):
@@ -143,9 +161,8 @@ class CkMinions(object):
                        'list': self._check_list_minions,
                        'grain': self._check_grain_minions,
                        'grain_pcre': self._check_grain_pcre_minions,
-                       'exsel': self._all_minions,
-                       'pillar': self._all_minions,
-                       'compound': self._all_minions,
+                       'pillar': self._check_pillar_minions,
+                       'compound': self._check_compound_minions,
                       }[expr_form](expr)
         except Exception:
             log.exception(('Failed matching available minions with {0} pattern: {1}'
