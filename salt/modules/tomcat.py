@@ -147,6 +147,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     # prepare URL
     if url[-1] != '/':
         url += '/'
+    url6 = url
     url += 'text/{0}'.format(cmd)
     url6 += '{0}'.format(cmd)
     if opts:
@@ -157,7 +158,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     urllib2.install_opener(auth)
 
     try:
-        # Trying tomcat7 url
+        # Trying tomcat >= 7 url
         ret['msg'] = urllib2.urlopen(url, timeout=timeout).read().splitlines()
     except Exception:
         try:
