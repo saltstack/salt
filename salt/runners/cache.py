@@ -18,7 +18,7 @@ deprecation_warning = ("The 'minion' arg will be removed from "
 
 def grains(tgt=None, expr_form='glob', **kwargs):
     '''
-    Return cached grains for all minions or a specific minion
+    Return cached grains of the targeted minions
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
@@ -40,7 +40,7 @@ def grains(tgt=None, expr_form='glob', **kwargs):
 
 def pillar(tgt=None, expr_form='glob', **kwargs):
     '''
-    Return cached grains for all minions or a specific minion
+    Return cached pillars of the targeted minions
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
