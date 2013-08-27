@@ -6,6 +6,7 @@ import salt.utils.master
 import salt.output
 import salt.payload
 
+
 def grains(minion=None):
     '''
     Return cached grains for all minions or a specific minion
