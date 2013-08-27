@@ -1,5 +1,6 @@
 '''
 Common utility functions for the reclass adapters
+http://reclass.pantsfullofunix.net
 '''
 import sys
 import os
