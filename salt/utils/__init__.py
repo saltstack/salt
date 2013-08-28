@@ -4,6 +4,7 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
+import fnmatch
 import os
 import re
 import imp
@@ -886,7 +887,7 @@ def traverse_dict(data, key, default, delim=':'):
     return an empty dict.
     '''
     try:
-        for each in target.split(delim):
+        for each in key.split(delim):
             data = data[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
