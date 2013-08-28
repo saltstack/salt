@@ -261,7 +261,7 @@ def _nic_profile(nic):
     '''
     Gather the nic profile from the config or apply the default
 
-    This is the `default` profile, which can be overridden in the
+    This is the ``default`` profile, which can be overridden in the
     configuration:
 
     .. code-block:: yaml
