@@ -140,6 +140,9 @@ def update():
     '''
     Execute a git pull on all of the repos
     '''
+    # data for the fileserver event
+    data = {'changed': False,
+            'backend': 'gitfs'}
     pid = os.getpid()
     repos = init()
     for repo in repos:
@@ -147,12 +150,17 @@ def update():
         lk_fn = os.path.join(repo.working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
-        origin.fetch()
+        for fetch in origin.fetch():
+            if fetch.old_commit is not None:
+                data['changed'] = True
         try:
             os.remove(lk_fn)
         except (OSError, IOError):
             pass
 
+    # if there is a change, fire an event
+    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+    event.fire_event(data, 'fileserver')
     salt.fileserver.reap_fileserver_cache_dir(os.path.join(__opts__['cachedir'], 'gitfs/hash'), find_file)
 
 def envs():
