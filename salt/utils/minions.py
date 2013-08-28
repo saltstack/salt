@@ -286,6 +286,8 @@ class CkMinions(object):
             for token in unmatched:
                 results.append(')')
             results = ' '.join(results)
+            log.debug('Evaluating final compound matching expr: {0}'
+                      .format(results))
             try:
                 return list(eval(results))
             except Exception:
