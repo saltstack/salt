@@ -202,6 +202,90 @@ class CkMinions(object):
         minions = set(
             os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
         )
+        if self.opts.get('minion_data_cache', False):
+            ref = {'G': self._check_grain_minions,
+                   'P': self._check_grain_pcre_minions,
+                   'I': self._check_pillar_minions,
+                   'L': self._check_list_minions,
+                   'S': self._check_ipcidr_minions,
+                   'E': self._check_pcre_minions,
+                   'R': self._all_minions}
+            results = []
+            unmatched = []
+            opers = ['and', 'or', 'not', '(', ')']
+            tokens = expr.split()
+            for match in tokens:
+                # Try to match tokens from the compound target, first by using
+                # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
+                if '@' in match and match[1] == '@':
+                    comps = match.split('@')
+                    matcher = ref.get(comps[0])
+                    if not matcher:
+                        # If an unknown matcher is called at any time, fail out
+                        return []
+                    if unmatched and unmatched[-1] == '-':
+                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(')')
+                        unmatched.pop()
+                    else:
+                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                elif match in opers:
+                    # We didn't match a target, so append a boolean operator or
+                    # subexpression
+                    if results:
+                        if match == 'not':
+                            if results[-1] == '&':
+                                pass
+                            elif results[-1] == '|':
+                                pass
+                            else:
+                                results.append('&')
+                            results.append('(')
+                            results.append(str(set(minions)))
+                            results.append('-')
+                            unmatched.append('-')
+                        elif match == 'and':
+                            results.append('&')
+                        elif match == 'or':
+                            results.append('|')
+                        elif match == '(':
+                            results.append(match)
+                            unmatched.append(match)
+                        elif match == ')':
+                            if not unmatched or unmatched[-1] != '(':
+                                log.error('Invalid compound expr (unexpected '
+                                          'right parenthesis): {0}'
+                                          .format(expr))
+                                return []
+                            results.append(match)
+                            unmatched.pop()
+                        else:  # Won't get here, unless oper is added
+                            log.error('Unhandled oper in compound expr: {0}'
+                                      .format(expr))
+                            return []
+                    else:
+                        # seq start with oper, fail
+                        if match == '(':
+                            results.append(match)
+                            unmatched.append(match)
+                        else:
+                            return []
+                else:
+                    # The match is not explicitly defined, evaluate as a glob
+                    if unmatched and unmatched[-1] == '-':
+                        results.append(
+                                str(set(self._check_glob_minions(match))))
+                        results.append(')')
+                        unmatched.pop()
+                    else:
+                        results.append(
+                                str(set(self._check_glob_minions(match))))
+            results = ' '.join(results)
+            try:
+                return list(eval(results))
+            except Exception:
+                log.error('Invalid compound target: {0}'.format(expr))
+                return []
         return list(minions)
 
     def _all_minions(self, expr=None):
