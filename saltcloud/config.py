@@ -711,11 +711,13 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
     '''
     Search and return a setting in a known order:
 
-        1. In the virtual machines configuration
-        2. In the virtual machine's provider configuration
-        3. In the salt cloud configuration if global searching is enabled
-        4. Return the provided default
+        1. In the virtual machine's configuration
+        2. In the virtual machine's profile configuration
+        3. In the virtual machine's provider configuration
+        4. In the salt cloud configuration if global searching is enabled
+        5. Return the provided default
     '''
+
     # As a last resort, return the default
     value = default
 
@@ -724,6 +726,14 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
         value = deepcopy(opts[name])
 
     if vm_ and name:
+        # Let's get the value from the profile, if present
+        if 'profile' in vm_ and name in opts['profiles'][vm_['profile']]:
+            if isinstance(value, dict):
+                value.update(opts['profiles'][vm_['profile']][name].copy())
+            else:
+                value = deepcopy(opts['profiles'][vm_['profile']][name])
+
+        # Let's get the value from the provider, if present
         if ':' in vm_['provider']:
             # The provider is defined as <provider-alias>:<provider-name>
             alias, driver = vm_['provider'].split(':')
