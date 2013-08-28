@@ -6,6 +6,7 @@ Manage configuration files in salt-cloud
 import os
 import glob
 import logging
+from copy import deepcopy
 
 # Import salt libs
 import salt.config
@@ -720,7 +721,7 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
 
     if search_global is True and opts.get(name, None) is not None:
         # The setting name exists in the cloud(global) configuration
-        value = opts[name]
+        value = deepcopy(opts[name])
 
     if vm_ and name:
         if ':' in vm_['provider']:
@@ -733,7 +734,7 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
                     if isinstance(value, dict):
                         value.update(details[name].copy())
                     else:
-                        value = details[name]
+                        value = deepcopy(details[name])
         elif len(opts['providers'].get(vm_['provider'], ())) > 1:
             # The provider is NOT defined as <provider-alias>:<provider-name>
             # and there's more than one entry under the alias.
@@ -758,14 +759,14 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
                 if isinstance(value, dict):
                     value.update(provider_driver_defs[name].copy())
                 else:
-                    value = provider_driver_defs[name]
+                    value = deepcopy(provider_driver_defs[name])
 
     if name and vm_ and name in vm_:
         # The setting name exists in VM configuration.
         if isinstance(value, dict):
-            value.update(vm_[name])
+            value.update(vm_[name].copy())
         else:
-            value = vm_[name]
+            value = deepcopy(vm_[name])
 
     return value
 
