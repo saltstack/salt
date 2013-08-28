@@ -154,7 +154,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
         <memory>%%MEM%%</memory>
         <os>
                 <type>hvm</type>
-                <boot dev='hd'/>
+                %%BOOT%%
         </os>
         <devices>
                 <disk type='file' device='disk'>
@@ -176,6 +176,16 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
     data = data.replace('%%MEM%%', str(mem))
     data = data.replace('%%VDA%%', vda)
     data = data.replace('%%DISKTYPE%%', _image_type(vda))
+    boot_str = ''
+    if 'boot_dev' in kwargs:
+        for dev in boot_dev:
+            boot_part = '''<boot dev='%%DEV%%' />
+'''
+            boot_part = boot_part.replace('%%DEV%%', dev)
+            boot_str += boot_part
+    else:
+        boot_str = '''<boot dev='hd'/>'''
+    data = data.replace('%%BOOT%%', boot_str)
     nic_str = ''
     for dev, args in nicp.items():
         nic_t = '''
