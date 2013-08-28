@@ -770,7 +770,14 @@ def mod_watch(name, **kwargs):
         return script(name, **kwargs)
 
     elif kwargs['sfun'] == 'wait_call' or kwargs['sfun'] == 'call':
-        return call(name, **kwargs)
+        if kwargs.get('func'):
+            func = kwargs.pop('func')
+            return call(name, func, **kwargs)
+        else:
+            return {'name': name, 
+                    'changes': {},
+                    'comment': 'cmd.{0[sfun]} needs a named parameter func'.format(kwargs),
+                    'result': False}
 
     return {'name': name,
             'changes': {},
