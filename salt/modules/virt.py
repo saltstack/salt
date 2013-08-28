@@ -176,7 +176,7 @@ def _get_target(target, ssh):
     proto = 'qemu'
     if ssh:
         proto += '+ssh'
-    return ' %s://%s/%s' % (proto, target, 'system')
+    return ' {0}://{1}/{2}'.format(proto, target, 'system')
 
 
 def _gen_xml(name,
@@ -250,8 +250,8 @@ def _image_type(vda):
     '''
     Detect what driver needs to be used for the given image
     '''
-    out = __salt__['cmd.run']('qemu-img {0}'.format(vda))
-    if 'qcow2' in out:
+    out = __salt__['cmd.run']('qemu-img info {0}'.format(vda))
+    if 'file format: qcow2' in out:
         return 'qcow2'
     else:
         return 'raw'
