@@ -454,7 +454,7 @@ def deploy_war(war,
 
     # Copy file name if needed
     tfile = war
-    if war[0] != '/':
+    if not os.path.isfile(war):
         tfile = os.path.join(tempfile.gettempdir(), 'salt.' +
                 os.path.basename(war))
         cached = __salt__['cp.get_file'](war, tfile, env)
