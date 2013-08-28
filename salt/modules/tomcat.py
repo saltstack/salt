@@ -432,7 +432,7 @@ def deploy_war(war,
     url : http://localhost:8080/manager
         the URL of the server manager webapp
     env : base
-        the environment for WAR file in used by salt.modules.cp.get_file
+        the environment for WAR file in used by salt.modules.cp.get_url
         function
     timeout : 180
         timeout for HTTP request
@@ -454,10 +454,12 @@ def deploy_war(war,
 
     # Copy file name if needed
     tfile = war
+    cache = False
     if not os.path.isfile(war):
+        cache = True
         tfile = os.path.join(tempfile.gettempdir(), 'salt.' +
                 os.path.basename(war))
-        cached = __salt__['cp.get_file'](war, tfile, env)
+        cached = __salt__['cp.get_url'](war, tfile, env)
         if not cached:
             return 'FAIL - could not cache the WAR file'
         try:
@@ -479,7 +481,7 @@ def deploy_war(war,
     res = '\n'.join(deployed['msg'])
 
     # Cleanup
-    if war[0] != '/':
+    if cache:
         __salt__['file.remove'](tfile)
 
     return res
