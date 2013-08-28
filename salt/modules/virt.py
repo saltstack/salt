@@ -260,6 +260,18 @@ def _image_type(vda):
 def _nic_profile(nic):
     '''
     Gather the nic profile from the config or apply the default
+
+    This is the `default` profile, which can be overridden in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+          nic:
+            default:
+              eth0:
+                bridge: br0
+                model: virtio
     '''
     default = {'eth0': {'bridge': 'br0', 'model': 'virtio'}}
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
