@@ -186,7 +186,6 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
     else:
         boot_str = '''<boot dev='hd'/>'''
     data = data.replace('%%BOOT%%', boot_str)
-
     nic_str = ''
     for dev, args in nicp.items():
         nic_t = '''
