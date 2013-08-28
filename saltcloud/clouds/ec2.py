@@ -816,8 +816,42 @@ def create(vm_=None, call=None):
             raise SaltCloudConfigError(
                 '\'delvol_on_destroy\' should be a boolean value.'
             )
-    if set_delvol_on_destroy is not None:
-        params[spot_prefix+'BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
+    if set_delvol_on_destroy:
+        # first make sure to look up the root device name
+        # as Ubuntu and CentOS (and most likely other OSs)
+        # use different device identifiers
+
+        log.info('Attempting to look up root device name for image id {0} on '
+                 'VM {1}'.format(image_id, vm_['name']))
+
+        rd_params = {'Action': 'DescribeImages',
+                              'ImageId.1': image_id}
+        try:
+            rd_data = query(rd_params, location=location)
+            if 'error' in rd_data:
+                return rd_data['error']
+            log.debug('EC2 Response: {0!r}'.format(rd_data))
+        except Exception as exc:
+            log.error(
+                'Error getting root device name for image id {0} for '
+                'VM {1}: \n{2}'.format(image_id, vm_['name'], exc),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+            raise
+
+        # make sure we have a response
+        if not rd_data:
+            err_msg = 'There was an error querying EC2 for the root device ' \
+                      'of image id {0}. Empty response.'.format(image_id)
+            raise SaltCloudSystemExit(err_msg)
+
+        # pull the root device name from the result and use it when
+        # launching the new VM
+        rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
+        log.info('Found root device name: {0}'.format(rd_name))
+
+        params[spot_prefix+'BlockDeviceMapping.1.DeviceName'] = rd_name
         params[spot_prefix+'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
             set_delvol_on_destroy
         ).lower()
