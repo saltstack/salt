@@ -145,7 +145,10 @@ def file_list(load):
         return ret
 
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             for fname in files:
                 rel_fn = os.path.relpath(
@@ -165,7 +168,10 @@ def file_list_emptydirs(load):
     if load['env'] not in __opts__['file_roots']:
         return ret
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             if len(dirs) == 0 and len(files) == 0:
                 rel_fn = os.path.relpath(root, path)
@@ -182,7 +188,10 @@ def dir_list(load):
     if load['env'] not in __opts__['file_roots']:
         return ret
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             ret.append(os.path.relpath(root, path))
     return ret

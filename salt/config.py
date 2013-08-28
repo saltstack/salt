@@ -255,7 +255,7 @@ DEFAULT_MASTER_OPTS = {
     'timeout': 5,
     'keep_jobs': 24,
     'root_dir': syspaths.ROOT_DIR,
-    'pki_dir': os.path.join(syspaths.CONFIG_DIR, 'master'),
+    'pki_dir': os.path.join(syspaths.CONFIG_DIR, 'pki', 'master'),
     'cachedir': os.path.join(syspaths.CACHE_DIR, 'master'),
     'file_roots': {
         'base': [syspaths.BASE_FILE_ROOTS_DIR],

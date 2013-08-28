@@ -1989,9 +1989,16 @@ class ClearFuncs(object):
 
         # check if the cmd is blacklisted
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
-            if re.match(module_re, clear_load['fun']):
-                good = False
-                break
+            # if this is a regular command, its a single function
+            if type(clear_load['fun']) == str:
+                funs_to_check = [ clear_load['fun'] ]
+            # if this a compound function
+            else:
+                funs_to_check = clear_load['fun']
+            for fun in funs_to_check:
+                if re.match(module_re, fun):
+                    good = False
+                    break
 
         if good is False:
             log.error(

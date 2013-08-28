@@ -216,13 +216,14 @@ def highstate(test=None, **kwargs):
 
     # Not 100% if this should be fatal or not,
     # but I'm guessing it likely should not be.
+    cumask = os.umask(191)
     try:
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.highstate" cache file {0}'
         log.error(msg.format(cache_file))
-
+    os.umask(cumask)
     _set_retcode(ret)
     return ret
 
@@ -295,12 +296,14 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
+    cumask = os.umask(191)
     try:
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
+    os.umask(cumask)
     _set_retcode(ret)
     with salt.utils.fopen(cfn, 'w+') as fp_:
         try:
