@@ -1251,6 +1251,12 @@ class Map(Cloud):
                     )
                 )
 
+            elif 'Errors' in out:
+                raise SaltCloudSystemExit(
+                    'An error occurred while creating the master, not '
+                    'continuing: {0}'.format(out['Errors'])
+                )
+
             deploy_kwargs = (
                 self.opts.get('show_deploy_args', False) is True and
                 # Get the needed data
