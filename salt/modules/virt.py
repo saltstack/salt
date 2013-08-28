@@ -221,7 +221,7 @@ def _gen_xml(name,
     data = data.replace('%%DISKTYPE%%', _image_type(vda))
     boot_str = ''
     if 'boot_dev' in kwargs:
-        for dev in boot_dev:
+        for dev in kwargs['boot_dev']:
             boot_part = '''<boot dev='%%DEV%%' />
 '''
             boot_part = boot_part.replace('%%DEV%%', dev)
