@@ -259,6 +259,9 @@ class CkMinions(object):
                                 return []
                             results.append(match)
                             unmatched.pop()
+                            if unmatched and unmatched[-1] == '-':
+                                results.append(')')
+                                unmatched.pop()
                         else:  # Won't get here, unless oper is added
                             log.error('Unhandled oper in compound expr: {0}'
                                       .format(expr))
@@ -280,6 +283,8 @@ class CkMinions(object):
                     else:
                         results.append(
                                 str(set(self._check_glob_minions(match))))
+            for token in unmatched:
+                results.append(')')
             results = ' '.join(results)
             try:
                 return list(eval(results))
