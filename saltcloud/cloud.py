@@ -1376,9 +1376,11 @@ class Map(Cloud):
                         ','.join(group), self.opts['start_action'],
                         timeout=self.opts['timeout'] * 60, expr_form='list'
                     ))
-            for obj in output_multip:
-                obj.values()[0]['ret'] = out[obj.keys()[0]]
-                output.update(obj)
+                for obj in output_multip:
+                    obj.values()[0]['ret'] = out[obj.keys()[0]]
+                    output.update(obj)
+            else:
+                output = output_multip
 
         return output
 
