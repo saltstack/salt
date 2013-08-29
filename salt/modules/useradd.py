@@ -16,7 +16,7 @@ import copy
 
 # Import salt libs
 import salt.utils
-from salt._compat import callable, string_types
+from salt._compat import string_types, callable as _callable
 
 log = logging.getLogger(__name__)
 RETCODE_12_ERROR_REGEX = re.compile(
@@ -37,7 +37,7 @@ def __virtual__():
         # Functionality on OS X needs to be limited
         mod = sys.modules[__name__]
         for attr in dir(mod):
-            if callable(getattr(mod, attr)):
+            if _callable(getattr(mod, attr)):
                 if not attr in ('_format_info', 'getent', 'info',
                                 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
