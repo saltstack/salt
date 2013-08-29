@@ -381,7 +381,7 @@ def list_policies(runas=None):
     Return a dictionary of policies nested by vhost and name 
     based on the data returned from rabbitmqctl list_policies.
 
-    Reference: http://www.rabbitmq_policy.com/ha.html
+    Reference: http://www.rabbitmq.com/ha.html
 
     CLI Example:
 
@@ -413,7 +413,7 @@ def set_policy(vhost, name, pattern, definition, priority=0, runas=None):
     '''
     Set a policy based on rabbitmqctl set_policy.
 
-    Reference: http://www.rabbitmq_policy.com/ha.html
+    Reference: http://www.rabbitmq.com/ha.html
 
     CLI Example:
 
@@ -433,7 +433,7 @@ def delete_policy(vhost, name, runas=None):
     '''
     Delete a policy based on rabbitmqctl clear_policy.
 
-    Reference: http://www.rabbitmq_policy.com/ha.html
+    Reference: http://www.rabbitmq.com/ha.html
 
     CLI Example:
 
@@ -453,7 +453,7 @@ def policy_exists(vhost, name, runas=None):
     '''
     Return whether the policy exists based on rabbitmqctl list_policies.
 
-    Reference: http://www.rabbitmq_policy.com/ha.html
+    Reference: http://www.rabbitmq.com/ha.html
 
     CLI Example:
 
