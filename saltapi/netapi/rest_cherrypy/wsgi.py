@@ -65,6 +65,7 @@ def get_application(*args):
 
     def wsgi_app(environ, start_response):
         root, _, conf = opts_tuple or bootstrap_app()
+        cherrypy.config.update({'environment': 'embedded'})
 
         cherrypy.tree.mount(root, '/', conf)
         return cherrypy.tree(environ, start_response)

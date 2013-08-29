@@ -1124,6 +1124,9 @@ class API(object):
             },
         }
 
+        if self.apiopts.get('debug', False) == False:
+            conf['global']['environment'] = 'production'
+
         # Serve static media if the directory has been set in the configuration
         if 'static' in self.apiopts:
             conf[self.apiopts.get('static_path', '/static')] = {
