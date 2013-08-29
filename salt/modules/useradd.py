@@ -3,6 +3,7 @@ Manage users with the useradd command
 '''
 
 # Import python libs
+import re
 import sys
 
 try:
@@ -18,6 +19,9 @@ import salt.utils
 from salt._compat import callable, string_types
 
 log = logging.getLogger(__name__)
+RETCODE_12_ERROR_REGEX = re.compile(
+    r'userdel(.*)warning(.*)/var/mail(.*)No such file or directory'
+)
 
 
 def __virtual__():
@@ -160,16 +164,38 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    cmd = 'userdel '
+    cmd = ['userdel']
+
     if remove:
-        cmd += '-r '
+        cmd.append('-r')
+
     if force:
-        cmd += '-f '
-    cmd += name
+        cmd.append('-f')
 
-    ret = __salt__['cmd.run_all'](cmd)
+    cmd.append(name)
 
-    return not ret['retcode']
+    ret = __salt__['cmd.run_all'](' '.join(cmd))
+
+    if ret['retcode'] == 0:
+        # Command executed with no errors
+        return True
+
+    if ret['retcode'] == 12:
+        # There's a known bug in Debian based distributions, at least, that
+        # makes the command exit with 12, see:
+        #  https://bugs.launchpad.net/ubuntu/+source/shadow/+bug/1023509
+        if __grains__['os_familiy'] not in ('Debian',):
+            return False
+
+        if RETCODE_12_ERROR_REGEX.match(ret['stderr']) is not None:
+            # We've hit the bug, let's log it and not fail
+            log.debug(
+                'While the userdel exited with code 12, this is a know bug on '
+                'debian based distributions. See http://goo.gl/HH3FzT'
+            )
+            return True
+
+    return False
 
 
 def getent():
