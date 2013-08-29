@@ -99,11 +99,24 @@ def kill_pid(pid, signal=15):
     '''
     Kill a proccess by PID.
 
-    CLI Example:
+    .. code-block:: bash
+
+        salt 'minion' ps.kill_pid pid [ signal=signal_number ]
+
+    pid
+        PID of process to kill.
+
+    signal
+        Signal to send to the process. See manpage entry for kill
+        for possible values. Default: 15 (SIGTERM).
+
+    **Example:**
+
+    Send SIGKILL to process with PID 2000:
     
     .. code-block:: bash
 
-        salt '<minion id>' ps.kill_pid 1234 9
+        salt 'minion' ps.kill_pid 2000 signal=9
     '''
     try:
         psutil.Process(pid).send_signal(signal)
@@ -112,22 +125,49 @@ def kill_pid(pid, signal=15):
         return False
 
 
-def pkill(pattern, signal=15, full=False):
+def pkill(pattern, user=None, signal=15, full=False):
     '''
     Kill processes matching a pattern.
-    
-    CLI Example:
 
     .. code-block:: bash
 
-        salt '*' ps.pkill httpd
+        salt '*' ps.pkill pattern [ user=username ] [ signal=signal_number ] [ full=(true|false) ]
+
+    pattern
+        Pattern to search for in the process list.
+
+    user
+        Limit matches to the given username. Default: All users.
+
+    signal
+        Signal to send to the process(es). See manpage entry for kill
+        for possible values. Default: 15 (SIGTERM).
+
+    full
+        A boolean value indicating whether only the name of the command or
+        the full command line should be matched against the pattern.
+
+    **Examples:**
+
+    Send SIGHUP to all httpd processes on all 'www' minions:
+
+    .. code-block:: bash
+
+        salt 'www.*' httpd signal=1
+
+    Send SIGKILL to all bash processes owned by user 'tom':
+
+    .. code-block:: bash
+
+        salt '*' bash signal=9 user=tom
     '''
     
     killed = []
     for proc in psutil.process_iter():
-        kill = pattern in ' '.join(proc.cmdline) if full \
+        name_match = pattern in ' '.join(proc.cmdline) if full \
                else pattern in proc.name
-        if kill: 
+        user_match = True if user is None else user == proc.username
+        if name_match and user_match: 
             try: 
                 proc.send_signal(signal)
                 killed.append(proc.pid)
@@ -139,22 +179,48 @@ def pkill(pattern, signal=15, full=False):
         return {'killed': killed}
 
 
-def pgrep(pattern, full=False):
+def pgrep(pattern, user=None, full=False):
     '''
     Return the pids for processes matching a pattern.
 
-    CLI Example:
-
+    If full is true, the full command line is searched for a match,
+    otherwise only the name of the command is searched.
+    
     .. code-block: bash
         
-        salt '*' ps.pgrep httpd
+        salt '*' ps.pgrep pattern [ user=username ] [ full=(true|false) ]
+
+    pattern
+        Pattern to search for in the process list.
+
+    user
+        Limit matches to the given username. Default: All users.
+
+    full
+        A boolean value indicating whether only the name of the command or
+        the full command line should be matched against the pattern.
+
+    **Examples:**
+
+    Find all httpd processes on all 'www' minions:
+
+    .. code-block:: bash
+
+        salt 'www.*' httpd
+
+    Find all bash processes owned by user 'tom':
+
+    .. code-block:: bash
+
+        salt '*' bash user=tom
     '''
 
     procs = []
     for proc in psutil.process_iter():
-        match = pattern in ' '.join(proc.cmdline) if full \
+        name_match = pattern in ' '.join(proc.cmdline) if full \
                else pattern in proc.name
-        if match: 
+        user_match = True if user is None else user == proc.username
+        if name_match and user_match: 
             procs.append(proc.pid)
     return procs or None
 
