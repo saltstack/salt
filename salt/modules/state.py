@@ -443,20 +443,14 @@ def show_top():
         __context__['retcode'] = 1
         return conflict
     st_ = salt.state.HighState(__opts__)
-    ret = {}
-    static = st_.get_top()
-    ext = st_.client.ext_nodes()
-    for top_ in [static, ext]:
-        for env in top_:
-            if env not in ret:
-                ret[env] = top_[env]
-            else:
-                for match in top_[env]:
-                    if match not in ret[env]:
-                        ret[env][match] = top_[env][match]
-                    else:
-                        ret[env][match].extend(top_[env][match])
-    return ret
+    errors = []
+    top = st_.get_top()
+    errors += st_.verify_tops(top)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    matches = st_.top_matches(top)
+    return matches
 
 # Just commenting out, someday I will get this working
 #def show_masterstate():
