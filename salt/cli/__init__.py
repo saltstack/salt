@@ -11,11 +11,11 @@ import salt.cli.caller
 import salt.cli.cp
 import salt.cli.batch
 import salt.client
+import salt.client.ssh
 import salt.output
 import salt.runner
 import salt.auth
 import salt.key
-import salt.ssh
 
 from salt.utils import parsers
 from salt.utils.verify import check_user, verify_env, verify_files
@@ -353,5 +353,5 @@ class SaltSSH(parsers.SaltSSHOptionParser):
     def run(self):
         self.parse_args()
 
-        ssh = salt.ssh.SSH(self.config)
+        ssh = salt.client.ssh.SSH(self.config)
         ssh.run()
