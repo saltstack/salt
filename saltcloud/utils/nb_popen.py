@@ -73,7 +73,7 @@ class CloudNonBlockingPopen(subprocess.Popen):
         self._stderr_logger = logging.getLogger(
             self._stderr_logger_name_.format(pid=self.pid)
         )
-        log.info(
+        log.debug(
             'Running command under pid {0}: {1!r}'.format(self.pid, *args)
         )
 
