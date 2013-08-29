@@ -3,6 +3,8 @@ Manage users with the useradd command
 '''
 
 # Import python libs
+import sys
+
 try:
     import grp
     import pwd
@@ -13,7 +15,7 @@ import copy
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt._compat import callable, string_types
 
 log = logging.getLogger(__name__)
 
@@ -23,21 +25,20 @@ def __virtual__():
     Set the user module if the kernel is Linux or OpenBSD
     and remove some of the functionality on OS X
     '''
-    # XXX: Why are these imports in __virtual__?
-    import sys
-    from salt._compat import callable
+    if __grains__['kernel'] not in ('Linux', 'Darwin', 'OpenBSD', 'NetBSD'):
+        # This module is not meant to be handling user accounts
+        return False
+
     if __grains__['kernel'] == 'Darwin':
+        # Functionality on OS X needs to be limited
         mod = sys.modules[__name__]
         for attr in dir(mod):
             if callable(getattr(mod, attr)):
                 if not attr in ('_format_info', 'getent', 'info',
                                 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
-    return (
-        'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD',
-                                           'NetBSD')
-        else False
-    )
+
+    return 'user'
 
 
 def _get_gecos(name):
