@@ -89,13 +89,13 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    cmd = 'useradd '
+    cmd = ['useradd']
     if shell:
-        cmd += '-s {0} '.format(shell)
+        cmd.extend(['-s', shell])
     if uid not in (None, ''):
-        cmd += '-u {0} '.format(uid)
+        cmd.extend(['-u', uid])
     if gid not in (None, ''):
-        cmd += '-g {0} '.format(gid)
+        cmd.extend(['-g', gid])
     elif groups is not None and name in groups:
         try:
             for line in salt.utils.fopen('/etc/login.defs'):
@@ -103,9 +103,7 @@ def add(name,
                     continue
 
                 if 'yes' in line:
-                    cmd += '-g {0} '.format(
-                        __salt__['file.group_to_gid'](name)
-                    )
+                    cmd.extend(['-g', __salt__['file.group_to_gid'](name)])
 
                 # We found what we wanted, let's break out of the loop
                 break
@@ -113,42 +111,45 @@ def add(name,
             log.debug('Error reading /etc/login.defs', exc_info=True)
 
     if createhome:
-        cmd += '-m '
+        cmd.append('-m')
     elif createhome is False:
-        cmd += '-M '
+        cmd.append('-M')
 
     if home is not None:
-        cmd += '-d {0} '.format(home)
+        cmd.extend(['-d', home])
 
     if not unique:
-        cmd += '-o '
-    if system:
-        if not __grains__['kernel'] == 'NetBSD':
-            cmd += '-r '
-    cmd += name
-    ret = __salt__['cmd.run_all'](cmd)['retcode']
-    if ret != 0:
+        cmd.append('-o')
+
+    if system and __grains__['kernel'] != 'NetBSD':
+        cmd.append('-r')
+
+    cmd.append(name)
+
+    ret = __salt__['cmd.run_all'](' '.join(cmd))
+
+    if ret['retcode'] != 0:
         return False
-    else:
-        # At this point, the user was successfully created, so return true
-        # regardless of the outcome of the below functions. If there is a
-        # problem wth changing any of the user's info below, it will be raised
-        # in a future highstate call. If anyone has a better idea on how to do
-        # this, feel free to change it, but I didn't think it was a good idea
-        # to return False when the user was successfully created since A) the
-        # user does exist, and B) running useradd again would result in a
-        # nonzero exit status and be interpreted as a False result.
-        if groups:
-            chgroups(name, groups)
-        if fullname:
-            chfullname(name, fullname)
-        if roomnumber:
-            chroomnumber(name, roomnumber)
-        if workphone:
-            chworkphone(name, workphone)
-        if homephone:
-            chhomephone(name, homephone)
-        return True
+
+    # At this point, the user was successfully created, so return true
+    # regardless of the outcome of the below functions. If there is a
+    # problem wth changing any of the user's info below, it will be raised
+    # in a future highstate call. If anyone has a better idea on how to do
+    # this, feel free to change it, but I didn't think it was a good idea
+    # to return False when the user was successfully created since A) the
+    # user does exist, and B) running useradd again would result in a
+    # nonzero exit status and be interpreted as a False result.
+    if groups:
+        chgroups(name, groups)
+    if fullname:
+        chfullname(name, fullname)
+    if roomnumber:
+        chroomnumber(name, roomnumber)
+    if workphone:
+        chworkphone(name, workphone)
+    if homephone:
+        chhomephone(name, homephone)
+    return True
 
 
 def delete(name, remove=False, force=False):
