@@ -22,25 +22,15 @@ A REST API for Salt
 
         .. versionadded:: 0.8.2
     debug : ``False``
-        Starts a for-development web server that will reload itself when the
-        underlying code is changed. This server is not multithreaded.
-
-        Does not use SSL!
+        Starts the web server in development mode. It will reload itself when
+        the underlying code is changed and will output more debugging info.
     ssl_crt
-        Required when ``debug`` is ``False``
-
         The path to a SSL certificate. (See below)
     ssl_key
-        Required when ``debug`` is ``False``
-
         The path to the private key for your SSL certificate. (See below)
     disable_ssl
-        A flag to disable SSL on the production-ready server. This is rarely
-        useful outside testing environments. If you enable this tread
-        carefully.
-
-        Warning: your Salt authentication credentials will be sent in the
-        clear!
+        A flag to disable SSL. Warning: your Salt authentication credentials
+        will be sent in the clear!
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
@@ -71,9 +61,10 @@ A REST API for Salt
           ssl_crt: /etc/pki/tls/certs/localhost.crt
           ssl_key: /etc/pki/tls/certs/localhost.key
 
-    The REST interface requires a secure HTTPS connection. You must provide an
-    SSL certificate to use. If you don't already have a certificate and don't
-    wish to buy one, you can generate a self-signed certificate using the
+    The REST interface strongly recommends a secure HTTPS connection since Salt
+    authentication credentials will be sent over the wire. If you don't already
+    have a certificate and don't wish to buy one, you can generate a
+    self-signed certificate using the
     :py:func:`~salt.modules.tls.create_self_signed_cert` function in Salt (note
     the dependencies for this module):
 
