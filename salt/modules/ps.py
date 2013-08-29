@@ -95,6 +95,70 @@ def get_pid_list():
     return psutil.get_pid_list()
 
 
+def kill_pid(pid, signal=15):
+    '''
+    Kill a proccess by PID.
+
+    CLI Example:
+    
+    .. code-block:: bash
+
+        salt '<minion id>' ps.kill_pid 1234 9
+    '''
+    try:
+        psutil.Process(pid).send_signal(signal)
+        return True
+    except psutil.NoSuchProcess:
+        return False
+
+
+def pkill(pattern, signal=15, full=False):
+    '''
+    Kill processes matching a pattern.
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.pkill httpd
+    '''
+    
+    killed = []
+    for proc in psutil.process_iter():
+        kill = pattern in ' '.join(proc.cmdline) if full \
+               else pattern in proc.name
+        if kill: 
+            try: 
+                proc.send_signal(signal)
+                killed.append(proc.pid)
+            except psutil.NoSuchProcess:
+                pass
+    if not killed:
+        return None
+    else:
+        return {'killed': killed}
+
+
+def pgrep(pattern, full=False):
+    '''
+    Return the pids for processes matching a pattern.
+
+    CLI Example:
+
+    .. code-block: bash
+        
+        salt '*' ps.pgrep httpd
+    '''
+
+    procs = []
+    for proc in psutil.process_iter():
+        match = pattern in ' '.join(proc.cmdline) if full \
+               else pattern in proc.name
+        if match: 
+            procs.append(proc.pid)
+    return procs or None
+
+
 def cpu_percent(interval=0.1, per_cpu=False):
     '''
     Return the percent of time the CPU is busy.
