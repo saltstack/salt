@@ -184,7 +184,7 @@ def delete(name, remove=False, force=False):
         # There's a known bug in Debian based distributions, at least, that
         # makes the command exit with 12, see:
         #  https://bugs.launchpad.net/ubuntu/+source/shadow/+bug/1023509
-        if __grains__['os_familiy'] not in ('Debian',):
+        if __grains__['os_family'] not in ('Debian',):
             return False
 
         if RETCODE_12_ERROR_REGEX.match(ret['stderr']) is not None:
