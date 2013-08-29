@@ -1,51 +1,62 @@
 '''
 Return cached data from minions
 '''
+# Import python libs
+import logging
+
 # Import salt libs
+import salt.log
 import salt.utils.master
 import salt.output
 import salt.payload
+from salt._compat import string_types
 
+log = logging.getLogger(__name__)
 
-def grains(minion=None):
+deprecation_warning = ("The 'minion' arg will be removed from " 
+                    "cache.py runner. Specify minion with 'tgt' arg!")
+
+def grains(tgt=None, expr_form='glob', **kwargs):
     '''
-    Return cached grains for all minions or a specific minion
+    Return cached grains of the targeted minions
     '''
-    pillar_util = salt.utils.master.MasterPillarUtil('*', 'glob',
+    deprecated_minion = kwargs.get('minion', None)
+    if tgt is None and deprecated_minion is None:
+        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        tgt = '*' # targat all minions for backward compatibility
+    elif tgt is None and isinstance(deprecated_minion, string_types):
+        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        tgt = deprecated_minion
+    elif tgt is None:
+        return {}
+    pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
                                                 use_cached_grains=True,
                                                 grains_fallback=False,
                                                 opts=__opts__)
     cached_grains = pillar_util.get_minion_grains()
-
-    if minion:
-        if minion in cached_grains:
-            salt.output.display_output({minion: cached_grains[minion]},
-                                       None, __opts__)
-            return {minion: cached_grains[minion]}
-    for minion_id in cached_grains:
-        salt.output.display_output({minion_id: cached_grains[minion_id]},
-                                   None, __opts__)
+    salt.output.display_output(cached_grains, None, __opts__)
     return cached_grains
 
 
-def pillar(minion=None):
+def pillar(tgt=None, expr_form='glob', **kwargs):
     '''
-    Return cached grains for all minions or a specific minion
+    Return cached pillars of the targeted minions
     '''
-    pillar_util = salt.utils.master.MasterPillarUtil('*', 'glob',
+    deprecated_minion = kwargs.get('minion', None)
+    if tgt is None and deprecated_minion is None:
+        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        tgt = '*' # targat all minions for backward compatibility
+    elif tgt is None and isinstance(deprecated_minion, string_types):
+        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        tgt = deprecated_minion
+    elif tgt is None:
+        return {}
+    pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
                                                 use_cached_grains=True,
                                                 grains_fallback=False,
                                                 use_cached_pillar=True,
                                                 pillar_fallback=False,
                                                 opts=__opts__)
     cached_pillar = pillar_util.get_minion_pillar()
-
-    if minion:
-        if minion in cached_pillar:
-            salt.output.display_output({minion: cached_pillar[minion]},
-                                       None, __opts__)
-            return {minion: cached_pillar[minion]}
-    for minion_id in cached_pillar:
-        salt.output.display_output({minion_id: cached_pillar[minion_id]},
-                                   None, __opts__)
+    salt.output.display_output(cached_pillar, None, __opts__)
     return cached_pillar
