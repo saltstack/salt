@@ -399,7 +399,38 @@ def _check_touch(name, atime, mtime):
     return True, 'File {0} exists and has the correct times'.format(name)
 
 
-def _symlink_check(name, target, force):
+def _get_symlink_ownership(path):
+    return (
+        __salt__['file.get_user'](path, follow_symlinks=False),
+        __salt__['file.get_group'](path, follow_symlinks=False)
+    )
+
+
+def _check_symlink_ownership(path, user, group):
+    '''
+    Check if the symlink ownership matches the specified user and group
+    '''
+    cur_user, cur_group = _get_symlink_ownership(path)
+    return ((cur_user == user) and (cur_group == group))
+
+
+def _set_symlink_ownership(path, uid, gid):
+    '''
+    Set the ownership of a symlink and return a boolean indicating
+    success/failure
+    '''
+    try:
+        os.lchown(path, uid, gid)
+    except OSError:
+        pass
+    return _check_symlink_ownership(
+        path,
+        __salt__['file.uid_to_user'](uid),
+        __salt__['file.gid_to_group'](gid)
+   )
+
+
+def _symlink_check(name, target, force, user, group):
     '''
     Check the symlink function
     '''
@@ -413,7 +444,15 @@ def _symlink_check(name, target, force):
                 name, target
             )
         else:
-            return True, 'The symlink {0} is present'.format(name)
+            result = True
+            msg = 'The symlink {0} is present'.format(name)
+            if not _check_symlink_ownership(name, user, group):
+                result = None
+                msg += (
+                    ', but the ownership of the symlink would be changed '
+                    'from {2}:{3} to {0}:{1}'
+                ).format(user, group, *_get_symlink_ownership(name))
+            return result, msg
     else:
         if force:
             return None, ('The file or directory {0} is set for removal to '
@@ -495,8 +534,8 @@ def symlink(
         target,
         force=False,
         makedirs=False,
-        user=None,
-        group=None,
+        user='root',
+        group='root',
         mode=None,
         **kwargs):
     '''
@@ -532,12 +571,31 @@ def symlink(
            'changes': {},
            'result': True,
            'comment': ''}
+
+    preflight_errors = []
+    uid = __salt__['file.user_to_uid'](user)
+    gid = __salt__['file.group_to_gid'](group)
+
+    if uid == '':
+        preflight_errors.append('User {0} does not exist'.format(user))
+
+    if gid == '':
+        preflight_errors.append('Group {0} does not exist'.format(group))
+
     if not os.path.isabs(name):
-        return _error(
-            ret, 'Specified file {0} is not an absolute path'.format(name))
+        preflight_errors.append(
+            'Specified file {0} is not an absolute path'.format(name)
+        )
+
+    if preflight_errors:
+        msg = '. '.join(preflight_errors)
+        if len(preflight_errors) > 1:
+            msg += '.'
+        return _error(ret, msg)
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = _symlink_check(name, target, force)
+        ret['result'], ret['comment'] = _symlink_check(name, target, force,
+                                                       user, group)
         return ret
 
     if not os.path.isdir(os.path.dirname(name)):
@@ -560,9 +618,23 @@ def symlink(
             # The target is wrong, delete the link
             os.remove(name)
         else:
-            # The link looks good!
-            ret['comment'] = 'The symlink {0} is present'.format(name)
+            if _check_symlink_ownership(name, user, group):
+                # The link looks good!
+                ret['comment'] = ('Symlink {0} is present and owned by '
+                                  '{1}:{2}'.format(name, user, group))
+            else:
+                if _set_symlink_ownership(name, uid, gid):
+                    ret['comment'] = ('Set ownership of symlink {0} to '
+                                      '{1}:{2}'.format(name, user, group))
+                    ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
+                else:
+                    ret['result'] = False
+                    ret['comment'] += (
+                        'Failed to set ownership of symlink {0} to '
+                        '{1}:{2}'.format(name, user, group)
+                    )
             return ret
+
     elif os.path.isfile(name):
         # Since it is not a link, and is a file, error out
         if force:
@@ -579,10 +651,24 @@ def symlink(
                                'should be'.format(name))
     if not os.path.exists(name):
         # The link is not present, make it
-        os.symlink(target, name)
-        ret['comment'] = 'Created new symlink {0} -> {1}'.format(name, target)
-        ret['changes']['new'] = name
-        return ret
+        try:
+            os.symlink(target, name)
+        except OSError as exc:
+            ret['result'] = False
+            ret['comment'] = ('Unable to create new symlink {0} -> '
+                              '{1}: {2}'.format(name, target, exc))
+            return ret
+        else:
+            ret['comment'] = ('Created new symlink {0} -> '
+                              '{1}'.format(name, target))
+            ret['changes']['new'] = name
+
+        if not _check_symlink_ownership(name, user, group):
+            if not _set_symlink_ownership(name, uid, gid):
+                ret['result'] = False
+                ret['comment'] += (', but was unable to set ownership to '
+                                   '{0}:{1}'.format(user, group))
+    return ret
 
 
 def absent(name):

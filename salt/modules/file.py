@@ -144,7 +144,7 @@ def group_to_gid(group):
         return ''
 
 
-def get_gid(path):
+def get_gid(path, follow_symlinks=True):
     '''
     Return the id of the group that owns a given file
 
@@ -153,6 +153,9 @@ def get_gid(path):
     .. code-block:: bash
 
         salt '*' file.get_gid /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
     if not os.path.exists(path):
         try:
@@ -161,10 +164,10 @@ def get_gid(path):
         except OSError:
             pass
         return -1
-    return os.stat(path).st_gid
+    return os.stat(path).st_gid if follow_symlinks else os.lstat(path).st_gid
 
 
-def get_group(path):
+def get_group(path, follow_symlinks=True):
     '''
     Return the group that owns a given file
 
@@ -173,8 +176,11 @@ def get_group(path):
     .. code-block:: bash
 
         salt '*' file.get_group /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
-    gid = get_gid(path)
+    gid = get_gid(path, follow_symlinks)
     if gid == -1:
         return False
     return gid_to_group(gid)
@@ -214,7 +220,7 @@ def user_to_uid(user):
         return ''
 
 
-def get_uid(path):
+def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
@@ -223,6 +229,9 @@ def get_uid(path):
     .. code-block:: bash
 
         salt '*' file.get_uid /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
     if not os.path.exists(path):
         try:
@@ -230,11 +239,11 @@ def get_uid(path):
             return os.lstat(path).st_uid
         except OSError:
             pass
-        return False
-    return os.stat(path).st_uid
+        return -1
+    return os.stat(path).st_uid if follow_symlinks else os.lstat(path).st_uid
 
 
-def get_user(path):
+def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
 
@@ -243,8 +252,11 @@ def get_user(path):
     .. code-block:: bash
 
         salt '*' file.get_user /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
-    uid = get_uid(path)
+    uid = get_uid(path, follow_symlinks)
     if uid == -1:
         return False
     return uid_to_user(uid)
@@ -534,6 +546,8 @@ def sed(path,
         flags='g',
         escape_all=False):
     '''
+    .. versionadded:: 0.9.5
+
     Make a simple edit to a file
 
     Equivalent to::
@@ -566,8 +580,6 @@ def sed(path,
     .. code-block:: bash
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
@@ -645,6 +657,8 @@ def psed(path,
          escape_all=False,
          multi=False):
     '''
+    .. versionadded:: 0.9.5
+
     Make a simple edit to a file (pure Python version)
 
     Equivalent to::
@@ -685,8 +699,6 @@ def psed(path,
     .. code-block:: bash
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
@@ -756,6 +768,8 @@ def uncomment(path,
               char='#',
               backup='.bak'):
     '''
+    .. versionadded:: 0.9.5
+
     Uncomment specified commented lines in a file
 
     path
@@ -777,8 +791,6 @@ def uncomment(path,
     .. code-block:: bash
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.uncomment()
 
@@ -794,6 +806,8 @@ def comment(path,
             char='#',
             backup='.bak'):
     '''
+    .. versionadded:: 0.9.5
+
     Comment out specified lines in a file
 
     path
@@ -820,8 +834,6 @@ def comment(path,
     .. code-block:: bash
 
         salt '*' file.comment /etc/modules pcspkr
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.comment()
 
@@ -838,6 +850,8 @@ def comment(path,
 
 def patch(originalfile, patchfile, options='', dry_run=False):
     '''
+    .. versionadded:: 0.10.4
+
     Apply a patch to a file
 
     Equivalent to::
@@ -856,8 +870,6 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     .. code-block:: bash
 
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
-
-    .. versionadded:: 0.10.4
     '''
     if dry_run:
         if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
@@ -873,15 +885,15 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
 def contains(path, text):
     '''
-    Return True if the file at ``path`` contains ``text``
+    .. versionadded:: 0.9.5
+
+    Return ``True`` if the file at ``path`` contains ``text``
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
-
-    .. versionadded:: 0.9.5
     '''
     if not os.path.exists(path):
         return False
@@ -978,6 +990,8 @@ def contains_glob(path, glob):
 
 def append(path, *args):
     '''
+    .. versionadded:: 0.9.5
+
     Append text to the end of a file
 
     CLI Example:
@@ -987,8 +1001,6 @@ def append(path, *args):
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.append()
 
@@ -1001,9 +1013,10 @@ def append(path, *args):
 
 def touch(name, atime=None, mtime=None):
     '''
-    Just like 'nix's "touch" command, create a file if it
-    doesn't exist or simply update the atime and mtime if
-    it already does.
+    .. versionadded:: 0.9.5
+
+    Just like *nix's ``touch`` command, create a file if it doesn't exist or
+    simply update the atime and mtime if it already does.
 
     atime:
         Access time in Unix epoch time
@@ -1015,8 +1028,6 @@ def touch(name, atime=None, mtime=None):
     .. code-block:: bash
 
         salt '*' file.touch /var/log/emptyfile
-
-    .. versionadded:: 0.9.5
     '''
     if atime and atime.isdigit():
         atime = int(atime)
