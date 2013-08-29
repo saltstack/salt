@@ -1,4 +1,6 @@
 '''
+.. |reclass| replace:: **reclass**
+
 This ``master_tops`` plugin provides access to the |reclass| database, such
 that state information (top data) are retrieved from |reclass|.
 
@@ -39,8 +41,6 @@ note of the differing data types for ``ext_pillar`` and ``master_tops``):
 If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
-
-.. |reclass| replace:: **reclass**
 '''
 
 # This file cannot be called reclass.py, because then the module import would
