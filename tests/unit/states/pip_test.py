@@ -19,11 +19,14 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from salt.states import pip_state as pip
+from salt.states import pip_state
 from salt.exceptions import CommandExecutionError
 
-pip.__opts__ = {'test': False}
-pip.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
+# Import 3rd-party libs
+import pip
+
+pip_state.__opts__ = {'test': False}
+pip_state.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -37,11 +40,11 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value=[])
         pip_install = MagicMock(return_value={'retcode': 0})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list,
-                                       'pip.install': pip_install}):
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
             with warnings.catch_warnings(record=True) as w:
-                ret = pip.installed('pep8', runas='me!')
+                ret = pip_state.installed('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.installed is deprecated, '
                     'and will be removed in 0.18.0. Please use \'user\' '
@@ -58,10 +61,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
     def test_installed_runas_and_user_raises_exception(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                pip.installed,
+                pip_state.installed,
                 'pep8',
                 user='Me!',
                 runas='Not Me!'
@@ -75,11 +78,11 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value=['pep8'])
         pip_uninstall = MagicMock(return_value=True)
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list,
-                                       'pip.uninstall': pip_uninstall}):
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list,
+                                             'pip.uninstall': pip_uninstall}):
             with warnings.catch_warnings(record=True) as w:
-                ret = pip.removed('pep8', runas='me!')
+                ret = pip_state.removed('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.installed is deprecated, '
                     'and will be removed in 0.18.0. Please use \'user\' '
@@ -96,10 +99,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
     def test_removed_runas_and_user_raises_exception(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                pip.removed,
+                pip_state.removed,
                 'pep8',
                 user='Me!',
                 runas='Not Me!'
@@ -108,10 +111,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
     def test_install_requirements_parsing(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.3'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list}):
-            with patch.dict(pip.__opts__, {'test': True}):
-                ret = pip.installed('pep8=1.3.2')
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list}):
+            with patch.dict(pip_state.__opts__, {'test': True}):
+                ret = pip_state.installed('pep8=1.3.2')
                 self.assertSaltFalseReturn({'test': ret})
                 self.assertInSaltComment(
                     'Invalid version specification in package pep8=1.3.2. '
@@ -121,10 +124,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.3'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list}):
-            with patch.dict(pip.__opts__, {'test': True}):
-                ret = pip.installed('pep8>=1.3.2')
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list}):
+            with patch.dict(pip_state.__opts__, {'test': True}):
+                ret = pip_state.installed('pep8>=1.3.2')
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
                     'Python package pep8>=1.3.2 already installed',
@@ -133,10 +136,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.3'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list}):
-            with patch.dict(pip.__opts__, {'test': True}):
-                ret = pip.installed('pep8<1.3.2')
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list}):
+            with patch.dict(pip_state.__opts__, {'test': True}):
+                ret = pip_state.installed('pep8<1.3.2')
                 self.assertSaltNoneReturn({'test': ret})
                 self.assertInSaltComment(
                     'Python package pep8<1.3.2 is set to be installed',
@@ -145,10 +148,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.2'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list}):
-            with patch.dict(pip.__opts__, {'test': True}):
-                ret = pip.installed('pep8>1.3.1,<1.3.3')
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list}):
+            with patch.dict(pip_state.__opts__, {'test': True}):
+                ret = pip_state.installed('pep8>1.3.1,<1.3.3')
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
                     'Python package pep8>1.3.1;<1.3.3 already installed',
@@ -157,10 +160,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list}):
-            with patch.dict(pip.__opts__, {'test': True}):
-                ret = pip.installed('pep8>1.3.1,<1.3.3')
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list}):
+            with patch.dict(pip_state.__opts__, {'test': True}):
+                ret = pip_state.installed('pep8>1.3.1,<1.3.3')
                 self.assertSaltNoneReturn({'test': ret})
                 self.assertInSaltComment(
                     'Python package pep8>1.3.1;<1.3.3 is set to be installed',
@@ -169,10 +172,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list}):
-            with patch.dict(pip.__opts__, {'test': True}):
-                ret = pip.installed(
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list}):
+            with patch.dict(pip_state.__opts__, {'test': True}):
+                ret = pip_state.installed(
                     'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.1'
                 )
                 self.assertSaltNoneReturn({'test': ret})
@@ -185,10 +188,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list}):
-            with patch.dict(pip.__opts__, {'test': True}):
-                ret = pip.installed(
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list}):
+            with patch.dict(pip_state.__opts__, {'test': True}):
+                ret = pip_state.installed(
                     'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
                 )
                 self.assertSaltNoneReturn({'test': ret})
@@ -201,10 +204,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list}):
-            with patch.dict(pip.__opts__, {'test': True}):
-                ret = pip.installed(
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list}):
+            with patch.dict(pip_state.__opts__, {'test': True}):
+                ret = pip_state.installed(
                     'https://pypi.python.org/packages/source/S/SaltTesting/'
                     'SaltTesting-0.5.0.tar.gz'
                     '#md5=e6760af92b7165f8be53b5763e40bc24'
@@ -230,10 +233,10 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                       'https://pypi.python.org/packages/source/S/SaltTesting/'
                       'SaltTesting-0.5.0.tar.gz\n    \nCleaning up...'
         })
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list,
-                                       'pip.install': pip_install}):
-            ret = pip.installed(
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
+            ret = pip_state.installed(
                 'https://pypi.python.org/packages/source/S/SaltTesting/'
                 'SaltTesting-0.5.0.tar.gz'
                 '#md5=e6760af92b7165f8be53b5763e40bc24'
@@ -261,11 +264,11 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
             'stderr' :'',
             'stdout': 'Cloned!'
         })
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock,
-                                       'pip.list': pip_list,
-                                       'pip.install': pip_install}):
-            with patch.dict(pip.__opts__, {'test': False}):
-                ret = pip.installed(
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
+            with patch.dict(pip_state.__opts__, {'test': False}):
+                ret = pip_state.installed(
                     'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
                 )
                 self.assertSaltTrueReturn({'test': ret})
@@ -273,6 +276,42 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                     'Package was successfully installed',
                     {'test': ret}
                 )
+
+        # Test VCS installations with version info like >= 0.1
+        try:
+            orignal_pip_version = pip.__version__
+            pip.__version__ = MagicMock(
+                side_effect=AttributeError(
+                    'Faked missing __version__ attribute'
+                )
+            )
+        except AttributeError:
+            # The pip version being used is already < 1.2
+            pass
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_install = MagicMock(return_value={
+            'retcode': 0,
+            'stderr' :'',
+            'stdout': 'Cloned!'
+        })
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
+            with patch.dict(pip_state.__opts__, {'test': False}):
+                ret = pip_state.installed(
+                    'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.0'
+                )
+                self.assertSaltTrueReturn({'test': ret})
+                self.assertInSaltComment(
+                    'Package was successfully installed',
+                    {'test': ret}
+                )
+
+        # Reset the version attribute if existing
+        if hasattr(pip, '__version__'):
+            pip.__version__ = orignal_pip_version
 
 
 if __name__ == '__main__':
