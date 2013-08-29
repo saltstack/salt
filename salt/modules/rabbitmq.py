@@ -374,3 +374,92 @@ def list_queues_vhost(vhost, *kwargs):
     res = __salt__['cmd.run'](
         'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))))
     return res
+
+
+def list_policies(runas=None):
+    '''
+    Return a dictionary of policies nested by vhost and name 
+    based on the data returned from rabbitmqctl list_policies.
+
+    Reference: http://www.rabbitmq.com/ha.html
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.list_policies'
+    '''
+    ret = {}
+    res = __salt__['cmd.run']('rabbitmqctl list_policies',
+                              runas=runas)
+    for line in res.splitlines():
+        if '...' not in line and line != '\n':
+            parts = line.split('\t')
+            if len(parts) != 5:
+                continue
+            vhost, name = parts[0], parts[1]
+            if vhost not in ret:
+                ret[vhost] = {}
+            ret[vhost][name] = {
+                'pattern': parts[2],
+                'definition': parts[3],
+                'priority': parts[4]
+            }
+    log.debug('Listing policies: {}'.format(ret))
+    return ret
+
+
+def set_policy(vhost, name, pattern, definition, priority=0, runas=None):
+    '''
+    Set a policy based on rabbitmqctl set_policy.
+
+    Reference: http://www.rabbitmq.com/ha.html
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode": "all"}'
+    '''
+    res = __salt__['cmd.run'](
+        "rabbitmqctl set_policy -p {0} {1} '{2}' '{3}' {4}".format(
+            vhost, name, pattern, definition.replace("'", '"'), priority),
+        runas=runas)
+    log.debug('Set policy: {}'.format(res))
+    return _format_response(res, 'Set')
+
+
+def delete_policy(vhost, name, runas=None):
+    '''
+    Delete a policy based on rabbitmqctl clear_policy.
+
+    Reference: http://www.rabbitmq.com/ha.html
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.delete_policy / HA'
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl clear_policy -p {0} {1}'.format(
+            vhost, name),
+        runas=runas)
+    log.debug('Delete policy: {}'.format(res))
+    return _format_response(res, 'Deleted')
+
+
+def policy_exists(vhost, name, runas=None):
+    '''
+    Return whether the policy exists based on rabbitmqctl list_policies.
+
+    Reference: http://www.rabbitmq.com/ha.html
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.policy_exists / HA
+    '''
+    policies = list_policies(runas=runas)
+    return bool(vhost in policies and name in policies[vhost])
