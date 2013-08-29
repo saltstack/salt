@@ -215,9 +215,10 @@ def add_host(ip, alias):
 def _write_hosts(hosts):
     lines = []
     for ip, aliases in hosts.iteritems():
-        line = '{0}\t'.format(ip)
-        for alias in aliases:
-            line = '{0}\t{1}'.format(line, alias)
+        line = '{0}\t\t{1}'.format(
+            ip,
+            '\t\t'.join(aliases)
+            )
         lines.append(line)
 
     hfn = __get_hosts_filename()
