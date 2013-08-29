@@ -10,10 +10,17 @@
 
 # Import python libs
 import os
+import pwd
+import glob
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting import skipIf
+from salttesting.helpers import (
+    destructiveTest,
+    ensure_in_syspath,
+    with_system_account
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -169,6 +176,147 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @with_system_account('issue-6912', on_existing='delete', delete=True)
+    def test_issue_6912_wrong_owner(self, username):
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, '6912-wrong-owner'
+        )
+        # ----- Using runas ------------------------------------------------->
+        venv_create = self.run_function(
+            'virtualenv.create', [venv_dir], runas=username
+        )
+        if venv_create['retcode'] > 0:
+            self.skipTest(
+                'Failed to create testcase virtual environment: {0}'.format(
+                    ret
+                )
+            )
+
+        # Using the package name.
+        try:
+            ret = self.run_state(
+                'pip.installed', name='pep8', runas=username, bin_env=venv_dir
+            )
+            self.assertSaltTrueReturn(ret)
+            uinfo = pwd.getpwnam(username)
+            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
+                              os.path.join(venv_dir, '*', '**', 'pep8*'),
+                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
+                for path in glob.glob(globmatch):
+                    self.assertEqual(
+                        uinfo.pw_uid, os.stat(path).st_uid
+                    )
+
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Using a requirements file
+        venv_create = self.run_function(
+            'virtualenv.create', [venv_dir], runas=username
+        )
+        if venv_create['retcode'] > 0:
+            self.skipTest(
+                'Failed to create testcase virtual environment: {0}'.format(
+                    ret
+                )
+            )
+        req_filename = os.path.join(
+            integration.TMP_STATE_TREE, 'issue-6912-requirements.txt'
+        )
+        with open(req_filename, 'wb') as f:
+            f.write('pep8')
+
+        try:
+            ret = self.run_state(
+                'pip.installed', name='', runas=username, bin_env=venv_dir,
+                requirements='salt://issue-6912-requirements.txt'
+            )
+            self.assertSaltTrueReturn(ret)
+            uinfo = pwd.getpwnam(username)
+            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
+                              os.path.join(venv_dir, '*', '**', 'pep8*'),
+                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
+                for path in glob.glob(globmatch):
+                    self.assertEqual(
+                        uinfo.pw_uid, os.stat(path).st_uid
+                    )
+
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+            os.unlink(req_filename)
+        # <---- Using runas --------------------------------------------------
+
+        # ----- Using user -------------------------------------------------->
+        venv_create = self.run_function(
+            'virtualenv.create', [venv_dir], runas=username
+        )
+        if venv_create['retcode'] > 0:
+            self.skipTest(
+                'Failed to create testcase virtual environment: {0}'.format(
+                    ret
+                )
+            )
+
+        # Using the package name
+        try:
+            ret = self.run_state(
+                'pip.installed', name='pep8', user=username, bin_env=venv_dir
+            )
+            self.assertSaltTrueReturn(ret)
+            uinfo = pwd.getpwnam(username)
+            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
+                              os.path.join(venv_dir, '*', '**', 'pep8*'),
+                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
+                for path in glob.glob(globmatch):
+                    self.assertEqual(
+                        uinfo.pw_uid, os.stat(path).st_uid
+                    )
+
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Using a requirements file
+        venv_create = self.run_function(
+            'virtualenv.create', [venv_dir], runas=username
+        )
+        if venv_create['retcode'] > 0:
+            self.skipTest(
+                'Failed to create testcase virtual environment: {0}'.format(
+                    ret
+                )
+            )
+        req_filename = os.path.join(
+            integration.TMP_STATE_TREE, 'issue-6912-requirements.txt'
+        )
+        with open(req_filename, 'wb') as f:
+            f.write('pep8')
+
+        try:
+            ret = self.run_state(
+                'pip.installed', name='', user=username, bin_env=venv_dir,
+                requirements='salt://issue-6912-requirements.txt'
+            )
+            self.assertSaltTrueReturn(ret)
+            uinfo = pwd.getpwnam(username)
+            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
+                              os.path.join(venv_dir, '*', '**', 'pep8*'),
+                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
+                for path in glob.glob(globmatch):
+                    self.assertEqual(
+                        uinfo.pw_uid, os.stat(path).st_uid
+                    )
+
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+            os.unlink(req_filename)
+        # <---- Using user ---------------------------------------------------
 
 
 if __name__ == '__main__':

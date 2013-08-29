@@ -154,49 +154,55 @@ def installed(name,
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
-    try:
+    if name:
         try:
-            # With pip < 1.2, the __version__ attribute does not exist and
-            # vcs+URL urls are not properly parsed.
-            # The next line is meant to trigger an AttributeError and handle
-            # lower pip versions
-            logger.debug('Installed pip version: {0}'.format(pip.__version__))
-            install_req = pip.req.InstallRequirement.from_line(name)
-        except AttributeError:
-            logger.debug('Installed pip version is lower than 1.2')
-            supported_vcs = ('git', 'svn', 'hg', 'bzr')
-            if name.startswith(supported_vcs):
-                for vcs in supported_vcs:
-                    if name.startswith(vcs):
-                        install_req = pip.req.InstallRequirement.from_line(
-                            name.split('{0}+'.format(vcs))[-1]
-                        )
-                        break
-            else:
+            try:
+                # With pip < 1.2, the __version__ attribute does not exist and
+                # vcs+URL urls are not properly parsed.
+                # The next line is meant to trigger an AttributeError and
+                # handle lower pip versions
+                logger.debug(
+                    'Installed pip version: {0}'.format(pip.__version__)
+                )
                 install_req = pip.req.InstallRequirement.from_line(name)
-    except ValueError as exc:
-        ret['result'] = False
-        if '=' in name and '==' not in name:
+            except AttributeError:
+                logger.debug('Installed pip version is lower than 1.2')
+                supported_vcs = ('git', 'svn', 'hg', 'bzr')
+                if name.startswith(supported_vcs):
+                    for vcs in supported_vcs:
+                        if name.startswith(vcs):
+                            install_req = pip.req.InstallRequirement.from_line(
+                                name.split('{0}+'.format(vcs))[-1]
+                            )
+                            break
+                else:
+                    install_req = pip.req.InstallRequirement.from_line(name)
+        except ValueError as exc:
+            ret['result'] = False
+            if '=' in name and '==' not in name:
+                ret['comment'] = (
+                    'Invalid version specification in package {0}. \'=\' is '
+                    'not supported, use \'==\' instead.'.format(name)
+                )
+                return ret
             ret['comment'] = (
-                'Invalid version specification in package {0}. \'=\' is not '
-                'supported, use \'==\' instead.'.format(name)
+                'pip raised an exception while parsing {0!r}: {1}'.format(
+                    name, exc
+                )
             )
             return ret
-        ret['comment'] = (
-            'pip raised an exception while parsing {0!r}: {1}'.format(
-                name, exc
-            )
-        )
-        return ret
 
-    if install_req.req is None:
-        # This is most likely an url and there's no way to know what will be
-        # installed before actually installing it.
+        if install_req.req is None:
+            # This is most likely an url and there's no way to know what will
+            # be installed before actually installing it.
+            prefix = ''
+            version_spec = []
+        else:
+            prefix = install_req.req.project_name
+            version_spec = install_req.req.specs
+    else:
         prefix = ''
         version_spec = []
-    else:
-        prefix = install_req.req.project_name
-        version_spec = install_req.req.specs
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
