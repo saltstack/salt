@@ -64,6 +64,9 @@ reviewed. If a reviewer asks for changes, just make the changes locally in the
 same local feature branch, push them to GitHub, then add a comment to the
 discussion section of the pull request. 
 
+
+.. _enable-travis-ci:
+
 .. note:: Travis-CI
 
     To make reviewing pull requests easier for the maintainers, please enable
