@@ -187,10 +187,10 @@ def status(name, sig=None):
     statuses = __salt__['cmd.run'](cmd).splitlines()
     for line in statuses:
         if 'RUNNING' in line:
-            return getsid(name)
+            return True
         elif 'PENDING' in line:
-            return getsid(name)
-    return ''
+            return True
+    return False
 
 
 def getsid(name):
