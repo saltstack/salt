@@ -18,6 +18,9 @@ requisite to a pkg.installed state for the package which provides pip
           - pkg: python-pip
 '''
 
+# Import python libs
+import logging
+
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -29,6 +32,8 @@ try:
     HAS_PIP = True
 except ImportError:
     HAS_PIP = False
+
+logger = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -155,10 +160,10 @@ def installed(name,
             # vcs+URL urls are not properly parsed.
             # The next line is meant to trigger an AttributeError and handle
             # lower pip versions
-            log.debug('Installed pip version: {0}'.format(pip.__version__))
+            logger.debug('Installed pip version: {0}'.format(pip.__version__))
             install_req = pip.req.InstallRequirement.from_line(name)
         except AttributeError:
-            log.debug('Installed pip version is lower than 1.2')
+            logger.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
             if name.startswith(supported_vcs):
                 for vcs in supported_vcs:
