@@ -97,18 +97,20 @@ def add(name,
     if gid not in (None, ''):
         cmd += '-g {0} '.format(gid)
     elif groups is not None and name in groups:
-        def usergroups():
-            retval = False
-            try:
-                for line in salt.utils.fopen('/etc/login.defs'):
-                    if 'USERGROUPS_ENAB' in line[:15]:
-                        if "yes" in line:
-                            retval = True
-            except Exception:
-                log.debug('Error reading /etc/login.defs', exc_info=True)
-            return retval
-        if usergroups():
-            cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
+        try:
+            for line in salt.utils.fopen('/etc/login.defs'):
+                if 'USERGROUPS_ENAB' in line[:15]:
+                    continue
+
+                if 'yes' in line:
+                    cmd += '-g {0} '.format(
+                        __salt__['file.group_to_gid'](name)
+                    )
+
+                # We found what we wanted, let's break out of the loop
+                break
+        except OSError:
+            log.debug('Error reading /etc/login.defs', exc_info=True)
 
     if createhome:
         cmd += '-m '
