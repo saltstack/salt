@@ -159,9 +159,11 @@ def installed(name,
             try:
                 # With pip < 1.2, the __version__ attribute does not exist and
                 # vcs+URL urls are not properly parsed.
-                # The next line is meant to trigger an AttributeError and handle
-                # lower pip versions
-                logger.debug('Installed pip version: {0}'.format(pip.__version__))
+                # The next line is meant to trigger an AttributeError and
+                # handle lower pip versions
+                logger.debug(
+                    'Installed pip version: {0}'.format(pip.__version__)
+                )
                 install_req = pip.req.InstallRequirement.from_line(name)
             except AttributeError:
                 logger.debug('Installed pip version is lower than 1.2')
@@ -179,8 +181,8 @@ def installed(name,
             ret['result'] = False
             if '=' in name and '==' not in name:
                 ret['comment'] = (
-                    'Invalid version specification in package {0}. \'=\' is not '
-                    'supported, use \'==\' instead.'.format(name)
+                    'Invalid version specification in package {0}. \'=\' is '
+                    'not supported, use \'==\' instead.'.format(name)
                 )
                 return ret
             ret['comment'] = (
@@ -191,8 +193,8 @@ def installed(name,
             return ret
 
         if install_req.req is None:
-            # This is most likely an url and there's no way to know what will be
-            # installed before actually installing it.
+            # This is most likely an url and there's no way to know what will
+            # be installed before actually installing it.
             prefix = ''
             version_spec = []
         else:
