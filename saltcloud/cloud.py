@@ -624,13 +624,17 @@ class Cloud(object):
             opt_map = False
         if self.opts['parallel'] and self.opts['start_action'] and not opt_map:
             log.info(
-                "Running {0} on {1}".format(self.opts['start_action'], vm_['name'])
+                'Running {0} on {1}'.format(
+                    self.opts['start_action'], vm_['name']
+                )
             )
             client = salt.client.LocalClient()
             action_out = client.cmd(
-                vm_['name'], self.opts['start_action'], timeout=self.opts['timeout'] * 60
+                vm_['name'],
+                self.opts['start_action'],
+                timeout=self.opts['timeout'] * 60
             )
-            output['ret']=action_out
+            output['ret'] = action_out
         return output
 
     def run_profile(self, profile, names):
@@ -931,7 +935,9 @@ class Map(Cloud):
             return {}
 
         if 'include' in map_:
-            map_ = salt.config.include_config(map_, self.opts['map'])
+            map_ = salt.config.include_config(
+                map_, self.opts['map'], verbose=False
+            )
 
         # Create expected data format if needed
         for profile, mapped in map_.copy().items():
@@ -982,11 +988,11 @@ class Map(Cloud):
 
     def _has_loop(self, dmap, seen=None, val=None):
         if seen is None:
-            for k,v in dmap['create'].items():
+            for values in dmap['create'].values():
                 seen = []
                 try:
-                    machines = v['requires']
-                except KeyError as e:
+                    machines = values['requires']
+                except KeyError:
                     machines = []
                 for machine in machines:
                     if self._has_loop(dmap, seen=list(seen), val=machine):
@@ -994,15 +1000,16 @@ class Map(Cloud):
         else:
             if val in seen:
                 return True
-            else:
-                seen.append(val)
-                try:
-                    machines = dmap['create'][val]['requires']
-                except KeyError as e:
-                    machines = []
-                for machine in machines:
-                    if self._has_loop(dmap, seen=list(seen), val=machine):
-                        return True
+
+            seen.append(val)
+            try:
+                machines = dmap['create'][val]['requires']
+            except KeyError:
+                machines = []
+
+            for machine in machines:
+                if self._has_loop(dmap, seen=list(seen), val=machine):
+                    return True
         return False
 
     def _calcdep(self, dmap, machine, data, level):
@@ -1054,7 +1061,8 @@ class Map(Cloud):
                 # Get the VM name
                 nodedata = profile_data.copy()
                 # Update profile data with the map overrides
-                for setting in ('grains', 'master', 'minion', 'volumes', 'requires'):
+                for setting in ('grains', 'master', 'minion', 'volumes',
+                                'requires'):
                     deprecated = 'map_{0}'.format(setting)
                     if deprecated in overrides:
                         log.warn(
@@ -1159,24 +1167,28 @@ class Map(Cloud):
             log.error(msg)
             raise SaltCloudException(msg)
         #Go through the create list and calc dependencies
-        for k,v in dmap['create'].items():
-            log.info("Calculating dependencies for {0}".format(k))
+        for key, val in dmap['create'].items():
+            log.info('Calculating dependencies for {0}'.format(key))
             level = 0
-            level = self._calcdep(dmap, k, v, level)
-            log.debug("Got execution order {0} for {1}".format(level,k))
-            dmap['create'][k]['level'] = level
+            level = self._calcdep(dmap, key, val, level)
+            log.debug('Got execution order {0} for {1}'.format(level, key))
+            dmap['create'][key]['level'] = level
+
         try:
             existing_list = dmap['existing'].items()
         except KeyError:
-            existing_list={}
-        for k,v in existing_list:
-            log.info("Calculating dependencies for {0}".format(k))
+            existing_list = {}
+
+        for key, val in existing_list:
+            log.info('Calculating dependencies for {0}'.format(key))
             level = 0
-            level = self._calcdep(dmap, k, v, level)
-            log.debug("Got execution order {0} for {1}".format(level,k))
-            dmap['existing'][k]['level'] = level
+            level = self._calcdep(dmap, key, val, level)
+            log.debug('Got execution order {0} for {1}'.format(level, key))
+            dmap['existing'][key]['level'] = level
+
         #Now sort the create list based on dependencies
-        create_list = sorted(dmap['create'].items(), key=lambda x: x[1]['level'])
+        create_list = sorted(dmap['create'].items(),
+                             key=lambda x: x[1]['level'])
         output = {}
         if self.opts['parallel']:
             parallel_data = []
@@ -1249,6 +1261,12 @@ class Map(Cloud):
                     'Master creation details is not a dictionary: {0}'.format(
                         out
                     )
+                )
+
+            elif 'Errors' in out:
+                raise SaltCloudSystemExit(
+                    'An error occurred while creating the master, not '
+                    'continuing: {0}'.format(out['Errors'])
                 )
 
             deploy_kwargs = (
@@ -1338,16 +1356,20 @@ class Map(Cloud):
             # correct order based on dependencies.
             if self.opts['start_action']:
                 actionlist = []
-                grp=-1
-                for k,v in groupby(dmap['create'].values(), lambda x: x['level']):
+                grp = -1
+                for key, val in groupby(dmap['create'].values(),
+                                        lambda x: x['level']):
                     actionlist.append([])
-                    grp +=1
-                    for item in v:
+                    grp += 1
+                    for item in val:
                         actionlist[grp].append(item['name'])
-                out={}
+
+                out = {}
                 for group in actionlist:
                     log.info(
-                        "Running {0} on {1}".format(self.opts['start_action'], ', '.join(group))
+                        'Running {0} on {1}'.format(
+                            self.opts['start_action'], ', '.join(group)
+                        )
                     )
                     client = salt.client.LocalClient()
                     out.update(client.cmd(
