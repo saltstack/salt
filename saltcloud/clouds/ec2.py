@@ -848,7 +848,10 @@ def create(vm_=None, call=None):
 
         # pull the root device name from the result and use it when
         # launching the new VM
-        rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
+        if type(rd_data[0]['blockDeviceMapping']['item']) is list:
+            rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
+        else:
+            rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
         log.info('Found root device name: {0}'.format(rd_name))
 
         params[spot_prefix+'BlockDeviceMapping.1.DeviceName'] = rd_name
