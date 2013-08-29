@@ -97,9 +97,9 @@ def add(name,
     if shell:
         cmd.extend(['-s', shell])
     if uid not in (None, ''):
-        cmd.extend(['-u', uid])
+        cmd.extend(['-u', str(uid)])
     if gid not in (None, ''):
-        cmd.extend(['-g', gid])
+        cmd.extend(['-g', str(gid)])
     elif groups is not None and name in groups:
         try:
             for line in salt.utils.fopen('/etc/login.defs'):
@@ -107,7 +107,9 @@ def add(name,
                     continue
 
                 if 'yes' in line:
-                    cmd.extend(['-g', __salt__['file.group_to_gid'](name)])
+                    cmd.extend([
+                        '-g', str(__salt__['file.group_to_gid'](name))
+                    ])
 
                 # We found what we wanted, let's break out of the loop
                 break
