@@ -727,6 +727,17 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
+    saltcloud.utils.fire_event(
+        'event',
+        'starting create',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     key_filename = config.get_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
@@ -867,6 +878,13 @@ def create(vm_=None, call=None):
 
     tags['Name'] = vm_['name']
 
+    saltcloud.utils.fire_event(
+        'event',
+        'requesting instance',
+        'salt.cloud.create',
+        {'kwargs': params, 'location': location},
+    )
+
     try:
         data = query(params, 'instancesSet', location=location)
         if 'error' in data:
@@ -926,6 +944,12 @@ def create(vm_=None, call=None):
                          'Nothing else we can do here.')
                 return False
 
+        saltcloud.utils.fire_event(
+            'event',
+            'waiting for spot instance',
+            'salt.cloud.create',
+        )
+
         try:
             data = _wait_for_spot_instance(
                 __query_spot_instance_request,
@@ -952,6 +976,13 @@ def create(vm_=None, call=None):
 
     # Pull the instance ID, valid for both spot and normal instances
     instance_id = data[0]['instanceId']
+
+    saltcloud.utils.fire_event(
+        'event',
+        'querying instance',
+        'salt.cloud.create',
+        {'instance_id': instance_id},
+    )
 
     log.debug('The new VM instance_id is {0}'.format(instance_id))
 
@@ -1026,6 +1057,13 @@ def create(vm_=None, call=None):
         finally:
             raise SaltCloudSystemExit(exc.message)
 
+    saltcloud.utils.fire_event(
+        'event',
+        'setting tags',
+        'salt.cloud.create',
+        {'tags': tags},
+    )
+
     set_tags(
         vm_['name'], tags,
         instance_id=instance_id, call='action', location=location
@@ -1041,6 +1079,13 @@ def create(vm_=None, call=None):
 
     display_ssh_output = config.get_config_value(
         'display_ssh_output', vm_, __opts__, default=True
+    )
+
+    saltcloud.utils.fire_event(
+        'event',
+        'waiting for ssh',
+        'salt.cloud.create',
+        {'ip_address': ip_address},
     )
 
     if saltcloud.utils.wait_for_ssh(ip_address):
@@ -1107,6 +1152,14 @@ def create(vm_=None, call=None):
         )
 
         ret['deploy_kwargs'] = deploy_kwargs
+
+        saltcloud.utils.fire_event(
+            'event',
+            'executing deploy script',
+            'salt.cloud.create',
+            {'kwargs': deploy_kwargs},
+        )
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
@@ -1130,6 +1183,13 @@ def create(vm_=None, call=None):
         'volumes', vm_, __opts__, search_global=True
     )
     if volumes:
+        saltcloud.utils.fire_event(
+            'event',
+            'attaching volumes',
+            'salt.cloud.create',
+            {'volumes': volumes},
+        )
+
         log.info('Create and attach volumes to node {0}'.format(vm_['name']))
         created = create_attach_volumes(
             vm_['name'],
@@ -1141,6 +1201,18 @@ def create(vm_=None, call=None):
             call='action'
         )
         ret['Attached Volumes'] = created
+
+    saltcloud.utils.fire_event(
+        'event',
+        'created instance',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+            'instance_id': instance_id,
+        },
+    )
 
     return ret
 
@@ -1397,6 +1469,13 @@ def destroy(name, call=None):
         quiet=True
     )
 
+    saltcloud.utils.fire_event(
+        'event',
+        'destroying instance',
+        'salt.cloud.destroy',
+        {'name': name, 'instance_id': instance_id},
+    )
+
     if protected == 'true':
         raise SaltCloudSystemExit(
             'This instance has been protected from being destroyed. '
@@ -1434,6 +1513,13 @@ def destroy(name, call=None):
                   'SpotInstanceRequestId.1': sir_id}
         result = query(params)
         ret['spotInstance'] = result[0]
+
+    saltcloud.utils.fire_event(
+        'event',
+        'destroyed instance',
+        'salt.cloud.destroy',
+        {'name': name, 'instance_id': instance_id},
+    )
 
     return ret
 

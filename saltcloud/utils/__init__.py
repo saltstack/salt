@@ -691,20 +691,24 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         )
                     )
             # Fire deploy action
-            event = salt.utils.event.SaltEvent('master', sock_dir)
-            try:
-                event.fire_event(
-                    '{0} has been created at {1}'.format(name, host),
-                    'salt-cloud'
-                )
-            except ValueError:
-                # We're using develop or a 0.17.x version of salt
-                event.fire_event(
-                    {name: '{0} has been created at {1}'.format(name, host)},
-                    'salt-cloud'
-                )
-            return True
+            fire_event(name,
+                       '{0} has been deployed at {1}'.format(name, host),
+                       tag='salt.cloud.deploy_script')
     return False
+
+
+def fire_event(key, msg, tag, args=None, sock_dir='/var/run/salt/master'):
+    # Fire deploy action
+    event = salt.utils.event.SaltEvent('master', sock_dir)
+    try:
+        event.fire_event(msg, tag)
+    except ValueError:
+        # We're using develop or a 0.17.x version of salt
+        if type(args) is dict:
+            args[key] = msg
+        else:
+            args = {key: msg}
+        event.fire_event(args, tag)
 
 
 def scp_file(dest_path, contents, kwargs):
