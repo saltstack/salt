@@ -1542,12 +1542,10 @@ class Matcher(object):
             return False
         ref = {'G': 'grain',
                'P': 'grain_pcre',
-               'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
-               'E': 'pcre',
-               'D': 'data'}
+               'E': 'pcre'}
         if HAS_RANGE:
             ref['R'] = 'range'
         results = []
