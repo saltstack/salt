@@ -181,6 +181,17 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    saltcloud.utils.fire_event(
+        'event',
+        'starting create',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     kwargs = {
@@ -200,6 +211,13 @@ def create(vm_):
     location = get_location(vm_)
     if location:
         kwargs['datacenter'] = {'name': location}
+
+    saltcloud.utils.fire_event(
+        'event',
+        'requesting instance',
+        'salt.cloud.create',
+        {'kwargs': kwargs},
+    )
 
     try:
         response = conn.createObject(kwargs)
@@ -304,6 +322,13 @@ def create(vm_):
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs
 
+        saltcloud.utils.fire_event(
+            'event',
+            'executing deploy script',
+            'salt.cloud.create',
+            {'kwargs': deploy_kwargs},
+        )
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
@@ -322,6 +347,18 @@ def create(vm_):
     )
 
     ret.update(response)
+
+    saltcloud.utils.fire_event(
+        'event',
+        'created instance',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     return ret
 
 
@@ -407,27 +444,23 @@ def destroy(name, call=None):
 
         salt-cloud --destroy mymachine
     '''
+    saltcloud.utils.fire_event(
+        'event',
+        'destroying instance',
+        'salt.cloud.destroy',
+        {'name': name},
+    )
+
     ret = {}
     node = show_instance(name, call='action')
     conn = get_conn()
     response = conn.deleteObject(id=node['id'])
+
+    saltcloud.utils.fire_event(
+        'event',
+        'destroyed instance',
+        'salt.cloud.destroy',
+        {'name': name},
+    )
+
     return response
-
-    node = show_instance(name, call='action')
-    if node['state'] == 'STARTED':
-        stop(name, call='action')
-        if not wait_until(name, 'STOPPED'):
-            return {
-                'Error': 'Unable to destroy {0}, command timed out'.format(
-                    name
-                )
-            }
-
-    data = query(action='ve', command=name, method='DELETE')
-
-    if 'error' in data:
-        return data['error']
-
-    return {'Destroyed': '{0} was destroyed.'.format(name)}
-
-
