@@ -137,6 +137,13 @@ def create(vm_):
     # Store what was used to the deploy the VM
     ret['deploy_kwargs'] = deploy_kwargs
 
+    saltcloud.utils.fire_event(
+        'event',
+        'executing deploy script',
+        'salt.cloud.create',
+        {'kwargs': deploy_kwargs},
+    )
+
     deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
     if deployed:
         ret['deployed'] = deployed
