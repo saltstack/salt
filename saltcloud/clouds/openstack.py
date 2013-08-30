@@ -411,7 +411,7 @@ def create(vm_):
                     log.warn(
                         'Public IP address was not ready when we last checked.  Appending public IP address now.'
                     )
-                    public=data.public_ips
+                    public = data.public_ips
                 else:
                     log.warn('{0} is a private IP'.format(private_ip))
                     ignore_ip = ignore_ip_addr(vm_, private_ip)
