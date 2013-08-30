@@ -165,3 +165,11 @@ at the ``debug`` level:
   log_granular_levels:
     'salt': 'warning',
     'salt.modules': 'debug'
+
+
+External Logging Handlers
+-------------------------
+
+Besides the internal logging handlers used by salt, there are some external
+which can be used, see the :doc:`external logging handlers<handlers/index>`
+document.

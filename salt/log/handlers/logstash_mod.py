@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.log.handlers.logstash_mod
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Logstash Logging Handler
+    ========================
 
     This module provides some `Logstash`_ logging handlers.
 

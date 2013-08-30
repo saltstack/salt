@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.log.handlers.sentry_mod
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Sentry logging handler.
+    Sentry Logging Handler
+    ======================
 
     Configuring the python `Sentry`_ client, `Raven`_, should be done under the
     ``sentry_handler`` configuration key.

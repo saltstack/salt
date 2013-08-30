@@ -88,7 +88,7 @@ Running Salt
         salt-master --log-level=debug
 
     For information on salt's logging system please see the :doc:`logging 
-    document</ref/configuration/logging>`.
+    document</ref/configuration/logging/index>`.
 
 
 .. admonition:: Run as an unprivileged (non-root) user
