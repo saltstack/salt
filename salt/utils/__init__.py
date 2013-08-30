@@ -95,8 +95,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-#KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$", re.UNICODE) # python 3
-KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$")
+#KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$', re.UNICODE) # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -672,18 +672,26 @@ def build_whitespace_split_regex(text):
 
 
 def build_whitepace_splited_regex(text):
-    warnings.warn("The build_whitepace_splited_regex function is deprecated,"
-                  " please use build_whitespace_split_regex instead.",
+    warnings.warn('The build_whitepace_splited_regex function is deprecated,'
+                  ' please use build_whitespace_split_regex instead.',
                   DeprecationWarning)
     build_whitespace_split_regex(text)
 
 
 def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
     '''
-    Pass in a function and a dict containing arguments to the function.
+    Build the required arguments and keyword arguments required for the passed
+    function.
 
-    A dict with the keys args and kwargs is returned.
-    If full is not None, we're building arguments for a state call.
+    :param fun: The function to get the argspec from
+    :param data: A dictionary containing the required data to build the
+                 arguments and keyword arguments.
+    :param initial_ret: The initial return data pre-populated as dictionary or
+                        None
+    :param expected_extra_kws: Any expected extra keyword argument names which
+                               should not trigger a :ref:`SaltInvocationError`
+    :returns: A dictionary with the function required arguments and keyword
+              arguments.
     '''
     ret = initial_ret is not None and initial_ret or {}
     ret['args'] = []
@@ -694,7 +702,7 @@ def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
     if aspec.keywords:
         # This state accepts **kwargs
         ret['kwargs'] = {}
-        for key in data:
+        for key in data.copy():
             # Passing kwargs the conflict with args == traceback
             if key in aspec.args:
                 continue
