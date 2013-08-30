@@ -70,15 +70,15 @@ def run(name, **kwargs):
 
     arglen = 0
     deflen = 0
-    if isinstance(aspec[0], list):
-        arglen = len(aspec[0])
-    if isinstance(aspec[3], tuple):
-        deflen = len(aspec[3])
+    if isinstance(aspec.args, list):
+        arglen = len(aspec.args)
+    if isinstance(aspec.defaults, tuple):
+        deflen = len(aspec.defaults)
     # Match up the defaults with the respective args
     for ind in range(arglen - 1, -1, -1):
         minus = arglen - ind
         if deflen - minus > -1:
-            defaults[aspec[0][ind]] = aspec[3][-minus]
+            defaults[aspec.args[ind]] = aspec.defaults[-minus]
     # overwrite passed default kwargs
     for arg in defaults:
         if arg == 'name':
@@ -90,7 +90,7 @@ def run(name, **kwargs):
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
-    for arg in aspec[0]:
+    for arg in aspec.args:
         if arg == 'name':
             rarg = 'm_name'
         elif arg == 'fun':
@@ -112,29 +112,29 @@ def run(name, **kwargs):
         ret['result'] = False
         return ret
 
-    if aspec[1] and aspec[1] in kwargs:
-        varargs = kwargs.pop(aspec[1])
+    if aspec.varargs and aspec.varargs in kwargs:
+        varargs = kwargs.pop(aspec.varargs)
 
         if not isinstance(varargs, list):
             msg = "'{0}' must be a list."
-            ret['comment'] = msg.format(aspec[1])
+            ret['comment'] = msg.format(aspec.varargs)
             ret['result'] = False
             return ret
 
         args.extend(varargs)
 
     nkwargs = {}
-    if aspec[2] and aspec[2] in kwargs:
-        nkwargs = kwargs.pop(aspec[2])
+    if aspec.keywords and aspec.keywords in kwargs:
+        nkwargs = kwargs.pop(aspec.keywords)
 
         if not isinstance(nkwargs, dict):
             msg = "'{0}' must be a dict."
-            ret['comment'] = msg.format(aspec[2])
+            ret['comment'] = msg.format(aspec.keywords)
             ret['result'] = False
             return ret
 
     try:
-        if aspec[2]:
+        if aspec.keywords:
             mret = __salt__[name](*args, **nkwargs)
         else:
             mret = __salt__[name](*args)

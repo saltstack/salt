@@ -494,6 +494,9 @@ def check_or_die(command):
     '''
     Simple convenience function for modules to use for gracefully blowing up
     if a required tool is not available in the system path.
+
+    Lazily import `salt.modules.cmdmod` to avoid any sort of circular
+    dependencies.
     '''
     if command is None:
         raise CommandNotFoundError('\'None\' is not a valid command.')
@@ -579,7 +582,7 @@ def path_join(*parts):
     if not parts:
         return root
 
-    if platform.system().lower() == 'windows':
+    if is_windows():
         if len(root) == 1:
             root += ':'
         root = root.rstrip(os.sep) + os.sep
@@ -713,15 +716,15 @@ def arg_lookup(fun):
     aspec = get_function_argspec(fun)
     arglen = 0
     deflen = 0
-    if isinstance(aspec[0], list):
-        arglen = len(aspec[0])
-    if isinstance(aspec[3], tuple):
-        deflen = len(aspec[3])
+    if isinstance(aspec.args, list):
+        arglen = len(aspec.args)
+    if isinstance(aspec.defaults, tuple):
+        deflen = len(aspec.defaults)
     for ind in range(arglen - 1, 0, -1):
         minus = arglen - ind
         if deflen - minus > -1:
-            ret['kwargs'][aspec[0][ind]] = aspec[3][-minus]
-    for arg in aspec[0]:
+            ret['kwargs'][aspec.args[ind]] = aspec.defaults[-minus]
+    for arg in aspec.args:
         if arg in ret:
             continue
         else:

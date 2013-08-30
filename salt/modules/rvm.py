@@ -53,7 +53,9 @@ def is_installed(runas=None):
     '''
     Check if RVM is installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.is_installed
     '''
@@ -64,7 +66,9 @@ def install(runas=None):
     '''
     Install RVM system wide.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.install
     '''
@@ -95,7 +99,9 @@ def install_ruby(ruby, runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.install_ruby 1.9.3-p385
     '''
@@ -116,7 +122,9 @@ def reinstall_ruby(ruby, runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.reinstall_ruby 1.9.3-p385
     '''
@@ -130,7 +138,9 @@ def list_(runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.list
     '''
@@ -156,7 +166,9 @@ def set_default(ruby, runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.set_default 2.0.0
     '''
@@ -173,7 +185,9 @@ def get(version='stable', runas=None):
     ruby
         The version of ruby to reinstall.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.get
     '''
@@ -195,7 +209,9 @@ def wrapper(ruby_string, wrapper_prefix, runas=None, *binaries):
         given, wrappers for ruby, gem, rake, irb, rdoc, ri and testrb are
         generated.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.wrapper <ruby_string> <wrapper_prefix>
     '''
@@ -220,7 +236,9 @@ def rubygems(ruby, version, runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.rubygems 2.0.0 1.8.24
     '''
@@ -238,7 +256,9 @@ def gemset_create(ruby, gemset, runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.gemset_create 2.0.0 foobar
     '''
@@ -256,7 +276,9 @@ def gemset_list(ruby='default', runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.gemset_list
     '''
@@ -282,7 +304,9 @@ def gemset_delete(ruby, gemset, runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.gemset_delete 2.0.0 foobar
     '''
@@ -302,7 +326,9 @@ def gemset_empty(ruby, gemset, runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.gemset_empty 2.0.0 foobar
     '''
@@ -322,7 +348,9 @@ def gemset_copy(source, destination, runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.gemset_copy foobar bazquo
     '''
@@ -338,7 +366,9 @@ def gemset_list_all(runas=None):
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.gemset_list_all
     '''
@@ -370,7 +400,9 @@ def do(ruby, command, runas=None):  # pylint: disable=C0103
     runas : None
         The user to run rvm as.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rvm.do 2.0.0 <command>
     '''

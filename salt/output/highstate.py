@@ -93,7 +93,7 @@ def output(data):
                 elif __opts__.get('state_output', 'full').lower() == 'changes':
                     # Print terse if no error and no changes, otherwise, be
                     # verbose
-                    if ret['result'] is not False and not ret['changes']:
+                    if ret['result'] and not ret['changes']:
                         msg = _format_terse(tcolor, comps, ret, colors)
                         hstrs.append(msg)
                         continue
@@ -146,8 +146,8 @@ def output(data):
             # Append result counts to end of output
             colorfmt = '{0}{1}{2[ENDC]}'
             rlabel = {True: 'Succeeded', False: 'Failed', None: 'Not Run'}
-            count_max_len = max([len(str(x)) for x in rcounts.values()])
-            label_max_len = max([len(x) for x in rlabel.values()])
+            count_max_len = max([len(str(x)) for x in rcounts.values()] or [0])
+            label_max_len = max([len(x) for x in rlabel.values()] or [0])
             line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
             hstrs.append(
                 colorfmt.format(

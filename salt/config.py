@@ -24,6 +24,7 @@ import salt.loader
 import salt.utils
 import salt.utils.network
 import salt.pillar
+import salt.syspaths as syspaths
 
 log = logging.getLogger(__name__)
 
@@ -120,6 +121,9 @@ VALID_OPTS = {
     'master_roots': dict,
     'gitfs_remotes': list,
     'gitfs_root': str,
+    'hgfs_remotes': list,
+    'hgfs_root': str,
+    'hgfs_branch_method': str,
     'ext_pillar': list,
     'pillar_version': int,
     'pillar_opts': bool,
@@ -160,13 +164,13 @@ DEFAULT_MINION_OPTS = {
     'master_port': '4506',
     'master_finger': '',
     'user': 'root',
-    'root_dir': '/',
-    'pki_dir': '/etc/salt/pki/minion',
+    'root_dir': syspaths.ROOT_DIR,
+    'pki_dir': os.path.join(syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': None,
-    'cachedir': '/var/cache/salt/minion',
+    'cachedir': os.path.join(syspaths.CACHE_DIR, 'minion'),
     'cache_jobs': False,
-    'conf_file': '/etc/salt/minion',
-    'sock_dir': '/var/run/salt/minion',
+    'conf_file': os.path.join(syspaths.CONFIG_DIR, 'minion'),
+    'sock_dir': os.path.join(syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
     'renderer': 'yaml_jinja',
     'failhard': False,
@@ -178,10 +182,10 @@ DEFAULT_MINION_OPTS = {
     'top_file': '',
     'file_client': 'remote',
     'file_roots': {
-        'base': ['/srv/salt'],
+        'base': [syspaths.BASE_FILE_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': ['/srv/pillar'],
+        'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'hash_type': 'md5',
     'external_nodes': '',
@@ -203,7 +207,7 @@ DEFAULT_MINION_OPTS = {
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
-    'log_file': '/var/log/salt/minion',
+    'log_file': os.path.join(syspaths.LOGS_DIR, 'minion'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -215,7 +219,7 @@ DEFAULT_MINION_OPTS = {
     'cython_enable': False,
     'state_verbose': True,
     'state_output': 'full',
-    'state_auto_order': False,
+    'state_auto_order': True,
     'acceptance_wait_time': 10,
     'acceptance_wait_time_max': 0,
     'loop_interval': 1,
@@ -231,7 +235,7 @@ DEFAULT_MINION_OPTS = {
     'recon_default': 100,
     'recon_randomize': False,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
-    'pidfile': '/var/run/salt-minion.pid',
+    'pidfile': os.path.join(syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
     'tcp_keepalive_idle': 300,
@@ -242,27 +246,31 @@ DEFAULT_MINION_OPTS = {
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
     'publish_port': '4505',
+    'pub_hwm': 1,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
-    'sock_dir': '/var/run/salt/master',
+    'sock_dir': os.path.join(syspaths.SOCK_DIR, 'master'),
     'ret_port': '4506',
     'timeout': 5,
     'keep_jobs': 24,
-    'root_dir': '/',
-    'pki_dir': '/etc/salt/pki/master',
-    'cachedir': '/var/cache/salt/master',
+    'root_dir': syspaths.ROOT_DIR,
+    'pki_dir': os.path.join(syspaths.CONFIG_DIR, 'pki', 'master'),
+    'cachedir': os.path.join(syspaths.CACHE_DIR, 'master'),
     'file_roots': {
-        'base': ['/srv/salt'],
+        'base': [syspaths.BASE_FILE_ROOTS_DIR],
     },
     'master_roots': {
-        'base': ['/srv/salt-master'],
+        'base': [syspaths.BASE_MASTER_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': ['/srv/pillar'],
+        'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'gitfs_remotes': [],
     'gitfs_root': '',
+    'hgfs_remotes': [],
+    'hgfs_root': '',
+    'hgfs_branch_method': 'branches',
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': True,
@@ -281,7 +289,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_backend': ['roots'],
     'max_open_files': 100000,
     'hash_type': 'md5',
-    'conf_file': '/etc/salt/master',
+    'conf_file': os.path.join(syspaths.CONFIG_DIR, 'master'),
     'open_mode': False,
     'auto_accept': False,
     'renderer': 'yaml_jinja',
@@ -296,7 +304,7 @@ DEFAULT_MASTER_OPTS = {
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipv6': False,
-    'log_file': '/var/log/salt/master',
+    'log_file': os.path.join(syspaths.LOGS_DIR, 'master'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -304,7 +312,7 @@ DEFAULT_MASTER_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
-    'pidfile': '/var/run/salt-master.pid',
+    'pidfile': os.path.join(syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
     'cluster_masters': [],
     'cluster_mode': 'paranoid',
@@ -313,18 +321,20 @@ DEFAULT_MASTER_OPTS = {
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
-    'state_auto_order': False,
+    'state_auto_order': True,
     'search': '',
     'search_index_interval': 3600,
     'loop_interval': 60,
     'nodegroups': {},
     'cython_enable': False,
-    'key_logfile': '/var/log/salt/key',
+    # XXX: Remove 'key_logfile' support in 0.18.0
+    'key_logfile': os.path.join(syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
-    'win_repo': '/srv/salt/win/repo',
-    'win_repo_mastercachefile': '/srv/salt/win/repo/winrepo.p',
+    'win_repo': os.path.join(syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'win_repo_mastercachefile': os.path.join(syspaths.BASE_FILE_ROOTS_DIR,
+                                             'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
 }
 
@@ -337,7 +347,7 @@ def _validate_file_roots(opts):
     if not isinstance(opts['file_roots'], dict):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
-        return {'base': ['/srv/salt']}
+        return {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
     for env, dirs in list(opts['file_roots'].items()):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             opts['file_roots'][env] = []
@@ -507,12 +517,12 @@ def include_config(include, orig_path, verbose):
             if verbose:
                 log.warn(
                     'Warning parsing configuration file: "include" path/glob '
-                    '"{0}" matches no files'.format(path)
+                    '{0!r} matches no files'.format(path)
                 )
 
         for fn_ in sorted(glob.glob(path)):
             try:
-                log.debug('Including configuration from {0}'.format(fn_))
+                log.debug('Including configuration from {0!r}'.format(fn_))
                 configuration.update(_read_conf_file(fn_))
             except Exception as err:
                 log.warn(
@@ -600,7 +610,7 @@ def syndic_config(master_config_path,
     opts.update(master_opts)
     opts.update(minion_opts)
     syndic_opts = {
-        'root_dir': opts.get('root_dir', '/'),
+        'root_dir': opts.get('root_dir', syspaths.ROOT_DIR),
         'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
         'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
         'id': minion_opts['id'],
@@ -656,8 +666,11 @@ def get_id():
     not an IP address is being used for the ID.
     '''
 
-    log.debug('Guessing ID. The id can be explicitly in set {0}'
-              .format('/etc/salt/minion'))
+    log.debug(
+        'Guessing ID. The id can be explicitly in set {0}'.format(
+            os.path.join(syspaths.CONFIG_DIR, 'minion')
+        )
+    )
 
     # Check /etc/hostname
     try:

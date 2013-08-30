@@ -81,18 +81,19 @@ SUB_EVENT = set([
             'state.sls',
             ])
 
-TAGEND = '\n\n' # long tag delimeter
-TAGPARTER = '.' # name spaced tag delimeter
-SALT = 'salt' #base prefix for all salt. events
+TAGEND = '\n\n'  # long tag delimeter
+TAGPARTER = '.'  # name spaced tag delimeter
+SALT = 'salt'  # base prefix for all salt. events
 # dict map of namespaced base tag prefixes for salt events
-TAGS = \
-{
-    'auth': 'auth', # prefix for all .auth events
-    'job': 'job', # prefix for all .job events (minion jobs)
-    'key': 'key', # prefix for all .key events
-    'minion': 'minion', # prefix for all .minion events (minion sourced events)
-    'run': 'run', #prefis for all .run events (salt runners)
+TAGS = {
+    'auth': 'auth',  # prefix for all .auth events
+    'job': 'job',  # prefix for all .job events (minion jobs)
+    'key': 'key',  # prefix for all .key events
+    'minion': 'minion',  # prefix for all .minion events (minion sourced events)
+    'syndic': 'syndic',  # prefix for all .syndic events (syndic minion sourced events)
+    'run': 'run',  # prefix for all .run events (salt runners)
 }
+
 
 def tagify(suffix='', prefix='', base=SALT):
     '''
@@ -107,11 +108,12 @@ def tagify(suffix='', prefix='', base=SALT):
 
     '''
     parts = [base, TAGS.get(prefix, prefix)]
-    if hasattr(suffix, 'append'): # list so extend parts
+    if hasattr(suffix, 'append'):  # list so extend parts
         parts.extend(suffix)
-    else: # string so append
+    else:  # string so append
         parts.append(suffix)
     return (TAGPARTER.join([part for part in parts if part]))
+
 
 class SaltEvent(object):
     '''
@@ -215,15 +217,15 @@ class SaltEvent(object):
         socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
         if self.sub in socks and socks[self.sub] == zmq.POLLIN:
             raw = self.sub.recv()
-            if ord(raw[20]) >= 0x80: #old style
+            if ord(raw[20]) >= 0x80:  # old style
                 mtag = raw[0:20].rstrip('|')
                 mdata = raw[20:]
-            else: #new style
-                mtag, sep, mdata = raw.partition(TAGEND) #split tag from data
+            else:  # new style
+                mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
             data = self.serial.loads(mdata)
 
-            if not mtag.startswith(tag): #tag not match
+            if not mtag.startswith(tag):  # tag not match
                 return None
 
             if full:
@@ -250,19 +252,19 @@ class SaltEvent(object):
 
         Supports new style long tags.
         '''
-        if not str(tag): #no empty tags allowed
+        if not str(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
-        if not isinstance(data, MutableMapping): #data must be dict
+        if not isinstance(data, MutableMapping):  # data must be dict
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
 
         if not self.cpush:
             self.connect_pull()
 
         tagend = ""
-        if len(tag) <= 20: #old style compatible tag
-            tag = '{0:|<20}'.format(tag) #pad with pipes '|' to 20 character length
-        else: #new style longer than 20 chars
+        if len(tag) <= 20:  # old style compatible tag
+            tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
+        else:  # new style longer than 20 chars
             tagend = TAGEND
 
         event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
@@ -305,20 +307,22 @@ class SaltEvent(object):
                         if data.get('result') is False:
                             self.fire_event(
                                     data,
-                                    '{0}.{1}'.format(tags[0], tags[-1])) # old dup event
+                                    '{0}.{1}'.format(tags[0], tags[-1]))  # old dup event
+                            data['jid'] = load['jid']
+                            data['id'] = load['id']
+                            data['success'] = False
+                            data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
+                            data['fun'] = load['fun']
                             self.fire_event(
                                 data,
                                 tagify([load['jid'],
-                                        'ret',
+                                        'sub',
                                         load['id'],
                                         'error',
-                                        tags[0],
-                                        tags[-1]],
-                                    'job'))
+                                        load['fun']],
+                                       'job'))
                 except Exception:
                     pass
-            else:
-                self.fire_event(load, load['fun'])
 
     def __del__(self):
         self.destroy()

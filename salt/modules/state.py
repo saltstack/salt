@@ -216,13 +216,14 @@ def highstate(test=None, **kwargs):
 
     # Not 100% if this should be fatal or not,
     # but I'm guessing it likely should not be.
+    cumask = os.umask(191)
     try:
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.highstate" cache file {0}'
         log.error(msg.format(cache_file))
-
+    os.umask(cumask)
     _set_retcode(ret)
     return ret
 
@@ -295,12 +296,14 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
+    cumask = os.umask(191)
     try:
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
+    os.umask(cumask)
     _set_retcode(ret)
     with salt.utils.fopen(cfn, 'w+') as fp_:
         try:
@@ -391,8 +394,6 @@ def show_lowstate():
         ret = st_.compile_low_chunks()
     finally:
         st_.pop_active()
-    if isinstance(ret, list):
-        __context__['retcode'] = 1
     return ret
 
 
@@ -442,20 +443,14 @@ def show_top():
         __context__['retcode'] = 1
         return conflict
     st_ = salt.state.HighState(__opts__)
-    ret = {}
-    static = st_.get_top()
-    ext = st_.client.ext_nodes()
-    for top_ in [static, ext]:
-        for env in top_:
-            if env not in ret:
-                ret[env] = top_[env]
-            else:
-                for match in top_[env]:
-                    if match not in ret[env]:
-                        ret[env][match] = top_[env][match]
-                    else:
-                        ret[env][match].extend(top_[env][match])
-    return ret
+    errors = []
+    top = st_.get_top()
+    errors += st_.verify_tops(top)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    matches = st_.top_matches(top)
+    return matches
 
 # Just commenting out, someday I will get this working
 #def show_masterstate():

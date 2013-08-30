@@ -11,7 +11,7 @@ import shutil
 import copy
 
 # Import salt libs
-import salt.ssh.shell
+import salt.client.ssh.shell
 import salt.utils
 import salt.utils.thin
 import salt.roster
@@ -40,7 +40,7 @@ class SSH(object):
                     )
                 )
         if not os.path.isfile(priv):
-            salt.ssh.shell.gen_key(priv)
+            salt.client.ssh.shell.gen_key(priv)
         self.defaults = {
                 'user': self.opts.get('ssh_user', 'root'),
                 'port': self.opts.get('ssh_port', '22'),
@@ -203,7 +203,7 @@ class Single(object):
         self.fun, self.arg = self.__arg_comps()
         self.id = id_
         self.extra = kwargs
-        self.shell = salt.ssh.shell.Shell(
+        self.shell = salt.client.ssh.shell.Shell(
                 host,
                 user,
                 port,

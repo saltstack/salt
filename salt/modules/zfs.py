@@ -12,7 +12,7 @@ import sys
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-import salt.modules.cmd as salt_cmd
+import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
 
@@ -42,8 +42,8 @@ def _available_commands():
     # Note that we append '|| :' as a unix hack to force return code to be 0.
     res = salt_cmd.run_all('{0} help || :'.format(zfs_path))
 
-    # This bit is dependent on specific output from `zfs help` - any major
-    # changes in how this works upstream will require a change.
+    # This bit is dependent on specific output from `zfs help` - any major changes
+    # in how this works upstream will require a change.
     for line in res['stderr'].splitlines():
         if re.match('	[a-zA-Z]', line):
             cmds = line.split(' ')[0].split('|')
@@ -61,7 +61,7 @@ def _exit_status(retcode):
     ret = {0: 'Successful completion.',
            1: 'An error occurred.',
            2: 'Usage error.'
-           }[retcode]
+          }[retcode]
     return ret
 
 
@@ -73,12 +73,10 @@ def __virtual__():
         return 'zfs'
     return False
 
-
 def _add_doc(func, doc, prefix='\n\n    '):
     if not func.__doc__:
         func.__doc__ = ''
     func.__doc__ += '{0}{1}'.format(prefix, doc)
-
 
 def _make_function(cmd_name, doc):
     '''

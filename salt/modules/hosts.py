@@ -215,10 +215,11 @@ def add_host(ip, alias):
 def _write_hosts(hosts):
     lines = []
     for ip, aliases in hosts.iteritems():
-        for alias in aliases:
-            lines.append(
-                '{0}\t\t{1}'.format(ip, alias)
+        line = '{0}\t\t{1}'.format(
+            ip,
+            '\t\t'.join(aliases)
             )
+        lines.append(line)
 
     hfn = __get_hosts_filename()
     with salt.utils.fopen(hfn, 'w+') as ofile:

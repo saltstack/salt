@@ -11,6 +11,7 @@ import logging
 
 # Import salt libs
 import salt.payload
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ class CkMinions(object):
 
     def _check_grain_minions(self, expr):
         '''
-        Return the minions found by looking via a list
+        Return the minions found by looking via grains
         '''
         minions = set(
             os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
@@ -103,9 +104,11 @@ class CkMinions(object):
 
     def _check_grain_pcre_minions(self, expr):
         '''
-        Return the minions found by looking via a list
+        Return the minions found by looking via grains with PCRE
         '''
-        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
@@ -122,6 +125,174 @@ class CkMinions(object):
                 if not salt.utils.subdict_match(grains, expr,
                                                 delim=':', regex_match=True):
                     minions.remove(id_)
+        return list(minions)
+
+    def _check_pillar_minions(self, expr):
+        '''
+        Return the minions found by looking via pillar
+        '''
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                if id_ not in minions:
+                    continue
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                pillar = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('pillar')
+                if not salt.utils.subdict_match(pillar, expr):
+                    minions.remove(id_)
+        return list(minions)
+
+    def _check_ipcidr_minions(self, expr):
+        '''
+        Return the minions found by looking via ipcidr
+        '''
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                if id_ not in minions:
+                    continue
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                grains = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('grains')
+
+                num_parts = len(expr.split('/'))
+                if num_parts > 2:
+                    # Target is not valid CIDR, no minions match
+                    return []
+                elif num_parts == 2:
+                    # Target is CIDR
+                    if not salt.utils.network.in_subnet(
+                            expr,
+                            addrs=grains.get('ipv4', [])):
+                        minions.remove(id_)
+                else:
+                    # Target is an IPv4 address
+                    import socket
+                    try:
+                        socket.inet_aton(expr)
+                    except socket.error:
+                        # Not a valid IPv4 address, no minions match
+                        return []
+                    else:
+                        if not expr in grains.get('ipv4', []):
+                            minions.remove(id_)
+        return list(minions)
+
+    def _check_compound_minions(self, expr):
+        '''
+        Return the minions found by looking via compound matcher
+        '''
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
+        if self.opts.get('minion_data_cache', False):
+            ref = {'G': self._check_grain_minions,
+                   'P': self._check_grain_pcre_minions,
+                   'I': self._check_pillar_minions,
+                   'L': self._check_list_minions,
+                   'S': self._check_ipcidr_minions,
+                   'E': self._check_pcre_minions,
+                   'R': self._all_minions}
+            results = []
+            unmatched = []
+            opers = ['and', 'or', 'not', '(', ')']
+            tokens = expr.split()
+            for match in tokens:
+                # Try to match tokens from the compound target, first by using
+                # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
+                if '@' in match and match[1] == '@':
+                    comps = match.split('@')
+                    matcher = ref.get(comps[0])
+                    if not matcher:
+                        # If an unknown matcher is called at any time, fail out
+                        return []
+                    if unmatched and unmatched[-1] == '-':
+                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(')')
+                        unmatched.pop()
+                    else:
+                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                elif match in opers:
+                    # We didn't match a target, so append a boolean operator or
+                    # subexpression
+                    if results:
+                        if match == 'not':
+                            if results[-1] == '&':
+                                pass
+                            elif results[-1] == '|':
+                                pass
+                            else:
+                                results.append('&')
+                            results.append('(')
+                            results.append(str(set(minions)))
+                            results.append('-')
+                            unmatched.append('-')
+                        elif match == 'and':
+                            results.append('&')
+                        elif match == 'or':
+                            results.append('|')
+                        elif match == '(':
+                            results.append(match)
+                            unmatched.append(match)
+                        elif match == ')':
+                            if not unmatched or unmatched[-1] != '(':
+                                log.error('Invalid compound expr (unexpected '
+                                          'right parenthesis): {0}'
+                                          .format(expr))
+                                return []
+                            results.append(match)
+                            unmatched.pop()
+                            if unmatched and unmatched[-1] == '-':
+                                results.append(')')
+                                unmatched.pop()
+                        else:  # Won't get here, unless oper is added
+                            log.error('Unhandled oper in compound expr: {0}'
+                                      .format(expr))
+                            return []
+                    else:
+                        # seq start with oper, fail
+                        if match == '(':
+                            results.append(match)
+                            unmatched.append(match)
+                        else:
+                            return []
+                else:
+                    # The match is not explicitly defined, evaluate as a glob
+                    if unmatched and unmatched[-1] == '-':
+                        results.append(
+                                str(set(self._check_glob_minions(match))))
+                        results.append(')')
+                        unmatched.pop()
+                    else:
+                        results.append(
+                                str(set(self._check_glob_minions(match))))
+            for token in unmatched:
+                results.append(')')
+            results = ' '.join(results)
+            log.debug('Evaluating final compound matching expr: {0}'
+                      .format(results))
+            try:
+                return list(eval(results))
+            except Exception:
+                log.error('Invalid compound target: {0}'.format(expr))
+                return []
         return list(minions)
 
     def _all_minions(self, expr=None):
@@ -143,13 +314,14 @@ class CkMinions(object):
                        'list': self._check_list_minions,
                        'grain': self._check_grain_minions,
                        'grain_pcre': self._check_grain_pcre_minions,
-                       'exsel': self._all_minions,
-                       'pillar': self._all_minions,
-                       'compound': self._all_minions,
-                      }[expr_form](expr)
+                       'pillar': self._check_pillar_minions,
+                       'compound': self._check_compound_minions,
+                       'ipcidr': self._check_ipcidr_minions,
+                       }[expr_form](expr)
         except Exception:
-            log.exception(('Failed matching available minions with {0} pattern: {1}'
-                           ).format(expr_form, expr))
+            log.exception(
+                    'Failed matching available minions with {0} pattern: {1}'
+                    .format(expr_form, expr))
             minions = expr
         return minions
 

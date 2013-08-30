@@ -9,6 +9,7 @@ import urllib
 
 # Import salt libs
 import salt.utils
+import salt.syspaths as syspaths
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
@@ -43,7 +44,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.bindpw': '',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
-            'virt.images': '/srv/salt-images',
+            'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
             'virt.tunnel': False,
             }
 

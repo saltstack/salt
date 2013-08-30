@@ -49,7 +49,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         except AssertionError as err:
             try:
                 self.assertInSaltComment(
-                    ret, 'Unable to receive remote host key'
+                    'Unable to receive remote host key', ret
                 )
                 self.skipTest('Unable to receive remote host key')
             except AssertionError:

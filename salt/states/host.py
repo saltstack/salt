@@ -22,7 +22,7 @@ Or using the "names:" directive, you can put several names for the same IP.
           - server1
           - florida
 
-NOTE: changing the IP or name(s) in the present() function does not cause an
+NOTE: changing the name(s) in the present() function does not cause an
 update to remove the old entry.
 '''
 

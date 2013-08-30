@@ -89,6 +89,7 @@ def install(pkgs=None,
             requirements=None,
             env=None,
             bin_env=None,
+            use_wheel=False,
             log=None,
             proxy=None,
             timeout=None,
@@ -137,6 +138,8 @@ def install(pkgs=None,
         (/home/code/path/to/virtualenv/)
     env
         deprecated, use bin_env now
+    use_wheel
+        Prefer wheel archives (requires pip>=1.4)
     log
         Log file where a complete (maximum verbosity) record will be kept
     proxy
@@ -218,14 +221,13 @@ def install(pkgs=None,
         Include pre-releases in the available versions
 
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.install <package name>,<package2 name>
-
         salt '*' pip.install requirements=/path/to/requirements.txt
-
         salt '*' pip.install <package name> bin_env=/path/to/virtualenv
-
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
 
     Complicated CLI example::
@@ -301,6 +303,19 @@ def install(pkgs=None,
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
             cmd.append('--requirement={0!r}'.format(treq or requirement))
+
+    if use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            log.error(
+                ('The --use-wheel option is only supported in pip {0} and '
+                 'newer. The version of pip detected is {1}. This option '
+                 'will be ignored.'.format(min_version, cur_version))
+            )
+        else:
+            cmd.append('--use-wheel')
 
     if log:
         try:
@@ -441,9 +456,10 @@ def install(pkgs=None,
 
         # It's possible we replaced version-range commas with semicolons so
         # they would survive the previous line (in the pip.installed state).
-        # Put the commas back in
+        # Put the commas back in while making sure the names are contained in
+        # quotes, this allows for proper version spec passing salt>=0.17.0
         cmd.extend(
-            [p.replace(';', ',') for p in pkgs]
+            ['{0!r}'.format(p.replace(';', ',')) for p in pkgs]
         )
 
     if editable:
@@ -527,14 +543,13 @@ def uninstall(pkgs=None,
     cwd
         Current working directory to run pip from
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.uninstall <package name>,<package2 name>
-
         salt '*' pip.uninstall requirements=/path/to/requirements.txt
-
         salt '*' pip.uninstall <package name> bin_env=/path/to/virtualenv
-
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
 
     '''
@@ -658,7 +673,9 @@ def freeze(bin_env=None,
     cwd
         Current working directory to run pip from
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
@@ -702,7 +719,9 @@ def list_(prefix=None,
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.list salt
     '''
@@ -756,3 +775,25 @@ def list_(prefix=None,
         else:
             packages[name] = version
     return packages
+
+
+def version(bin_env=None):
+    '''
+    .. versionadded:: 0.17.0
+
+    Returns the version of pip. Use ``bin_env`` to specify the path to a
+    virtualenv and get the version of pip in that virtualenv.
+
+    If unable to detect the pip version, returns ``None``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.version
+    '''
+    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
+    try:
+        return re.match(r'^pip (\S+)', output).group(1)
+    except AttributeError:
+        return None

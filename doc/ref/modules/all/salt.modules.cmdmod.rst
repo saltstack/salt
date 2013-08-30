@@ -1,1 +1,6 @@
-Please see :doc:`salt.modules.cmd`.
+===================
+salt.modules.cmdmod
+===================
+
+.. automodule:: salt.modules.cmdmod
+    :members:

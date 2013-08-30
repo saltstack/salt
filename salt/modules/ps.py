@@ -24,9 +24,12 @@ def __virtual__():
     # The python 2.6 version of psutil lacks several functions
     # used in this salt module so instead of spaghetti  string
     # code to try to bring sanity to everything, disable it.
-    if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+    try:
+        if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+            return False
+    except Exception:
         return False
-    return "ps"
+    return 'ps'
 
 
 def top(num_processes=5, interval=3):
@@ -35,7 +38,9 @@ def top(num_processes=5, interval=3):
     num_processes = return the top N CPU consuming processes
     interval = the number of seconds to sample CPU usage over
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' ps.top
 
@@ -81,11 +86,143 @@ def get_pid_list():
     '''
     Return a list of process ids (PIDs) for all running processes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.get_pid_list
     '''
     return psutil.get_pid_list()
+
+
+def kill_pid(pid, signal=15):
+    '''
+    Kill a proccess by PID.
+
+    .. code-block:: bash
+
+        salt 'minion' ps.kill_pid pid [ signal=signal_number ]
+
+    pid
+        PID of process to kill.
+
+    signal
+        Signal to send to the process. See manpage entry for kill
+        for possible values. Default: 15 (SIGTERM).
+
+    **Example:**
+
+    Send SIGKILL to process with PID 2000:
+    
+    .. code-block:: bash
+
+        salt 'minion' ps.kill_pid 2000 signal=9
+    '''
+    try:
+        psutil.Process(pid).send_signal(signal)
+        return True
+    except psutil.NoSuchProcess:
+        return False
+
+
+def pkill(pattern, user=None, signal=15, full=False):
+    '''
+    Kill processes matching a pattern.
+
+    .. code-block:: bash
+
+        salt '*' ps.pkill pattern [ user=username ] [ signal=signal_number ] [ full=(true|false) ]
+
+    pattern
+        Pattern to search for in the process list.
+
+    user
+        Limit matches to the given username. Default: All users.
+
+    signal
+        Signal to send to the process(es). See manpage entry for kill
+        for possible values. Default: 15 (SIGTERM).
+
+    full
+        A boolean value indicating whether only the name of the command or
+        the full command line should be matched against the pattern.
+
+    **Examples:**
+
+    Send SIGHUP to all httpd processes on all 'www' minions:
+
+    .. code-block:: bash
+
+        salt 'www.*' httpd signal=1
+
+    Send SIGKILL to all bash processes owned by user 'tom':
+
+    .. code-block:: bash
+
+        salt '*' bash signal=9 user=tom
+    '''
+    
+    killed = []
+    for proc in psutil.process_iter():
+        name_match = pattern in ' '.join(proc.cmdline) if full \
+               else pattern in proc.name
+        user_match = True if user is None else user == proc.username
+        if name_match and user_match: 
+            try: 
+                proc.send_signal(signal)
+                killed.append(proc.pid)
+            except psutil.NoSuchProcess:
+                pass
+    if not killed:
+        return None
+    else:
+        return {'killed': killed}
+
+
+def pgrep(pattern, user=None, full=False):
+    '''
+    Return the pids for processes matching a pattern.
+
+    If full is true, the full command line is searched for a match,
+    otherwise only the name of the command is searched.
+    
+    .. code-block: bash
+        
+        salt '*' ps.pgrep pattern [ user=username ] [ full=(true|false) ]
+
+    pattern
+        Pattern to search for in the process list.
+
+    user
+        Limit matches to the given username. Default: All users.
+
+    full
+        A boolean value indicating whether only the name of the command or
+        the full command line should be matched against the pattern.
+
+    **Examples:**
+
+    Find all httpd processes on all 'www' minions:
+
+    .. code-block:: bash
+
+        salt 'www.*' httpd
+
+    Find all bash processes owned by user 'tom':
+
+    .. code-block:: bash
+
+        salt '*' bash user=tom
+    '''
+
+    procs = []
+    for proc in psutil.process_iter():
+        name_match = pattern in ' '.join(proc.cmdline) if full \
+               else pattern in proc.name
+        user_match = True if user is None else user == proc.username
+        if name_match and user_match: 
+            procs.append(proc.pid)
+    return procs or None
 
 
 def cpu_percent(interval=0.1, per_cpu=False):
@@ -98,7 +235,9 @@ def cpu_percent(interval=0.1, per_cpu=False):
         if True return an array of CPU percent busy for each CPU, otherwise
         aggregate all percents into one number
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.cpu_percent
     '''
@@ -118,7 +257,9 @@ def cpu_times(per_cpu=False):
         if True return an array of percents for each CPU, otherwise aggregate
         all percents into one number
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.cpu_times
     '''
@@ -133,7 +274,9 @@ def physical_memory_usage():
     '''
     Return a dict that describes free and available physical memory.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' ps.physical_memory_usage
     '''
@@ -145,7 +288,9 @@ def virtual_memory_usage():
     Return a dict that describes free and available memory, both physical
     and virtual.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.virtual_memory_usage
     '''
@@ -156,7 +301,9 @@ def cached_physical_memory():
     '''
     Return the amount cached memory.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.cached_physical_memory
     '''
@@ -167,7 +314,9 @@ def physical_memory_buffers():
     '''
     Return the amount of physical memory buffers.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.physical_memory_buffers
     '''
@@ -183,7 +332,9 @@ def disk_partitions(all=False):
         if set to False, only return local, physical partitions (hard disk,
         USB, CD/DVD partitions).  If True, return all filesystems.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.disk_partitions
     '''
@@ -196,7 +347,9 @@ def disk_usage(path):
     Given a path, return a dict listing the total available space as well as
     the free space, and used space.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.disk_usage /home
     '''
@@ -208,7 +361,9 @@ def disk_partition_usage(all=False):
     Return a list of disk partitions plus the mount point, filesystem and usage
     statistics.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.disk_partition_usage
     '''
@@ -222,7 +377,9 @@ def total_physical_memory():
     '''
     Return the total number of bytes of physical memory.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.total_physical_memory
     '''
@@ -233,7 +390,9 @@ def num_cpus():
     '''
     Return the number of CPUs.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.num_cpus
     '''
@@ -244,7 +403,9 @@ def boot_time():
     '''
     Return the boot time in number of seconds since the epoch began.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.boot_time
     '''
@@ -255,7 +416,9 @@ def network_io_counters():
     '''
     Return network I/O statisitics.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.network_io_counters
     '''
@@ -266,7 +429,9 @@ def disk_io_counters():
     '''
     Return disk I/O statisitics.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ps.disk_io_counters
     '''

@@ -41,6 +41,7 @@ import salt.utils
 import salt.utils.verify
 import salt.utils.event
 import salt.utils.minions
+import salt.syspaths as syspaths
 from salt.exceptions import SaltInvocationError
 from salt.exceptions import EauthAuthenticationError
 
@@ -77,7 +78,9 @@ class LocalClient(object):
     running as (unless :conf_master:`external_auth` is configured and
     authentication credentials are included in the execution.
     '''
-    def __init__(self, c_path='/etc/salt/master', mopts=None):
+    def __init__(self,
+                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
+                 mopts=None):
         if mopts:
             self.opts = mopts
         else:
@@ -670,7 +673,8 @@ class LocalClient(object):
                     timeout += inc_timeout
                     continue
                 if verbose:
-                    if tgt_type in ('glob', 'pcre', 'list'):
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found.intersection(minions)) >= len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
@@ -947,7 +951,8 @@ class LocalClient(object):
                 continue
             if int(time.time()) > start + timeout:
                 if verbose:
-                    if tgt_type in ('glob', 'pcre', 'list'):
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
@@ -1047,7 +1052,8 @@ class LocalClient(object):
                     timeout += inc_timeout
                     continue
                 if verbose:
-                    if tgt_type in ('glob', 'pcre', 'list'):
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
@@ -1281,7 +1287,7 @@ class Caller(object):
         # Or call objects directly
         caller.sminion.functions['cmd.run']('ls -l')
     '''
-    def __init__(self, c_path='/etc/salt/minion'):
+    def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion')):
         self.opts = salt.config.minion_config(c_path)
         self.sminion = salt.minion.SMinion(self.opts)
 

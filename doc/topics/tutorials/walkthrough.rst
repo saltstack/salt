@@ -314,10 +314,10 @@ of Salt.
 Helpful Functions to Know
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :doc:`cmd </ref/modules/all/salt.modules.cmd>` module contains
+The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module contains
 functions to shell out on minions, such as :mod:`cmd.run
-<salt.modules.cmd.run>` and :mod:`cmd.run_all
-<salt.modules.cmd.run_all>`:
+<salt.modules.cmdmod.run>` and :mod:`cmd.run_all
+<salt.modules.cmdmod.run_all>`:
 
 .. code-block:: bash
 
@@ -330,6 +330,12 @@ yum on Red Hat based systems, apt on Debian systems, etc.:
 .. code-block:: bash
 
     salt '*' pkg.install vim
+
+.. note::
+    Some custom Linux spins and derivatives of other distros are not properly
+    detected by Salt. If the above command returns an error message saying that
+    ``pkg.install`` is not available, then you may need to override the pkg
+    provider. This process is explained :doc:`here </ref/states/providers>`.
 
 The :mod:`network.interfaces <salt.modules.network.interfaces>` function will
 list all interfaces on a minion, along with their IP addresses, netmasks, MAC

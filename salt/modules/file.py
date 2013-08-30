@@ -56,7 +56,8 @@ def __clean_tmp(sfn):
     '''
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any env)
-        all_roots = itertools.chain.from_iterable(__opts__['file_roots'].itervalues())
+        all_roots = itertools.chain.from_iterable(
+                __opts__['file_roots'].itervalues())
         in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
         if os.path.exists(sfn) and not in_roots:
@@ -143,7 +144,7 @@ def group_to_gid(group):
         return ''
 
 
-def get_gid(path):
+def get_gid(path, follow_symlinks=True):
     '''
     Return the id of the group that owns a given file
 
@@ -152,13 +153,21 @@ def get_gid(path):
     .. code-block:: bash
 
         salt '*' file.get_gid /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
     if not os.path.exists(path):
+        try:
+            # Broken symlinks will return false, but still have a uid and gid
+            return os.lstat(path).st_gid
+        except OSError:
+            pass
         return -1
-    return os.stat(path).st_gid
+    return os.stat(path).st_gid if follow_symlinks else os.lstat(path).st_gid
 
 
-def get_group(path):
+def get_group(path, follow_symlinks=True):
     '''
     Return the group that owns a given file
 
@@ -167,8 +176,11 @@ def get_group(path):
     .. code-block:: bash
 
         salt '*' file.get_group /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
-    gid = get_gid(path)
+    gid = get_gid(path, follow_symlinks)
     if gid == -1:
         return False
     return gid_to_group(gid)
@@ -208,7 +220,7 @@ def user_to_uid(user):
         return ''
 
 
-def get_uid(path):
+def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
@@ -217,13 +229,21 @@ def get_uid(path):
     .. code-block:: bash
 
         salt '*' file.get_uid /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
     if not os.path.exists(path):
-        return False
-    return os.stat(path).st_uid
+        try:
+            # Broken symlinks will return false, but still have a uid and gid
+            return os.lstat(path).st_uid
+        except OSError:
+            pass
+        return -1
+    return os.stat(path).st_uid if follow_symlinks else os.lstat(path).st_uid
 
 
-def get_user(path):
+def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
 
@@ -232,8 +252,11 @@ def get_user(path):
     .. code-block:: bash
 
         salt '*' file.get_user /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
-    uid = get_uid(path)
+    uid = get_uid(path, follow_symlinks)
     if uid == -1:
         return False
     return uid_to_user(uid)
@@ -303,6 +326,11 @@ def chown(path, user, group):
         else:
             gid = -1
     if not os.path.exists(path):
+        try:
+            # Broken symlinks will return false, but still need to be chowned
+            return os.lchown(path, uid, gid)
+        except OSError:
+            pass
         err += 'File not found'
     if err:
         return err
@@ -518,6 +546,8 @@ def sed(path,
         flags='g',
         escape_all=False):
     '''
+    .. versionadded:: 0.9.5
+
     Make a simple edit to a file
 
     Equivalent to::
@@ -550,8 +580,6 @@ def sed(path,
     .. code-block:: bash
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
@@ -629,6 +657,8 @@ def psed(path,
          escape_all=False,
          multi=False):
     '''
+    .. versionadded:: 0.9.5
+
     Make a simple edit to a file (pure Python version)
 
     Equivalent to::
@@ -648,14 +678,16 @@ def psed(path,
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
     flags : ``gMS``
-        Flags to modify the search. Valid values are :
-            ``g``: Replace all occurrences of the pattern, not just the first.
-            ``I``: Ignore case.
-            ``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S`` dependent on the locale.
-            ``M``: Treat multiple lines as a single line.
-            ``S``: Make `.` match all characters, including newlines.
-            ``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``, ``\\s`` and ``\\S`` dependent on Unicode.
-            ``X``: Verbose (whitespace is ignored).
+        Flags to modify the search. Valid values are:
+          - ``g``: Replace all occurrences of the pattern, not just the first.
+          - ``I``: Ignore case.
+          - ``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S``
+            dependent on the locale.
+          - ``M``: Treat multiple lines as a single line.
+          - ``S``: Make `.` match all characters, including newlines.
+          - ``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``,
+            ``\\s`` and ``\\S`` dependent on Unicode.
+          - ``X``: Verbose (whitespace is ignored).
     multi: ``False``
         If True, treat the entire file as a single line
 
@@ -667,8 +699,6 @@ def psed(path,
     .. code-block:: bash
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
@@ -738,6 +768,8 @@ def uncomment(path,
               char='#',
               backup='.bak'):
     '''
+    .. versionadded:: 0.9.5
+
     Uncomment specified commented lines in a file
 
     path
@@ -759,8 +791,6 @@ def uncomment(path,
     .. code-block:: bash
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.uncomment()
 
@@ -776,6 +806,8 @@ def comment(path,
             char='#',
             backup='.bak'):
     '''
+    .. versionadded:: 0.9.5
+
     Comment out specified lines in a file
 
     path
@@ -802,8 +834,6 @@ def comment(path,
     .. code-block:: bash
 
         salt '*' file.comment /etc/modules pcspkr
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.comment()
 
@@ -820,6 +850,8 @@ def comment(path,
 
 def patch(originalfile, patchfile, options='', dry_run=False):
     '''
+    .. versionadded:: 0.10.4
+
     Apply a patch to a file
 
     Equivalent to::
@@ -838,8 +870,6 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     .. code-block:: bash
 
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
-
-    .. versionadded:: 0.10.4
     '''
     if dry_run:
         if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
@@ -855,20 +885,20 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
 def contains(path, text):
     '''
-    Return True if the file at ``path`` contains ``text``
+    .. versionadded:: 0.9.5
+
+    Return ``True`` if the file at ``path`` contains ``text``
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
-
-    .. versionadded:: 0.9.5
     '''
     if not os.path.exists(path):
         return False
 
-    stripped_text = text.strip()
+    stripped_text = str(text).strip()
     try:
         with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
@@ -960,6 +990,8 @@ def contains_glob(path, glob):
 
 def append(path, *args):
     '''
+    .. versionadded:: 0.9.5
+
     Append text to the end of a file
 
     CLI Example:
@@ -969,8 +1001,6 @@ def append(path, *args):
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.append()
 
@@ -983,9 +1013,10 @@ def append(path, *args):
 
 def touch(name, atime=None, mtime=None):
     '''
-    Just like 'nix's "touch" command, create a file if it
-    doesn't exist or simply update the atime and mtime if
-    it already does.
+    .. versionadded:: 0.9.5
+
+    Just like *nix's ``touch`` command, create a file if it doesn't exist or
+    simply update the atime and mtime if it already does.
 
     atime:
         Access time in Unix epoch time
@@ -997,8 +1028,6 @@ def touch(name, atime=None, mtime=None):
     .. code-block:: bash
 
         salt '*' file.touch /var/log/emptyfile
-
-    .. versionadded:: 0.9.5
     '''
     if atime and atime.isdigit():
         atime = int(atime)
@@ -1064,7 +1093,8 @@ def rename(src, dst):
         os.rename(src, dst)
         return True
     except OSError:
-        raise CommandExecutionError('Could not rename "{0}" to "{1}"'.format(src, dst))
+        raise CommandExecutionError('Could not rename "{0}" to "{1}"'
+                                    .format(src, dst))
     return False
 
 
@@ -1085,7 +1115,8 @@ def copy(src, dst):
         shutil.copyfile(src, dst)
         return True
     except OSError:
-        raise CommandExecutionError('Could not copy "{0}" to "{1}"'.format(src, dst))
+        raise CommandExecutionError('Could not copy "{0}" to "{1}"'
+                                    .format(src, dst))
     return False
 
 
@@ -1564,7 +1595,8 @@ def check_managed(
     if changes:
         log.info(changes)
         comments = ['The following values are set to be changed:\n']
-        comments.extend('{0}: {1}\n'.format(key, val) for key, val in changes.iteritems())
+        comments.extend('{0}: {1}\n'.format(key, val)
+                        for key, val in changes.iteritems())
         return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 

@@ -17,7 +17,9 @@ class TimedProc(object):
             # Translate a newline submitted as '\n' on the CLI to an actual
             # newline character.
             self.stdin = self.stdin.replace('\\n', '\n')
-        self.process = subprocess.Popen(args, stdin=subprocess.PIPE, **kwargs)
+        self.with_communicate = kwargs.pop('with_communicate', True)
+
+        self.process = subprocess.Popen(args, **kwargs)
 
     def wait(self, timeout=None):
         '''
@@ -25,8 +27,11 @@ class TimedProc(object):
         If timeout is reached, throw TimedProcTimeoutError
         '''
         def receive():
-            (self.stdout, self.stderr) = \
-                self.process.communicate(input=self.stdin)
+            if self.with_communicate:
+                (self.stdout, self.stderr) = self.process.communicate(input=self.stdin)
+            else:
+                self.process.wait()
+                (self.stdout, self.stderr) = (None, None)
 
         if timeout:
             if not isinstance(timeout, (int, float)):

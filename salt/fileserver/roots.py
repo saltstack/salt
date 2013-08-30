@@ -75,11 +75,20 @@ def serve_file(load, fnd):
         ret['data'] = data
     return ret
 
+
 def update():
     '''
     When we are asked to update (regular interval) lets reap the cache
     '''
-    salt.fileserver.reap_fileserver_cache_dir(os.path.join(__opts__['cachedir'], 'roots/hash'), find_file)
+    try:
+        salt.fileserver.reap_fileserver_cache_dir(
+            os.path.join(__opts__['cachedir'], 'roots/hash'),
+            find_file
+        )
+    except os.error:
+        # Hash file won't exist if no files have yet been served up
+        pass
+
 
     mtime_map_path = os.path.join(__opts__['cachedir'], 'roots/mtime_map')
     # data to send on event
@@ -155,6 +164,7 @@ def file_hash(load, fnd):
 
     return ret
 
+
 def file_list(load):
     '''
     Return a list of all files on the file server in a specified
@@ -165,7 +175,10 @@ def file_list(load):
         return ret
 
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             for fname in files:
                 rel_fn = os.path.relpath(
@@ -185,7 +198,10 @@ def file_list_emptydirs(load):
     if load['env'] not in __opts__['file_roots']:
         return ret
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             if len(dirs) == 0 and len(files) == 0:
                 rel_fn = os.path.relpath(root, path)
@@ -202,7 +218,10 @@ def dir_list(load):
     if load['env'] not in __opts__['file_roots']:
         return ret
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             ret.append(os.path.relpath(root, path))
     return ret

@@ -219,11 +219,19 @@ def _run_check(cmd_kwargs, onlyif, unless, group):
                     'result': False}
 
     if onlyif:
+        if not isinstance(onlyif, str):
+            if not onlyif:
+                return {'comment': 'onlyif execution succeeded',
+                        'result': True}
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
             return {'comment': 'onlyif execution failed',
                     'result': True}
 
     if unless:
+        if not isinstance(unless, str):
+            if unless:
+                return {'comment': 'unless execution succeeded',
+                        'result': True}
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
             return {'comment': 'unless execution succeeded',
                     'result': True}
@@ -762,7 +770,14 @@ def mod_watch(name, **kwargs):
         return script(name, **kwargs)
 
     elif kwargs['sfun'] == 'wait_call' or kwargs['sfun'] == 'call':
-        return call(name, **kwargs)
+        if kwargs.get('func'):
+            func = kwargs.pop('func')
+            return call(name, func, **kwargs)
+        else:
+            return {'name': name, 
+                    'changes': {},
+                    'comment': 'cmd.{0[sfun]} needs a named parameter func'.format(kwargs),
+                    'result': False}
 
     return {'name': name,
             'changes': {},

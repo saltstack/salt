@@ -16,20 +16,13 @@ import warnings
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
 ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import warn_until
 
-# Import 3rd party libs
-try:
-    from mock import patch
-    HAS_MOCK = True
-except ImportError:
-    HAS_MOCK = False
-
-
-@skipIf(HAS_MOCK is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WarnUntilTestCase(TestCase):
 
     @patch('salt.version')

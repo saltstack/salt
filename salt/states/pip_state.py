@@ -19,19 +19,30 @@ requisite to a pkg.installed state for the package which provides pip
 '''
 
 # Import python libs
-import re
-import urlparse
+import logging
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
+# Import 3rd-party libs
+try:
+    import pip
+    import pip.req
+    HAS_PIP = True
+except ImportError:
+    HAS_PIP = False
+
+logger = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
-    return 'pip' if 'pip.list' in __salt__ else False
+    if HAS_PIP and 'pip.list' in __salt__:
+        return 'pip'
+    return False
 
 
 def _find_key(prefix, pip_list):
@@ -54,7 +65,7 @@ def _fulfills_version_spec(version, version_spec):
     boolean value based on whether or not the version number meets the
     specified version.
     '''
-    for oper, spec in (version_spec[0:2], version_spec[2:4]):
+    for oper, spec in version_spec:
         if oper is None:
             continue
         if not salt.utils.compare_versions(ver1=version, oper=oper, ver2=spec):
@@ -67,6 +78,7 @@ def installed(name,
               requirements=None,
               env=None,
               bin_env=None,
+              use_wheel=False,
               log=None,
               proxy=None,
               timeout=None,
@@ -105,11 +117,15 @@ def installed(name,
         The user under which to run pip
     pip_bin : None
         Deprecated, use bin_env
+    use_wheel : False
+        Prefer wheel archives (requires pip>=1.4)
     env : None
         Deprecated, use bin_env
     bin_env : None
         the pip executable or virtualenv to use
 
+    .. versionchanged:: 0.17.0
+        ``use_wheel`` option added.
     '''
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -118,35 +134,75 @@ def installed(name,
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    scheme, netloc, path, query, fragment = urlparse.urlsplit(name)
-    if scheme and netloc:
-        # parse as VCS url
-        prefix = path.lstrip('/').split('@', 1)[0]
-        if scheme.startswith('git+'):
-            prefix = prefix.rstrip('.git')
-    else:
-        # Split the passed string into the prefix and version
-        try:
-            version_spec = list(re.match(
-                (r'([^=<>]+)(?:(?:([<>]=?|==?)([^<>=,]+))'
-                 r'(?:,([<>]=?|==?)([^<>=]+))?)?$'),
-                name
-            ).groups())
-            prefix = version_spec.pop(0)
-        except AttributeError:
+    if use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
             ret['result'] = False
-            ret['comment'] = 'Invalidly-formatted package {0}'.format(name)
+            ret['comment'] = ('The \'use_wheel\' option is only supported in '
+                              'pip {0} and newer. The version of pip detected '
+                              'was {1}.').format(min_version, cur_version)
             return ret
-        else:
-            # Check to see if '=' was used instead of '=='. version_spec will
-            # contain two sets of comparison operators and version numbers, so
-            # we are checking elements 0 and 2 of this list.
-            if any((version_spec[x] == '=' for x in (0, 2))):
-                ret['result'] = False
-                ret['comment'] = ('Invalid version specification in '
-                                  'package {0}. \'=\' is not supported, use '
-                                  '\'==\' instead.'.format(name))
+
+    if repo is not None:
+        msg = ('The \'repo\' argument to pip.installed is deprecated and will '
+               'be removed in 0.18.0. Please use \'name\' instead. The '
+               'current value for name, {0!r} will be replaced by the value '
+               'of repo, {1!r}'.format(name, repo))
+        salt.utils.warn_until((0, 18), msg)
+        ret.setdefault('warnings', []).append(msg)
+        name = repo
+
+    if name:
+        try:
+            try:
+                # With pip < 1.2, the __version__ attribute does not exist and
+                # vcs+URL urls are not properly parsed.
+                # The next line is meant to trigger an AttributeError and
+                # handle lower pip versions
+                logger.debug(
+                    'Installed pip version: {0}'.format(pip.__version__)
+                )
+                install_req = pip.req.InstallRequirement.from_line(name)
+            except AttributeError:
+                logger.debug('Installed pip version is lower than 1.2')
+                supported_vcs = ('git', 'svn', 'hg', 'bzr')
+                if name.startswith(supported_vcs):
+                    for vcs in supported_vcs:
+                        if name.startswith(vcs):
+                            install_req = pip.req.InstallRequirement.from_line(
+                                name.split('{0}+'.format(vcs))[-1]
+                            )
+                            break
+                else:
+                    install_req = pip.req.InstallRequirement.from_line(name)
+        except ValueError as exc:
+            ret['result'] = False
+            if '=' in name and '==' not in name:
+                ret['comment'] = (
+                    'Invalid version specification in package {0}. \'=\' is '
+                    'not supported, use \'==\' instead.'.format(name)
+                )
                 return ret
+            ret['comment'] = (
+                'pip raised an exception while parsing {0!r}: {1}'.format(
+                    name, exc
+                )
+            )
+            return ret
+
+        if install_req.req is None:
+            # This is most likely an url and there's no way to know what will
+            # be installed before actually installing it.
+            prefix = ''
+            version_spec = []
+        else:
+            prefix = install_req.req.project_name
+            version_spec = install_req.req.specs
+    else:
+        prefix = ''
+        version_spec = []
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
@@ -172,9 +228,6 @@ def installed(name,
     # will be re-added in pip.install call.
     name = name.replace(',', ';')
 
-    if repo:
-        name = repo
-
     # If a requirements file is specified, only install the contents of the
     # requirements file. Similarly, using the --editable flag with pip should
     # also ignore the "name" parameter.
@@ -186,11 +239,13 @@ def installed(name,
             if requirements:
                 # TODO: Check requirements file against currently-installed
                 # packages to provide more accurate state output.
-                comments.append('Requirements file {0} will be '
+                comments.append('Requirements file {0!r} will be '
                                 'processed.'.format(requirements))
             if editable:
-                comments.append('Package will be installed from VCS checkout '
-                                '{0}.'.format(editable))
+                comments.append(
+                    'Package will be installed in editable mode (i.e. '
+                    'setuptools "develop mode") from {0}.'.format(editable)
+                )
             ret['comment'] = ' '.join(comments)
             return ret
     else:
@@ -200,7 +255,7 @@ def installed(name,
             prefix_realname = _find_key(prefix, pip_list)
         except (CommandNotFoundError, CommandExecutionError) as err:
             ret['result'] = False
-            ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
+            ret['comment'] = 'Error installing {0!r}: {1}'.format(name, err)
             return ret
 
         if ignore_installed is False and prefix_realname is not None:
@@ -223,9 +278,10 @@ def installed(name,
             return ret
 
     pip_install_call = __salt__['pip.install'](
-        pkgs='"{0}"'.format(name) if name else '',
+        pkgs='{0}'.format(name) if name else '',
         requirements=requirements,
         bin_env=bin_env,
+        use_wheel=use_wheel,
         log=log,
         proxy=proxy,
         timeout=timeout,
@@ -270,8 +326,12 @@ def installed(name,
                 ret['changes']['editable'] = True
             ret['comment'] = ' '.join(comments)
         else:
-            pkg_list = __salt__['pip.list'](prefix, bin_env,
-                                            user=user, cwd=cwd)
+            if not prefix:
+                pkg_list = []
+            else:
+                pkg_list = __salt__['pip.list'](
+                    prefix, bin_env, user=user, cwd=cwd
+                )
             if not pkg_list:
                 ret['comment'] = (
                     'There was no error installing package \'{0}\' although '

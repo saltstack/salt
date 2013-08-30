@@ -18,28 +18,19 @@ from salttesting.helpers import (
     TestsLoggingHandler,
     ForceImportErrorOn
 )
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 ensure_in_syspath('../../')
 
-# Import 3rd party libs
-try:
-    from mock import MagicMock, patch
-    has_mock = True
-except ImportError:
-    has_mock = False
-    patch = lambda x: lambda y: None
-
-
 # Import salt libs
-from salt.modules import virtualenv
+from salt.modules import virtualenv_mod
 from salt.exceptions import CommandExecutionError
 
-virtualenv.__salt__ = {}
-
+virtualenv_mod.__salt__ = {}
 base_virtualenv_mock = MagicMock()
 base_virtualenv_mock.__version__ = '1.9.1'
 
 
-@skipIf(has_mock is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.which', lambda bin_name: bin_name)
 @patch.dict('sys.modules', {'virtualenv': base_virtualenv_mock})
 class VirtualenvTestCase(TestCase):
@@ -47,15 +38,15 @@ class VirtualenvTestCase(TestCase):
     def test_issue_6029_deprecated_distribute(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
 
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv._install_script = MagicMock(
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod._install_script = MagicMock(
                 return_value={
                     'retcode': 0,
                     'stdout': 'Installed script!',
                     'stderr': ''
                 }
             )
-            virtualenv.create(
+            virtualenv_mod.create(
                 '/tmp/foo', system_site_packages=True, distribute=True
             )
             mock.assert_called_once_with(
@@ -68,10 +59,10 @@ class VirtualenvTestCase(TestCase):
             virtualenv_mock = MagicMock()
             virtualenv_mock.__version__ = '1.10rc1'
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
                 with patch.dict('sys.modules',
                                 {'virtualenv': virtualenv_mock}):
-                    virtualenv.create(
+                    virtualenv_mod.create(
                         '/tmp/foo', system_site_packages=True, distribute=True
                     )
                     mock.assert_called_once_with(
@@ -91,8 +82,8 @@ class VirtualenvTestCase(TestCase):
     def test_issue_6030_deprecated_never_download(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
 
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create(
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create(
                 '/tmp/foo', never_download=True
             )
             mock.assert_called_once_with(
@@ -105,10 +96,10 @@ class VirtualenvTestCase(TestCase):
             # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()
             virtualenv_mock.__version__ = '1.10rc1'
-            with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
                 with patch.dict('sys.modules',
                                 {'virtualenv': virtualenv_mock}):
-                    virtualenv.create(
+                    virtualenv_mod.create(
                         '/tmp/foo', never_download=True
                     )
                     mock.assert_called_once_with('virtualenv /tmp/foo',
@@ -132,8 +123,8 @@ class VirtualenvTestCase(TestCase):
 
         # Passing extra_search_dirs as a list
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create(
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create(
                 '/tmp/foo', extra_search_dir=extra_search_dirs
             )
             mock.assert_called_once_with(
@@ -147,8 +138,8 @@ class VirtualenvTestCase(TestCase):
 
         # Passing extra_search_dirs as comma separated list
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create(
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create(
                 '/tmp/foo', extra_search_dir=','.join(extra_search_dirs)
             )
             mock.assert_called_once_with(
@@ -162,10 +153,10 @@ class VirtualenvTestCase(TestCase):
 
     def test_system_site_packages_and_no_site_packages_mutual_exclusion(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                virtualenv.create,
+                virtualenv_mod.create,
                 '/tmp/foo',
                 no_site_packages=True,
                 system_site_packages=True
@@ -177,9 +168,9 @@ class VirtualenvTestCase(TestCase):
         warnings.filterwarnings('always', '', DeprecationWarning, __name__)
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             with warnings.catch_warnings(record=True) as w:
-                virtualenv.create(
+                virtualenv_mod.create(
                     '/tmp/foo', no_site_packages=True
                 )
                 self.assertEqual(
@@ -192,20 +183,20 @@ class VirtualenvTestCase(TestCase):
     def test_unapplicable_options(self):
         # ----- Virtualenv using pyvenv options ----------------------------->
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                virtualenv.create,
+                virtualenv_mod.create,
                 '/tmp/foo',
                 venv_bin='virtualenv',
                 upgrade=True
             )
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                virtualenv.create,
+                virtualenv_mod.create,
                 '/tmp/foo',
                 venv_bin='virtualenv',
                 symlinks=True
@@ -213,49 +204,49 @@ class VirtualenvTestCase(TestCase):
         # <---- Virtualenv using pyvenv options ------------------------------
 
         # ----- pyvenv using virtualenv options ----------------------------->
-        virtualenv.__salt__ = {'cmd.which_bin': lambda _: 'pyvenv'}
+        virtualenv_mod.__salt__ = {'cmd.which_bin': lambda _: 'pyvenv'}
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                virtualenv.create,
+                virtualenv_mod.create,
                 '/tmp/foo',
                 venv_bin='pyvenv',
                 no_site_packages=True
             )
 
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                virtualenv.create,
+                virtualenv_mod.create,
                 '/tmp/foo',
                 venv_bin='pyvenv',
                 python='python2.7'
             )
 
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                virtualenv.create,
+                virtualenv_mod.create,
                 '/tmp/foo',
                 venv_bin='pyvenv',
                 prompt='PY Prompt'
             )
 
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                virtualenv.create,
+                virtualenv_mod.create,
                 '/tmp/foo',
                 venv_bin='pyvenv',
                 never_download=True
             )
 
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
                 CommandExecutionError,
-                virtualenv.create,
+                virtualenv_mod.create,
                 '/tmp/foo',
                 venv_bin='pyvenv',
                 extra_search_dir='/tmp/bar'
@@ -267,10 +258,10 @@ class VirtualenvTestCase(TestCase):
 
             # ----- virtualenv binary not available ------------------------->
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
                 self.assertRaises(
                     CommandExecutionError,
-                    virtualenv.create,
+                    virtualenv_mod.create,
                     '/tmp/foo',
                 )
             # <---- virtualenv binary not available --------------------------
@@ -280,10 +271,10 @@ class VirtualenvTestCase(TestCase):
                 {'retcode': 1, 'stdout': '', 'stderr': 'This is an error'},
                 {'retcode': 0, 'stdout': ''}
             ])
-            with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
                 self.assertRaises(
                     CommandExecutionError,
-                    virtualenv.create,
+                    virtualenv_mod.create,
                     '/tmp/foo',
                     venv_bin='virtualenv',
                 )
@@ -294,8 +285,8 @@ class VirtualenvTestCase(TestCase):
                 {'retcode': 0, 'stdout': '1.9.1'},
                 {'retcode': 0, 'stdout': ''}
             ])
-            with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-                virtualenv.create(
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+                virtualenv_mod.create(
                     '/tmp/foo', never_download=True
                 )
                 mock.assert_called_with(
@@ -309,8 +300,8 @@ class VirtualenvTestCase(TestCase):
                 {'retcode': 0, 'stdout': '1.10rc1'},
                 {'retcode': 0, 'stdout': ''}
             ])
-            with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-                virtualenv.create(
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+                virtualenv_mod.create(
                     '/tmp/foo', never_download=True
                 )
                 mock.assert_called_with(
@@ -321,8 +312,8 @@ class VirtualenvTestCase(TestCase):
 
     def test_python_argument(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create(
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create(
                 '/tmp/foo', python='/usr/bin/python2.7',
             )
             mock.assert_called_once_with(
@@ -332,8 +323,8 @@ class VirtualenvTestCase(TestCase):
 
     def test_prompt_argument(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create('/tmp/foo', prompt='PY Prompt')
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', prompt='PY Prompt')
             mock.assert_called_once_with(
                 'virtualenv --prompt=\'PY Prompt\' /tmp/foo',
                 runas=None
@@ -341,16 +332,16 @@ class VirtualenvTestCase(TestCase):
 
         # Now with some quotes on the mix
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create('/tmp/foo', prompt='\'PY\' Prompt')
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', prompt='\'PY\' Prompt')
             mock.assert_called_once_with(
                 'virtualenv --prompt="\'PY\' Prompt" /tmp/foo',
                 runas=None
             )
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create('/tmp/foo', prompt='"PY" Prompt')
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', prompt='"PY" Prompt')
             mock.assert_called_once_with(
                 'virtualenv --prompt=\'"PY" Prompt\' /tmp/foo',
                 runas=None
@@ -358,8 +349,8 @@ class VirtualenvTestCase(TestCase):
 
     def test_clear_argument(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create('/tmp/foo', clear=True)
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', clear=True)
             mock.assert_called_once_with(
                 'virtualenv --clear /tmp/foo', runas=None
             )
@@ -368,8 +359,8 @@ class VirtualenvTestCase(TestCase):
         # We test for pyvenv only because with virtualenv this is un
         # unsupported option.
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create('/tmp/foo', venv_bin='pyvenv', upgrade=True)
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', venv_bin='pyvenv', upgrade=True)
             mock.assert_called_once_with(
                 'pyvenv --upgrade /tmp/foo', runas=None
             )
@@ -378,8 +369,8 @@ class VirtualenvTestCase(TestCase):
         # We test for pyvenv only because with virtualenv this is un
         # unsupported option.
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv.__salt__, {'cmd.run_all': mock}):
-            virtualenv.create('/tmp/foo', venv_bin='pyvenv', symlinks=True)
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+            virtualenv_mod.create('/tmp/foo', venv_bin='pyvenv', symlinks=True)
             mock.assert_called_once_with(
                 'pyvenv --symlinks /tmp/foo', runas=None
             )

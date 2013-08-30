@@ -147,20 +147,28 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     # prepare URL
     if url[-1] != '/':
         url += '/'
+    url6 = url
     url += 'text/{0}'.format(cmd)
+    url6 += '{0}'.format(cmd)
     if opts:
         url += '?{0}'.format(urllib.urlencode(opts))
+        url6 += '?{0}'.format(urllib.urlencode(opts))
 
     # Make the HTTP request
     urllib2.install_opener(auth)
 
     try:
+        # Trying tomcat >= 7 url
         ret['msg'] = urllib2.urlopen(url, timeout=timeout).read().splitlines()
-        if not ret['msg'][0].startswith('OK'):
-            ret['res'] = False
     except Exception:
+        try:
+            # Trying tomcat6 url
+            ret['msg'] = urllib2.urlopen(url6, timeout=timeout).read().splitlines()
+        except Exception:
+            ret['msg'] = 'Failed to create HTTP request'
+    
+    if not ret['msg'][0].startswith('OK'):
         ret['res'] = False
-        ret['msg'] = 'Failed to create HTTP request'
 
     return ret
 

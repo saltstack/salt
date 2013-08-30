@@ -15,6 +15,7 @@ The data sent to the state calls is as follows:
 import os
 import sys
 import copy
+import site
 import fnmatch
 import logging
 import collections
@@ -27,6 +28,7 @@ import salt.minion
 import salt.pillar
 import salt.fileclient
 import salt.utils.event
+import salt.syspaths as syspaths
 from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltReqTimeoutError, SaltException
@@ -538,6 +540,11 @@ class State(object):
         '''
         Refresh all the modules
         '''
+        log.debug('Refreshing modules...')
+        # In case a package has been installed into the current python
+        # process 'site-packages', the 'site' module needs to be reloaded in
+        # order for the newly installed package to be importable.
+        reload(site)
         self.load_modules()
         self.functions['saltutil.refresh_modules']()
 
@@ -549,8 +556,14 @@ class State(object):
         possible module type, e.g. a python, pyx, or .so. Always refresh if the
         function is recurse, since that can lay down anything.
         '''
+        if data.get('reload_modules', False) is True:
+            # User explicitly requests a reload
+            self.module_refresh()
+            return
+
         if not ret['changes']:
             return
+
         if data['state'] == 'file':
             if data['fun'] == 'managed':
                 if data['name'].endswith(
@@ -620,14 +633,18 @@ class State(object):
             aspec = salt.utils.get_function_argspec(self.states[full])
             arglen = 0
             deflen = 0
-            if isinstance(aspec[0], list):
-                arglen = len(aspec[0])
-            if isinstance(aspec[3], tuple):
-                deflen = len(aspec[3])
+            if isinstance(aspec.args, list):
+                arglen = len(aspec.args)
+            if isinstance(aspec.defaults, tuple):
+                deflen = len(aspec.defaults)
             for ind in range(arglen - deflen):
-                if aspec[0][ind] not in data:
-                    errors.append('Missing parameter ' + aspec[0][ind]
-                                + ' for state ' + full)
+                if aspec.args[ind] not in data:
+                    errors.append(
+                        'Missing parameter {0} for state {1}'.format(
+                            aspec.args[ind],
+                            full
+                        )
+                    )
         # If this chunk has a recursive require, then it will cause a
         # recursive loop when executing, check for it
         reqdec = ''
@@ -841,27 +858,27 @@ class State(object):
         aspec = salt.utils.get_function_argspec(self.states[ret['full']])
         arglen = 0
         deflen = 0
-        if isinstance(aspec[0], list):
-            arglen = len(aspec[0])
-        if isinstance(aspec[3], tuple):
-            deflen = len(aspec[3])
-        if aspec[2]:
-            # This state accepts kwargs
+        if isinstance(aspec.args, list):
+            arglen = len(aspec.args)
+        if isinstance(aspec.defaults, tuple):
+            deflen = len(aspec.defaults)
+        if aspec.keywords:
+            # This state accepts **kwargs
             ret['kwargs'] = {}
             for key in data:
                 # Passing kwargs the conflict with args == stack trace
-                if key in aspec[0]:
+                if key in aspec.args:
                     continue
                 ret['kwargs'][key] = data[key]
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
             minus = arglen - ind
             if deflen - minus > -1:
-                kwargs[aspec[0][ind]] = aspec[3][-minus]
+                kwargs[aspec.args[ind]] = aspec.defaults[-minus]
         for arg in kwargs:
             if arg in data:
                 kwargs[arg] = data[arg]
-        for arg in aspec[0]:
+        for arg in aspec.args:
             if arg in kwargs:
                 ret['args'].append(kwargs[arg])
             else:
@@ -1222,6 +1239,7 @@ class State(object):
                         data
                         )
                     )
+
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
@@ -1667,7 +1685,7 @@ class BaseHighState(object):
             opts['failhard'] = False
             opts['state_top'] = 'salt://top.sls'
             opts['nodegroups'] = {}
-            opts['file_roots'] = {'base': ['/srv/salt']}
+            opts['file_roots'] = {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
         else:
             opts['renderer'] = mopts['renderer']
             opts['failhard'] = mopts.get('failhard', False)
@@ -2012,9 +2030,18 @@ class BaseHighState(object):
         if self.opts['state_auto_order']:
             for name in state:
                 for s_dec in state[name]:
+                    if not isinstance(s_dec, string_types):
+                        # PyDSL OrderedDict?
+                        continue
+
+                    if not isinstance(state[name], dict):
+                        # Include's or excludes as lists?
+                        continue
+
                     found = False
                     if s_dec.startswith('_'):
                         continue
+
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:

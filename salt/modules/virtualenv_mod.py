@@ -3,10 +3,10 @@ Create virtualenv environments
 '''
 
 # Import python libs
-from __future__ import absolute_import
 import glob
 import shutil
 import logging
+import os
 import os.path
 
 # Import salt libs
@@ -268,6 +268,24 @@ def create(path,
         )
 
     return ret
+
+
+def get_site_packages(venv):
+    '''
+    Returns the path to the site-packages directory inside a virtualenv
+
+    CLI Example::
+
+        salt '*' virtualenv.get_site_packages /path/to/my/venv
+    '''
+    bin_path = os.path.join(venv, 'bin/python')
+
+    if not os.path.exists(bin_path):
+        raise salt.exceptions.CommandExecutionError(
+            "Path does not appear to be a virtualenv: '{0}'".format(bin_path))
+
+    return __salt__['cmd.exec_code'](bin_path,
+            'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
 
 def _install_script(source, cwd, python, runas):
