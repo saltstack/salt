@@ -90,6 +90,36 @@ def update():
         pass
 
 
+    mtime_map_path = os.path.join(__opts__['cachedir'], 'roots/mtime_map')
+    # data to send on event
+    data = {'changed': False,
+            'backend': 'roots'}
+
+    old_mtime_map = {}
+    # if you have an old map, load that
+    if os.path.exists(mtime_map_path):
+        with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
+            for line in fp_:
+                file_path, mtime = line.split(':', 1)
+                old_mtime_map[file_path] = mtime
+
+    # generate the new map
+    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
+
+    # compare the maps, set changed to the return value
+    data['changed'] = salt.fileserver.diff_mtime_map(old_mtime_map, new_mtime_map)
+
+
+    # write out the new map
+    with salt.utils.fopen(mtime_map_path, 'w') as fp_:
+        for file_path, mtime in new_mtime_map.iteritems():
+            fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
+                                                     mtime=mtime))
+
+    # if there is a change, fire an event
+    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+    event.fire_event(data, 'salt.fileserver.roots.update')
+
 def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
