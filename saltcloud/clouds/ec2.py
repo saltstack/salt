@@ -310,11 +310,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
 
 def _wait_for_spot_instance(update_callback,
-                           update_args=None,
-                           update_kwargs=None,
-                           timeout=5 * 60,
-                           interval=5,
-                           max_failures=10):
+                            update_args=None,
+                            update_kwargs=None,
+                            timeout=5 * 60,
+                            interval=5,
+                            max_failures=10):
     '''
     Helper function that waits for a spot instance request to become active
     for a specific maximum amount of time.
@@ -925,7 +925,7 @@ def create(vm_=None, call=None):
             if state in ['cancelled', 'failed', 'closed']:
                 # Request will never be active, fail
                 log.error('Spot instance request resulted in state \'{0}\'. '
-                         'Nothing else we can do here.')
+                          'Nothing else we can do here.')
                 return False
 
         try:
