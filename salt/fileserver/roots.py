@@ -109,7 +109,7 @@ def update():
 
     # if there is a change, fire an event
     event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
-    event.fire_event(data, 'fileserver')
+    event.fire_event(data, 'salt.fileserver.roots.update')
 
 def file_hash(load, fnd):
     '''
