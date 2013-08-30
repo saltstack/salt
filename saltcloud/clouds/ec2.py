@@ -824,8 +824,10 @@ def create(vm_=None, call=None):
         log.info('Attempting to look up root device name for image id {0} on '
                  'VM {1}'.format(image_id, vm_['name']))
 
-        rd_params = {'Action': 'DescribeImages',
-                              'ImageId.1': image_id}
+        rd_params = {
+            'Action': 'DescribeImages',
+            'ImageId.1': image_id
+        }
         try:
             rd_data = query(rd_params, location=location)
             if 'error' in rd_data:
