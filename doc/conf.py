@@ -65,7 +65,7 @@ docs_basepath = os.path.abspath(os.path.dirname(__file__))
 addtl_paths = (
         os.pardir, # saltcloud (for autodoc)
         '_ext', # custom Sphinx extensions
-                        )
+)
 
 for path in addtl_paths:
     sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))

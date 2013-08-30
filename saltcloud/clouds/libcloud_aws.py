@@ -337,7 +337,7 @@ def create(vm_):
     if not isinstance(tags, dict):
         raise SaltCloudConfigError(
                 '\'tag\' should be a dict.'
-            )
+        )
 
     try:
         data = conn.create_node(**kwargs)

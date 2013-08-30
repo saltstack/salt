@@ -863,7 +863,7 @@ def create(vm_=None, call=None):
     if not isinstance(tags, dict):
         raise SaltCloudConfigError(
                 '\'tag\' should be a dict.'
-            )
+        )
 
     tags['Name'] = vm_['name']
 
