@@ -1083,8 +1083,8 @@ def salt_cloud_force_ascii(exc):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
     unicode_trans = {
-        u'\xa0':    u' ',   # Convert non-breaking space to space
-        u'\u2013':  u'-',   # Convert en dash to dash
+        u'\xa0': u' ',   # Convert non-breaking space to space
+        u'\u2013': u'-',  # Convert en dash to dash
     }
 
     if exc.object[exc.start:exc.end] in unicode_trans:

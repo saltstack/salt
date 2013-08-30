@@ -310,11 +310,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
 
 def _wait_for_spot_instance(update_callback,
-                           update_args=None,
-                           update_kwargs=None,
-                           timeout=5 * 60,
-                           interval=5,
-                           max_failures=10):
+                            update_args=None,
+                            update_kwargs=None,
+                            timeout=5 * 60,
+                            interval=5,
+                            max_failures=10):
     '''
     Helper function that waits for a spot instance request to become active
     for a specific maximum amount of time.
@@ -771,30 +771,30 @@ def create(vm_=None, call=None):
         spot_prefix = ''
 
     image_id = vm_['image']
-    params[spot_prefix+'ImageId'] = image_id
+    params[spot_prefix + 'ImageId'] = image_id
 
     vm_size = config.get_config_value(
         'size', vm_, __opts__, search_global=False
     )
     if vm_size in SIZE_MAP:
         vm_size = SIZE_MAP[vm_size]
-    params[spot_prefix+'InstanceType'] = vm_size
+    params[spot_prefix + 'InstanceType'] = vm_size
 
     ex_keyname = keyname(vm_)
     if ex_keyname:
-        params[spot_prefix+'KeyName'] = ex_keyname
+        params[spot_prefix + 'KeyName'] = ex_keyname
 
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
         if not isinstance(ex_securitygroup, list):
-            params[spot_prefix+'SecurityGroup.1'] = ex_securitygroup
+            params[spot_prefix + 'SecurityGroup.1'] = ex_securitygroup
         else:
             for (counter, sg_) in enumerate(ex_securitygroup):
-                params[spot_prefix+'SecurityGroup.{0}'.format(counter)] = sg_
+                params[spot_prefix + 'SecurityGroup.{0}'.format(counter)] = sg_
 
     az_ = get_availability_zone(vm_)
     if az_ is not None:
-        params[spot_prefix+'Placement.AvailabilityZone'] = az_
+        params[spot_prefix + 'Placement.AvailabilityZone'] = az_
 
     subnetid_ = get_subnetid(vm_)
     if subnetid_ is not None:
@@ -803,10 +803,10 @@ def create(vm_=None, call=None):
     ex_securitygroupid = securitygroupid(vm_)
     if ex_securitygroupid:
         if not isinstance(ex_securitygroupid, list):
-            params[spot_prefix+'SecurityGroupId.1'] = ex_securitygroupid
+            params[spot_prefix + 'SecurityGroupId.1'] = ex_securitygroupid
         else:
             for (counter, sg_) in enumerate(ex_securitygroupid):
-                params[spot_prefix+'SecurityGroupId.{0}'.format(counter)] = sg_
+                params[spot_prefix + 'SecurityGroupId.{0}'.format(counter)] = sg_
 
     set_delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False
@@ -824,8 +824,10 @@ def create(vm_=None, call=None):
         log.info('Attempting to look up root device name for image id {0} on '
                  'VM {1}'.format(image_id, vm_['name']))
 
-        rd_params = {'Action': 'DescribeImages',
-                              'ImageId.1': image_id}
+        rd_params = {
+            'Action': 'DescribeImages',
+            'ImageId.1': image_id
+        }
         try:
             rd_data = query(rd_params, location=location)
             if 'error' in rd_data:
@@ -854,8 +856,8 @@ def create(vm_=None, call=None):
             rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
         log.info('Found root device name: {0}'.format(rd_name))
 
-        params[spot_prefix+'BlockDeviceMapping.1.DeviceName'] = rd_name
-        params[spot_prefix+'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
+        params[spot_prefix + 'BlockDeviceMapping.1.DeviceName'] = rd_name
+        params[spot_prefix + 'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
             set_delvol_on_destroy
         ).lower()
 
@@ -863,7 +865,7 @@ def create(vm_=None, call=None):
     if not isinstance(tags, dict):
         raise SaltCloudConfigError(
                 '\'tag\' should be a dict.'
-            )
+        )
 
     tags['Name'] = vm_['name']
 
@@ -923,14 +925,14 @@ def create(vm_=None, call=None):
             if state in ['cancelled', 'failed', 'closed']:
                 # Request will never be active, fail
                 log.error('Spot instance request resulted in state \'{0}\'. '
-                         'Nothing else we can do here.')
+                          'Nothing else we can do here.')
                 return False
 
         try:
             data = _wait_for_spot_instance(
                 __query_spot_instance_request,
                 update_args=(sir_id, location),
-                timeout=10*60,
+                timeout=10 * 60,
                 max_failures=5
             )
             log.debug('wait_for_spot_instance data {0}'.format(data))

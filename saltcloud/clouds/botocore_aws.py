@@ -128,7 +128,7 @@ def __virtual__():
         # only import callables that actually have __code__ (this includes
         # functions but excludes Exception classes)
         if (callable(POST_IMPORT_LOCALS_KEYS[key]) and
-            hasattr(POST_IMPORT_LOCALS_KEYS[key], "__code__")):
+                hasattr(POST_IMPORT_LOCALS_KEYS[key], "__code__")):
             globals().update(
                 {
                     key: namespaced_function(
