@@ -5,6 +5,11 @@ Logging
 The salt project tries to get the logging to work for you and help us solve any 
 issues you might find along the way.
 
+If you want to get some more information on the nitty-gritty of salt's logging 
+system, please head over to the :doc:`logging development 
+document</topics/development/logging>`, if all you're after is salt's logging 
+configurations, please continue reading.
+
 
 Available Configuration Settings
 ================================
