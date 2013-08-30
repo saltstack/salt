@@ -280,6 +280,13 @@ def destroy(name, conn=None):
     '''
     Delete a single VM
     '''
+    saltcloud.utils.fire_event(
+        'event',
+        'destroying instance',
+        'salt.cloud.destroy',
+        {'name': name},
+    )
+
     if not conn:
         conn = get_conn()   # pylint: disable-msg=E0602
 
@@ -293,9 +300,13 @@ def destroy(name, conn=None):
         # Fire destroy action
         event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
         try:
-            event.fire_event(
-                '{0} has been destroyed'.format(name), 'salt-cloud'
+            saltcloud.utils.fire_event(
+                'event',
+                'destroyed instance',
+                'salt.cloud.destroy',
+                {'name': name},
             )
+
         except ValueError:
             # We're using develop or a 0.17.x version of salt
             event.fire_event(

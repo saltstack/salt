@@ -238,6 +238,17 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    saltcloud.utils.fire_event(
+        'event',
+        'starting create',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     kwargs = {
         'name': vm_['name'],
@@ -260,6 +271,13 @@ def create(vm_):
                 key_filename
             )
         )
+
+    saltcloud.utils.fire_event(
+        'event',
+        'requesting instance',
+        'salt.cloud.create',
+        {'kwargs': kwargs},
+    )
 
     try:
         ret = create_node(kwargs)
@@ -343,6 +361,13 @@ def create(vm_):
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs
 
+        saltcloud.utils.fire_event(
+            'event',
+            'executing deploy script',
+            'salt.cloud.create',
+            {'kwargs': deploy_kwargs},
+        )
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
@@ -360,6 +385,18 @@ def create(vm_):
         )
     )
     ret.update(data)
+
+    saltcloud.utils.fire_event(
+        'event',
+        'created instance',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     return ret
 
 
@@ -527,6 +564,21 @@ def destroy(name, call=None):
 
         salt-cloud --destroy mymachine
     '''
+    saltcloud.utils.fire_event(
+        'event',
+        'destroying instance',
+        'salt.cloud.destroy',
+        {'name': name},
+    )
+
     data = show_instance(name, call='action')
     node = query(method='droplets', command='{0}/destroy'.format(data['id']))
+
+    saltcloud.utils.fire_event(
+        'event',
+        'destroyed instance',
+        'salt.cloud.destroy',
+        {'name': name},
+    )
+
     return node

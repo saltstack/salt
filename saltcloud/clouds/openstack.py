@@ -296,6 +296,17 @@ def create(vm_):
             'system for the password.'
         )
 
+    saltcloud.utils.fire_event(
+        'event',
+        'starting create',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
@@ -352,6 +363,15 @@ def create(vm_):
         kwargs['ex_security_groups'] = [
             g for g in avail_groups if g.name in group_list
         ]
+
+    saltcloud.utils.fire_event(
+        'event',
+        'requesting instance',
+        'salt.cloud.create',
+        {'kwargs': {'name': kwargs['name'],
+                    'image': kwargs['image'].name,
+                    'size': kwargs['size'].name}},
+    )
 
     try:
         data = conn.create_node(**kwargs)
@@ -526,6 +546,13 @@ def create(vm_):
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs
 
+        saltcloud.utils.fire_event(
+            'event',
+            'executing deploy script',
+            'salt.cloud.create',
+            {'kwargs': deploy_kwargs},
+        )
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
@@ -544,4 +571,16 @@ def create(vm_):
     )
 
     ret.update(data.__dict__)
+
+    saltcloud.utils.fire_event(
+        'event',
+        'created instance',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     return ret
