@@ -173,7 +173,6 @@ def create(vm_):
 
         salt-cloud -p profile_name vm_name
     '''
-
     deploy = config.get_config_value('deploy', vm_, __opts__)
     key_filename = config.get_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -185,6 +184,17 @@ def create(vm_):
             'is not set and \'sshpass\' binary is not present on the '
             'system for the password.'
         )
+
+    saltcloud.utils.fire_event(
+        'event',
+        'starting create',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
 
     log.info(
         'Creating Cloud VM {0} in {1}'.format(
@@ -202,6 +212,14 @@ def create(vm_):
         'location': vm_.get('location', DEFAULT_LOCATION)
 
     }
+
+    saltcloud.utils.fire_event(
+        'event',
+        'requesting instance',
+        'salt.cloud.create',
+        {'kwargs': kwargs},
+    )
+
     try:
         data = create_node(**kwargs)
     except Exception as exc:
@@ -311,6 +329,13 @@ def create(vm_):
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs
 
+        saltcloud.utils.fire_event(
+            'event',
+            'executing deploy script',
+            'salt.cloud.create',
+            {'kwargs': deploy_kwargs},
+        )
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
@@ -329,6 +354,18 @@ def create(vm_):
     )
 
     ret.update(data)
+
+    saltcloud.utils.fire_event(
+        'event',
+        'created instance',
+        'salt.cloud.create',
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     return ret
 
 
@@ -373,9 +410,24 @@ def destroy(name, call=None):
         salt-cloud -d vm_name
 
     '''
+    saltcloud.utils.fire_event(
+        'event',
+        'destroying instance',
+        'salt.cloud.destroy',
+        {'name': name},
+    )
+
     node = get_node(name)
     ret = query2(command='my/machines/{0}'.format(node['id']),
                  location=node['location'], method='DELETE')
+
+    saltcloud.utils.fire_event(
+        'event',
+        'destroyed instance',
+        'salt.cloud.destroy',
+        {'name': name},
+    )
+
     return ret[0] in VALID_RESPONSE_CODES
 
 
