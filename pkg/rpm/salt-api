@@ -27,7 +27,7 @@
 if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 else
-    SALTAPI=/usr/bin/salt-api -d
+    SALTAPI=/usr/bin/salt-api
     PYTHON=/usr/bin/python
 fi
 
@@ -48,6 +48,7 @@ fi
 SERVICE=salt-api
 PROCESS=salt-api
 CONFIG_ARGS="-d"
+PID_FILE="/var/run/salt-api.pid"
 
 RETVAL=0
 
@@ -65,7 +66,13 @@ start() {
             RETVAL=0
         fi
     else
-        daemon --check $SERVICE $SALTAPI -d $CONFIG_ARGS
+        if status $PROCESS &> /dev/null; then 
+            failure "Already running."
+            RETVAL=1
+        else 
+            daemon --pidfile=$PID_FILE --check $SERVICE $SALTAPI $CONFIG_ARGS
+            RETVAL=0
+        fi
     fi
     RETVAL=$?
     echo
@@ -87,10 +94,18 @@ stop() {
             RETVAL=1
         fi
     else
-        killproc $PROCESS
+        if [ -f $PID_FILE ] && cat $PID_FILE | xargs pkill -P &> /dev/null; then
+            success
+            RETVAL=0
+            rm -f $PID_FILE
+        else
+            failure "$PID_FILE does not exist or could not kill."
+            RETVAL=1
+        fi
     fi
     RETVAL=$?
     echo
+    return $RETVAL
 }
 
 restart() {
