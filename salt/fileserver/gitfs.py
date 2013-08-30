@@ -150,9 +150,13 @@ def update():
         lk_fn = os.path.join(repo.working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
-        for fetch in origin.fetch():
-            if fetch.old_commit is not None:
-                data['changed'] = True
+        try:
+            for fetch in origin.fetch():
+                if fetch.old_commit is not None:
+                    data['changed'] = True
+        except Exception as exc:
+            log.warning('GitPython exception caught while fetching: '
+                        '{0}'.format(exc))
         try:
             os.remove(lk_fn)
         except (OSError, IOError):
@@ -161,7 +165,15 @@ def update():
     # if there is a change, fire an event
     event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
     event.fire_event(data, 'salt.fileserver.gitfs.update ')
-    salt.fileserver.reap_fileserver_cache_dir(os.path.join(__opts__['cachedir'], 'gitfs/hash'), find_file)
+    try:
+        salt.fileserver.reap_fileserver_cache_dir(
+            os.path.join(__opts__['cachedir'], 'gitfs/hash'),
+            find_file
+        )
+    except os.error:
+        # Hash file won't exist if no files have yet been served up
+        pass
+
 
 def envs():
     '''
@@ -195,7 +207,8 @@ def find_file(path, short='base', **kwargs):
         return fnd
 
     local_path = path
-    path = os.path.join(__opts__['gitfs_root'], local_path)
+    if __opts__['gitfs_root']:
+        path = os.path.join(__opts__['gitfs_root'], local_path)
 
     if short == 'base':
         short = 'master'
@@ -334,14 +347,19 @@ def file_list(load):
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
-        try:
-            tree = ref.commit.tree / __opts__['gitfs_root']
-        except KeyError:
-            continue
+        tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Blob):
                 continue
-            ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+            if __opts__['gitfs_root']:
+                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+                continue
+            ret.append(blob.path)
     return ret
 
 
@@ -359,15 +377,23 @@ def file_list_emptydirs(load):
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
-        try:
-            tree = ref.commit.tree / __opts__['gitfs_root']
-        except KeyError:
-            continue
+
+        tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Tree):
                 continue
             if not blob.blobs:
-                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+                if __opts__['gitfs_root']:
+                    ret.append(
+                        os.path.relpath(blob.path, __opts__['gitfs_root'])
+                    )
+                    continue
+                ret.append(blob.path)
     return ret
 
 
@@ -385,12 +411,18 @@ def dir_list(load):
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
-        try:
-            tree = ref.commit.tree / __opts__['gitfs_root']
-        except KeyError:
-            continue
+
+        tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Tree):
                 continue
-            ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+            if __opts__['gitfs_root']:
+                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
+                continue
+            ret.append(blob.path)
     return ret
