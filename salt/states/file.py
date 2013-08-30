@@ -534,8 +534,8 @@ def symlink(
         target,
         force=False,
         makedirs=False,
-        user='root',
-        group='root',
+        user=None,
+        group=None,
         mode=None,
         **kwargs):
     '''
@@ -571,6 +571,14 @@ def symlink(
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if user is None:
+        user = __opts__['user']
+
+    if group is None:
+        group = __salt__['file.gid_to_group'](
+            __salt__['user.info'](user).get('gid', 0)
+        )
 
     preflight_errors = []
     uid = __salt__['file.user_to_uid'](user)
