@@ -160,7 +160,7 @@ def update():
 
     # if there is a change, fire an event
     event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
-    event.fire_event(data, 'fileserver')
+    event.fire_event(data, 'salt.fileserver.gitfs.update ')
     salt.fileserver.reap_fileserver_cache_dir(os.path.join(__opts__['cachedir'], 'gitfs/hash'), find_file)
 
 def envs():
