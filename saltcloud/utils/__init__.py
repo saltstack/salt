@@ -1084,7 +1084,7 @@ def salt_cloud_force_ascii(exc):
 
     unicode_trans = {
         u'\xa0': u' ',   # Convert non-breaking space to space
-        u'\u2013': u'-', # Convert en dash to dash
+        u'\u2013': u'-',  # Convert en dash to dash
     }
 
     if exc.object[exc.start:exc.end] in unicode_trans:
