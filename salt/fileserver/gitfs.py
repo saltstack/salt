@@ -117,14 +117,14 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     repos = []
-    for ind in range(len(__opts__['gitfs_remotes'])):
+    for ind, opt in enumerate(__opts__['gitfs_remotes']):
         rp_ = os.path.join(bp_, str(ind))
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
         repo = git.Repo.init(rp_)
         if not repo.remotes:
             try:
-                repo.create_remote('origin', __opts__['gitfs_remotes'][ind])
+                repo.create_remote('origin', opt)
             except Exception:
                 # This exception occurs when two processes are trying to write
                 # to the git config at once, go ahead and pass over it since
