@@ -142,11 +142,11 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # lines, the package name is in the first column. On odd-offset lines, the
     # package version is in the second column.
     lines = __salt__['cmd.run'](cmd).splitlines()
-    for index in range(0, len(lines)):
+    for index, line in enumerate(lines):
         if index % 2 == 0:
-            name = lines[index].split()[0].strip()
+            name = line.split()[0].strip()
         if index % 2 == 1:
-            version_num = lines[index].split()[1].strip()
+            version_num = line.split()[1].strip()
             __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
@@ -185,7 +185,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkgutil.latest_version CSWpython
         salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
+    if not names:
         return ''
     ret = {}
     # Initialize the dict with empty strings
