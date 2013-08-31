@@ -366,8 +366,15 @@ hello blue 3
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_compile_time_state_execution(self):
-        dirpath = tempfile.mkdtemp()
-        output = os.path.join(dirpath, 'output')
+        if not sys.stdin.isatty():
+            self.skipTest('Not attached to a TTY')
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         try:
             write_to(os.path.join(dirpath, 'aaa.sls'),
 '''#!pydsl
