@@ -126,7 +126,7 @@ def init():
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
             with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
                 hgconfig.write('[paths]\n')
-                hgconfig.write('default = {0}\n'.format(opt)
+                hgconfig.write('default = {0}\n'.format(opt))
         repos.append(repo)
         repo.close()
 
