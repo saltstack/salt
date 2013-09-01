@@ -368,6 +368,7 @@ def list_nodes(conn=None):
             'private_ips': node.private_ips,
             'public_ips': node.public_ips,
             'size': node.size,
+            'extra': node.extra,
             'state': node_state(node.state)
         }
     return ret
