@@ -70,7 +70,7 @@ def run(command):
 
 if __name__ == '__main__':
     opts = parse()
-    for ind in range(opts['runs']):
+    for _ in opts['runs']:
         for command in opts['command'].split(','):
             print('-' * 30)
             print('Running command {0}'.format(command))
