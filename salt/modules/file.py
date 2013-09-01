@@ -2051,6 +2051,225 @@ def makedirs_perms(name,
                 group,
                 int('{0}'.format(mode)) if mode else None)
 
+def get_devmm(name):
+    '''
+    Get major/minor info from a device
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.get_devmm /dev/ttyUSB0
+    '''
+    if is_chrdev(name) or is_blkdev(name):
+       stat_structure = os.stat(name)
+       return (os.major(stat_structure.st_rdev),os.minor(stat_structure.st_rdev))
+    else:
+       return (0,0)
+
+
+def is_chrdev(name):
+    '''
+    Check if a file exists and is a character device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_chrdev /dev/ttyUSB0
+    '''
+    stat_structure = None
+    try:
+        stat_structure = os.stat(name)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            #If the character device does not exist in the first place
+            return False
+        else:
+            raise
+    return stat.S_ISCHR(stat_structure.st_mode)
+
+def mknod_chrdev(name,
+                 major,
+                 minor,
+                 user=None,
+                 group=None,
+                 mode='0660'):
+    '''
+    Create a character device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.mknod_chrdev /dev/tty0 4 0
+    '''
+    log.debug("Creating character device name:{0} major:{1} minor:{2} mode:{3}".format(name,
+                                                                                       major,
+                                                                                       minor,
+                                                                                       mode))
+    try:
+        os.mknod(name,
+                 int(str(mode).lstrip('0'),8)|stat.S_IFCHR,
+                 os.makedev(major,minor))
+    except OSError as exc:
+        #be happy it is already there....however, if you are trying to change the major/minor, you will need to unlink it first as os.mknod will not overwrite
+        if exc.errno != errno.EEXIST:
+            raise
+    #quick pass at verifying the permissions of the newly created character device
+    check_perms(name,
+                None,
+                user,
+                group,
+                int('{0}'.format(mode)) if mode else None)
+
+def is_blkdev(name):
+    '''
+    Check if a file exists and is a block device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_blkdev /dev/sda1
+    '''
+    stat_structure = None
+    try:
+        stat_structure = os.stat(name)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            #If the block device does not exist in the first place
+            return False
+        else:
+            raise
+    return stat.S_ISBLK(stat_structure.st_mode)
+
+def mknod_blkdev(name,
+                 major,
+                 minor,
+                 user=None,
+                 group=None,
+                 mode='0660'):
+    '''
+    Create a block device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.mknod_blkdev /dev/loop8 7 8
+    '''
+    log.debug("Creating block device name:{0} major:{1} minor:{2} mode:{3}".format(name,
+                                                                                   major,
+                                                                                   minor,
+                                                                                   mode))
+    try:
+        os.mknod(name,
+                 int(str(mode).lstrip('0'),8)|stat.S_IFBLK,
+                 os.makedev(major,minor))
+    except OSError as exc:
+        #be happy it is already there....however, if you are trying to change the major/minor, you will need to unlink it first as os.mknod will not overwrite
+        if exc.errno != errno.EEXIST:
+            raise
+    #quick pass at verifying the permissions of the newly created block device
+    check_perms(name,
+                None,
+                user,
+                group,
+                int('{0}'.format(mode)) if mode else None)
+
+def is_fifo(name):
+    '''
+    Check if a file exists and is a FIFO.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_fifo /dev/mypipe
+    '''
+    stat_structure = None
+    try:
+        stat_structure = os.stat(name)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            #If the fifo does not exist in the first place
+            return False
+        else:
+            raise
+    return stat.S_ISFIFO(stat_structure.st_mode)
+
+def mknod_fifo(name,
+               user=None,
+               group=None,
+               mode='0660'):
+    '''
+    Create a FIFO pipe.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.mknod_fifo /dev/fifopipe
+    '''
+    log.debug("Creating FIFO name:{0}".format(name))
+    try:
+        os.mkfifo(name,int(str(mode).lstrip('0'),8))
+    except OSError as exc:
+        #be happy it is already there
+        if exc.errno != errno.EEXIST:
+            raise
+    #quick pass at verifying the permissions of the newly created fifo
+    check_perms(name,
+                None,
+                user,
+                group,
+                int('{0}'.format(mode)) if mode else None)
+
+def mknod(name,
+          ntype,
+          major=0,
+          minor=0,
+          user=None,
+          group=None,
+          mode='0600'):
+    '''
+    Create a block device, character device, or fifi pipe.
+    Identical to the gnu mknod.
+
+    CLI Example:
+
+   .. code-block:: bash
+
+      salt '*' file.mknod /dev/gadget c 134 8
+      salt '*' file.mknod /dev/sza1 b 8 900
+      salt '*' file.nknod /dev/pipe p
+    '''
+    makedirs(name,
+             user,
+             group)
+    if ntype == 'c':
+        mknod_chrdev(name,
+                     major,
+                     minor,
+                     user,
+                     group,
+                     mode)
+    elif ntype == 'b':
+         mknod_blkdev(name,
+                      major,
+                      minor,
+                      user,
+                      group,
+                      mode)
+    elif ntype == 'p':
+         mknod_fifo(name,
+                    user,
+                    group,
+                    mode)
+    else:
+        raise Exception("Node type unavailable: '{0}'. Available node types are character ('c'), block ('b'), and pipe ('p').".format(ntype))
+
 
 def list_backups(path, limit=None):
     '''
