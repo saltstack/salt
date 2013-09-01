@@ -302,7 +302,7 @@ def diskusage(*args):
                 # select fstype
                 fstypes.add(arg)
 
-    if len(fstypes) > 0:
+    if fstypes:
         # determine which mount points host the specified fstypes
         regex = re.compile(
             '|'.join(
