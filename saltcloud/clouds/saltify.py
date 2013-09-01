@@ -140,7 +140,7 @@ def create(vm_):
     saltcloud.utils.fire_event(
         'event',
         'executing deploy script',
-        'salt.cloud.create',
+        'salt.cloud.{0}.deploying'.format(vm_['name']),
         {'kwargs': deploy_kwargs},
     )
 
