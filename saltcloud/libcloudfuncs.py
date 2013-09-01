@@ -70,7 +70,6 @@ def get_node(conn, name):
     Return a libcloud node for the named VM
     '''
     nodes = conn.list_nodes()
-    print nodes
     for node in nodes:
         if node.name == name:
             return node
