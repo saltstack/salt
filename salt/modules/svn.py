@@ -101,7 +101,9 @@ def info(cwd,
         How to fmt the output from info.
         (str, xml, list, dict)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.info /path/to/svn/repo
     '''
@@ -155,7 +157,9 @@ def checkout(cwd,
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.checkout /path/to/repo svn://remote/repo
     '''
@@ -186,7 +190,9 @@ def update(cwd, targets=None, user=None, username=None, password=None, *opts):
     username : None
         Connect to the Subversion server as another user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.update /path/to/repo
     '''
@@ -216,7 +222,9 @@ def diff(cwd, targets=None, user=None, username=None, password=None, *opts):
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.diff /path/to/repo
     '''
@@ -255,7 +263,9 @@ def commit(cwd,
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.commit /path/to/repo
     '''
@@ -285,7 +295,9 @@ def add(cwd, targets, user=None, username=None, password=None, *opts):
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.add /path/to/repo /path/to/new/file
     '''
@@ -322,7 +334,9 @@ def remove(cwd,
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.remove /path/to/repo /path/to/repo/remove
     '''
@@ -354,7 +368,9 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.status /path/to/repo
     '''
