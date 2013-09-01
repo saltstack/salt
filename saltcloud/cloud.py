@@ -681,6 +681,9 @@ class Cloud(object):
                 # No need to use CloudProviderContext here because self.create
                 # takes care of that
                 ret[name] = self.create(vm_)
+                if not ret[name]:
+                    ret[name] = {'Error': 'Failed to deploy VM'}
+                    continue
                 if self.opts.get('show_deploy_args', False) is False:
                     ret[name].pop('deploy_kwargs', None)
             except (SaltCloudSystemExit, SaltCloudConfigError), exc:
