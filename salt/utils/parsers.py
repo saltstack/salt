@@ -19,12 +19,12 @@ import traceback
 from functools import partial
 
 # Import salt libs
-import salt.log as log
 import salt.config as config
 import salt.loader as loader
 import salt.utils as utils
 import salt.version as version
 import salt.syspaths as syspaths
+import salt.log.setup as log
 
 
 def _sorted(mixins_or_funcs):
@@ -356,6 +356,9 @@ class LogLevelMixIn(object):
                 )
             else:
                 self.options.log_level = self._default_logging_level_
+
+        # Setup extended logging right before the last step
+        self._mixin_after_parsed_funcs.append(self.__setup_extended_logging)
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
@@ -512,6 +515,9 @@ class LogLevelMixIn(object):
         )
         for name, level in self.config['log_granular_levels'].items():
             log.set_logger_level(name, level)
+
+    def __setup_extended_logging(self, *args):
+        log.setup_extended_logging(self.config)
 
     def __setup_console_logger(self, *args):
         # If daemon is set force console logger to quiet
