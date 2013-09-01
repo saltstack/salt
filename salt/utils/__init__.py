@@ -26,6 +26,7 @@ import types
 import warnings
 import zmq
 from calendar import month_abbr as months
+from functools import wraps
 import salt._compat
 
 try:
@@ -806,6 +807,7 @@ def memoize(func):
     '''
     cache = {}
 
+    @wraps(func)
     def _memoize(*args):
         if args not in cache:
             cache[args] = func(*args)
