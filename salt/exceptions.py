@@ -9,6 +9,20 @@ class SaltException(Exception):
     '''
 
 
+class SaltCatchAllException(Exception):
+    '''
+    Catch all exception for cases such as:
+
+    .. code-block:: python
+
+        try:
+            run_function(*args, **kwargs)
+        except Exception:
+            # handle exception
+            pass
+    '''
+
+
 class SaltClientError(SaltException):
     '''
     Problem reading the master root key
