@@ -272,6 +272,15 @@ def ssh_interface(vm_):
         search_global=False
     )
 
+def rackconnect(vm_):
+    '''
+    Determine if we should wait for rackconnect automation before running. Either 
+    'False' (default) or 'True'.
+    '''
+    return config.get_config_value(
+        'rackconnect', vm_, __opts__, default='False',
+        search_global=False
+    )
 
 def create(vm_):
     '''
@@ -416,6 +425,15 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
+        if rackconnect(vm_) is True:
+            extra = nodelist[vm_['name']].get('extra')
+            rc_status = extra.get('metadata').get('rackconnect_automation_status')
+            access_ip = extra.get('access_ip')
+
+            if rc_status != 'DEPLOYED':
+                log.debug('Waiting for Rackconnect automation to complete')
+                return
+
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         if private and not public:
@@ -439,6 +457,11 @@ def create(vm_):
                         data.private_ips.append(private_ip)
 
             if ssh_interface(vm_) == 'private_ips' and data.private_ips:
+                return data
+
+        if rackconnect(vm_) is True:
+            if ssh_interface(vm_) != 'private_ips':
+                data.public_ips = access_ip
                 return data
 
         if private:
@@ -468,9 +491,12 @@ def create(vm_):
             raise SaltCloudSystemExit(exc.message)
 
     log.debug('VM is now running')
+
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
-    else:
+    elif (rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips'):
+            ip_address = data.public_ips        
+    else: 
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 

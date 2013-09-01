@@ -70,6 +70,7 @@ def get_node(conn, name):
     Return a libcloud node for the named VM
     '''
     nodes = conn.list_nodes()
+    print nodes
     for node in nodes:
         if node.name == name:
             return node
@@ -368,6 +369,7 @@ def list_nodes(conn=None):
             'private_ips': node.private_ips,
             'public_ips': node.public_ips,
             'size': node.size,
+            'extra': node.extra,
             'state': node_state(node.state)
         }
     return ret
