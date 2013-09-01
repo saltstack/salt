@@ -730,7 +730,7 @@ def create(vm_=None, call=None):
     saltcloud.utils.fire_event(
         'event',
         'starting create',
-        'salt.cloud.create',
+        'salt.cloud.{0}.creating'.format(vm_['name']),
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
@@ -883,7 +883,7 @@ def create(vm_=None, call=None):
     saltcloud.utils.fire_event(
         'event',
         'requesting instance',
-        'salt.cloud.create',
+        'salt.cloud.{0}.requesting'.format(vm_['name']),
         {'kwargs': params, 'location': location},
     )
 
@@ -949,7 +949,7 @@ def create(vm_=None, call=None):
         saltcloud.utils.fire_event(
             'event',
             'waiting for spot instance',
-            'salt.cloud.create',
+            'salt.cloud.{0}.waiting_for_spot'.format(vm_['name']),
         )
 
         try:
@@ -982,7 +982,7 @@ def create(vm_=None, call=None):
     saltcloud.utils.fire_event(
         'event',
         'querying instance',
-        'salt.cloud.create',
+        'salt.cloud.{0}.querying'.format(vm_['name']),
         {'instance_id': instance_id},
     )
 
@@ -1062,7 +1062,7 @@ def create(vm_=None, call=None):
     saltcloud.utils.fire_event(
         'event',
         'setting tags',
-        'salt.cloud.create',
+        'salt.cloud.{0}.tagging'.format(vm_['name']),
         {'tags': tags},
     )
 
@@ -1086,7 +1086,7 @@ def create(vm_=None, call=None):
     saltcloud.utils.fire_event(
         'event',
         'waiting for ssh',
-        'salt.cloud.create',
+        'salt.cloud.{0}.waiting_for_ssh'.format(vm_['name']),
         {'ip_address': ip_address},
     )
 
@@ -1158,7 +1158,7 @@ def create(vm_=None, call=None):
         saltcloud.utils.fire_event(
             'event',
             'executing deploy script',
-            'salt.cloud.create',
+            'salt.cloud.{0}.deploying'.format(vm_['name']),
             {'kwargs': deploy_kwargs},
         )
 
@@ -1188,7 +1188,7 @@ def create(vm_=None, call=None):
         saltcloud.utils.fire_event(
             'event',
             'attaching volumes',
-            'salt.cloud.create',
+            'salt.cloud.{0}.attaching_volumes'.format(vm_['name']),
             {'volumes': volumes},
         )
 
@@ -1207,7 +1207,7 @@ def create(vm_=None, call=None):
     saltcloud.utils.fire_event(
         'event',
         'created instance',
-        'salt.cloud.create',
+        'salt.cloud.{0}.created'.format(vm_['name']),
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
@@ -1474,7 +1474,7 @@ def destroy(name, call=None):
     saltcloud.utils.fire_event(
         'event',
         'destroying instance',
-        'salt.cloud.destroy',
+        'salt.cloud.{0}.destroying'.format(name),
         {'name': name, 'instance_id': instance_id},
     )
 
@@ -1519,7 +1519,7 @@ def destroy(name, call=None):
     saltcloud.utils.fire_event(
         'event',
         'destroyed instance',
-        'salt.cloud.destroy',
+        'salt.cloud.{0}.destroyed'.format(name),
         {'name': name, 'instance_id': instance_id},
     )
 
