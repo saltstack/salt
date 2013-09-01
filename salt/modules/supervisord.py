@@ -30,6 +30,7 @@ def _get_supervisorctl_bin(bin_env):
 
     return bin_env
 
+
 def _ctl_cmd(cmd, name, conf_file, bin_env):
     ret = [_get_supervisorctl_bin(bin_env)]
     if conf_file is not None:
@@ -39,11 +40,13 @@ def _ctl_cmd(cmd, name, conf_file, bin_env):
         ret.append(name)
     return ' ' .join(ret)
 
+
 def _get_return(ret):
     if ret['retcode'] == 0:
         return ret['stdout']
     else:
         return ''
+
 
 def start(name='all', user=None, conf_file=None, bin_env=None):
     '''
@@ -56,11 +59,15 @@ def start(name='all', user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.start <service>
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd('start', name, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd('start', name, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
 
 
@@ -75,11 +82,15 @@ def restart(name='all', user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.restart <service>
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd('restart', name, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd('restart', name, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
 
 
@@ -94,12 +105,17 @@ def stop(name='all', user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.stop <service>
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd('stop', name, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd('stop', name, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
+
 
 def add(name, user=None, conf_file=None, bin_env=None):
     '''
@@ -112,12 +128,17 @@ def add(name, user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.add <name>
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd('add', name, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd('add', name, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
+
 
 def remove(name, user=None, conf_file=None, bin_env=None):
     '''
@@ -130,12 +151,17 @@ def remove(name, user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.remove <name>
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd('remove', name, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd('remove', name, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
+
 
 def reread(user=None, conf_file=None, bin_env=None):
     '''
@@ -148,12 +174,17 @@ def reread(user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.reread
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd('reread', None, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd('reread', None, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
+
 
 def update(user=None, conf_file=None, bin_env=None):
     '''
@@ -166,12 +197,17 @@ def update(user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.update
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd('update', None, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd('update', None, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
+
 
 def status(name=None, user=None, conf_file=None, bin_env=None):
     '''
@@ -184,7 +220,9 @@ def status(name=None, user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.status
     '''
@@ -197,6 +235,7 @@ def status(name=None, user=None, conf_file=None, bin_env=None):
         all_process[process] = {'state': state, 'reason': reason}
     return all_process
 
+
 def status_raw(name=None, user=None, conf_file=None, bin_env=None):
     '''
     Display the raw output of status
@@ -208,12 +247,17 @@ def status_raw(name=None, user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.status_raw
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd('status', name, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd('status', name, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
+
 
 def custom(command, user=None, conf_file=None, bin_env=None):
     '''
@@ -226,7 +270,9 @@ def custom(command, user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' supervisord.custom "mstop '*gunicorn*'"
     '''
