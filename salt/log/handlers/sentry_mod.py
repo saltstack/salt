@@ -5,7 +5,7 @@
 
     Configuring the python `Sentry`_ client, `Raven`_, should be done under the
     ``sentry_handler`` configuration key.
-    At the bare minimum you need to define the `DSN`_. As an example:
+    At the bare minimum, you need to define the `DSN`_. As an example:
 
     .. code-block: yaml
 
@@ -27,7 +27,7 @@
     All the client configuration keys are supported, please see the
     `Raven client documentation`_.
 
-    The default logging level for the sentry handler is ``ERROR``, if you wish
+    The default logging level for the sentry handler is ``ERROR``. If you wish
     to define a different one, define ``log_level`` under the
     ``sentry_handler`` configuration key:
 
@@ -39,16 +39,16 @@
 
 
     The available log levels are those also available for the salt ``cli``
-    tools and configuration, ``salt --help`` should give you the required
+    tools and configuration; ``salt --help`` should give you the required
     information.
 
 
     Threaded Raven Transports
     -------------------------
 
-    Raven's documents rightly suggest using it's threaded transport for
-    critical applications. Salt however handles this possible performance
-    impact for us by dispatching log records on a dedicated thread. It's up
+    Raven's documents rightly suggest using its threaded transport for
+    critical applications. However, Salt handles this possible performance
+    issue for us by dispatching log records on a dedicated thread. It's up
     to the user to use the threaded transports or not but it's not *required*
     for salt.
 
