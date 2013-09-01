@@ -159,7 +159,7 @@ def update():
                         '{0}'.format(exc))
         try:
             os.remove(lk_fn)
-        except (OSError, IOError):
+        except (IOError, OSError):
             pass
 
     # if there is a change, fire an event
@@ -170,7 +170,7 @@ def update():
             os.path.join(__opts__['cachedir'], 'gitfs/hash'),
             find_file
         )
-    except os.error:
+    except (IOError, OSError):
         # Hash file won't exist if no files have yet been served up
         pass
 
