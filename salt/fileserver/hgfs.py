@@ -115,7 +115,7 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'hgfs')
     repos = []
-    for ind in range(len(__opts__['hgfs_remotes'])):
+    for ind, opt in enumerate(__opts__['hgfs_remotes']):
         rp_ = os.path.join(bp_, str(ind))
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
@@ -126,8 +126,7 @@ def init():
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
             with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
                 hgconfig.write('[paths]\n')
-                hgconfig.write('default = {0}\n'.format(
-                    __opts__['hgfs_remotes'][ind]))
+                hgconfig.write('default = {0}\n'.format(opt))
         repos.append(repo)
         repo.close()
 

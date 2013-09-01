@@ -93,7 +93,7 @@ def send(func, *args, **kwargs):
     data = {}
     arg_data = salt.utils.arg_lookup(__salt__[func])
     func_data = {}
-    for ind in range(len(arg_data.get('args', []))):
+    for ind, _ in enumerate(arg_data.get('args', [])):
         try:
             func_data[arg_data[ind]] = args[ind]
         except IndexError:

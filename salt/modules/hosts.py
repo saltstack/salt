@@ -126,8 +126,8 @@ def set_host(ip, alias):
     if not os.path.isfile(hfn):
         return False
     lines = salt.utils.fopen(hfn).readlines()
-    for ind in range(len(lines)):
-        tmpline = lines[ind].strip()
+    for ind, line in enumerate(lines):
+        tmpline = line.strip()
         if not tmpline:
             continue
         if tmpline.startswith('#'):

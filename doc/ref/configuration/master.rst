@@ -16,7 +16,8 @@ The configuration file for the salt-master is located at
 :file:`/etc/salt/master`. The available options are as follows:
 
 Primary Master Configuration
-----------------------------
+============================
+
 
 .. conf_master:: interface
 
@@ -252,8 +253,9 @@ Default:: :file:`/tmp/salt-unix`
 Set the location to use for creating Unix sockets for master process
 communication
 
+
 Master Security Settings
-------------------------
+========================
 
 .. conf_master:: open_mode
 
@@ -387,7 +389,7 @@ security purposes.
 
 
 Master Module Management
-------------------------
+========================
 
 .. conf_master:: runner_dirs
 
@@ -413,7 +415,7 @@ the Salt master
     cython_enable: False
 
 Master State System Settings
-----------------------------
+============================
 
 .. conf_master:: state_verbose
 
@@ -522,7 +524,7 @@ or just post what changes are going to be made
     test: False
 
 Master File Server Settings
----------------------------
+===========================
 
 .. conf_master:: file_roots
 
@@ -589,7 +591,7 @@ The buffer size in the file server in bytes
 .. _pillar-configuration:
 
 Pillar Configuration
---------------------
+====================
 
 .. conf_master:: pillar_roots
 
@@ -639,7 +641,7 @@ Default:: ``None``
 There are additional details at :ref:`salt-pillars`
 
 Syndic Server Settings
-----------------------
+======================
 
 A Salt syndic is a Salt master used to pass commands from a higher Salt master to
 minions below the syndic. Using the syndic is simple. If this is a master that
@@ -721,7 +723,7 @@ master, specify the pidfile of the syndic daemon.
     syndic_pidfile: syndic.pid
 
 Peer Publish Settings
----------------------
+=====================
 
 Salt minions can send commands to other minions, but only if the minion is
 allowed to. By default "Peer Publication" is disabled, and when enabled it
@@ -780,7 +782,7 @@ runner:
           - manage.up
 
 Node Groups
------------
+===========
 
 .. conf_master:: nodegroups
 
@@ -795,20 +797,24 @@ A group consists of a group name and a compound target.
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
 
+
+
+.. _master-logging-settings:
+
 Master Logging Settings
------------------------
+=======================
 
 .. conf_master:: log_file
 
 ``log_file``
 ------------
 
-Default: /var/log/salt/master
+Default: ``/var/log/salt/master``
 
-The master log can be sent to a regular file, local path name, or network location.
-Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``),
-with rsyslogd(8) configured for network logging.  The format for remote addresses is:
-``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``.  Examples:
+The master log can be sent to a regular file, local path name, or network 
+location. See also :conf-log:`log_file`.
+
+Examples:
 
 .. code-block:: yaml
 
@@ -822,6 +828,8 @@ with rsyslogd(8) configured for network logging.  The format for remote addresse
 
     log_file: udp://loghost:10514
 
+
+
 .. conf_master:: log_level
 
 ``log_level``
@@ -829,12 +837,14 @@ with rsyslogd(8) configured for network logging.  The format for remote addresse
 
 Default: ``warning``
 
-The level of messages to send to the console.
-One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+The level of messages to send to the console. See also :conf-log:`log_level`.
 
 .. code-block:: yaml
 
     log_level: warning
+
+
+
 
 .. conf_master:: log_level_logfile
 
@@ -843,12 +853,14 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 Default: ``warning``
 
-The level of messages to send to the log file.
-One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+The level of messages to send to the log file. See also 
+:conf-log:`log_level_logfile`.
 
 .. code-block:: yaml
 
     log_level_logfile: warning
+
+
 
 .. conf_master:: log_datefmt
 
@@ -857,12 +869,15 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 Default: ``%H:%M:%S``
 
-The date and time format used in console log messages. Allowed date/time formatting
-can be seen on :func:`time.strftime <python2:time.strftime>`.
+The date and time format used in console log messages. See also 
+:conf-log:`log_datefmt`.
 
 .. code-block:: yaml
 
     log_datefmt: '%H:%M:%S'
+
+
+
 
 .. conf_master:: log_datefmt_logfile
 
@@ -871,12 +886,14 @@ can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 Default: ``%Y-%m-%d %H:%M:%S``
 
-The date and time format used in log file messages. Allowed date/time formatting
-can be seen on :func:`time.strftime <python2:time.strftime>`.
+The date and time format used in log file messages. See also 
+:conf-log:`log_datefmt_logfile`.
 
 .. code-block:: yaml
 
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
+
+
 
 .. conf_master:: log_fmt_console
 
@@ -885,12 +902,14 @@ can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 Default: ``[%(levelname)-8s] %(message)s``
 
-The format of the console logging messages. Allowed formatting options can
-be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
+The format of the console logging messages. See also 
+:conf-log:`log_fmt_console`.
 
 .. code-block:: yaml
 
     log_fmt_console: '[%(levelname)-8s] %(message)s'
+
+
 
 .. conf_master:: log_fmt_logfile
 
@@ -899,12 +918,14 @@ be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
-The format of the log file logging messages. Allowed formatting options can
-be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
+The format of the log file logging messages. See also 
+:conf-log:`log_fmt_logfile`.
 
 .. code-block:: yaml
 
     log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+
+
 
 .. conf_master:: log_granular_levels
 
@@ -913,15 +934,13 @@ be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 Default: ``{}``
 
-This can be used to control logging levels more specifically.  The
-example sets the main salt library at the 'warning' level, but sets
-'salt.modules' to log at the 'debug' level:
+This can be used to control logging levels more specifically. See also 
+:conf-log:`log_granular_levels`.
 
-.. code-block:: yaml
 
-  log_granular_levels:
-    'salt': 'warning',
-    'salt.modules': 'debug'
+
+Include Configuration
+=====================
 
 .. conf_master:: default_include
 
@@ -931,6 +950,37 @@ example sets the main salt library at the 'warning' level, but sets
 Default: ``master.d/*.conf``
 
 The master can include configuration from other files. Per default the
-master will automatically include all config files from `master.d/*.conf`
-where master.d is relative to the directory of the master configuration
+master will automatically include all config files from ``master.d/*.conf``
+where ``master.d`` is relative to the directory of the master configuration
 file.
+
+
+.. conf_master:: include
+
+``include``
+-----------
+
+Default: ``not defined``
+
+The master can include configuration from other files. To enable this,
+pass a list of paths to this option. The paths can be either relative or
+absolute; if relative, they are considered to be relative to the directory
+the main minion configuration file lives in. Paths can make use of
+shell-style globbing. If no files are matched by a path passed to this
+option then the master will log a warning message.
+
+.. code-block:: yaml
+
+    # Include files from a master.d directory in the same
+    # directory as the master config file
+    include: master.d/*
+
+    # Include a single extra file into the configuration
+    include: /etc/roles/webserver
+
+    # Include several files and the master.d directory
+    include:
+      - extra_config
+      - master.d/*
+      - /etc/roles/webserver
+

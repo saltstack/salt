@@ -51,10 +51,7 @@ def get_path():
     ret = __salt__['reg.read_key']('HKEY_LOCAL_MACHINE', 'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment', 'PATH').split(';')
 
     # Trim ending backslash
-    for i in range(0, len(ret)):
-        ret[i] = _normalize_dir(ret[i])
-
-    return ret
+    return map(_normalize_dir, ret)
 
 def exists(path):
     '''

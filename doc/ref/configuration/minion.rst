@@ -15,8 +15,10 @@ of the Salt system each have a respective configuration file. The
 The Salt Minion configuration is very simple, typically the only value that
 needs to be set is the master value so the minion can find its master.
 
+
+
 Minion Primary Configuration
-----------------------------
+============================
 
 .. conf_minion:: master
 
@@ -302,8 +304,10 @@ Pull port used when :conf_minion:`ipc_mode` is set to ``tcp``.
 
     tcp_pull_port: 4511
 
+
+
 Minion Module Management
-------------------------
+========================
 
 .. conf_minion:: disable_modules
 
@@ -428,8 +432,10 @@ below.
       pkg: yumpkg5
       service: systemd
 
+
+      
 State Management Settings
--------------------------
+=========================
 
 .. conf_minion:: renderer
 
@@ -519,8 +525,10 @@ environments is to isolate via the top file.
 
     environment: None
 
+
+
 File Directory Settings
------------------------
+=======================
 
 .. conf_minion:: file_client
 
@@ -604,8 +612,10 @@ the pillar environments.
       prod:
         - /srv/pillar/prod
 
+
+
 Security Settings
------------------
+=================
 
 .. conf_minion:: open_mode
 
@@ -622,8 +632,10 @@ minion to clean the keys.
 
     open_mode: False
 
+
+
 Thread Settings
----------------
+===============
 
 .. conf_minion:: multiprocessing
 
@@ -636,20 +648,25 @@ publication a new process is spawned and the command is executed therein.
 
     multiprocessing: True
 
+
+
+
+.. _minion-logging-settings:
+
 Minion Logging Settings
------------------------
+=======================
 
 .. conf_minion:: log_file
 
 ``log_file``
 ------------
 
-Default: /var/log/salt/minion
+Default: ``/var/log/salt/minion``
 
-The minion log can be sent to a regular file, local path name, or network location.
-Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``),
-with rsyslogd(8) configured for network logging.  The format for remote addresses is:
-``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``.  Examples:
+The minion log can be sent to a regular file, local path name, or network 
+location.  See also :conf-log:`log_file`.
+
+Examples:
 
 .. code-block:: yaml
 
@@ -663,6 +680,8 @@ with rsyslogd(8) configured for network logging.  The format for remote addresse
 
     log_file: udp://loghost:10514
 
+
+
 .. conf_minion:: log_level
 
 ``log_level``
@@ -670,12 +689,14 @@ with rsyslogd(8) configured for network logging.  The format for remote addresse
 
 Default: ``warning``
 
-The level of messages to send to the console.
-One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+The level of messages to send to the console. See also :conf-log:`log_level`.
 
 .. code-block:: yaml
 
     log_level: warning
+
+
+
 
 .. conf_minion:: log_level_logfile
 
@@ -684,12 +705,14 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 Default: ``warning``
 
-The level of messages to send to the log file.
-One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+The level of messages to send to the log file. See also 
+:conf-log:`log_level_logfile`.
 
 .. code-block:: yaml
 
     log_level_logfile: warning
+
+
 
 .. conf_minion:: log_datefmt
 
@@ -698,12 +721,15 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 Default: ``%H:%M:%S``
 
-The date and time format used in console log messages. Allowed date/time formatting
-can be seen on :func:`time.strftime <python2:time.strftime>`.
+The date and time format used in console log messages. See also 
+:conf-log:`log_datefmt`.
 
 .. code-block:: yaml
 
     log_datefmt: '%H:%M:%S'
+
+
+
 
 .. conf_minion:: log_datefmt_logfile
 
@@ -712,12 +738,14 @@ can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 Default: ``%Y-%m-%d %H:%M:%S``
 
-The date and time format used in log file messages. Allowed date/time formatting
-can be seen on :func:`time.strftime <python2:time.strftime>`.
+The date and time format used in log file messages. See also 
+:conf-log:`log_datefmt_logfile`.
 
 .. code-block:: yaml
 
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
+
+
 
 .. conf_minion:: log_fmt_console
 
@@ -726,12 +754,14 @@ can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 Default: ``[%(levelname)-8s] %(message)s``
 
-The format of the console logging messages. Allowed formatting options can
-be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
+The format of the console logging messages. See also 
+:conf-log:`log_fmt_console`.
 
 .. code-block:: yaml
 
     log_fmt_console: '[%(levelname)-8s] %(message)s'
+
+
 
 .. conf_minion:: log_fmt_logfile
 
@@ -740,12 +770,14 @@ be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
-The format of the log file logging messages. Allowed formatting options can
-be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
+The format of the log file logging messages. See also 
+:conf-log:`log_fmt_logfile`.
 
 .. code-block:: yaml
 
     log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+
+
 
 .. conf_minion:: log_granular_levels
 
@@ -754,15 +786,13 @@ be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 Default: ``{}``
 
-This can be used to control logging levels more specifically.  This
-example sets the main salt library at the 'warning' level, but sets 
-'salt.modules' to log at the 'debug' level:
+This can be used to control logging levels more specifically. See also 
+:conf-log:`log_granular_levels`.
 
-.. code-block:: yaml
 
-  log_granular_levels:
-    'salt': 'warning',
-    'salt.modules': 'debug'
+
+Include Configuration
+=====================
 
 .. conf_minion:: include
 
@@ -804,8 +834,9 @@ option then the minion will log a warning message.
       - /etc/roles/webserver
 
 
+
 Frozen Build Update Settings
-----------------------------
+============================
 
 These options control how :py:func:`salt.modules.saltutil.update` works with esky
 frozen apps. For more information look at `<https://github.com/cloudmatrix/esky/>`_.
