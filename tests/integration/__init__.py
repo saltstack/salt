@@ -3,7 +3,6 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-
 import os
 import sys
 import time
@@ -48,6 +47,9 @@ import salt.version
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
+# Import 3rd-party libs
+import yaml
+
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
@@ -56,6 +58,7 @@ PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
+TMP_CONF_DIR = os.path.join(TMP, 'config')
 
 log = logging.getLogger(__name__)
 
@@ -110,23 +113,28 @@ class TestDaemon(object):
         '''
         Start a master and minion
         '''
+        running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         self.master_opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
+        self.master_opts['user'] = running_tests_user
         minion_config_path = os.path.join(
             INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'
         )
         self.minion_opts = salt.config.minion_config(minion_config_path)
+        self.minion_opts['user'] = running_tests_user
         self.syndic_opts = salt.config.syndic_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'),
             minion_config_path
         )
+        self.syndic_opts['user'] = running_tests_user
 
         #if sys.version_info < (2, 7):
         #    self.minion_opts['multiprocessing'] = False
         self.sub_minion_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
         )
+        self.sub_minion_opts['user'] = running_tests_user
         #if sys.version_info < (2, 7):
         #    self.sub_minion_opts['multiprocessing'] = False
         self.smaster_opts = salt.config.master_config(
@@ -134,6 +142,7 @@ class TestDaemon(object):
                 INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'
             )
         )
+        self.smaster_opts['user'] = running_tests_user
 
         # Set up config options that require internal data
         self.master_opts['pillar_roots'] = {
@@ -187,7 +196,7 @@ class TestDaemon(object):
                     TMP_STATE_TREE,
                     TMP
                     ],
-                   pwd.getpwuid(os.getuid()).pw_name)
+                   running_tests_user)
 
         # Set up PATH to mockbin
         self._enter_mockbin()
@@ -217,16 +226,13 @@ class TestDaemon(object):
         if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
             from copy import deepcopy
             try:
-                import yaml
                 os.makedirs('/tmp/salttest/conf')
             except OSError:
                 pass
             master_opts = deepcopy(self.master_opts)
             minion_opts = deepcopy(self.minion_opts)
             master_opts.pop('conf_file', None)
-            master_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
 
-            minion_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
             minion_opts.pop('conf_file', None)
             minion_opts.pop('grains', None)
             minion_opts.pop('pillar', None)
@@ -542,7 +548,47 @@ class TestDaemon(object):
         return True
 
 
-class SaltClientTestCaseMixIn(object):
+class AdaptedConfigurationTestCaseMixIn(object):
+
+    __slots__ = ()
+
+    def get_config_dir(self):
+        integration_config_dir = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'conf'
+        )
+        if os.getuid() == 0:
+            # Running as root, the running user does not need to be updated
+            return integration_config_dir
+
+        for fname in os.listdir(integration_config_dir):
+            self.get_config_file_path(fname)
+        return TMP_CONF_DIR
+
+    def get_config_file_path(self, filename):
+        integration_config_file = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'conf', filename
+        )
+        if os.getuid() == 0:
+            # Running as root, the running user does not need to be updated
+            return integration_config_file
+
+        if not os.path.isdir(TMP_CONF_DIR):
+            os.makedirs(TMP_CONF_DIR)
+
+        updated_config_path = os.path.join(TMP_CONF_DIR, filename)
+        if not os.path.isfile(updated_config_path):
+            self.__update_config(integration_config_file, updated_config_path)
+        return updated_config_path
+
+    def __update_config(self, source, dest):
+        if not os.path.isfile(dest):
+            running_tests_user = pwd.getpwuid(os.getuid()).pw_name
+            configuration = yaml.load(open(source).read())
+            configuration['user'] = running_tests_user
+            open(dest, 'w').write(yaml.dump(configuration))
+
+
+class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
     __slots__ = ('client', '_salt_client_config_file_name_')
@@ -550,10 +596,7 @@ class SaltClientTestCaseMixIn(object):
     @property
     def client(self):
         return salt.client.LocalClient(
-            os.path.join(
-                INTEGRATION_TEST_DIR, 'files', 'conf',
-                self._salt_client_config_file_name_
-            )
+            self.get_config_file_path(self._salt_client_config_file_name_)
         )
 
 
@@ -608,7 +651,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+            self.get_config_file_path('minion')
         )
 
     @property
@@ -617,7 +660,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
+            self.get_config_file_path('sub_minion')
         )
 
     @property
@@ -626,7 +669,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+            self.get_config_file_path('master')
         )
 
 
@@ -650,7 +693,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         return orig['minion']
 
 
-class ShellCase(ShellTestCase):
+class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     '''
     Execute a test for a shell command
     '''
@@ -663,16 +706,14 @@ class ShellCase(ShellTestCase):
         '''
         Execute salt
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt', arg_str)
 
     def run_run(self, arg_str):
         '''
         Execute salt-run
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-run', arg_str)
 
     def run_run_plus(self, fun, options='', *arg):
@@ -685,7 +726,7 @@ class ShellCase(ShellTestCase):
             '{0} {1} {2}'.format(options, fun, ' '.join(arg))
         )
         opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+            self.get_config_file_path('master')
         )
         opts.update({'doc': False, 'fun': fun, 'arg': arg})
         with RedirectStdStreams():
@@ -697,21 +738,18 @@ class ShellCase(ShellTestCase):
         '''
         Execute salt-key
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-key', arg_str, catch_stderr=catch_stderr)
 
     def run_cp(self, arg_str):
         '''
         Execute salt-cp
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
+        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cp', arg_str)
 
     def run_call(self, arg_str):
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
+        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-call', arg_str)
 
 
