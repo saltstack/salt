@@ -57,7 +57,9 @@ def cpu():
     '''
     Tests for the CPU performance of minions.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' sysbench.cpu
     '''
@@ -84,7 +86,9 @@ def threads():
     '''
     This tests the performance of the processor's scheduler
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sysbench.threads
     '''
@@ -113,7 +117,9 @@ def mutex():
     '''
     Tests the implementation of mutex
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' sysbench.mutex
     '''
@@ -150,7 +156,9 @@ def memory():
     '''
     This tests the memory for read and write operations.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' sysbench.memory
     '''
@@ -197,7 +205,9 @@ def fileio():
     The test works with 32 files with each file being 1Gb in size
     The test consumes a lot of time. Be patient!
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' sysbench.fileio
     '''

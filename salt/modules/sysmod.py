@@ -29,7 +29,9 @@ def doc(*args, **kwargs):
 
     Multiple modules/functions can be specified.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sys.doc
         salt '*' sys.doc sys
@@ -62,7 +64,9 @@ def list_functions(*args, **kwargs):
     List the functions for all modules. Optionally, specify a module or modules
     from which to list.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sys.list_functions
         salt '*' sys.list_functions sys
@@ -91,7 +95,9 @@ def list_modules():
     '''
     List the modules loaded on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sys.list_modules
     '''
@@ -108,7 +114,9 @@ def reload_modules():
     '''
     Tell the minion to reload the execution modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sys.reload_modules
     '''
@@ -122,7 +130,9 @@ def argspec(module=''):
     Return the argument specification of functions in Salt execution
     modules.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sys.argspec pkg.install
         salt '*' sys.argspec sys

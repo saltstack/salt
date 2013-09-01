@@ -154,7 +154,9 @@ def update(version=None):
 
     Returns details about the transaction upon completion.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.update 0.10.3
     '''
@@ -190,7 +192,9 @@ def sync_modules(env=None, refresh=True):
     to grab the contents of the _modules directory, base is the default
     environment.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.sync_modules
     '''
@@ -207,7 +211,9 @@ def sync_states(env=None, refresh=True):
     to grab the contents of the _states directory, base is the default
     environment.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.sync_states
     '''
@@ -224,7 +230,9 @@ def sync_grains(env=None, refresh=True):
     to grab the contents of the _grains directory, base is the default
     environment.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.sync_grains
     '''
@@ -241,7 +249,9 @@ def sync_renderers(env=None, refresh=True):
     to grab the contents of the _renderers directory, base is the default
     environment.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.sync_renderers
     '''
@@ -258,7 +268,9 @@ def sync_returners(env=None, refresh=True):
     to grab the contents of the _returners directory, base is the default
     environment.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.sync_returners
     '''
@@ -275,7 +287,9 @@ def sync_outputters(env=None, refresh=True):
     to grab the contents of the _outputters directory, base is the default
     environment.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.sync_outputters
     '''
@@ -290,7 +304,9 @@ def sync_all(env=None, refresh=True):
     Sync down all of the dynamic modules from the file server for a specific
     environment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.sync_all
     '''
@@ -311,7 +327,9 @@ def refresh_pillar():
     '''
     Signal the minion to refresh the pillar data.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.refresh_pillar
     '''
@@ -322,7 +340,9 @@ def refresh_modules():
     '''
     Signal the minion to refresh the module and grain data
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.refresh_modules
     '''
@@ -334,7 +354,9 @@ def is_running(fun):
     If the named function is running return the data associated with it/them.
     The argument can be a glob
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.is_running state.highstate
     '''
@@ -350,7 +372,9 @@ def running():
     '''
     Return the data on all running salt processes on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.running
     '''
@@ -383,7 +407,9 @@ def find_job(jid):
     '''
     Return the data for a specific job id
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.find_job <job id>
     '''
@@ -397,7 +423,9 @@ def signal_job(jid, sig):
     '''
     Sends a signal to the named salt job's process
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.signal_job <job id> 15
     '''
@@ -423,7 +451,9 @@ def term_job(jid):
     '''
     Sends a termination signal (SIGTERM 15) to the named salt job's process
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.term_job <job id>
     '''
@@ -434,7 +464,9 @@ def kill_job(jid):
     '''
     Sends a kill signal (SIGKILL 9) to the named salt job's process
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.kill_job <job id>
     '''
@@ -445,7 +477,9 @@ def regen_keys():
     '''
     Used to regenerate the minion keys.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.regen_keys
     '''
@@ -466,7 +500,9 @@ def revoke_auth():
     Note that the minion session will be revoked and the minion may
     not be able to return the result of this command back to the master.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.revoke_auth
     '''
@@ -495,7 +531,9 @@ def cmd(tgt,
     '''
     Assuming this minion is a master, execute a salt command
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' saltutil.cmd
     '''
