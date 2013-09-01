@@ -66,20 +66,24 @@ def running():
     This function is used to prevent multiple state calls from being run at
     the same time.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.running
     '''
     ret = []
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
-        err = ('The function "{0}" is running as PID {1} and was started at '
-               '{2} with jid {3}').format(
-                data['fun'],
-                data['pid'],
-                salt.utils.jid_to_time(data['jid']),
-                data['jid'],
-                )
+        err = (
+            'The function "{0}" is running as PID {1} and was started at '
+            '{2} with jid {3}'
+        ).format(
+            data['fun'],
+            data['pid'],
+            salt.utils.jid_to_time(data['jid']),
+            data['jid'],
+        )
         ret.append(err)
     return ret
 
@@ -89,7 +93,9 @@ def low(data):
     Execute a single low data call
     This function is mostly intended for testing the state system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     '''
@@ -115,7 +121,9 @@ def high(data):
     Execute the compound calls stored in a single set of high data
     This function is mostly intended for testing the state system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
@@ -133,7 +141,9 @@ def template(tem):
     '''
     Execute the information stored in a template file on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.template '<Path to template on the minion>'
     '''
@@ -151,7 +161,9 @@ def template_str(tem):
     '''
     Execute the information stored in a string from an sls template
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.template_str '<Template String>'
     '''
@@ -169,7 +181,9 @@ def highstate(test=None, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.highstate
 
@@ -233,10 +247,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     Execute a set list of state modules from an environment, default
     environment is base
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.sls core,edit.vim dev
-
         salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
 
@@ -318,10 +333,11 @@ def top(topfn, test=None, **kwargs):
     '''
     Execute a specific top file instead of the default
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.top reverse_top.sls
-
         salt '*' state.top reverse_top.sls exclude=sls_to_exclude
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
@@ -357,7 +373,9 @@ def show_highstate():
     '''
     Retrieve the highstate data from the salt master and display it
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_highstate
     '''
@@ -380,7 +398,9 @@ def show_lowstate():
     '''
     List out the low data that will be applied to this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_lowstate
     '''
@@ -402,7 +422,9 @@ def show_sls(mods, env='base', test=None, **kwargs):
     Display the state data from a specific sls or list of sls files on the
     master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_sls core,edit.vim dev
     '''
@@ -434,7 +456,9 @@ def show_top():
     '''
     Return the top data that the minion will use for a highstate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_top
     '''
@@ -457,7 +481,9 @@ def show_top():
 #    '''
 #    Display the data gathered from the master compiled state
 #
-#    CLI Example::
+#    CLI Example:
+#
+#    .. code-block:: bash
 #
 #        salt '*' state.show_masterstate
 #    '''
@@ -475,7 +501,9 @@ def single(fun, name, test=None, **kwargs):
     would in a YAML salt file. Alternatively, JSON format of keyword values
     is also supported.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.single pkg.installed name=vim
 
@@ -517,7 +545,9 @@ def clear_cache():
     Remember that the state cache is completely disabled by default, this
     execution only applies if cache=True is used in states
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.clear_cache
     '''
@@ -538,7 +568,9 @@ def pkg(pkg_path, test=False, **kwargs):
     tarball available locally. This packaged state
     can be generated using salt-ssh.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.pkg /tmp/state_pkg.tgz
     '''

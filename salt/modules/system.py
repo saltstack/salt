@@ -18,7 +18,9 @@ def halt():
     '''
     Halt a running system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.halt
     '''
@@ -31,7 +33,9 @@ def init(runlevel):
     '''
     Change the system runlevel on sysV compatible systems
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.init 3
     '''
@@ -44,7 +48,9 @@ def poweroff():
     '''
     Poweroff a running system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.poweroff
     '''
@@ -57,7 +63,9 @@ def reboot():
     '''
     Reboot the system using the 'reboot' command
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.reboot
     '''
@@ -70,7 +78,9 @@ def shutdown():
     '''
     Shutdown a running system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.shutdown
     '''
