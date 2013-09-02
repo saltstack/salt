@@ -72,6 +72,7 @@ def run_suite(opts, path, display_name, suffix='[!_]*.py'):
         if not os.path.isdir(XML_OUTPUT_DIR):
             os.makedirs(XML_OUTPUT_DIR)
         runner = saltunittest.TextTestRunner(
+            stream=sys.stdout,
             verbosity=opts.verbosity
         ).run(tests)
         TEST_RESULTS.append((header, runner))
