@@ -95,7 +95,7 @@ def latest_version(*names, **kwargs):
 
         # keep pkg.latest culm
         for pkg in set(names) - set(ret) - set(list_pkgs()):
-            for line in __salt__['cmd.run']('{0} search -fe {1}'.format(
+            for line in __salt__['cmd.run']('{0} search -fe -Sname {1}'.format(
                 _cmd('pkg'), pkg)
             ).splitlines():
                 if line.startswith('Version'):
