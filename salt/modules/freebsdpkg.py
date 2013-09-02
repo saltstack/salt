@@ -81,17 +81,12 @@ def latest_version(*names, **kwargs):
             if not line.startswith('\t'):
                 continue
             line = line.strip()
-            if line.startswith('Installing'):
-                _, pkg, ver = line.split()
-                pkg = pkg.rstrip(':')
-            elif line.startswith('Upgrading'):
-                _, pkg, _, _, ver = line.split()
-                pkg = pkg.rstrip(':')
-            elif line.startswith('Reinstalling'):
-                _, pkgver = line.split()
-                comps = pkgver.split('-')
-                pkg = ''.join(comps[:-1])
-                ver = comps[-1]
+            _words = line.split()
+            if _words[0] in ('Installing', 'Upgrading', 'Downgrading'):
+                pkg = _words[1].rstrip(':')
+                ver = _words[2] if _words[0] == 'Installing' else _words[4]
+            elif _words[0] in ('Reinstalling'):
+                pkg, ver = _words[1].split('-')
             else:
                 # unexpected string
                 continue
