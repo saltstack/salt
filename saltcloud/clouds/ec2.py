@@ -1391,6 +1391,9 @@ def get_tags(name=None, instance_id=None, call=None, location=None):
         )
 
     if instance_id is None:
+        if location is None:
+            location = get_location()
+
         instances = list_nodes_full(location)
         if name in instances:
             instance_id = instances[name]['instanceId']
@@ -1574,6 +1577,9 @@ def show_instance(name, call=None):
 
 
 def _get_node(name, location=None):
+    if location is None:
+        location = get_location()
+
     attempts = 10
     while attempts >= 0:
         try:
@@ -1684,7 +1690,7 @@ def list_nodes():
     Return a list of the VMs that are on the provider
     '''
     ret = {}
-    nodes = list_nodes_full()
+    nodes = list_nodes_full(get_location())
     if 'error' in nodes:
         raise SaltCloudSystemExit(
             'An error occurred while listing nodes: {0}'.format(
@@ -1708,8 +1714,7 @@ def list_nodes_select():
     Return a list of the VMs that are on the provider, with select fields
     '''
     ret = {}
-
-    nodes = list_nodes_full()
+    nodes = list_nodes_full(get_location())
     if 'error' in nodes:
         raise SaltCloudSystemExit(
             'An error occurred while listing nodes: {0}'.format(
@@ -1739,7 +1744,7 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
         )
 
     if not instance_id:
-        instances = list_nodes_full()
+        instances = list_nodes_full(get_location())
         instance_id = instances[name]['instanceId']
     params = {'Action': 'DescribeInstanceAttribute',
               'InstanceId': instance_id,
@@ -1805,7 +1810,7 @@ def _toggle_term_protect(name, value):
 
         salt-cloud -a disable_term_protect mymachine
     '''
-    instances = list_nodes_full()
+    instances = list_nodes_full(get_location())
     instance_id = instances[name]['instanceId']
     params = {'Action': 'ModifyInstanceAttribute',
               'InstanceId': instance_id,
@@ -1857,7 +1862,7 @@ def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
         salt-cloud -a disable_term_protect mymachine
     '''
     if not instance_id:
-        instances = list_nodes_full()
+        instances = list_nodes_full(get_location())
         instance_id = instances[name]['instanceId']
 
     if requesturl:
@@ -1942,7 +1947,7 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
         instance_id = kwargs['instance_id']
 
     if name and not instance_id:
-        instances = list_nodes_full()
+        instances = list_nodes_full(get_location())
         instance_id = instances[name]['instanceId']
 
     if not name and not instance_id:
