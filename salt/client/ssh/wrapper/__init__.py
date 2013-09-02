@@ -4,6 +4,9 @@ how executions are run in the salt-ssh system, this allows for state routines
 to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 '''
+# Import python libs
+import json
+
 # Import salt libs
 import salt.utils
 import salt.client.ssh
