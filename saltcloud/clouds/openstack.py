@@ -272,6 +272,15 @@ def ssh_interface(vm_):
         search_global=False
     )
 
+def rackconnect(vm_):
+    '''
+    Determine if we should wait for rackconnect automation before running. Either 
+    'False' (default) or 'True'.
+    '''
+    return config.get_config_value(
+        'rackconnect', vm_, __opts__, default='False',
+        search_global=False
+    )
 
 def create(vm_):
     '''
@@ -295,6 +304,17 @@ def create(vm_):
             'is not set and \'sshpass\' binary is not present on the '
             'system for the password.'
         )
+
+    saltcloud.utils.fire_event(
+        'event',
+        'starting create',
+        'salt.cloud.{0}.creating'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9._-')
@@ -353,6 +373,15 @@ def create(vm_):
             g for g in avail_groups if g.name in group_list
         ]
 
+    saltcloud.utils.fire_event(
+        'event',
+        'requesting instance',
+        'salt.cloud.{0}.requesting'.format(vm_['name']),
+        {'kwargs': {'name': kwargs['name'],
+                    'image': kwargs['image'].name,
+                    'size': kwargs['size'].name}},
+    )
+
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -396,6 +425,15 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
+        if rackconnect(vm_) is True:
+            extra = nodelist[vm_['name']].get('extra')
+            rc_status = extra.get('metadata').get('rackconnect_automation_status')
+            access_ip = extra.get('access_ip')
+
+            if rc_status != 'DEPLOYED':
+                log.debug('Waiting for Rackconnect automation to complete')
+                return
+
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         if private and not public:
@@ -411,7 +449,7 @@ def create(vm_):
                     log.warn(
                         'Public IP address was not ready when we last checked.  Appending public IP address now.'
                     )
-                    public=data.public_ips
+                    public = data.public_ips
                 else:
                     log.warn('{0} is a private IP'.format(private_ip))
                     ignore_ip = ignore_ip_addr(vm_, private_ip)
@@ -419,6 +457,11 @@ def create(vm_):
                         data.private_ips.append(private_ip)
 
             if ssh_interface(vm_) == 'private_ips' and data.private_ips:
+                return data
+
+        if rackconnect(vm_) is True:
+            if ssh_interface(vm_) != 'private_ips':
+                data.public_ips = access_ip
                 return data
 
         if private:
@@ -448,9 +491,12 @@ def create(vm_):
             raise SaltCloudSystemExit(exc.message)
 
     log.debug('VM is now running')
+
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
-    else:
+    elif (rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips'):
+            ip_address = data.public_ips        
+    else: 
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
@@ -526,6 +572,13 @@ def create(vm_):
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs
 
+        saltcloud.utils.fire_event(
+            'event',
+            'executing deploy script',
+            'salt.cloud.{0}.deploying'.format(vm_['name']),
+            {'kwargs': deploy_kwargs},
+        )
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
@@ -544,4 +597,16 @@ def create(vm_):
     )
 
     ret.update(data.__dict__)
+
+    saltcloud.utils.fire_event(
+        'event',
+        'created instance',
+        'salt.cloud.{0}.created'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+    )
+
     return ret

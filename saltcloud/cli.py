@@ -258,7 +258,7 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.function:
             kwargs = {}
             args = self.args[:]
-            for arg in args:
+            for arg in args[:]:
                 if '=' in arg:
                     key, value = arg.split('=')
                     kwargs[key] = value

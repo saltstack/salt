@@ -127,6 +127,23 @@ it can be verified with Salt:
 
     # salt myinstance test.ping
 
+RackConnect Environments
+--------------------------------
+
+Rackspace offers a hybrid hosting configuration option called RackConnect that
+allows you to use a physical firewall appliance with your cloud servers. When this 
+service is in use the public_ip assigned by nova will be replaced by a NAT ip on
+the firewall. For salt-cloud to work properly it must use the newly assigned "access ip"
+instead of the Nova assigned public ip. You can enable that capability by adding this 
+to your profiles:
+
+.. code-block:: yaml
+
+    openstack_512:
+        provider: my-openstack-config
+        size: 512MB Standard Instance
+        image: Ubuntu 12.04 LTS (Precise Pangolin)
+        rackconnect: True
 
 First and Next Generation Images
 --------------------------------

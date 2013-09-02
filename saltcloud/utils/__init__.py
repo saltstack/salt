@@ -441,10 +441,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 root_cmd(subsys_command, tty, sudo, **kwargs)
                 root_cmd('service sshd restart', tty, sudo, **kwargs)
 
-            # Update hostname on the minion
-            hostname_cmd = 'test `hostname` == {0} || hostname {0}'.format(name)
-            root_cmd(hostname_cmd, tty, sudo, **kwargs)
-
             # Minion configuration
             if minion_pem:
                 scp_file('/tmp/minion.pem', minion_pem, kwargs)
@@ -695,20 +691,24 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         )
                     )
             # Fire deploy action
-            event = salt.utils.event.SaltEvent('master', sock_dir)
-            try:
-                event.fire_event(
-                    '{0} has been created at {1}'.format(name, host),
-                    'salt-cloud'
-                )
-            except ValueError:
-                # We're using develop or a 0.17.x version of salt
-                event.fire_event(
-                    {name: '{0} has been created at {1}'.format(name, host)},
-                    'salt-cloud'
-                )
-            return True
+            fire_event(name,
+                       '{0} has been deployed at {1}'.format(name, host),
+                       tag='salt.cloud.deploy_script')
     return False
+
+
+def fire_event(key, msg, tag, args=None, sock_dir='/var/run/salt/master'):
+    # Fire deploy action
+    event = salt.utils.event.SaltEvent('master', sock_dir)
+    try:
+        event.fire_event(msg, tag)
+    except ValueError:
+        # We're using develop or a 0.17.x version of salt
+        if type(args) is dict:
+            args[key] = msg
+        else:
+            args = {key: msg}
+        event.fire_event(args, tag)
 
 
 def scp_file(dest_path, contents, kwargs):
@@ -1087,8 +1087,8 @@ def salt_cloud_force_ascii(exc):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
     unicode_trans = {
-        u'\xa0':    u' ',   # Convert non-breaking space to space
-        u'\u2013':  u'-',   # Convert en dash to dash
+        u'\xa0': u' ',   # Convert non-breaking space to space
+        u'\u2013': u'-',  # Convert en dash to dash
     }
 
     if exc.object[exc.start:exc.end] in unicode_trans:
