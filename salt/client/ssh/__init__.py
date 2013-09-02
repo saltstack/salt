@@ -372,45 +372,6 @@ class Single(object):
         self.arg_str = 'state.pkg /tmp/salt_state.tgz test={0}'.format(test)
 
 
-class FunctionWrapper(dict):
-    '''
-    Create an object that acts like the salt function dict and makes function
-    calls remotely via the SSH shell system
-    '''
-    def __init__(
-            self,
-            opts,
-            id_,
-            host,
-            **kwargs):
-        super(FunctionWrapper, self).__init__()
-        self.opts = opts
-        self.kwargs = {'id_': id_,
-                       'host': host}
-        self.kwargs.update(kwargs)
-
-    def __getitem__(self, cmd):
-        '''
-        Return the function call to simulate the salt local lookup system
-        '''
-        def caller(*args, **kwargs):
-            '''
-            The remote execution function
-            '''
-            arg_str = '{0} '.format(cmd)
-            for arg in args:
-                arg_str += '{0} '.format(arg)
-            for key, val in kwargs.items():
-                arg_str += '{0}={1} '.format(key, val)
-            single = Single(self.opts, arg_str, **self.kwargs)
-            ret = single.cmd_block()
-            if ret.startswith('deploy'):
-                single.deploy()
-                ret = single.cmd_block()
-            return json.loads(ret, object_hook=salt.utils.decode_dict)
-        return caller
-
-
 class SSHState(salt.state.State):
     '''
     Create a State object which wraps the SSH functions for state operations
