@@ -5,7 +5,7 @@ Return config information
 # Import python libs
 import re
 import os
-import urllib
+import urllib2
 
 # Import salt libs
 import salt.utils
@@ -261,5 +261,5 @@ def gather_bootstrap_script(replace=False):
     if not replace and os.path.isfile(fn_):
         return fn_
     with salt.utils.fopen(fn_, 'w+') as fp_:
-        fp_.write(urllib.urlopen('http://bootstrap.saltstack.org').read())
+        fp_.write(urllib2.urlopen('http://bootstrap.saltstack.org').read())
     return fn_
