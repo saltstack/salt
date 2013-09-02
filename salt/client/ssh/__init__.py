@@ -12,6 +12,7 @@ import copy
 
 # Import salt libs
 import salt.client.ssh.shell
+import salt.client.ssh.wrapper
 import salt.utils
 import salt.utils.thin
 import salt.roster
@@ -327,7 +328,10 @@ class Single(object):
         Generate an archive file which contains the instructions and files
         to execute a state run on a remote system
         '''
-        wrapper = FunctionWrapper(self.opts, self.target['id'], **self.target)
+        wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                self.opts,
+                self.target['id'],
+                **self.target)
         st_ = SSHHighState(self.opts, None, wrapper)
         lowstate = st_.compile_low_chunks()
         #file_refs = salt.utils.lowstate_file_refs(lowstate)
@@ -336,7 +340,10 @@ class Single(object):
         '''
         Create the seed file for a state.sls run
         '''
-        wrapper = FunctionWrapper(self.opts, self.id, **self.target)
+        wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                self.opts,
+                self.id,
+                **self.target)
         minion_opts = copy.deepcopy(self.opts)
         minion_opts.update(wrapper['test.opts_pkg']())
         pillar = kwargs.get('pillar', {})
