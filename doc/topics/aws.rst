@@ -425,35 +425,76 @@ instance.
     $ salt-cloud -a show_instance myinstance
 
 
-delvol_on_destroy
-=================
+del_root_vol_on_destroy
+=======================
 This argument overrides the default DeleteOnTermination setting in the AMI for 
-the root EBS volume for an instance. Many AMIs contain 'false' as a default, 
+the EBS root volumes for an instance. Many AMIs contain 'false' as a default,
 resulting in orphaned volumes in the EC2 account, which may unknowingly be 
 charged to the account. This setting can be added to the profile or map file 
 for an instance.
 
+If set, this setting will apply to the root EBS volume
+
 .. code-block:: yaml
 
-    delvol_on_destroy: True
+    del_root_vol_on_destroy: True
 
 
-This can also be set as a cloud provider setting in the EC2 cloud 
+This can also be set as a cloud provider setting in the EC2 cloud
 configuration:
 
 .. code-block:: yaml
 
     my-ec2-config:
-      delvol_on_destroy: True
+      del_root_vol_on_destroy: True
 
 
-The setting for this may be changed on an existing instance using one of the 
-following commands:
+del_all_vols_on_destroy
+=======================
+This argument overrides the default DeleteOnTermination setting in the AMI for 
+the not-root EBS volumes for an instance. Many AMIs contain 'false' as a
+default, resulting in orphaned volumes in the EC2 account, which may
+unknowingly be charged to the account. This setting can be added to the profile
+or map file for an instance.
+
+If set, this setting will apply to any (non-root) volumes that were created
+by salt-cloud using the 'volumes' setting.
+
+The volumes will not be deleted under the following conditions
+* If a volume is detached before terminating the instance
+* If a volume is created without this setting and attached to the instance
+
+.. code-block:: yaml
+
+    del_all_vols_on_destroy: True
+
+
+This can also be set as a cloud provider setting in the EC2 cloud
+configuration:
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      del_all_vols_on_destroy: True
+
+
+The setting for this may be changed on all volumes of an existing instance
+using one of the following commands:
 
 .. code-block:: bash
 
     salt-cloud -a delvol_on_destroy myinstance
     salt-cloud -a keepvol_on_destroy myinstance
+
+The setting for this may be changed on a volume on an existing instance
+using one of the following commands:
+
+.. code-block:: bash
+
+    salt-cloud -a delvol_on_destroy myinstance device=/dev/sda1
+    salt-cloud -a delvol_on_destroy myinstance volume_id=vol-1a2b3c4d
+    salt-cloud -a keepvol_on_destroy myinstance device=/dev/sda1
+    salt-cloud -a keepvol_on_destroy myinstance volume_id=vol-1a2b3c4d
 
 
 EC2 Termination Protection

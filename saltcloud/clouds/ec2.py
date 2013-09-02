@@ -819,15 +819,17 @@ def create(vm_=None, call=None):
             for (counter, sg_) in enumerate(ex_securitygroupid):
                 params[spot_prefix + 'SecurityGroupId.{0}'.format(counter)] = sg_
 
-    set_delvol_on_destroy = config.get_config_value(
-        'delvol_on_destroy', vm_, __opts__, search_global=False
+    set_del_root_vol_on_destroy = config.get_config_value(
+        'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
-    if set_delvol_on_destroy is not None:
-        if not isinstance(set_delvol_on_destroy, bool):
+
+    if set_del_root_vol_on_destroy is not None:
+        if not isinstance(set_del_root_vol_on_destroy, bool):
             raise SaltCloudConfigError(
-                '\'delvol_on_destroy\' should be a boolean value.'
+                '\'del_root_vol_on_destroy\' should be a boolean value.'
             )
-    if set_delvol_on_destroy:
+
+    if set_del_root_vol_on_destroy:
         # first make sure to look up the root device name
         # as Ubuntu and CentOS (and most likely other OSs)
         # use different device identifiers
@@ -869,8 +871,18 @@ def create(vm_=None, call=None):
 
         params[spot_prefix + 'BlockDeviceMapping.1.DeviceName'] = rd_name
         params[spot_prefix + 'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
-            set_delvol_on_destroy
+            set_del_root_vol_on_destroy
         ).lower()
+
+    set_del_all_vols_on_destroy = config.get_config_value(
+        'del_all_vols_on_destroy', vm_, __opts__, search_global=False
+    )
+
+    if set_del_all_vols_on_destroy is not None:
+        if not isinstance(set_del_all_vols_on_destroy, bool):
+            raise SaltCloudConfigError(
+                '\'del_all_vols_on_destroy\' should be a boolean value.'
+            )
 
     tags = config.get_config_value('tag', vm_, __opts__, {}, search_global=False)
     if not isinstance(tags, dict):
@@ -1198,7 +1210,8 @@ def create(vm_=None, call=None):
             {
                 'volumes': volumes,
                 'zone': ret['placement']['availabilityZone'],
-                'instance_id': ret['instanceId']
+                'instance_id': ret['instanceId'],
+                'del_all_vols_on_destroy': set_del_all_vols_on_destroy
             },
             call='action'
         )
@@ -1225,7 +1238,8 @@ def create_attach_volumes(name, kwargs, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The set_tags action must be called with -a or --action.'
+            'The create_attach_volumes action must be called with '
+            '-a or --action.'
         )
 
     if not 'instance_id' in kwargs:
@@ -1261,6 +1275,13 @@ def create_attach_volumes(name, kwargs, call=None):
             for item in created_volume:
                 if 'volumeId' in item:
                     volume_dict['volume_id'] = item['volumeId']
+
+            # Update the delvol parameter for any newly created volumes
+            delvols_on_destroy = kwargs.get('del_all_vols_on_destroy', None)
+
+            if delvols_on_destroy is not None:
+                _toggle_delvol(instance_id=kwargs['instance_id'],
+                               value=delvols_on_destroy)
 
         attach = attach_volume(
             name,
@@ -1816,9 +1837,9 @@ def _toggle_term_protect(name, value):
     return show_term_protect(name=name, instance_id=instance_id, call='action')
 
 
-def keepvol_on_destroy(name, call=None):
+def keepvol_on_destroy(name, device=None, volume_id=None, call=None):
     '''
-    Do not delete root EBS volume upon instance termination
+    Do not delete all/specified EBS volumes upon instance termination
 
     CLI Example::
 
@@ -1829,12 +1850,13 @@ def keepvol_on_destroy(name, call=None):
             'The keepvol_on_destroy action must be called with -a or --action.'
         )
 
-    return _toggle_delvol(name=name, value='false')
+    return _toggle_delvol(name=name, device=device,
+                          volume_id=volume_id, value='false')
 
 
-def delvol_on_destroy(name, call=None):
+def delvol_on_destroy(name, device=None, volume_id=None, call=None):
     '''
-    Delete root EBS volume upon instance termination
+    Delete all/specified EBS volumes upon instance termination
 
     CLI Example::
 
@@ -1845,17 +1867,12 @@ def delvol_on_destroy(name, call=None):
             'The delvol_on_destroy action must be called with -a or --action.'
         )
 
-    return _toggle_delvol(name=name, value='true')
+    return _toggle_delvol(name=name, device=device,
+                          volume_id=volume_id, value='true')
 
 
-def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
-    '''
-    Disable termination protection on a node
-
-    CLI Example::
-
-        salt-cloud -a disable_term_protect mymachine
-    '''
+def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
+                   value=None, requesturl=None):
     if not instance_id:
         instances = list_nodes_full()
         instance_id = instances[name]['instanceId']
@@ -1868,12 +1885,23 @@ def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
         data, requesturl = query(params, return_url=True)
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
-    device_name = blockmap['item']['deviceName']
 
     params = {'Action': 'ModifyInstanceAttribute',
-              'InstanceId': instance_id,
-              'BlockDeviceMapping.1.DeviceName': device_name,
-              'BlockDeviceMapping.1.Ebs.DeleteOnTermination': value}
+              'InstanceId': instance_id}
+
+    if type(blockmap['item']) != list:
+        blockmap['item'] = [blockmap['item']]
+
+    for idx, item in enumerate(blockmap['item']):
+        device_name = item['deviceName']
+
+        if device is not None and device != device_name:
+            continue
+        if volume_id is not None and volume_id != item['ebs']['volumeId']:
+            continue
+
+        params['BlockDeviceMapping.%d.DeviceName' % (idx)] = device_name
+        params['BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % (idx)] = value
 
     query(params, return_root=True)
 
