@@ -36,7 +36,7 @@ from salt.modules.file import (check_hash, check_managed, check_perms, # pylint:
         manage_file, file_exists, get_diff, get_managed, __clean_tmp,
         check_managed, check_file_meta, _binary_replace, contains_regex)
 
-from salt.utils import namespaced_function
+from salt.utils import namespaced_function as _namespaced_function
 
 log = logging.getLogger(__name__)
 
@@ -50,14 +50,14 @@ def __virtual__():
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs
 
-            check_perms = namespaced_function(check_perms, globals())
-            get_managed = namespaced_function(get_managed, globals())
-            makedirs_perms = namespaced_function(makedirs_perms, globals())
-            makedirs = namespaced_function(makedirs, globals())
-            manage_file = namespaced_function(manage_file, globals())
-            source_list = namespaced_function(source_list, globals())
-            mkdir = namespaced_function(mkdir, globals())
-            __clean_tmp = namespaced_function(__clean_tmp, globals())
+            check_perms = _namespaced_function(check_perms, globals())
+            get_managed = _namespaced_function(get_managed, globals())
+            makedirs_perms = _namespaced_function(makedirs_perms, globals())
+            makedirs = _namespaced_function(makedirs, globals())
+            manage_file = _namespaced_function(manage_file, globals())
+            source_list = _namespaced_function(source_list, globals())
+            mkdir = _namespaced_function(mkdir, globals())
+            __clean_tmp = _namespaced_function(__clean_tmp, globals())
 
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
