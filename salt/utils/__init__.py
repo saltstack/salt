@@ -163,7 +163,7 @@ def get_colors(use=True):
         'LIGHT_PURPLE': '\033[1;35m',
         'BROWN': '\033[0;33m',
         'YELLOW': '\033[1;33m',
-        'WHITE': '\033[1;37m',
+       'WHITE': '\033[1;37m',
         'DEFAULT_COLOR': '\033[00m',
         'RED_BOLD': '\033[01;31m',
         'ENDC': '\033[0m',
@@ -714,20 +714,12 @@ def arg_lookup(fun):
     ret = {'args': [],
            'kwargs': {}}
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            ret['kwargs'][aspec.args[ind]] = aspec.defaults[-minus]
+    args = aspec.args
+    defaults = aspec.defaults
+    for arg, default in zip(args[len(args) - len(defaults):], defaults):
+      ret['kwargs'][arg] = default
     for arg in aspec.args:
-        if arg in ret:
-            continue
-        else:
+        if arg not in ret:
             ret['args'].append(arg)
     return ret
 
@@ -1395,18 +1387,11 @@ def version_cmp(pkg1, pkg2):
     making the comparison.
     '''
     try:
-        if distutils.version.LooseVersion(pkg1) < \
-                distutils.version.LooseVersion(pkg2):
-            return -1
-        elif distutils.version.LooseVersion(pkg1) == \
-                distutils.version.LooseVersion(pkg2):
-            return 0
-        elif distutils.version.LooseVersion(pkg1) > \
-                distutils.version.LooseVersion(pkg2):
-            return 1
+        pkg1_ver = distutils.version.LooseVersion(pkg1)
+        pkg2_ver = distutils.version.LooseVersion(pkg2)
+        return cmp(pkg1_ver, pkg2_ver)
     except Exception as e:
         log.exception(e)
-    return None
 
 
 def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):

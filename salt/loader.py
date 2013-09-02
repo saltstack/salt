@@ -125,8 +125,7 @@ def returners(opts, functions, whitelist=None):
     Returns the returner modules
     '''
     load = _create_loader(opts, 'returners', 'returner')
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = {'name': '__salt__', 'value': functions}
     return load.gen_functions(pack, whitelist=whitelist)
 
 
@@ -135,8 +134,7 @@ def pillars(opts, functions):
     Returns the pillars modules
     '''
     load = _create_loader(opts, 'pillar', 'pillar')
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = {'name': '__salt__', 'value': functions}
     return load.filter_func('ext_pillar', pack)
 
 
@@ -163,11 +161,8 @@ def outputters(opts):
     '''
     Returns the outputters modules
     '''
-    load = _create_loader(
-        opts,
-        'output',
-        'output',
-        ext_type_dirs='outputter_dirs')
+    load = _create_loader(opts, 'output',
+                          'output', ext_type_dirs='outputter_dirs')
     return load.filter_func('output')
 
 
@@ -202,8 +197,7 @@ def states(opts, functions, whitelist=None):
     Returns the state modules
     '''
     load = _create_loader(opts, 'states', 'states')
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = {'name': '__salt__', 'value': functions}
     return load.gen_functions(pack, whitelist=whitelist)
 
 
@@ -212,8 +206,7 @@ def search(opts, returners, whitelist=None):
     Returns the search modules
     '''
     load = _create_loader(opts, 'search', 'search')
-    pack = {'name': '__ret__',
-            'value': returners}
+    pack = {'name': '__ret__', 'value': returners}
     return load.gen_functions(pack, whitelist=whitelist)
 
 
@@ -221,13 +214,9 @@ def log_handlers(opts):
     '''
     Returns the custom logging handler modules
     '''
-    load = _create_loader(
-        opts,
-        'log_handlers',
-        'log_handlers',
-        int_type='handlers',
-        base_path=os.path.join(SALT_BASE_PATH, 'log')
-    )
+    load = _create_loader(opts, 'log_handlers', 'log_handlers',
+                          int_type='handlers',
+                          base_path=os.path.join(SALT_BASE_PATH, 'log'))
     return load.filter_func('setup_handlers')
 
 
@@ -235,11 +224,9 @@ def render(opts, functions):
     '''
     Returns the render modules
     '''
-    load = _create_loader(
-        opts, 'renderers', 'render', ext_type_dirs='render_dirs'
-    )
-    pack = {'name': '__salt__',
-            'value': functions}
+    load = _create_loader(opts, 'renderers',
+                          'render', ext_type_dirs='render_dirs')
+    pack = {'name': '__salt__', 'value': functions}
     rend = load.filter_func('render', pack)
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
@@ -298,16 +285,14 @@ def runner(opts):
     '''
     Directly call a function inside a loader directory
     '''
-    load = _create_loader(
-        opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
-    )
+    load = _create_loader(opts, 'runners',
+                          'runner', ext_type_dirs='runner_dirs')
     return load.gen_functions()
 
 
 def _generate_module(name):
     if name in sys.modules:
         return
-
     code = "'''Salt loaded {0} parent module'''".format(name.split('.')[-1])
     module = imp.new_module(name)
     exec code in module.__dict__
