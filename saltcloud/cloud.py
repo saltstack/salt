@@ -683,6 +683,8 @@ class Cloud(object):
                 ret[name] = self.create(vm_)
                 if not ret[name]:
                     ret[name] = {'Error': 'Failed to deploy VM'}
+                    if len(names) == 1:
+                        raise SaltCloudSystemExit('Failed to deploy VM')
                     continue
                 if self.opts.get('show_deploy_args', False) is False:
                     ret[name].pop('deploy_kwargs', None)
