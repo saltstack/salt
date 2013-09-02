@@ -255,7 +255,7 @@ def gather_bootstrap_script(replace=False):
 
     .. code-block:: bash
 
-        salt '*' qemu.gather_bootstrap_script True
+        salt '*' config.gather_bootstrap_script True
     '''
     fn_ = os.path.join(__opts__['cachedir'], 'bootstrap.sh')
     if not replace and os.path.isfile(fn_):
