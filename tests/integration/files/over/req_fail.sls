@@ -4,7 +4,7 @@ fail_stage:
     - fail
 req_fail:
   match: '*'
-  sls: 
+  sls:
     - fail
   require:
     - fail_stage
