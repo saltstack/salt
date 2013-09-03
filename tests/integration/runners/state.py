@@ -26,7 +26,6 @@ class ManageTest(integration.ShellCase):
                 'Executing the following Over State:',
                 )
         self.assertTrue(any(item in ret for item in items))
-        #self.assertIn('Requisite fail_stage failed for stage', ret)
 
     def test_over_parse_req_fail(self):
         '''
@@ -39,7 +38,6 @@ class ManageTest(integration.ShellCase):
                 'Executing the following Over State:',
                 )
         self.assertTrue(any(item in ret for item in items))
-        #self.assertIn('Requisite fail_stage failed for stage', ret)
 
 
 if __name__ == "__main__":
