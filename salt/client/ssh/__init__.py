@@ -199,7 +199,7 @@ class SSH(object):
                 opts,
                 opts['arg_str'],
                 host,
-                target)
+                **target)
         ret = {'id': single.id}
         stdout, stderr = single.run()
         if stdout.startswith('deploy'):
@@ -228,12 +228,14 @@ class SSH(object):
         running = {}
         target_iter = self.targets.__iter__()
         rets = set()
+        init = False
         while True:
-            if len(running) < self.opts.get('ssh_max_procs', 5):
+            if len(running) < self.opts.get('ssh_max_procs', 5) and not init:
                 try:
                     host = next(target_iter)
                 except StopIteration:
-                    pass
+                    init = True
+                    continue
                 for default in self.defaults:
                     if not default in self.targets[host]:
                         self.targets[host][default] = self.defaults[default]
@@ -244,23 +246,28 @@ class SSH(object):
                         self.targets[host],
                         )
                 routine = threading.Thread(target=self.handle_routine, args=args)
-                running[host]['thread'] = routine.start()
+                routine.start()
+                running[host] = {'thread': routine}
                 continue
             ret = que.get()
             for host in running:
                 if not running[host]['thread'].is_alive():
                     running[host]['thread'].join()
                     rets.add(host)
+            for host in rets:
+                if host in running:
                     running.pop(host)
             if not isinstance(ret, dict):
                 continue
             yield {ret['id']: ret['ret']}
+            if len(rets) >= len(self.targets):
+                break
 
     def run(self):
         '''
         Execute the overall routine
         '''
-        for ret in self.process():
+        for ret in self.handle_ssh():
             host = ret.keys()[0]
             ret = self.key_deploy(host, ret)
             salt.output.display_output(
