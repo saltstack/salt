@@ -20,7 +20,7 @@ class ManageTest(integration.ShellCase):
         '''
         state.over
         '''
-        os_fn = os.path.join(integration.FILES, 'over/req_fail.sls')
+        os_fn = os.path.join(integration.FILES, 'over', 'req_fail.sls')
         ret = '\n'.join(self.run_run('state.over os_fn={0}'.format(os_fn)))
         self.assertIn('Requisite fail_stage failed for stage', ret)
 
@@ -28,7 +28,7 @@ class ManageTest(integration.ShellCase):
         '''
         state.over
         '''
-        os_fn = os.path.join(integration.FILES, 'over/parse_req_fail.sls')
+        os_fn = os.path.join(integration.FILES, 'over', 'parse_req_fail.sls')
         ret = '\n'.join(self.run_run('state.over os_fn={0}'.format(os_fn)))
         self.assertIn('Requisite fail_stage failed for stage', ret)
 
