@@ -485,6 +485,7 @@ using one of the following commands:
 
     salt-cloud -a delvol_on_destroy myinstance
     salt-cloud -a keepvol_on_destroy myinstance
+    salt-cloud -a show_delvol_on_destroy myinstance
 
 The setting for this may be changed on a volume on an existing instance
 using one of the following commands:
@@ -495,6 +496,8 @@ using one of the following commands:
     salt-cloud -a delvol_on_destroy myinstance volume_id=vol-1a2b3c4d
     salt-cloud -a keepvol_on_destroy myinstance device=/dev/sda1
     salt-cloud -a keepvol_on_destroy myinstance volume_id=vol-1a2b3c4d
+    salt-cloud -a show_delvol_on_destroy myinstance device=/dev/sda1
+    salt-cloud -a show_delvol_on_destroy myinstance volume_id=vol-1a2b3c4d
 
 
 EC2 Termination Protection

@@ -1252,6 +1252,7 @@ def create_attach_volumes(name, kwargs, call=None):
 
     ret = []
     for volume in volumes:
+        created = False
         volume_name = '{0} on {1}'.format(volume['device'], name)
 
         volume_dict = {
@@ -1272,16 +1273,10 @@ def create_attach_volumes(name, kwargs, call=None):
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function')
+            created = True
             for item in created_volume:
                 if 'volumeId' in item:
                     volume_dict['volume_id'] = item['volumeId']
-
-            # Update the delvol parameter for any newly created volumes
-            delvols_on_destroy = kwargs.get('del_all_vols_on_destroy', None)
-
-            if delvols_on_destroy is not None:
-                _toggle_delvol(instance_id=kwargs['instance_id'],
-                               value=delvols_on_destroy)
 
         attach = attach_volume(
             name,
@@ -1289,6 +1284,15 @@ def create_attach_volumes(name, kwargs, call=None):
             instance_id=kwargs['instance_id'],
             call='action'
         )
+
+        # Update the delvol parameter for this volume
+        delvols_on_destroy = kwargs.get('del_all_vols_on_destroy', None)
+
+        if attach and created and delvols_on_destroy is not None:
+            _toggle_delvol(instance_id=kwargs['instance_id'],
+                           device=volume['device'],
+                           value=delvols_on_destroy)
+
         if attach:
             msg = (
                 '{0} attached to {1} (aka {2}) as device {3}'.format(
@@ -1842,7 +1846,64 @@ def _toggle_term_protect(name, value):
     return show_term_protect(name=name, instance_id=instance_id, call='action')
 
 
-def keepvol_on_destroy(name, device=None, volume_id=None, call=None):
+def show_delvol_on_destroy(name, kwargs=None, call=None):
+    '''
+    Do not delete all/specified EBS volumes upon instance termination
+
+    CLI Example::
+
+        salt-cloud -a show_delvol_on_destroy mymachine
+    '''
+
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The keepvol_on_destroy action must be called with -a or --action.'
+        )
+
+    if not kwargs:
+        kwargs = {}
+
+    instance_id = kwargs.get('instance_id', None)
+    device = kwargs.get('device', None)
+    volume_id = kwargs.get('volume_id', None)
+
+    if instance_id is None:
+        instances = list_nodes_full()
+        instance_id = instances[name]['instanceId']
+
+    params = {'Action': 'DescribeInstances',
+              'InstanceId.1': instance_id}
+
+    data, requesturl = query(params, return_url=True)
+
+    blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
+
+    if type(blockmap['item']) != list:
+        blockmap['item'] = [blockmap['item']]
+
+    items = []
+
+    for idx, item in enumerate(blockmap['item']):
+        device_name = item['deviceName']
+
+        if device is not None and device != device_name:
+            continue
+
+        if volume_id is not None and volume_id != item['ebs']['volumeId']:
+            continue
+
+        info = {
+            'device_name': device_name,
+            'volume_id': item['ebs']['volumeId'],
+            'deleteOnTermination': item['ebs']['deleteOnTermination']
+        }
+
+        items.append(info)
+
+    return items
+
+
+def keepvol_on_destroy(name, kwargs=None, call=None):
     '''
     Do not delete all/specified EBS volumes upon instance termination
 
@@ -1855,11 +1916,17 @@ def keepvol_on_destroy(name, device=None, volume_id=None, call=None):
             'The keepvol_on_destroy action must be called with -a or --action.'
         )
 
+    if not kwargs:
+        kwargs = {}
+
+    device = kwargs.get('device', None)
+    volume_id = kwargs.get('volume_id', None)
+
     return _toggle_delvol(name=name, device=device,
                           volume_id=volume_id, value='false')
 
 
-def delvol_on_destroy(name, device=None, volume_id=None, call=None):
+def delvol_on_destroy(name, kwargs=None, call=None):
     '''
     Delete all/specified EBS volumes upon instance termination
 
@@ -1872,12 +1939,19 @@ def delvol_on_destroy(name, device=None, volume_id=None, call=None):
             'The delvol_on_destroy action must be called with -a or --action.'
         )
 
+    if not kwargs:
+        kwargs = {}
+
+    device = kwargs.get('device', None)
+    volume_id = kwargs.get('volume_id', None)
+
     return _toggle_delvol(name=name, device=device,
                           volume_id=volume_id, value='true')
 
 
 def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
                    value=None, requesturl=None):
+
     if not instance_id:
         instances = list_nodes_full(get_location())
         instance_id = instances[name]['instanceId']
