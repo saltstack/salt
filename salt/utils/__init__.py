@@ -163,7 +163,7 @@ def get_colors(use=True):
         'LIGHT_PURPLE': '\033[1;35m',
         'BROWN': '\033[0;33m',
         'YELLOW': '\033[1;33m',
-        'WHITE': '\033[1;37m',
+       'WHITE': '\033[1;37m',
         'DEFAULT_COLOR': '\033[00m',
         'RED_BOLD': '\033[01;31m',
         'ENDC': '\033[0m',
@@ -1387,9 +1387,9 @@ def version_cmp(pkg1, pkg2):
     making the comparison.
     '''
     try:
-		pkg1_ver = distutils.version.LooseVersion(pkg1)
-		pkg2_ver = distutils.version.LooseVersion(pkg2)
-		return cmp(pkg1_ver, pkg2_ver)
+        pkg1_ver = distutils.version.LooseVersion(pkg1)
+        pkg2_ver = distutils.version.LooseVersion(pkg2)
+        return cmp(pkg1_ver, pkg2_ver)
     except Exception as e:
         log.exception(e)
 

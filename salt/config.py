@@ -367,14 +367,10 @@ def _validate_opts(opts):
     for key, val in opts.items():
         if key in VALID_OPTS:
             if isinstance(VALID_OPTS[key](), list):
-                if isinstance(val, VALID_OPTS[key]):
-                    continue
-                else:
+                if not isinstance(val, VALID_OPTS[key]):
                     errors.append(err.format(key, val, type(val), 'list'))
             if isinstance(VALID_OPTS[key](), dict):
-                if isinstance(val, VALID_OPTS[key]):
-                    continue
-                else:
+                if not isinstance(val, VALID_OPTS[key]):
                     errors.append(err.format(key, val, type(val), 'dict'))
             else:
                 try:

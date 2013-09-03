@@ -7,12 +7,14 @@ used to manage salt keys directly without interfacing with the CLI.
 import os
 import shutil
 import fnmatch
+from collections import defaultdict
 
 # Import salt libs
 import salt.crypt
 import salt.utils
 import salt.utils.event
 from salt.utils.event import tagify
+
 
 class KeyCLI(object):
     '''
@@ -28,74 +30,54 @@ class KeyCLI(object):
         '''
         keys = self.key.list_keys()
         if status.startswith('acc'):
-            salt.output.display_output(
-                {'minions': keys['minions']},
-                'key',
-                self.opts
-            )
+            all_keys = {'minions': keys['minions']}
         elif status.startswith('pre') or status.startswith('un'):
-            salt.output.display_output(
-                {'minions_pre': keys['minions_pre']},
-                'key',
-                self.opts
-            )
-        elif status.startswith('rej'):
-            salt.output.display_output(
-                {'minions_rejected': keys['minions_rejected']},
-                'key',
-                self.opts
-            )
+            all_keys = {'minions_pre': keys['minions_pre']}
+        else:  # status.startswith('rej'):
+            all_keys = {'minions_rejected': keys['minions_rejected']}
+        salt.output.display_output(all_keys, 'key', self.opts)
 
     def list_all(self):
         '''
         Print out all keys
         '''
-        salt.output.display_output(
-                self.key.list_keys(),
-                'key',
-                self.opts)
+        keys = self.key.list_keys()
+        salt.output.display_output(keys, 'key', self.opts)
+
+    def _print_accepted(self, matches, after_match):
+        """
+        Print all accepted keys.
+        """
+        if 'minions_pre' in after_match:
+            matches_set = set(matches['minions_pre'])
+            after_match_set = set(after_match['minions_pre'])
+            accepted = matches_set.difference(after_match_set)
+        else:
+            accepted = matches['minions_pre']
+        for key in accepted:
+            print('Key for minion {0} accepted.'.format(key))
 
     def accept(self, match):
         '''
         Accept the keys matched
         '''
-        def _print_accepted(matches, after_match):
-            if 'minions_pre' in after_match:
-                accepted = set(matches['minions_pre']).difference(
-                        set(after_match['minions_pre'])
-                        )
-            else:
-                accepted = matches['minions_pre']
-            for key in accepted:
-                print('Key for minion {0} accepted.'.format(key))
-
         matches = self.key.name_match(match)
         if not matches.get('minions_pre', False):
-            print(
-                'The key glob {0} does not match any unaccepted keys.'.format(
-                    match
-                    )
-                )
+            print(('The key glob {0} does not match any unaccepted'
+                   ' keys.').format(match))
             return
+        print('The following keys are going to be accepted:')
+        keys = {'minions_pre': matches['minions_pre']}
+        salt.output.display_output(keys, 'key', self.opts)
         if not self.opts.get('yes', False):
-            print('The following keys are going to be accepted:')
-            salt.output.display_output(
-                    {'minions_pre': matches['minions_pre']},
-                    'key',
-                    self.opts)
             try:
                 veri = raw_input('Proceed? [n/Y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if not veri or veri.lower().startswith('y'):
-                _print_accepted(matches, self.key.accept(match))
+                self._print_accepted(matches, self.key.accept(match))
         else:
-            print('The following keys are going to be accepted:')
-            salt.output.display_output(
-                    {'minions_pre': matches['minions_pre']},
-                    'key',
-                    self.opts)
-            _print_accepted(matches, self.key.accept(match))
+            self._print_accepted(matches, self.key.accept(match))
 
     def accept_all(self):
         '''
@@ -113,10 +95,7 @@ class KeyCLI(object):
             return
         if not self.opts.get('yes', False):
             print('The following keys are going to be deleted:')
-            salt.output.display_output(
-                    matches,
-                    'key',
-                    self.opts)
+            salt.output.display_output(matches, 'key', self.opts)
             try:
                 veri = raw_input('Proceed? [N/y] ')
             except KeyboardInterrupt:
@@ -125,10 +104,7 @@ class KeyCLI(object):
                 self.key.delete_key(match)
         else:
             print('Deleting the following keys:')
-            salt.output.display_output(
-                    matches,
-                    'key',
-                    self.opts)
+            salt.output.display_output(matches, 'key', self.opts)
             self.key.delete_key(match)
 
     def delete_all(self):
@@ -149,10 +125,7 @@ class KeyCLI(object):
             return
         if not self.opts.get('yes', False):
             print('The following keys are going to be rejected:')
-            salt.output.display_output(
-                    matches,
-                    'key',
-                    self.opts)
+            salt.output.display_output(matches, 'key', self.opts)
             veri = raw_input('Proceed? [n/Y] ')
             if veri.lower().startswith('n'):
                 return
@@ -169,10 +142,7 @@ class KeyCLI(object):
         Print out a single key
         '''
         matches = self.key.key_str(match)
-        salt.output.display_output(
-                matches,
-                'key',
-                self.opts)
+        salt.output.display_output(matches, 'key', self.opts)
 
     def print_all(self):
         '''
@@ -185,54 +155,50 @@ class KeyCLI(object):
         Print out the fingerprints for the matched keys
         '''
         matches = self.key.finger(match)
-        salt.output.display_output(
-                matches,
-                'key',
-                self.opts)
+        salt.output.display_output(matches, 'key', self.opts)
 
     def finger_all(self):
         '''
         Print out all fingerprints
         '''
         matches = self.key.finger('*')
-        salt.output.display_output(
-                matches,
-                'key',
-                self.opts)
+        salt.output.display_output(matches, 'key', self.opts)
 
     def run(self):
         '''
         Run the logic for saltkey
         '''
-        if self.opts['gen_keys']:
-            salt.crypt.gen_keys(
-                    self.opts['gen_keys_dir'],
-                    self.opts['gen_keys'],
-                    self.opts['keysize'])
+        opts = self.opts
+        if opts['gen_keys']:
+            salt.crypt.gen_keys(opts['gen_keys_dir'],
+                                opts['gen_keys'],
+                                opts['keysize']
+                                )
             return
-        if self.opts['list']:
-            self.list_status(self.opts['list'])
-        elif self.opts['list_all']:
+        #TODO: refactor
+        if opts['list']:
+            self.list_status(opts['list'])
+        elif opts['list_all']:
             self.list_all()
-        elif self.opts['print']:
-            self.print_key(self.opts['print'])
-        elif self.opts['print_all']:
+        elif opts['print']:
+            self.print_key(opts['print'])
+        elif opts['print_all']:
             self.print_all()
-        elif self.opts['accept']:
-            self.accept(self.opts['accept'])
-        elif self.opts['accept_all']:
+        elif opts['accept']:
+            self.accept(opts['accept'])
+        elif opts['accept_all']:
             self.accept_all()
-        elif self.opts['reject']:
-            self.reject(self.opts['reject'])
-        elif self.opts['reject_all']:
+        elif opts['reject']:
+            self.reject(opts['reject'])
+        elif opts['reject_all']:
             self.reject_all()
-        elif self.opts['delete']:
-            self.delete(self.opts['delete'])
-        elif self.opts['delete_all']:
+        elif opts['delete']:
+            self.delete(opts['delete'])
+        elif opts['delete_all']:
             self.delete_all()
-        elif self.opts['finger']:
-            self.finger(self.opts['finger'])
-        elif self.opts['finger_all']:
+        elif opts['finger']:
+            self.finger(opts['finger'])
+        elif opts['finger_all']:
             self.finger_all()
         else:
             self.list_all()
@@ -272,14 +238,8 @@ class Key(object):
         '''
         Log if the master is not running
         '''
-        if not os.path.exists(
-                os.path.join(
-                    self.opts['sock_dir'],
-                    'publish_pull.ipc'
-                    )
-                ):
-            return False
-        return True
+        return os.path.exists(os.path.join(self.opts['sock_dir'],
+                                           'publish_pull.ipc'))
 
     def name_match(self, match, full=False):
         '''
@@ -289,12 +249,10 @@ class Key(object):
             matches = self.all_keys()
         else:
             matches = self.list_keys()
-        ret = {}
+        ret = defaultdict(list)
         for status, keys in matches.items():
             for key in salt.utils.isorted(keys):
                 if fnmatch.fnmatch(key, match):
-                    if status not in ret:
-                        ret[status] = []
                     ret[status].append(key)
         return ret
 
@@ -315,9 +273,8 @@ class Key(object):
         Return a dict of managed keys and what the key status are
         '''
         acc, pre, rej = self._check_minions_directories()
-        ret = {}
+        ret = defaultdict(list)
         for dir_ in acc, pre, rej:
-            ret[os.path.basename(dir_)] = []
             for fn_ in salt.utils.isorted(os.listdir(dir_)):
                 if os.path.isfile(os.path.join(dir_, fn_)):
                     ret[os.path.basename(dir_)].append(fn_)
@@ -335,34 +292,28 @@ class Key(object):
         '''
         Return a dict of managed keys under a named status
         '''
-        acc, pre, rej = self._check_minions_directories()
-        ret = {}
-        if match.startswith('acc'):
-            ret[os.path.basename(acc)] = []
-            for fn_ in salt.utils.isorted(os.listdir(acc)):
-                if os.path.isfile(os.path.join(acc, fn_)):
-                    ret[os.path.basename(acc)].append(fn_)
-        elif match.startswith('pre') or match.startswith('un'):
-            ret[os.path.basename(pre)] = []
-            for fn_ in salt.utils.isorted(os.listdir(pre)):
-                if os.path.isfile(os.path.join(pre, fn_)):
-                    ret[os.path.basename(pre)].append(fn_)
-        elif match.startswith('rej'):
-            ret[os.path.basename(rej)] = []
-            for fn_ in salt.utils.isorted(os.listdir(rej)):
-                if os.path.isfile(os.path.join(rej, fn_)):
-                    ret[os.path.basename(rej)].append(fn_)
-        elif match.startswith('all'):
+        if match.startswith('all'):
             return self.all_keys()
+        acc, pre, rej = self._check_minions_directories()
+        if match.startswith('acc'):
+            type_ = acc
+        elif match.startswith('pre') or match.startswith('un'):
+            type_ = pre
+        elif match.startswith('rej'):
+            type_ = rej
+        name = os.path.basename(type_)
+        ret = {name: []}
+        for fn_ in salt.utils.isorted(os.listdir(type_)):
+            if os.path.isfile(os.path.join(type_, fn_)):
+                ret[name].append(fn_)
         return ret
 
     def key_str(self, match):
         '''
         Return the specified public key or keys based on a glob
         '''
-        ret = {}
+        ret = defaultdict(dict)
         for status, keys in self.name_match(match).items():
-            ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
                 with salt.utils.fopen(path, 'r') as fp_:
@@ -373,9 +324,8 @@ class Key(object):
         '''
         Return all managed key strings
         '''
-        ret = {}
+        ret = defaultdict(dict)
         for status, keys in self.list_keys().items():
-            ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
                 with salt.utils.fopen(path, 'r') as fp_:
@@ -388,25 +338,16 @@ class Key(object):
         glob
         '''
         matches = self.name_match(match)
-        if 'minions_pre' in matches:
-            for key in matches['minions_pre']:
-                try:
-                    shutil.move(
-                            os.path.join(
-                                self.opts['pki_dir'],
-                                'minions_pre',
-                                key),
-                            os.path.join(
-                                self.opts['pki_dir'],
-                                'minions',
-                                key)
-                            )
-                    eload = {'result': True,
-                             'act': 'accept',
-                             'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
-                except (IOError, OSError):
-                    pass
+        join = os.path.join
+        pki_dir = self.opts['pki_dir']
+        for key in matches.get('minions_pre', ()):
+            try:
+                shutil.move(join(pki_dir, 'minions_pre', key),
+                            join(pki_dir, 'minions', key))
+                eload = {'result': True, 'act': 'accept', 'id': key}
+                self.event.fire_event(eload, tagify(prefix='key'))
+            except (IOError, OSError):
+                pass
         return self.name_match(match)
 
     def accept_all(self):
@@ -414,21 +355,13 @@ class Key(object):
         Accept all keys in pre
         '''
         keys = self.list_keys()
+        join = os.path.join
+        pki_dir = self.opts['pki_dir']
         for key in keys['minions_pre']:
             try:
-                shutil.move(
-                        os.path.join(
-                            self.opts['pki_dir'],
-                            'minions_pre',
-                            key),
-                        os.path.join(
-                            self.opts['pki_dir'],
-                            'minions',
-                            key)
-                        )
-                eload = {'result': True,
-                         'act': 'accept',
-                         'id': key}
+                shutil.move(join(pki_dir, 'minions_pre', key),
+                            join(pki_dir, 'minions', key))
+                eload = {'result': True, 'act': 'accept', 'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
             except (IOError, OSError):
                 pass
@@ -442,9 +375,7 @@ class Key(object):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
-                    eload = {'result': True,
-                             'act': 'delete',
-                             'id': key}
+                    eload = {'result': True, 'act': 'delete', 'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
@@ -460,9 +391,7 @@ class Key(object):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
-                    eload = {'result': True,
-                             'act': 'delete',
-                             'id': key}
+                    eload = {'result': True, 'act': 'delete', 'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
@@ -475,25 +404,16 @@ class Key(object):
         Reject a specified host's public key or keys based on a glob
         '''
         matches = self.name_match(match)
-        if 'minions_pre' in matches:
-            for key in matches['minions_pre']:
-                try:
-                    shutil.move(
-                            os.path.join(
-                                self.opts['pki_dir'],
-                                'minions_pre',
-                                key),
-                            os.path.join(
-                                self.opts['pki_dir'],
-                                'minions_rejected',
-                                key)
-                            )
-                    eload = {'result': True,
-                             'act': 'reject',
-                             'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
-                except (IOError, OSError):
-                    pass
+        join = os.path.join
+        pki_dir = self.opts['pki_dir']
+        for key in matches.get('minions_pre', ()):
+            try:
+                shutil.move(join(pki_dir, 'minions_pre', key),
+                            join(pki_dir, 'minions_rejected', key))
+                eload = {'result': True, 'act': 'reject', 'id': key}
+                self.event.fire_event(eload, tagify(prefix='key'))
+            except (IOError, OSError):
+                pass
         self.check_minion_cache()
         salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.name_match(match)
@@ -503,21 +423,13 @@ class Key(object):
         Reject all keys in pre
         '''
         keys = self.list_keys()
+        join = os.path.join
+        pki_dir = self.opts['pki_dir']
         for key in keys['minions_pre']:
             try:
-                shutil.move(
-                        os.path.join(
-                            self.opts['pki_dir'],
-                            'minions_pre',
-                            key),
-                        os.path.join(
-                            self.opts['pki_dir'],
-                            'minions_rejected',
-                            key)
-                        )
-                eload = {'result': True,
-                         'act': 'reject',
-                         'id': key}
+                shutil.move(join(pki_dir, 'minions_pre', key),
+                            join(pki_dir, 'minions_rejected', key))
+                eload = {'result': True, 'act': 'reject', 'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
             except (IOError, OSError):
                 pass
@@ -534,10 +446,10 @@ class Key(object):
         for status, keys in matches.items():
             ret[status] = {}
             for key in keys:
-                if status == 'local':
-                    path = os.path.join(self.opts['pki_dir'], key)
-                else:
-                    path = os.path.join(self.opts['pki_dir'], status, key)
+                args = [self.opts['pki_dir'], key]
+                if status != 'local':
+                    args[1:1] = [status]
+                path = os.path.join(*args)
                 ret[status][key] = salt.utils.pem_finger(path)
         return ret
 
@@ -545,13 +457,12 @@ class Key(object):
         '''
         Return fingerprins for all keys
         '''
-        ret = {}
+        ret = defaultdict(dict)
         for status, keys in self.list_keys().items():
-            ret[status] = {}
             for key in keys:
-                if status == 'local':
-                    path = os.path.join(self.opts['pki_dir'], key)
-                else:
-                    path = os.path.join(self.opts['pki_dir'], status, key)
+                args = [self.opts['pki_dir'], key]
+                if status != 'local':
+                    args[1:1] = [status]
+                path = os.path.join(*args)
                 ret[status][key] = salt.utils.pem_finger(path)
         return ret

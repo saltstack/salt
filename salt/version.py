@@ -82,10 +82,12 @@ def __get_version(version, version_info):
                 match.group('sha')
             )
 
-        parsed_version_info = tuple([
-            int(g) for g in [h or '0' for h in match.groups()[:3]]
-                    if g.isdigit()
-        ])
+        parsed_version_info = []
+        for h in match.groups()[:3]:
+            for g in (h or '0'):
+                if g.isdigit():
+                    parsed_version_info.append(int(g))
+        parsed_version_info = tuple(parsed_version_info)
 
         if parsed_version_info > version_info:
             warnings.warn(
