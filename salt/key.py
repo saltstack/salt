@@ -7,7 +7,6 @@ used to manage salt keys directly without interfacing with the CLI.
 import os
 import shutil
 import fnmatch
-from collections import defaultdict
 
 # Import salt libs
 import salt.crypt
@@ -30,54 +29,50 @@ class KeyCLI(object):
         '''
         keys = self.key.list_keys()
         if status.startswith('acc'):
-            all_keys = {'minions': keys['minions']}
+            type_ = 'minions'
         elif status.startswith('pre') or status.startswith('un'):
-            all_keys = {'minions_pre': keys['minions_pre']}
+            type_ = 'minions_pre'
         else:  # status.startswith('rej'):
-            all_keys = {'minions_rejected': keys['minions_rejected']}
-        salt.output.display_output(all_keys, 'key', self.opts)
+            type_ = 'minions_rejected'
+        salt.output.display_output({type_: keys[type_]}, 'key', self.opts)
 
     def list_all(self):
         '''
         Print out all keys
         '''
-        keys = self.key.list_keys()
-        salt.output.display_output(keys, 'key', self.opts)
-
-    def _print_accepted(self, matches, after_match):
-        """
-        Print all accepted keys.
-        """
-        if 'minions_pre' in after_match:
-            matches_set = set(matches['minions_pre'])
-            after_match_set = set(after_match['minions_pre'])
-            accepted = matches_set.difference(after_match_set)
-        else:
-            accepted = matches['minions_pre']
-        for key in accepted:
-            print('Key for minion {0} accepted.'.format(key))
+        salt.output.display_output(self.key.list_keys(), 'key', self.opts)
 
     def accept(self, match):
         '''
         Accept the keys matched
         '''
+        def _print_accepted(matches, after_match):
+            if 'minions_pre' in after_match:
+                matches_set = set(matches['minions_pre'])
+                after_match_set = set(after_match['minions_pre'])
+                accepted = matches_set.difference(after_match_set)
+            else:
+                accepted = matches['minions_pre']
+            for key in accepted:
+                print('Key for minion {0} accepted.'.format(key))
+
         matches = self.key.name_match(match)
         if not matches.get('minions_pre', False):
-            print(('The key glob {0} does not match any unaccepted'
-                   ' keys.').format(match))
+            msg = 'The key glob {0} does not match any unaccepted keys.'
+            print(msg.format(match))
             return
         print('The following keys are going to be accepted:')
-        keys = {'minions_pre': matches['minions_pre']}
-        salt.output.display_output(keys, 'key', self.opts)
+        salt.output.display_output({'minions_pre': matches['minions_pre']},
+                                   'key', self.opts)
         if not self.opts.get('yes', False):
             try:
                 veri = raw_input('Proceed? [n/Y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if not veri or veri.lower().startswith('y'):
-                self._print_accepted(matches, self.key.accept(match))
+                _print_accepted(matches, self.key.accept(match))
         else:
-            self._print_accepted(matches, self.key.accept(match))
+            _print_accepted(matches, self.key.accept(match))
 
     def accept_all(self):
         '''
@@ -172,10 +167,8 @@ class KeyCLI(object):
         if opts['gen_keys']:
             salt.crypt.gen_keys(opts['gen_keys_dir'],
                                 opts['gen_keys'],
-                                opts['keysize']
-                                )
+                                opts['keysize'])
             return
-        #TODO: refactor
         if opts['list']:
             self.list_status(opts['list'])
         elif opts['list_all']:
@@ -238,8 +231,10 @@ class Key(object):
         '''
         Log if the master is not running
         '''
-        return os.path.exists(os.path.join(self.opts['sock_dir'],
-                                           'publish_pull.ipc'))
+        if not os.path.exists(os.path.join(self.opts['sock_dir'],
+                'publish_pull.ipc')):
+            return False
+        return True
 
     def name_match(self, match, full=False):
         '''
@@ -249,10 +244,12 @@ class Key(object):
             matches = self.all_keys()
         else:
             matches = self.list_keys()
-        ret = defaultdict(list)
+        ret = {}
         for status, keys in matches.items():
             for key in salt.utils.isorted(keys):
                 if fnmatch.fnmatch(key, match):
+                    if status not in ret:
+                        ret[status] = []
                     ret[status].append(key)
         return ret
 
@@ -273,8 +270,9 @@ class Key(object):
         Return a dict of managed keys and what the key status are
         '''
         acc, pre, rej = self._check_minions_directories()
-        ret = defaultdict(list)
+        ret = {}
         for dir_ in acc, pre, rej:
+            ret[os.path.basename(dir_)] = []
             for fn_ in salt.utils.isorted(os.listdir(dir_)):
                 if os.path.isfile(os.path.join(dir_, fn_)):
                     ret[os.path.basename(dir_)].append(fn_)
@@ -292,28 +290,34 @@ class Key(object):
         '''
         Return a dict of managed keys under a named status
         '''
-        if match.startswith('all'):
-            return self.all_keys()
         acc, pre, rej = self._check_minions_directories()
+        ret = {}
         if match.startswith('acc'):
-            type_ = acc
+            ret[os.path.basename(acc)] = []
+            for fn_ in salt.utils.isorted(os.listdir(acc)):
+                if os.path.isfile(os.path.join(acc, fn_)):
+                    ret[os.path.basename(acc)].append(fn_)
         elif match.startswith('pre') or match.startswith('un'):
-            type_ = pre
+            ret[os.path.basename(pre)] = []
+            for fn_ in salt.utils.isorted(os.listdir(pre)):
+                if os.path.isfile(os.path.join(pre, fn_)):
+                    ret[os.path.basename(pre)].append(fn_)
         elif match.startswith('rej'):
-            type_ = rej
-        name = os.path.basename(type_)
-        ret = {name: []}
-        for fn_ in salt.utils.isorted(os.listdir(type_)):
-            if os.path.isfile(os.path.join(type_, fn_)):
-                ret[name].append(fn_)
+            ret[os.path.basename(rej)] = []
+            for fn_ in salt.utils.isorted(os.listdir(rej)):
+                if os.path.isfile(os.path.join(rej, fn_)):
+                    ret[os.path.basename(rej)].append(fn_)
+        elif match.startswith('all'):
+            return self.all_keys()
         return ret
 
     def key_str(self, match):
         '''
         Return the specified public key or keys based on a glob
         '''
-        ret = defaultdict(dict)
+        ret = {}
         for status, keys in self.name_match(match).items():
+            ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
                 with salt.utils.fopen(path, 'r') as fp_:
@@ -324,8 +328,9 @@ class Key(object):
         '''
         Return all managed key strings
         '''
-        ret = defaultdict(dict)
+        ret = {}
         for status, keys in self.list_keys().items():
+            ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
                 with salt.utils.fopen(path, 'r') as fp_:
@@ -339,11 +344,10 @@ class Key(object):
         '''
         matches = self.name_match(match)
         join = os.path.join
-        pki_dir = self.opts['pki_dir']
         for key in matches.get('minions_pre', ()):
             try:
-                shutil.move(join(pki_dir, 'minions_pre', key),
-                            join(pki_dir, 'minions', key))
+                shutil.move(join(self.opts['pki_dir'], 'minions_pre', key),
+                            join(self.opts['pki_dir'], 'minions', key))
                 eload = {'result': True, 'act': 'accept', 'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
             except (IOError, OSError):
@@ -356,11 +360,10 @@ class Key(object):
         '''
         keys = self.list_keys()
         join = os.path.join
-        pki_dir = self.opts['pki_dir']
         for key in keys['minions_pre']:
             try:
-                shutil.move(join(pki_dir, 'minions_pre', key),
-                            join(pki_dir, 'minions', key))
+                shutil.move(join(self.opts['pki_dir'], 'minions_pre', key),
+                            join(self.opts['pki_dir'], 'minions', key))
                 eload = {'result': True, 'act': 'accept', 'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
             except (IOError, OSError):
@@ -406,7 +409,7 @@ class Key(object):
         matches = self.name_match(match)
         join = os.path.join
         pki_dir = self.opts['pki_dir']
-        for key in matches.get('minions_pre', ()):
+        for key in matches['minions_pre']:
             try:
                 shutil.move(join(pki_dir, 'minions_pre', key),
                             join(pki_dir, 'minions_rejected', key))
@@ -446,10 +449,10 @@ class Key(object):
         for status, keys in matches.items():
             ret[status] = {}
             for key in keys:
-                args = [self.opts['pki_dir'], key]
-                if status != 'local':
-                    args[1:1] = [status]
-                path = os.path.join(*args)
+                if status == 'local':
+                    path = os.path.join(self.opts['pki_dir'], key)
+                else:
+                    path = os.path.join(self.opts['pki_dir'], status, key)
                 ret[status][key] = salt.utils.pem_finger(path)
         return ret
 
@@ -457,12 +460,13 @@ class Key(object):
         '''
         Return fingerprins for all keys
         '''
-        ret = defaultdict(dict)
+        ret = {}
         for status, keys in self.list_keys().items():
+            ret[status] = {}
             for key in keys:
-                args = [self.opts['pki_dir'], key]
-                if status != 'local':
-                    args[1:1] = [status]
-                path = os.path.join(*args)
+                if status == 'local':
+                    path = os.path.join(self.opts['pki_dir'], key)
+                else:
+                    path = os.path.join(self.opts['pki_dir'], status, key)
                 ret[status][key] = salt.utils.pem_finger(path)
         return ret
