@@ -200,7 +200,7 @@ class SSH(object):
                 opts['arg_str'],
                 host,
                 target)
-        ret['id'] = single.id
+        ret = {'id': single.id}
         stdout, stderr = single.run()
         if stdout.startswith('deploy'):
             single.deploy()
@@ -243,7 +243,7 @@ class SSH(object):
                         host,
                         self.targets[host],
                         )
-                routine = threading.Thread(target=handle_routine, args=args)
+                routine = threading.Thread(target=self.handle_routine, args=args)
                 running[host]['thread'] = routine.start()
                 continue
             ret = que.get()
@@ -348,13 +348,11 @@ class Single(object):
         3. Execute a wrapper func
         '''
         if self.opts.get('raw_shell'):
-            for stdout, stderr in self.shell.exec_cmd(self.opts['raw_shell']):
-                else:
-                    return stdout, stderr
+            return self.shell.exec_cmd(self.opts['raw_shell'])
         elif self.fun in self.wfuncs:
             # Ensure that opts/grains are up to date
             # Execute routine
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
@@ -421,15 +419,6 @@ class Single(object):
         # 4. execute command
         cmd = HEREDOC.format(self.arg_str)
         return self.shell.exec_cmd(cmd)
-
-    def highstate_seed(self):
-        '''
-        Generate an archive file which contains the instructions and files
-        to execute a state run on a remote system
-        '''
-        st_ = SSHHighState(self.opts, None, wrapper)
-        lowstate = st_.compile_low_chunks()
-        #file_refs = salt.utils.lowstate_file_refs(lowstate)
 
     def sls_seed(self, mods, env='base', test=None, exclude=None, **kwargs):
         '''
