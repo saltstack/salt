@@ -10,6 +10,7 @@ import pprint
 import re
 import sys
 import yaml
+import collections # needed by _parse_pkginfo -- there might be a better way to make it work
 
 # Import salt libs
 import salt.utils
