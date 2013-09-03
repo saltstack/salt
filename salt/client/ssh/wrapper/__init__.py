@@ -23,12 +23,13 @@ class FunctionWrapper(dict):
             opts,
             id_,
             host,
+            wfuncs=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
+        self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
         self.opts = opts
         self.kwargs = {'id_': id_,
                        'host': host}
-        self.wfuncs = salt.loader.ssh_wrapper(opts)
         self.kwargs.update(kwargs)
 
     def __getitem__(self, cmd):
