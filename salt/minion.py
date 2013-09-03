@@ -151,6 +151,8 @@ def yamlify_arg(arg):
     '''
     yaml.safe_load the arg unless it has a newline in it.
     '''
+    if not isinstance(arg, string_types):
+        return arg
     try:
         original_arg = str(arg)
         if isinstance(arg, string_types):
@@ -159,7 +161,7 @@ def yamlify_arg(arg):
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
             if (isinstance(original_arg, string_types) and
-                    not original_arg.startswith("{")):
+                    not original_arg.startswith('{')):
                 return original_arg
             else:
                 return arg
