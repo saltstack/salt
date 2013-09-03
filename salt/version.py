@@ -55,7 +55,8 @@ def __get_version(version, version_info):
             # Let's not import `salt.utils` for the above check
             kwargs['close_fds'] = True
 
-        process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
+        process = subprocess.Popen(
+                ['git', 'describe', '--tags', '--match', 'v[0-9]*'], **kwargs)
         out, err = process.communicate()
         out = out.strip()
         err = err.strip()
