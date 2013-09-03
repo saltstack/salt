@@ -101,7 +101,7 @@ def kill_pid(pid, signal=15):
 
     .. code-block:: bash
 
-        salt 'minion' ps.kill_pid pid [ signal=signal_number ]
+        salt 'minion' ps.kill_pid pid [signal=signal_number]
 
     pid
         PID of process to kill.
@@ -131,8 +131,8 @@ def pkill(pattern, user=None, signal=15, full=False):
 
     .. code-block:: bash
 
-        salt '*' ps.pkill pattern [ user=username ] [ signal=signal_number ] \
-                [ full=(true|false) ]
+        salt '*' ps.pkill pattern [user=username] [signal=signal_number] \
+                [full=(true|false)]
 
     pattern
         Pattern to search for in the process list.
@@ -189,7 +189,7 @@ def pgrep(pattern, user=None, full=False):
 
     .. code-block:: bash
 
-        salt '*' ps.pgrep pattern [ user=username ] [ full=(true|false) ]
+        salt '*' ps.pgrep pattern [user=username] [full=(true|false)]
 
     pattern
         Pattern to search for in the process list.
