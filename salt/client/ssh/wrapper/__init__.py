@@ -28,12 +28,15 @@ class FunctionWrapper(dict):
         self.opts = opts
         self.kwargs = {'id_': id_,
                        'host': host}
+        self.wfuncs = salt.loader.ssh_wrapper(opts)
         self.kwargs.update(kwargs)
 
     def __getitem__(self, cmd):
         '''
         Return the function call to simulate the salt local lookup system
         '''
+        if cmd in self.wfuncs:
+            return self.wfuncs[cmd]
         def caller(*args, **kwargs):
             '''
             The remote execution function
