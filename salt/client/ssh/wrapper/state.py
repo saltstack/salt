@@ -24,7 +24,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     Create the seed file for a state.sls run
     '''
     __pillar__.update(kwargs.get('pillar', {}))
-    st_ = SSHHighState(minion_opts, __pillar__, __salt__)
+    st_ = SSHHighState(__opts__, __pillar__, __salt__)
     if isinstance(mods, str):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
