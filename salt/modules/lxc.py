@@ -6,7 +6,6 @@ Work with linux containers
 
 # Import python libs
 import logging
-import random
 import tempfile
 
 #import salt libs
@@ -61,14 +60,6 @@ def _nic_profile(nic):
     return __salt__['config.option']('lxc.nic', {}).get(nic, default)
 
 
-def _gen_mac():
-    mac = [0x00, 0x00, 0x6c,
-           random.randint(0x00, 0xff),
-           random.randint(0x00, 0xff),
-           random.randint(0x00, 0xff)]
-    return ':'.join(map(lambda x: "{0:x}".format(x), mac))
-
-
 def _gen_config(name,
                 nicp,
                 cpuset=None,
@@ -77,7 +68,6 @@ def _gen_config(name,
     '''
     Generate the config string for an lxc container
     '''
-    #data = [('lxc.utsname', name)]
     data = []
 
     if memory:
@@ -91,7 +81,7 @@ def _gen_config(name,
         data.append(('lxc.network.type', args.pop('type', 'veth')))
         data.append(('lxc.network.name', dev))
         data.append(('lxc.network.flags', args.pop('flags', 'up')))
-        data.append(('lxc.network.hwaddr', _gen_mac()))
+        data.append(('lxc.network.hwaddr', salt.utils.gen_mac()))
         for k, v in args.items():
             data.append(('lxc.network.{0}'.format(k), v))
 
@@ -137,7 +127,7 @@ def init(name,
         If true, start the newly created container.
     '''
     nicp = _nic_profile(nic)
-    start_ = kwargs.pop('start')
+    start_ = kwargs.pop('start', False)
     with tempfile.NamedTemporaryFile() as cfile:
         cfile.write(_gen_config(name, cpuset=cpuset, cpushare=cpushare,
                                 memory=memory, nicp=nicp))
