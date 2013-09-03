@@ -156,10 +156,10 @@ def create(name, config=None, profile=None, options=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'minion' lxc.create name [ config=config_file ] \
-                [ profile=profile ] [ template=template_name ] \
-                [ backing=backing_store ] [ vgname=volume_group ] \
-                [ size=filesystem_size ] [ options=template_options ]
+        salt 'minion' lxc.create name [config=config_file] \
+                [profile=profile] [template=template_name] \
+                [backing=backing_store] [ vgname=volume_group] \
+                [size=filesystem_size] [options=template_options]
 
     name
         Name of the container.
