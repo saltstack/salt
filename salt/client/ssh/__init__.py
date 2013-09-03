@@ -390,7 +390,7 @@ class Single(object):
                 **self.target)
             self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
             wrapper.wfuncs = self.wfuncs
-            ret = json.dumps(self.wfuncs())
+            ret = json.dumps(self.wfuncs[self.fun](*self.arg))
             return ret, ''
         else:
             return self.cmd_block()

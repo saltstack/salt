@@ -1015,7 +1015,7 @@ def touch(name, atime=None, mtime=None):
     '''
     .. versionadded:: 0.9.5
 
-    Just like \*nix's ``touch`` command, create a file if it doesn't exist or
+    Just like the ``touch`` command, create a file if it doesn't exist or
     simply update the atime and mtime if it already does.
 
     atime:
