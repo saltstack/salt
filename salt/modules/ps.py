@@ -113,7 +113,7 @@ def kill_pid(pid, signal=15):
     **Example:**
 
     Send SIGKILL to process with PID 2000:
-    
+
     .. code-block:: bash
 
         salt 'minion' ps.kill_pid 2000 signal=9
@@ -131,7 +131,8 @@ def pkill(pattern, user=None, signal=15, full=False):
 
     .. code-block:: bash
 
-        salt '*' ps.pkill pattern [ user=username ] [ signal=signal_number ] [ full=(true|false) ]
+        salt '*' ps.pkill pattern [ user=username ] [ signal=signal_number ] \
+                [ full=(true|false) ]
 
     pattern
         Pattern to search for in the process list.
@@ -161,14 +162,14 @@ def pkill(pattern, user=None, signal=15, full=False):
 
         salt '*' bash signal=9 user=tom
     '''
-    
+
     killed = []
     for proc in psutil.process_iter():
         name_match = pattern in ' '.join(proc.cmdline) if full \
-               else pattern in proc.name
+            else pattern in proc.name
         user_match = True if user is None else user == proc.username
-        if name_match and user_match: 
-            try: 
+        if name_match and user_match:
+            try:
                 proc.send_signal(signal)
                 killed.append(proc.pid)
             except psutil.NoSuchProcess:
@@ -185,9 +186,9 @@ def pgrep(pattern, user=None, full=False):
 
     If full is true, the full command line is searched for a match,
     otherwise only the name of the command is searched.
-    
-    .. code-block: bash
-        
+
+    .. code-block:: bash
+
         salt '*' ps.pgrep pattern [ user=username ] [ full=(true|false) ]
 
     pattern
@@ -218,9 +219,9 @@ def pgrep(pattern, user=None, full=False):
     procs = []
     for proc in psutil.process_iter():
         name_match = pattern in ' '.join(proc.cmdline) if full \
-               else pattern in proc.name
+            else pattern in proc.name
         user_match = True if user is None else user == proc.username
-        if name_match and user_match: 
+        if name_match and user_match:
             procs.append(proc.pid)
     return procs or None
 
@@ -338,7 +339,8 @@ def disk_partitions(all=False):
 
         salt '*' ps.disk_partitions
     '''
-    result = [dict(partition._asdict()) for partition in psutil.disk_partitions(all)]
+    result = [dict(partition._asdict()) for partition in
+              psutil.disk_partitions(all)]
     return result
 
 
