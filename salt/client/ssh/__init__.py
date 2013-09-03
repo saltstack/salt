@@ -9,6 +9,8 @@ import json
 import getpass
 import shutil
 import copy
+import threading
+from salt._compat import Queue
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -19,6 +21,30 @@ import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
+
+HEREDOC = (' << "EOF"\n'
+           'if [ `type -p python2` ]\n'
+           'then\n'
+           '    PYTHON=python2\n'
+           'elif [ `type -p python26` ]\n'
+            'then\n'
+           '    PYTHON=python26\n'
+           'elif [ `type -p python27` ]\n'
+           'then\n'
+           '    PYTHON=python27\n'
+           'fi\n'
+           'if hash salt-call\n'
+           'then\n'
+           '    SALT=$(type -p salt-call)\n'
+           'elif [ -f /tmp/salt-call ] \n'
+           'then\n'
+           '    SALT=/tmp/salt-call\n'
+           'else\n'
+           '    echo "deploy"\n'
+           '    exit 1\n'
+           'fi\n'
+           '$PYTHON $SALT --local --out json -l quiet {0}\n'
+           'EOF')
 
 
 class SSH(object):
@@ -165,6 +191,71 @@ class SSH(object):
             if len(done) >= len(self.targets):
                 break
 
+    def handle_routine(self, que, opts, host, target):
+        '''
+        Run the routine in a "Thread", put a dict on the queue
+        '''
+        single = Single(
+                opts,
+                opts['arg_str'],
+                host,
+                target)
+        ret['id'] = single.id
+        stdout, stderr = single.run()
+        if stdout.startswith('deploy'):
+            single.deploy()
+            stdout, stderr = single.run()
+        # This job is done, yield
+        try:
+            if not stdout and stderr:
+                ret['ret'] = stderr
+            else:
+                data = json.loads(stdout)
+                if len(data) < 2 and 'local' in data:
+                    ret['ret'] = data['local']
+                else:
+                    ret['ret'] = data
+        except Exception:
+            ret['ret'] = 'Bad Return'
+        que.put(ret)
+
+    def handle_ssh(self):
+        '''
+        Spin up the needed threads or processes and execute the subsequent
+        rouintes
+        '''
+        que = Queue.Queue()
+        running = {}
+        target_iter = self.targets.__iter__()
+        rets = set()
+        while True:
+            if len(running) < self.opts.get('ssh_max_procs', 5):
+                try:
+                    host = next(target_iter)
+                except StopIteration:
+                    pass
+                for default in self.defaults:
+                    if not default in self.targets[host]:
+                        self.targets[host][default] = self.defaults[default]
+                args = (
+                        que,
+                        self.opts,
+                        host,
+                        self.targets[host],
+                        )
+                routine = threading.Thread(target=handle_routine, args=args)
+                running[host]['thread'] = routine.start()
+                continue
+            ret = que.get()
+            for host in running:
+                if not running[host]['thread'].is_alive():
+                    running[host]['thread'].join()
+                    rets.add(host)
+                    running.pop(host)
+            if not isinstance(ret, dict):
+                continue
+            yield {ret['id']: ret['ret']}
+
     def run(self):
         '''
         Execute the overall routine
@@ -220,6 +311,8 @@ class Single(object):
         self.target['priv'] = priv
         self.target['timeout'] = timeout
         self.target['sudo'] = sudo
+        self.serial = salt.payload.Serial(opts)
+        self.wfuncs = salt.loader.ssh_wrapper(opts)
 
     def __arg_comps(self):
         '''
@@ -247,6 +340,56 @@ class Single(object):
                 )
         return True
 
+    def run(self):
+        '''
+        Execute the routine, the routine can be either:
+        1. Execute a remote Salt command
+        2. Execute a raw shell command
+        3. Execute a wrapper func
+        '''
+        if self.opts.get('raw_shell'):
+            for stdout, stderr in self.shell.exec_cmd(self.opts['raw_shell']):
+                else:
+                    return stdout, stderr
+        elif self.fun in self.wfuncs:
+            # Ensure that opts/grains are up to date
+            # Execute routine
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                os.makedirs(cdir)
+            datap = os.path.join(cdir, 'data.p')
+            if not os.path.isfile(datap):
+                # Make the datap
+                # TODO: Auto expire the datap
+                wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                    self.opts,
+                    self.target['id'],
+                    **self.target)
+                opts_pkg = wrapper['test.opts_pkg']()
+                # TODO: Get Pillar in here
+                # TODO: cache minion opts in datap in master.py
+                with salt.utils.fopen(datap, 'w+') as fp_:
+                    fp_.write(
+                            self.serial.dumps(
+                                {'opts': opts_pkg,
+                                 'grains': opts_pkg['grains']}
+                                )
+                            )
+            with salt.utils.fopen(datap, 'r') as fp_:
+                data = self.serial.load(fp_)
+            opts = data.get('opts', {})
+            opts['grains'] = data.get('grains')
+            wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                opts,
+                self.target['id'],
+                **self.target)
+            self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
+            wrapper.wfuncs = self.wfuncs
+            ret = json.dumps(self.wfuncs())
+            return ret, ''
+        else:
+            return self.cmd_block()
+
     def cmd(self):
         '''
         Prepare the precheck command to send to the subsystem
@@ -261,29 +404,7 @@ class Single(object):
             args, kwargs = salt.minion.parse_args_and_kwargs(
                     self.sls_seed, self.arg)
             self.sls_seed(*args, **kwargs)
-        cmd = (' << "EOF"\n'
-               'if [ `type -p python2` ]\n'
-               'then\n'
-               '    PYTHON=python2\n'
-               'elif [ `type -p python26` ]\n'
-               'then\n'
-               '    PYTHON=python26\n'
-               'elif [ `type -p python27` ]\n'
-               'then\n'
-               '    PYTHON=python27\n'
-               'fi\n'
-               'if hash salt-call\n'
-               'then\n'
-               '    SALT=$(type -p salt-call)\n'
-               'elif [ -f /tmp/salt-call ] \n'
-               'then\n'
-               '    SALT=/tmp/salt-call\n'
-               'else\n'
-               '    echo "deploy"\n'
-               '    exit 1\n'
-               'fi\n'
-               '$PYTHON $SALT --local --out json -l quiet {0}\n'
-               'EOF').format(self.arg_str)
+        cmd = HEREDOC.format(self.arg_str)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
@@ -298,29 +419,7 @@ class Single(object):
         # 2. check is salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        cmd = (' << "EOF"\n'
-               'if [ `type -p python2` ]\n'
-               'then\n'
-               '    PYTHON=python2\n'
-               'elif [ `type -p python26` ]\n'
-               'then\n'
-               '    PYTHON=python26\n'
-               'elif [ `type -p python27` ]\n'
-               'then\n'
-               '    PYTHON=python27\n'
-               'fi\n'
-               'if hash salt-call\n'
-               'then\n'
-               '    SALT=$(type -p salt-call)\n'
-               'elif [ -f /tmp/salt-call ] \n'
-               'then\n'
-               '    SALT=/tmp/salt-call\n'
-               'else\n'
-               '    echo "deploy"\n'
-               '    exit 1\n'
-               'fi\n'
-               '$PYTHON $SALT --local --out json -l quiet {0}\n'
-               'EOF').format(self.arg_str)
+        cmd = HEREDOC.format(self.arg_str)
         return self.shell.exec_cmd(cmd)
 
     def highstate_seed(self):
@@ -328,10 +427,6 @@ class Single(object):
         Generate an archive file which contains the instructions and files
         to execute a state run on a remote system
         '''
-        wrapper = salt.client.ssh.wrapper.FunctionWrapper(
-                self.opts,
-                self.target['id'],
-                **self.target)
         st_ = SSHHighState(self.opts, None, wrapper)
         lowstate = st_.compile_low_chunks()
         #file_refs = salt.utils.lowstate_file_refs(lowstate)
