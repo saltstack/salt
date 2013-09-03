@@ -154,7 +154,7 @@ def yamlify_arg(arg):
     if not isinstance(arg, string_types):
         return arg
     try:
-        original_arg = str(arg)
+        original_arg = copy.copy(arg)
         if isinstance(arg, string_types):
             if '\n' not in arg:
                 arg = yaml.safe_load(arg)
