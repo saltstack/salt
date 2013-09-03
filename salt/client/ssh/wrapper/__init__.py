@@ -8,6 +8,7 @@ as ZeroMQ salt, but via ssh.
 import json
 
 # Import salt libs
+import salt.loader
 import salt.utils
 import salt.client.ssh
 
