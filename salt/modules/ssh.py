@@ -535,7 +535,7 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
         chunks += ['-p', str(port)]
     if enc:
         chunks += ['-t', str(enc)]
-    if not enc and __grains__['osfinger'] in need_dash_t:
+    if not enc and __grains__.get('osfinger') in need_dash_t:
         chunks += ['-t', 'rsa']
     if hash_hostname:
         chunks.append('-H')
