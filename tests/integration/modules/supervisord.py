@@ -52,7 +52,7 @@ class SupervisordModuleTest(integration.ModuleCase):
             else:
                 time.sleep(1)
                 timeout -= 1
-        
+
 
     def tearDown(self):
         if hasattr(self, 'supervisor_proc') and self.supervisor_proc.poll() is not None:
@@ -85,7 +85,7 @@ class SupervisordModuleTest(integration.ModuleCase):
 
     def test_start_one_already_running(self):
         '''
-        Try to start a specific service that is running. 
+        Try to start a specific service that is running.
         '''
         self.start_supervisord(autostart=True)
         ret = self.run_function('supervisord.start', ['sleep_service'], conf_file=self.supervisor_conf, bin_env=self.venv_dir)
@@ -104,8 +104,12 @@ class SupervisordModuleTest(integration.ModuleCase):
         Restart all services when they are not running.
         '''
         self.start_supervisord(autostart=False)
-        ret = self.run_function('supervisord.restart', [], conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertEqual(ret, 'sleep_service: started\nsleep_service2: started')
+        ret = self.run_function(
+            'supervisord.restart', [], conf_file=self.supervisor_conf,
+            bin_env=self.venv_dir)
+        # These 2 services might return in different orders so test separately
+        self.assertIn('sleep_service: started', ret)
+        self.assertIn('sleep_service2: started', ret)
 
     def test_restart_one(self):
         '''
