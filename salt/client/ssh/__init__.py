@@ -380,7 +380,6 @@ class Single(object):
                     self.id,
                     **self.target)
                 opts_pkg = wrapper['test.opts_pkg']()
-                # TODO: Get Pillar in here
                 pillar = salt.pillar.Pillar(
                         opts_pkg,
                         opts_pkg['grains'],
