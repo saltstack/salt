@@ -11,7 +11,11 @@ import grp
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from salttesting.helpers import (
+    destructiveTest,
+    ensure_in_syspath,
+    requires_system_grains
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -70,7 +74,8 @@ class UserTest(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_user_present_gid_from_name_default(self):
+    @requires_system_grains
+    def test_user_present_gid_from_name_default(self, grains=None):
         '''
         This is a DESTRUCTIVE TEST. It creates a new user on the on the minion.
         This is an integration test. Not all systems will automatically create
@@ -78,9 +83,6 @@ class UserTest(integration.ModuleCase,
         If you run the test and it fails, please fix the code it's testing to
         work on your operating system.
         '''
-        # Let's get this system's grains
-        grains = self.run_function('grains.items')
-
         ret = self.run_state('user.present', name='salt_test',
                              gid_from_name=True, home='/var/lib/salt_test')
         self.assertSaltTrueReturn(ret)
