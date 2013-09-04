@@ -124,13 +124,12 @@ class SMaster(object):
             cumask = os.umask(191)
             if user not in users:
                 try:
-                    founduser = pwd.getpwnam(user)
+                    pwd.getpwnam(user)
                 except KeyError:
                     log.error('ACL user {0} is not available'.format(user))
                     continue
-            keyfile = os.path.join(
-                self.opts['cachedir'], '.{0}_key'.format(user)
-            )
+            keyfile = os.path.join(self.opts['cachedir'],
+                                   '.{0}_key'.format(user))
 
             if os.path.exists(keyfile):
                 log.debug('Removing stale keyfile: {0}'.format(keyfile))
@@ -314,11 +313,8 @@ class Master(SMaster):
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
         clear_old_jobs_proc.start()
-        reqserv = ReqServer(
-                self.opts,
-                self.crypticle,
-                self.key,
-                self.master_key)
+        reqserv = ReqServer(self.opts, self.crypticle,
+                            self.key, self.master_key)
         reqserv.start_publisher()
         reqserv.start_event_publisher()
         reqserv.start_reactor()
@@ -458,9 +454,9 @@ class ReqServer(object):
 
         for ind in range(int(self.opts['worker_threads'])):
             self.work_procs.append(MWorker(self.opts,
-                    self.master_key,
-                    self.key,
-                    self.crypticle))
+                                           self.master_key,
+                                           self.key,
+                                           self.crypticle))
 
         for ind, proc in enumerate(self.work_procs):
             log.info('Starting Salt worker process {0}'.format(ind))
@@ -530,10 +526,10 @@ class MWorker(multiprocessing.Process):
     salt master.
     '''
     def __init__(self,
-            opts,
-            mkey,
-            key,
-            crypticle):
+                 opts,
+                 mkey,
+                 key,
+                 crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
@@ -550,7 +546,7 @@ class MWorker(multiprocessing.Process):
         socket = context.socket(zmq.REP)
         w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
-            )
+        )
         log.info('Worker binding to socket {0}'.format(w_uri))
         try:
             socket.connect(w_uri)
@@ -649,11 +645,8 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
-        self.clear_funcs = ClearFuncs(
-                self.opts,
-                self.key,
-                self.mkey,
-                self.crypticle)
+        self.clear_funcs = ClearFuncs(self.opts, self.key,
+                                      self.mkey, self.crypticle)
         self.aes_funcs = AESFuncs(self.opts, self.crypticle)
         self.__bind()
 
@@ -675,10 +668,9 @@ class AESFuncs(object):
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
         # Create the master minion to access the external job cache
-        self.mminion = salt.minion.MasterMinion(
-                self.opts,
-                states=False,
-                rend=False)
+        self.mminion = salt.minion.MasterMinion(self.opts,
+                                                states=False,
+                                                rend=False)
         self.__setup_fileserver()
 
     def __setup_fileserver(self):
@@ -734,7 +726,8 @@ class AESFuncs(object):
             return False
         if not isinstance(self.opts['peer'], dict):
             return False
-        if any(key not in clear_load for key in ('fun', 'arg', 'tgt', 'ret', 'tok', 'id')):
+        keys = ('fun', 'arg', 'tgt', 'ret', 'tok', 'id')
+        if any(key not in clear_load for key in keys):
             return False
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
@@ -763,11 +756,9 @@ class AESFuncs(object):
             for arg in clear_load['arg']:
                 arg_.append(arg.split())
             clear_load['arg'] = arg_
-        good = self.ckminions.auth_check(
-                perms,
-                clear_load['fun'],
-                clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob'))
+        good = self.ckminions.auth_check(perms, clear_load['fun'],
+                                         clear_load['tgt'],
+                                         clear_load.get('tgt_type', 'glob'))
         if not good:
             return False
         return True
@@ -793,12 +784,8 @@ class AESFuncs(object):
                            '').format(self.opts['external_nodes']))
                 return {}
             cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-            ndata = yaml.safe_load(
-                    subprocess.Popen(
-                        cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE
-                        ).communicate()[0])
+            subp = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            ndata = yaml.safe_load(subp.communicate()[0])
             if 'environment' in ndata:
                 env = ndata['environment']
             else:
@@ -864,16 +851,11 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
         checker = salt.utils.minions.CkMinions(self.opts)
-        minions = checker.check_minions(
-                load['tgt'],
-                load.get('expr_form', 'glob')
-                )
+        minions = checker.check_minions(load['tgt'],
+                                        load.get('expr_form', 'glob'))
         for minion in minions:
-            mine = os.path.join(
-                    self.opts['cachedir'],
-                    'minions',
-                    minion,
-                    'mine.p')
+            mine = os.path.join(self.opts['cachedir'], 'minions',
+                                minion, 'mine.p')
             try:
                 with salt.utils.fopen(mine) as fp_:
                     fdata = self.serial.load(fp_).get(load['fun'])
@@ -891,7 +873,8 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
+        if (self.opts.get('minion_data_cache', False) or
+                self.opts.get('enforce_mine_cache', False)):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
@@ -921,12 +904,8 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        cpath = os.path.join(
-                self.opts['cachedir'],
-                'minions',
-                load['id'],
-                'files',
-                load['path'])
+        cpath = os.path.join(self.opts['cachedir'], 'minions',
+                             load['id'], 'files', load['path'])
         cdir = os.path.dirname(cpath)
         if not os.path.isdir(cdir):
             try:
@@ -951,12 +930,8 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        pillar = salt.pillar.Pillar(
-                self.opts,
-                load['grains'],
-                load['id'],
-                load['env'],
-                load.get('ext'))
+        pillar = salt.pillar.Pillar(self.opts, load['grains'],
+                                    load['id'], load['env'], load.get('ext'))
         data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
@@ -964,11 +939,8 @@ class AESFuncs(object):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
             with salt.utils.fopen(datap, 'w+') as fp_:
-                fp_.write(
-                        self.serial.dumps(
-                            {'grains': load['grains'],
-                             'pillar': data})
-                            )
+                fp_.write(self.serial.dumps({'grains': load['grains'],
+                                             'pillar': data}))
         return data
 
     def _master_state(self, load):
@@ -977,12 +949,9 @@ class AESFuncs(object):
         '''
         if 'opts' not in load or 'grains' not in load:
             return False
-        return salt.state.master_compile(
-                self.opts,
-                load['opts'],
-                load['grains'],
-                load['opts']['id'],
-                load['opts']['environment'])
+        return salt.state.master_compile(self.opts, load['opts'],
+                                         load['grains'], load['opts']['id'],
+                                         load['opts']['environment'])
 
     def _minion_event(self, load):
         '''
@@ -997,9 +966,10 @@ class AESFuncs(object):
             return False
         if 'events' in load:
             for event in load['events']:
-                self.event.fire_event(event, event['tag']) # old dup event
-                if load.get('pretag') != None:
-                    self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
+                self.event.fire_event(event, event['tag'])  # old dup event
+                if load.get('pretag') is not None:
+                    self.event.fire_event(event, tagify(event['tag'],
+                                          base=load['pretag']))
         else:
             tag = load['tag']
             self.event.fire_event(load, tag)
@@ -1016,13 +986,15 @@ class AESFuncs(object):
             return False
         if load['jid'] == 'req':
         # The minion is returning a standalone job, request a jobid
-            load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    load.get('nocache', False))
+            load['jid'] = salt.utils.prep_jid(self.opts['cachedir'],
+                                              self.opts['hash_type'],
+                                              load.get('nocache', False))
         log.info('Got return from {id} for job {jid}'.format(**load))
-        self.event.fire_event(load, load['jid']) # old dup event
-        self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
+        self.event.fire_event(load, load['jid'])  # old dup event
+        self.event.fire_event(load, tagify([load['jid'],
+                                           'ret',
+                                           load['id']],
+                                           'job'))
         self.event.fire_ret_load(load)
         if self.opts['master_ext_job_cache']:
             fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
@@ -1030,11 +1002,8 @@ class AESFuncs(object):
             return
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+        jid_dir = salt.utils.jid_dir(load['jid'], self.opts['cachedir'],
+                                     self.opts['hash_type'])
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
@@ -1086,15 +1055,13 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         # set the write flag
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+        jid_dir = salt.utils.jid_dir(load['jid'], self.opts['cachedir'],
+                                     self.opts['hash_type'])
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
             if 'load' in load:
-                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
+                path = os.path.join(jid_dir, '.load.p')
+                with salt.utils.fopen(path, 'w+') as fp_:
                     self.serial.dump(load['load'], fp_)
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
@@ -1178,9 +1145,7 @@ class AESFuncs(object):
             )
             return {}
         # Check that this minion can access this data
-        auth_cache = os.path.join(
-                self.opts['cachedir'],
-                'publish_auth')
+        auth_cache = os.path.join(self.opts['cachedir'], 'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, load['jid'])
@@ -1211,14 +1176,13 @@ class AESFuncs(object):
         if not self.__verify_minion_publish(clear_load):
             return {}
         # Set up the publication payload
-        load = {
-                'fun': clear_load['fun'],
+        load = {'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'expr_form': clear_load.get('tgt_type', 'glob'),
                 'tgt': clear_load['tgt'],
                 'ret': clear_load['ret'],
                 'id': clear_load['id'],
-               }
+                }
         if 'tgt_type' in clear_load:
             if clear_load['tgt_type'].startswith('node'):
                 if clear_load['tgt'] in self.opts['nodegroups']:
@@ -1231,12 +1195,9 @@ class AESFuncs(object):
                 load['expr_form'] = clear_load['tgt_type']
         ret = {}
         ret['jid'] = self.local.cmd_async(**load)
-        ret['minions'] = self.ckminions.check_minions(
-                clear_load['tgt'],
-                load['expr_form'])
-        auth_cache = os.path.join(
-                self.opts['cachedir'],
-                'publish_auth')
+        ret['minions'] = self.ckminions.check_minions(clear_load['tgt'],
+                                                      load['expr_form'])
+        auth_cache = os.path.join(self.opts['cachedir'], 'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, ret['jid'])
@@ -1265,29 +1226,26 @@ class AESFuncs(object):
         if not self.__verify_minion_publish(clear_load):
             return {}
         # Set up the publication payload
-        load = {
-                'fun': clear_load['fun'],
+        load = {'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'expr_form': clear_load.get('tgt_type', 'glob'),
                 'tgt': clear_load['tgt'],
                 'ret': clear_load['ret'],
                 'id': clear_load['id'],
-               }
+                }
         if 'tmo' in clear_load:
             try:
                 load['timeout'] = int(clear_load['tmo'])
             except ValueError:
-                msg = 'Failed to parse timeout value: {0}'.format(
-                        clear_load['tmo'])
-                log.warn(msg)
+                msg = 'Failed to parse timeout value: {0}'
+                log.warn(msg.format(clear_load['tmo']))
                 return {}
         if 'timeout' in clear_load:
             try:
                 load['timeout'] = int(clear_load['timeout'])
             except ValueError:
-                msg = 'Failed to parse timeout value: {0}'.format(
-                        clear_load['tmo'])
-                log.warn(msg)
+                msg = 'Failed to parse timeout value: {0}'
+                log.warn(msg.format(clear_load['tmo']))
                 return {}
         if 'tgt_type' in clear_load:
             if clear_load['tgt_type'].startswith('node'):
@@ -1373,20 +1331,17 @@ class AESFuncs(object):
                 return self.crypticle.dumps(ret)
             # encrypt with a specific AES key
             pubfn = os.path.join(self.opts['pki_dir'],
-                    'minions',
-                    load['id'])
+                                 'minions',
+                                 load['id'])
             key = salt.crypt.Crypticle.generate_key_string()
-            pcrypt = salt.crypt.Crypticle(
-                    self.opts,
-                    key)
+            pcrypt = salt.crypt.Crypticle(self.opts, key)
             try:
                 pub = RSA.load_pub_key(pubfn)
             except RSA.RSAError:
                 return self.crypticle.dumps({})
 
-            pret = {}
-            pret['key'] = pub.public_encrypt(key, 4)
-            pret['pillar'] = pcrypt.dumps(ret)
+            pret = {'key': pub.public_encrypt(key, 4),
+                    'pillar': pcrypt.dumps(ret)}
             return pret
         # AES Encrypt the return
         return self.crypticle.dumps(ret)
@@ -1416,10 +1371,9 @@ class ClearFuncs(object):
         # Make an Auth object
         self.loadauth = salt.auth.LoadAuth(opts)
         # Stand up the master Minion to access returner data
-        self.mminion = salt.minion.MasterMinion(
-                self.opts,
-                states=False,
-                rend=False)
+        self.mminion = salt.minion.MasterMinion(self.opts,
+                                                states=False,
+                                                rend=False)
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
 
@@ -1429,11 +1383,11 @@ class ClearFuncs(object):
         '''
         log.debug('Sending out cluster data')
         ret = self.local.cmd(self.opts['cluster_masters'],
-                'cluster.distrib',
-                self._cluster_load(),
-                0,
-                'list'
-                )
+                             'cluster.distrib',
+                             self._cluster_load(),
+                             0,
+                             'list'
+                             )
         log.debug('Cluster distributed: {0}'.format(ret))
 
     def _cluster_load(self):
@@ -1495,8 +1449,8 @@ class ClearFuncs(object):
                 return False
 
             # check group flags
-            if self.opts.get('permissive_pki_access', False) \
-              and stat.S_IWGRP & fmode.st_mode:
+            if (self.opts.get('permissive_pki_access', False) and
+                    stat.S_IWGRP & fmode.st_mode):
                 return True
             elif stat.S_IWGRP & fmode.st_mode:
                 return False
@@ -1570,21 +1524,20 @@ class ClearFuncs(object):
         salt.utils.verify.check_max_open_files(self.opts)
 
         if not salt.utils.verify.valid_id(self.opts, load['id']):
-            log.info(
-                'Authentication request from invalid id {id}'.format(**load)
-                )
+            msg = 'Authentication request from invalid id {id}'
+            log.info(msg.format(**load))
             return {'enc': 'clear',
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
         pubfn = os.path.join(self.opts['pki_dir'],
-                'minions',
-                load['id'])
+                             'minions',
+                             load['id'])
         pubfn_pend = os.path.join(self.opts['pki_dir'],
-                'minions_pre',
-                load['id'])
+                                  'minions_pre',
+                                  load['id'])
         pubfn_rejected = os.path.join(self.opts['pki_dir'],
-                'minions_rejected',
-                load['id'])
+                                      'minions_rejected',
+                                      load['id'])
         if self.opts['open_mode']:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -1597,7 +1550,7 @@ class ClearFuncs(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return ret
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
@@ -1612,7 +1565,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
@@ -1626,7 +1579,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return ret
             # This is a new key, stick it in pre
             log.info(
@@ -1640,7 +1593,7 @@ class ClearFuncs(object):
                      'act': 'pend',
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return ret
         elif os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
@@ -1655,7 +1608,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
@@ -1668,7 +1621,7 @@ class ClearFuncs(object):
                          'act': 'pend',
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': True}}
         elif os.path.isfile(pubfn_pend)\
@@ -1683,7 +1636,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
@@ -1698,7 +1651,7 @@ class ClearFuncs(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -1721,11 +1674,12 @@ class ClearFuncs(object):
         ret = {'enc': 'pub',
                'pub_key': self.master_key.get_pub_str(),
                'publish_port': self.opts['publish_port'],
-              }
+               }
         if self.opts['auth_mode'] >= 2:
             if 'token' in load:
                 try:
-                    mtoken = self.master_key.key.private_decrypt(load['token'], 4)
+                    private_decrypt = self.master_key.key.private_decrypt
+                    mtoken = private_decrypt(load['token'], 4)
                     aes = '{0}_|-{1}'.format(self.opts['aes'], mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
@@ -1756,7 +1710,7 @@ class ClearFuncs(object):
                  'act': 'accept',
                  'id': load['id'],
                  'pub': load['pub']}
-        self.event.fire_event(eload, tagify(prefix = 'auth'))
+        self.event.fire_event(eload, tagify(prefix='auth'))
         return ret
 
     def runner(self, clear_load):
@@ -1768,11 +1722,8 @@ class ClearFuncs(object):
             try:
                 token = self.loadauth.get_tok(clear_load['token'])
             except Exception as exc:
-                log.error(
-                    'Exception occurred when generating auth token: {0}'.format(
-                        exc
-                    )
-                )
+                msg = 'Exception occurred when generating auth token: {0}'
+                log.error(msg.format(exc))
                 return ''
             if not token:
                 log.warning('Authentication failure of type "token" occurred.')
@@ -1783,13 +1734,16 @@ class ClearFuncs(object):
             if token['name'] not in self.opts['external_auth'][token['eauth']]:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            good = self.ckminions.runner_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
-                    clear_load['fun'])
+            ext_auth = self.opts['external_auth'][token['eauth']]
+            if token['name'] in ext_auth:
+                value = ext_auth[token['name']]
+            else:
+                value = ext_auth['*']
+            good = self.ckminions.runner_check(value, clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
+                       'user {0}.')
+                log.warning(msg.format(clear_load.get('username', 'UNKNOWN')))
                 return ''
 
             try:
@@ -1798,7 +1752,7 @@ class ClearFuncs(object):
                 return runner_client.async(fun, clear_load.get('kwarg', {}))
             except Exception as exc:
                 log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
+                          'introspecting {0}: {1}'.format(fun, exc))
                 return ''
 
         if 'eauth' not in clear_load:
@@ -1815,23 +1769,28 @@ class ClearFuncs(object):
 
         try:
             name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            ext_auth = self.opts['external_auth'][clear_load['eauth']]
+            name_in_eauth = name in ext_auth
+            mask = '*' in ext_auth
+            if not ((name in ext_auth) | ('*' in ext_auth)):
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
+                       'user {0}.')
+                log.warning(msg.format(clear_load.get('username', 'UNKNOWN')))
                 return ''
             if not self.loadauth.time_auth(clear_load):
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
+                       'user {0}.')
+                log.warning(msg.format(clear_load.get('username', 'UNKNOWN')))
                 return ''
-            good = self.ckminions.runner_check(
-                    self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][clear_load['eauth']]['*'],
-                    clear_load['fun'])
+            if name in ext_auth:
+                value = ext_auth[name]
+            else:
+                value = ext_auth['*']
+            good = self.ckminions.runner_check(value, clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
+                       'user {0}.')
+                log.warning(msg.format(clear_load.get('username', 'UNKNOWN')))
                 return ''
 
             try:
@@ -1840,7 +1799,7 @@ class ClearFuncs(object):
                 return runner_client.async(fun, clear_load.get('kwarg', {}))
             except Exception as exc:
                 log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
+                          'introspecting {0}: {1}'.format(fun, exc))
                 return ''
 
         except Exception as exc:
@@ -1858,11 +1817,8 @@ class ClearFuncs(object):
             try:
                 token = self.loadauth.get_tok(clear_load['token'])
             except Exception as exc:
-                log.error(
-                    'Exception occurred when generating auth token: {0}'.format(
-                        exc
-                    )
-                )
+                msg = 'Exception occurred when generating auth token: {0}'
+                log.error(msg.format(exc))
                 return ''
             if not token:
                 log.warning('Authentication failure of type "token" occurred.')
@@ -1873,21 +1829,25 @@ class ClearFuncs(object):
             if token['name'] not in self.opts['external_auth'][token['eauth']]:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
-                    clear_load['fun'])
+            ext_auth = self.opts['external_auth'][token['eauth']]
+            if token['name'] in ext_auth:
+                value = ext_auth[token['name']]
+            else:
+                value = ext_auth['*']
+            good = self.ckminions.wheel_check(value, clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
+                       'user {0}.')
+                log.warning(msg.format(clear_load.get('username', 'UNKNOWN')))
                 return ''
 
             try:
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                return self.wheel_.call_func(fun,
+                                             **clear_load.get('kwarg', {}))
             except Exception as exc:
                 log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
+                          'introspecting {0}: {1}'.format(fun, exc))
                 return ''
 
         if 'eauth' not in clear_load:
@@ -1904,31 +1864,35 @@ class ClearFuncs(object):
 
         try:
             name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            ext_auth = self.opts['external_auth'][clear_load['eauth']]
+            if not ((name in ext_auth) | ('*' in ext_auth)):
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
+                       'user {0}.')
+                log.warning(msg.format(clear_load.get('username', 'UNKNOWN')))
                 return ''
             if not self.loadauth.time_auth(clear_load):
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
+                       'user {0}.')
+                log.warning(msg.format(clear_load.get('username', 'UNKNOWN')))
                 return ''
-            good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
-                    clear_load['fun'])
+            if name in ext_auth:
+                value = ext_auth[name]
+            else:
+                value = ext_auth['*']
+            good = self.ckminions.wheel_check(value, clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
+                       'user {0}.')
+                log.warning(msg.format(clear_load.get('username', 'UNKNOWN')))
                 return ''
 
             try:
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                return self.wheel_.call_func(fun,
+                                             **clear_load.get('kwarg', {}))
             except Exception as exc:
                 log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
+                          'introspecting {0}: {1}'.format(fun, exc))
                 return ''
 
         except Exception as exc:
@@ -1951,7 +1915,8 @@ class ClearFuncs(object):
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            ext_auth = self.opts['external_auth'][clear_load['eauth']]
+            if not ((name in ext_auth) | ('*' in ext_auth)):
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             if not self.loadauth.time_auth(clear_load):
@@ -1991,7 +1956,7 @@ class ClearFuncs(object):
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
             # if this is a regular command, its a single function
             if type(clear_load['fun']) == str:
-                funs_to_check = [ clear_load['fun'] ]
+                funs_to_check = [clear_load['fun']]
             # if this a compound function
             else:
                 funs_to_check = clear_load['fun']
@@ -2019,11 +1984,8 @@ class ClearFuncs(object):
             try:
                 token = self.loadauth.get_tok(extra['token'])
             except Exception as exc:
-                log.error(
-                    'Exception occurred when generating auth token: {0}'.format(
-                        exc
-                    )
-                )
+                msg = 'Exception occurred when generating auth token: {0}'
+                log.error(msg.format(exc))
                 return ''
             if not token:
                 log.warning('Authentication failure of type "token" occurred.')
@@ -2031,14 +1993,18 @@ class ClearFuncs(object):
             if token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not ((token['name'] in self.opts['external_auth'][token['eauth']]) | ('*' in self.opts['external_auth'][token['eauth']])):
+            ext_auth = self.opts['external_auth'][token['eauth']]
+            if not ((token['name'] in ext_auth) | ('*' in ext_auth)):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            good = self.ckminions.auth_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
-                    clear_load['fun'],
-                    clear_load['tgt'],
-                    clear_load.get('tgt_type', 'glob'))
+            if token['name'] in ext_auth:
+                value = ext_auth[token['name']]
+            else:
+                value = ext_auth['*']
+            good = self.ckminions.auth_check(value, clear_load['fun'],
+                                             clear_load['tgt'],
+                                             clear_load.get('tgt_type',
+                                                            'glob'))
             if not good:
                 # Accept find_job so the CLI will function cleanly
                 if clear_load['fun'] != 'saltutil.find_job':
@@ -2055,7 +2021,8 @@ class ClearFuncs(object):
                 return ''
             try:
                 name = self.loadauth.load_name(extra)
-                if not ((name in self.opts['external_auth'][extra['eauth']]) | ('*' in self.opts['external_auth'][extra['eauth']])):
+                ext_auth = self.opts['external_auth'][extra['eauth']]
+                if not ((name in ext_auth) | ('*' in ext_auth)):
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -2070,11 +2037,14 @@ class ClearFuncs(object):
                     'Exception occurred while authenticating: {0}'.format(exc)
                 )
                 return ''
-            good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*'],
-                    clear_load['fun'],
-                    clear_load['tgt'],
-                    clear_load.get('tgt_type', 'glob'))
+            if name in ext_auth:
+                value = ext_auth[name]
+            else:
+                value = ext_auth['*']
+            good = self.ckminions.auth_check(value, clear_load['fun'],
+                                             clear_load['tgt'],
+                                             clear_load.get('tgt_type',
+                                                            'glob'))
             if not good:
                 # Accept find_job so the CLI will function cleanly
                 if clear_load['fun'] != 'saltutil.find_job':
@@ -2084,23 +2054,27 @@ class ClearFuncs(object):
                     return ''
         # Verify that the caller has root on master
         elif 'user' in clear_load:
+            opts = self.opts
             if clear_load['user'].startswith('sudo_'):
                 # If someone can sudo, allow them to act as root
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
-                elif clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
+                elif clear_load.pop('key') != self.key[opts.get('user',
+                                                                'root')]:
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-            elif clear_load['user'] == self.opts.get('user', 'root'):
-                if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
+            elif clear_load['user'] == opts.get('user', 'root'):
+                if clear_load.pop('key') != self.key[opts.get('user',
+                                                              'root')]:
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
             elif clear_load['user'] == 'root':
-                if clear_load.pop('key') != self.key.get(self.opts.get('user', 'root')):
+                if clear_load.pop('key') != self.key.get(opts.get('user',
+                                                                  'root')):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
@@ -2119,16 +2093,17 @@ class ClearFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    if clear_load['user'] not in self.opts['client_acl']:
+                    if clear_load['user'] not in opts['client_acl']:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                            self.opts['client_acl'][clear_load['user']],
-                            clear_load['fun'],
-                            clear_load['tgt'],
-                            clear_load.get('tgt_type', 'glob'))
+                        opts['client_acl'][clear_load['user']],
+                        clear_load['fun'],
+                        clear_load['tgt'],
+                        clear_load.get('tgt_type', 'glob')
+                    )
                     if not good:
                         # Accept find_job so the CLI will function cleanly
                         if clear_load['fun'] != 'saltutil.find_job':
@@ -2149,10 +2124,9 @@ class ClearFuncs(object):
                 )
                 return ''
         # Retrieve the minions list
-        minions = self.ckminions.check_minions(
-                clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob')
-                )
+        minions = self.ckminions.check_minions(clear_load['tgt'],
+                                               clear_load.get('tgt_type',
+                                                              'glob'))
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
         if not self.opts.get('order_masters'):
@@ -2168,39 +2142,40 @@ class ClearFuncs(object):
         # Retrieve the jid
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    extra.get('nocache', False)
-                    )
+                self.opts['cachedir'],
+                self.opts['hash_type'],
+                extra.get('nocache', False)
+            )
         self.event.fire_event({'minions': minions}, clear_load['jid'])
         jid_dir = salt.utils.jid_dir(
-                clear_load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+            clear_load['jid'],
+            self.opts['cachedir'],
+            self.opts['hash_type']
+        )
 
-        new_job_load =  {
-                'jid': clear_load['jid'],
-                'tgt_type':clear_load['tgt_type'],
-                'tgt': clear_load['tgt'],
-                'user': clear_load['user'],
-                'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'minions': minions,
-            }
+        new_job_load = {'jid': clear_load['jid'],
+                        'tgt_type': clear_load['tgt_type'],
+                        'tgt': clear_load['tgt'],
+                        'user': clear_load['user'],
+                        'fun': clear_load['fun'],
+                        'arg': clear_load['arg'],
+                        'minions': minions,
+                        }
 
         # Announce the job on the event bus
-        self.event.fire_event(new_job_load, 'new_job') # old dup event
-        self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
+        self.event.fire_event(new_job_load, 'new_job')  # old dup event
+        self.event.fire_event(new_job_load, tagify([clear_load['jid'],
+                                                   'new'],
+                                                   'job'))
 
         # Verify the jid dir
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
         # Save the invocation information
         self.serial.dump(
-                clear_load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
-                )
+            clear_load,
+            salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
+        )
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
@@ -2227,13 +2202,12 @@ class ClearFuncs(object):
         # In short, check with Thomas Hatch before you even think about
         # touching this stuff, we can probably do what you want to do another
         # way that won't have a negative impact.
-        load = {
-                'fun': clear_load['fun'],
+        load = {'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'tgt': clear_load['tgt'],
                 'jid': clear_load['jid'],
                 'ret': clear_load['ret'],
-               }
+                }
 
         if 'id' in extra:
             load['id'] = extra['id']
@@ -2263,13 +2237,10 @@ class ClearFuncs(object):
         pub_sock = context.socket(zmq.PUSH)
         pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-            )
+        )
         pub_sock.connect(pull_uri)
         pub_sock.send(self.serial.dumps(payload))
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': clear_load['jid'],
-                'minions': minions
-            }
-        }
+        return {'enc': 'clear',
+                'load': {'jid': clear_load['jid'],
+                         'minions': minions}
+                }

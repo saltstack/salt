@@ -45,10 +45,8 @@ class RunnerClient(object):
             data['ret'] = self.low(fun, low)
             data['success'] = True
         except Exception as exc:
-            data['ret'] = 'Exception occured in runner {0}: {1}'.format(
-                            fun,
-                            exc,
-                            )
+            msg = 'Exception occured in runner {0}: {1}'
+            data['ret'] = msg.format(fun, exc,)
 
         event.fire_event(data, tagify('ret', base=tag))
 
@@ -64,9 +62,7 @@ class RunnerClient(object):
         '''
         Return a dictionary of functions and the inline documentation for each
         '''
-        ret = [(fun, self.functions[fun].__doc__)
-                for fun in sorted(self.functions)]
-
+        ret = [(f, self.functions[f].__doc__) for f in sorted(self.functions)]
         return dict(ret)
 
     def cmd(self, fun, arg, kwarg=None):
@@ -77,9 +73,10 @@ class RunnerClient(object):
             kwarg = {}
         self._verify_fun(fun)
         args, kwargs = salt.minion.parse_args_and_kwargs(
-                self.functions[fun],
-                arg,
-                kwarg)
+            self.functions[fun],
+            arg,
+            kwarg,
+        )
         return self.functions[fun](*args, **kwargs)
 
     def low(self, fun, low):
@@ -103,8 +100,9 @@ class RunnerClient(object):
         low['jid'] = jid
 
         proc = multiprocessing.Process(
-                target=self._proc_runner,
-                args=(tag, fun, low))
+            target=self._proc_runner,
+            args=(tag, fun, low),
+        )
         proc.start()
         return tag
 
@@ -118,8 +116,8 @@ class RunnerClient(object):
         load = kwargs
         load['cmd'] = 'runner'
         sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
+            'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+        )
         ret = sreq.send('clear', load)
         if ret == '':
             raise salt.exceptions.EauthAuthenticationError
@@ -147,8 +145,9 @@ class Runner(RunnerClient):
             self._print_docs()
         else:
             try:
-                return super(Runner, self).cmd(
-                        self.opts['fun'], self.opts['arg'], self.opts)
+                return super(Runner, self).cmd(self.opts['fun'],
+                                               self.opts['arg'],
+                                               self.opts)
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 print ret

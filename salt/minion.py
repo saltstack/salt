@@ -73,8 +73,9 @@ def resolve_dns(opts):
         # Because I import salt.log below I need to re-import salt.utils here
         import salt.utils
         try:
-            ret['master_ip'] = \
-                    salt.utils.dns_check(opts['master'], True, opts['ipv6'])
+            ret['master_ip'] = salt.utils.dns_check(opts['master'],
+                                                    True,
+                                                    opts['ipv6'])
         except SaltClientError:
             if opts['retry_dns']:
                 while True:
@@ -136,9 +137,7 @@ def parse_args_and_kwargs(func, args, data=None):
                 if has_kwargs or arg_name in spec_args:
                     kwargs[arg_name] = yamlify_arg(arg_value)
                     continue
-            else:
-                # Not a kwarg
-                pass
+            # Not a kwarg
         _args.append(yamlify_arg(arg))
     if has_kwargs and isinstance(data, dict):
         # this function accepts kwargs, pack in the publish data
@@ -401,9 +400,9 @@ class MultiMinion(object):
                     # the loop_interval setting
                     if minion.schedule.loop_interval < loop_interval:
                         loop_interval = minion.schedule.loop_interval
-                        log.debug(
-                            'Overriding loop_interval because of scheduled jobs.'
-                        )
+                        msg = ('Overriding loop_interval because of'
+                               'scheduled jobs.')
+                        log.debug(msg)
                 except Exception as exc:
                     log.error(
                         'Exception {0} occurred in scheduled job'.format(exc)
@@ -432,7 +431,9 @@ class MultiMinion(object):
                                 minions[master] = {'minion': minion}
                             t_minion = Minion(minion, 1, False)
                             minions[master]['minion'] = t_minion
-                            minions[master]['generator'] = t_minion.tune_in_no_block()
+                            minions[master]['generator'] = (
+                                t_minion.tune_in_no_block()
+                            )
                             auth_wait = self.opts['acceptance_wait_time']
                         except SaltClientError:
                             continue
@@ -537,8 +538,10 @@ class Minion(object):
             # decryption of the payload failed, try to re-auth but wait
             # random seconds if set in config with random_reauth_delay
             if 'random_reauth_delay' in self.opts:
-                reauth_delay = randint(0, int(self.opts['random_reauth_delay']))
-                log.debug("Waiting {0} seconds to re-authenticate".format(reauth_delay))
+                delay = int(self.opts['random_reauth_delay'])
+                reauth_delay = randint(0, delay)
+                msg = "Waiting {0} seconds to re-authenticate"
+                log.debug(msg.format(reauth_delay))
                 time.sleep(reauth_delay)
 
             self.authenticate()
@@ -699,8 +702,8 @@ class Minion(object):
                 except Exception as exc:
                     log.error(
                         'The return failed for job {0} {1}'.format(
-                        data['jid'],
-                        exc
+                            data['jid'],
+                            exc
                         )
                     )
 
@@ -722,7 +725,9 @@ class Minion(object):
             ret['success'][data['fun'][ind]] = False
             try:
                 func = minion_instance.functions[data['fun'][ind]]
-                args, kwargs = parse_args_and_kwargs(func, data['arg'][ind], data)
+                args, kwargs = parse_args_and_kwargs(func,
+                                                     data['arg'][ind],
+                                                     data)
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
@@ -745,8 +750,8 @@ class Minion(object):
                 except Exception as exc:
                     log.error(
                         'The return failed for job {0} {1}'.format(
-                        data['jid'],
-                        exc
+                            data['jid'],
+                            exc
                         )
                     )
 
@@ -861,7 +866,8 @@ class Minion(object):
             time.sleep(acceptance_wait_time)
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time
-                log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
+                msg = 'Authentication wait time is {0}'
+                log.debug(msg.format(acceptance_wait_time))
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
@@ -980,13 +986,16 @@ class Minion(object):
         recon_delay = self.opts['recon_default']
 
         if self.opts['recon_randomize']:
-            recon_delay = randint(self.opts['recon_default'],
-                                  self.opts['recon_default'] + self.opts['recon_max']
-                          )
+            recon_default = self.opts['recon_default']
+            recon_default_and_max = recon_default + self.opts['recon_max']
+            recon_delay = randint(recon_default,
+                                  recon_default_and_max)
 
-            log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
-                self.opts['recon_default'],
-                self.opts['recon_default'] + self.opts['recon_max'],
+            msg = ("Generated random reconnect delay between '{0}ms'"
+                   "and '{1}ms' ({2})")
+            log.debug(msg.format(
+                recon_default,
+                recon_default_and_max,
                 recon_delay)
             )
 
@@ -1025,15 +1034,15 @@ class Minion(object):
         # Send an event to the master that the minion is live
         self._fire_master(
             'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
+                self.opts['id'],
+                time.asctime()
             ),
             'minion_start'
         )
         self._fire_master(
             'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
+                self.opts['id'],
+                time.asctime()
             ),
             tagify([self.opts['id'], 'start'], 'minion'),
         )
@@ -1129,16 +1138,16 @@ class Minion(object):
         # Send an event to the master that the minion is live
         self._fire_master(
             'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
+                self.opts['id'],
+                time.asctime()
             ),
             'minion_start'
         )
         # dup name spaced event
         self._fire_master(
             'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
+                self.opts['id'],
+                time.asctime()
             ),
             tagify([self.opts['id'], 'start'], 'minion'),
         )
@@ -1297,15 +1306,15 @@ class Syndic(Minion):
         # Send an event to the master that the minion is live
         self._fire_master(
             'Syndic {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
+                self.opts['id'],
+                time.asctime()
             ),
             'syndic_start'
         )
         self._fire_master(
             'Syndic {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
+                self.opts['id'],
+                time.asctime()
             ),
             tagify([self.opts['id'], 'start'], 'syndic'),
         )
@@ -1330,25 +1339,31 @@ class Syndic(Minion):
                     if event is None:
                         # Timeout reached
                         break
-                    if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
+                    if (salt.utils.is_jid(event['tag']) and
+                            'return' in event['data']):
                         if not event['tag'] in jids:
                             if not 'jid' in event['data']:
                                 # Not a job return
                                 continue
-                            jids[event['tag']] = {}
-                            jids[event['tag']]['__fun__'] = event['data'].get('fun')
-                            jids[event['tag']]['__jid__'] = event['data']['jid']
-                            jids[event['tag']]['__load__'] = salt.utils.jid_load(
+                            d = {}
+                            d['__fun__'] = event['data'].get('fun')
+                            d['__jid__'] = event['data']['jid']
+                            d['__load__'] = salt.utils.jid_load(
                                 event['data']['jid'],
                                 self.local.opts['cachedir'],
                                 self.opts['hash_type'])
-                        jids[event['tag']][event['data']['id']] = event['data']['return']
+                            jids[event['tag']] = d
+                        jids[event['tag']][event['data']['id']] = (
+                            event['data']['return']
+                        )
                     else:
                         # Add generic event aggregation here
                         if not 'retcode' in event['data']:
                             raw_events.append(event)
                 if raw_events:
-                    self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], base='syndic'))
+                    self._fire_master(events=raw_events,
+                                      pretag=tagify(self.opts['id'],
+                                                    base='syndic'))
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:
