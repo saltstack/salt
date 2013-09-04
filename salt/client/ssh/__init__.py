@@ -367,16 +367,17 @@ class Single(object):
             refresh = False
             if not os.path.isfile(datap):
                 refresh = True
-            elif self.opts.get('refresh_cache'):
-                refresh = True
-            if ((time.time() - os.stat(datap).st_mtime) / 60 > self.opts.get('cache_life', 60)):
+            else:
+                if ((time.time() - os.stat(datap).st_mtime) / 60 > self.opts.get('cache_life', 60)):
+                    refresh = True
+            if self.opts.get('refresh_cache'):
                 refresh = True
             if refresh:
                 # Make the datap
                 # TODO: Auto expire the datap
                 wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                     self.opts,
-                    self.target['id'],
+                    self.id,
                     **self.target)
                 opts_pkg = wrapper['test.opts_pkg']()
                 # TODO: Get Pillar in here
@@ -404,7 +405,7 @@ class Single(object):
             opts['pillar'] = data.get('pillar')
             wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                 opts,
-                self.target['id'],
+                self.id,
                 **self.target)
             self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
             wrapper.wfuncs = self.wfuncs
