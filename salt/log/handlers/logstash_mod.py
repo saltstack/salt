@@ -286,7 +286,14 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
             self._context = zmq.Context()
             self._publisher = self._context.socket(zmq.PUB)
             # Above 1000 unsent events in the socket queue, stop dropping them
-            self._publisher.setsockopt(zmq.HWM, 1000)
+            try:
+                self._publisher.setsockopt(zmq.HWM, 1000)
+            except AttributeError:
+                # in zmq >= 3.0, there are separate send and receive HWM
+                # settings
+                self._publisher.setsockopt(zmq.SNDHWM, 1000)
+                self._publisher.setsockopt(zmq.RCVHWM, 1000)
+
             self._publisher.connect(self._address)
         return self._publisher
 
