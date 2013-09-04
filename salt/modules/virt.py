@@ -601,9 +601,9 @@ def get_disks(vm_):
                 #
                 # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
                 elif line.startswith('backing file'):
-                    matches = re.match(".*\(actual path: (.*?)\)", line)
+                    matches = re.match(r'.*\(actual path: (.*?)\)', line)
                     if matches:
-                        output.append("backing file: {0}".format(matches.group(1)))
+                        output.append('backing file: {0}'.format(matches.group(1)))
                     continue
 
                 elif snapshots:
