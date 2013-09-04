@@ -1,8 +1,9 @@
 '''
 .. |reclass| replace:: **reclass**
 
-This ``master_tops`` plugin provides access to the |reclass| database, such
-that state information (top data) are retrieved from |reclass|.
+This :doc:`master_tops <../../../topics/master_tops>` plugin provides
+access to the |reclass| database, such that state information (top
+data) are retrieved from |reclass|.
 
 You can find more information about |reclass| at
 http://reclass.pantsfullofunix.net.
