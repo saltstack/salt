@@ -13,13 +13,13 @@ import shutil
 import subprocess
 
 # Import third party libs
+import yaml
 try:
     import libvirt
     from xml.dom import minidom
-    HAS_ALL_IMPORTS= True
+    HAS_ALL_IMPORTS = True
 except ImportError:
-    HAS_ALL_IMPORTS= False
-import yaml
+    HAS_ALL_IMPORTS = False
 
 # Import salt libs
 import salt.utils
