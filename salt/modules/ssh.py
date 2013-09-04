@@ -526,11 +526,17 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
 
         salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
     '''
+    # The following list of OSes have an old version of openssh-clients
+    # and thus require the '-t' option for ssh-keyscan
+    need_dash_t = ['CentOS-5',]
+
     chunks = ['ssh-keyscan', ]
     if port:
         chunks += ['-p', str(port)]
     if enc:
         chunks += ['-t', str(enc)]
+    if not enc and __grains__['osfinger'] in need_dash_t:
+        chunks += ['-t', 'rsa']
     if hash_hostname:
         chunks.append('-H')
     chunks.append(str(hostname))
