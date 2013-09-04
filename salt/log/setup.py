@@ -260,7 +260,14 @@ def setup_temp_logger(log_level='error'):
     logging.root.addHandler(handler)
 
     # Sync the null logging handler messages with the temporary handler
-    LOGGING_NULL_HANDLER.sync_with_handlers([handler])
+    if LOGGING_NULL_HANDLER is not None:
+        LOGGING_NULL_HANDLER.sync_with_handlers([handler])
+    else:
+        logging.getLogger(__name__).debug(
+            'LOGGING_NULL_HANDLER is already None, can\'t sync messages '
+            'with it'
+        )
+
     # Remove the temporary null logging handler
     __remove_null_logging_handler()
 
@@ -547,7 +554,13 @@ def setup_extended_logging(opts):
         additional_handlers.append(handler)
 
     # Sync the null logging handler messages with the temporary handler
-    LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
+    if LOGGING_STORE_HANDLER is not None:
+        LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
+    else:
+        logging.getLogger(__name__).debug(
+            'LOGGING_STORE_HANDLER is already None, can\'t sync messages '
+            'with it'
+        )
 
     # Remove the temporary queue logging handler
     __remove_queue_logging_handler()
