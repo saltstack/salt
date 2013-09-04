@@ -1102,7 +1102,11 @@ def create(vm_=None, call=None):
         {'ip_address': ip_address},
     )
 
-    if saltcloud.utils.wait_for_ssh(ip_address):
+    ssh_connect_timeout = config.get_config_value(
+        'ssh_connect_timeout', vm_, __opts__, 900
+    )
+
+    if saltcloud.utils.wait_for_ssh(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
                 host=ip_address,
