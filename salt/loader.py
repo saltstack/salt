@@ -241,11 +241,9 @@ def ssh_wrapper(opts, functions=None):
         opts,
         'wrapper',
         'wrapper',
-        int_type='ssh_wrapper',
         base_path=os.path.join(SALT_BASE_PATH, os.path.join(
             'client',
-            'ssh',
-            'wrapper'))
+            'ssh'))
     )
     pack = {'name': '__salt__',
             'value': functions}
