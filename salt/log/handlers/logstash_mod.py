@@ -289,7 +289,7 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
             try:
                 self._publisher.setsockopt(zmq.HWM, 1000)
             except AttributeError:
-                # in zmq >= 3.0, there are separate send and receive HWM
+                # In ZMQ >= 3.0, there are separate send and receive HWM
                 # settings
                 self._publisher.setsockopt(zmq.SNDHWM, 1000)
                 self._publisher.setsockopt(zmq.RCVHWM, 1000)
