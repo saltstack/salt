@@ -1121,6 +1121,10 @@ def create(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote ssh'
             )
+    else:
+        raise SaltCloudSystemExit(
+            'Failed to connect to remote ssh'
+        )
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
