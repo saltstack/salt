@@ -15,9 +15,9 @@ inventory:
 .. code-block:: yaml
 
     master_tops:
-        reclass:
-          storage_type: yaml_fs
-          base_inventory_uri: /srv/salt
+      reclass:
+        storage_type: yaml_fs
+        base_inventory_uri: /srv/salt
 
 This would cause |reclass| to read the inventory from YAML files in
 ``/srv/salt/nodes`` and ``/srv/salt/classes``.
@@ -29,15 +29,15 @@ note of the differing data types for ``ext_pillar`` and ``master_tops``):
 .. code-block:: yaml
 
     reclass: &reclass
-        storage_type: yaml_fs
-        base_inventory_uri: /srv/salt
-        reclass_source_path: ~/code/reclass
+      storage_type: yaml_fs
+      base_inventory_uri: /srv/salt
+      reclass_source_path: ~/code/reclass
 
     ext_pillar:
-        - reclass: *reclass
+      - reclass: *reclass
 
     master_tops:
-        reclass: *reclass
+      reclass: *reclass
 
 If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
