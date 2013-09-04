@@ -2123,7 +2123,7 @@ def mknod_chrdev(name,
         if exc.errno != errno.EEXIST:
             raise
         else:
-           ret['comment'] = 'Character device {0} exists and cannot be overwritten'.format(name)
+           ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
     #quick pass at verifying the permissions of the newly created character device
     check_perms(name,
                 None,
@@ -2187,7 +2187,7 @@ def mknod_blkdev(name,
         if exc.errno != errno.EEXIST:
             raise
         else:
-           ret['comment'] = 'Block device {0} exists and cannot be overwritten'.format(name)
+           ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
     #quick pass at verifying the permissions of the newly created block device
     check_perms(name,
                 None,
@@ -2244,7 +2244,7 @@ def mknod_fifo(name,
         if exc.errno != errno.EEXIST:
             raise
         else:
-           ret['comment'] = 'Fifo {0} exists and cannot be overwritten'.format(name)
+           ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
     #quick pass at verifying the permissions of the newly created fifo
     check_perms(name,
                 None,
