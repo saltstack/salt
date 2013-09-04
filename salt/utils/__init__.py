@@ -336,7 +336,7 @@ def jid_to_time(jid):
     return ret
 
 
-def gen_mac(prefix='52:54:00'):
+def gen_mac(prefix='AC:DE:48'):
     '''
     Generates a mac addr with the defined prefix
     '''
