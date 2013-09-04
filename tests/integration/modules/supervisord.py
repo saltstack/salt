@@ -136,8 +136,9 @@ class SupervisordModuleTest(integration.ModuleCase):
         ret = self.run_function(
             'supervisord.restart', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
-        self.assertEqual(
-            ret, 'sleep_service: started\nsleep_service2: started')
+        # These 2 services might return in different orders so test separately
+        self.assertIn('sleep_service: started', ret)
+        self.assertIn('sleep_service2: started', ret)
 
     def test_restart_one(self):
         '''
