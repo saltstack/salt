@@ -20,6 +20,8 @@ High level differences to yum and apt are:
   git.
 - Packages can be downloaded from within the salt repository, a git
   repository or from http(s) or ftp urls.
+- No dependencies are managed. Dependencies between packages needs to
+  be managed manually.
 
 
 Usage
@@ -252,10 +254,12 @@ The install state/module function of the windows package manager works
 roughly as follows:
 
 1. Execute ``pkg.list_pkgs`` and store the result
-2. Run the installer command
-3. Execute ``pkg.list_pkgs`` and compare to the result stored from
+2. Check if any action needs to be taken. (ie compare required package
+   and version against ``pkg.list_pkgs`` results)
+3. If so, run the installer command.
+4. Execute ``pkg.list_pkgs`` and compare to the result stored from
    before installation.
-4. Sucess/Failure/Changes will be reported based on the differences
+5. Sucess/Failure/Changes will be reported based on the differences
    between the original and final ``pkg.list_pkgs`` results.
 
 If there are any problems in using the package manager it is likely to
