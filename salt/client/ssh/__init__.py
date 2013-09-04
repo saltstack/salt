@@ -9,6 +9,7 @@ import json
 import getpass
 import shutil
 import copy
+import time
 import threading
 from salt._compat import Queue
 
@@ -363,7 +364,14 @@ class Single(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
+            refresh = False
             if not os.path.isfile(datap):
+                refresh = True
+            elif self.opts.get('refresh_cache'):
+                refresh = True
+            if ((time.time() - os.stat(datap).st_mtime) / 60 > self.opts.get('cache_life', 60)):
+                refresh = True
+            if refresh:
                 # Make the datap
                 # TODO: Auto expire the datap
                 wrapper = salt.client.ssh.wrapper.FunctionWrapper(
@@ -372,18 +380,28 @@ class Single(object):
                     **self.target)
                 opts_pkg = wrapper['test.opts_pkg']()
                 # TODO: Get Pillar in here
+                pillar = salt.pillar.Pillar(
+                        opts_pkg,
+                        opts_pkg['grains'],
+                        opts_pkg['id'],
+                        opts_pkg.get('environment', 'base')
+                        )
+                pillar_data = pillar.compile_pillar()
+
                 # TODO: cache minion opts in datap in master.py
                 with salt.utils.fopen(datap, 'w+') as fp_:
                     fp_.write(
                             self.serial.dumps(
                                 {'opts': opts_pkg,
-                                 'grains': opts_pkg['grains']}
+                                 'grains': opts_pkg['grains'],
+                                 'pillar': pillar_data}
                                 )
                             )
             with salt.utils.fopen(datap, 'r') as fp_:
                 data = self.serial.load(fp_)
             opts = data.get('opts', {})
             opts['grains'] = data.get('grains')
+            opts['pillar'] = data.get('pillar')
             wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                 opts,
                 self.target['id'],
