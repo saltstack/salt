@@ -10,7 +10,6 @@ import pprint
 import re
 import sys
 import yaml
-import collections # needed by _parse_pkginfo -- there might be a better way to make it work
 
 # Import salt libs
 import salt.utils
@@ -25,6 +24,7 @@ def _parse_pkg_meta(path):
     '''
     def parse_rpm(path):
         try:
+            import collections  # needed by _parse_pkginfo, DO NOT REMOVE
             from salt.modules.yumpkg5 import __QUERYFORMAT, _parse_pkginfo
             from salt.utils import namespaced_function as _namespaced_function
             _parse_pkginfo = _namespaced_function(_parse_pkginfo, globals())
