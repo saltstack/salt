@@ -68,6 +68,9 @@ class UserTest(integration.ModuleCase,
         If you run the test and it fails, please fix the code it's testing to
         work on your operating system.
         '''
+        # Let's get this system's grains
+        grains = self.run_function('grains.items')
+
         ret = self.run_state('user.present', name='salt_test',
                              gid_from_name=True, home='/var/lib/salt_test')
         self.assertSaltTrueReturn(ret)
@@ -77,7 +80,10 @@ class UserTest(integration.ModuleCase,
         group_name = grp.getgrgid(ret['gid']).gr_name
 
         self.assertTrue(os.path.isdir('/var/lib/salt_test'))
-        self.assertEqual(group_name, 'salt_test')
+        if grains['os_family'] in ('Suse',):
+            self.assertEqual(group_name, 'users')
+        else:
+            self.assertEqual(group_name, 'salt_test')
 
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
