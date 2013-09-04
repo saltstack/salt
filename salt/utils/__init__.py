@@ -338,7 +338,7 @@ def jid_to_time(jid):
 
 def gen_mac(prefix='AC:DE:48'):
     '''
-    Generates a MAC addr with the defined OUI prefix.
+    Generates a MAC address with the defined OUI prefix.
 
     Common prefixes:
 
