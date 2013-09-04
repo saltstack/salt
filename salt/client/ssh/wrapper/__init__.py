@@ -48,9 +48,9 @@ class FunctionWrapper(dict):
             for key, val in kwargs.items():
                 arg_str += '{0}={1} '.format(key, val)
             single = salt.client.ssh.Single(self.opts, arg_str, **self.kwargs)
-            ret = single.cmd_block()
-            if ret.startswith('deploy'):
+            stdout, stderr = single.cmd_block()
+            if stdout.startswith('deploy'):
                 single.deploy()
-                ret = single.cmd_block()
-            return json.loads(ret, object_hook=salt.utils.decode_dict)
+                stdout, stderr = single.cmd_block()
+            return json.loads(stdout, object_hook=salt.utils.decode_dict)
         return caller
