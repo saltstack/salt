@@ -25,6 +25,8 @@ def image(location, id_=None, config=None, approve_key=True, install=True):
     Seed a disk image with salt-minion config. Optionally, approve the minion's
     key and/or install salt-minion.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion' seed.image location id [config=config_data] \
@@ -61,6 +63,8 @@ def device(location, id_=None, config=None, approve_key=True, install=True):
     Seed a device (e.g., a LVM volume) with salt-minion config. Optionally,
     approve the minion's key and/or install salt-minion.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion' seed.device location id [config=config_data] \
@@ -90,7 +94,7 @@ def device(location, id_=None, config=None, approve_key=True, install=True):
         return False
     ret = _seed(mpt, id_, config, approve_key, install)
     __salt__['mount.umount'](mpt)
-    os.rmdir(mpt) 
+    os.rmdir(mpt)
     return ret
 
 
@@ -98,6 +102,8 @@ def directory(location, id_=None, config=None, approve_key=True, install=True):
     '''
     Seed a directory with salt-minion config. Optionally,
     approve the minion's key and/or install salt-minion.
+
+    CLI Example:
 
     .. code-block:: bash
 
