@@ -1264,3 +1264,84 @@ def expand_repo_def(repokwargs):
     sanitized['architectures'] = getattr(source_entry, 'architectures', [])
 
     return sanitized
+
+def hold(*packages):
+    '''
+    Set dpkg holds on a list of packages. Not specifying any packages does
+    nothing and returns blank results.
+
+    Holds that are set by dpkg are respected by tools that use dpkg (apt-get,
+    aptitude)
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.hold grub-pc
+        salt '*' pkg.hold grub-pc linux-image-generic
+    '''
+    if len(packages) == 0:
+        return []
+
+    ret =[]
+    out = __salt__['cmd.run_all']("dpkg --get-selections | awk '$2~/hold/'")
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    holds = out['stdout']
+
+    for p in packages:
+        if re.search('\b{0}\b'.format(re.escape(p)), holds):
+            ret.append({p: True})
+            continue
+        cmd = 'echo {0} hold | dpkg --set-selections'.format(p)
+        out = __salt__['cmd.run_all'](cmd)
+        if out['retcode'] != 0:
+            msg = 'Error:  ' + out['stderr']
+            log.error(msg)
+            return msg
+        ret.append({p: True})
+
+    return ret
+
+
+def unhold(*packages):
+    '''
+    Unset dpkg holds on a list of packages. Not specifying any packages does
+    nothing and returns blank results.
+
+    Holds that are set by dpkg are respected by tools that use dpkg (apt-get,
+    aptitude). Holds set by those tools may not be affected by this function.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.unhold grub-pc
+        salt '*' pkg.unhold grub-pc linux-image-generic
+    '''
+    if len(packages) == 0:
+        return []
+
+    ret =[]
+    out = __salt__['cmd.run_all']("dpkg --get-selections | awk '$2~/hold/'")
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    holds = out['stdout']
+
+    for p in packages:
+        if not re.search('\b{0}\b'.format(re.escape(p)), holds):
+            ret.append({p: True})
+            continue
+        cmd = 'echo {0} install | dpkg --set-selections'.format(p)
+        out = __salt__['cmd.run_all'](cmd)
+        if out['retcode'] != 0:
+            msg = 'Error:  ' + out['stderr']
+            log.error(msg)
+            return msg
+        ret.append({p: True})
+
+    return ret
