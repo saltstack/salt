@@ -682,15 +682,16 @@ def format_call(fun, data):
         # This state accepts kwargs
         ret['kwargs'] = {}
         for key in data:
-            # Passing kwargs the conflict with args == stack trace
+            # Passing kwargs the conflict with args == traceback
             if key in aspec.args:
                 continue
             ret['kwargs'][key] = data[key]
-    kwargs = {}
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            kwargs[aspec.args[ind]] = aspec.defaults[-minus]
+
+    try:
+        kwargs = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    except TypeError:
+        # aspec.defaults is None
+        kwargs = {}
     for arg in kwargs:
         if arg in data:
             kwargs[arg] = data[arg]
@@ -711,24 +712,11 @@ def arg_lookup(fun):
     Return a dict containing the arguments and default arguments to the
     function.
     '''
-    ret = {'args': [],
-           'kwargs': {}}
+    ret = {'kwargs': {}}
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            ret['kwargs'][aspec.args[ind]] = aspec.defaults[-minus]
-    for arg in aspec.args:
-        if arg in ret:
-            continue
-        else:
-            ret['args'].append(arg)
+    if aspec.defaults:
+        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    ret['args'] = aspec.args
     return ret
 
 
@@ -1214,7 +1202,6 @@ def get_hash(path, form='md5', chunk_size=4096):
         for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
-
 
 
 def namespaced_function(function, global_dict, defaults=None):
