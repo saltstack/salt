@@ -9,13 +9,14 @@ import re
 import logging
 import urllib2
 import json
-from types import StringTypes
 
 # Import third party libs
 import yaml
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
 log = logging.getLogger(__name__)
@@ -1276,7 +1277,7 @@ def _parse_selections(dpkgselection):
     pkg.get_selections and pkg.set_selections work with.
     '''
     ret = {}
-    if type(dpkgselection) in StringTypes:
+    if isinstance(dpkgselection, string_types):
         dpkgselection = dpkgselection.split('\n')
     for line in dpkgselection:
         if line:
@@ -1322,22 +1323,18 @@ def get_selections(pattern=None, state=None):
     stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
     ret = _parse_selections(stdout)
     if state:
-        try:
-            return {state: ret[state]}
-        except KeyError:
-            return {state: []}
+        return {state: ret.get(state, [])}
     return ret
 
 
 # TODO: allow state=None to be set, and that *args will be set to that state
 # TODO: maybe use something similar to pkg_resources.pack_pkgs to allow a list passed to selection, with the default state set to whatever is passed by the above, but override that if explicitly specified
-# TODO: creat a pkg.hold alias, instead of the above?
 # TODO: handle path to selection file from local fs as well as from salt file server
 def set_selections(path=None, selection=None, clear=False):
     '''
     Change package state in the dpkg database.
 
-    The state can be any one of, documented in dpkg(1):
+    The state can be any one of, documented in ``dpkg(1)``:
 
      - install
      - hold
@@ -1377,16 +1374,18 @@ def set_selections(path=None, selection=None, clear=False):
     if not path and not selection:
         return ret
     if path and selection:
-        log.error('"selection" and "path" cannot be set at the same time with '
-                  'pkg.set_selections')
-        return ret
+        err = ('The \'selection\' and \'path\' arguments to '
+               'pkg.set_selections are mutually exclusive, and cannot be '
+               'specified together')
+        raise SaltInvocationError(err)
 
-    if type(selection) in StringTypes:
+    if isinstance(selection, string_types):
         try:
             selection = yaml.safe_load(selection)
-        except yaml.parser.ParserError as e:
-            log.error(e)
-            selection = {}
+        except (yaml.parser.ParserError, yaml.scanner.ScannerError) as exc:
+            raise SaltInvocationError(
+                'Improperly-formatted selection: {0}'.format(exc)
+            )
 
     if path:
         path = __salt__['cp.cache_file'](path)
@@ -1395,34 +1394,43 @@ def set_selections(path=None, selection=None, clear=False):
         selection = _parse_selections(content)
 
     if selection:
+        valid_states = ('install', 'hold', 'deinstall', 'purge')
+        bad_states = [x for x in selection if x not in valid_states]
+        if bad_states:
+            raise SaltInvocationError(
+                'Invalid state(s): {0}'.format(', '.join(bad_states))
+            )
+
         if clear:
             cmd = 'dpkg --clear-selections'
             if not __opts__['test']:
-                retcode = __salt__['cmd.retcode'](cmd)
-                if retcode:
-                    log.error('failed to clear selections')
+                result = __salt__['cmd.run_all'](cmd)
+                if result['retcode'] != 0:
+                    err = ('Running dpkg --clear-selections failed: '
+                           '{0}'.format(result['stderr']))
+                    log.error(err)
+                    raise CommandExecutionError(err)
 
-        for _state, _pkgs in selection.items():
+        sel_revmap = {}
+        for _state, _pkgs in get_selections().iteritems():
+            sel_revmap.update(dict((_pkg, _state) for _pkg in _pkgs))
+
+        for _state, _pkgs in selection.iteritems():
             for _pkg in _pkgs:
-                sel = __salt__['pkg.get_selections'](pattern=_pkg)
-                old_state = '-'
-                for k, v in sel.items():
-                    if k in ['install', 'hold', 'deinstall', 'purge']:
-                        old_state = k
-                if _state == old_state:
+                if _state == sel_revmap.get(_pkg):
                     continue
-                ret[_pkg] = {'old': old_state,
-                             'new': _state}
-
                 cmd = 'echo {0} {1} | dpkg --set-selections'.format(
                     _pkg,
                     _state
                     )
                 if not __opts__['test']:
-                    retcode = __salt__['cmd.retcode'](cmd)
-                    if retcode:
-                        log.error('failed to set state {0} for package {1}'.format(
-                            _state,
-                            _pkg
-                            ))
+                    result = __salt__['cmd.run_all'](cmd)
+                    if result['retcode'] != 0:
+                        log.error(
+                            'failed to set state {0} for package '
+                            '{1}'.format(_state, _pkg)
+                        )
+                    else:
+                        ret[_pkg] = {'old': sel_revmap.get(_pkg),
+                                     'new': _state}
     return ret
