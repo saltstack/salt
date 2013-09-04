@@ -316,7 +316,7 @@ def init(name,
     define_xml_str(xml)
     if kwargs.get('seed'):
         install = kwargs.get('install', True)
-        __salt__['img.seed'](img_dest, name, kwargs.get('config'),
+        __salt__['seed.image'](img_dest, id_=name, config=kwargs.get('config'),
                 install=install)
     elif kwargs.get('seed_cmd'):
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))

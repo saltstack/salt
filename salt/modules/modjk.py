@@ -79,7 +79,10 @@ def _do_http(opts, profile='default'):
 
     for line in urllib2.urlopen(url, timeout=timeout).read().splitlines():
         splt = line.split('=', 1)
-        ret[splt[0]] = splt[1]
+        if splt[0] in ret:
+            ret[splt[0]] += ',{0}'.format(splt[1])
+        else:
+            ret[splt[0]] = splt[1]
 
     return ret
 

@@ -231,6 +231,25 @@ def log_handlers(opts):
     return load.filter_func('setup_handlers')
 
 
+def ssh_wrapper(opts, functions=None):
+    '''
+    Returns the custom logging handler modules
+    '''
+    if functions is None:
+        functions = {}
+    load = _create_loader(
+        opts,
+        'wrapper',
+        'wrapper',
+        base_path=os.path.join(SALT_BASE_PATH, os.path.join(
+            'client',
+            'ssh'))
+    )
+    pack = {'name': '__salt__',
+            'value': functions}
+    return load.gen_functions(pack)
+
+
 def render(opts, functions):
     '''
     Returns the render modules
