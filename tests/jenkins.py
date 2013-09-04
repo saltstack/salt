@@ -55,7 +55,7 @@ def cleanup(clean, vm_name):
     proc.communicate()
 
 
-def run(platform, provider, commit, clean):
+def run(platform, provider, commit, clean, sls, pillar):
     '''
     RUN!
     '''
@@ -86,9 +86,11 @@ def run(platform, provider, commit, clean):
     sys.stdout.flush()
 
     # Run tests here
-    cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
-                vm_name,
-                commit)
+    cmd = 'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" --no-color'.format(
+                sls=sls,
+                pillar=pillar.format(commit=commit, vm_name=vm_name),
+                vm_name=vm_name,
+                commit=commit)
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -141,6 +143,14 @@ def parse():
     parser.add_option('--commit',
             dest='commit',
             help='The git commit to track')
+    parser.add_option('--sls',
+            dest='sls',
+            default='testrun',
+            help='The sls file to execute')
+    parser.add_option('--pillar',
+            dest='pillar',
+            default='{{git_commit: {commit}}}',
+            help='Pillar values to pass to the sls file')
     parser.add_option('--no-clean',
             dest='clean',
             default=True,
