@@ -336,13 +336,16 @@ def jid_to_time(jid):
     return ret
 
 
-def gen_mac(prefix='52:54:00:'):
+def gen_mac(prefix='52:54:00'):
     '''
     Generates a mac addr with the defined prefix
     '''
     src = ['1', '2', '3', '4', '5', '6', '7', '8',
            '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
     mac = prefix
+    mac.replace('-', ':')
+    if not mac.endswith(':'):
+        mac += ':'
     while len(mac) < 18:
         if len(mac) < 3:
             mac = random.choice(src) + random.choice(src) + ':'
