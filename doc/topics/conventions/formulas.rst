@@ -12,7 +12,7 @@ tasks.
 .. note:: Formulas require Salt 0.17 or later.
 
     More accurately, Formulas are not tested on earlier versions of Salt so
-    your milage may vary.
+    your mileage may vary.
 
     All Formulas require the grains execution module that shipped with Salt
     0.16.4. Earlier Salt versions may copy :blob:`salt/modules/formula_util.py`
