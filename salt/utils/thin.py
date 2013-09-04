@@ -52,7 +52,9 @@ def gen_thin(cachedir):
                         tfp.add(os.path.join(root, name))
         os.chdir(os.path.dirname(salt.utils.which('salt-call')))
         tfp.add('salt-call')
+        with open(thinver, 'w+') as fp_:
+            fp_.write(salt.__version__)
+        os.chdir(os.path.dirname(thinver))
+        tfp.add('version')
         os.chdir(start_dir)
-    with open(thinver, 'w+') as fp_:
-        fp_.write(salt.__version__)
     return thintar

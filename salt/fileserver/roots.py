@@ -11,7 +11,7 @@ import os
 # Import salt libs
 import salt.fileserver
 import salt.utils
-
+from salt.utils.event import tagify
 
 def find_file(path, env='base', **kwargs):
     '''
@@ -119,7 +119,7 @@ def update():
 
     # if there is a change, fire an event
     event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
-    event.fire_event(data, 'salt.fileserver.roots.update')
+    event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):

@@ -20,6 +20,29 @@ High level differences to yum and apt are:
   git.
 - Packages can be downloaded from within the salt repository, a git
   repository or from http(s) or ftp urls.
+- No dependencies are managed. Dependencies between packages needs to
+  be managed manually.
+
+
+Operation
+=========
+
+The install state/module function of the windows package manager works
+roughly as follows:
+
+1. Execute ``pkg.list_pkgs`` and store the result
+2. Check if any action needs to be taken. (ie compare required package
+   and version against ``pkg.list_pkgs`` results)
+3. If so, run the installer command.
+4. Execute ``pkg.list_pkgs`` and compare to the result stored from
+   before installation.
+5. Sucess/Failure/Changes will be reported based on the differences
+   between the original and final ``pkg.list_pkgs`` results.
+
+If there are any problems in using the package manager it is likely to
+be due to the data in your sls files not matching the difference
+between the pre and post ``pkg.list_pkgs`` results.
+
 
 
 Usage
@@ -243,24 +266,6 @@ cache and then refresh each minion's package cache:
     salt '*' pkg.refresh_db
 
 .. _wiki: http://wpkg.org/Category:Silent_Installers
-
-
-Operation
-=========
-
-The install state/module function of the windows package manager works
-roughly as follows:
-
-1. Execute ``pkg.list_pkgs`` and store the result
-2. Run the installer command
-3. Execute ``pkg.list_pkgs`` and compare to the result stored from
-   before installation.
-4. Sucess/Failure/Changes will be reported based on the differences
-   between the original and final ``pkg.list_pkgs`` results.
-
-If there are any problems in using the package manager it is likely to
-be due to the data in your sls files not matching the difference
-between the pre and post ``pkg.list_pkgs`` results.
 
 
 
