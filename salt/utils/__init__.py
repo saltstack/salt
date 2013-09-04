@@ -336,19 +336,26 @@ def jid_to_time(jid):
     return ret
 
 
-def gen_mac(prefix='52:54:'):
+def gen_mac(prefix='AC:DE:48'):
     '''
-    Generates a mac addr with the defined prefix
+    Generates a MAC address with the defined OUI prefix.
+
+    Common prefixes:
+
+     - ``00:16:3E`` -- Xen
+     - ``00:18:51`` -- OpenVZ
+     - ``00:50:56`` -- VMware (manually generated)
+     - ``52:54:00`` -- QEMU/KVM
+     - ``AC:DE:48`` -- PRIVATE
+
+    References:
+
+     - http://standards.ieee.org/develop/regauth/oui/oui.txt
+     - https://www.wireshark.org/tools/oui-lookup.html
+     - https://en.wikipedia.org/wiki/MAC_address
     '''
-    src = ['1', '2', '3', '4', '5', '6', '7', '8',
-           '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
-    mac = prefix
-    while len(mac) < 18:
-        if len(mac) < 3:
-            mac = random.choice(src) + random.choice(src) + ':'
-        if mac.endswith(':'):
-            mac += random.choice(src) + random.choice(src) + ':'
-    return mac[:-1]
+    r=random.randint
+    return '%s:%02X:%02X:%02X' % (prefix, r(0, 0xff), r(0, 0xff), r(0, 0xff))
 
 
 def ip_bracket(addr):
