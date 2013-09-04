@@ -694,6 +694,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             fire_event(name,
                        '{0} has been deployed at {1}'.format(name, host),
                        tag='salt.cloud.deploy_script')
+            return True
     return False
 
 
