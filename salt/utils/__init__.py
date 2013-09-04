@@ -672,12 +672,6 @@ def format_call(fun, data):
     ret = {}
     ret['args'] = []
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
     if aspec.keywords:
         # This state accepts kwargs
         ret['kwargs'] = {}
