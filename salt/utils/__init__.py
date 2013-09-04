@@ -354,7 +354,7 @@ def gen_mac(prefix='AC:DE:48'):
      - https://www.wireshark.org/tools/oui-lookup.html
      - https://en.wikipedia.org/wiki/MAC_address
     '''
-    r=random.randint
+    r = random.randint
     return '%s:%02X:%02X:%02X' % (prefix, r(0, 0xff), r(0, 0xff), r(0, 0xff))
 
 
