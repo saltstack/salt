@@ -240,7 +240,7 @@ def check_key_file(user, source, config='.ssh/authorized_keys', env='base'):
     '''
     keyfile = __salt__['cp.cache_file'](source, env)
     if not keyfile:
-        return ret
+        return {}
     s_keys = _validate_keys(keyfile)
     if not s_keys:
         err = 'No keys detected in {0}. Is file properly ' \
