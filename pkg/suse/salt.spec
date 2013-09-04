@@ -250,13 +250,13 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %{_mandir}/man1/salt-run.1.*
 %{_sbindir}/rcsalt-master
 %config(noreplace) %{_sysconfdir}/init.d/salt-master
+%config(noreplace) %{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/master
 %{_sysconfdir}/salt/master.d
 %dir /srv/salt
 %if 0%{?_unitdir:1}
 %_unitdir/salt-master.service
 %endif
-%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 
 %files
 %defattr(-,root,root,-)
