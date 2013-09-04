@@ -82,16 +82,19 @@ SUB_EVENT = set([
             ])
 
 TAGEND = '\n\n'  # long tag delimeter
-TAGPARTER = '.'  # name spaced tag delimeter
-SALT = 'salt'  # base prefix for all salt. events
+TAGPARTER = '/'  # name spaced tag delimeter
+SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
-    'auth': 'auth',  # prefix for all .auth events
-    'job': 'job',  # prefix for all .job events (minion jobs)
-    'key': 'key',  # prefix for all .key events
-    'minion': 'minion',  # prefix for all .minion events (minion sourced events)
-    'syndic': 'syndic',  # prefix for all .syndic events (syndic minion sourced events)
-    'run': 'run',  # prefix for all .run events (salt runners)
+    'auth': 'auth',  # prefix for all salt/auth events
+    'job': 'job',  # prefix for all salt/job events (minion jobs)
+    'key': 'key',  # prefix for all salt/key events
+    'minion': 'minion',  # prefix for all salt/minion events (minion sourced events)
+    'syndic': 'syndic',  # prefix for all salt/syndic events (syndic minion sourced events)
+    'run': 'run',  # prefix for all salt/run events (salt runners)
+    'wheel': 'wheel', # prefix for all salt/wheel events
+    'cloud': 'cloud', # prefix for all salt/cloud events
+    'fileserver': 'fileserver', #prefix for all salt/fileserver events
 }
 
 
