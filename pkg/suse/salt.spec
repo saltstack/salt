@@ -31,6 +31,7 @@ Source4:        %{name}-master.service
 Source5:        %{name}-syndic.service
 Source6:        %{name}-minion.service
 Source7:        %{name}.logrotate
+Source8:        %{name}.SuSEfirewall2
 %if 0%{?sles_version}
 BuildRequires:  python
 Requires:       python
@@ -150,6 +151,9 @@ install -Dpm 0644 conf/master %{buildroot}%{_sysconfdir}/salt/master
 #
 ##logrotate file
 install -Dpm 0644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
+#
+##SuSEfirewall2 file
+install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 
 %preun -n salt-syndic
 %stop_on_removal salt-syndic
@@ -252,6 +256,7 @@ install -Dpm 0644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 %if 0%{?_unitdir:1}
 %_unitdir/salt-master.service
 %endif
+%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 
 %files
 %defattr(-,root,root,-)
