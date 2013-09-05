@@ -20,112 +20,70 @@ import salt.config
 log = logging.getLogger(__name__)
 
 
-def image(location, id_=None, config=None, approve_key=True, install=True):
-    '''
-    Seed a disk image with salt-minion config. Optionally, approve the minion's
-    key and/or install salt-minion.
-
-    .. code-block:: bash
-
-        salt 'minion' seed.image location id [config=config_data] \
-                [approve_key=(true|false)] [install=(true|false)]
-
-    location
-        Full path to the image file on the target minion's file system.
-
-    id
-        Minion id with which to seed the img.
-
-    config
-        Minion configuration options. By default, the 'master' option is set to
-        the target host's 'master'.
-
-    approve_key
-        Whether to request a pre-approval of the generated minion key. Requires
-        that the salt-master be configured to either auto-accept all keys or
-        expect a signing request from the target host.
-
-    install
-        Whether to install salt-minion, if absent.
-    '''
-    mpt = __salt__['img.mount_image'](location)
-    if not mpt:
-        return False
-    ret = _seed(location, id_, config, approve_key, install)
-    __salt__['img.umount_image'](mpt)
-    return ret
+def _mount(path, ftype):
+    mpt = None
+    if ftype == 'block':
+        mpt = tempfile.mkdtemp()
+        if not __salt__['mount.mount'](mpt, path):
+            os.rmdir(mpt)
+            return None
+    elif ftype == 'dir':
+        return path
+    elif ftype == 'file':
+        mpt = __salt__['img.mount_image'](path)
+        if not mpt:
+            return None
+    return mpt
 
 
-def device(location, id_=None, config=None, approve_key=True, install=True):
-    '''
-    Seed a device (e.g., a LVM volume) with salt-minion config. Optionally,
-    approve the minion's key and/or install salt-minion.
-
-    .. code-block:: bash
-
-        salt 'minion' seed.device location id [config=config_data] \
-                [approve_key=(true|false)] [install=(true|false)]
-
-    location
-        Path to the device on the target minion's file system.
-
-    id
-        Minion id with which to seed the device.
-
-    config
-        Minion configuration options. By default, the 'master' option is set
-        to the target host's 'master'.
-
-    approve_key
-        Whether to request a pre-approval of the generated minion key. Requires
-        that the salt-master be configured to either auto-accept all keys or
-        expect a signing request from the target host.
-
-    install
-        Whether to install salt-minion, if absent.
-    '''
-    mpt = tempfile.mkdtemp()
-    if not __salt__['mount.mount'](mpt, location):
+def _umount(mpt, ftype):
+    if ftype == 'block':
+        __salt__['mount.umount'](mpt)
         os.rmdir(mpt)
-        return False
-    ret = _seed(mpt, id_, config, approve_key, install)
-    __salt__['mount.umount'](mpt)
-    os.rmdir(mpt) 
-    return ret
+    elif ftype == 'file':
+        __salt__['img.umount_image'](mpt)
 
 
-def directory(location, id_=None, config=None, approve_key=True, install=True):
+def apply(path, id_=None, config=None, approve_key=True, install=True):
     '''
-    Seed a directory with salt-minion config. Optionally,
-    approve the minion's key and/or install salt-minion.
+    Seed a location (disk image, directory, or block device) with the
+    minion config, approve the minion's key, and/or install salt-minion.
 
     .. code-block:: bash
 
-        salt 'minion' seed.directory location id [config=config_data] \
-                [approve_key=(true|false)] [install=(true|false)]
+        salt 'minion' seed.whatever path id [config=config_data] \
+                [gen_key=(true|false)] [approve_key=(true|false)] \
+                [install=(true|false)]
 
-    location
-        Full path to the image file on the target minion's file system.
+    path
+        Full path to the directory, device, or disk image  on the target
+        minion's file system.
 
     id
-        Minion id with which to seed the directory.
+        Minion id with which to seed the path.
 
     config
         Minion configuration options. By default, the 'master' option is set to
         the target host's 'master'.
 
     approve_key
-        Whether to request a pre-approval of the generated minion key. Requires
+        Request a pre-approval of the generated minion key. Requires
         that the salt-master be configured to either auto-accept all keys or
-        expect a signing request from the target host.
+        expect a signing request from the target host. Default: true.
 
     install
-        Whether to install salt-minion, if absent.
+        Install salt-minion, if absent. Default: true.
     '''
-    return _seed(location, id_, config, approve_key, install)
 
+    stats = __salt__['file.stats'](path, follow_symlink=True)
+    if not stats:
+        return '{0} does not exist'.format(path)
+    ftype = stats['type']
+    path = stats['target']
+    mpt = _mount(path, ftype)
+    if not mpt:
+        return '{0} could not be mounted'.format(path)
 
-def _seed(location, id_, config, approve_key, install):
     if config is None:
         config = {}
     if not 'master' in config:
@@ -133,7 +91,7 @@ def _seed(location, id_, config, approve_key, install):
     if id_:
         config['id'] = id_
 
-    tmp = os.path.join(location, 'tmp')
+    tmp = os.path.join(mpt, 'tmp')
 
     # Write the new minion's config to a tmp file
     tmp_config = os.path.join(tmp, 'minion')
@@ -149,7 +107,7 @@ def _seed(location, id_, config, approve_key, install):
 
     if approve_key:
         __salt__['pillar.ext']({'virtkey': {'name': id_, 'key': pubkey}})
-    res = _check_install(location)
+    res = _check_install(mpt)
     if res:
         # salt-minion is already installed, just move the config and keys
         # into place
@@ -157,21 +115,23 @@ def _seed(location, id_, config, approve_key, install):
                  'configuring as {0}'.format(id_))
         minion_config = salt.config.minion_config(tmp_config)
         pki_dir = minion_config['pki_dir']
-        os.rename(privkeyfn, os.path.join(location,
+        os.rename(privkeyfn, os.path.join(mpt,
                                           pki_dir.lstrip('/'),
                                           'minion.pem'))
-        os.rename(pubkeyfn, os.path.join(location,
+        os.rename(pubkeyfn, os.path.join(mpt,
                                          pki_dir.lstrip('/'),
                                          'minion.pub'))
-        os.rename(tmp_config, os.path.join(location, 'etc/salt/minion'))
+        os.rename(tmp_config, os.path.join(mpt, 'etc/salt/minion'))
     elif install:
-        log.info('attempting to install salt-minion: '
-                 '{0}'.format(location))
-        res = _install(location)
+        log.info('attempting to install salt-minion to '
+                 '{0}'.format(mpt))
+        res = _install(mpt)
     else:
-        log.error('failed to configure salt-minion: '
-                  '{0}'.format(location))
+        log.error('failed to configure salt-minion to '
+                  '{0}'.format(mpt))
         res = False
+
+    _umount(mpt, ftype)
     return res
 
 
@@ -179,7 +139,7 @@ def _install(mpt):
     '''
     Determine whether salt-minion is installed and, if not,
     install it.
-    Return True if install is successful or already installed
+    Return True if install is successful or already installed.
     '''
 
     # Verify that the boostrap script is downloaded
