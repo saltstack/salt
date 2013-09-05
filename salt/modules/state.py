@@ -578,16 +578,17 @@ def pkg(pkg_path, test=False, **kwargs):
     if not os.path.isfile(pkg_path):
         return {}
     root = tempfile.mkdtemp()
-    with tarfile.open(pkg_path, 'r:gz') as s_pkg:
+    s_pkg = tarfile.open(pkg_path, 'r:gz')
         # Verify that the tarball does not extract outside of the intended
         # root
-        members = s_pkg.getmembers()
-        for member in members:
-            if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
-                return {}
-            elif '..{0}'.format(os.sep) in member.path:
-                return {}
-        s_pkg.extractall(root)
+    members = s_pkg.getmembers()
+    for member in members:
+        if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
+            return {}
+        elif '..{0}'.format(os.sep) in member.path:
+            return {}
+    s_pkg.extractall(root)
+    s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
