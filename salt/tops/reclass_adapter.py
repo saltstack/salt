@@ -1,9 +1,9 @@
 '''
 .. |reclass| replace:: **reclass**
 
-This :doc:`master_tops <../../../topics/master_tops>` plugin provides
-access to the |reclass| database, such that state information (top
-data) are retrieved from |reclass|.
+This :doc:`master_tops </topics/master_tops/index>` plugin provides access to
+the |reclass| database, such that state information (top data) are retrieved
+from |reclass|.
 
 You can find more information about |reclass| at
 http://reclass.pantsfullofunix.net.
@@ -55,6 +55,9 @@ from salt.utils.reclass import (
     set_inventory_base_uri_default
 )
 
+from salt.exceptions import SaltInvocationError
+
+
 def __virtual__(retry=False):
     try:
         import reclass
@@ -67,7 +70,6 @@ def __virtual__(retry=False):
         prepend_reclass_source_path(opts)
         return __virtual__(retry=True)
 
-from salt.exceptions import SaltInvocationError
 
 def top(**kwargs):
     '''
