@@ -30,6 +30,7 @@ Full Table of Contents
     topics/git/*
     topics/development/index
 
+    ref/faq
     ref/index
     ref/modules/*
     ref/modules/all/index

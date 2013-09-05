@@ -168,7 +168,8 @@ When the minion is started, it will generate an ``id`` value. This is the name
 by which the minion will attempt to authenticate to the master. The following
 steps are attempted, in order to try to find a value that is not ``localhost``:
 
-1. ``/etc/hostname`` is checked (non-Windows only)
+1. ``/etc/hostname`` is checked (non-Windows only) **Note: Not used currently,
+   will be as of version 0.17.0.**
 2. The Python function ``socket.getfqdn()`` is run
 3. ``/etc/hosts`` (``%WINDIR%\system32\drivers\etc\hosts`` on Windows hosts) is
    checked for hostnames that map to anything within :strong:`127.0.0.0/8`.

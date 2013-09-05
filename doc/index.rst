@@ -232,8 +232,14 @@ Reference
 :doc:`Full table of contents </contents>`
     Dense but complete.
 
+FAQ
+===
+
+See :doc:`here <faq>` for a list of Frequently Asked Questions and common
+pitfalls to avoid.
+
 More information about the project
-----------------------------------
+==================================
 
 :doc:`Release notes </topics/releases/index>`
     Living history of Salt Stack.
