@@ -244,7 +244,7 @@ More information about the project
     Living history of Salt Stack.
 
 :doc:`Community </topics/community>`
-    How to can get involved.
+    How to get involved.
 
 :doc:`Salt Development </topics/development/index>`
     Information for Hacking on Salt
