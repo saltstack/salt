@@ -204,6 +204,7 @@ class SSH(object):
         '''
         Run the routine in a "Thread", put a dict on the queue
         '''
+        opts = copy.deepcopy(opts)
         single = Single(
                 opts,
                 opts['arg_str'],
@@ -383,11 +384,11 @@ class Single(object):
             if refresh:
                 # Make the datap
                 # TODO: Auto expire the datap
-                wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                     self.opts,
                     self.id,
                     **self.target)
-                opts_pkg = wrapper['test.opts_pkg']()
+                opts_pkg = pre_wrapper['test.opts_pkg']()
                 pillar = salt.pillar.Pillar(
                         opts_pkg,
                         opts_pkg['grains'],
