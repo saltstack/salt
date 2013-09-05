@@ -2484,7 +2484,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     elif ntype == 'b':
         #check for file existence
         if __salt__['file.file_exists'](name):
-            ret['comment'] = "File exists and is not a character device {0}. Cowardly refusing to continue".format(name)
+            ret['comment'] = "File exists and is not a block device {0}. Cowardly refusing to continue".format(name)
 
         #if it is a block device
         elif not __salt__['file.is_blkdev'](name):
@@ -2508,7 +2508,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     elif ntype == 'p':
         #check for file existence, if it is a fifo, user, group, and mode
         if __salt__['file.file_exists'](name):
-            ret['comment'] = "File exists and is not a character device {0}. Cowardly refusing to continue".format(name)
+            ret['comment'] = "File exists and is not a fifo pipe {0}. Cowardly refusing to continue".format(name)
 
         #if it is a fifo
         elif not __salt__['file.is_fifo'](name):
@@ -2522,7 +2522,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         else:
             ret, perms = __salt__['file.check_perms'](name, None, user, group, mode)
             if not ret['changes']:
-                ret['comment'] = "Block device {0} is up to date.".format(name)
+                ret['comment'] = "Fifo pipe {0} is up to date.".format(name)
 
     else:
         ret['comment'] = "Node type unavailable: '{0}. Available node types are character ('c'), block ('b'), and pipe ('p')".format(ntype)
