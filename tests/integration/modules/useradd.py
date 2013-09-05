@@ -5,7 +5,11 @@ import random
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from salttesting.helpers import (
+    destructiveTest,
+    ensure_in_syspath,
+    requires_system_grains
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -32,7 +36,8 @@ class UseraddModuleTest(integration.ModuleCase):
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_groups_includes_primary(self):
+    @requires_system_grains
+    def test_groups_includes_primary(self, grains=None):
         # Let's create a user, which usually creates the group matching the
         # name
         uname = self.__random_string()
@@ -41,8 +46,6 @@ class UseraddModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [uname, True, True])
             self.skipTest('Failed to create user')
 
-        # Let's get this system's grains
-        grains = self.run_function('grains.items')
         try:
             uinfo = self.run_function('user.info', [uname])
             if grains['os_family'] in ('Suse',):
