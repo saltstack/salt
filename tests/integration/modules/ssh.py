@@ -92,7 +92,7 @@ class SSHModuleTest(integration.ModuleCase):
         '''
         Check that known host information is returned from remote host
         '''
-        ret = self.run_function('ssh.recv_known_host', ['root', 'github.com'])
+        ret = self.run_function('ssh.recv_known_host', ['github.com'])
         try:
             self.assertNotEqual(ret, None)
             self.assertEqual(ret['enc'], 'ssh-rsa')
