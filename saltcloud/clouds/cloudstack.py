@@ -27,6 +27,8 @@ import logging
 import saltcloud.config as config
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.utils import namespaced_function
+# CloudStackNetwork will be needed during creation of a new node
+from libcloud.compute.drivers.cloudstack import CloudStackNetwork
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -52,6 +54,20 @@ def __virtual__():
     if get_configured_provider() is False:
         log.debug(
             'There is no CloudStack cloud provider configuration available. '
+            'Not loading module.'
+        )
+        return False
+
+    verify_ssl_cert = config.get_config_value(
+            'verify_ssl_cert', get_configured_provider(), __opts__, default=True, search_global=False
+        )
+    if not verify_ssl_cert:
+      try:
+        import libcloud.security
+        libcloud.security.VERIFY_SSL_CERT = False
+      except:
+        log.debug(
+            'Could not disable SSL certificate verification. '
             'Not loading module.'
         )
         return False
@@ -150,6 +166,14 @@ def get_ip(data):
         ip = data.private_ips[0]
     return ip
 
+def get_networkid(conn, vm_):
+    '''
+    Return the networkid to use
+    '''
+    networkid = config.get_config_value('networkid', vm_, __opts__)
+    if networkid is not None:
+        return networkid
+    raise SaltCloudNotFound('The specified networkid could not be found.')
 
 def create(vm_):
     '''
@@ -174,6 +198,8 @@ def create(vm_):
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
         'keypair': get_keypair(vm_),
+        'networks': ( CloudStackNetwork( None, None, None, get_networkid(conn, vm_), None, None ), ), # The only attr that is used is 'id'. Setting the rest to None
+        'password': [],
     }
 
     saltcloud.utils.fire_event(
@@ -205,6 +231,7 @@ def create(vm_):
         deploy_kwargs = {
             'host': get_ip(data),
             'username': 'root',
+            'password': data.extra['password'],
             'key_filename': get_key(),
             'script': deploy_script.script,
             'name': vm_['name'],
