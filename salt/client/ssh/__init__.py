@@ -10,8 +10,7 @@ import getpass
 import shutil
 import copy
 import time
-import threading
-from salt._compat import Queue
+import multiprocessing
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -234,7 +233,7 @@ class SSH(object):
         Spin up the needed threads or processes and execute the subsequent
         rouintes
         '''
-        que = Queue.Queue()
+        que = multiprocessing.Queue()
         running = {}
         target_iter = self.targets.__iter__()
         rets = set()
@@ -255,7 +254,7 @@ class SSH(object):
                         host,
                         self.targets[host],
                         )
-                routine = threading.Thread(target=self.handle_routine, args=args)
+                routine = multiprocessing.Process(target=self.handle_routine, args=args)
                 routine.start()
                 running[host] = {'thread': routine}
                 continue
