@@ -24,7 +24,7 @@ Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states
 
 These states are often confused. A description of the difference between the
 two can be found in the docmentation for the :mod:`cmd states
-<salt.states.cmd>`
+<salt.states.cmd>`.
 
 How does Salt guess the Minion's hostname?
 ------------------------------------------
