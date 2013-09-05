@@ -101,9 +101,9 @@ def init(name,
 
     .. code-block:: bash
 
-        salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \
-                [cpushare=cgroups_cpushare] [memory=cgroups_memory] \
-                [nic=nic_profile] [profile=lxc_profile] \
+        salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
+                [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
+                [nic=nic_profile] [profile=lxc_profile] \\
                 [state=(true|false)]
 
     name
@@ -147,9 +147,9 @@ def create(name, config=None, profile=None, options=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'minion' lxc.create name [config=config_file] \
-                [profile=profile] [template=template_name] \
-                [backing=backing_store] [ vgname=volume_group] \
+        salt 'minion' lxc.create name [config=config_file] \\
+                [profile=profile] [template=template_name] \\
+                [backing=backing_store] [ vgname=volume_group] \\
                 [size=filesystem_size] [options=template_options]
 
     name
