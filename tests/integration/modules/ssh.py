@@ -9,8 +9,9 @@ import shutil
 import salt.utils
 import integration
 
-AUTHORIZED_KEYS = os.path.join('/tmp/subsalttest', 'authorized_keys')
-KNOWN_HOSTS = os.path.join('/tmp/subsalttest', 'known_hosts')
+SUBSALT_DIR = os.path.join(integration.TMP, 'subsalt')
+AUTHORIZED_KEYS = os.path.join(SUBSALT_DIR, 'authorized_keys')
+KNOWN_HOSTS = os.path.join(SUBSALT_DIR, 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 
 
@@ -23,6 +24,9 @@ class SSHModuleTest(integration.ModuleCase):
         Set up the ssh module tests
         '''
         super(SSHModuleTest, self).setUp()
+        if not os.path.isdir(SUBSALT_DIR):
+            os.makedirs(SUBSALT_DIR)
+
         ssh_raw_path = os.path.join(integration.FILES, 'ssh', 'raw')
         with salt.utils.fopen(ssh_raw_path) as fd:
             self.key = fd.read().strip()
@@ -31,10 +35,8 @@ class SSHModuleTest(integration.ModuleCase):
         '''
         Tear down the ssh module tests
         '''
-        if os.path.isfile(AUTHORIZED_KEYS):
-            os.remove(AUTHORIZED_KEYS)
-        if os.path.isfile(KNOWN_HOSTS):
-            os.remove(KNOWN_HOSTS)
+        if os.path.isdir(SUBSALT_DIR):
+            shutil.rmtree(SUBSALT_DIR)
         super(SSHModuleTest, self).tearDown()
 
     def test_auth_keys(self):
@@ -70,10 +72,18 @@ class SSHModuleTest(integration.ModuleCase):
         '''
         Check that known host information is returned from remote host
         '''
-        ret = self.run_function('ssh.recv_known_host', ['root', 'github.com'])
-        self.assertEqual(ret['enc'], 'ssh-rsa')
-        self.assertEqual(ret['key'], self.key)
-        self.assertEqual(ret['fingerprint'], GITHUB_FINGERPRINT)
+        ret = self.run_function('ssh.recv_known_host', ['github.com'])
+        try:
+            self.assertNotEqual(ret, None)
+            self.assertEqual(ret['enc'], 'ssh-rsa')
+            self.assertEqual(ret['key'], self.key)
+            self.assertEqual(ret['fingerprint'], GITHUB_FINGERPRINT)
+        except AssertionError as exc:
+            raise AssertionError(
+                'AssertionError: {0}. Function returned: {1}'.format(
+                    exc, ret
+                )
+            )
 
     def test_check_known_host_add(self):
         '''
