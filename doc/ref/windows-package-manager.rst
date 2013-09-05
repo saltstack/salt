@@ -293,5 +293,12 @@ updated the repository cache on the relevant minions:
 
     salt-run winrepo.genrepo
     salt 'MINION' pkg.refresh_db
+    
+    
+Packages management under Windows 2003
+----------------------------------------
 
+On windows server 2003, you need to install optional windows component 
+"wmi windows installer provider" to have full list of installed packages.
+If you don't have this, salt-minion can't report some installed softwares.
 
