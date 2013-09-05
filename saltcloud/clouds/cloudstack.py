@@ -158,7 +158,7 @@ def create(vm_):
     saltcloud.utils.fire_event(
         'event',
         'starting create',
-        'salt.cloud.{0}.creating'.format(vm_['name']),
+        'salt/cloud/{0}/creating'.format(vm_['name']),
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
@@ -179,7 +179,7 @@ def create(vm_):
     saltcloud.utils.fire_event(
         'event',
         'requesting instance',
-        'salt.cloud.{0}.requesting'.format(vm_['name']),
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
@@ -248,7 +248,7 @@ def create(vm_):
         saltcloud.utils.fire_event(
             'event',
             'executing deploy script',
-            'salt.cloud.{0}.deploying'.format(vm_['name']),
+            'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': deploy_kwargs},
         )
 
@@ -274,7 +274,7 @@ def create(vm_):
     saltcloud.utils.fire_event(
         'event',
         'created instance',
-        'salt.cloud.{0}.created'.format(vm_['name']),
+        'salt/cloud/{0}/created'.format(vm_['name']),
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
