@@ -2448,16 +2448,16 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     Usage::
 
-        /dev/charactertst:
+        /dev/chr:
           file.mknod:
             - ntype: c
             - major: 180
-            - minor: 34
+            - minor: 31
             - user: root
             - group: root
             - mode: 660
  
-        /dev/blocktst:
+        /dev/blk:
           file.mknod:
             - ntype: b
             - major: 8
@@ -2466,7 +2466,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             - group: root
             - mode: 660
  
-       /dev/pipetst:
+       /dev/fifo:
          file.mknod:
            - ntype: p
            - user: root
