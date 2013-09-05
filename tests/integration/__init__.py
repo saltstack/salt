@@ -720,8 +720,6 @@ class ShellCase(TestCase):
             term_sent = False
             while True:
                 process.poll()
-                if process.returncode is not None:
-                    break
 
                 if datetime.now() > stop_at:
                     if term_sent is False:
@@ -732,8 +730,12 @@ class ShellCase(TestCase):
                         term_sent = True
                         continue
 
-                    # As a last resort, kill the process group
-                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                    try:
+                        # As a last resort, kill the process group
+                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                    except OSError as exc:
+                        if exc.errno != 3:
+                            raise
 
                     out = [
                         'Process took more than {0} seconds to complete. '
@@ -744,6 +746,9 @@ class ShellCase(TestCase):
                             'Process killed, unable to catch stderr output'
                         ]
                     return out
+
+                if process.returncode is not None:
+                    break
 
         if catch_stderr:
             if sys.version_info < (2, 7):
