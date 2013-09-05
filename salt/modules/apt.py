@@ -932,7 +932,7 @@ def mod_repo(repo, **kwargs):
             # secure PPAs should be the same as urllib method
             if ppa_format_support and 'ppa_auth' not in kwargs:
                 try:
-                  get_repo(repo)
+                    get_repo(repo)
                 except:
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = 'apt-add-repository {0}'.format(repo)
