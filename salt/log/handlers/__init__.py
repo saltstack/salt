@@ -79,4 +79,8 @@ class TemporaryLoggingHandler(logging.NullHandler):
         while self.__messages:
             record = self.__messages.pop(0)
             for handler in handlers:
+                if handler.level > record.levelno:
+                    # If the handler's level is higher than the log record one,
+                    # it should not handle the log record
+                    continue
                 handler.handle(record)
