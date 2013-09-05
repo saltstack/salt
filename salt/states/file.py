@@ -2414,16 +2414,20 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     '''
     Create a special file similar to the 'nix mknod command. The supported device types are
     p (fifo pipe), c (character device), and b (block device). Provide the major and minor
-    integers when specifying a character device or a block device. A fifo pipe does not require
-    this information. The command will create the necessary dirs if needed. If a file of the same name
-    not of the same type exists, it will not be overwritten or unlinked (deleted). This is a
-    precaution.
+    numbers when specifying a character device or block device. A fifo pipe does not require
+    this information. The command will create the necessary dirs if needed. If a file of the 
+    same name not of the same type/major/minor exists, it will not be overwritten or unlinked
+    (deleted). This is logically in place as a safety measure because you can really shoot 
+    yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
+    note that not just anyone can create special devices. Usually this is only done as root.
+    If the state is executed as none other than root on a minion, you may recieve a permision
+    error.
 
     name
         name of the file
 
     ntype
-        node type 'p' (fifo pipe), 'c' (character device), and 'b' (block device)
+        node type 'p' (fifo pipe), 'c' (character device), or 'b' (block device)
 
     major
         major number of the device
@@ -2444,13 +2448,32 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     Usage::
 
-        /dev/gadget:
+        /dev/charactertst:
           file.mknod:
             - ntype: c
             - major: 180
-            - minor: 34 
+            - minor: 34
+            - user: root
+            - group: root
+            - mode: 660
+ 
+        /dev/blocktst:
+          file.mknod:
+            - ntype: b
+            - major: 8
+            - minor: 999
+            - user: root
+            - group: root
+            - mode: 660
+ 
+       /dev/pipetst:
+         file.mknod:
+           - ntype: p
+           - user: root
+           - group: root
+           - mode: 660
 
-    .. versionadded:: 0.9.9
+    .. versionadded:: 0.17.0
     '''
     ret = {'name': name,
            'changes': {},
