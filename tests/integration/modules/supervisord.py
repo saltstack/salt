@@ -96,8 +96,13 @@ class SupervisordModuleTest(integration.ModuleCase):
         Restart all services when they are running.
         '''
         self.start_supervisord(autostart=True)
-        ret = self.run_function('supervisord.restart', [], conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertEqual(ret, 'sleep_service: stopped\nsleep_service2: stopped\nsleep_service: started\nsleep_service2: started')
+        ret = self.run_function(
+            'supervisord.restart', [], conf_file=self.supervisor_conf,
+            bin_env=self.venv_dir)
+        self.assertIn('sleep_service: stopped', ret)
+        self.assertIn('sleep_service2: stopped', ret)
+        self.assertIn('sleep_service: started', ret)
+        self.assertIn('sleep_service2: started', ret)
 
     def test_restart_all_not_running(self):
         '''

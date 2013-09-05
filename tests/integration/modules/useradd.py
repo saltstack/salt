@@ -21,7 +21,7 @@ class UseraddModuleTest(integration.ModuleCase):
             )
 
     def __random_string(self, size=6):
-        return ''.join(
+        return 'RS-' + ''.join(
             random.choice(string.ascii_uppercase + string.digits)
             for x in range(size)
         )
@@ -37,9 +37,14 @@ class UseraddModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [uname, True, True])
             self.skipTest('Failed to create user')
 
+        # Let's get this system's grains
+        grains = self.run_function('grains.items')
         try:
             uinfo = self.run_function('user.info', [uname])
-            self.assertIn(uname, uinfo['groups'])
+            if grains['os_family'] in ('Suse',):
+                self.assertIn('users', uinfo['groups'])
+            else:
+                self.assertIn(uname, uinfo['groups'])
 
             # This uid is available, store it
             uid = uinfo['uid']
