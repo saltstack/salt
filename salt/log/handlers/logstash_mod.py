@@ -82,6 +82,13 @@
     set, the logging level used will be the one defined for ``log_level`` in
     the global configuration file section.
 
+    HWM
+    ...
+
+    The `high water mark`_ for the ZMQ socket setting. Only applicable for the
+    ``logstash_zmq_handler``.
+
+
 
     .. admonition:: Inspiration
 
@@ -96,6 +103,7 @@
     .. _`PyZMQ logging handler`: https://github.com/zeromq/pyzmq/blob/master/zmq/log/handlers.py
     .. _`UDP input`: http://logstash.net/docs/latest/inputs/udp
     .. _`ZeroMQ input`: http://logstash.net/docs/latest/inputs/zeromq
+    .. _`high water mark`: http://api.zeromq.org/3-2:zmq-setsockopt
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
@@ -166,6 +174,8 @@ def setup_handlers():
 
     if 'logstash_zmq_handler' in __opts__:
         address = __opts__['logstash_zmq_handler'].get('address', None)
+        zmq_hwm = __opts__['logstash_zmq_handler'].get('hwm', 1000)
+
         if address is None:
             log.debug(
                 'The required \'logstash_zmq_handler\' configuration key, '
@@ -173,7 +183,7 @@ def setup_handlers():
                 'configuring the logstash ZMQ logging handler.'
             )
         else:
-            zmq_handler = ZMQLogstashHander(address)
+            zmq_handler = ZMQLogstashHander(address, zmq_hwm=zmq_hwm)
             zmq_handler.setFormatter(logstash_formatter)
             zmq_handler.setLevel(
                 LOG_LEVELS[
@@ -271,10 +281,11 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
     Logstash ZMQ logging handler.
     '''
 
-    def __init__(self, address, level=logging.NOTSET):
+    def __init__(self, address, level=logging.NOTSET, zmq_hwm=1000):
         super(ZMQLogstashHander, self).__init__(level=level)
         self._context = self._publisher = None
         self._address = address
+        self._zmq_hwm = zmq_hwm
         self._pid = os.getpid()
 
     @property
@@ -286,7 +297,16 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
             self._context = zmq.Context()
             self._publisher = self._context.socket(zmq.PUB)
             # Above 1000 unsent events in the socket queue, stop dropping them
-            self._publisher.setsockopt(zmq.HWM, 1000)
+            try:
+                # Above the defined high water mark(unsent messages), start
+                # dropping them
+                self._publisher.setsockopt(zmq.HWM, self._zmq_hwm)
+            except AttributeError:
+                # In ZMQ >= 3.0, there are separate send and receive HWM
+                # settings
+                self._publisher.setsockopt(zmq.SNDHWM, self._zmq_hwm)
+                self._publisher.setsockopt(zmq.RCVHWM, self._zmq_hwm)
+
             self._publisher.connect(self._address)
         return self._publisher
 

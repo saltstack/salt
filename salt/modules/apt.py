@@ -10,8 +10,13 @@ import logging
 import urllib2
 import json
 
+# Import third party libs
+import yaml
+
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
 log = logging.getLogger(__name__)
@@ -1264,3 +1269,168 @@ def expand_repo_def(repokwargs):
     sanitized['architectures'] = getattr(source_entry, 'architectures', [])
 
     return sanitized
+
+
+def _parse_selections(dpkgselection):
+    '''
+    Parses the format from ``dpkg --get-selections`` and return a format that
+    pkg.get_selections and pkg.set_selections work with.
+    '''
+    ret = {}
+    if isinstance(dpkgselection, string_types):
+        dpkgselection = dpkgselection.split('\n')
+    for line in dpkgselection:
+        if line:
+            _pkg, _state = line.split()
+            if _state in ret:
+                ret[_state].append(_pkg)
+            else:
+                ret[_state] = [_pkg]
+    return ret
+
+
+def get_selections(pattern=None, state=None):
+    '''
+    View package state from the dpkg database.
+
+    Returns a dict of dicts containing the state, and package names:
+
+    .. code-block:: python
+
+        {'<host>':
+            {'<state>': ['pkg1',
+                         ...
+                        ]
+            },
+            ...
+        }
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_selections
+        salt '*' pkg.get_selections 'python-*'
+        salt '*' pkg.get_selections state=hold
+        salt '*' pkg.get_selections 'openssh*' state=hold
+    '''
+    ret = {}
+    cmd = 'dpkg --get-selections'
+    if pattern:
+        cmd += ' "{0}"'.format(pattern)
+    else:
+        cmd += ' "*"'
+    stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    ret = _parse_selections(stdout)
+    if state:
+        return {state: ret.get(state, [])}
+    return ret
+
+
+# TODO: allow state=None to be set, and that *args will be set to that state
+# TODO: maybe use something similar to pkg_resources.pack_pkgs to allow a list passed to selection, with the default state set to whatever is passed by the above, but override that if explicitly specified
+# TODO: handle path to selection file from local fs as well as from salt file server
+def set_selections(path=None, selection=None, clear=False):
+    '''
+    Change package state in the dpkg database.
+
+    The state can be any one of, documented in ``dpkg(1)``:
+
+     - install
+     - hold
+     - deinstall
+     - purge
+
+    This command is commonly used to mark specific packages to be held from
+    being upgraded, that is, to be kept at a certain version. When a state is
+    changed to anything but being held, then it is typically followed by
+    ``apt-get -u dselect-upgrade``.
+
+    Note: Be careful with the ``clear`` argument, since it will start
+    with setting all packages to deinstall state.
+
+    Returns a dict of dicts containing the package names, and the new and old
+    versions:
+
+    .. code-block:: python
+
+        {'<host>':
+            {'<package>': {'new': '<new-state>',
+                           'old': '<old-state>'}
+            },
+            ...
+        }
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.set_selections selection='{"install": ["netcat"]}'
+        salt '*' pkg.set_selections selection='{"hold": ["openssh-server", "openssh-client"]}'
+        salt '*' pkg.set_selections salt://path/to/file
+        salt '*' pkg.set_selections salt://path/to/file clear=True
+    '''
+    ret = {}
+    if not path and not selection:
+        return ret
+    if path and selection:
+        err = ('The \'selection\' and \'path\' arguments to '
+               'pkg.set_selections are mutually exclusive, and cannot be '
+               'specified together')
+        raise SaltInvocationError(err)
+
+    if isinstance(selection, string_types):
+        try:
+            selection = yaml.safe_load(selection)
+        except (yaml.parser.ParserError, yaml.scanner.ScannerError) as exc:
+            raise SaltInvocationError(
+                'Improperly-formatted selection: {0}'.format(exc)
+            )
+
+    if path:
+        path = __salt__['cp.cache_file'](path)
+        with salt.utils.fopen(path, 'r') as ifile:
+            content = ifile.readlines()
+        selection = _parse_selections(content)
+
+    if selection:
+        valid_states = ('install', 'hold', 'deinstall', 'purge')
+        bad_states = [x for x in selection if x not in valid_states]
+        if bad_states:
+            raise SaltInvocationError(
+                'Invalid state(s): {0}'.format(', '.join(bad_states))
+            )
+
+        if clear:
+            cmd = 'dpkg --clear-selections'
+            if not __opts__['test']:
+                result = __salt__['cmd.run_all'](cmd)
+                if result['retcode'] != 0:
+                    err = ('Running dpkg --clear-selections failed: '
+                           '{0}'.format(result['stderr']))
+                    log.error(err)
+                    raise CommandExecutionError(err)
+
+        sel_revmap = {}
+        for _state, _pkgs in get_selections().iteritems():
+            sel_revmap.update(dict((_pkg, _state) for _pkg in _pkgs))
+
+        for _state, _pkgs in selection.iteritems():
+            for _pkg in _pkgs:
+                if _state == sel_revmap.get(_pkg):
+                    continue
+                cmd = 'echo {0} {1} | dpkg --set-selections'.format(
+                    _pkg,
+                    _state
+                    )
+                if not __opts__['test']:
+                    result = __salt__['cmd.run_all'](cmd)
+                    if result['retcode'] != 0:
+                        log.error(
+                            'failed to set state {0} for package '
+                            '{1}'.format(_state, _pkg)
+                        )
+                    else:
+                        ret[_pkg] = {'old': sel_revmap.get(_pkg),
+                                     'new': _state}
+    return ret

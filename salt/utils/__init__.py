@@ -336,19 +336,26 @@ def jid_to_time(jid):
     return ret
 
 
-def gen_mac(prefix='52:54:'):
+def gen_mac(prefix='AC:DE:48'):
     '''
-    Generates a mac addr with the defined prefix
+    Generates a MAC address with the defined OUI prefix.
+
+    Common prefixes:
+
+     - ``00:16:3E`` -- Xen
+     - ``00:18:51`` -- OpenVZ
+     - ``00:50:56`` -- VMware (manually generated)
+     - ``52:54:00`` -- QEMU/KVM
+     - ``AC:DE:48`` -- PRIVATE
+
+    References:
+
+     - http://standards.ieee.org/develop/regauth/oui/oui.txt
+     - https://www.wireshark.org/tools/oui-lookup.html
+     - https://en.wikipedia.org/wiki/MAC_address
     '''
-    src = ['1', '2', '3', '4', '5', '6', '7', '8',
-           '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
-    mac = prefix
-    while len(mac) < 18:
-        if len(mac) < 3:
-            mac = random.choice(src) + random.choice(src) + ':'
-        if mac.endswith(':'):
-            mac += random.choice(src) + random.choice(src) + ':'
-    return mac[:-1]
+    r = random.randint
+    return '%s:%02X:%02X:%02X' % (prefix, r(0, 0xff), r(0, 0xff), r(0, 0xff))
 
 
 def ip_bracket(addr):
@@ -672,25 +679,20 @@ def format_call(fun, data):
     ret = {}
     ret['args'] = []
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
     if aspec.keywords:
         # This state accepts kwargs
         ret['kwargs'] = {}
         for key in data:
-            # Passing kwargs the conflict with args == stack trace
+            # Passing kwargs the conflict with args == traceback
             if key in aspec.args:
                 continue
             ret['kwargs'][key] = data[key]
-    kwargs = {}
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            kwargs[aspec.args[ind]] = aspec.defaults[-minus]
+
+    try:
+        kwargs = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    except TypeError:
+        # aspec.defaults is None
+        kwargs = {}
     for arg in kwargs:
         if arg in data:
             kwargs[arg] = data[arg]
@@ -711,24 +713,11 @@ def arg_lookup(fun):
     Return a dict containing the arguments and default arguments to the
     function.
     '''
-    ret = {'args': [],
-           'kwargs': {}}
+    ret = {'kwargs': {}}
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            ret['kwargs'][aspec.args[ind]] = aspec.defaults[-minus]
-    for arg in aspec.args:
-        if arg in ret:
-            continue
-        else:
-            ret['args'].append(arg)
+    if aspec.defaults:
+        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    ret['args'] = aspec.args
     return ret
 
 
@@ -1214,7 +1203,6 @@ def get_hash(path, form='md5', chunk_size=4096):
         for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
-
 
 
 def namespaced_function(function, global_dict, defaults=None):

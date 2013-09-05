@@ -9,6 +9,7 @@ import json
 import getpass
 import shutil
 import copy
+import time
 import threading
 from salt._compat import Queue
 
@@ -36,15 +37,23 @@ HEREDOC = (' << "EOF"\n'
            'if hash salt-call\n'
            'then\n'
            '    SALT=$(type -p salt-call)\n'
-           'elif [ -f /tmp/salt-call ] \n'
+           'elif [ -f /tmp/.salt/salt-call ] \n'
            'then\n'
-           '    SALT=/tmp/salt-call\n'
+           '    if [[ $(cat /tmp/.salt/version) != {0} ]]\n'
+           '    then\n'
+           '        rm -rf /tmp/.salt\n'
+           '        mkdir -p /tmp/.salt\n'
+           '        echo "deploy"\n'
+           '        exit 1\n'
+           '    fi\n'
+           '    SALT=/tmp/.salt/salt-call\n'
            'else\n'
+           '    mkdir -p /tmp/.salt\n'
            '    echo "deploy"\n'
            '    exit 1\n'
            'fi\n'
-           '$PYTHON $SALT --local --out json -l quiet {0}\n'
-           'EOF')
+           '$PYTHON $SALT --local --out json -l quiet {{0}}\n'
+           'EOF').format(salt.__version__)
 
 
 class SSH(object):
@@ -195,6 +204,7 @@ class SSH(object):
         '''
         Run the routine in a "Thread", put a dict on the queue
         '''
+        opts = copy.deepcopy(opts)
         single = Single(
                 opts,
                 opts['arg_str'],
@@ -341,9 +351,9 @@ class Single(object):
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
                 thin,
-                '/tmp/salt-thin.tgz')
+                '/tmp/.salt/salt-thin.tgz')
         self.shell.exec_cmd(
-                'tar xvf /tmp/salt-thin.tgz -C /tmp && rm /tmp/salt-thin.tgz'
+                'tar xvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt && rm /tmp/.salt/salt-thin.tgz'
                 )
         return True
 
@@ -363,30 +373,47 @@ class Single(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
+            refresh = False
             if not os.path.isfile(datap):
+                refresh = True
+            else:
+                if ((time.time() - os.stat(datap).st_mtime) / 60 > self.opts.get('cache_life', 60)):
+                    refresh = True
+            if self.opts.get('refresh_cache'):
+                refresh = True
+            if refresh:
                 # Make the datap
                 # TODO: Auto expire the datap
-                wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                     self.opts,
-                    self.target['id'],
+                    self.id,
                     **self.target)
-                opts_pkg = wrapper['test.opts_pkg']()
-                # TODO: Get Pillar in here
+                opts_pkg = pre_wrapper['test.opts_pkg']()
+                pillar = salt.pillar.Pillar(
+                        opts_pkg,
+                        opts_pkg['grains'],
+                        opts_pkg['id'],
+                        opts_pkg.get('environment', 'base')
+                        )
+                pillar_data = pillar.compile_pillar()
+
                 # TODO: cache minion opts in datap in master.py
                 with salt.utils.fopen(datap, 'w+') as fp_:
                     fp_.write(
                             self.serial.dumps(
                                 {'opts': opts_pkg,
-                                 'grains': opts_pkg['grains']}
+                                 'grains': opts_pkg['grains'],
+                                 'pillar': pillar_data}
                                 )
                             )
             with salt.utils.fopen(datap, 'r') as fp_:
                 data = self.serial.load(fp_)
             opts = data.get('opts', {})
             opts['grains'] = data.get('grains')
+            opts['pillar'] = data.get('pillar')
             wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                 opts,
-                self.target['id'],
+                self.id,
                 **self.target)
             self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
             wrapper.wfuncs = self.wfuncs

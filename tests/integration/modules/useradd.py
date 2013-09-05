@@ -5,7 +5,11 @@ import random
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from salttesting.helpers import (
+    destructiveTest,
+    ensure_in_syspath,
+    requires_system_grains
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -25,14 +29,15 @@ class UseraddModuleTest(integration.ModuleCase):
             )
 
     def __random_string(self, size=6):
-        return ''.join(
+        return 'RS-' + ''.join(
             random.choice(string.ascii_uppercase + string.digits)
             for x in range(size)
         )
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_groups_includes_primary(self):
+    @requires_system_grains
+    def test_groups_includes_primary(self, grains=None):
         # Let's create a user, which usually creates the group matching the
         # name
         uname = self.__random_string()
@@ -43,7 +48,10 @@ class UseraddModuleTest(integration.ModuleCase):
 
         try:
             uinfo = self.run_function('user.info', [uname])
-            self.assertIn(uname, uinfo['groups'])
+            if grains['os_family'] in ('Suse',):
+                self.assertIn('users', uinfo['groups'])
+            else:
+                self.assertIn(uname, uinfo['groups'])
 
             # This uid is available, store it
             uid = uinfo['uid']
