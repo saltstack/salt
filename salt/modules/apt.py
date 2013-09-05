@@ -933,7 +933,8 @@ def mod_repo(repo, **kwargs):
             if ppa_format_support and 'ppa_auth' not in kwargs:
                 try:
                     get_repo(repo)
-                except:
+                    return {repo: ''}
+                except Exception:
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = 'apt-add-repository {0}'.format(repo)
                     else:
