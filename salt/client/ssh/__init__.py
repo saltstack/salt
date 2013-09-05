@@ -37,15 +37,23 @@ HEREDOC = (' << "EOF"\n'
            'if hash salt-call\n'
            'then\n'
            '    SALT=$(type -p salt-call)\n'
-           'elif [ -f /tmp/salt-call ] \n'
+           'elif [ -f /tmp/.salt/salt-call ] \n'
            'then\n'
-           '    SALT=/tmp/salt-call\n'
+           '    if [[ $(cat /tmp/.salt/salt-call/version) != {0} ]]\n'
+           '    then\n'
+           '        rm -rf /tmp/.salt\n'
+           '        mkdir -p /tmp/.salt\n'
+           '        echo "deploy"\n'
+           '        exit 1\n'
+           '    fi\n'
+           '    SALT=/tmp/.salt/salt-call\n'
            'else\n'
+           '    mkdir -p /tmp/.salt\n'
            '    echo "deploy"\n'
            '    exit 1\n'
            'fi\n'
-           '$PYTHON $SALT --local --out json -l quiet {0}\n'
-           'EOF')
+           '$PYTHON $SALT --local --out json -l quiet {{0}}\n'
+           'EOF').format(salt.__version__)
 
 
 class SSH(object):
@@ -342,9 +350,9 @@ class Single(object):
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
                 thin,
-                '/tmp/salt-thin.tgz')
+                '/tmp/.salt/salt-thin.tgz')
         self.shell.exec_cmd(
-                'tar xvf /tmp/salt-thin.tgz -C /tmp && rm /tmp/salt-thin.tgz'
+                'tar xvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt && rm /tmp/.salt/salt-thin.tgz'
                 )
         return True
 
