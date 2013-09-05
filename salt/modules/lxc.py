@@ -343,11 +343,11 @@ def exists(name):
 
 def state(name):
     '''
-    Returns information about a container.
+    Returns the state of a container.
 
     .. code-block:: bash
 
-        salt '*' lxc.info name
+        salt '*' lxc.state name
     '''
     if not exists(name):
         return None
@@ -363,6 +363,13 @@ def state(name):
 
 
 def info(name):
+    '''
+    Returns information about a container.
+
+    .. code-block:: bash
+
+        salt '*' lxc.info name
+    '''
     f = '/var/lib/lxc/{0}/config'.format(name)
     cgroup_dir = '/sys/fs/cgroup/memory/lxc/{0}/'.format(name)
     if not os.path.isfile(f):
