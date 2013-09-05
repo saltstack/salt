@@ -76,13 +76,14 @@ def run(platform, provider, commit, clean, sls, pillar):
     proc.poll_and_read_until_finish()
     proc.communicate()
 
-    if proc.returncode > 0:
-        print('Failed to bootstrap VM. Exit code: {0}'.format(proc.returncode))
+    retcode = proc.returncode
+    if retcode != 0:
+        print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
         cleanup(clean, vm_name)
-        sys.exit(proc.returncode)
+        sys.exit(retcode)
 
-    print('VM Bootstrapped. Exit code: {0}'.format(proc.returncode))
+    print('VM Bootstrapped. Exit code: {0}'.format(retcode))
     sys.stdout.flush()
 
     # Run tests here
