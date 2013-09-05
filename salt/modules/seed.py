@@ -49,6 +49,8 @@ def apply(path, id_=None, config=None, approve_key=True, install=True):
     Seed a location (disk image, directory, or block device) with the
     minion config, approve the minion's key, and/or install salt-minion.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion' seed.whatever path id [config=config_data] \
