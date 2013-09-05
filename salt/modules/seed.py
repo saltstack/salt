@@ -53,8 +53,8 @@ def apply(path, id_=None, config=None, approve_key=True, install=True):
 
     .. code-block:: bash
 
-        salt 'minion' seed.whatever path id [config=config_data] \
-                [gen_key=(true|false)] [approve_key=(true|false)] \
+        salt 'minion' seed.whatever path id [config=config_data] \\
+                [gen_key=(true|false)] [approve_key=(true|false)] \\
                 [install=(true|false)]
 
     path
