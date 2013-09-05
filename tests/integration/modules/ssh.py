@@ -92,6 +92,7 @@ class SSHModuleTest(integration.ModuleCase):
         '''
         ret = self.run_function('ssh.recv_known_host', ['root', 'github.com'])
         try:
+            self.assertNotEqual(ret, None)
             self.assertEqual(ret['enc'], 'ssh-rsa')
             self.assertEqual(ret['key'], self.key)
             self.assertEqual(ret['fingerprint'], GITHUB_FINGERPRINT)
