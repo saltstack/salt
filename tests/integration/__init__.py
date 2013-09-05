@@ -3,6 +3,7 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
+import re
 import os
 import sys
 import time
@@ -761,14 +762,14 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         if getattr(self, '_call_binary_', None) is None:
             self.skipTest('\'_call_binary_\' not defined.')
         from salt.utils import which
-        from salt.version import __version_info__
+        from salt.version import __version_info__, GIT_DESCRIBE_REGEX
         git = which('git')
         if not git:
             self.skipTest('The git binary is not available')
 
         # Let's get the output of git describe
         process = subprocess.Popen(
-            [git, 'describe'],
+            [git, 'describe', '--tags', '--match', 'v[0-9]*'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -783,14 +784,24 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
                 )
             )
 
-        parsed_version = '{0}'.format(out.strip().lstrip('v'))
+        match = re.search(GIT_DESCRIBE_REGEX, out)
+        if not match:
+            return version, version_info
+
+        parsed_version = '{0}.{1}.{2}'.format(
+            match.group('major'),
+            match.group('minor'),
+            match.group('bugfix') or '0'
+        )
         parsed_version_info = tuple([
-            int(i) for i in parsed_version.split('-', 1)[0].split('.')
+            int(g) for g in [h or '0' for h in match.groups()[:3]]
+            if g.isdigit()
         ])
+
         if parsed_version_info and parsed_version_info < __version_info__:
             self.skipTest(
-                'We\'re likely about to release a new version. '
-                'This test would fail. Parsed({0!r}) < Expected({1!r})'.format(
+                'We\'re likely about to release a new version. This test '
+                'would fail. Parsed({0!r}) < Expected({1!r})'.format(
                     parsed_version_info, __version_info__
                 )
             )
