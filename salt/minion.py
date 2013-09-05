@@ -142,7 +142,7 @@ def parse_args_and_kwargs(func, args, data=None):
                 pass
         _args.append(yamlify_arg(arg))
     if has_kwargs and isinstance(data, dict):
-        # this function accepts kwargs, pack in the publish data
+        # this function accepts **kwargs, pack in the publish data
         for key, val in data.items():
             kwargs['__pub_{0}'.format(key)] = val
     return _args, kwargs

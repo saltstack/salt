@@ -69,7 +69,7 @@ import salt.payload
 import salt.version
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
-    SaltClientError, CommandNotFoundError, SaltSystemExit
+    SaltClientError, CommandNotFoundError, SaltSystemExit, SaltInvocationError
 )
 
 
@@ -678,23 +678,27 @@ def build_whitepace_splited_regex(text):
     build_whitespace_split_regex(text)
 
 
-def format_call(fun, data):
+def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
     '''
     Pass in a function and a dict containing arguments to the function.
 
-    A dict with the keys args and kwargs is returned
+    A dict with the keys args and kwargs is returned.
+    If full is not None, we're building arguments for a state call.
     '''
-    ret = {}
+    ret = initial_ret is not None and initial_ret or {}
     ret['args'] = []
     aspec = get_function_argspec(fun)
+    # Since we WILL be changing the data dictionary, let's change a copy of it
+    data = data.copy()
+
     if aspec.keywords:
-        # This state accepts kwargs
+        # This state accepts **kwargs
         ret['kwargs'] = {}
         for key in data:
             # Passing kwargs the conflict with args == traceback
             if key in aspec.args:
                 continue
-            ret['kwargs'][key] = data[key]
+            ret['kwargs'][key] = data.pop(key)
 
     try:
         kwargs = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
@@ -702,17 +706,53 @@ def format_call(fun, data):
         # aspec.defaults is None
         kwargs = {}
     for arg in kwargs:
-        if arg in data:
-            kwargs[arg] = data[arg]
+        if arg in data.copy():
+            kwargs[arg] = data.pop(arg)
     for arg in aspec.args:
         if arg in kwargs:
             ret['args'].append(kwargs[arg])
         else:
             try:
-                ret['args'].append(data[arg])
+                ret['args'].append(data.pop(arg))
             except KeyError:
                 # Bad arg match, can safely proceed
                 pass
+
+    # Now let gather any remaining and unexpected keyword arguments
+    extra = []
+    for key in data.keys():
+        if key in expected_extra_kws:
+            continue
+        extra.append(key)
+
+    if extra:
+        # Found unexpected keyword arguments, raise an error to the user
+        if len(extra) == 1:
+            raise SaltInvocationError(
+                '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
+                    extra,
+                    ret.get(
+                        # In case this is being called for a state module
+                        'full',
+                        # Not a state module, build the name
+                        '{0}.{1}'.format(fun.__module__, fun.__name__)
+                    )
+                )
+            )
+
+        raise SaltInvocationError(
+            '{0} and {1!r} are invalid keyword arguments for {2}'.format(
+                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
+                extra[-1],
+                ret.get(
+                    # In case this is being called for a state module
+                    'full',
+                    # Not a state module, build the name
+                    '{0}.{1}'.format(fun.__module__, fun.__name__)
+                )
+            )
+        )
+
     return ret
 
 

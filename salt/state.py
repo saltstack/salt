@@ -842,53 +842,6 @@ class State(object):
         chunks.sort(key=lambda k: (k['order'], '{0[state]}{0[name]}{0[fun]}'.format(k)))
         return chunks
 
-    def format_call(self, data):
-        '''
-        Formats low data into a list of dict's used to actually call the state,
-        returns:
-        {
-        'full': 'module.function',
-        'args': [arg[0], arg[1], ...]
-        }
-        used to call the function like this:
-        self.states[ret['full']](*ret['args'])
-
-        It is assumed that the passed data has already been verified with
-        verify_data
-        '''
-        ret = {}
-        ret['full'] = '{0[state]}.{0[fun]}'.format(data)
-        ret['args'] = []
-        aspec = salt.utils.get_function_argspec(self.states[ret['full']])
-        arglen = 0
-        deflen = 0
-        if isinstance(aspec.args, list):
-            arglen = len(aspec.args)
-        if isinstance(aspec.defaults, tuple):
-            deflen = len(aspec.defaults)
-        if aspec.keywords:
-            # This state accepts **kwargs
-            ret['kwargs'] = {}
-            for key in data:
-                # Passing kwargs the conflict with args == stack trace
-                if key in aspec.args:
-                    continue
-                ret['kwargs'][key] = data[key]
-        kwargs = {}
-        for ind in range(arglen - 1, 0, -1):
-            minus = arglen - ind
-            if deflen - minus > -1:
-                kwargs[aspec.args[ind]] = aspec.defaults[-minus]
-        for arg in kwargs:
-            if arg in data:
-                kwargs[arg] = data[arg]
-        for arg in aspec.args:
-            if arg in kwargs:
-                ret['args'].append(kwargs[arg])
-            else:
-                ret['args'].append(data[arg])
-        return ret
-
     def compile_high_data(self, high):
         '''
         "Compile" the high data as it is retrieved from the CLI or YAML into
@@ -1246,7 +1199,17 @@ class State(object):
 
         if 'provider' in data:
             self.load_modules(data)
-        cdata = self.format_call(data)
+
+        state_func_name = '{0[state]}.{0[fun]}'.format(data)
+        cdata = salt.utils.format_call(
+            self.states[state_func_name], data,
+            initial_ret={'full': state_func_name},
+            expected_extra_kws=(
+                '__id__', 'fun', 'state', 'require', 'order', 'reload_modules',
+                '__sls__', '__env__', '__pub_user', '__pub_arg', '__pub_jid',
+                '__pub_fun', '__pub_tgt', '__pub_tgt_type', '__pub_ret'
+            )
+        )
         if data.get('__prereq__'):
             test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
             sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = True
