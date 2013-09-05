@@ -13,8 +13,8 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-AUTHORIZED_KEYS = os.path.join('/tmp/subsalttest', 'authorized_keys')
-KNOWN_HOSTS = os.path.join('/tmp/subsalttest', 'known_hosts')
+AUTHORIZED_KEYS = os.path.join(integration.TMP, 'subsalt', 'authorized_keys')
+KNOWN_HOSTS = os.path.join(integration.TMP, 'subsalt', 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 
 
