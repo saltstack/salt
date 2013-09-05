@@ -2181,7 +2181,7 @@ def mknod_blkdev(name,
                                                                                    minor,
                                                                                    mode))
     try:
-         if __opts__['test']:
+        if __opts__['test']:
             ret['changes'] = {'new' : 'Block device {0} created.'.format(name)}
             ret['result'] = None
         else:
