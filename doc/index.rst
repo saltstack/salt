@@ -235,8 +235,7 @@ Reference
 FAQ
 ===
 
-See :doc:`here <faq>` for a list of Frequently Asked Questions and common
-pitfalls to avoid.
+See :doc:`here <faq>` for a list of Frequently Asked Questions.
 
 More information about the project
 ==================================
