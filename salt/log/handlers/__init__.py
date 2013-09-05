@@ -56,9 +56,9 @@ class TemporaryLoggingHandler(logging.NullHandler):
     records will be dispatched to the provided handlers.
     '''
 
-    def __init__(self, max_queue_size=10000):
+    def __init__(self, level=logging.NOTSET, max_queue_size=10000):
         self.__max_queue_size = max_queue_size
-        super(TemporaryLoggingHandler, self).__init__()
+        super(TemporaryLoggingHandler, self).__init__(level=level)
         self.__messages = []
 
     def handle(self, record):
@@ -79,4 +79,8 @@ class TemporaryLoggingHandler(logging.NullHandler):
         while self.__messages:
             record = self.__messages.pop(0)
             for handler in handlers:
+                if handler.level > record.levelno:
+                    # If the handler's level is higher than the log record one,
+                    # it should not handle the log record
+                    continue
                 handler.handle(record)

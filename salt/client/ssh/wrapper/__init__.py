@@ -13,7 +13,7 @@ import salt.utils
 import salt.client.ssh
 
 
-class FunctionWrapper(dict):
+class FunctionWrapper(object):
     '''
     Create an object that acts like the salt function dict and makes function
     calls remotely via the SSH shell system
@@ -52,5 +52,8 @@ class FunctionWrapper(dict):
             if stdout.startswith('deploy'):
                 single.deploy()
                 stdout, stderr = single.cmd_block()
-            return json.loads(stdout, object_hook=salt.utils.decode_dict)
+            ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
+            if len(ret) < 2 and 'local' in ret:
+                ret = ret['local']
+            return ret
         return caller

@@ -10,8 +10,7 @@ import getpass
 import shutil
 import copy
 import time
-import threading
-from salt._compat import Queue
+import multiprocessing
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -37,15 +36,23 @@ HEREDOC = (' << "EOF"\n'
            'if hash salt-call\n'
            'then\n'
            '    SALT=$(type -p salt-call)\n'
-           'elif [ -f /tmp/salt-call ] \n'
+           'elif [ -f /tmp/.salt/salt-call ] \n'
            'then\n'
-           '    SALT=/tmp/salt-call\n'
+           '    if [[ $(cat /tmp/.salt/version) != {0} ]]\n'
+           '    then\n'
+           '        rm -rf /tmp/.salt\n'
+           '        mkdir -p /tmp/.salt\n'
+           '        echo "deploy"\n'
+           '        exit 1\n'
+           '    fi\n'
+           '    SALT=/tmp/.salt/salt-call\n'
            'else\n'
+           '    mkdir -p /tmp/.salt\n'
            '    echo "deploy"\n'
            '    exit 1\n'
            'fi\n'
-           '$PYTHON $SALT --local --out json -l quiet {0}\n'
-           'EOF')
+           '$PYTHON $SALT --local --out json -l quiet {{0}}\n'
+           'EOF').format(salt.__version__)
 
 
 class SSH(object):
@@ -196,6 +203,7 @@ class SSH(object):
         '''
         Run the routine in a "Thread", put a dict on the queue
         '''
+        opts = copy.deepcopy(opts)
         single = Single(
                 opts,
                 opts['arg_str'],
@@ -225,7 +233,7 @@ class SSH(object):
         Spin up the needed threads or processes and execute the subsequent
         rouintes
         '''
-        que = Queue.Queue()
+        que = multiprocessing.Queue()
         running = {}
         target_iter = self.targets.__iter__()
         rets = set()
@@ -246,11 +254,15 @@ class SSH(object):
                         host,
                         self.targets[host],
                         )
-                routine = threading.Thread(target=self.handle_routine, args=args)
+                routine = multiprocessing.Process(target=self.handle_routine, args=args)
                 routine.start()
                 running[host] = {'thread': routine}
                 continue
-            ret = que.get()
+            ret = {}
+            try:
+                ret = que.get(False)
+            except Exception:
+                pass
             for host in running:
                 if not running[host]['thread'].is_alive():
                     running[host]['thread'].join()
@@ -258,9 +270,10 @@ class SSH(object):
             for host in rets:
                 if host in running:
                     running.pop(host)
-            if not isinstance(ret, dict):
-                continue
-            yield {ret['id']: ret['ret']}
+            if ret:
+                if not isinstance(ret, dict):
+                    continue
+                yield {ret['id']: ret['ret']}
             if len(rets) >= len(self.targets):
                 break
 
@@ -342,9 +355,9 @@ class Single(object):
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
                 thin,
-                '/tmp/salt-thin.tgz')
+                '/tmp/.salt/salt-thin.tgz')
         self.shell.exec_cmd(
-                'tar xvf /tmp/salt-thin.tgz -C /tmp && rm /tmp/salt-thin.tgz'
+                'tar xvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt && rm /tmp/.salt/salt-thin.tgz'
                 )
         return True
 
@@ -375,11 +388,11 @@ class Single(object):
             if refresh:
                 # Make the datap
                 # TODO: Auto expire the datap
-                wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                     self.opts,
                     self.id,
                     **self.target)
-                opts_pkg = wrapper['test.opts_pkg']()
+                opts_pkg = pre_wrapper['test.opts_pkg']()
                 pillar = salt.pillar.Pillar(
                         opts_pkg,
                         opts_pkg['grains'],

@@ -84,7 +84,7 @@ def is_extended_logging_configured():
 
 
 # Store a reference to the temporary queue logging handler
-LOGGING_NULL_HANDLER = TemporaryLoggingHandler()
+LOGGING_NULL_HANDLER = TemporaryLoggingHandler(logging.WARNING)
 
 # Store a reference to the temporary console logger
 LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
