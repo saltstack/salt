@@ -178,6 +178,56 @@ def _get_target(target, ssh):
         proto += '+ssh'
     return ' {0}://{1}/{2}'.format(proto, target, 'system')
 
+def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **kwargs_sink):
+    '''
+    Prepares the serial and console sections of the VM xml
+
+    serial_type: presently 'pty' or 'tcp'(telnet)
+
+    telnet_port: When selecting tcp, which port to listen on
+
+    console: Is this serial device the console or for some other purpose
+
+    Returns string representing the serial and console devices suitable for
+    insertion into the VM XML definition
+    '''
+
+    import jinja2
+
+    templates = {
+            'pty': '''
+                <serial type='pty'>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='pty'>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+            ''',
+
+            'tcp': '''
+                <serial type='tcp'>
+                    <source mode='bind' host='' service='{{ telnet_port }}'/>
+                    <protocol type='telnet'/>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='tcp'>
+                    <source mode='bind' host='' service='{{telnet_port}}'/>
+                    <protocol type='telnet'/>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+            '''
+    }
+
+    dict_loader = jinja2.DictLoader(templates)
+    env = jinja2.Environment(loader=dict_loader)
+    template = env.get_template(serial_type)
+    return template.render(serial_type=serial_type,
+                           telnet_port=telnet_port,
+                           console=console)
 
 def _gen_xml(name,
              cpu,
@@ -207,6 +257,7 @@ def _gen_xml(name,
                 </disk>
                 %%NICS%%
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
+                %%SERIAL%%
         </devices>
         <features>
                 <acpi/>
@@ -219,6 +270,13 @@ def _gen_xml(name,
     data = data.replace('%%MEM%%', str(mem))
     data = data.replace('%%VDA%%', vda)
     data = data.replace('%%DISKTYPE%%', _image_type(vda))
+
+    if 'serial_type' in kwargs:
+       serial_section = _prepare_serial_port_xml(**kwargs)
+    else:
+       serial_section = ""
+    data = data.replace('%%SERIAL%%', serial_section)
+
     boot_str = ''
     if 'boot_dev' in kwargs:
         for dev in kwargs['boot_dev']:
@@ -229,6 +287,7 @@ def _gen_xml(name,
     else:
         boot_str = '''<boot dev='hd'/>'''
     data = data.replace('%%BOOT%%', boot_str)
+
     nic_str = ''
     for dev, args in nicp.items():
         nic_t = '''
@@ -254,7 +313,6 @@ def _gen_xml(name,
         nic_str += nic_t
     data = data.replace('%%NICS%%', nic_str)
     return data
-
 
 def _image_type(vda):
     '''
@@ -300,7 +358,7 @@ def init(name,
 
     CLI Example::
 
-        salt 'hypervisor' vm_name 4 512 salt://path/to/image.raw
+        salt 'hypervisor' virt.init vm_name 4 512 salt://path/to/image.raw
     '''
     img_dir = os.path.join(__salt__['config.option']('virt.images'), name)
     img_dest = os.path.join(
