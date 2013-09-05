@@ -258,7 +258,11 @@ class SSH(object):
                 routine.start()
                 running[host] = {'thread': routine}
                 continue
-            ret = que.get()
+            ret = {}
+            try:
+                ret = que.get(False)
+            except Exception:
+                pass
             for host in running:
                 if not running[host]['thread'].is_alive():
                     running[host]['thread'].join()
@@ -266,9 +270,10 @@ class SSH(object):
             for host in rets:
                 if host in running:
                     running.pop(host)
-            if not isinstance(ret, dict):
-                continue
-            yield {ret['id']: ret['ret']}
+            if ret:
+                if not isinstance(ret, dict):
+                    continue
+                yield {ret['id']: ret['ret']}
             if len(rets) >= len(self.targets):
                 break
 
