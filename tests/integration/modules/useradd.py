@@ -21,7 +21,7 @@ class UseraddModuleTest(integration.ModuleCase):
             )
 
     def __random_string(self, size=6):
-        return ''.join(
+        return 'RS-' + ''.join(
             random.choice(string.ascii_uppercase + string.digits)
             for x in range(size)
         )
