@@ -2113,11 +2113,15 @@ def mknod_chrdev(name,
                                                                                        minor,
                                                                                        mode))
     try:
-        if os.mknod(name,
-                    int(str(mode).lstrip('0'),8)|stat.S_IFCHR,
-                    os.makedev(major,minor)) is None:
+        if __opts__['test']:
             ret['changes'] = {'new' : 'Character device {0} created.'.format(name)}
-            ret['result'] = True
+            ret['result'] = None
+        else:
+            if os.mknod(name,
+                        int(str(mode).lstrip('0'),8)|stat.S_IFCHR,
+                        os.makedev(major,minor)) is None:
+                ret['changes'] = {'new' : 'Character device {0} created.'.format(name)}
+                ret['result'] = True
     except OSError as exc:
         #be happy it is already there....however, if you are trying to change the major/minor, you will need to unlink it first as os.mknod will not overwrite
         if exc.errno != errno.EEXIST:
@@ -2177,11 +2181,15 @@ def mknod_blkdev(name,
                                                                                    minor,
                                                                                    mode))
     try:
-        if os.mknod(name,
-                    int(str(mode).lstrip('0'),8)|stat.S_IFBLK,
-                    os.makedev(major,minor)) is None:
+         if __opts__['test']:
             ret['changes'] = {'new' : 'Block device {0} created.'.format(name)}
-            ret['result'] = True
+            ret['result'] = None
+        else:
+            if os.mknod(name,
+                        int(str(mode).lstrip('0'),8)|stat.S_IFBLK,
+                        os.makedev(major,minor)) is None:
+                ret['changes'] = {'new' : 'Block device {0} created.'.format(name)}
+                ret['result'] = True
     except OSError as exc:
         #be happy it is already there....however, if you are trying to change the major/minor, you will need to unlink it first as os.mknod will not overwrite
         if exc.errno != errno.EEXIST:
@@ -2236,9 +2244,13 @@ def mknod_fifo(name,
            'result': False}
     log.debug("Creating FIFO name:{0}".format(name))
     try:
-        if os.mkfifo(name,int(str(mode).lstrip('0'),8)) is None:
+        if __opts__['test']:
             ret['changes'] = {'new' : 'Fifo pipe {0} created.'.format(name)}
-            ret['result'] = True
+            ret['result'] = None
+        else:
+            if os.mkfifo(name,int(str(mode).lstrip('0'),8)) is None:
+                ret['changes'] = {'new' : 'Fifo pipe {0} created.'.format(name)}
+                ret['result'] = True
     except OSError as exc:
         #be happy it is already there
         if exc.errno != errno.EEXIST:
