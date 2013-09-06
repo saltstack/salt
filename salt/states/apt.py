@@ -1,5 +1,6 @@
 '''
 Package management operations specific to APT- and DEB-based systems
+====================================================================
 '''
 
 # Import python libs
