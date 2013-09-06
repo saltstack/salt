@@ -42,7 +42,10 @@ def generate_vm_name(platform):
     '''
     return 'ZZZ-{0}-{1}'.format(
         platform,
-        hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
+        os.environ.get(
+            'BUILD_NUMBER',
+            hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
+        )
     )
 
 
