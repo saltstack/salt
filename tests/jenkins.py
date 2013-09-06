@@ -84,11 +84,6 @@ def run(opts):
     '''
     RUN!
     '''
-    import pprint
-    print '+' * 80
-    pprint.pprint(os.environ)
-    print '+' * 80
-
     vm_name = os.environ.get(
         'SALTCLOUD_VM_PLATFORM',
         generate_vm_name(opts.platform)
@@ -175,10 +170,6 @@ def parse():
     '''
     Parse the CLI options
     '''
-    import pprint
-    print '+' * 80
-    pprint.pprint(os.environ)
-    print '+' * 80
     parser = optparse.OptionParser()
     parser.add_option('--platform',
         dest='platform',
@@ -212,7 +203,7 @@ def parse():
     )
     parser.add_option(
         '--delete-vm',
-        default=os.environ.get('SALTCLOUD_VM_NAME', None),
+        default=None,
         help='Print a parseable KEY=VAL output'
     )
 
