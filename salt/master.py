@@ -1761,9 +1761,9 @@ class ClearFuncs(object):
 
     def runner(self, clear_load):
         '''
-        Send a master control function back to the wheel system
+        Send a master control function back to the runner system
         '''
-        # All wheel ops pass through eauth
+        # All runner ops pass through eauth
         if 'token' in clear_load:
             try:
                 token = self.loadauth.get_tok(clear_load['token'])
@@ -1925,7 +1925,14 @@ class ClearFuncs(object):
 
             try:
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                new_data = {'fun': clear_load['fun'],
+                            'user': clear_load.get('username', 'UNKNOWN')}
+                jid = salt.utils.gen_jid()
+                self.event.fire_event(new_data, tagify([jid, 'new'], 'wheel'))
+                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                ret_data = {'ret': ret,
+                            'user': clear_load.get('username', 'UNKNOWN')}
+                self.event.fire_event(ret_data, tagify([jid, 'ret'], 'wheel'))
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
