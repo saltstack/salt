@@ -300,6 +300,7 @@ def wait_for_ssh(host, port=22, timeout=900):
         trycount += 1
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(30)
             sock.connect((host, port))
             # Stop any remaining reads/writes on the socket
             sock.shutdown(socket.SHUT_RDWR)

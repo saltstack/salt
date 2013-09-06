@@ -1385,7 +1385,8 @@ class Map(Cloud):
                     obj.values()[0]['ret'] = out[obj.keys()[0]]
                     output.update(obj)
             else:
-                output = output_multip
+                for obj in output_multip:
+                    output.update(obj)
 
         return output
 

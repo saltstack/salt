@@ -114,11 +114,7 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.selected_query_option is not None:
             if self.selected_query_option == 'list_providers':
                 try:
-                    display_output = salt.output.get_printout(
-                        self.options.output, self.config
-                    )
-                    print(display_output(mapper.provider_list()))
-                    self.exit(0)
+                    ret = mapper.provider_list()
                 except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error listing providers: {0}'
                     self.handle_exception(msg, exc)
@@ -143,51 +139,27 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.list_locations is not None:
             try:
-                display_output = salt.output.get_printout(
-                    self.options.output, self.config
+                ret = mapper.location_list(
+                    self.options.list_locations
                 )
-                print(
-                    display_output(
-                        mapper.location_list(
-                            self.options.list_locations
-                        )
-                    )
-                )
-                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing locations: {0}'
                 self.handle_exception(msg, exc)
 
         elif self.options.list_images is not None:
             try:
-                display_output = salt.output.get_printout(
-                    self.options.output, self.config
+                ret = mapper.image_list(
+                    self.options.list_images
                 )
-                print(
-                    display_output(
-                        mapper.image_list(
-                            self.options.list_images
-                        )
-                    )
-                )
-                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing images: {0}'
                 self.handle_exception(msg, exc)
 
         elif self.options.list_sizes is not None:
             try:
-                display_output = salt.output.get_printout(
-                    self.options.output, self.config
+                ret = mapper.size_list(
+                    self.options.list_sizes
                 )
-                print(
-                    display_output(
-                        mapper.size_list(
-                            self.options.list_sizes
-                        )
-                    )
-                )
-                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing sizes: {0}'
                 self.handle_exception(msg, exc)
@@ -294,15 +266,22 @@ class SaltCloud(parsers.SaltCloudParser):
                 sys.stderr.write('No nodes defined in this map')
                 self.exit(1)
             try:
+                ret = {}
+                run_map = True
+
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 dmap = mapper.map_data()
 
                 msg = ''
                 if 'errors' in dmap:
+                    # display profile errors
                     msg += 'Found the following errors:\n'
                     for profile_name, error in dmap['errors'].iteritems():
                         msg += '  {0}: {1}\n'.format(profile_name, error)
+                    sys.stderr.write(msg)
+                    sys.stderr.flush()
 
+                msg = ''
                 if 'existing' in dmap:
                     msg += ('The following virtual machines were found '
                             'already running:\n')
@@ -322,14 +301,24 @@ class SaltCloud(parsers.SaltCloudParser):
                         msg += '  {0}\n'.format(name)
 
                 if not dmap['create'] and not dmap.get('destroy', None):
-                    print(msg)
-                    self.exit(1)
+                    if not dmap.get('existing', None):
+                        # nothing to create or destroy & nothing exists
+                        print(msg)
+                        self.exit(1)
+                    else:
+                        # nothing to create or destroy, print existing
+                        run_map = False
 
-                if self.print_confirm(msg):
-                    ret = mapper.run_map(dmap)
+                if run_map:
+                    if self.print_confirm(msg):
+                        ret = mapper.run_map(dmap)
 
-                if self.config.get('parallel', False) is False:
-                    log.info('Complete')
+                    if self.config.get('parallel', False) is False:
+                        log.info('Complete')
+
+                if dmap.get('existing', None):
+                    for name in dmap['existing'].keys():
+                        ret[name] = {'Message': 'Already running'}
 
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a query error: {0}'
