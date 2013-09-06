@@ -271,10 +271,14 @@ class SaltCloud(parsers.SaltCloudParser):
 
                 msg = ''
                 if 'errors' in dmap:
+                    # display profile errors
                     msg += 'Found the following errors:\n'
                     for profile_name, error in dmap['errors'].iteritems():
                         msg += '  {0}: {1}\n'.format(profile_name, error)
+                    sys.stderr.write(msg)
+                    sys.stderr.flush()
 
+                msg = ''
                 if 'existing' in dmap:
                     msg += ('The following virtual machines were found '
                             'already running:\n')
