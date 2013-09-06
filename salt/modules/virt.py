@@ -272,16 +272,15 @@ def _gen_xml(name,
     data = data.replace('%%DISKTYPE%%', _image_type(vda))
 
     if 'serial_type' in kwargs:
-       serial_section = _prepare_serial_port_xml(**kwargs)
+        serial_section = _prepare_serial_port_xml(**kwargs)
     else:
-       serial_section = ""
+        serial_section = ''
     data = data.replace('%%SERIAL%%', serial_section)
 
     boot_str = ''
     if 'boot_dev' in kwargs:
         for dev in kwargs['boot_dev']:
-            boot_part = '''<boot dev='%%DEV%%' />
-'''
+            boot_part = "<boot dev='%%DEV%%' />"
             boot_part = boot_part.replace('%%DEV%%', dev)
             boot_str += boot_part
     else:
@@ -295,8 +294,7 @@ def _gen_xml(name,
                     <source %%SOURCE%%/>
                     <mac address='%%MAC%%'/>
                     <model type='%%MODEL%%'/>
-                </interface>
-'''
+                </interface>\n'''
         if 'bridge' in args:
             nic_t = nic_t.replace('%%SOURCE%%', 'bridge=\'{0}\''.format(args['bridge']))
             nic_t = nic_t.replace('%%TYPE%%', 'bridge')
