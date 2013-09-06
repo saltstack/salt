@@ -10,10 +10,11 @@ This script is intended to be shell-centric!!
 import os
 import re
 import sys
-import subprocess
-import hashlib
+import time
 import random
+import hashlib
 import optparse
+import subprocess
 
 try:
     from salt.utils.nb_popen import NonBlockingPopen
@@ -119,6 +120,9 @@ def run(opts):
 
     print('VM Bootstrapped. Exit code: {0}'.format(retcode))
     sys.stdout.flush()
+
+    print('Sleeping for 5 seconds to allow the minion to breath a little')
+    time.sleep(5)
 
     # Run tests here
     cmd = (
