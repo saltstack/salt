@@ -143,8 +143,11 @@ class SupervisordModuleTest(integration.ModuleCase):
         Stop all services when they are running.
         '''
         self.start_supervisord(autostart=True)
-        ret = self.run_function('supervisord.stop', [], conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertEqual(ret, 'sleep_service: stopped\nsleep_service2: stopped')
+        ret = self.run_function('supervisord.stop',
+                                [],
+                                conf_file=self.supervisor_conf,
+                                bin_env=self.venv_dir)
+        self.assertIn('sleep_service: stopped', ret)
 
     def test_stop_all_not_running(self):
         '''
