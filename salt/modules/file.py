@@ -2067,7 +2067,7 @@ def get_devmm(name):
                 os.major(stat_structure.st_rdev),
                 os.minor(stat_structure.st_rdev))
     else:
-       return (0, 0)
+        return (0, 0)
 
 
 def is_chrdev(name):
