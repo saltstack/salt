@@ -175,6 +175,10 @@ def parse():
     '''
     Parse the CLI options
     '''
+    import pprint
+    print '+' * 80
+    pprint.pprint(os.environ)
+    print '+' * 80
     parser = optparse.OptionParser()
     parser.add_option('--platform',
         dest='platform',
