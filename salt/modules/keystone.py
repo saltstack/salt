@@ -22,6 +22,7 @@ Module for handling openstack keystone calls.
 HAS_KEYSTONE = False
 try:
     from keystoneclient.v2_0 import client
+    import keystoneclient.exceptions
     HAS_KEYSTONE = True
 except ImportError:
     pass
@@ -482,9 +483,9 @@ def user_verify_password(user_id=None,
               'auth_url': auth_url}
     try:
         userauth = client.Client(**kwargs)
-    except Exception as error:
-        return str(error)
-    return 'Password is valid'
+    except keystoneclient.exceptions.Unauthorized:
+        return False
+    return True
 
 
 def user_password_update(user_id=None,
