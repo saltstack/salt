@@ -114,11 +114,7 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.selected_query_option is not None:
             if self.selected_query_option == 'list_providers':
                 try:
-                    display_output = salt.output.get_printout(
-                        self.options.output, self.config
-                    )
-                    print(display_output(mapper.provider_list()))
-                    self.exit(0)
+                    ret = mapper.provider_list()
                 except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error listing providers: {0}'
                     self.handle_exception(msg, exc)
@@ -143,51 +139,27 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.list_locations is not None:
             try:
-                display_output = salt.output.get_printout(
-                    self.options.output, self.config
+                ret = mapper.location_list(
+                    self.options.list_locations
                 )
-                print(
-                    display_output(
-                        mapper.location_list(
-                            self.options.list_locations
-                        )
-                    )
-                )
-                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing locations: {0}'
                 self.handle_exception(msg, exc)
 
         elif self.options.list_images is not None:
             try:
-                display_output = salt.output.get_printout(
-                    self.options.output, self.config
+                ret = mapper.image_list(
+                    self.options.list_images
                 )
-                print(
-                    display_output(
-                        mapper.image_list(
-                            self.options.list_images
-                        )
-                    )
-                )
-                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing images: {0}'
                 self.handle_exception(msg, exc)
 
         elif self.options.list_sizes is not None:
             try:
-                display_output = salt.output.get_printout(
-                    self.options.output, self.config
+                ret = mapper.size_list(
+                    self.options.list_sizes
                 )
-                print(
-                    display_output(
-                        mapper.size_list(
-                            self.options.list_sizes
-                        )
-                    )
-                )
-                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing sizes: {0}'
                 self.handle_exception(msg, exc)
