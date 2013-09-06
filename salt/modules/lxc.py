@@ -104,7 +104,7 @@ def init(name,
         salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
                 [nic=nic_profile] [profile=lxc_profile] \\
-                [state=(true|false)]
+                [start=(true|false)]
 
     name
         Name of the container.
