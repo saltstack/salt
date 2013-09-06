@@ -84,6 +84,11 @@ def run(opts):
     '''
     RUN!
     '''
+    import pprint
+    print '+' * 80
+    pprint.pprint(os.environ)
+    print '+' * 80
+
     vm_name = os.environ.get(
         'SALTCLOUD_VM_PLATFORM',
         generate_vm_name(opts.platform)
@@ -91,7 +96,7 @@ def run(opts):
 
     cmd = (
         'salt-cloud -l debug --script-args "-D -n git {commit}" -p '
-        '{provider}_{platform} {0}'.format(vm_name, **opts)
+        '{provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
     )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
@@ -170,6 +175,10 @@ def parse():
     '''
     Parse the CLI options
     '''
+    import pprint
+    print '+' * 80
+    pprint.pprint(os.environ)
+    print '+' * 80
     parser = optparse.OptionParser()
     parser.add_option('--platform',
         dest='platform',
