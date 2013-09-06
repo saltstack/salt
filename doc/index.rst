@@ -98,11 +98,11 @@ arbitrary commands on remote hosts.
         databases can be supported or custom interfaces can be easily
         communicated with.
 
-:doc:`Targeting </topics/targeting/index>`
-------------------------------------------
+Targeting
+---------
 
-Targeting is specifying which minions should execute commands or manage server
-configuration.
+:doc:`Targeting </topics/targeting/index>` is specifying which minions
+should execute commands or manage server configuration.
 
 :doc:`Globbing and regex </topics/targeting/globbing>`
     Match minions using globbing and regular expressions.
