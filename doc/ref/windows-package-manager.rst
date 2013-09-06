@@ -5,6 +5,49 @@ Windows Software Repository
 The Salt Windows Software Repository provides a package manager and software
 repository similar to what is provided by yum and apt on Linux.
 
+It permits the installation of software using the installers on remote
+windows machines. In many senses, the operation is similar to that of
+the other package managers salt is aware of:
+
+- the ``pkg.installed`` and similar states work on Windows.
+- the ``pkg.install`` and similar module functions work on Windows.
+- each windows machine needs to have ``pkg.refresh_db`` executed
+  against it to pick up the latest version of the package database.
+
+High level differences to yum and apt are:
+
+- The repository metadata (sls files) is hosted through either salt or
+  git.
+- Packages can be downloaded from within the salt repository, a git
+  repository or from http(s) or ftp urls.
+- No dependencies are managed. Dependencies between packages needs to
+  be managed manually.
+
+
+Operation
+=========
+
+The install state/module function of the windows package manager works
+roughly as follows:
+
+1. Execute ``pkg.list_pkgs`` and store the result
+2. Check if any action needs to be taken. (ie compare required package
+   and version against ``pkg.list_pkgs`` results)
+3. If so, run the installer command.
+4. Execute ``pkg.list_pkgs`` and compare to the result stored from
+   before installation.
+5. Sucess/Failure/Changes will be reported based on the differences
+   between the original and final ``pkg.list_pkgs`` results.
+
+If there are any problems in using the package manager it is likely to
+be due to the data in your sls files not matching the difference
+between the pre and post ``pkg.list_pkgs`` results.
+
+
+
+Usage
+=====
+
 By default, the Windows software repository is found at ``/srv/salt/win/repo``
 This can be changed in the master config file (default location is
 ``/etc/salt/master``) by modifying the  ``win_repo`` variable.  Each piece of
@@ -223,3 +266,39 @@ cache and then refresh each minion's package cache:
     salt '*' pkg.refresh_db
 
 .. _wiki: http://wpkg.org/Category:Silent_Installers
+
+
+
+Troubleshooting
+===============
+
+
+Incorrect name/version
+----------------------
+
+If the package seems to install properly, but salt reports a failure
+then it is likely you have a version or ``full_name`` mismatch.
+
+Check the exact ``full_name`` and version used by the package. Use
+``pkg.list_pkgs`` to check that the names and version exactly match
+what is installed.
+
+Changes to sls files not being picked up
+----------------------------------------
+
+Ensure you have (re)generated the repository cache file and then
+updated the repository cache on the relevant minions:
+
+.. code-block:: bash
+
+    salt-run winrepo.genrepo
+    salt 'MINION' pkg.refresh_db
+    
+    
+Packages management under Windows 2003
+----------------------------------------
+
+On windows server 2003, you need to install optional windows component 
+"wmi windows installer provider" to have full list of installed packages.
+If you don't have this, salt-minion can't report some installed softwares.
+

@@ -19,7 +19,7 @@ Module to provide Postgres compatibility to salt.
 
 # Import python libs
 import datetime
-import distutils
+import distutils.version
 import logging
 import StringIO
 import os
@@ -117,7 +117,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     psql_version = version(
         user, host, port, maintenance_db, password, runas
     )
-    return distutils.version.LooseVersion(psql_version).version
+    return distutils.version.LooseVersion(psql_version)
 
 
 def _connection_defaults(user=None, host=None, port=None, maintenance_db=None,
@@ -403,7 +403,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           maintenance_db=maintenance_db,
                           password=password,
                           runas=runas)
-    if len(ver) >= 2 and ver[0] >= 9 and ver[1] >= 1:
+    if ver >= distutils.version.LooseVersion('9.1'):
         query = (
             'SELECT rolname as "name", rolsuper as "superuser", '
             'rolinherit as "inherits privileges", '

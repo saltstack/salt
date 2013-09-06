@@ -1,8 +1,9 @@
 '''
 .. |reclass| replace:: **reclass**
 
-This ``master_tops`` plugin provides access to the |reclass| database, such
-that state information (top data) are retrieved from |reclass|.
+This :doc:`master_tops </topics/master_tops/index>` plugin provides access to
+the |reclass| database, such that state information (top data) are retrieved
+from |reclass|.
 
 You can find more information about |reclass| at
 http://reclass.pantsfullofunix.net.
@@ -14,9 +15,9 @@ inventory:
 .. code-block:: yaml
 
     master_tops:
-        reclass:
-          storage_type: yaml_fs
-          base_inventory_uri: /srv/salt
+      reclass:
+        storage_type: yaml_fs
+        base_inventory_uri: /srv/salt
 
 This would cause |reclass| to read the inventory from YAML files in
 ``/srv/salt/nodes`` and ``/srv/salt/classes``.
@@ -28,15 +29,15 @@ note of the differing data types for ``ext_pillar`` and ``master_tops``):
 .. code-block:: yaml
 
     reclass: &reclass
-        storage_type: yaml_fs
-        base_inventory_uri: /srv/salt
-        reclass_source_path: ~/code/reclass
+      storage_type: yaml_fs
+      base_inventory_uri: /srv/salt
+      reclass_source_path: ~/code/reclass
 
     ext_pillar:
-        - reclass: *reclass
+      - reclass: *reclass
 
     master_tops:
-        reclass: *reclass
+      reclass: *reclass
 
 If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
@@ -54,6 +55,9 @@ from salt.utils.reclass import (
     set_inventory_base_uri_default
 )
 
+from salt.exceptions import SaltInvocationError
+
+
 def __virtual__(retry=False):
     try:
         import reclass
@@ -66,7 +70,6 @@ def __virtual__(retry=False):
         prepend_reclass_source_path(opts)
         return __virtual__(retry=True)
 
-from salt.exceptions import SaltInvocationError
 
 def top(**kwargs):
     '''

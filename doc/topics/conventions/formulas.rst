@@ -4,24 +4,28 @@
 Salt Formulas
 =============
 
-.. note:: Salt version requirements
-
-    Many Formulas require Salt 0.16.4 or later although this can currently be
-    side-stepped by copying the newer version of :blob:`salt/modules/grains.py`
-    into the :file:`/srv/salt/_modules` directory and it will be automatically
-    distributed to all minions.
-
 Formulas are pre-written Salt States. They are as open-ended as Salt States
 themselves and can be used for tasks such as installing a package, configuring
 and starting a service, setting up users or permissions, and many other common
 tasks.
 
-.. seealso:: Salt Formula repositories
+.. note:: Formulas require Salt 0.17 or later.
 
-    All official Salt Formulas are found as separate Git repositories in the
-    "saltstack-formulas" organization on GitHub:
+    More accurately, Formulas are not tested on earlier versions of Salt so
+    your mileage may vary.
 
-    https://github.com/saltstack-formulas
+    All Formulas require the grains execution module that shipped with Salt
+    0.16.4. Earlier Salt versions may copy :blob:`salt/modules/formula_util.py`
+    into the :file:`/srv/salt/_modules` directory and it will be automatically
+    distributed to all minions.
+
+    Some Formula utilize features added in Salt 0.17 and will not work on
+    earlier Salt versions.
+
+All official Salt Formulas are found as separate Git repositories in the
+"saltstack-formulas" organization on GitHub:
+
+https://github.com/saltstack-formulas
 
 As an example, quickly install and configure the popular memcached server using
 sane defaults simply by including the :formula:`memcached-formula` repository
@@ -170,7 +174,7 @@ A basic Formula repository should have the following layout::
 
     foo-formula
     |-- foo/
-    |   |-- package-map.jinja
+    |   |-- map.jinja
     |   |-- init.sls
     |   `-- bar.sls
     |-- LICENSE
@@ -206,18 +210,18 @@ A sample skeleton for the ``README.rst`` file:
     ``foo.bar``
         Install the ``bar`` package.
 
-``package-map.jinja``
----------------------
+``map.jinja``
+-------------
 
 It is useful to have a single source for platform-specific or other
 parameterized information that can be reused throughout a Formula. See
 ":ref:`conventions-formula-parameterization`" below for more information. Such
-a file should be named :file:`package-map.jinja` and live alongside the state
+a file should be named :file:`map.jinja` and live alongside the state
 files.
 
 The following is an example from the MySQL Formula.
 
-:file:`package-map.jinja`:
+:file:`map.jinja`:
 
 .. code:: jinja
 
@@ -247,7 +251,7 @@ state file using the following syntax:
 
 .. code:: yaml
 
-    {% from "mysql/package-map.jinja" import mysql with context %}
+    {% from "mysql/map.jinja" import mysql with context %}
 
     mysql-server:
       pkg:

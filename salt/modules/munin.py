@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 '''
 Run munin plugins/checks from salt and format the output as data.
 '''

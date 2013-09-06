@@ -13,7 +13,7 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
-deprecation_warning = ("The 'minion' arg will be removed from " 
+deprecation_warning = ("The 'minion' arg will be removed from "
                     "cache.py runner. Specify minion with 'tgt' arg!")
 
 def grains(tgt=None, expr_form='glob', **kwargs):

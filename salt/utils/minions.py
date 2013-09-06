@@ -53,7 +53,13 @@ class CkMinions(object):
         cwd = os.getcwd()
         os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
         ret = set(glob.glob(expr))
-        os.chdir(cwd)
+        try:
+            os.chdir(cwd)
+        except OSError as exc:
+            if exc.errno != 13:
+                # If it's not a permission denied, perhaps we're running with
+                # sudo
+                raise
         return list(ret)
 
     def _check_list_minions(self, expr):

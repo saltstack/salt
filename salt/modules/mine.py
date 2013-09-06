@@ -4,6 +4,7 @@ can be easily read by other minions
 '''
 
 # Import python libs
+import copy
 import logging
 
 # Import salt libs
@@ -92,14 +93,13 @@ def send(func, *args, **kwargs):
         return False
     data = {}
     arg_data = salt.utils.arg_lookup(__salt__[func])
-    func_data = {}
+    func_data = copy.deepcopy(kwargs)
     for ind, _ in enumerate(arg_data.get('args', [])):
         try:
-            func_data[arg_data[ind]] = args[ind]
+            func_data[arg_data['args'][ind]] = args[ind]
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    func_data.update(kwargs)
     f_call = salt.utils.format_call(__salt__[func], func_data)
     try:
         if 'kwargs' in f_call:

@@ -98,11 +98,11 @@ arbitrary commands on remote hosts.
         databases can be supported or custom interfaces can be easily
         communicated with.
 
-:doc:`Targeting </topics/targeting/index>`
-------------------------------------------
+Targeting
+---------
 
-Targeting is specifying which minions should execute commands or manage server
-configuration.
+:doc:`Targeting </topics/targeting/index>` is specifying which minions
+should execute commands or manage server configuration.
 
 :doc:`Globbing and regex </topics/targeting/globbing>`
     Match minions using globbing and regular expressions.
@@ -232,14 +232,19 @@ Reference
 :doc:`Full table of contents </contents>`
     Dense but complete.
 
+FAQ
+===
+
+See :doc:`here <faq>` for a list of Frequently Asked Questions.
+
 More information about the project
-----------------------------------
+==================================
 
 :doc:`Release notes </topics/releases/index>`
     Living history of Salt Stack.
 
 :doc:`Community </topics/community>`
-    How to can get involved.
+    How to get involved.
 
 :doc:`Salt Development </topics/development/index>`
     Information for Hacking on Salt

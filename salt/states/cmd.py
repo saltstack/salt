@@ -1,6 +1,6 @@
 '''
-Execution of arbitrary commands.
-================================
+Execution of arbitrary commands
+===============================
 
 The cmd state module manages the enforcement of executed commands, this
 state can tell a command to run under certain circumstances.
@@ -103,6 +103,33 @@ it can also watch a git state for changes
           - git: my-project
 
 
+Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states.cmd.wait>`?
+--------------------------------------------------------------------------------------------
+
+These two states are often confused. The important thing to remember about them
+is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS
+file that contains them is applied. If it is more desirable to have a command
+that only runs after some other state changes, then :mod:`cmd.wait
+<salt.states.cmd.wait>` does just that. :mod:`cmd.wait <salt.states.cmd.wait>`
+is designed to be :doc:`watched </ref/states/requisites>` by other states, and
+executed when the state watching it changes. Example:
+
+.. code-block:: yaml
+
+    /usr/local/bin/postinstall.sh:
+      cmd:
+        - wait
+      file:
+        - managed
+        - source: salt://utils/scripts/postinstall.sh
+
+    mycustompkg:
+      pkg:
+        - installed
+        - watch:
+          - cmd: /usr/local/bin/postinstall.sh
+        - require:
+          - file: /usr/local/bin/postinstall.sh
 '''
 
 # Import python libs
@@ -774,7 +801,7 @@ def mod_watch(name, **kwargs):
             func = kwargs.pop('func')
             return call(name, func, **kwargs)
         else:
-            return {'name': name, 
+            return {'name': name,
                     'changes': {},
                     'comment': 'cmd.{0[sfun]} needs a named parameter func'.format(kwargs),
                     'result': False}

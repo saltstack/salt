@@ -17,6 +17,7 @@ class TimedProc(object):
             # Translate a newline submitted as '\n' on the CLI to an actual
             # newline character.
             self.stdin = self.stdin.replace('\\n', '\n')
+            kwargs['stdin'] = subprocess.PIPE
         self.with_communicate = kwargs.pop('with_communicate', True)
 
         self.process = subprocess.Popen(args, **kwargs)

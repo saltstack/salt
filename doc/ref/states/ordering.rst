@@ -23,7 +23,7 @@ It makes states get evaluated in the order in which they are defined.
 State Auto Ordering
 ===================
 
-..versionadded: 0.17.0
+.. versionadded: 0.17.0
 
 Salt always executes states in a finite manner, meaning that they will always
 execute in the same order regardless of the system that is executing them.

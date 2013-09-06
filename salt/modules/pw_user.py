@@ -76,6 +76,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
     if salt.utils.is_true(kwargs.pop('system', False)):
         log.warning('pw_user module does not support the \'system\' argument')
     if kwargs:
@@ -125,7 +126,7 @@ def delete(name, remove=False, force=False):
     cmd = 'pw userdel '
     if remove:
         cmd += '-r '
-    cmd += name
+    cmd += '-n ' + name
 
     ret = __salt__['cmd.run_all'](cmd)
 

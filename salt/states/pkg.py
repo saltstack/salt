@@ -1,6 +1,6 @@
 '''
-Installation of packages using OS package managers such as yum or apt-get.
-==========================================================================
+Installation of packages using OS package managers such as yum or apt-get
+=========================================================================
 
 Salt can manage software packages via the pkg state module, packages can be
 set up to be installed, latest, removed and purged. Package management
@@ -390,6 +390,8 @@ def installed(
                                      for x in targets])
             comment = 'The following packages are set to be ' \
                       'installed/updated: {0}.'.format(summary)
+        else:
+            comment = ''
         return {'name': name,
                 'changes': {},
                 'result': None,

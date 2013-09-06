@@ -106,13 +106,13 @@ a ``top.sls`` of:
         - packages
         - services
 
-a packages.sls file of:
+a ``packages.sls`` file of:
 
 .. code-block:: yaml
 
     bind: bind9
 
-and a services.sls file of:
+and a ``services.sls`` file of:
 
 .. code-block:: yaml
 
@@ -120,7 +120,7 @@ and a services.sls file of:
 
 Then a request for the ``bind`` pillar will only return 'named'; the 'bind9'
 value is not available. It is better to structure your pillar files with more
-hierarchy. For example your package files could look like:
+hierarchy. For example your ``package.sls`` file could look like:
 
 .. code-block:: yaml
 
@@ -243,7 +243,7 @@ is being traversed. The below example would match minions with a pillar named
 
 .. code-block:: bash
 
-    salt -I 'foo:bar:baz*'
+    salt -I 'foo:bar:baz*' test.ping
 
 
 Master Config In Pillar
