@@ -266,6 +266,9 @@ class SaltCloud(parsers.SaltCloudParser):
                 sys.stderr.write('No nodes defined in this map')
                 self.exit(1)
             try:
+                ret = {}
+                run_map = True
+
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 dmap = mapper.map_data()
 
@@ -298,14 +301,24 @@ class SaltCloud(parsers.SaltCloudParser):
                         msg += '  {0}\n'.format(name)
 
                 if not dmap['create'] and not dmap.get('destroy', None):
-                    print(msg)
-                    self.exit(1)
+                    if not dmap.get('existing', None):
+                        # nothing to create or destroy & nothing exists
+                        print(msg)
+                        self.exit(1)
+                    else:
+                        # nothing to create or destroy, print existing
+                        run_map = False
 
-                if self.print_confirm(msg):
-                    ret = mapper.run_map(dmap)
+                if run_map:
+                    if self.print_confirm(msg):
+                        ret = mapper.run_map(dmap)
 
-                if self.config.get('parallel', False) is False:
-                    log.info('Complete')
+                    if self.config.get('parallel', False) is False:
+                        log.info('Complete')
+
+                if dmap.get('existing', None):
+                    for name in dmap['existing'].keys():
+                        ret[name] = {'Message': 'Already running'}
 
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a query error: {0}'
