@@ -7,6 +7,13 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    '''
+    Only work on apt-based platforms with pkg.get_selections
+    '''
+    return 'apt' if 'pkg.get_selections' in __salt__ else False
+
+
 def held(name):
     '''
     Set package in 'hold' state, meaning it will not be upgraded.
