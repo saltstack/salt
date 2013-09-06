@@ -12,6 +12,7 @@ Full list of builtin state modules
 
     alias
     alternatives
+    apt
     cmd
     cron
     debconfmod
