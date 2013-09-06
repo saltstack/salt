@@ -71,11 +71,11 @@ def echo_parseable_environment(platform, provider):
     '''
     name = generate_vm_name(platform)
     output = (
-        'SALTCLOUD_VM_PROVIDER="{provider}"\n'
-        'SALTCLOUD_VM_PLATFORM="{platform}"\n'
-        'SALTCLOUD_VM_NAME="{name}"\n').format(name=name,
-                                               provider=provider,
-                                               platform=platform)
+        'JENKINS_SALTCLOUD_VM_PROVIDER="{provider}"\n'
+        'JENKINS_SALTCLOUD_VM_PLATFORM="{platform}"\n'
+        'JENKINS_SALTCLOUD_VM_NAME="{name}"\n').format(name=name,
+                                                       provider=provider,
+                                                       platform=platform)
     sys.stdout.write(output)
     sys.stdout.flush()
 
@@ -85,7 +85,7 @@ def run(opts):
     RUN!
     '''
     vm_name = os.environ.get(
-        'SALTCLOUD_VM_PLATFORM',
+        'JENKINS_SALTCLOUD_VM_PLATFORM',
         generate_vm_name(opts.platform)
     )
 
@@ -110,7 +110,7 @@ def run(opts):
     if retcode != 0:
         print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if opts.clean:
+        if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
             delete_vm(vm_name)
         sys.exit(retcode)
 
@@ -161,7 +161,7 @@ def run(opts):
             # Anything else, raise the exception
             raise
 
-    if opts.clean:
+    if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(vm_name)
     return retcode
 
@@ -173,11 +173,11 @@ def parse():
     parser = optparse.OptionParser()
     parser.add_option('--platform',
         dest='platform',
-        default=os.environ.get('SALTCLOUD_VM_PLATFORM', None),
+        default=os.environ.get('JENKINS_SALTCLOUD_VM_PLATFORM', None),
         help='The target platform, choose from:\ncent6\ncent5\nubuntu12.04')
     parser.add_option('--provider',
         dest='provider',
-        default=os.environ.get('SALTCLOUD_VM_PROVIDER', None),
+        default=os.environ.get('JENKINS_SALTCLOUD_VM_PROVIDER', None),
         help='The vm provider')
     parser.add_option('--commit',
         dest='commit',
@@ -203,13 +203,13 @@ def parse():
     )
     parser.add_option(
         '--delete-vm',
-        default=None,
-        help='Print a parseable KEY=VAL output'
+        default=os.environ.get('JENKINS_SALTCLOUD_VM_NAME', None),
+        help='Delete a running VM'
     )
 
     options, args = parser.parse_args()
 
-    if options.delete_vm is not None:
+    if options.delete_vm is not None and not options.commit:
         delete_vm(options.delete_vm)
         parser.exit(0)
 
