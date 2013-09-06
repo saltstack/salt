@@ -85,7 +85,9 @@ def run(opts):
     RUN!
     '''
     import pprint
+    print '+' * 80
     pprint.pprint(os.environ)
+    print '+' * 80
 
     vm_name = os.environ.get(
         'SALTCLOUD_VM_PLATFORM',
