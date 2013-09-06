@@ -2,10 +2,8 @@
 Management of MySQL users.
 ==========================
 
-:strong:`NOTE:` These states require the MySQLdb python module be installed on
-the minion, and additional settings added to the minion config file. See the
-documentation for the :mod:`mysql <salt.modules.mysql>` module for more
-information.
+:depends:   - MySQLdb Python module
+:configuration: See :py:mod:`salt.modules.mysql` for setup instructions.
 
 .. code-block:: yaml
 

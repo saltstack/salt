@@ -57,7 +57,9 @@ def enforce_nice_config():
     Enforce a nice tree structure for /etc/portage/package.* configuration
     files.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.enforce_nice_config
     '''
@@ -220,7 +222,9 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
     Append a string or a list of flags for a given package or DEPEND atom to a
     given configuration file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.append_to_package_conf use string="app-admin/salt ldap -libvirt"
         salt '*' portage_config.append_to_package_conf use atom="> = app-admin/salt-0.14.1" flags="['ldap', '-libvirt']"
@@ -332,7 +336,9 @@ def append_use_flags(atom, uses=None, overwrite=False):
     '''
     Append a list of use flags for a given package or DEPEND atom
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.append_use_flags "app-admin/salt[ldap, -libvirt]"
         salt '*' portage_config.append_use_flags ">=app-admin/salt-0.14.1" "['ldap', '-libvirt']"
@@ -351,7 +357,9 @@ def get_flags_from_package_conf(conf, atom):
     Warning: This only works if the configuration files tree is in the correct
     format (the one enforced by enforce_nice_config)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.get_flags_from_package_conf license salt
     '''
@@ -385,7 +393,9 @@ def has_flag(conf, atom, flag):
     Warning: This only works if the configuration files tree is in the correct
     format (the one enforced by enforce_nice_config)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.has_flag license salt Apache-2.0
     '''
@@ -397,7 +407,9 @@ def has_flag(conf, atom, flag):
 def get_missing_flags(conf, atom, flags):
     '''
     Find out which of the given flags are currently not set.
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.get_missing_flags use salt "['ldap', '-libvirt', 'openssl']"
     '''
@@ -414,7 +426,9 @@ def has_use(atom, use):
     Warning: This only works if the configuration files tree is in the correct
     format (the one enforced by enforce_nice_config)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.has_use salt libvirt
     '''
@@ -428,7 +442,9 @@ def is_present(conf, atom):
     Warning: This only works if the configuration files tree is in the correct
     format (the one enforced by enforce_nice_config)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.is_present unmask salt
     '''

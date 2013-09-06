@@ -1,10 +1,15 @@
 '''
-ext_pillar adapter for reclass.
+.. |reclass| replace:: **reclass**
 
-Please refer to the file ``README.Salt`` in the reclass source for more
-information on how to use these. In a nutshell, you'll just add the plugin to
-the ext_pillar hash in the master config and tell reclass by way of a few
-options how and where to find the inventory:
+This ``ext_pillar`` plugin provides access to the |reclass| database, such
+that Pillar data for a specific minion are fetched using |reclass|.
+
+You can find more information about |reclass| at
+http://reclass.pantsfullofunix.net.
+
+To use the plugin, add it to the ``ext_pillar`` list in the Salt master config
+and tell |reclass| by way of a few options how and where to find the
+inventory:
 
 .. code-block:: yaml
 
@@ -13,13 +18,12 @@ options how and where to find the inventory:
             storage_type: yaml_fs
             base_inventory_uri: /srv/salt
 
-This would cause reclass to read the inventory from YAML files in
+This would cause |reclass| to read the inventory from YAML files in
 ``/srv/salt/nodes`` and ``/srv/salt/classes``.
 
-More information about reclass: http://github.com/madduck/reclass
-
-If you are also using master_tops and you want to avoid having to specify the
-same information for both, use YAML anchors:
+If you are also using |reclass| as ``master_tops`` plugin, and you want to
+avoid having to specify the same information for both, use YAML anchors (take
+note of the differing data types for ``ext_pillar`` and ``master_tops``):
 
 .. code-block:: yaml
 
@@ -38,12 +42,17 @@ If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
 '''
+
 # This file cannot be called reclass.py, because then the module import would
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
-from salt.utils.reclass import prepend_reclass_source_path, \
-        filter_out_source_path_option, set_inventory_base_uri_default
+from salt.utils.reclass import (
+    prepend_reclass_source_path,
+    filter_out_source_path_option,
+    set_inventory_base_uri_default
+)
+
 
 def __virtual__(retry=False):
     try:
@@ -69,6 +78,10 @@ def __virtual__(retry=False):
 from salt.exceptions import SaltInvocationError
 
 def ext_pillar(minion_id, pillar, **kwargs):
+    '''
+    Obtain the Pillar data from **reclass** for the given ``minion_id``.
+    '''
+
     # If reclass is installed, __virtual__ put it onto the search path, so we
     # don't need to protect against ImportError:
     from reclass.adapters.salt import ext_pillar as reclass_ext_pillar
@@ -104,4 +117,4 @@ def ext_pillar(minion_id, pillar, **kwargs):
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError('ext_pillar.reclass: ' + e.message)
+        raise SaltInvocationError('ext_pillar.reclass: {0}'.format(e.message))

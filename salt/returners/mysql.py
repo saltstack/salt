@@ -80,15 +80,19 @@ def _get_options():
     '''
     Returns options used for the MySQL connection.
     '''
-    defaults = { "host": "salt", "user": "salt", "pass": "salt", "db": "salt", "port": 3306 }
-    _options = { }
+    defaults = {'host': 'salt',
+                'user': 'salt',
+                'pass': 'salt',
+                'db': 'salt',
+                'port': 3306}
+    _options = {}
     for attr in defaults:
-      _attr = __salt__['config.option']('mysql.{0}'.format(attr))
-      if not _attr:
-        log.debug('Using default for Mysql {0}'.format(attr))
-        _options[attr] = defaults[attr]
-        continue
-      _options[attr] = _attr
+        _attr = __salt__['config.option']('mysql.{0}'.format(attr))
+        if not _attr:
+            log.debug('Using default for MySQL {0}'.format(attr))
+            _options[attr] = defaults[attr]
+            continue
+        _options[attr] = _attr
 
     return _options
 

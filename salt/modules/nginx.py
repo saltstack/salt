@@ -28,7 +28,9 @@ def version():
     '''
     Return server version from nginx -v
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nginx.version
     '''
@@ -42,7 +44,9 @@ def configtest():
     '''
     test configuration and exit
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nginx.configtest
     '''
@@ -57,7 +61,9 @@ def signal(signal=None):
     '''
     Signals nginx to start, reload, reopen or stop.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nginx.signal reload
     '''
