@@ -56,8 +56,7 @@ def wrap_tmpl_func(render_str):
                 except (UnicodeDecodeError, ValueError) as exc:
                     if salt.utils.is_bin_file(tmplsrc):
                         # Template is a bin file, return the raw file
-                        with open(tmplsrc, 'r') as fp_:
-                            return dict(result=True, data=fp_.read())
+                        return dict(result=True, data=tmplsrc)
                     log.error('Exception ocurred while reading file {0}: {1}'
                               .format(tmplsrc, exc))
                     raise exc
