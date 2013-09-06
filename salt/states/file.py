@@ -60,7 +60,13 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
           - salt://foo.conf?env=dev
         - user: foo
         - group: users
-        - mode: 644
+        - mode: '0644'
+
+    .. warning::
+
+        When using a mode that includes a leading zero you MUST wrap the 
+        value in single quotes. If the value is not wrapped in quotes it
+        will be interpreted as an octal.
 
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
