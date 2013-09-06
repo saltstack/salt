@@ -1,5 +1,7 @@
+# Import python libs
 import logging
 
+# Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -8,6 +10,9 @@ log = logging.getLogger(__name__)
 def held(name):
     '''
     Set package in 'hold' state, meaning it will not be upgraded.
+
+    name
+        The name of the package, e.g., 'tmux'
     '''
     ret = {'name': name}
     state = __salt__['pkg.get_selections'](
