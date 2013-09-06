@@ -52,7 +52,7 @@ def auth():
     auth_url = __salt__['config.option']('keystone.auth_url',
                                          'http://127.0.0.1:35357/v2.0/')
     insecure = __salt__['config.option']('keystone.insecure', False)
-    token = __salt__['config.option']('keystone.token', 'ADMIN')
+    token = __salt__['config.option']('keystone.token')
     endpoint = __salt__['config.option']('keystone.endpoint',
                                          'http://127.0.0.1:35357/v2.0')
 
