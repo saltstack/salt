@@ -122,6 +122,7 @@ def run(opts):
     sys.stdout.flush()
 
     print('Sleeping for 5 seconds to allow the minion to breath a little')
+    sys.stdout.flush()
     time.sleep(5)
 
     # Run tests here
