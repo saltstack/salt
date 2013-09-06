@@ -44,14 +44,14 @@ def auth():
 
     Only intended to be used within Keystone-enabled modules
     '''
-    user = __salt__['config.option']('keystone.user')
-    password = __salt__['config.option']('keystone.password')
-    tenant = __salt__['config.option']('keystone.tenant')
+    user = __salt__['config.option']('keystone.user', 'admin')
+    password = __salt__['config.option']('keystone.password', 'ADMIN')
+    tenant = __salt__['config.option']('keystone.tenant', 'admin')
     tenant_id = __salt__['config.option']('keystone.tenant_id')
-    auth_url = __salt__['config.option']('keystone.auth_url')
-    insecure = __salt__['config.option']('keystone.insecure')
+    auth_url = __salt__['config.option']('keystone.auth_url', 'http://127.0.0.1:35357/v2.0/')
+    insecure = __salt__['config.option']('keystone.insecure', False)
     token = __salt__['config.option']('keystone.token')
-    endpoint = __salt__['config.option']('keystone.endpoint')
+    endpoint = __salt__['config.option']('keystone.endpoint', 'http://127.0.0.1:35357/v2.0')
 
     kwargs = {}
     if token:
