@@ -12,11 +12,11 @@ import imp
 import inspect
 import logging
 import os
-import platform
 import random
 import re
 import shlex
 import shutil
+import string
 import socket
 import stat
 import subprocess
@@ -1510,3 +1510,39 @@ def decode_dict(data):
             value = decode_dict(value)
         rv[key] = value
     return rv
+
+
+def is_bin_file(path):
+    '''
+    Detects if the file is a binary, returns bool. Returns True if the file is
+    a bin, False if the file is not and None if the file is not available.
+    '''
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, 'r') as fp_:
+            return(is_bin_str(fp_.read(2048)))
+    except os.error:
+        return None
+
+
+def is_bin_str(data):
+    '''
+    Detects if the passed string of data is bin or text
+    '''
+    text_characters = ''.join(map(chr, range(32, 127)) + list('\n\r\t\b'))
+    _null_trans = string.maketrans('', '')
+    if '\0' in data:
+        return True
+    if not data:
+        return False
+
+    # Get the non-text characters (maps a character to itself then
+    # use the 'remove' option to get rid of the text characters.)
+    text = data.translate(_null_trans, text_characters)
+
+    # If more than 30% non-text characters, then
+    # this is considered a binary file
+    if len(text)/len(data) > 0.30:
+        return True
+    return False
