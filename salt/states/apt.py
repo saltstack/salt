@@ -20,8 +20,7 @@ def held(name):
     )
     if not state:
         ret.update(comment='Package {0} does not have a state'.format(name))
-        return ret
-    if not salt.utils.is_true(state.get('hold', False)):
+    elif not salt.utils.is_true(state.get('hold', False)):
         if not __opts__['test']:
             result = __salt__['pkg.set_selections'](
                 selection={'hold': [name]}
