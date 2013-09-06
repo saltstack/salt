@@ -1795,7 +1795,10 @@ class ClearFuncs(object):
             try:
                 fun = clear_load.pop('fun')
                 runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(fun, clear_load.get('kwarg', {}))
+                return runner_client.async(
+                        fun,
+                        clear_load.get('kwarg', {}),
+                        clear_load.get('username', 'UNKNOWN'))
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
