@@ -286,6 +286,7 @@
 # file_ignore_glob:
 #   - '*.pyc'
 #   - '*/somefolder/*.bak'
+#   - '*.swp'
 
 # File Server Backend
 # Salt supports a modular fileserver backend system, this system allows
