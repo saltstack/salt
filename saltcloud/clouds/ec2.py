@@ -1020,10 +1020,8 @@ def create(vm_=None, call=None):
 
         if isinstance(data, list) and not data:
             log.warn(
-                'There was an error in the query. {0} attempts '
-                'remaining: {1}'.format(
-                    attempts, data['error']
-                )
+                'Query returned an empty list. {0} attempts '
+                'remaining.'.format(attempts)
             )
             attempts -= 1
             continue
