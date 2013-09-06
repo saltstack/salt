@@ -49,26 +49,24 @@ def auth():
     password = __salt__['config.option']('keystone.password', 'ADMIN')
     tenant = __salt__['config.option']('keystone.tenant', 'admin')
     tenant_id = __salt__['config.option']('keystone.tenant_id')
-    auth_url = __salt__['config.option']('keystone.auth_url', 'http://127.0.0.1:35357/v2.0/')
+    auth_url = __salt__['config.option']('keystone.auth_url',
+                                         'http://127.0.0.1:35357/v2.0/')
     insecure = __salt__['config.option']('keystone.insecure', False)
     token = __salt__['config.option']('keystone.token', 'ADMIN')
-    endpoint = __salt__['config.option']('keystone.endpoint', 'http://127.0.0.1:35357/v2.0')
+    endpoint = __salt__['config.option']('keystone.endpoint',
+                                         'http://127.0.0.1:35357/v2.0')
 
     kwargs = {}
     if token:
-        kwargs = {
-                'token': token,
-                'endpoint': endpoint,
-                }
+        kwargs = {'token': token,
+                  'endpoint': endpoint}
     else:
-        kwargs = {
-                'username': user,
-                'password': password,
-                'tenant_name': tenant,
-                'tenant_id': tenant_id,
-                'auth_url': auth_url,
-                'insecure': insecure,
-                }
+        kwargs = {'username': user,
+                  'password': password,
+                  'tenant_name': tenant,
+                  'tenant_id': tenant_id,
+                  'auth_url': auth_url,
+                  'insecure': insecure}
 
     return client.Client(**kwargs)
 
@@ -99,12 +97,10 @@ def ec2_credentials_get(user_id=None,
     if not access:
         return {'Error': 'Access key is required'}
     ec2_credentials = kstone.ec2.get(user_id=user_id, access=access)
-    ret[ec2_credentials.user_id] = {
-            'user_id': ec2_credentials.user_id,
-            'tenant': ec2_credentials.tenant_id,
-            'access': ec2_credentials.access,
-            'secret': ec2_credentials.secret,
-            }
+    ret[ec2_credentials.user_id] = {'user_id': ec2_credentials.user_id,
+                                    'tenant': ec2_credentials.tenant_id,
+                                    'access': ec2_credentials.access,
+                                    'secret': ec2_credentials.secret}
     return ret
 
 
@@ -130,12 +126,10 @@ def ec2_credentials_list(user_id=None, name=None):
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
     for ec2_credential in kstone.ec2.list(user_id):
-        ret[ec2_credential.user_id] = {
-                'user_id': ec2_credential.user_id,
-                'tenant_id': ec2_credential.tenant_id,
-                'access': ec2_credential.access,
-                'secret': ec2_credential.secret,
-                }
+        ret[ec2_credential.user_id] = {'user_id': ec2_credential.user_id,
+                                       'tenant_id': ec2_credential.tenant_id,
+                                       'access': ec2_credential.access,
+                                       'secret': ec2_credential.secret}
     return ret
 
 
@@ -166,14 +160,12 @@ def endpoint_list():
     kstone = auth()
     ret = {}
     for endpoint in kstone.endpoints.list():
-        ret[endpoint.id] = {
-                'id': endpoint.id,
-                'region': endpoint.region,
-                'adminurl': endpoint.adminurl,
-                'internalurl': endpoint.internalurl,
-                'publicurl': endpoint.publicurl,
-                'service_id': endpoint.service_id,
-                }
+        ret[endpoint.id] = {'id': endpoint.id,
+                            'region': endpoint.region,
+                            'adminurl': endpoint.adminurl,
+                            'internalurl': endpoint.internalurl,
+                            'publicurl': endpoint.publicurl,
+                            'service_id': endpoint.service_id}
     return ret
 
 
@@ -199,10 +191,8 @@ def role_get(role_id=None, name=None):
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
     role = kstone.roles.get(role_id)
-    ret[role.name] = {
-            'id': role.id,
-            'name': role.name,
-            }
+    ret[role.name] = {'id': role.id,
+                      'name': role.name}
     return ret
 
 
@@ -219,10 +209,8 @@ def role_list():
     kstone = auth()
     ret = {}
     for role in kstone.roles.list():
-        ret[role.name] = {
-                'id': role.id,
-                'name': role.name,
-                }
+        ret[role.name] = {'id': role.id,
+                          'name': role.name}
     return ret
 
 
@@ -248,12 +236,10 @@ def service_get(service_id=None, name=None):
     if not service_id:
         return {'Error': 'Unable to resolve service id'}
     service = kstone.services.get(service_id)
-    ret[service.name] = {
-            'id': service.id,
-            'name': service.name,
-            'type': service.type,
-            'description': service.description,
-            }
+    ret[service.name] = {'id': service.id,
+                         'name': service.name,
+                         'type': service.type,
+                         'description': service.description}
     return ret
 
 
@@ -270,12 +256,10 @@ def service_list():
     kstone = auth()
     ret = {}
     for service in kstone.services.list():
-        ret[service.name] = {
-                'id': service.id,
-                'name': service.name,
-                'description': service.description,
-                'type': service.type,
-                }
+        ret[service.name] = {'id': service.id,
+                             'name': service.name,
+                             'description': service.description,
+                             'type': service.type}
     return ret
 
 
@@ -301,12 +285,10 @@ def tenant_get(tenant_id=None, name=None):
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
     tenant = kstone.tenants.get(tenant_id)
-    ret[tenant.name] = {
-            'id': tenant.id,
-            'name': tenant.name,
-            'description': tenant.description,
-            'enabled': tenant.enabled,
-            }
+    ret[tenant.name] = {'id': tenant.id,
+                        'name': tenant.name,
+                        'description': tenant.description,
+                        'enabled': tenant.enabled}
     return ret
 
 
@@ -323,12 +305,10 @@ def tenant_list():
     kstone = auth()
     ret = {}
     for tenant in kstone.tenants.list():
-        ret[tenant.name] = {
-                'id': tenant.id,
-                'name': tenant.name,
-                'description': tenant.description,
-                'enabled': tenant.enabled,
-                }
+        ret[tenant.name] = {'id': tenant.id,
+                            'name': tenant.name,
+                            'description': tenant.description,
+                            'enabled': tenant.enabled}
     return ret
 
 
@@ -344,12 +324,10 @@ def token_get():
     '''
     kstone = auth()
     token = kstone.service_catalog.get_token()
-    return {
-            'id': token['id'],
+    return {'id': token['id'],
             'expires': token['expires'],
             'user_id': token['user_id'],
-            'tenant_id': token['tenant_id'],
-            }
+            'tenant_id': token['tenant_id']}
 
 
 def user_list():
@@ -365,13 +343,11 @@ def user_list():
     kstone = auth()
     ret = {}
     for user in kstone.users.list():
-        ret[user.name] = {
-                'id': user.id,
-                'name': user.name,
-                'email': user.email,
-                'enabled': user.enabled,
-                'tenant_id': user.tenantId,
-                }
+        ret[user.name] = {'id': user.id,
+                          'name': user.name,
+                          'email': user.email,
+                          'enabled': user.enabled,
+                          'tenant_id': user.tenantId}
     return ret
 
 
@@ -397,13 +373,11 @@ def user_get(user_id=None, name=None):
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
     user = kstone.users.get(user_id)
-    ret[user.name] = {
-            'id': user.id,
-            'name': user.name,
-            'email': user.email,
-            'enabled': user.enabled,
-            'tenant_id': user.tenantId,
-            }
+    ret[user.name] = {'id': user.id,
+                      'name': user.name,
+                      'email': user.email,
+                      'enabled': user.enabled,
+                      'tenant_id': user.tenantId}
     return ret
 
 
@@ -418,13 +392,11 @@ def user_create(name, password, email, tenant_id=None, enabled=True):
         salt '*' keystone.user_create name=jack password=zero email=jack@halloweentown.org tenant_id=a28a7b5a999a455f84b1f5210264375e enabled=True
     '''
     kstone = auth()
-    item = kstone.users.create(
-        name=name,
-        password=password,
-        email=email,
-        tenant_id=tenant_id,
-        enabled=enabled,
-        )
+    item = kstone.users.create(name=name,
+                               password=password,
+                               email=email,
+                               tenant_id=tenant_id,
+                               enabled=enabled)
     return user_get(item.id)
 
 
@@ -539,12 +511,10 @@ def user_role_list(user_id=None,
     if not user_id and not tenant_id:
         return {'Error': 'Unable to resolve user or tenant id'}
     for role in kstone.roles.roles_for_user(user=user_id, tenant=tenant_id):
-        ret[role.name] = {
-                'id': role.id,
-                'name': role.name,
-                'user_id': user_id,
-                'tenant_id': tenant_id,
-                }
+        ret[role.name] = {'id': role.id,
+                          'name': role.name,
+                          'user_id': user_id,
+                          'tenant_id': tenant_id}
     return ret
 
 
