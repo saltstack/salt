@@ -65,8 +65,11 @@ def auth():
                   'password': password,
                   'tenant_name': tenant,
                   'tenant_id': tenant_id,
-                  'auth_url': auth_url,
-                  'insecure': insecure}
+                  'auth_url': auth_url}
+        # 'insecure' keyword not supported by all v2.0 keystone clients
+        #   this ensures it's only passed in when defined
+        if insecure:
+            kwargs[insecure] = True
 
     return client.Client(**kwargs)
 
@@ -82,7 +85,7 @@ def ec2_credentials_get(user_id=None,
     .. code-block:: bash
 
         salt '*' keystone.ec2_credentials_get c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
-        salt '*' keystone.ec2_credentials_get id=c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
+        salt '*' keystone.ec2_credentials_get user_id=c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
         salt '*' keystone.ec2_credentials_get name=nova access=722787eb540849158668370dc627ec5f
     '''
     kstone = auth()
@@ -113,7 +116,7 @@ def ec2_credentials_list(user_id=None, name=None):
     .. code-block:: bash
 
         salt '*' keystone.ec2_credentials_list 298ce377245c4ec9b70e1c639c89e654
-        salt '*' keystone.ec2_credentials_list id=298ce377245c4ec9b70e1c639c89e654
+        salt '*' keystone.ec2_credentials_list user_id=298ce377245c4ec9b70e1c639c89e654
         salt '*' keystone.ec2_credentials_list name=jack
     '''
     kstone = auth()
@@ -178,7 +181,7 @@ def role_get(role_id=None, name=None):
     .. code-block:: bash
 
         salt '*' keystone.role_get c965f79c4f864eaaa9c3b41904e67082
-        salt '*' keystone.role_get id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.role_get role_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.role_get name=nova
     '''
     kstone = auth()
@@ -223,7 +226,7 @@ def service_get(service_id=None, name=None):
     .. code-block:: bash
 
         salt '*' keystone.service_get c965f79c4f864eaaa9c3b41904e67082
-        salt '*' keystone.service_get id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.service_get service_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_get name=nova
     '''
     kstone = auth()
@@ -272,7 +275,7 @@ def tenant_get(tenant_id=None, name=None):
     .. code-block:: bash
 
         salt '*' keystone.tenant_get c965f79c4f864eaaa9c3b41904e67082
-        salt '*' keystone.tenant_get id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.tenant_get tenant_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.tenant_get name=nova
     '''
     kstone = auth()
@@ -360,7 +363,7 @@ def user_get(user_id=None, name=None):
     .. code-block:: bash
 
         salt '*' keystone.user_get c965f79c4f864eaaa9c3b41904e67082
-        salt '*' keystone.user_get id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.user_get user_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_get name=nova
     '''
     kstone = auth()
@@ -409,7 +412,7 @@ def user_delete(user_id=None, name=None):
     .. code-block:: bash
 
         salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082
-        salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.user_delete user_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_delete name=nova
     '''
     kstone = auth()
@@ -440,7 +443,7 @@ def user_update(user_id=None,
 
     .. code-block:: bash
 
-        salt '*' keystone.user_update id=c965f79c4f864eaaa9c3b41904e67082 name=newname
+        salt '*' keystone.user_update user_id=c965f79c4f864eaaa9c3b41904e67082 name=newname
         salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
     '''
     kstone = auth()
@@ -449,6 +452,39 @@ def user_update(user_id=None,
     kstone.users.update(user=user_id, name=name, email=email, enabled=enabled)
     ret = 'Info updated for user ID {0}'.format(user_id)
     return ret
+
+
+def user_verify_password(user_id=None,
+                         name=None,
+                         password=None):
+    '''
+    Verify a user's password
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.user_verify_password name=test password=foobar
+        salt '*' keystone.user_verify_password user_id=c965f79c4f864eaaa9c3b41904e67082 password=foobar
+    '''
+    kstone = auth()
+    auth_url = __salt__['config.option']('keystone.endpoint',
+                                         'http://127.0.0.1:35357/v2.0')
+    if user_id:
+        for user in kstone.users.list():
+            if user.id == user_id:
+                name = user.name
+                continue
+    if not name:
+        return {'Error': 'Unable to resolve user name'}
+    kwargs = {'username': name,
+              'password': password,
+              'auth_url': auth_url}
+    try:
+        userauth = client.Client(**kwargs)
+    except Exception as error:
+        return str(error)
+    return 'Password is valid'
 
 
 def user_password_update(user_id=None,
@@ -462,7 +498,7 @@ def user_password_update(user_id=None,
     .. code-block:: bash
 
         salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_delete user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
         salt '*' keystone.user_delete name=nova password=12345
     '''
     kstone = auth()
