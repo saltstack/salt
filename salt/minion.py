@@ -645,7 +645,7 @@ class Minion(object):
                 args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
-                if isinstance(types.GeneratorType):
+                if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}
                     for single in return_data:
