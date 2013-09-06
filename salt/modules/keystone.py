@@ -73,9 +73,9 @@ def auth():
     return client.Client(**kwargs)
 
 
-def ec2_credentials_get(id=None,       # pylint: disable=C0103
+def ec2_credentials_get(user_id=None,
                         name=None,
-                        access=None):  # pylint: disable=C0103
+                        access=None):
     '''
     Return ec2_credentials for a user (keystone ec2-credentials-get)
 
@@ -92,13 +92,13 @@ def ec2_credentials_get(id=None,       # pylint: disable=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable=C0103
+                user_id = user.id
                 continue
-    if not id:
+    if not user_id:
         return {'Error': 'Unable to resolve user id'}
     if not access:
         return {'Error': 'Access key is required'}
-    ec2_credentials = kstone.ec2.get(user_id=id, access=access)
+    ec2_credentials = kstone.ec2.get(user_id=user_id, access=access)
     ret[ec2_credentials.user_id] = {
             'user_id': ec2_credentials.user_id,
             'tenant': ec2_credentials.tenant_id,
@@ -108,7 +108,7 @@ def ec2_credentials_get(id=None,       # pylint: disable=C0103
     return ret
 
 
-def ec2_credentials_list(id=None, name=None):  # pylint: disable=C0103
+def ec2_credentials_list(user_id=None, name=None):
     '''
     Return a list of ec2_credentials for a specific user (keystone ec2-credentials-list)
 
@@ -125,11 +125,11 @@ def ec2_credentials_list(id=None, name=None):  # pylint: disable=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable=C0103
+                user_id = user.id
                 continue
-    if not id:
+    if not user_id:
         return {'Error': 'Unable to resolve user id'}
-    for ec2_credential in kstone.ec2.list(id):
+    for ec2_credential in kstone.ec2.list(user_id):
         ret[ec2_credential.user_id] = {
                 'user_id': ec2_credential.user_id,
                 'tenant_id': ec2_credential.tenant_id,
@@ -177,7 +177,7 @@ def endpoint_list():
     return ret
 
 
-def role_get(id=None, name=None):  # pylint: disable=C0103
+def role_get(role_id=None, name=None):
     '''
     Return a specific roles (keystone role-get)
 
@@ -194,11 +194,11 @@ def role_get(id=None, name=None):  # pylint: disable=C0103
     if name:
         for role in kstone.roles.list():
             if role.name == name:
-                id = role.id  # pylint: disable=C0103
+                role_id = role.id
                 continue
-    if not id:
+    if not role_id:
         return {'Error': 'Unable to resolve role id'}
-    role = kstone.roles.get(id)
+    role = kstone.roles.get(role_id)
     ret[role.name] = {
             'id': role.id,
             'name': role.name,
@@ -226,7 +226,7 @@ def role_list():
     return ret
 
 
-def service_get(id=None, name=None):  # pylint: disable=C0103
+def service_get(service_id=None, name=None):
     '''
     Return a specific services (keystone service-get)
 
@@ -243,11 +243,11 @@ def service_get(id=None, name=None):  # pylint: disable=C0103
     if name:
         for service in kstone.services.list():
             if service.name == name:
-                id = service.id  # pylint: disable=C0103
+                service_id = service.id
                 continue
-    if not id:
+    if not service_id:
         return {'Error': 'Unable to resolve service id'}
-    service = kstone.services.get(id)
+    service = kstone.services.get(service_id)
     ret[service.name] = {
             'id': service.id,
             'name': service.name,
@@ -279,7 +279,7 @@ def service_list():
     return ret
 
 
-def tenant_get(id=None, name=None):  # pylint: disable=C0103
+def tenant_get(tenant_id=None, name=None):
     '''
     Return a specific tenants (keystone tenant-get)
 
@@ -296,11 +296,11 @@ def tenant_get(id=None, name=None):  # pylint: disable=C0103
     if name:
         for tenant in kstone.tenants.list():
             if tenant.name == name:
-                id = tenant.id  # pylint: disable=C0103
+                tenant_id = tenant.id
                 continue
-    if not id:
+    if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
-    tenant = kstone.tenants.get(id)
+    tenant = kstone.tenants.get(tenant_id)
     ret[tenant.name] = {
             'id': tenant.id,
             'name': tenant.name,
@@ -375,7 +375,7 @@ def user_list():
     return ret
 
 
-def user_get(id=None, name=None):  # pylint: disable=C0103
+def user_get(user_id=None, name=None):
     '''
     Return a specific users (keystone user-get)
 
@@ -392,11 +392,11 @@ def user_get(id=None, name=None):  # pylint: disable=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable=C0103
+                user_id = user.id
                 continue
-    if not id:
+    if not user_id:
         return {'Error': 'Unable to resolve user id'}
-    user = kstone.users.get(id)
+    user = kstone.users.get(user_id)
     ret[user.name] = {
             'id': user.id,
             'name': user.name,
@@ -428,7 +428,7 @@ def user_create(name, password, email, tenant_id=None, enabled=True):
     return user_get(item.id)
 
 
-def user_delete(id=None, name=None):  # pylint: disable=C0103
+def user_delete(user_id=None, name=None):
     '''
     Delete a user (keystone user-delete)
 
@@ -444,21 +444,21 @@ def user_delete(id=None, name=None):  # pylint: disable=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable=C0103
+                user_id = user.id
                 continue
-    if not id:
+    if not user_id:
         return {'Error': 'Unable to resolve user id'}
-    kstone.users.delete(id)
-    ret = 'User ID {0} deleted'.format(id)
+    kstone.users.delete(user_id)
+    ret = 'User ID {0} deleted'.format(user_id)
     if name:
         ret += ' ({0})'.format(name)
     return ret
 
 
-def user_update(id=None,        # pylint: disable=C0103
+def user_update(user_id=None,
                 name=None,
                 email=None,
-                enabled=None):  # pylint: disable=C0103
+                enabled=None):
     '''
     Update a user's information (keystone user-update)
     The following fields may be updated: name, email, enabled.
@@ -472,16 +472,16 @@ def user_update(id=None,        # pylint: disable=C0103
         salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
     '''
     kstone = auth()
-    if not id:
+    if not user_id:
         return {'Error': 'Unable to resolve user id'}
-    kstone.users.update(user=id, name=name, email=email, enabled=enabled)
-    ret = 'Info updated for user ID {0}'.format(id)
+    kstone.users.update(user=user_id, name=name, email=email, enabled=enabled)
+    ret = 'Info updated for user ID {0}'.format(user_id)
     return ret
 
 
-def user_password_update(id=None,         # pylint: disable=C0103
+def user_password_update(user_id=None,
                          name=None,
-                         password=None):  # pylint: disable=C0103
+                         password=None):
     '''
     Update a user's password (keystone user-password-update)
 
@@ -497,12 +497,12 @@ def user_password_update(id=None,         # pylint: disable=C0103
     if name:
         for user in kstone.users.list():
             if user.name == name:
-                id = user.id  # pylint: disable=C0103
+                user_id = user.id
                 continue
-    if not id:
+    if not user_id:
         return {'Error': 'Unable to resolve user id'}
-    kstone.users.update_password(user=id, password=password)
-    ret = 'Password updated for user ID {0}'.format(id)
+    kstone.users.update_password(user=user_id, password=password)
+    ret = 'Password updated for user ID {0}'.format(user_id)
     if name:
         ret += ' ({0})'.format(name)
     return ret
