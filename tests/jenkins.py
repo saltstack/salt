@@ -85,7 +85,7 @@ def run(opts):
     RUN!
     '''
     vm_name = os.environ.get(
-        'JENKINS_SALTCLOUD_VM_PLATFORM',
+        'JENKINS_SALTCLOUD_VM_NAME',
         generate_vm_name(opts.platform)
     )
 
