@@ -40,13 +40,13 @@ def generate_vm_name(platform):
     '''
     Generate a random enough vm name
     '''
-    return 'ZZZ-{0}-{1}'.format(
-        platform,
-        os.environ.get(
-            'BUILD_NUMBER',
-            hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
-        )
-    )
+    if 'BUILD_NUMBER' in os.environ:
+        random_part = 'BUILD{0:0>6}'.format(os.environ.get('BUILD_NUMBER'))
+    else:
+        random_part = hashlib.md5(
+            str(random.randint(1, 100000000))).hexdigest()[:6]
+
+    return 'ZJENKINS-{0}-{1}'.format(platform, random_part)
 
 
 def delete_vm(vm_name):
