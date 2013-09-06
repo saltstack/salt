@@ -1,6 +1,6 @@
 '''
-SELinux Management
-==================
+Management of SELinux rules.
+============================
 
 If SELinux is available for the running system, the mode can be managed and
 booleans can be set.
@@ -11,43 +11,39 @@ booleans can be set.
         selinux.mode
 
     samba_create_home_dirs:
-        selinx.boolean:
+        selinux.boolean:
           - value: True
           - persist: True
 
 '''
 
+
 def _refine_mode(mode):
     '''
-    Return a mode value that is completely predictable
+    Return a mode value that is predictable
     '''
-    if any([
-        str(mode).startswith('e'),
-        str(mode) == '1',
-        str(mode).startswith('E'),
-        str(mode) == 'on']):
+    mode = str(mode).lower()
+    if any([mode.startswith('e'),
+            mode == '1',
+            mode == 'on']):
         return 'Enforcing'
-    if any([
-        str(mode).startswith('p'),
-        str(mode) == '0',
-        str(mode).startswith('P'),
-        str(mode) == 'off']):
+    if any([mode.startswith('p'),
+            mode == '0',
+            mode == 'off']):
         return 'Permissive'
     return 'unknown'
 
 
 def _refine_value(value):
     '''
-    Return a value that is completely predictable
+    Return a yes/no value, or None if the input is invalid
     '''
-    if any([
-        str(value) == '1',
-        str(value) == 'on']):
+    value = str(value).lower()
+    if value in ('1', 'on', 'yes', 'true'):
         return 'on'
-    if any([
-        str(value) == '0',
-        str(value) == 'off']):
+    if value in ('0', 'off', 'no', 'false'):
         return 'off'
+    return None
 
 
 def mode(name):
@@ -62,14 +58,14 @@ def mode(name):
            'result': False,
            'comment': '',
            'changes': {}}
-    tmode = _refine_mode(mode)
+    tmode = _refine_mode(name)
     if tmode == 'unknown':
         ret['comment'] = '{0} is not an accepted mode'.format(name)
         return ret
     mode = __salt__['selinux.getenforce']()
     if mode == tmode:
         ret['result'] = True
-        ret['comment'] = 'Selinux is already in {0} mode'.format(tmode)
+        ret['comment'] = 'SELinux is already in {0} mode'.format(tmode)
         return ret
     # The mode needs to change...
     if __opts__['test']:
@@ -81,10 +77,11 @@ def mode(name):
     mode = __salt__['selinux.setenforce'](tmode)
     if mode == tmode:
         ret['result'] = True
-        ret['comment'] = 'Selinux has been set to {0} mode'.format(tmode)
+        ret['comment'] = 'SELinux has been set to {0} mode'.format(tmode)
         return ret
     ret['comment'] = 'Failed to set SELinux to {0} mode'.format(tmode)
     return ret
+
 
 def boolean(name, value, persist=False):
     '''
@@ -105,13 +102,18 @@ def boolean(name, value, persist=False):
            'comment': '',
            'changes': {}}
     bools = __salt__['selinux.list_sebool']()
-    if not name in bools:
+    if name not in bools:
         ret['comment'] = 'Boolean {0} is not available'.format(name)
         ret['result'] = False
         return ret
-    value = _refine_value(value)
-    state = bools[name]['State'] == value
-    default = bools[name]['Default'] == value
+    rvalue = _refine_value(value)
+    if rvalue is None:
+        ret['comment'] = '{0} is not a valid value for the ' \
+                         'boolean'.format(value)
+        ret['result'] = False
+        return ret
+    state = bools[name]['State'] == rvalue
+    default = bools[name]['Default'] == rvalue
     if persist:
         if state and default:
             ret['comment'] = 'Boolean is in the correct state'
@@ -123,11 +125,11 @@ def boolean(name, value, persist=False):
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Boolean {0} is set to be changed to {1}'.format(
-                name, value)
+                name, rvalue)
         return ret
 
-    if __salt__['selinux.setsebool'](name, value, persist):
-        ret['comment'] = 'Boolean {0} has been set to {1}'.format(name, value)
+    if __salt__['selinux.setsebool'](name, rvalue, persist):
+        ret['comment'] = 'Boolean {0} has been set to {1}'.format(name, rvalue)
         return ret
-    ret['comment'] = 'Failed to set the boolean {0} to {1}'.format(name, value)
+    ret['comment'] = 'Failed to set the boolean {0} to {1}'.format(name, rvalue)
     return ret

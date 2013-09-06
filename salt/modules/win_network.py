@@ -2,31 +2,32 @@
 Module for gathering and managing network information
 '''
 
-from string import ascii_letters, digits
-import socket
+# Import python libs
+import re
 
-__outputter__ = {
-    'dig':     'txt',
-    'ping':    'txt',
-    'netstat': 'txt',
-}
+# Import salt libs
+import salt.utils
+
+try:
+    import salt.utils.winapi
+    HAS_DEPENDENCIES = True
+except ImportError:
+    HAS_DEPENDENCIES = False
+
+# Import 3rd party libraries
+try:
+    import wmi
+except ImportError:
+    HAS_DEPENDENCIES = False
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return 'network'
     return False
-
-
-def _sanitize_host(host):
-    '''
-    Sanitize host string.
-    '''
-    return "".join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.')
-    ])
 
 
 def ping(host):
@@ -37,7 +38,7 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -n 4 %s' % _sanitize_host(host)
+    cmd = 'ping -n 4 {0}'.format(salt.utils.network.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -51,7 +52,7 @@ def netstat():
     '''
     ret = []
     cmd = 'netstat -na'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if line.startswith('  TCP'):
@@ -78,8 +79,8 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'tracert %s' % _sanitize_host(host)
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    cmd = 'tracert {0}'.format(salt.utils.network.sanitize_host(host))
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if not ' ' in line:
             continue
@@ -130,14 +131,25 @@ def nslookup(host):
         salt '*' network.nslookup archlinux.org
     '''
     ret = []
-    cmd = 'nslookup %s' % _sanitize_host(host)
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    addresses = []
+    cmd = 'nslookup {0}'.format(salt.utils.network.sanitize_host(host))
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
+        if addresses:
+            # We're in the last block listing addresses
+            addresses.append(line.strip())
+            continue
         if line.startswith('Non-authoritative'):
             continue
+        if 'Addresses' in line:
+            comps = line.split(":", 1)
+            addresses.append(comps[1].strip())
+            continue
         if ":" in line:
-            comps = line.split(":")
+            comps = line.split(":", 1)
             ret.append({comps[0].strip(): comps[1].strip()})
+    if addresses:
+        ret.append({'Addresses': addresses})
     return ret
 
 
@@ -151,152 +163,84 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig %s' % _sanitize_host(host)
+    cmd = 'dig {0}'.format(salt.utils.network.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
-
-
-def isportopen(host, port):
-    '''
-    Return status of a port
-
-    CLI Example::
-
-        salt '*' network.isportopen 127.0.0.1 22
-    '''
-
-    if not (1 <= int(port) <= 65535):
-        return False
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    out = sock.connect_ex((_sanitize_host(host), int(port)))
-
-    return out
-
-
-def _cidr_to_ipv4_netmask(cidr_bits):
-    '''
-    Returns an IPv4 netmask
-    '''
-    netmask = ''
-    for n in range(4):
-        if n:
-            netmask += '.'
-        if cidr_bits >= 8:
-            netmask += '255'
-            cidr_bits -= 8
-        else:
-            netmask += '%d' % (256-(2**(8-cidr_bits)))
-            cidr_bits = 0
-    return netmask
 
 
 def interfaces():
     '''
-    Returns a dictionary of interfaces with various information about each
-    (up/down state, ip address, netmask, and hwaddr)
+    Return a dictionary of information about all the interfaces on the minion
 
     CLI Example::
 
         salt '*' network.interfaces
     '''
-    ret = {}
-    ifaces = []
-    lines = __salt__['cmd.run']('ipconfig /all').split('\r\n')
-    configstart = 0
-    configname = ''
-    for line in lines:
-        if configstart == 3:
-            ifaces.append(config)
-            configstart = 0
-            continue
-        if not line:
-            configstart = configstart + 1
-            continue
-        if line.startswith('  '):
-            comps = line.split(':', 1)
-            config[configname][comps[0].rstrip(' .').strip()] =  comps[1].strip()
-            continue
-        if configstart == 1:
-            configname = line.strip(' :')
-            config = {configname: {}}
-            configstart = configstart + 1
-            continue
-    for iface in ifaces:
-        for key, val in iface.iteritems():
-            item = {}
-            itemdict = {'Physical Address': 'hwaddr',
-                        'IPv4 Address': 'ipaddr',
-                        'Link-local IPv6 Address': 'ipaddr6',
-                        'Subnet Mask': 'netmask',
-                        }
-            item['broadcast'] = None
-            for k, v in itemdict.iteritems():
-                if k in val:
-                    item[v] = val[k].rstrip('(Preferred)')
-            if 'IPv4 Address' in val:
-                item['up'] = True
-            else:
-                item['up'] = False
-            ret[key] = item
-    return ret
+    return salt.utils.network.interfaces()
 
 
-def up(interface):
+def hw_addr(iface):
     '''
-    Returns True if interface is up, otherwise returns False
+    Return the hardware address (a.k.a. MAC address) for a given interface
 
     CLI Example::
 
-        salt '*' network.up 'Wireless LAN adapter Wireless Network Connection'
+        salt '*' network.hw_addr 'Wireless Connection #1'
     '''
-    data = interfaces().get(interface)
-    if data:
-        return data['up']
-    else:
-        return None
+    return salt.utils.network.hw_addr(iface)
+
+# Alias hwaddr to preserve backward compat
+hwaddr = hw_addr
 
 
-def ipaddr(interface):
+def subnets():
     '''
-    Returns the IP address for a given interface
+    Returns a list of subnets to which the host belongs
 
     CLI Example::
 
-        salt '*' network.ipaddr 'Wireless LAN adapter Wireless Network Connection'
+        salt '*' network.subnets
     '''
-    data = interfaces().get(interface)
-    if data:
-        return data['ipaddr']
-    else:
-        return None
+    return salt.utils.network.subnets()
 
 
-def netmask(interface):
+def in_subnet(cidr):
     '''
-    Returns the netmask for a given interface
+    Returns True if host is within specified subnet, otherwise False
 
     CLI Example::
 
-        salt '*' network.netmask 'Wireless LAN adapter Wireless Network Connection'
+        salt '*' network.in_subnet 10.0.0.0/16
     '''
-    data = interfaces().get(interface)
-    if data:
-        return data['netmask']
-    else:
-        return None
+    return salt.utils.network.in_subnet(cidr)
 
 
-def hwaddr(interface):
+def ip_addrs(interface=None, include_loopback=False):
     '''
-    Returns the hwaddr for a given interface
+    Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
+    ignored, unless 'include_loopback=True' is indicated. If 'interface' is
+    provided, then only IP addresses from that interface will be returned.
 
     CLI Example::
 
-        salt '*' network.hwaddr 'Wireless LAN adapter Wireless Network Connection'
+        salt '*' network.ip_addrs
     '''
-    data = interfaces().get(interface)
-    if data:
-        return data['hwaddr']
-    else:
-        return None
+    return salt.utils.network.ip_addrs(interface=interface,
+                                       include_loopback=include_loopback)
 
+ipaddrs = ip_addrs
+
+
+def ip_addrs6(interface=None, include_loopback=False):
+    '''
+    Returns a list of IPv6 addresses assigned to the host. ::1 is ignored,
+    unless 'include_loopback=True' is indicated. If 'interface' is provided,
+    then only IP addresses from that interface will be returned.
+
+    CLI Example::
+
+        salt '*' network.ip_addrs6
+    '''
+    return salt.utils.network.ip_addrs6(interface=interface,
+                                        include_loopback=include_loopback)
+
+ipaddrs6 = ip_addrs6

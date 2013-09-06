@@ -27,7 +27,7 @@ Much of the salt code has been cleaned up and a new cleaner logging system has
 been introduced thanks to the efforts of Pedro Algarvio. These additions will
 allow for much more flexible logging to be executed by salt, and fixed a great
 deal of my poor spelling in the salt docstrings! Pedro Algarvio has also
-cleaned up the api, making it easier to embed salt into another application.
+cleaned up the API, making it easier to embed salt into another application.
 
 The biggest addition to salt found in 0.8.8 is the new state system. The salt
 module system has received a new front end which allows salt to be used as a
@@ -49,14 +49,14 @@ Hosts
 
 The system used to define the salt states is based on a data structure, the
 data structure used to define the salt states has been made to be as easy to
-use as possible. The data structure is defined by default using a yaml file
-rendered via a jinja template. This means that the state definition language
-supports all of the data structures that yaml supports, and all of the
-programming constructs and logic that jinja supports. If the user does not
-like yaml or jinja the states can be defined in yaml-mako, json-jinja, or
+use as possible. The data structure is defined by default using a YAML file
+rendered via a Jinja template. This means that the state definition language
+supports all of the data structures that YAML supports, and all of the
+programming constructs and logic that Jinja supports. If the user does not
+like YAML or Jinja the states can be defined in yaml-mako, json-jinja, or
 json-mako. The system used to render the states is completely dynamic, and any
 rendering system can be added to the capabilities of Salt, this means that a
-rendering system that renders xml data in a cheetah template, or whatever you
+rendering system that renders XML data in a cheetah template, or whatever you
 can imagine, can be easily added to the capabilities of salt.
 
 The salt state system also supports isolated environments, as well as matching

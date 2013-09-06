@@ -21,17 +21,22 @@ master
 Options
 =======
 
-.. program:: salt-cp
+.. program:: salt-run
 
-.. option:: -h, --help
+.. include:: _includes/common-options.rst
 
-    Print a usage message briefly summarizing these command-line options
+.. include:: _includes/timeout-option.rst
+.. |timeout| replace:: 1
 
-.. option:: -c CONFIG, --config=CONFIG
+.. option:: -d, --doc, --documentation
 
-    The location of the salt master configuration file, the salt master
-    settings are required to know where the connections are;
-    default=/etc/salt/master
+    Display documentation for runners, pass a module or a runner to see 
+    documentation on only that module/runner.
+
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/master
+.. |loglevel| replace:: ``warning``
+
 
 See also
 ========

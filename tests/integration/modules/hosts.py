@@ -3,13 +3,15 @@ Test the hosts module
 '''
 # Import python libs
 import os
-import sys
 import shutil
 
-# Import Salt libs
-from saltunittest import TestLoader, TextTestRunner
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 import integration
-from integration import TestDaemon
+import salt.utils
 
 HFN = os.path.join(integration.TMP, 'hosts')
 
@@ -18,6 +20,9 @@ class HostsModuleTest(integration.ModuleCase):
     '''
     Test the hosts module
     '''
+
+    maxDiff = None
+
     def __clean_hosts(self):
         '''
         Clean out the hosts file
@@ -62,7 +67,9 @@ class HostsModuleTest(integration.ModuleCase):
         hosts.get_ip
         '''
         self.__clean_hosts()
-        self.assertEqual(self.run_function('hosts.get_ip', ['myname']), '127.0.0.1')
+        self.assertEqual(
+            self.run_function('hosts.get_ip', ['myname']), '127.0.0.1'
+        )
         self.assertEqual(self.run_function('hosts.get_ip', ['othername']), '')
         self.__clear_hosts()
         self.assertEqual(self.run_function('hosts.get_ip', ['othername']), '')
@@ -72,81 +79,140 @@ class HostsModuleTest(integration.ModuleCase):
         hosts.get_alias
         '''
         self.__clean_hosts()
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), ['localhost', 'myname'])
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.2']), [])
+        self.assertEqual(
+            self.run_function('hosts.get_alias', ['127.0.0.1']),
+            ['localhost', 'myname']
+        )
+        self.assertEqual(
+            self.run_function('hosts.get_alias', ['127.0.0.2']),
+            []
+        )
         self.__clear_hosts()
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), [])
+        self.assertEqual(
+            self.run_function('hosts.get_alias', ['127.0.0.1']),
+            []
+        )
 
     def test_has_pair(self):
         '''
         hosts.has_pair
         '''
         self.__clean_hosts()
-        self.assertTrue(self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']))
-        self.assertFalse(self.run_function('hosts.has_pair', ['127.0.0.1', 'othername']))
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        )
+        self.assertFalse(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'othername'])
+        )
 
     def test_set_host(self):
         '''
         hosts.set_hosts
         '''
         self.__clean_hosts()
-        assert self.run_function('hosts.set_host', ['192.168.1.123', 'newip'])
-        self.assertTrue(self.run_function('hosts.has_pair', ['192.168.1.123', 'newip']))
+        self.assertTrue(
+            self.run_function('hosts.set_host', ['192.168.1.123', 'newip'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.set_host', ['127.0.0.1', 'localhost'])
+        )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
-        assert self.run_function('hosts.set_host', ['127.0.0.1', 'localhost'])
-        self.assertFalse(self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']), 'should remove second entry')
+        self.assertFalse(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']),
+            'should remove second entry'
+        )
 
     def test_add_host(self):
         '''
         hosts.add_host
         '''
         self.__clean_hosts()
-        assert self.run_function('hosts.add_host', ['192.168.1.123', 'newip'])
-        self.assertTrue(self.run_function('hosts.has_pair', ['192.168.1.123', 'newip']))
+        self.assertTrue(
+            self.run_function('hosts.add_host', ['192.168.1.123', 'newip'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
+        )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
-        assert self.run_function('hosts.add_host', ['127.0.0.1', 'othernameip'])
+        self.assertTrue(
+            self.run_function('hosts.add_host', ['127.0.0.1', 'othernameip'])
+        )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
 
     def test_rm_host(self):
         self.__clean_hosts()
-        assert self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
-        assert self.run_function('hosts.rm_host', ['127.0.0.1', 'myname'])
-        assert not self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
-        assert self.run_function('hosts.rm_host', ['127.0.0.1', 'unknown'])
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.rm_host', ['127.0.0.1', 'myname'])
+        )
+        self.assertFalse(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.rm_host', ['127.0.0.1', 'unknown'])
+        )
 
     def test_add_host_formatting(self):
         '''
         Ensure that hosts.add_host isn't adding duplicates and that
         it's formatting the output correctly
         '''
-        # instead of using the "clean" hosts file we're going to
+        # instead of using the 'clean' hosts file we're going to
         # use an empty one so we can prove the syntax of the entries
         # being added by the hosts module
         self.__clear_hosts()
-        f = open(HFN, 'w')
+        f = salt.utils.fopen(HFN, 'w')
         f.close()
 
-        assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1.fqdn.com'])
-        assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1'])
-        assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2.fqdn.com'])
-        assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2'])
-        assert self.run_function('hosts.add_host', ['192.168.1.2', 'oldhost2'])
-        assert self.run_function('hosts.add_host', ['192.168.1.3', 'host3.fqdn.com'])
-        assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2-reorder'])
-        assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1-reorder'])
+        self.assertTrue(
+            self.run_function(
+                'hosts.add_host', ['192.168.1.3', 'host3.fqdn.com']
+            )
+        )
+        self.assertTrue(
+            self.run_function(
+                'hosts.add_host', ['192.168.1.1', 'host1.fqdn.com']
+            )
+        )
+        self.assertTrue(
+            self.run_function('hosts.add_host', ['192.168.1.1', 'host1'])
+        )
+        self.assertTrue(
+            self.run_function(
+                'hosts.add_host', ['192.168.1.2', 'host2.fqdn.com']
+            )
+        )
+        self.assertTrue(
+            self.run_function('hosts.add_host', ['192.168.1.2', 'host2'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.add_host', ['192.168.1.2', 'oldhost2'])
+        )
+        self.assertTrue(
+            self.run_function(
+                'hosts.add_host', ['192.168.1.2', 'host2-reorder']
+            )
+        )
+        self.assertTrue(
+            self.run_function(
+                'hosts.add_host', ['192.168.1.1', 'host1-reorder']
+            )
+        )
 
         # now read the lines and ensure they're formatted correctly
-        lines = open(HFN, 'r').readlines()
+        lines = salt.utils.fopen(HFN, 'r').read().splitlines()
         self.assertEqual(lines, [
-            "192.168.1.3\t\thost3.fqdn.com\n",
-            "192.168.1.2\t\thost2.fqdn.com\thost2\toldhost2\thost2-reorder\n",
-            "192.168.1.1\t\thost1.fqdn.com\thost1\thost1-reorder\n",
-            ])
+            '192.168.1.3\t\thost3.fqdn.com',
+            '192.168.1.1\t\thost1.fqdn.com\t\thost1\t\thost1-reorder',
+            '192.168.1.2\t\thost2.fqdn.com\t\thost2\t\toldhost2\t\thost2-reorder',
+        ])
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(HostsModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(HostsModuleTest)

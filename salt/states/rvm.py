@@ -1,6 +1,7 @@
 '''
-Management of ruby installations and gemsets with RVM
-=====================================================
+Managing Ruby installations and gemsets with Ruby Version Manager (RVM).
+========================================================================
+
 This module is used to install and manage ruby installations and
 gemsets with RVM, the Ruby Version Manager. Different versions of ruby
 can be installed and gemsets created. RVM itself will be installed
@@ -15,16 +16,14 @@ configuration could look like:
     rvm:
       group:
         - present
-      user:
-        - present
+      user.present:
         - gid: rvm
         - home: /home/rvm
         - require:
           - group: rvm
 
     rvm-deps:
-      pkg:
-        - installed
+      pkg.installed:
         - names:
           - bash
           - coreutils
@@ -35,11 +34,9 @@ configuration could look like:
           - curl
           - git-core
           - subversion
-          - sudo
 
     mri-deps:
-      pkg:
-        - installed
+      pkg.installed:
         - names:
           - build-essential
           - openssl
@@ -66,16 +63,14 @@ configuration could look like:
           - ruby
 
     jruby-deps:
-      pkg:
-        - installed
+      pkg.installed:
         - names:
           - curl
           - g++
           - openjdk-6-jre-headless
 
     ruby-1.9.2:
-      rvm:
-        - installed
+      rvm.installed:
         - default: True
         - runas: rvm
         - require:
@@ -84,8 +79,7 @@ configuration could look like:
           - user: rvm
 
     jruby:
-      rvm:
-        - installed
+      rvm.installed:
         - runas: rvm
         - require:
           - pkg: rvm-deps
@@ -93,35 +87,31 @@ configuration could look like:
           - user: rvm
 
     jgemset:
-      rvm:
-        - gemset_present
+      rvm.gemset_present:
         - ruby: jruby
         - runas: rvm
         - require:
           - rvm: jruby
 
     mygemset:
-      rvm:
-        - gemset_present
+      rvm.gemset_present:
         - ruby: ruby-1.9.2
         - runas: rvm
         - require:
           - rvm: ruby-1.9.2
 '''
-# Import Python libs
+
+# Import python libs
 import re
 
 
-def _check_rvm(ret):
+def _check_rvm(ret, runas=None):
     '''
-    Check to see if rmv is installed and install it
+    Check to see if rvm is installed.
     '''
-    if not __salt__['rvm.is_installed']():
-        if __salt__['rvm.install']():
-            ret['changes']['rvm'] = 'Installed'
-        else:
-            ret['result'] = False
-            ret['comment'] = 'Could not install RVM.'
+    if not __salt__['rvm.is_installed'](runas):
+        ret['result'] = False
+        ret['comment'] = 'RVM is not installed.'
     return ret
 
 
@@ -141,7 +131,7 @@ def _check_and_install_ruby(ret, ruby, default=False, runas=None):
             ret['comment'] = 'Could not install ruby.'
             return ret
 
-    if not ret['default'] and default:
+    if default:
         __salt__['rvm.set_default'](ruby, runas=runas)
 
     return ret
@@ -153,7 +143,7 @@ def _check_ruby(ret, ruby, runas=None):
     '''
     match_version = True
     match_micro_version = False
-    micro_version_regex = re.compile('-([0-9]{4}\.[0-9]{2}|p[0-9]+)$')
+    micro_version_regex = re.compile(r'-([0-9]{4}\.[0-9]{2}|p[0-9]+)$')
     if micro_version_regex.search(ruby):
         match_micro_version = True
     if re.search('^[a-z]+$', ruby):
@@ -189,15 +179,19 @@ def installed(name, default=False, runas=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    ret = _check_rvm(ret)
-    if ret['result'] == False:
-        return ret
-
     if __opts__['test']:
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
         return ret
 
-    return _check_and_install_ruby(ret, name, default, runas=runas)
+    ret = _check_rvm(ret, runas)
+    if ret['result'] is False:
+        if not __salt__['rvm.install'](runas=runas):
+            ret['comment'] = 'RVM failed to install.'
+            return ret
+        else:
+            return _check_and_install_ruby(ret, name, default, runas=runas)
+    else:
+        return _check_and_install_ruby(ret, name, default, runas=runas)
 
 
 def gemset_present(name, ruby='default', runas=None):
@@ -209,11 +203,11 @@ def gemset_present(name, ruby='default', runas=None):
     ruby : default
         The ruby version this gemset belongs to.
     runas : None
-        The use user to run rvm as.
+        The user to run rvm as.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    ret = _check_rvm(ret)
+    ret = _check_rvm(ret, runas)
     if ret['result'] is False:
         return ret
 

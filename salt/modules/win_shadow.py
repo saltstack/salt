@@ -2,12 +2,14 @@
 Manage the shadow file
 '''
 
+import salt.utils
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows():
         return 'shadow'
     return False
 
@@ -23,7 +25,7 @@ def info(name):
     '''
     ret = {
             'name': name,
-            'pwd': '',
+            'passwd': '',
             'lstchg': '',
             'min': '',
             'max': '',

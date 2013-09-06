@@ -2,33 +2,33 @@
 States tutorial, part 3
 =======================
 
-This tutorial builds on the topic covered in :doc:`part 2 <states_pt2>`. It is
-recommended that you begin there.
+.. note::
 
-This tutorial will cover more advanced templating and configuration techniques
-for ``sls`` files.
+  This tutorial builds on topics covered in :doc:`part 1 <states_pt1>` and
+  :doc:`part 2 <states_pt2>`. It is recommended that you begin there.
+
+This part of the tutorial will cover more advanced templating and
+configuration techniques for ``sls`` files.
 
 Templating SLS modules
 ======================
 
-SLS modules may require programming logic or inline executions. This is
+SLS modules may require programming logic or inline execution. This is
 accomplished with module templating. The default module templating system used
 is `Jinja2`_  and may be configured by changing the :conf_master:`renderer`
 value in the master config.
 
 .. _`Jinja2`: http://jinja.pocoo.org/
 
-All states are passed through a templating system when they are initially read,
-so all that is required to make use of the templating system is to add some
-templating code. An example of an sls module with templating may look like
-this:
+All states are passed through a templating system when they are initially read.
+To make use of the templating system, simply add some templating markup.
+An example of an sls module with templating markup may look like this:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% for usr in 'moe','larry','curly' %}
     {{ usr }}:
-      user:
-        - present
+      user.present
     {% endfor %}
 
 This templated sls file once generated will look like this:
@@ -36,32 +36,43 @@ This templated sls file once generated will look like this:
 .. code-block:: yaml
 
     moe:
-      user:
-        - present
+      user.present
     larry:
-      user:
-        - present
+      user.present
     curly:
+      user.present
+
+Here's a more complex example:
+
+.. code-blocK:: jinja
+
+    {% for usr in 'moe','larry','curly' %}
+    {{ usr }}:
+      group:
+        - present
       user:
         - present
+        - gid_from_name: True
+        - require:
+          - group: {{ usr }}
+    {% endfor %}
 
 Using Grains in SLS modules
 ===========================
 
 Often times a state will need to behave differently on different systems.
-:doc:`Salt grains </topics/targeting/grains>` can be used from within sls modules. An object
-called ``grains`` is made available in the template context:
+:doc:`Salt grains </topics/targeting/grains>` objects are made available
+in the template context. The `grains` can be used from within sls modules:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
-      pkg:
+      pkg.installed:
         {% if grains['os'] == 'RedHat' %}
         - name: httpd
         {% elif grains['os'] == 'Ubuntu' %}
         - name: apache2
         {% endif %}
-        - installed
 
 Calling Salt modules from templates
 ===================================
@@ -72,57 +83,54 @@ system. It also allows for shell commands to be run easily from within the sls
 modules.
 
 The Salt module functions are also made available in the template context as
-``salt``:
+``salt:``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
-    {% for usr in 'moe','larry','curly' %}
-    {{ usr }}:
-      group:
-        - present
+    moe:
       user:
         - present
-        - gid: {{ salt['file.group_to_gid'](usr) }}
-        - require:
-          - group: {{ usr }}
-    {% endfor %}
+        - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
 
-Below is an example that uses the ``network.hwaddr`` function to retrieve the
+Note that for the above example to work, ``some_group_that_exists`` must exist
+before the state file is processed by the templating engine.
+
+Below is an example that uses the ``network.hw_addr`` function to retrieve the
 MAC address for eth0:
 
-    salt['network.hwaddr']('eth0')
+.. code-block:: python
+
+    salt['network.hw_addr']('eth0')
 
 Advanced SLS module syntax
 ==========================
 
-Last we will cover some incredibly useful techniques for more complex State
+Lastly, we will cover some incredibly useful techniques for more complex State
 trees.
 
 :term:`Include declaration`
 ---------------------------
 
-You have seen an example of how to spread a Salt tree across several files but
-in order to be able to have :term:`requisite references <requisite reference>`
-span multiple files you must use an :term:`include declaration`. For example:
+A previous example showed how to spread a Salt tree across several files.
+Similarly, :doc:`requisites </ref/states/requisites>` span multiple files by
+using an :term:`include declaration`. For example:
 
-``python-libs.sls``:
+``python/python-libs.sls:``
 
 .. code-block:: yaml
 
     python-dateutil:
-      pkg:
-        - installed
+      pkg.installed
 
-``django.sls``:
+``python/django.sls:``
 
 .. code-block:: yaml
 
     include:
-      - python-libs
+      - python.python-libs
 
     django:
-      pkg:
-        - installed
+      pkg.installed:
         - require:
           - pkg: python-dateutil
 
@@ -133,32 +141,32 @@ You can modify previous declarations by using an :term:`extend declaration`. For
 example the following modifies the Apache tree to also restart Apache when the
 vhosts file is changed:
 
-``apache.sls``:
+``apache/apache.sls:``
 
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed
 
-``mywebsite.sls``:
+``apache/mywebsite.sls:``
 
 .. code-block:: yaml
 
     include:
-      - apache
+      - apache.apache
 
     extend:
       apache:
         service:
+          - running
           - watch:
             - file: /etc/httpd/extra/httpd-vhosts.conf
 
     /etc/httpd/extra/httpd-vhosts.conf:
-      file:
-        - managed
-        - source: salt://httpd-vhosts.conf
+      file.managed:
+        - source: salt://apache/httpd-vhosts.conf
 
+.. include:: /_incl/extend_with_require_watch.rst
 
 :term:`Name declaration`
 ------------------------
@@ -167,25 +175,25 @@ You can override the :term:`ID declaration` by using a :term:`name
 declaration`. For example, the previous example is a bit more maintainable if
 rewritten as follows:
 
-``mywebsite.sls``:
+``apache/mywebsite.sls:``
 
 .. code-block:: yaml
-    :emphasize-lines: 8,10,13
+    :emphasize-lines: 8,10,12
 
     include:
-      - apache
+      - apache.apache
 
     extend:
-      apache
+      apache:
         service:
+          - running
           - watch:
             - file: mywebsite
 
     mywebsite:
-      file:
-        - managed
+      file.managed:
         - name: /etc/httpd/extra/httpd-vhosts.conf
-        - source: salt://httpd-vhosts.conf
+        - source: salt://apache/httpd-vhosts.conf
 
 :term:`Names declaration`
 -------------------------
@@ -198,23 +206,15 @@ can be rewritten without the loop:
 .. code-block:: yaml
 
     stooges:
-      user:
-        - present
+      user.present:
         - names:
           - moe
           - larry
           - curly
 
-Continue learning
-=================
+Next steps
+==========
 
-The best way to continue learning about Salt States is to read through the
-:doc:`reference documentation </ref/states/index>` and to look through examples
-of existing :term:`state trees <state tree>`. You can find examples in the
-`salt-states repository`_ and please send a pull-request on GitHub with any
-state trees that you build and want to share!
-
-.. _`salt-states repository`: https://github.com/saltstack/salt-states
-
-If you have any questions, suggestions, or just want to chat with other people
-who are using Salt we have an :doc:`active community </topics/community>`.
+In :doc:`part 4 <states_pt4>` we will discuss how to use salt's
+:conf_master:`file_roots` to set up a workflow in which states can be
+"promoted" from dev, to QA, to production.

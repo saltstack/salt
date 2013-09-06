@@ -14,13 +14,15 @@ returner::
 Required python modules: pycassa
 '''
 
+# Import python libs
 import logging
 
+# Import third party libs
 try:
     import pycassa
-    has_pycassa = True
+    HAS_PYCASSA = True
 except ImportError:
-    has_pycassa = False
+    HAS_PYCASSA = False
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +33,7 @@ __opts__ = {'cassandra.servers': ['localhost:9160'],
 
 
 def __virtual__():
-    if not has_pycassa:
+    if not HAS_PYCASSA:
         return False
     return 'cassandra'
 
@@ -46,16 +48,16 @@ def returner(ret):
 
     pool = pycassa.ConnectionPool(__opts__['cassandra.keyspace'],
                                   __opts__['cassandra.servers'])
-    cf = pycassa.ColumnFamily(pool, __opts__['cassandra.column_family'],
-                              write_consistency_level=consistency_level)
+    ccf = pycassa.ColumnFamily(pool, __opts__['cassandra.column_family'],
+                               write_consistency_level=consistency_level)
 
     columns = {'fun': ret['fun'],
                'id': ret['id']}
     if isinstance(ret['return'], dict):
-        for key, value in ret['return'].iteritems():
-            columns['return.%s' % (key,)] = str(value)
+        for key, value in ret['return'].items():
+            columns['return.{0}'.format(key)] = str(value)
     else:
         columns['return'] = str(ret['return'])
 
     log.debug(columns)
-    cf.insert(ret['jid'], columns)
+    ccf.insert(ret['jid'], columns)

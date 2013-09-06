@@ -1,21 +1,24 @@
 '''
 Execute batch runs
 '''
-# Import Python libs
+
+# Import python libs
 import math
 import time
 import copy
 
-# Import Salt libs
+# Import salt libs
 import salt.client
 import salt.output
+
 
 class Batch(object):
     '''
     Manage the execution of batch runs
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, quiet=False):
         self.opts = opts
+        self.quiet = quiet
         self.local = salt.client.LocalClient(opts['conf_file'])
         self.minions = self.__gather_minions()
 
@@ -26,31 +29,20 @@ class Batch(object):
         args = [self.opts['tgt'],
                 'test.ping',
                 [],
-                1,
+                5,
                 ]
-        if self.opts['pcre']:
-            args.append('pcre')
-        elif self.opts['list']:
-            args.append('list')
-        elif self.opts['grain']:
-            args.append('grain')
-        elif self.opts['grain_pcre']:
-            args.append('grain_pcre')
-        elif self.opts['exsel']:
-            args.append('exsel')
-        elif self.opts['pillar']:
-            args.append('pillar')
-        elif self.opts['nodegroup']:
-            args.append('nodegroup')
-        elif self.opts['compound']:
-            args.append('compound')
+
+        selected_target_option = self.opts.get('selected_target_option', None)
+        if selected_target_option is not None:
+            args.append(selected_target_option)
         else:
-            args.append('glob')
+            args.append(self.opts.get('expr_form', 'glob'))
 
         fret = []
         for ret in self.local.cmd_iter(*args):
             for minion in ret:
-                print('{0} Detected for this batch run'.format(minion))
+                if not self.quiet:
+                    print('{0} Detected for this batch run'.format(minion))
                 fret.append(minion)
         return sorted(fret)
 
@@ -69,8 +61,9 @@ class Batch(object):
             else:
                 return int(self.opts['batch'])
         except ValueError:
-            print(('Invalid batch data sent: {0}\nData must be in the form'
-                   'of %10, 10% or 3').format(self.opts['batch']))
+            if not self.quiet:
+                print(('Invalid batch data sent: {0}\nData must be in the form'
+                       'of %10, 10% or 3').format(self.opts['batch']))
 
     def run(self):
         '''
@@ -79,7 +72,7 @@ class Batch(object):
         args = [[],
                 self.opts['fun'],
                 self.opts['arg'],
-                9999999999,
+                self.opts['timeout'],
                 'list',
                 ]
         bnum = self.get_bnum()
@@ -87,7 +80,16 @@ class Batch(object):
         active = []
         ret = {}
         iters = []
-        # Itterate while we still have things to execute
+
+        # the minion tracker keeps track of responses and iterators
+        # - it removes finished iterators from iters[]
+        # - if a previously detected minion does not respond, its
+        #   added with an empty answer to ret{} once the timeout is reached
+        # - unresponsive minions are removed from active[] to make
+        #   sure that the main while loop finishes even with unresp minions
+        minion_tracker = {}
+
+        # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
             next_ = []
             if len(to_run) <= bnum and not active:
@@ -95,44 +97,88 @@ class Batch(object):
                 while to_run:
                     next_.append(to_run.pop())
             else:
-                for ind in range(bnum - len(active)):
+                for i in range(bnum - len(active)):
                     if to_run:
                         next_.append(to_run.pop())
+
             active += next_
             args[0] = next_
+
             if next_:
-                print('\nExecuting run on {0}\n'.format(next_))
-                iters.append(
-                        self.local.cmd_iter_no_block(*args))
+                if not self.quiet:
+                    print('\nExecuting run on {0}\n'.format(next_))
+                # create a new iterator for this batch of minions
+                new_iter = self.local.cmd_iter_no_block(
+                                *args,
+                                raw=self.opts.get('raw', False))
+                # add it to our iterators and to the minion_tracker
+                iters.append(new_iter)
+                minion_tracker[new_iter] = {}
+                # every iterator added is 'active' and has its set of minions
+                minion_tracker[new_iter]['minions'] = next_
+                minion_tracker[new_iter]['active'] = True
+
             else:
                 time.sleep(0.02)
             parts = {}
+
             for queue in iters:
                 try:
                     # Gather returns until we get to the bottom
                     ncnt = 0
                     while True:
-                        part = queue.next()
+                        part = next(queue)
                         if part is None:
                             time.sleep(0.01)
                             ncnt += 1
                             if ncnt > 5:
                                 break
                             continue
-                        parts.update(part)
+                        if self.opts.get('raw'):
+                            parts.update({part['id']: part})
+                        else:
+                            parts.update(part)
                 except StopIteration:
-                    # remove the iter, it is done
-                    pass
+                    # if a iterator is done:
+                    # - set it to inactive
+                    # - add minions that have not responded to parts{}
+
+                    # check if the tracker contains the iterator
+                    if queue in minion_tracker:
+                        minion_tracker[queue]['active'] = False
+
+                        # add all minions that belong to this iterator and
+                        # that have not responded to parts{} with an empty response
+                        for minion in minion_tracker[queue]['minions']:
+                            if minion not in parts.keys():
+                                parts[minion] = {}
+                                parts[minion]['ret'] = {}
+
             for minion, data in parts.items():
                 active.remove(minion)
-                ret[minion] = data['ret']
-                data[minion] = data.pop('ret')
-                if 'out' in data:
-                    out = data.pop('out')
+                if self.opts.get('raw'):
+                    yield data
                 else:
-                    out = None
-                salt.output.display_output(
-                        data,
-                        out,
-                        self.opts)
-        return ret
+                    ret[minion] = data['ret']
+                    yield {minion: data['ret']}
+                if not self.quiet:
+                    ret[minion] = data['ret']
+                    data[minion] = data.pop('ret')
+                    if 'out' in data:
+                        out = data.pop('out')
+                    else:
+                        out = None
+                    salt.output.display_output(
+                            data,
+                            out,
+                            self.opts)
+
+            # remove inactive iterators from the iters list
+            for queue in minion_tracker.keys():
+                # only remove inactive queues
+                if not minion_tracker[queue]['active'] and queue in iters:
+                    iters.remove(queue)
+                    # also remove the iterator's minions from the active list
+                    for minion in minion_tracker[queue]['minions']:
+                        if minion in active:
+                            active.remove(minion)

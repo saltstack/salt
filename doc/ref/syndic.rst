@@ -19,7 +19,7 @@ Configuring the Syndic
 Since the Syndic only needs to be attached to a higher level master the
 configuration is very simple. On a master that is running a syndic to connect
 to a higher level master the syndic_master option needs to be set in the
-master config file. The syndic_master option contains the hostname or ip
+master config file. The syndic_master option contains the hostname or IP
 address of the master server that can control the master that the syndic is
 running on.
 
@@ -30,6 +30,13 @@ order_masters value in the configuration to True. The order_masters option in
 the config on the higher level master is very important, to control a syndic
 extra information needs to be sent with the publications, the order_masters
 option makes sure that the extra data is sent out.
+
+To sum up, you have those configuration options available on the master side:
+
+    - **syndic_master**: MasterOfMaster ip/address
+    - **syndic_master_port**: MasterOfMaster ret_port
+    - **syndic_log_file**: path to the logfile (absolute or not)
+    - **syndic_pidfile**: path to the pidfile (absolute or not)
 
 Running the Syndic
 ==================

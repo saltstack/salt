@@ -2,17 +2,42 @@
 Ordering States
 ===============
 
-When creating salt sls files, it is often important to ensure that they run in
-a specific order. While states will always execute in the same order, that
-order is not necessarily defined the way you want it.
+The way in which configuration management systems are executed is a hotly
+debated topic in the configuration management world. Two
+major philosophies exist on the subject, to either execute in an imperative
+fashion where things are executed in the order in which they are defined, or
+in a declarative fashion where dependencies need to be mapped between objects.
 
-A few tools exist in Salt to set up the correct state ordering. These tools
-consist of requisite declarations and order options.
+Imperative ordering is finite and generally considered easier to write, but
+declarative ordering is much more powerful and flexible but generally considered
+more difficult to create.
 
-.. note::
+Salt has been created to get the best of both worlds. States are evaluated in
+a finite order, which guarantees that states are always executed in the same
+order, and the states runtime is declarative, making Salt fully aware of
+dependencies via the requisite system.
 
-    Salt does **not** execute :term:`state declarations <state declaration>` in
-    the order they appear in the source.
+Also, in Salt 0.17.0, the ``state_auto_order`` option was added to Salt.
+It makes states get evaluated in the order in which they are defined.
+
+State Auto Ordering
+===================
+
+.. versionadded: 0.17.0
+
+Salt always executes states in a finite manner, meaning that they will always
+execute in the same order regardless of the system that is executing them.
+But in Salt 0.17.0, the ``state_auto_order`` option was added. This option
+makes states get evaluated in the order in which they are defined in sls
+files.
+
+The evaluation order makes it easy to know what order the states will be
+executed in, but it is important to note that the requisite system will
+override the ordering defined in the files, and the ``order`` option described
+below will also override the order in which states are defined in sls files.
+
+If the classic ordering is preferred (lexicographic), then set ``state_auto_order``
+to ``False`` in the master configuration file.
 
 Requisite Statements
 ====================
@@ -35,8 +60,7 @@ These requisite statements are applied to a specific state declaration:
     httpd:
       pkg:
         - installed
-      file:
-        - managed
+      file.managed:
         - name: /etc/httpd/conf/httpd.conf
         - source: salt://httpd/httpd.conf
         - require:
@@ -50,6 +74,14 @@ The requisite system works by finding the states that are required and
 executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
+.. note:: Requisite matching
+
+    Requisites match on both the ID Declaration and the ``name`` parameter.
+    Therefore, if you are using the ``pkgs`` or ``sources`` argument to install
+    a list of packages in a pkg state, it's important to note that you cannot
+    have a requisite that matches on an individual package in the list.
+
+
 Multiple Requisites
 -------------------
 
@@ -61,8 +93,7 @@ more requisites. Both requisite types can also be separately declared:
     httpd:
       pkg:
         - installed
-      service:
-        - running
+      service.running:
         - enable: True
         - watch:
           - file: /etc/httpd/conf/httpd.conf
@@ -70,8 +101,7 @@ more requisites. Both requisite types can also be separately declared:
           - pkg: httpd
           - user: httpd
           - group: httpd
-      file:
-        - managed
+      file.managed:
         - name: /etc/httpd/conf/httpd.conf
         - source: salt://httpd/httpd.conf
         - require:
@@ -98,8 +128,7 @@ the vim package has been installed:
     vim:
       pkg:
         - installed
-      file:
-        - managed
+      file.managed:
         - source: salt://vim/vimrc
         - require:
           - pkg: vim
@@ -127,14 +156,12 @@ Perhaps an example can better explain the behavior:
     redis:
       pkg:
         - latest
-      file:
-        - managed
+      file.managed:
         - source: salt://redis/redis.conf
         - name: /etc/redis.conf
         - require:
           - pkg: redis
-      service:
-        - running
+      service.running:
         - enable: True
         - watch:
           - file: /etc/redis.conf
@@ -146,19 +173,28 @@ installed. This is normal require behavior, but if the watched file changes,
 or the watched package is installed or upgraded, then the redis service is
 restarted.
 
-Watch and the Watcher Function
-------------------------------
+Watch and the mod_watch Function
+--------------------------------
 
-The watch requisite is based on the ``watcher`` function, state python
-modules can include a function called watcher, this function is then called
-if the watch call is invoked. In the case of the service module the underlying
-service is restarted. In the case of the cmd state the command is executed.
+The watch requisite is based on the ``mod_watch`` function. Python state
+modules can include a function called ``mod_watch`` which is then called
+if the watch call is invoked. When ``mod_watch`` is called depends on the
+execution of the watched state, which:
 
-The watcher function for the service state looks like this:
+  - If no changes then just run the watching state itself as usual.
+    ``mod_watch`` is not called. This behavior is same as using a ``require``.
+
+  - If changes then run the watching state *AND* if that changes nothing then
+    react by calling ``mod_watch``.
+
+When reacting, in the case of the service module the underlying service is
+restarted. In the case of the cmd state the command is executed.
+
+The ``mod_watch`` function for the service state looks like this:
 
 .. code-block:: python
 
-    def watcher(name, sig=None):
+    def mod_watch(name, sig=None, reload=False, full_restart=False):
         '''
         The service watcher, called to invoke the watch command.
 
@@ -169,21 +205,47 @@ The watcher function for the service state looks like this:
             The string to search for when looking for the service process with ps
         '''
         if __salt__['service.status'](name, sig):
-            changes = {name: __salt__['service.restart'](name)}
-            return {'name': name,
-                    'changes': changes,
-                    'result': True,
-                    'comment': 'Service restarted'}
+            if 'service.reload' in __salt__ and reload:
+                restart_func = __salt__['service.reload']
+            elif 'service.full_restart' in __salt__ and full_restart:
+                restart_func = __salt__['service.full_restart']
+            else:
+                restart_func = __salt__['service.restart']
+        else:
+            restart_func = __salt__['service.start']
 
+        result = restart_func(name)
         return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': 'Service {0} started'.format(name)}
+                'changes': {name: result},
+                'result': result,
+                'comment': 'Service restarted' if result else \
+                           'Failed to restart the service'
+               }
 
-The watch requisite only works if the state that is watching has a watcher
-function written. If watch is set on a state that does not have a watcher
-function (like pkg), then the listed states will behave only as if they were
-under a ``require`` statement.
+The watch requisite only works if the state that is watching has a
+``mod_watch`` function written. If watch is set on a state that does not have
+a ``mod_watch`` function (like pkg), then the listed states will behave only
+as if they were under a ``require`` statement.
+
+Also notice that a ``mod_watch`` may accept additional keyword arguments,
+which, in the sls file, will be taken from the same set of arguments specified
+for the state that includes the ``watch`` requisite. This means, for the
+earlier ``service.running`` example above,  you can tell the service to
+``reload`` instead of restart like this:
+
+.. code-block:: yaml
+
+  redis:
+
+    # ... other state declarations omitted ...
+
+      service.running:
+        - enable: True
+        - reload: True
+        - watch:
+          - file: /etc/redis.conf
+          - pkg: redis
+
 
 The Order Option
 ================
@@ -198,8 +260,7 @@ with the option `order`:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - order: 1
 
 By adding the order option to `1` this ensures that the vim package will be
@@ -215,6 +276,20 @@ set the order to ``last``:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - order: last
+
+Remember that requisite statements override the order option. So the order
+option should be applied to the highest component of the requisite chain:
+
+.. code-block:: yaml
+
+    vim:
+      pkg.installed:
+        - order: last
+        - require:
+          - file: /etc/vimrc
+
+    /etc/vimrc:
+      file.managed:
+        - source: salt://edit/vimrc

@@ -1,13 +1,13 @@
-# Import python libs
-import sys
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
-class PublishModuleTest(integration.ModuleCase):
+class PublishModuleTest(integration.ModuleCase,
+                        integration.SaltReturnAssertsMixIn):
     '''
     Validate the publish module
     '''
@@ -16,20 +16,17 @@ class PublishModuleTest(integration.ModuleCase):
         publish.publish
         '''
         ret = self.run_function('publish.publish', ['minion', 'test.ping'])
-        self.assertTrue(ret['minion'])
+        self.assertTrue(ret)
 
     def test_full_data(self):
         '''
         publish.full_data
         '''
         ret = self.run_function(
-                'publish.full_data',
-                [
-                    'minion',
-                    'test.fib',
-                    ['40']
-                ]
-                )
+            'publish.full_data',
+            ['minion', 'test.fib', ['40']]
+        )
+        self.assertTrue(ret)
         self.assertEqual(ret['minion']['ret'][0][-1], 34)
 
     def test_kwarg(self):
@@ -37,13 +34,12 @@ class PublishModuleTest(integration.ModuleCase):
         Verify that the pub data is making it to the minion functions
         '''
         ret = self.run_function(
-                'publish.full_data',
-                [
-                    'minion',
-                    'test.kwarg',
-                    'cheese=spam',
-                ]
-                )['minion']['ret']
+            'publish.full_data',
+            ['minion', 'test.kwarg', 'cheese=spam']
+        )
+
+        ret = ret['minion']['ret']
+
         check_true = (
             'cheese',
             '__pub_arg',
@@ -55,11 +51,13 @@ class PublishModuleTest(integration.ModuleCase):
             '__pub_tgt_type',
         )
         for name in check_true:
+            if not name in ret:
+                print name
             self.assertTrue(name in ret)
 
-        self.assertEqual(ret['cheese'],    'spam')
+        self.assertEqual(ret['cheese'], 'spam')
         self.assertEqual(ret['__pub_arg'], ['cheese=spam'])
-        self.assertEqual(ret['__pub_id'],  'minion')
+        self.assertEqual(ret['__pub_id'], 'minion')
         self.assertEqual(ret['__pub_fun'], 'test.kwarg')
 
     def test_reject_minion(self):
@@ -67,19 +65,12 @@ class PublishModuleTest(integration.ModuleCase):
         Test bad authentication
         '''
         ret = self.run_function(
-                'publish.publish',
-                [
-                    'minion',
-                    'cmd.run',
-                    ['echo foo']
-                ]
-                )
+            'publish.publish',
+            ['minion', 'cmd.run', ['echo foo']]
+        )
         self.assertEqual(ret, {})
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(PublishModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PublishModuleTest)

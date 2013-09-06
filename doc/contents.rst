@@ -6,22 +6,34 @@ Full Table of Contents
     :maxdepth: 3
     :glob:
 
+    faq
+
     topics/index
     topics/installation/index
     topics/configuration
+    topics/hacking
     topics/targeting/index
-    topics/tutorials/modules
-    topics/tutorials/starting_states
-    topics/tutorials/states*
-    topics/tutorials/firewall
-    topics/tutorials/bootstrap_ec2
+    topics/tutorials/index
+    topics/eauth/*
     topics/pillar/index
-    topics/jobs/index
+    topics/master_tops/index
+    topics/jobs/*
+    topics/nonroot
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
     topics/community
-    topics/tutorials/standalone_minion.rst
+    topics/projects/index
+    topics/event/index
+    topics/mine/*
+    topics/virt/*
+    topics/tests/*
+    topics/reactor/*
+    topics/conventions/*
+    topics/git/*
+    topics/development/index
 
+    ref/configuration/logging/*
+    ref/configuration/logging/handlers/*
     ref/index
     ref/modules/*
     ref/modules/all/index
@@ -31,14 +43,25 @@ Full Table of Contents
     ref/states/all/index
     ref/renderers/*
     ref/renderers/all/index
-    ref/runners
+    ref/pillar/*
+    ref/pillar/all/index
+    ref/tops/*
+    ref/tops/all/index
+    ref/runners/index
+    ref/runners/all/index
+    ref/wheel/all/index
+    ref/auth/all/index
+    ref/output/all/index
+    ref/clients/index
     ref/peer
+    ref/clientacl
     ref/syndic
-    ref/python-api
-    ref/file_server/index
-    ref/file_server/file_roots
-    ref/file_server/dynamic-modules
+    ref/file_server/*
+    ref/file_server/all/index
     ref/configuration/*
+    ref/internals/index
+    ref/topology
+    ref/windows-package-manager
 
     ref/cli/index
     ref/cli/salt
@@ -48,7 +71,7 @@ Full Table of Contents
     ref/cli/salt-cp
     ref/cli/salt-call
     ref/cli/salt-run
+    ref/cli/salt-ssh
     ref/cli/salt-syndic
 
-    topics/specs/salt_auth_proto_abs
     topics/releases/index

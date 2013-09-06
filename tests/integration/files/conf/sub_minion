@@ -1,0 +1,35 @@
+# basic config
+master: localhost
+master_port: 64506
+root_dir: /tmp/subsalttest
+pki_dir: pki
+id: sub_minion
+cachedir: cachedir
+sock_dir: sub_minion_sock
+#acceptance_wait_time: 1
+open_mode: True
+log_file: minion
+
+# module extension
+test.foo: baz
+hosts.file: /tmp/salt-tests-tmpdir/hosts
+aliases.file: /tmp/salt-tests-tmpdir/aliases
+integration.test: True
+
+# Grains addons
+grains:
+  test_grain: spam
+  role: sub
+  planets:
+    - jupiter
+    - saturn
+    - uranus
+    - neptune
+  level1:
+    level2: bar
+  companions:
+    two:
+      - jamie
+      - zoe
+
+ipc_mode: tcp

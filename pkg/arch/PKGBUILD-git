@@ -1,6 +1,7 @@
-# Maintainer: Thomas S Hatch <thatch45 at gmail dot com>
+# Maintainer: Christer Edwards <christer.edwards@gmail.com>
 pkgname=salt-git
-pkgver=$(date +%Y%m%d)
+_gitname="salt"
+pkgver=v0.14.0.504.g6fc4ee2
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=('any')
@@ -8,55 +9,65 @@ url="https://github.com/saltstack/salt"
 license=('APACHE')
 groups=()
 depends=('python2'
-         'python2-pyzmq'
-         'python-m2crypto'
          'python2-yaml'
-         'pycrypto'
+         'python2-jinja'
+         'python2-pyzmq'
+         'python2-crypto'
          'python2-psutil'
-         'python2-jinja')
-makedepends=('git')
-provides=()
+         'python2-msgpack'
+         'python2-m2crypto')
+
 backup=('etc/salt/master'
         'etc/salt/minion')
-options=()
+
+makedepends=('git')
 conflicts=('salt')
-source=("salt-master"
-        "salt-minion"
-        "salt-syndic")
-md5sums=('1594591acb0a266854186a694da21103'
-         '21ab2eac231e9f61bf002ba5f16f8a3d'
-         '09683ef4966e401761f7d2db6ad4b692')
+provides=('salt')
 
-_gitroot="git://github.com/saltstack/salt.git"
-_gitname="salt"
+# makepkg 4.1 knows about git and will pull main branch
+source=("git://github.com/saltstack/salt.git")
 
-build() {
-  cd "$srcdir"
-  msg "Connecting to GIT server...."
+# makepkg knows it's a git repo because the url starts with 'git'
+# it then knows to checkout the branch upon cloning, expediating versioning.
+#branch="develop"
+#source=("git://github.com/saltstack/salt.git#branch=$branch")
 
-  if [ -d $_gitname ] ; then
-    cd $_gitname && git pull origin
-    msg "The local files are updated."
-  else
-    git clone $_gitroot $_gitname
-  fi
+# makepkg also knows about tags
+#tags="v0.14.1"
+#source=("git://github.com/saltstack/salt.git#tag=$tag")
 
-  msg "GIT checkout done or server timeout"
-  msg "Starting make..."
+# because the sources are not static, skip checksums
+md5sums=('SKIP')
 
-  rm -rf "$srcdir/$_gitname-build"
-  git clone "$srcdir/$_gitname" "$srcdir/$_gitname-build"
-
+pkgver() {
+  cd "$srcdir/$_gitname"
+  echo $(git describe --always | sed 's/-/./g')
+  # for git, if the repo has no tags, comment out the above and uncomment the next line:
+  #echo "0.$(git rev-list --count $branch).$(git describe --always)"
+  # This will give you a count of the total commits and the hash of the commit you are on.
+  # Useful if you're making a repository with git packages so that they can have sequential
+  # version numbers. (Else a pacman -Syu may not update the package)
 }
 
+#build() {
+#  cd "${srcdir}/${_gitname}"
+#  python2 setup.py build 
+   # no need to build setup.py install will do this
+#}
+
 package() {
-  cd "$srcdir/$_gitname-build"
+  cd "${srcdir}/${_gitname}"
+  
+  python2 setup.py install --root=${pkgdir}/ --optimize=1
 
-  python2 setup.py install --root=$pkgdir/ --optimize=1
+  install -Dm644 ${srcdir}/salt/pkg/arch/salt-master.service ${pkgdir}/usr/lib/systemd/system/salt-master.service
+  install -Dm644 ${srcdir}/salt/pkg/arch/salt-syndic.service ${pkgdir}/usr/lib/systemd/system/salt-syndic.service
+  install -Dm644 ${srcdir}/salt/pkg/arch/salt-minion.service ${pkgdir}/usr/lib/systemd/system/salt-minion.service
 
-  mkdir -p $pkgdir/etc/rc.d/
-  cp $srcdir/salt-master $pkgdir/etc/rc.d/
-  cp $srcdir/salt-minion $pkgdir/etc/rc.d/
-  cp $srcdir/salt-syndic $pkgdir/etc/rc.d/
-  chmod +x $pkgdir/etc/rc.d/*
+  mkdir -p ${pkgdir}/etc/salt/
+  cp ${srcdir}/salt/conf/master ${pkgdir}/etc/salt/
+  cp ${srcdir}/salt/conf/minion ${pkgdir}/etc/salt/
+
+  # remove vcs leftovers
+  find "$pkgdir" -type d -name .git -exec rm -r '{}' +
 }

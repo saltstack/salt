@@ -1,11 +1,19 @@
 #!/usr/bin/make -f
-#export DH_VERBOSE=1
+
+PKGFILES = pkg/*.service pkg/*.upstart pkg/*.logrotate
+SALT_BIN = common minion master syndic
+
 %:
-	dh $@ #--with python2
+	make -C doc html
+	make -C doc man && cp -p doc/_build/man/* doc/man
+	cp $(PKGFILES) debian
+	for d in $(SALT_BIN); do \
+	    cp pkg/salt.postrm debian/salt-$${d}.postrm; done
+	dh $@ 
+
 dh_override_auto_build:
-	python setup.py build #--install-layout=deb build
-#get-orig-source:
-#	git clone https://github.com/saltstack/salt.git
-#	mv salt salt-0.9.8
-#	tar -zcvf salt_0.9.8.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.8
-##	rm -rf salt-0.9.8
+	python setup.py build
+
+override_dh_installdeb:
+	dh_installdeb
+	find . -type f -regex .*/usr/bin/.* -exec sed -i -e 's/^\(#!\/usr\/bin\/\)env \(python\)$$/\1\2/' {} \;

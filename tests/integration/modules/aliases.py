@@ -1,18 +1,16 @@
-# Import python libs
-import os
-import sys
-import hashlib
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
+
 
 class AliasesTest(integration.ModuleCase):
     '''
     Validate aliases module
     '''
-    def test_set_target(self):
+    def not_test_set_target(self):
         '''
         aliases.set_target and aliases.get_target
         '''
@@ -26,7 +24,7 @@ class AliasesTest(integration.ModuleCase):
                 alias='fred')
         self.assertEqual(tgt_ret, 'target=bob')
 
-    def test_has_target(self):
+    def not_test_has_target(self):
         '''
         aliases.set_target and aliases.has_target
         '''
@@ -41,7 +39,7 @@ class AliasesTest(integration.ModuleCase):
                 target='bob')
         self.assertTrue(tgt_ret)
 
-    def test_list_aliases(self):
+    def not_test_list_aliases(self):
         '''
         aliases.list_aliases
         '''
@@ -72,3 +70,7 @@ class AliasesTest(integration.ModuleCase):
         self.assertIsInstance(tgt_ret, dict)
         self.assertNotIn('alias=frank', tgt_ret)
 
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(AliasesTest)

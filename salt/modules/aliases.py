@@ -4,10 +4,22 @@ Manage the information in the aliases file
 
 # Import python libs
 import os
-import sys
 import re
 import stat
 import tempfile
+
+# Import salt libs
+import salt.utils
+from salt.utils import which as _which
+
+
+__outputter__ = {
+    'rm_alias': 'txt',
+    'has_target': 'txt',
+    'get_target': 'txt',
+    'set_target': 'txt',
+    'list_aliases': 'yaml',
+}
 
 __ALIAS_RE = re.compile(r'([^:#]*)\s*:?\s*([^#]*?)(\s+#.*|$)')
 
@@ -16,10 +28,7 @@ def __get_aliases_filename():
     '''
     Return the path to the appropriate aliases file
     '''
-    if 'aliases.file' in __opts__:
-        return __opts__['aliases.file']
-    else:
-        return '/etc/aliases'
+    return __salt__['config.option']('aliases.file')
 
 
 def __parse_aliases():
@@ -35,12 +44,13 @@ def __parse_aliases():
     ret = []
     if not os.path.isfile(afn):
         return ret
-    for line in open(afn).readlines():
-        m = __ALIAS_RE.match(line)
-        if m:
-            ret.append(m.groups())
-        else:
-            ret.append((None, None, line.strip()))
+    with salt.utils.fopen(afn, 'r') as ifile:
+        for line in ifile:
+            match = __ALIAS_RE.match(line)
+            if match:
+                ret.append(match.groups())
+            else:
+                ret.append((None, None, line.strip()))
     return ret
 
 
@@ -54,29 +64,32 @@ def __write_aliases_file(lines):
 
     out = tempfile.NamedTemporaryFile(dir=adir, delete=False)
 
-    if not __opts__['integration.test']:
+    if not __opts__.get('integration.test', False):
         if os.path.isfile(afn):
-            st = os.stat(afn)
-            os.chmod(out.name, stat.S_IMODE(st.st_mode))
-            os.chown(out.name, st.st_uid, st.st_gid)
+            afn_st = os.stat(afn)
+            os.chmod(out.name, stat.S_IMODE(afn_st.st_mode))
+            os.chown(out.name, afn_st.st_uid, afn_st.st_gid)
         else:
-            os.chmod(out.name, 0644)
+            os.chmod(out.name, 0o644)
             os.chown(out.name, 0, 0)
 
     for (line_alias, line_target, line_comment) in lines:
         if not line_comment:
             line_comment = ''
         if line_alias and line_target:
-            out.write('%s: %s%s\n' % (line_alias, line_target, line_comment))
+            out.write('{0}: {1}{2}\n'.format(
+                line_alias, line_target, line_comment
+            ))
         else:
-            out.write('%s\n' % line_comment)
+            out.write('{0}\n'.format(line_comment))
 
     out.close()
     os.rename(out.name, afn)
 
-    newaliases_path = '/usr/bin/newaliases'
-    if os.path.exists(newaliases_path):
-        __salt__['cmd.run'](newaliases_path)
+    # Search $PATH for the newalises command
+    newaliases = _which('newaliases')
+    if newaliases is not None:
+        __salt__['cmd.run'](newaliases)
 
     return True
 
@@ -85,16 +98,15 @@ def list_aliases():
     '''
     Return the aliases found in the aliases file in this format::
 
-        {'<alias>': '<target>'}
+        {'alias': 'target'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' aliases.list_aliases
     '''
-    ret = {}
-    for (alias, target, comment) in __parse_aliases():
-        if not alias: continue
-        ret[alias] = target
+    ret = dict((alias, target) for alias, target, comment in __parse_aliases() if alias)
     return ret
 
 
@@ -102,8 +114,11 @@ def get_target(alias):
     '''
     Return the target associated with an alias
 
-    CLI Example::
-        salt '*' aliases.get_target <alias>
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aliases.get_target alias
     '''
     aliases = list_aliases()
     if alias in aliases:
@@ -115,8 +130,11 @@ def has_target(alias, target):
     '''
     Return true if the alias/target is set
 
-    CLI Example::
-        salt '*' aliases.has_target <alias> <target>
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aliases.has_target alias target
     '''
     aliases = list_aliases()
     return alias in aliases and target == aliases[alias]
@@ -128,8 +146,11 @@ def set_target(alias, target):
     any previous entry for the given alias or create a new one if it does not
     exist.
 
-    CLI Example::
-        salt '*' aliases.set_target <alias> <target>
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aliases.set_target alias target
     '''
 
     if get_target(alias) == target:
@@ -156,8 +177,11 @@ def rm_alias(alias):
     '''
     Remove an entry from the aliases file
 
-    CLI Example::
-        salt '*' aliases.rm_alias <alias>
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aliases.rm_alias alias
     '''
     if not get_target(alias):
         return True

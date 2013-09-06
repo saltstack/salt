@@ -1,0 +1,274 @@
+-------------------------------------------------------------------
+Fri Aug  9 18:08:12 UTC 2013 - aboe76@gmail.com
+
+- Update 0.16.3 bugfix release:
+  - Fixed scheduler config in pillar
+  - Fixed default value for file_recv master config option
+  - Fixed missing master configuration file parameters
+  - Fixed regression in binary package installation on 64-bit systems
+  - Fixed stackgrace when commenting a section in top.sls
+  - Fixed state declarations not formed as a list message.
+  - Fixed infinite loop on minion
+  - Fixed stacktrace in watch when state is 'prereq'
+  - Feature: function filter_by to grains module
+  - Feature: add new "osfinger" grain
+
+-------------------------------------------------------------------
+Sat Aug  3 06:01:32 UTC 2013 - aboe76@gmail.com
+
+- Fixed regression bug in salt 0.16.2
+  - Newly installed salt-minion doesn't create
+    /var/cache/salt/minion/proc
+  - fix let package create this directory
+    next version of Salt doesn't need this.
+
+-------------------------------------------------------------------
+Fri Aug  2 05:36:08 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.16.2
+  - gracefully handle lsb_release data when it is enclosed in quotes
+  - fixed pillar load from master config
+  - pillar function pillar.item and pillar.items instead of pillar.data
+  - fixed traceback when pillar sls is malformed
+  - gracefully handle quoted publish commands
+  - publich function publish.item and publish.items instead of publish.data
+  - salt-key usage in minionswarm script fixed
+  - minion random reauth_delay added to stagger re-auth attempts.
+  - improved user and group management
+  - improved file management
+  - improved package management
+  - service management custom initscripts support
+  - module networking hwaddr renamed to be in line with other modules
+  - fixed traceback in bridge.show
+  - fixed ssh know_hosts and auth.present output.
+  for more information: http://docs.saltstack.com/topics/releases/0.16.2.html
+
+-------------------------------------------------------------------
+Mon Jul 29 20:11:14 UTC 2013 - aboe76@gmail.com
+
+- removed not needed requirements:
+  Requires(pre): /usr/sbin/groupadd
+  Requires(pre): /usr/sbin/useradd
+  Requires(pre): /usr/sbin/userdel
+-------------------------------------------------------------------
+Mon Jul 29 18:06:03 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.16.1
+  - Bugfix release
+  - postgresql module Fixes #6352.
+  - returner fixes Fixes issue #5518
+  - http authentication issues fixed  #6356
+  - warning of deprecation runas in favor of user
+- more information at https://github.com/saltstack/salt/commits/v0.16.1
+  
+-------------------------------------------------------------------
+Fri Jul  5 21:24:21 UTC 2013 - aboe76@gmail.com
+
+- Updated init files, rc_status instead of rc status.
+
+-------------------------------------------------------------------
+Tue Jul  2 04:55:21 UTC 2013 - aboe76@gmail.com
+
+- Update to salt 0.16.0 final
+  - Multi-Master capability
+  - Prereq, the new requisite
+  - Peer system improvement
+  - Relative Includes
+  - More state Output Options
+  - Improved Windows Support
+  - Multi Targets for pkg.removed, pgk.purged States
+  - Random Times in cron states
+  - Confirmation Prompt on Key acceptance on master
+- full changelog details: http://docs.saltstack.com/topics/releases/0.16.0.html
+-------------------------------------------------------------------
+Sat Jun 22 05:31:10 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.16.0RC
+- New Feautures in 0.16.0:
+  - Multi-Master capability
+  - Prereq, the new requisite
+  - Peer system improvement
+  - Relative Includes
+  - More state Output Options
+  - Improved Windows Support
+  - Multi Targets for pkg.removed, pgk.purged States
+  - Random Times in cron states
+  - Confirmation Prompt on Key acceptance on master
+- full changelog details: http://docs.saltstack.com/topics/releases/0.16.0.html
+
+-------------------------------------------------------------------
+Wed Jun 12 20:48:36 UTC 2013 - aboe76@gmail.com
+
+- Updated init files from upstream, so init files are the same for
+  fedora/redhat/centos/debian/suse
+- Removed salt user and daemon.conf file, so package is in line
+  with upstream packages fedora/centos/debian.
+
+-------------------------------------------------------------------
+Sun Jun  2 07:39:03 UTC 2013 - aboe76@gmail.com
+
+- minor permission fix on salt config files to fix external auth
+
+-------------------------------------------------------------------
+Sat Jun  1 21:51:07 UTC 2013 - aboe76@gmail.com
+
+- Service release 0.15.3
+  showstoppers from 0.15.2:
+  - mine fix cross validity.
+  - redhat package issue
+  - pillar refresh fix
+
+-------------------------------------------------------------------
+Wed May 29 16:10:42 UTC 2013 - aboe76@gmail.com
+
+- Service release 0.15.2
+  xinetd service name not appended
+  virt-module uses qemu-img
+  publish.publish returns same info as salt-master
+  updated gitfs module  
+
+-------------------------------------------------------------------
+Mon May 27 20:42:06 UTC 2013 - aboe76@gmail.com
+
+- Fixed salt-master config file not readable by user 'salt'
+
+-------------------------------------------------------------------
+Mon May 27 20:04:14 UTC 2013 - aboe76@gmail.com
+
+- Updated package spec: security enhancement.
+  added system user salt to run salt-master under privileged user 'salt'
+  added config dirs, master.d/minion.d/syndic.d to add config files.
+  added salt-daemon.conf were salt user is specified under salt-master.
+
+-------------------------------------------------------------------
+Sun May 12 20:18:24 UTC 2013 - aboe76@gmail.com
+
+- Updated package spec, for systemd unit files
+  according to how systemd files needs to be packaged
+- added logrotate on salt log files
+- fixed rpmlint complain about reload function in init files
+
+-------------------------------------------------------------------
+Wed May  8 21:44:49 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.15.1
+- bugfix release.
+- fixes suse service check
+
+-------------------------------------------------------------------
+Sat May  4 08:16:27 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.15.0
+  Major update:
+  - salt mine function
+  - ipv6 support
+  - copy files from minions to master
+  - better template debugging
+  - state event firing
+  - major syndic updates
+  - peer system updates
+  - minion key revokation
+  - function return codes
+  - functions in overstate
+  - Pillar error reporting
+  - Cached State Data
+  - Monitoring states
+- Read http://docs.saltstack.com/topics/releases/0.15.0.html for more information
+- improved init files overwrite with /etc/default/salt
+
+-------------------------------------------------------------------
+Tue Apr 23 19:18:29 UTC 2013 - aboe76@gmail.com
+
+- Updated init files:
+- removed probe/reload/force reload
+  this isn't supported
+
+-------------------------------------------------------------------
+Sun Apr 14 14:46:00 UTC 2013 - aboe76@gmail.com
+
+- Updated init files
+
+-------------------------------------------------------------------
+Sun Apr 14 07:00:51 UTC 2013 - aboe76@gmail.com
+
+- Updated to 0.14.1 bugfix release:
+- some major fixes for the syndic system,
+- fixes to file.recurse and external auth and
+- fixes for windows
+
+-------------------------------------------------------------------
+Thu Apr 11 05:37:29 UTC 2013 - aboe76@gmail.com
+
+- Updated salt init files with option -d to really daemonize it
+
+-------------------------------------------------------------------
+Sat Mar 23 23:51:53 UTC 2013 - aboe76@gmail.com
+
+- Updated to 0.14.0
+  MAJOR FEATURES:
+    - Salt - As a Cloud Controller
+    - Libvirt State
+    - New get Functions
+
+-------------------------------------------------------------------
+Tue Mar 19 06:46:36 UTC 2013 - aboe76@gmail.com
+
+- Updated to 0.13.3
+  Last Bugfixes release before 0.14.0
+
+-------------------------------------------------------------------
+Wed Mar 13 22:04:43 UTC 2013 - aboe76@gmail.com
+
+- Updated 0.13.2
+  Bugfixes release (not specified)
+
+-------------------------------------------------------------------
+Mon Feb 25 17:52:59 UTC 2013 - aboe76@gmail.com
+
+- Updated spec file, postun removal of init.d files 
+
+-------------------------------------------------------------------
+Sat Feb 16 09:25:30 UTC 2013 - aboe76@gmail.com
+
+- Updated to Salt 0.13.1 bugfixes:
+- Fix #3693 (variable ref'ed before assignment)
+- Fix stack trace introduced with
+- Updated limit to be escaped like before and after.
+- Import install command from setuptools if we use them.
+- Fix user info not displayed correctly when group doesn't map cleanly
+- fix bug: Client.cache_dir()
+- Fix #3717
+- Fix #3716
+- Fix cmdmod.py daemon error
+- Updated test to properly determine homebrew user
+- Fixed whitespace issue
+
+-------------------------------------------------------------------
+Thu Feb 14 06:43:08 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.13.0
+
+-------------------------------------------------------------------
+Wed Jan 30 20:57:57 UTC 2013 - aboe76@gmail.com
+
+- Updated Suse Copyright in Spec-file
+
+-------------------------------------------------------------------
+Mon Jan 28 15:23:08 UTC 2013 - toddrme2178@gmail.com
+
+- Cleanup spec file
+
+-------------------------------------------------------------------
+Sat Jan 26 09:29:39 UTC 2013 - aboe76@gmail.com
+
+- split syndic from master in separate package
+
+-------------------------------------------------------------------
+Tue Jan 22 17:53:39 UTC 2013 - aboe76@gmail.com
+
+- updated to salt 0.12.1 bugfix release
+
+-------------------------------------------------------------------
+Wed Jan 16 06:38:40 UTC 2013 - aboe76@gmail.com
+
+- uploaded to salt 0.12.0

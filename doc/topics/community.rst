@@ -35,6 +35,12 @@ can use the `Freenode webchat client`__ right from your browser.
 .. __: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
 .. __: http://irclog.perlgeek.de/salt/
 
+Salt development
+----------------
+
+If you wish to discuss the development of Salt itself join us in
+``#salt-devel``.
+
 .. _community-github:
 
 Follow on Github
@@ -69,42 +75,25 @@ A few examples of salt states from the community:
 * https://github.com/kevingranade/kevingranade-salt-state
 * https://github.com/uggedal/states
 * https://github.com/mattmcclean/salt-openstack/tree/master/salt
+* https://github.com/rentalita/ubuntu-setup/
+* https://github.com/brutasse/states
+* https://github.com/bclermont/states
+* https://github.com/pcrews/salt-data
 
 Follow on ohloh
 ===============
 
 https://www.ohloh.net/p/salt
 
-Developing Salt
-===============
+Other community links
+=====================
 
-If you want to help develop Salt there is a great need and your patches are
-welcome!
+- `Salt Stack Inc. <http://saltstack.com>`_
+- `Subreddit <http://www.reddit.com/r/saltstack>`_
+- `Google+ <https://plus.google.com/114449193225626631691/posts>`_
+- `YouTube <http://www.youtube.com/user/SaltStack>`_
+- `Facebook <https://www.facebook.com/SaltStack>`_
+- `Twitter <https://twitter.com/SaltStackInc>`_
+- `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
 
-To assist in Salt development, you can help in a number of ways.
-
-Posting patches to the mailing list
------------------------------------
-
-If you have a patch for Salt, please format it via :command:`git format-patch` and
-send it to the Salt users mailing list. This allows the patch to give you the
-contributor the credit for your patch, and gives the Salt community an archive
-of the patch and a place for discussion.
-
-Setting a Github pull request
------------------------------
-
-This is probably the preferred method for contributions, simply create a Github
-fork, commit your changes to the fork, and then open up a pull request.
-
-Contributions Welcome!
-----------------------
-
-The goal here it to make contributions clear, make sure there is a trail for
-where the code has come from, but most importantly, to give credit where credit
-is due!
-
-The `Open Comparison Contributing Docs`__ has some good suggestions and tips for
-those who are looking forward to contribute.
-
-.. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
+.. include:: hacking.rst

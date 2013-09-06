@@ -1,8 +1,10 @@
 # winservice.py
 
+# Import python libs
 from os.path import splitext, abspath
 from sys import modules
 
+# Import third party libs
 import win32serviceutil
 import win32service
 import win32event
@@ -26,7 +28,7 @@ class Service(win32serviceutil.ServiceFramework):
     def sleep(self, sec):
         win32api.Sleep(sec * 1000, True)
 
-    def SvcDoRun(self):
+    def SvcDoRun(self):  # pylint: disable=C0103
         self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
         try:
             self.ReportServiceStatus(win32service.SERVICE_RUNNING)
@@ -34,13 +36,13 @@ class Service(win32serviceutil.ServiceFramework):
             self.start()
             self.log('wait')
             win32event.WaitForSingleObject(self.stop_event,
-                                            win32event.INFINITE)
+                                           win32event.INFINITE)
             self.log('done')
-        except Exception as x:
-            self.log('Exception : %s' % x)
+        except Exception as err:
+            self.log('Exception: {0}'.format(err))
             self.SvcStop()
 
-    def SvcStop(self):
+    def SvcStop(self):  # pylint: disable=C0103
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
         self.log('stopping')
         self.stop()
@@ -74,7 +76,7 @@ def instart(cls, name, display_name=None, stay_alive=True):
         from sys import executable
         module_path = executable
     module_file = splitext(abspath(module_path))[0]
-    cls._svc_reg_class_ = '%s.%s' % (module_file, cls.__name__)
+    cls._svc_reg_class_ = '{0}.{1}'.format(module_file, cls.__name__)
     if stay_alive:
         win32api.SetConsoleCtrlHandler(lambda x: True, True)
     try:
@@ -89,5 +91,5 @@ def instart(cls, name, display_name=None, stay_alive=True):
                 cls._svc_name_
                 )
         print('Start ok')
-    except Exception as x:
-        print(str(x))
+    except Exception as err:
+        print(str(err))

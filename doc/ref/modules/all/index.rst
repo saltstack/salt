@@ -1,8 +1,8 @@
 .. _all-salt.modules:
 
-============================
-Full list of builtin modules
-============================
+======================================
+Full list of builtin execution modules
+======================================
 
 .. admonition:: Virtual modules
 
@@ -17,71 +17,168 @@ Full list of builtin modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    aliases
+    alternatives
     apache
     apt
     archive
-    butterkvm
-    cluster
+    at
+    augeas_cfg
+    bluez
+    brew
+    bridge
+    bsd_shadow
+    cassandra
     cmdmod
+    config
     cp
     cron
+    daemontools
+    darwin_sysctl
     data
+    ddns
     debconfmod
+    debian_service
+    dig
     disk
-    django
+    djangomod
+    dnsmasq
+    dnsutil
+    dpkg
     ebuild
+    eix
+    eselect
+    event
+    extfs
     file
+    freebsd_sysctl
+    freebsdjail
     freebsdkmod
     freebsdpkg
     freebsdservice
     gem
     gentoo_service
+    gentoolkitmod
     git
+    glance
     grains
     groupadd
+    grub_legacy
+    guestfs
     hg
     hosts
+    img
+    iptables
+    key
+    keyboard
+    keystone
     kmod
-    kvm_hyper
+    launchctl
+    layman
+    ldapmod
+    linux_acl
+    linux_lvm
     linux_sysctl
+    localemod
+    locate
+    logrotate
+    lxc
+    makeconf
+    match
     mdadm
+    mine
+    modjk
+    mongodb
+    monit
     moosefs
     mount
+    munin
     mysql
+    netbsd_sysctl
+    netbsdservice
     network
+    nfs3
     nginx
+    nova
+    npm
+    nzbget
+    openbsdpkg
+    openbsdservice
+    osxdesktop
     pacman
+    pam
+    parted
+    pecl
     pillar
     pip
+    pkg_resource
+    pkgin
+    pkgng
+    pkgutil
+    portage_config
+    postgres
+    poudriere
     ps
     publish
     puppet
     pw_group
     pw_user
+    qemu_img
+    qemu_nbd
+    quota
+    rabbitmq
+    rbenv
+    reg
+    ret
     rh_ip
     rh_service
+    rpm
     rvm
+    s3
     saltutil
+    seed
     selinux
     service
     shadow
+    smartos_imgadm
+    smartos_vmadm
+    smf
+    solaris_group
+    solaris_shadow
+    solaris_user
+    solarispkg
     solr
+    sqlite3
     ssh
     state
     status
+    supervisord
+    svn
+    sysbench
+    sysmod
+    system
     systemd
     test
+    timezone
+    tls
     tomcat
     upstart
     useradd
     virt
-    virtualenv
+    virtualenv_mod
     win_disk
     win_file
+    win_groupadd
     win_network
+    win_pkg
     win_service
     win_shadow
+    win_status
+    win_system
     win_useradd
+    xapi
     yumpkg
     yumpkg5
+    zfs
+    zpool
     zypper

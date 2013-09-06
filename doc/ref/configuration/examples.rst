@@ -11,15 +11,13 @@ Configuration file examples
 Example master configuration file
 =================================
 
-.. literalinclude:: ../../../conf/master.template
-    :language: ini
-    :linenos:
+.. literalinclude:: ../../../conf/master
+    :language: yaml
 
 .. _configuration-examples-minion:
 
 Example minion configuration file
 =================================
 
-.. literalinclude:: ../../../conf/minion.template
-    :language: ini
-    :linenos:
+.. literalinclude:: ../../../conf/minion
+    :language: yaml

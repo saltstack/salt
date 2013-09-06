@@ -1,0 +1,3 @@
+/etc/salt/master.d/
+/etc/salt/pki/master/
+/var/cache/salt/master/

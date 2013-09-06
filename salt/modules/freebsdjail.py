@@ -2,7 +2,11 @@
 The jail module for FreeBSD
 '''
 
+# Import python libs
 import os
+
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -16,7 +20,9 @@ def start(jail=''):
     '''
     Start the specified jail or all, if none specified
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.start [<jail name>]
     '''
@@ -28,7 +34,9 @@ def stop(jail=''):
     '''
     Stop the specified jail or all, if none specified
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.stop [<jail name>]
     '''
@@ -40,7 +48,9 @@ def restart(jail=''):
     '''
     Restart the specified jail or all, if none specified
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.restart [<jail name>]
     '''
@@ -51,26 +61,39 @@ def restart(jail=''):
 def is_enabled():
     '''
     See if jail service is actually enabled on boot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jail.is_enabled <jail name>
     '''
-    cmd='service -e | grep jail'
+    cmd = 'service -e | grep jail'
     return not __salt__['cmd.retcode'](cmd)
 
 
 def get_enabled():
     '''
     Return which jails are set to be run
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jail.get_enabled
     '''
     ret = []
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
-        if os.path.isfile(rconf):
-            for line in open(rconf, 'r').readlines():
-                if not line.strip():
-                    continue
-                if not line.startswith('jail_list='):
-                    continue
-                jails = line.split('"')[1].split()
-                for j in jails:
-                    ret.append(j)
+        if os.access(rconf, os.R_OK):
+            with salt.utils.fopen(rconf, 'r') as _fp:
+                for line in _fp:
+                    if not line.strip():
+                        continue
+                    if not line.startswith('jail_list='):
+                        continue
+                    jails = line.split('"')[1].split()
+                    for j in jails:
+                        ret.append(j)
     return ret
 
 
@@ -78,51 +101,63 @@ def show_config(jail):
     '''
     Display specified jail's configuration
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.show_config <jail name>
     '''
     ret = {}
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
-        if os.path.isfile(rconf):
-            for line in open(rconf, 'r').readlines():
-                if not line.strip():
-                    continue
-                if not line.startswith('jail_{0}_'.format(jail)):
-                    continue
-                k, v = line.split('=')
-                ret[k.split('_',2)[2]] = v.split('"')[1]
+        if os.access(rconf, os.R_OK):
+            with salt.utils.fopen(rconf, 'r') as _fp:
+                for line in _fp:
+                    if not line.strip():
+                        continue
+                    if not line.startswith('jail_{0}_'.format(jail)):
+                        continue
+                    key, value = line.split('=')
+                    ret[key.split('_', 2)[2]] = value.split('"')[1]
     return ret
 
 
 def fstab(jail):
     '''
     Display contents of a fstab(5) file defined in specified
-    jail's configuration. If no file defined return False.
+    jail's configuration. If no file is defined, return False.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.fstab <jail name>
     '''
     ret = []
-    config = __salt__['jail.show_config'](jail)
+    config = show_config(jail)
     if 'fstab' in config:
-        fstab = config['fstab']
-        if os.path.isfile(fstab):
-            for line in open(fstab, 'r').readlines():
-                if not line.strip():
-                    continue
-                if line.strip().startswith('#'):
-                    continue
-                dv, m, f, o, dm, p = line.split()
-                ret.append({
-                    'device': dv, 'mountpoint': m,
-                    'fstype': f,  'options': o,
-                    'dump': dm,   'pass': p
-                    })
-        else:
-            ret = False
-    else:
+        c_fstab = config['fstab']
+        if os.access(c_fstab, os.R_OK):
+            with salt.utils.fopen(c_fstab, 'r') as _fp:
+                for line in _fp:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith('#'):
+                        continue
+                    try:
+                        device, mpoint, fstype, opts, dump, pas_ = line.split()
+                    except ValueError:
+                        # Gracefully continue on invalid lines
+                        continue
+                    ret.append({
+                        'device': device,
+                        'mountpoint': mpoint,
+                        'fstype': fstype,
+                        'options': opts,
+                        'dump': dump,
+                        'pass': pas_
+                        })
+    if not ret:
         ret = False
     return ret
 
@@ -131,21 +166,29 @@ def status(jail):
     '''
     See if specified jail is currently running
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.status <jail name>
     '''
-    cmd='jls | grep {0}'.format(jail)
+    cmd = 'jls | grep {0}'.format(jail)
     return not __salt__['cmd.retcode'](cmd)
 
 
 def sysctl():
     '''
     Dump all jail related kernel states (sysctl)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jail.sysctl
     '''
     ret = {}
-    sysctl=__salt__['cmd.run']('sysctl security.jail')
-    for s in sysctl.split('\n'):
-        k, v = s.split(':')
-        ret[k.strip()] = v.strip()
+    sysctl_jail = __salt__['cmd.run']('sysctl security.jail')
+    for line in sysctl_jail.splitlines():
+        key, value = line.split(':', 1)
+        ret[key.strip()] = value.strip()
     return ret

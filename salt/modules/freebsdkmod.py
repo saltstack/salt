@@ -2,6 +2,7 @@
 Module to manage FreeBSD kernel modules
 '''
 
+# Import python libs
 import os
 
 
@@ -44,12 +45,14 @@ def available():
     '''
     Return a list of all available kernel modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.available
     '''
     ret = []
-    for path in __salt__['cmd.run']('ls /boot/kernel | grep .ko$').split('\n'):
+    for path in __salt__['cmd.run']('ls /boot/kernel | grep .ko$').splitlines():
         bpath = os.path.basename(path)
         comps = bpath.split('.')
         if 'ko' in comps:
@@ -62,7 +65,9 @@ def check_available(mod):
     '''
     Check to see if the specified kernel module is available
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.check_available kvm
     '''
@@ -73,12 +78,14 @@ def lsmod():
     '''
     Return a dict containing information about currently loaded modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.lsmod
     '''
     ret = []
-    for line in __salt__['cmd.run']('kldstat').split('\n'):
+    for line in __salt__['cmd.run']('kldstat').splitlines():
         comps = line.split()
         if not len(comps) > 2:
             continue
@@ -100,13 +107,15 @@ def load(mod):
     '''
     Load the specified kernel module
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.load kvm
     '''
-    pre_mods = kldstat()
-    data = __salt__['cmd.run_all']('kldload {0}'.format(mod))
-    post_mods = kldstat()
+    pre_mods = lsmod()
+    __salt__['cmd.run_all']('kldload {0}'.format(mod))
+    post_mods = lsmod()
     return _new_mods(pre_mods, post_mods)
 
 
@@ -114,11 +123,13 @@ def remove(mod):
     '''
     Remove the specified kernel module
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.remove kvm
     '''
-    pre_mods = kldstat()
-    data = __salt__['cmd.run_all']('kldunload {0}'.format(mod))
-    post_mods = kldstat()
+    pre_mods = lsmod()
+    __salt__['cmd.run_all']('kldunload {0}'.format(mod))
+    post_mods = lsmod()
     return _rm_mods(pre_mods, post_mods)

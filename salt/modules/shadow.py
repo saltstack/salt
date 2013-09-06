@@ -2,25 +2,41 @@
 Manage the shadow file
 '''
 
+# Import python libs
 import os
-import spwd
+try:
+    import spwd
+except ImportError:
+    pass
+
+# Import salt libs
+import salt.utils
+
 
 def __virtual__():
-    '''
-    Only work on posix-like systems
-    '''
+    return 'shadow' if __grains__.get('kernel', '') == 'Linux' else False
 
-    # Disable on Windows, a specific file module exists:
-    if __grains__['os'] == 'Windows':
-        return False
-    return 'shadow'
+
+def default_hash():
+    '''
+    Returns the default hash used for unset passwords
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.default_hash
+    '''
+    return '!'
 
 
 def info(name):
     '''
     Return information for the specified user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.info root
     '''
@@ -28,7 +44,7 @@ def info(name):
         data = spwd.getspnam(name)
         ret = {
             'name': data.sp_nam,
-            'pwd': data.sp_pwd,
+            'passwd': data.sp_pwd,
             'lstchg': data.sp_lstchg,
             'min': data.sp_min,
             'max': data.sp_max,
@@ -36,9 +52,9 @@ def info(name):
             'inact': data.sp_inact,
             'expire': data.sp_expire}
     except KeyError:
-        ret = {
+        return {
             'name': '',
-            'pwd': '',
+            'passwd': '',
             'lstchg': '',
             'min': '',
             'max': '',
@@ -47,11 +63,15 @@ def info(name):
             'expire': ''}
     return ret
 
+
 def set_inactdays(name, inactdays):
     '''
-    Set the number of days of inactivity after a password has expired before the account is locked. See man chage.
+    Set the number of days of inactivity after a password has expired before
+    the account is locked. See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_inactdays username 7
     '''
@@ -64,11 +84,15 @@ def set_inactdays(name, inactdays):
     if post_info['inact'] != pre_info['inact']:
         return post_info['inact'] == inactdays
 
+
 def set_maxdays(name, maxdays):
     '''
-    Set the maximum number of days during which a password is valid. See man chage.
+    Set the maximum number of days during which a password is valid.
+    See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_maxdays username 90
     '''
@@ -81,11 +105,14 @@ def set_maxdays(name, maxdays):
     if post_info['max'] != pre_info['max']:
         return post_info['max'] == maxdays
 
+
 def set_mindays(name, mindays):
     '''
     Set the minimum number of days between password changes. See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_mindays username 7
     '''
@@ -99,38 +126,63 @@ def set_mindays(name, mindays):
         return post_info['min'] == mindays
     return False
 
-def set_password(name, password):
+
+def set_password(name, password, use_usermod=False):
     '''
     Set the password for a named user. The password must be a properly defined
-    hash, the password hash can be generated with this command:
-    ``openssl passwd -1 <plaintext password>``
+    hash. The password hash can be generated with this command:
 
-    CLI Example::
+    ``python -c "import crypt; print crypt.crypt('password',
+    '\\$6\\$SALTsalt')"``
 
-        salt '*' shadow.set_password root $1$UYCIxa628.9qXjpQCjM4a..
+    ``SALTsalt`` is the 8-character crpytographic salt. Valid characters in the
+    salt are ``.``, ``/``, and any alphanumeric character.
+
+    Keep in mind that the $6 represents a sha512 hash, if your OS is using a
+    different hashing algorithm this needs to be changed accordingly
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_password root '$1$UYCIxa628.9qXjpQCjM4a..'
     '''
-    s_file = '/etc/shadow'
-    ret = {}
-    if not os.path.isfile(s_file):
-        return ret
-    lines = []
-    for line in open(s_file, 'rb').readlines():
-        comps = line.strip().split(':')
-        if not comps[0] == name:
-            lines.append(line)
-            continue
-        comps[1] = password
-        line = ':'.join(comps)
-        lines.append('{0}\n'.format(line))
-    open(s_file, 'w+').writelines(lines)
-    uinfo = info(name)
-    return uinfo['pwd'] == password
+    if not salt.utils.is_true(use_usermod):
+        # Edit the shadow file directly
+        s_file = '/etc/shadow'
+        ret = {}
+        if not os.path.isfile(s_file):
+            return ret
+        lines = []
+        with salt.utils.fopen(s_file, 'rb') as fp_:
+            for line in fp_:
+                comps = line.strip().split(':')
+                if comps[0] != name:
+                    lines.append(line)
+                    continue
+                comps[1] = password
+                line = ':'.join(comps)
+                lines.append('{0}\n'.format(line))
+        with salt.utils.fopen(s_file, 'w+') as fp_:
+            fp_.writelines(lines)
+        uinfo = info(name)
+        return uinfo['passwd'] == password
+    else:
+        # Use usermod -p (less secure, but more feature-complete)
+        cmd = 'usermod -p {0} {1}'.format(name, password)
+        __salt__['cmd.run'](cmd)
+        uinfo = info(name)
+        return uinfo['passwd'] == password
+
 
 def set_warndays(name, warndays):
     '''
-    Set the number of days of warning before a password change is required. See man chage.
+    Set the number of days of warning before a password change is required.
+    See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_warndays username 7
     '''
@@ -143,3 +195,18 @@ def set_warndays(name, warndays):
     if post_info['warn'] != pre_info['warn']:
         return post_info['warn'] == warndays
     return False
+
+
+def set_date(name, date):
+    '''
+    sets the value for the date the password was last changed to the epoch
+    (January 1, 1970). See man chage.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_date username 0
+    '''
+    cmd = 'chage -d {0} {1}'.format(date, name)
+    __salt__['cmd.run'](cmd)

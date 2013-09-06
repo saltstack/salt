@@ -3,16 +3,23 @@ Manage a local persistent data structure that can hold any arbitrary data
 specific to the minion
 '''
 
+# Import python libs
 import os
-import salt.payload
 import ast
+
+# Import salt libs
+import salt.utils
+import salt.payload
+
 
 def clear():
     '''
     Clear out all of the data in the minion datastore, this function is
     destructive!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' data.clear
     '''
@@ -22,27 +29,34 @@ def clear():
         pass
     return True
 
+
 def load():
     '''
     Return all of the data in the minion datastore
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' data.load
     '''
     serial = salt.payload.Serial(__opts__)
 
     try:
-        fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "r")
+        datastore_path = os.path.join(__opts__['cachedir'], 'datastore')
+        fn_ = salt.utils.fopen(datastore_path, "r")
         return serial.load(fn_)
     except (IOError, OSError):
         return {}
+
 
 def dump(new_data):
     '''
     Replace the entire datastore with a passed data structure
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' data.dump '{'eggs': 'spam'}'
     '''
@@ -53,7 +67,8 @@ def dump(new_data):
             return False
 
     try:
-        with open(os.path.join(__opts__['cachedir'], 'datastore'), "w") as fn_:
+        datastore_path = os.path.join(__opts__['cachedir'], 'datastore')
+        with salt.utils.fopen(datastore_path, "w") as fn_:
             serial = salt.payload.Serial(__opts__)
             serial.dump(new_data, fn_)
 
@@ -62,11 +77,14 @@ def dump(new_data):
     except (IOError, OSError):
         return False
 
+
 def update(key, value):
     '''
     Update a key with a value in the minion datastore
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' data.update <key> <value>
     '''
@@ -75,24 +93,30 @@ def update(key, value):
     dump(store)
     return True
 
+
 def getval(key):
     '''
     Get a value from the minion datastore
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' data.getval <key>
     '''
     store = load()
     return store[key]
 
-def getvals(keys):
+
+def getvals(*keys):
     '''
     Get values from the minion datastore
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' data.getvals <key>
+    .. code-block:: bash
+
+        salt '*' data.getvals <key> [<key> ...]
     '''
     store = load()
     ret = []
@@ -100,3 +124,24 @@ def getvals(keys):
         if key in store:
             ret.append(store[key])
     return ret
+
+
+def cas(key, value, old_value):
+    '''
+    Check and set a value in the minion datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.cas <key> <value> <old_value>
+    '''
+    store = load()
+    if key not in store:
+        return False
+
+    if store[key] != old_value:
+        return False
+
+    store[key] = value
+    return True

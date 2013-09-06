@@ -1,0 +1,146 @@
+[MASTER]
+
+# Python code to execute, usually for sys.path manipulation such as
+# pygtk.require().
+init-hook="
+  exec 'aW1wb3J0IG9zLCBzeXMKCmlmICdWSVJUVUFMX0VOVicgaW4gb3MuZW52aXJvbjoKCiAgICB2ZV9k \
+  aXIgPSBvcy5lbnZpcm9uWydWSVJUVUFMX0VOViddCiAgICB2ZV9kaXIgaW4gc3lzLnBhdGggb3Ig \
+  c3lzLnBhdGguaW5zZXJ0KDAsIHZlX2RpcikKICAgIGFjdGl2YXRlX3RoaXMgPSBvcy5wYXRoLmpv \
+  aW4ob3MucGF0aC5qb2luKHZlX2RpciwgJ2JpbicpLCAnYWN0aXZhdGVfdGhpcy5weScpCgogICAg \
+  IyBGaXggZm9yIHdpbmRvd3MKICAgIGlmIG5vdCBvcy5wYXRoLmV4aXN0cyhhY3RpdmF0ZV90aGlz \
+  KToKICAgICAgICBhY3RpdmF0ZV90aGlzID0gb3MucGF0aC5qb2luKG9zLnBhdGguam9pbih2ZV9k \
+  aXIsICdTY3JpcHRzJyksICdhY3RpdmF0ZV90aGlzLnB5JykKCiAgICBleGVjZmlsZShhY3RpdmF0 \
+  ZV90aGlzLCBkaWN0KF9fZmlsZV9fPWFjdGl2YXRlX3RoaXMpKQo='.decode('base64')"
+# Pickle collected data for later comparisons.
+persistent=no
+
+
+[MESSAGES CONTROL]
+
+# Enable the message, report, category or checker with the given id(s). You can
+# either give multiple identifier separated by comma (,) or put this option
+# multiple time. See also the "--disable" option for examples.
+#enable=E0001,E0100,E0101,E0102,E0103,E0104,E0105,E0106,E0107,E0108,E0202,E0203,E0211,E0213,E0221,E0222,E0601,E0602,E0603,E0604,E0701,E0702,E0710,E0711,E1001,E1002,E1003,E1102,E1111,E1120,E1121,E1122,E1123,E1124,E1200,E1201,E1205,E1206,E1300,E1301,E1302,E1303,E1304,E1305,E1306,E1310,C0112,C0121,C0202,C0321,C0322,C0323,C0324,W0101,W0102,W0104,W0105,W0106,W0107,W0108,W0109,W0120,W0141,W0150,W0199,W0211,W0221,W0222,W0223,W0231,W0232,W0233,W0301,W0311,W0312,W0331,W0332,W0333,W0401,W0402,W0403,W0406,W0410,W0601,W0602,W0604,W0614,W0623,W0701,W0702,W0703,W0710,W0711,W1001,W1111,W1201,W1300,W1301,W1401,W1402,F0202
+
+# Disable the message, report, category or checker with the given id(s). You
+# can either give multiple identifiers separated by comma (,) or put this
+# option multiple times (only on the command line, not in the configuration
+# file where it should appear only once).You can also use "--disable=all" to
+# disable everything first and then reenable specific checks. For example, if
+# you want to run only the similarities checker, you can use "--disable=all
+# --enable=similarities". If you want to run only the classes checker, but have
+# no Warning level messages displayed, use"--disable=all --enable=classes
+# --disable=W"
+disable=R,
+  I0011,
+  E1101,
+  E1103,
+  C0102,
+  C0103,
+  C0111,
+  C0203,
+  C0204,
+  C0301,
+  C0302,
+  W0110,
+  W0122,
+  W0142,
+  W0201,
+  W0212,
+  W0404,
+  W0511,
+  W0603,
+  W0611,
+  W0612,
+  W0613,
+  W0621,
+  W0622,
+  W0631,
+  W0704,
+  F0220,
+  F0401
+
+# Disabled:
+# R* [refactoring suggestions & reports]
+# I0011 (locally-disabling)
+# E1101 (no-member) [pylint isn't smart enough]
+# E1103 (maybe-no-member)
+# C0102 (blacklisted-name) [because it activates C0103 too]
+# C0103 (invalid-name)
+# C0111 (missing-docstring)
+# C0203 (bad-mcs-method-argument)
+# C0204 (bad-mcs-classmethod-argument)
+# C0301 (line-too-long)
+# C0302 (too-many-lines)
+# W0110 (deprecated-lambda)
+# W0122 (exec-statement)
+# W0142 (star-args)
+# W0201 (attribute-defined-outside-init) [done in several places in the codebase]
+# W0212 (protected-access)
+# W0404 (reimported) [done intentionally for legit reasons]
+# W0511 (fixme) [several outstanding instances currently in the codebase]
+# W0603 (global-statement)
+# W0611 (unused-import) [used to check for module availability]
+# W0612 (unused-variable) [unused return values]
+# W0613 (unused-argument)
+# W0621 (redefined-outer-name)
+# W0622 (redefined-builtin) [many parameter names shadow builtins]
+# W0631 (undefined-loop-variable) [~3 instances, seem to be okay]
+# W0704 (pointless-except) [misnomer; "ignores the exception" rather than "pointless"]
+# F0220 (unresolved-interface)
+# F0401 (import-error)
+
+
+[REPORTS]
+
+# Include message's id in output
+include-ids=no
+
+# Include symbolic ids of messages in output
+symbols=no
+
+# Tells whether to display a full report or only the messages
+reports=no
+
+# Set the output format. Available formats are text, parseable, colorized, msvs
+# (visual studio) and html
+# output-format=parseable
+msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
+
+# Put messages in a separate file for each module / package specified on the
+# command line instead of printing them on stdout. Reports (if any) will be
+# written in a file name "pylint_global.[txt|html]".
+files-output=no
+
+
+[BASIC]
+
+# List of builtins function names that should not be used, separated by a comma
+bad-functions=apply,input
+
+
+[FORMAT]
+
+# String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
+# tab).
+indent-string='    '
+
+
+[VARIABLES]
+
+# List of additional names supposed to be defined in builtins. Remember that
+# you should avoid to define new builtins when possible.
+additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__
+
+
+[IMPORTS]
+
+# Deprecated modules which should not be used, separated by a comma
+deprecated-modules=regsub,TERMIOS,Bastion,rexec
+
+
+[EXCEPTIONS]
+
+# Exceptions that will emit a warning when being caught. Defaults to
+# "Exception"
+overgeneral-exceptions=BaseException

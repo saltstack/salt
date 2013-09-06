@@ -1,41 +1,109 @@
 '''
 A module to manage software on Windows
+
+:depends:   - pythoncom
+            - win32com
+            - win32con
+            - win32api
+            - pywintypes
 '''
+
+# Import third party libs
 try:
     import pythoncom
     import win32com.client
     import win32api
     import win32con
-except:
-    pass
+    import pywintypes
+    HAS_DEPENDENCIES = True
+except ImportError:
+    HAS_DEPENDENCIES = False
+
+# Import python libs
+import copy
+import logging
+import msgpack
+import os
+import locale
+from distutils.version import LooseVersion  # pylint: disable=E0611
+
+# Import salt libs
+import salt.utils
+
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    return 'pkg' if __grains__['os'] == 'Windows' else False
+    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+        return 'pkg'
+    return False
 
 
-def _list_removed(old, new):
+def latest_version(*names, **kwargs):
     '''
-    List the packages which have been removed between the two package objects
-    '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
-
-def available_version(name):
-    '''
-    The available version of the package in the repository
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
-        salt '*' pkg.available_version <package name>
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
+
     '''
-    return 'Not implemented on Windows yet'
+    if len(names) == 0:
+        return ''
+
+    # Initialize the return dict with empty strings
+    ret = {}
+    for name in names:
+        ret[name] = ''
+
+    # Refresh before looking for the latest version available
+    if salt.utils.is_true(kwargs.get('refresh', True)):
+        refresh_db()
+
+    pkgs = list_pkgs()
+    for name in names:
+        candidate = '0'
+        version_num = '0'
+        pkginfo = _get_package_info(name)
+        if not pkginfo:
+            log.error('Unable to locate package {0}'.format(name))
+            continue
+        if len(pkginfo) == 1:
+            candidate = pkginfo.keys()[0]
+            full_name = pkginfo[candidate]['full_name']
+            ret[name] = ''
+            if full_name in pkgs:
+                version_num = pkgs[full_name]
+            if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
+                                       pkg2=str(version_num)):
+                ret[name] = candidate
+            continue
+        for ver in pkginfo.keys():
+            if __salt__['pkg.compare'](pkg1=str(ver), oper='>',
+                                       pkg2=str(candidate)):
+                candidate = ver
+        full_name = pkginfo[candidate]['full_name']
+        ret[name] = ''
+        if full_name in pkgs:
+            version_num = pkgs[full_name]
+        if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
+                                   pkg2=str(version_num)):
+            ret[name] = candidate
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def upgrade_available(name):
@@ -46,10 +114,10 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return 'Not implemented on Windows yet'
+    return latest_version(name) != ''
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
@@ -57,10 +125,45 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
-    return 'Not implemented on Windows yet'
+    if salt.utils.is_true(refresh):
+        refresh_db()
+
+    ret = {}
+    for name, data in get_repo_data().items():
+        if version(name):
+            latest = latest_version(name)
+            if latest:
+                ret[name] = latest
+    return ret
 
 
-def version(name):
+def list_available(*names):
+    '''
+    Return a list of available versions of the specified package.
+
+    CLI Example::
+
+        salt '*' pkg.list_available <package name>
+        salt '*' pkg.list_available <package name01> <package name02>
+    '''
+    if not names:
+        return ''
+    if len(names) == 1:
+        pkginfo = _get_package_info(names[0])
+        if not pkginfo:
+            return ''
+        versions = pkginfo.keys()
+    else:
+        versions = {}
+        for name in names:
+            pkginfo = _get_package_info(name)
+            if not pkginfo:
+                continue
+            versions[name] = pkginfo.keys() if pkginfo else []
+    return versions
+
+
+def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
 
@@ -68,14 +171,39 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    pkgs = list_pkgs()
-    if name in pkgs:
-        return pkgs[name]
-    else:
+    win_names = []
+    ret = {}
+    if len(names) == 1:
+        val = __salt__['pkg_resource.version'](*names, **kwargs)
+        if len(val):
+            return val
         return ''
+    if len(names) > 1:
+        reverse_dict = {}
+        for name in names:
+            ret[name] = ''
+            versions = _get_package_info(name)
+            if versions:
+                for val in versions.itervalues():
+                    if 'full_name' in val and len(val.get('full_name', '')) > 0:
+                        reverse_dict[val.get('full_name', '')] = name
+                        win_names.append(val.get('full_name', ''))
+            else:
+                win_names.append(name)
+        nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
+        if len(nums):
+            for num, val in nums.iteritems():
+                if len(val) > 0:
+                    try:
+                        ret[reverse_dict[num]] = val
+                    except KeyError:
+                        ret[num] = val
+            return ret
+        return dict([(x, '') for x in names])
+    return ret
 
 
-def list_pkgs(*args):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
         List the packages currently installed in a dict::
 
@@ -84,19 +212,39 @@ def list_pkgs(*args):
         CLI Example::
 
             salt '*' pkg.list_pkgs
+            salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    pythoncom.CoInitialize()
-    if len(args) == 0:
-        pkgs = dict(
-                   _get_reg_software().items() +
-                   _get_msi_software().items())
-    else:
-        # get package version for each package in *args
-        pkgs = {}
-        for arg in args:
-            pkgs.update(_search_software(arg))
-    pythoncom.CoUninitialize()
-    return pkgs
+    versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
+    ret = {}
+    name_map = _get_name_map()
+    with salt.utils.winapi.Com():
+        for key, val in _get_reg_software().iteritems():
+            if key in name_map:
+                key = name_map[key]
+            __salt__['pkg_resource.add_pkg'](ret, key, val)
+        for key, val in _get_msi_software().iteritems():
+            if key in name_map:
+                key = name_map[key]
+            __salt__['pkg_resource.add_pkg'](ret, key, val)
+
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
+    return ret
+
 
 def _search_software(target):
     '''
@@ -106,13 +254,14 @@ def _search_software(target):
     '''
     search_results = {}
     software = dict(
-                    _get_reg_software().items() +
-                    _get_msi_software().items())
-    for key, value in software.iteritems():
+        list(_get_reg_software().items()) +
+        list(_get_msi_software().items()))
+    for key, value in software.items():
         if key is not None:
             if target.lower() in key.lower():
                 search_results[key] = value
     return search_results
+
 
 def _get_msi_software():
     '''
@@ -122,13 +271,27 @@ def _get_msi_software():
     win32_products = {}
     this_computer = "."
     wmi_service = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-    swbem_services = wmi_service.ConnectServer(this_computer,"root\cimv2")
+    swbem_services = wmi_service.ConnectServer(this_computer, "root\\cimv2")
+
+    # Find out whether the Windows Installer provider is present. It
+    # is optional on Windows Server 2003 and 64-bit operating systems See
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa392726%28v=vs.85%29.aspx#windows_installer_provider
+    try:
+        swbem_services.Get("Win32_Product")
+    except pywintypes.com_error:
+        log.warning("Windows Installer (MSI) provider not found; package management will not work correctly on MSI packages")
+        return win32_products
+
     products = swbem_services.ExecQuery("Select * from Win32_Product")
     for product in products:
-        prd_name = product.Name.encode('ascii', 'ignore')
-        prd_ver = product.Version.encode('ascii', 'ignore')
-        win32_products[prd_name] = prd_ver
+        try:
+            prd_name = product.Name.encode('ascii', 'ignore')
+            prd_ver = product.Version.encode('ascii', 'ignore')
+            win32_products[prd_name] = prd_ver
+        except Exception:
+            pass
     return win32_products
+
 
 def _get_reg_software():
     '''
@@ -151,19 +314,21 @@ def _get_reg_software():
                    'SchedulingAgent',
                    'WIC'
                    ]
+    encoding = locale.getpreferredencoding()
+
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
-    reg_entries = dict(_get_user_keys().items() +
-                       _get_machine_keys().items())
-    for reg_hive, reg_keys in reg_entries.iteritems():
+    reg_entries = dict(list(_get_user_keys().items()) +
+                       list(_get_machine_keys().items()))
+    for reg_hive, reg_keys in reg_entries.items():
         for reg_key in reg_keys:
             try:
                 reg_handle = win32api.RegOpenKeyEx(
-                                reg_hive,
-                                reg_key,
-                                0,
-                                win32con.KEY_READ)
-            except:
+                    reg_hive,
+                    reg_key,
+                    0,
+                    win32con.KEY_READ)
+            except Exception:
                 pass
                 #Unsinstall key may not exist for all users
             for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
@@ -175,14 +340,19 @@ def _get_reg_software():
                     reg_hive,
                     prd_uninst_key,
                     "DisplayName")
+                try:
+                    prd_name = prd_name.decode(encoding)
+                except Exception:
+                    pass
                 prd_ver = _get_reg_value(
                     reg_hive,
                     prd_uninst_key,
                     "DisplayVersion")
-                if not name in ignore_list:
-                    if not prd_name == 'Not Found':
+                if name not in ignore_list:
+                    if prd_name != 'Not Found':
                         reg_software[prd_name] = prd_ver
     return reg_software
+
 
 def _get_machine_keys():
     '''
@@ -194,10 +364,11 @@ def _get_machine_keys():
     machine_keys = [
         "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
         "Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-        ]
+    ]
     machine_hive = win32con.HKEY_LOCAL_MACHINE
     machine_hive_and_keys[machine_hive] = machine_keys
     return machine_hive_and_keys
+
 
 def _get_user_keys():
     '''
@@ -216,10 +387,10 @@ def _get_user_keys():
                   'S-1-5-20']
     sw_uninst_key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
     reg_handle = win32api.RegOpenKeyEx(
-                    users_hive,
-                    '',
-                    0,
-                    win32con.KEY_READ)
+        users_hive,
+        '',
+        0,
+        win32con.KEY_READ)
     for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
         #this is some identical key of a sid that contains some software names
         #but no detailed information about the software installed for that user
@@ -231,19 +402,19 @@ def _get_user_keys():
     user_hive_and_keys[users_hive] = user_keys
     return user_hive_and_keys
 
+
 def _get_reg_value(reg_hive, reg_key, value_name=''):
     '''
     Read one value from Windows registry.
-    If 'name' is empty string, reads default value.
+    If 'name' is empty map, reads default value.
     '''
-    value_data = ''
     try:
         key_handle = win32api.RegOpenKeyEx(
             reg_hive, reg_key, 0, win32con.KEY_ALL_ACCESS)
         value_data, value_type = win32api.RegQueryValueEx(key_handle,
                                                           value_name)
         win32api.RegCloseKey(key_handle)
-    except:
+    except Exception:
         value_data = 'Not Found'
     return value_data
 
@@ -258,63 +429,280 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    return 'Not implemented on Windows yet'
+    __context__.pop('winrepo.data', None)
+    repocache = __opts__['win_repo_cachefile']
+    cached_repo = __salt__['cp.is_cached'](repocache)
+    if not cached_repo:
+        # It's not cached. Cache it, mate.
+        cached_repo = __salt__['cp.cache_file'](repocache)
+        return True
+    # Check if the master's cache file has changed
+    if __salt__['cp.hash_file'](repocache) != __salt__['cp.hash_file'](cached_repo):
+        cached_repo = __salt__['cp.cache_file'](repocache)
+    return True
 
 
-def install(name, refresh=False, **kwargs):
+def install(name=None, refresh=False, pkgs=None, **kwargs):
     '''
     Install the passed package
 
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
         salt '*' pkg.install <package name>
     '''
-    return 'Not implemented on Windows yet'
+    if salt.utils.is_true(refresh):
+        refresh_db()
+
+    # Ignore pkg_type from parse_targets, Windows does not suport the "sources"
+    # argument
+    pkg_params = __salt__['pkg_resource.parse_targets'](name,
+                                                        pkgs,
+                                                        **kwargs)[0]
+
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
+
+    old = list_pkgs()
+
+    if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
+        # Only use the 'version' param if 'name' was not specified as a
+        # comma-separated list
+        pkg_params = {name: kwargs.get('version')}
+
+    for param, version_num in pkg_params.iteritems():
+        pkginfo = _get_package_info(param)
+        if not pkginfo:
+            log.error('Unable to locate package {0}'.format(name))
+            continue
+
+        version_num = version_num or _get_latest_pkg_version(pkginfo)
+
+        if version_num in [old.get(pkginfo[x]['full_name']) for x in pkginfo]:
+            # Desired version number already installed
+            continue
+        elif version_num not in pkginfo:
+            log.error('Version {0} not found for package '
+                      '{1}'.format(version_num, param))
+            continue
+
+        installer = pkginfo[version_num].get('installer')
+        if not installer:
+            log.error('No installer configured for version {0} of package '
+                      '{1}'.format(version_num, param))
+
+        if installer.startswith('salt:') \
+                or installer.startswith('http:') \
+                or installer.startswith('https:') \
+                or installer.startswith('ftp:'):
+            cached_pkg = __salt__['cp.is_cached'](installer)
+            if not cached_pkg:
+                # It's not cached. Cache it, mate.
+                cached_pkg = __salt__['cp.cache_file'](installer)
+        else:
+            cached_pkg = installer
+
+        cached_pkg = cached_pkg.replace('/', '\\')
+        msiexec = pkginfo[version_num].get('msiexec')
+        cmd = '{msiexec}"{cached_pkg}" {install_flags}'.format(
+            msiexec='msiexec /i ' if msiexec else '',
+            cached_pkg=cached_pkg,
+            install_flags=pkginfo[version_num]['install_flags']
+        )
+        __salt__['cmd.run_all'](cmd)
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def upgrade():
+def upgrade(refresh=True):
     '''
     Run a full system upgrade
 
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
         salt '*' pkg.upgrade
     '''
-    return 'Not implemented on Windows yet'
+    log.warning('pkg.upgrade not implemented on Windows yet')
+
+    # Uncomment the below once pkg.upgrade has been implemented
+
+    #if salt.utils.is_true(refresh):
+    #    refresh_db()
+    return {}
 
 
-def remove(name):
+def remove(name=None, pkgs=None, version=None, **kwargs):
     '''
-    Remove a single package
+    Remove packages.
 
-    Return a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+    version
+        The version of the package to be deleted. If this option is used in
+        combination with the ``pkgs`` option below, then this version will be
+        applied to all targeted packages.
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    return 'Not implemented on Windows yet'
+    pkg_params = __salt__['pkg_resource.parse_targets'](name,
+                                                        pkgs,
+                                                        **kwargs)[0]
+    old = list_pkgs()
+    for target in pkg_params:
+        pkginfo = _get_package_info(target)
+        if not pkginfo:
+            log.error('Unable to locate package {0}'.format(name))
+            continue
+        if not version:
+            version = _get_latest_pkg_version(pkginfo)
+
+        uninstaller = pkginfo[version].get('uninstaller')
+        if not uninstaller:
+            uninstaller = pkginfo[version].get('installer')
+        if not uninstaller:
+            return 'Error: No installer or uninstaller configured for package {0}'.format(name)
+        if uninstaller.startswith('salt:'):
+            cached_pkg = \
+                __salt__['cp.is_cached'](uninstaller)
+            if not cached_pkg:
+                # It's not cached. Cache it, mate.
+                cached_pkg = \
+                    __salt__['cp.cache_file'](uninstaller)
+        else:
+            cached_pkg = uninstaller
+        cached_pkg = cached_pkg.replace('/', '\\')
+        if not os.path.exists(os.path.expandvars(cached_pkg)) \
+                and '(x86)' in cached_pkg:
+            cached_pkg = cached_pkg.replace('(x86)', '')
+        cmd = '"' + str(os.path.expandvars(
+            cached_pkg)) + '"' + str(pkginfo[version].get('uninstall_flags', ''))
+        if pkginfo[version].get('msiexec'):
+            cmd = 'msiexec /x ' + cmd
+        __salt__['cmd.run_all'](cmd)
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name):
+def purge(name=None, pkgs=None, version=None, **kwargs):
     '''
-    Recursively remove a package and all dependencies which were installed
-    with it
+    Package purges are not supported, this function is identical to
+    ``remove()``.
 
-    Return a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+    version
+        The version of the package to be deleted. If this option is used in
+        combination with the ``pkgs`` option below, then this version will be
+        applied to all targeted packages.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return 'Not implemented on Windows yet'
+    return remove(name=name, pkgs=pkgs, version=version, **kwargs)
+
+
+def get_repo_data():
+    '''
+    Returns the cached winrepo data
+
+    CLI Example::
+
+        salt '*' pkg.get_repo_data
+    '''
+    #if 'winrepo.data' in __context__:
+    #    return __context__['winrepo.data']
+    repocache = __opts__['win_repo_cachefile']
+    cached_repo = __salt__['cp.is_cached'](repocache)
+    if not cached_repo:
+        __salt__['pkg.refresh_db']()
+    try:
+        with salt.utils.fopen(cached_repo, 'r') as repofile:
+            try:
+                repodata = msgpack.loads(repofile.read()) or {}
+                #__context__['winrepo.data'] = repodata
+                return repodata
+            except Exception as exc:
+                log.exception(exc)
+                return {}
+    except IOError as exc:
+        log.error('Not able to read repo file')
+        log.exception(exc)
+        return {}
+
+
+def _get_name_map():
+    '''
+    Return a reverse map of full pkg names to the names recognized by winrepo.
+    '''
+    return get_repo_data().get('name_map', {})
+
+
+def _get_package_info(name):
+    '''
+    Return package info.
+    Returns empty map if package not available
+    TODO: Add option for version
+    '''
+    return get_repo_data().get('repo', {}).get(name, {})
+
+
+def _reverse_cmp_pkg_versions(pkg1, pkg2):
+    '''
+    Compare software package versions
+    '''
+    if LooseVersion(pkg1) > LooseVersion(pkg2):
+        return 1
+    else:
+        return -1
+
+
+def _get_latest_pkg_version(pkginfo):
+    if len(pkginfo) == 1:
+        return pkginfo.keys().pop()
+    pkgkeys = pkginfo.keys()
+    return sorted(pkgkeys, cmp=_reverse_cmp_pkg_versions).pop()

@@ -10,4 +10,3 @@ fre.addScript('/usr/bin/salt-minion')
 fre.use_compression = 0
 fre.include_py = True
 fre()
-

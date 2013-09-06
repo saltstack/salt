@@ -1,15 +1,20 @@
 '''
 Tests for the file state
 '''
-# Import python libs
-import os
-#
-# Import salt libs
-from saltunittest import TestLoader, TextTestRunner
-import integration
-from integration import TestDaemon
 
-class CMDTest(integration.ModuleCase):
+# Import python libs
+import tempfile
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
+import integration
+
+
+class CMDTest(integration.ModuleCase,
+              integration.SaltReturnAssertsMixIn):
     '''
     Validate the cmd state
     '''
@@ -17,15 +22,19 @@ class CMDTest(integration.ModuleCase):
         '''
         cmd.run
         '''
-        ret = self.run_state('cmd.run', name='ls')
-        result = ret[ret.keys()[0]]['result']
-        self.assertTrue(result)
+
+        ret = self.run_state('cmd.run', name='ls', cwd=tempfile.gettempdir())
+        self.assertSaltTrueReturn(ret)
 
     def test_test_run(self):
         '''
         cmd.run test interface
         '''
-        ret = self.run_state('cmd.run', name='ls', test=True)
-        result = ret[ret.keys()[0]]['result']
-        self.assertIsNone(result)
+        ret = self.run_state('cmd.run', name='ls',
+                             cwd=tempfile.gettempdir(), test=True)
+        self.assertSaltNoneReturn(ret)
 
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(CMDTest)

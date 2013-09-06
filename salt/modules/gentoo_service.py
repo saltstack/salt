@@ -17,12 +17,14 @@ def get_enabled():
     '''
     Return a list of service that are enabled on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_enabled
     '''
     ret = set()
-    lines = __salt__['cmd.run']('rc-update show').strip().split('\n')
+    lines = __salt__['cmd.run']('rc-update show').splitlines()
     for line in lines:
         if not '|' in line:
             continue
@@ -36,12 +38,14 @@ def get_disabled():
     '''
     Return a set of services that are installed but disabled
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_disabled
     '''
     ret = set()
-    lines = __salt__['cmd.run']('rc-update -v show').strip().split('\n')
+    lines = __salt__['cmd.run']('rc-update -v show').splitlines()
     for line in lines:
         if not '|' in line:
             continue
@@ -52,11 +56,14 @@ def get_disabled():
             ret.add(comps[0])
     return sorted(ret)
 
+
 def get_all():
     '''
     Return all available boot services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -67,7 +74,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -79,7 +88,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -87,11 +98,13 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name):
+def restart(name, **kwargs):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -105,52 +118,63 @@ def status(name, sig=None):
     service is running or not, pass a signature to use to find the service via
     ps
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name> [service signature]
     '''
-    sig = name if not sig else sig
-    cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-            __grains__, sig)
-    return __salt__['cmd.run'](cmd).strip()
+    return __salt__['status.pid'](sig if sig else name)
 
-def enable(name):
+
+def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
     cmd = 'rc-update add {0} default'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
-def disable(name):
+
+def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
     cmd = 'rc-update delete {0} default'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def enabled(name):
     '''
-    Return True if the named servioce is enabled, false otherwise
+    Return True if the named service is enabled, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enabled <service name>
     '''
     return name in get_enabled()
 
+
 def disabled(name):
     '''
-    Return True if the named servioce is enabled, false otherwise
+    Return True if the named service is enabled, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disabled <service name>
     '''

@@ -4,25 +4,46 @@ tests for host state
 
 # Import python libs
 import os
-#
+import shutil
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
+import salt.utils
 
 HFILE = os.path.join(integration.TMP, 'hosts')
 
-class HostTest(integration.ModuleCase):
+
+class HostTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate the host state
     '''
+
+    def setUp(self):
+        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), HFILE)
+        super(HostTest, self).setUp()
+
+    def tearDown(self):
+        if os.path.exists(HFILE):
+            os.remove(HFILE)
+        super(HostTest, self).tearDown()
+
     def test_present(self):
         '''
         host.present
         '''
-        ret = self.run_state('host.present', name='spam.bacon', ip='10.10.10.10')
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        with open(HFILE) as fp_:
-            self.assertIn('{0}\t\t{1}'.format(ip, name), fp_.read())
+        name = 'spam.bacon'
+        ip = '10.10.10.10'
+        ret = self.run_state('host.present', name=name, ip=ip)
+        self.assertSaltTrueReturn(ret)
+        with salt.utils.fopen(HFILE) as fp_:
+            output = fp_.read()
+            self.assertIn('{0}\t\t{1}'.format(ip, name), output)
 
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(HostTest)

@@ -18,9 +18,9 @@ The Salt State Tree
 .. glossary::
 
     State tree
-        A collection of ``sls`` files that live under the directory specified
+        A collection of ``SLS`` files that live under the directory specified
         in :conf_master:`file_roots`. A state tree can be organized into
-        :term:`sls modules`.
+        ``SLS modules``.
 
 Include declaration
 -------------------
@@ -29,7 +29,7 @@ Include declaration
 
     Include declaration
         Defines a list of :term:`module reference` strings to include in this
-        :term:`sls`.
+        :term:`SLS`.
 
         Occurs only in the top level of the highstate structure.
 
@@ -48,7 +48,7 @@ Module reference
 
     Module reference
         The name of a SLS module defined by a separate SLS file and residing on
-        the Salt Master. A module named ``edit.vim`` is a reference to the sls
+        the Salt Master. A module named ``edit.vim`` is a reference to the SLS
         file ``salt://edit/vim.sls``.
 
 ID declaration
@@ -65,14 +65,16 @@ ID declaration
 
         Occurs on the top level or under the :term:`extend declaration`.
 
-.. note:: Naming gotchas
-
-        Must **not** contain a dot, otherwise highstate summary output will be
-        unpredictable. (This has been fixed in versions 0.9.7 and above)
-
         Must be unique across entire state tree. If the same ID declaration is
         used twice, only the first one matched will be used. All subsequent
         ID declarations with the same name will be ignored.
+
+.. note:: Naming gotchas
+
+        Until 0.9.6, IDs could **not** contain a dot, otherwise highstate summary output was
+        unpredictable. (It was fixed in versions 0.9.7 and above)
+
+
 
 Extend declaration
 ------------------
@@ -80,15 +82,15 @@ Extend declaration
 .. glossary::
 
     Extend declaration
-        Extends a :term:`name declaration` from an included ``sls module``. The
+        Extends a :term:`name declaration` from an included ``SLS module``. The
         keys of the extend declaration always define existing :term:`ID
         declarations <ID declaration>` which have been defined in included
-        ``sls modules``.
+        ``SLS modules``.
 
         Occurs only in the top level and defines a dictionary.
 
 Extend declarations are useful for adding-to or overriding parts of a
-:term:`state declaration` that is defined in another ``sls`` files. In the
+:term:`state declaration` that is defined in another ``SLS`` file. In the
 following contrived example, the shown ``mywebsite.sls`` file is ``include``
 -ing and ``extend`` -ing the ``apache.sls`` module in order to add a ``watch``
 declaration that will restart Apache whenever the Apache configuration file,
@@ -108,6 +110,14 @@ declaration that will restart Apache whenever the Apache configuration file,
     mywebsite:
       file:
         - managed
+
+.. seealso:: watch_in and require_in
+
+    Sometimes it is more convenient to use the :ref:`watch_in
+    <requisites-watch-in>` or :ref:`require_in <requisites-require-in>` syntax
+    instead of extending another ``SLS`` file.
+
+    :doc:`State Requisites </ref/states/requisites>`
 
 State declaration
 -----------------
@@ -168,8 +178,45 @@ Function declaration
         .. code-block:: yaml
 
             httpd:
+              pkg.installed
+
+        The function can be declared inline with the state as a shortcut, but
+        the actual data structure is better referenced in this form:
+
+        .. code-block:: yaml
+
+            httpd:
               pkg:
                 - installed
+
+        Where the function is a string in the body of the state declaration.
+        Technically when the function is declared in dot notation the compiler
+        converts it to be a string in the state declaration list. Note that the
+        use of the first example more than once in an ID declaration is invalid
+        yaml.
+
+        INVALID:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg.installed
+              service.running
+
+        When passing a function without arguments and another state declaration
+        within a single ID declaration, then the long or "standard" format
+        needs to be used since otherwise it does not represent a valid data
+        structure.
+
+        VALID:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg:
+                - installed
+              service:
+                - running
 
         Occurs as the only index in the :term:`state declaration` list.
 
@@ -192,8 +239,7 @@ For example in the following state declaration ``user``, ``group``, and
 .. code-block:: yaml
 
     /etc/http/conf/http.conf:
-      file:
-        - managed
+      file.managed:
         - user: root
         - group: root
         - mode: 644
@@ -218,14 +264,12 @@ declarations cannot both have ``/etc/motd`` as the ID declaration:
 .. code-block:: yaml
 
     motd_perms:
-      file:
-        - managed
+      file.managed:
         - name: /etc/motd
         - mode: 644
 
     motd_quote:
-      file:
-        - append
+      file.append:
         - name: /etc/motd
         - text: "Of all smells, bread; of all tastes, salt."
 
@@ -237,14 +281,12 @@ easier to specify ``mywebsite`` than to specify
 .. code-block:: yaml
 
     mywebsite:
-      file:
-        - managed
+      file.managed:
         - name: /etc/apache2/sites-available/mywebsite.com
         - source: salt://mywebsite.com
 
     a2ensite mywebsite.com:
-      cmd:
-        - wait
+      cmd.wait:
         - unless: test -L /etc/apache2/sites-enabled/mywebsite.com
         - watch:
           - file: mywebsite
@@ -269,29 +311,25 @@ For example, given the following state declaration:
 .. code-block:: yaml
 
     python-pkgs:
-      pkg:
-        - installed
+      pkg.installed:
         - names:
           - python-django
           - python-crypto
           - python-yaml
 
-Once converted into the :term:`lowstate` data structure the above state
+Once converted into the lowstate data structure the above state
 declaration will be expanded into the following three state declarations:
 
 .. code-block:: yaml
 
       python-django:
-        pkg:
-          - installed
+        pkg.installed
 
       python-crypto:
-        pkg:
-          - installed
+        pkg.installed
 
       python-yaml:
-        pkg:
-          - installed
+        pkg.installed
 
 Large example
 =============
@@ -309,6 +347,9 @@ components.
       <ID Declaration>:
         [<overrides>]
 
+
+    # standard declaration
+
     <ID Declaration>:
       <State Declaration>:
         - <Function>
@@ -320,9 +361,11 @@ components.
           - <Requisite Reference>
           - <Requisite Reference>
 
+
+    # inline function and names
+
     <ID Declaration>:
-      <State Declaration>:
-        - <Function>
+      <State Declaration>.<Function>:
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>
@@ -332,4 +375,23 @@ components.
           - <name>
         - <Requisite Declaration>:
           - <Requisite Reference>
+          - <Requisite Reference>
+
+ 
+    # multiple states for single id
+
+    <ID Declaration>:
+      <State Declaration>:
+        - <Function> 
+        - <Function Arg>
+        - <Name>: <name>
+        - <Requisite Declaration>:
+          - <Requisite Reference>
+      <State Declaration>:
+        - <Function>
+        - <Function Arg>
+        - <Names>:
+          - <name>
+          - <name>
+        - <Requisite Declaration>:
           - <Requisite Reference>

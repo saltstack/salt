@@ -13,8 +13,6 @@ Synopsis
 
     salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.ping
 
-    salt -Q test.ping
-
 Description
 ===========
 
@@ -27,20 +25,38 @@ Options
 
 .. program:: salt
 
-.. option:: -h, --help
+.. include:: _includes/common-options.rst
 
-    Print a usage message briefly summarizing these command-line options
+.. include:: _includes/timeout-option.rst
+.. |timeout| replace:: 5
 
-.. option:: -t TIMEOUT, --timeout=TIMEOUT
-
-    The timeout in seconds to wait for replies from the salt minions.
-
-.. option:: -s STATIC, --static=STATIC
+.. option:: -s, --static
 
     By default as of version 0.9.8 the salt command returns data to the
     console as it is received from minions, but previous releases would return
     data only after all data was received. To only return the data with a hard
     timeout and after all minions have returned then use the static option.
+
+.. option:: --async
+
+    Instead of waiting for the job to run on minions only print the jod id of
+    the started execution and complete.
+
+.. option:: --state-output=STATE_OUTPUT
+
+    Override the configured state_output value for minion output.  Default: 
+    full
+
+.. option:: --subset=SUBSET
+
+    Execute the routine on a random subset of the targeted minions.  The 
+    minions will be verified that they have the named function before 
+    executing.
+
+.. option:: -v VERBOSE, --verbose
+
+    Turn on verbosity for the salt call, this will cause the salt command to
+    print out extra data like the job id.
 
 .. option:: -b BATCH, --batch-size=BATCH
 
@@ -49,105 +65,42 @@ Options
     an explicit number of minions to execute at once, or a percentage of
     minions to execute on.
 
-.. option:: --version
+.. option:: -a EAUTH, --auth=EAUTH
 
-    Print the version of salt that is running.
+    Pass in an external authentication medium to validate against. The
+    credentials will be prompted for. Can be used with the -T option.
 
-.. option:: -E, --pcre
+.. option:: -T, --make-token
 
-    The target expression will be interpreted as a pcre regular expression
-    rather than a shell glob.
+    Used in conjunction with the -a option. This creates a token that allows
+    for the authenticated user to send commands without needing to
+    re-authenticate.
 
-.. option:: -L, --list
-
-    The target expression will be interpreted as a comma delimited list,
-    example: server1.foo.bar,server2.foo.bar,example7.quo.qux
-
-.. option:: -G, --grain
-
-    The target expression matches values returned by the salt grains system on
-    the minions. The target expression is in the format of '<grain value>:<glob
-    expression>'; example: 'os:Arch*'
-
-    This was changed in version 0.9.8 to accept glob expressions instead of
-    regular expression. To use regular expression matching with grains use
-    the --grain-pcre option.
-
-.. option:: --grain-pcre
-
-    The target expression matches values returned by the salt grains system on
-    the minions. The target expression is in the format of '<grain value>:<
-    regular expression>'; example: 'os:Arch.*'
-
-.. option:: -C, --compound
-
-    Utilize many target definitions to make the call very granular. This option
-    takes a group of targets separated by and or or. The default matcher is a
-    glob as usual, if something other than a glob is used preface it with the
-    letter denoting the type, example: 'webserv* and G@os:Debian or E@db*'
-    make sure that the compound target is encapsulated in quotes.
-
-.. option:: -X, --exsel
-
-    Instead of using shell globs use the return code of a function.
-
-.. option:: -N, --nodegroup
-
-    Use a predefined compound target defined in the salt master configuration
-    file
-
-.. option:: -R, --range
-
-    Instead of using shell globs to evaluate the target use a range expression
-    to identify targets. Range expressions look like %cluster.
-
-    Using the Range option requires that a range server is set up and the
-    location of the range server is referenced in the master configuration
-    file.
-
-.. option:: --return
+.. option:: --return=RETURNER
 
     Chose an alternative returner to call on the minion, if an alternative
-    returner is used then the return will not come back tot he command line
+    returner is used then the return will not come back to the command line
     but will be sent to the specified return system.
 
-.. option:: -Q, --query
+.. option:: -d, --doc, --documentation
 
-    The -Q option is being deprecated and will be removed in version 0.9.9,
-    Use the salt jobs interface instead, for documentation on the salt jobs
-    interface execute the command "salt-run -d jobs"
+    Return the documentation for the module functions available on the minions
 
-    Execute a salt command query, this can be used to find the results of a
-    previous function call: -Q test.echo')
+.. option:: --args-separator=ARGS_SEPARATOR
 
-.. option:: -c CONFIG, --config=CONFIG
+    Set the special argument used as a delimiter between command arguments of 
+    compound commands. This is useful when one wants to pass commas as 
+    arguments to some of the commands in a compound command.
 
-    The location of the salt master configuration file, the salt master
-    settings are required to know where the connections are;
-    default=/etc/salt/master
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/master
+.. |loglevel| replace:: ``warning``
 
-.. option::  --raw-out
+.. include:: _includes/target-selection.rst
+.. include:: _includes/extended-target-selection.rst
 
-    Print the output from the salt command in raw python
-    form, this is suitable for re-reading the output into
-    an executing python script with eval.
+.. include:: _includes/output-options.rst
 
-.. option::   --text-out
-
-    Print the output from the salt command in the same
-    form the shell would.
-
-.. option::   --yaml-out
-
-    Print the output from the salt command in yaml.
-
-.. option::   --json-out
-
-    Print the output from the salt command in json.
-
-.. option:: --no-color
-
-    Disable all colored output
 
 See also
 ========

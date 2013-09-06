@@ -1,8 +1,8 @@
 .. _all-salt.renderers:
 
-==============================
-Full list of builtin renderers
-==============================
+=====================================
+Full list of builtin renderer modules
+=====================================
 
 .. currentmodule:: salt.renderers
 
@@ -10,8 +10,11 @@ Full list of builtin renderers
     :toctree:
     :template: autosummary.rst.tmpl
 
-    salt.renderers.json_jinja
-    salt.renderers.json_mako
-    salt.renderers.yaml_jinja
-    salt.renderers.yaml_mako
-    salt.renderers.py
+    jinja
+    json
+    mako
+    py
+    pydsl
+    stateconf
+    wempy
+    yaml

@@ -3,10 +3,10 @@ State Modules
 =============
 
 State Modules are the components that map to actual enforcement and management
-of salt states.
+of Salt states.
 
-States are - Easy to Write!
-============================
+States are Easy to Write!
+=========================
 
 State Modules should be easy to write and straightforward. The information
 passed to the SLS data structures will map directly to the states modules.
@@ -17,7 +17,7 @@ illustrate:
 .. code-block:: yaml
 
     /etc/salt/master: # maps to "name"
-      file: # maps to State module filename eg https://github.com/saltstack/salt/blob/develop/salt/states/file.py
+      file: # maps to State module filename e.g. https://github.com/saltstack/salt/blob/develop/salt/states/file.py
         - managed # maps to the managed function in the file State module
         - user: root # one of many options passed to the manage function
         - group: root
@@ -31,14 +31,39 @@ This does issue the burden, that function names, state names and function
 arguments should be very human readable inside state modules, since they
 directly define the user interface.
 
+.. admonition:: Keyword Arguments
+
+    Salt passes a number of keyword arguments to states when rendering them,
+    including the environment, a unique identifier for the state, and more.
+    Additionally, keep in mind that the requisites for a state are part of the
+    keyword arguments. Therefore, if you need to iterate through the keyword
+    arguments in a state, these must be considered and handled appropriately.
+    One such example is in the :mod:`pkgrepo.managed
+    <salt.states.pkgrepo.managed>` state, which needs to be able to handle
+    arbitrary keyword arguments and pass them to module execution functions.
+    An example of how these keyword arguments can be handled can be found
+    here_.
+
+    .. _here: https://github.com/saltstack/salt/blob/v0.16.2/salt/states/pkgrepo.py#L163-183
+
+
 Using Custom State Modules
 ==========================
 
 Place your custom state modules inside a ``_states`` directory within the
-``file_roots`` specified by the master config file. These custom state modules
-can then be distributed in a number of ways. Custom state modules are
-distributed when state.highstate is run, or via the saltutil.sync_states
-function.
+:conf_master:`file_roots` specified by the master config file. These custom
+state modules can then be distributed in a number of ways. Custom state modules
+are distributed when :mod:`state.highstate <salt.modules.state.highstate>` is
+run, or by executing the :mod:`saltutil.sync_states
+<salt.modules.saltutil.sync_states>` or :mod:`saltutil.sync_all
+<salt.modules.saltutil.sync_all>` functions.
+
+Any custom states which have been synced to a minion, that are named the
+same as one of Salt's default set of states, will take the place of the default
+state with the same name. Note that a state's default name is its filename
+(i.e. ``foo.py`` becomes state ``foo``), but that its name can be overridden
+by using a :ref:`__virtual__ function <virtual-modules>`.
+
 
 Cross Calling Modules
 =====================
@@ -72,6 +97,23 @@ A State Module must return a dict containing the following keys/values:
 - **result:** A boolean value. *True* if the action was successful, otherwise
   *False*.
 - **comment:** A string containing a summary of the result.
+
+Test State
+==========
+
+All states should check for and support ``test`` being passed in the options. 
+This will return data about what changes would occur if the state were actually 
+run. An example of such a check could look like this:
+
+.. code-block:: python
+
+    # Return comment of changes if test.
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'State Foo will execute with param {0}'.format(bar)
+        return ret
+
+Make sure to test and return before performing any real actions on the minion.
 
 Watcher Function
 ================

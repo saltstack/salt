@@ -1,40 +1,43 @@
 '''
 Work with virtual machines managed by libvirt
 
-Required python modules: libvirt
+:depends: libvirt Python module
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
+# Import python libs
 import os
 import re
 import shutil
-import StringIO
 import subprocess
-from xml.dom import minidom
-from salt.exceptions import CommandExecutionError
 
+# Import third party libs
+import yaml
 try:
     import libvirt
-    has_libvirt = True
+    from xml.dom import minidom
+    HAS_ALL_IMPORTS = True
 except ImportError:
-    has_libvirt = False
+    HAS_ALL_IMPORTS = False
 
-# Import Third Party Libs
-import yaml
+# Import salt libs
+import salt.utils
+from salt._compat import StringIO as _StringIO
+from salt.exceptions import CommandExecutionError
 
 
-VIRT_STATE_NAME_MAP = {0: "running",
-                       1: "running",
-                       2: "running",
-                       3: "paused",
-                       4: "shutdown",
-                       5: "shutdown",
-                       6: "crashed"}
+VIRT_STATE_NAME_MAP = {0: 'running',
+                       1: 'running',
+                       2: 'running',
+                       3: 'paused',
+                       4: 'shutdown',
+                       5: 'shutdown',
+                       6: 'crashed'}
 
 
 def __virtual__():
-    if not has_libvirt:
+    if not HAS_ALL_IMPORTS:
         return False
     return 'virt'
 
@@ -44,13 +47,87 @@ def __get_conn():
     Detects what type of dom this node is and attempts to connect to the
     correct hypervisor via libvirt.
     '''
-    # This has only been tested on kvm and xen, it needs to be expanded to support
-    # all vm layers supported by libvirt
+    # This has only been tested on kvm and xen, it needs to be expanded to
+    # support all vm layers supported by libvirt
+
+    def __esxi_uri():
+        '''
+        Connect to an ESXi host with a configuration like so:
+
+        .. code-block:: yaml
+
+            libvirt:
+              hypervisor: esxi
+              connection: esx01
+
+        The connection setting can either be an explicit libvirt URI,
+        or a libvirt URI alias as in this example. No, it cannot be
+        just a hostname.
+
+
+        Example libvirt `/etc/libvirt/libvirt.conf`:
+
+        .. code-block::
+
+            uri_aliases = [
+              "esx01=esx://10.1.1.101/?no_verify=1&auto_answer=1",
+              "esx02=esx://10.1.1.102/?no_verify=1&auto_answer=1",
+            ]
+
+        Reference:
+
+         - http://libvirt.org/drvesx.html#uriformat
+         - http://libvirt.org/uri.html#URI_config
+        '''
+        connection = __salt__['config.get']('libvirt:connection', 'esx')
+        if connection.startswith('esx://'):
+            return connection
+        return '%s' % connection
+
+    def __esxi_auth():
+        '''
+        We rely on that the credentials is provided to libvirt through
+        it's built in mechanisms.
+
+        Example libvirt `/etc/libvirt/auth.conf`:
+
+        .. code-block::
+
+            [credentials-myvirt]
+            username=user
+            password=secret
+
+            [auth-esx-10.1.1.101]
+            credentials=myvirt
+
+            [auth-esx-10.1.1.102]
+            credentials=myvirt
+
+        Reference:
+
+          - http://libvirt.org/auth.html#Auth_client_config
+        '''
+        return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
+
+    conn_func = {
+        'esxi': [libvirt.openAuth, [__esxi_uri(),
+                                    __esxi_auth(),
+                                    0]],
+        'qemu': [libvirt.open, ['qemu:///system']],
+        }
+
+    hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
+
     try:
-        conn = libvirt.open("qemu:///system")
-    except:
-        msg = 'Sorry, {0} failed to open a connection to the hypervisor software'
-        raise CommandExecutionError(msg.format(__grains__['fqdn']))
+        conn = conn_func[hypervisor][0](*conn_func[hypervisor][1])
+    except Exception:
+        raise CommandExecutionError(
+            'Sorry, {0} failed to open a connection to the hypervisor '
+            'software at {1}'.format(
+                __grains__['fqdn'],
+                conn_func[hypervisor][1][0]
+            )
+        )
     return conn
 
 
@@ -68,21 +145,239 @@ def _libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
     '''
-    g_cmd = 'grep ^\s*group /etc/libvirt/qemu.conf'
-    u_cmd = 'grep ^\s*user /etc/libvirt/qemu.conf'
+    g_cmd = 'grep ^\\s*group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep ^\\s*user /etc/libvirt/qemu.conf'
     try:
         group = subprocess.Popen(g_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
     except IndexError:
-        group = "root"
+        group = 'root'
     try:
         user = subprocess.Popen(u_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
     except IndexError:
-        user = "root"
+        user = 'root'
     return {'user': user, 'group': group}
+
+
+def _get_migrate_command():
+    '''
+    Returns the command shared by the different migration types
+    '''
+    if __salt__['config.option']('virt.tunnel'):
+        return ('virsh migrate --p2p --tunnelled --live --persistent '
+                '--undefinesource ')
+    return 'virsh migrate --live --persistent --undefinesource '
+
+
+def _get_target(target, ssh):
+    proto = 'qemu'
+    if ssh:
+        proto += '+ssh'
+    return ' {0}://{1}/{2}'.format(proto, target, 'system')
+
+def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **kwargs_sink):
+    '''
+    Prepares the serial and console sections of the VM xml
+
+    serial_type: presently 'pty' or 'tcp'(telnet)
+
+    telnet_port: When selecting tcp, which port to listen on
+
+    console: Is this serial device the console or for some other purpose
+
+    Returns string representing the serial and console devices suitable for
+    insertion into the VM XML definition
+    '''
+
+    import jinja2
+
+    templates = {
+            'pty': '''
+                <serial type='pty'>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='pty'>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+            ''',
+
+            'tcp': '''
+                <serial type='tcp'>
+                    <source mode='bind' host='' service='{{ telnet_port }}'/>
+                    <protocol type='telnet'/>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='tcp'>
+                    <source mode='bind' host='' service='{{telnet_port}}'/>
+                    <protocol type='telnet'/>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+            '''
+    }
+
+    dict_loader = jinja2.DictLoader(templates)
+    env = jinja2.Environment(loader=dict_loader)
+    template = env.get_template(serial_type)
+    return template.render(serial_type=serial_type,
+                           telnet_port=telnet_port,
+                           console=console)
+
+def _gen_xml(name,
+             cpu,
+             mem,
+             vda,
+             nicp,
+             hypervisor,
+             **kwargs):
+    '''
+    Generate the XML string to define a libvirt vm
+    '''
+    mem = mem * 1024 # MB
+    data = '''
+<domain type='%%HYPERVISOR%%'>
+        <name>%%NAME%%</name>
+        <vcpu>%%CPU%%</vcpu>
+        <memory unit='KiB'>%%MEM%%</memory>
+        <os>
+                <type>hvm</type>
+                %%BOOT%%
+        </os>
+        <devices>
+                <disk type='file' device='disk'>
+                        <source file='%%VDA%%'/>
+                        <target dev='vda' bus='virtio'/>
+                        <driver name='qemu' type='%%DISKTYPE%%' cache='none' io='native'/>
+                </disk>
+                %%NICS%%
+                <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
+                %%SERIAL%%
+        </devices>
+        <features>
+                <acpi/>
+        </features>
+</domain>
+'''
+    data = data.replace('%%HYPERVISOR%%', hypervisor)
+    data = data.replace('%%NAME%%', name)
+    data = data.replace('%%CPU%%', str(cpu))
+    data = data.replace('%%MEM%%', str(mem))
+    data = data.replace('%%VDA%%', vda)
+    data = data.replace('%%DISKTYPE%%', _image_type(vda))
+
+    if 'serial_type' in kwargs:
+        serial_section = _prepare_serial_port_xml(**kwargs)
+    else:
+        serial_section = ''
+    data = data.replace('%%SERIAL%%', serial_section)
+
+    boot_str = ''
+    if 'boot_dev' in kwargs:
+        for dev in kwargs['boot_dev']:
+            boot_part = "<boot dev='%%DEV%%' />"
+            boot_part = boot_part.replace('%%DEV%%', dev)
+            boot_str += boot_part
+    else:
+        boot_str = '''<boot dev='hd'/>'''
+    data = data.replace('%%BOOT%%', boot_str)
+
+    nic_str = ''
+    for dev, args in nicp.items():
+        nic_t = '''
+                <interface type='%%TYPE%%'>
+                    <source %%SOURCE%%/>
+                    <mac address='%%MAC%%'/>
+                    <model type='%%MODEL%%'/>
+                </interface>\n'''
+        if 'bridge' in args:
+            nic_t = nic_t.replace('%%SOURCE%%', 'bridge=\'{0}\''.format(args['bridge']))
+            nic_t = nic_t.replace('%%TYPE%%', 'bridge')
+        elif 'network' in args:
+            nic_t = nic_t.replace('%%SOURCE%%', 'network=\'{0}\''.format(args['network']))
+            nic_t = nic_t.replace('%%TYPE%%', 'network')
+        if 'model' in args:
+            nic_t = nic_t.replace('%%MODEL%%', args['model'])
+        dmac = '{0}_mac'.format(dev)
+        if dmac in kwargs:
+            nic_t = nic_t.replace('%%MAC%%', kwargs[dmac])
+        else:
+            nic_t = nic_t.replace('%%MAC%%', salt.utils.gen_mac())
+        nic_str += nic_t
+    data = data.replace('%%NICS%%', nic_str)
+    return data
+
+def _image_type(vda):
+    '''
+    Detect what driver needs to be used for the given image
+    '''
+    out = __salt__['cmd.run']('qemu-img info {0}'.format(vda))
+    if 'file format: qcow2' in out:
+        return 'qcow2'
+    else:
+        return 'raw'
+
+
+def _nic_profile(nic):
+    '''
+    Gather the nic profile from the config or apply the default
+
+    This is the ``default`` profile, which can be overridden in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+          nic:
+            default:
+              eth0:
+                bridge: br0
+                model: virtio
+    '''
+    default = {'eth0': {'bridge': 'br0', 'model': 'virtio'}}
+    return __salt__['config.option']('virt.nic', {}).get(nic, default)
+
+
+def init(name,
+         cpu,
+         mem,
+         image,
+         nic='default',
+         hypervisor='kvm',
+         start=True,
+         **kwargs):
+    '''
+    Initialize a new vm
+
+    CLI Example::
+
+        salt 'hypervisor' virt.init vm_name 4 512 salt://path/to/image.raw
+    '''
+    img_dir = os.path.join(__salt__['config.option']('virt.images'), name)
+    img_dest = os.path.join(
+            __salt__['config.option']('virt.images'),
+            name,
+            'vda')
+    sfn = __salt__['cp.cache_file'](image)
+    if not os.path.isdir(img_dir):
+        os.makedirs(img_dir)
+    nicp = _nic_profile(nic)
+    salt.utils.copyfile(sfn, img_dest)
+    xml = _gen_xml(name, cpu, mem, img_dest, nicp, hypervisor, **kwargs)
+    define_xml_str(xml)
+    if kwargs.get('seed'):
+        install = kwargs.get('install', True)
+        __salt__['seed.apply'](img_dest, id_=name, config=kwargs.get('config'),
+                install=install)
+    elif kwargs.get('seed_cmd'):
+        __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
+    if start:
+        create(name)
 
 
 def list_vms():
@@ -98,6 +393,7 @@ def list_vms():
     vms.extend(list_inactive_vms())
     return vms
 
+
 def list_active_vms():
     '''
     Return a list of names for active virtual machine on the minion
@@ -112,6 +408,7 @@ def list_active_vms():
         vms.append(conn.lookupByID(id_).name())
     return vms
 
+
 def list_inactive_vms():
     '''
     Return a list of names for inactive virtual machine on the minion
@@ -125,6 +422,7 @@ def list_inactive_vms():
     for id_ in conn.listDefinedDomains():
         vms.append(id_)
     return vms
+
 
 def vm_info(vm_=None):
     '''
@@ -156,6 +454,7 @@ def vm_info(vm_=None):
                 'cputime': int(raw[4]),
                 'disks': get_disks(vm_),
                 'graphics': get_graphics(vm_),
+                'nics': get_nics(vm_),
                 'maxMem': int(raw[1]),
                 'mem': int(raw[2]),
                 'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
@@ -167,19 +466,32 @@ def vm_info(vm_=None):
             info[vm_] = _info(vm_)
     return info
 
-def vm_state(vm_):
+
+def vm_state(vm_=None):
     '''
-    Return the status of the named VM.
+    Return list of all the vms and their state.
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
 
     CLI Example::
 
         salt '*' virt.vm_state <vm name>
     '''
-    state = ''
-    dom = _get_dom(vm_)
-    raw = dom.info()
-    state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
-    return state
+    def _info(vm_):
+        state = ''
+        dom = _get_dom(vm_)
+        raw = dom.info()
+        state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
+        return state
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+    return info
+
 
 def node_info():
     '''
@@ -201,6 +513,7 @@ def node_info():
             'sockets': raw[5]}
     return info
 
+
 def get_nics(vm_):
     '''
     Return info about the network interfaces of a named vm
@@ -210,17 +523,19 @@ def get_nics(vm_):
         salt '*' virt.get_nics <vm name>
     '''
     nics = {}
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
-    for node in doc.getElementsByTagName("devices"):
-        i_nodes = node.getElementsByTagName("interface")
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
+    for node in doc.getElementsByTagName('devices'):
+        i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
             nic = {}
             nic['type'] = i_node.getAttribute('type')
             for v_node in i_node.getElementsByTagName('*'):
-                if v_node.tagName == "mac":
+                if v_node.tagName == 'mac':
                     nic['mac'] = v_node.getAttribute('address')
-                if v_node.tagName == "model":
+                if v_node.tagName == 'model':
                     nic['model'] = v_node.getAttribute('type')
+                if v_node.tagName == 'target':
+                    nic['target'] = v_node.getAttribute('dev')
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
@@ -229,7 +544,7 @@ def get_nics(vm_):
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
                 # type attribute of the virtualport itself
-                if v_node.tagName == "virtualport":
+                if v_node.tagName == 'virtualport':
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
                     for key in v_node.attributes.keys():
@@ -240,6 +555,7 @@ def get_nics(vm_):
             nics[nic['mac']] = nic
     return nics
 
+
 def get_macs(vm_):
     '''
     Return a list off MAC addresses from the named vm
@@ -249,13 +565,14 @@ def get_macs(vm_):
         salt '*' virt.get_macs <vm name>
     '''
     macs = []
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
-    for node in doc.getElementsByTagName("devices"):
-        i_nodes = node.getElementsByTagName("interface")
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
+    for node in doc.getElementsByTagName('devices'):
+        i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
             for v_node in i_node.getElementsByTagName('mac'):
                 macs.append(v_node.getAttribute('address'))
     return macs
+
 
 def get_graphics(vm_):
     '''
@@ -271,10 +588,10 @@ def get_graphics(vm_):
            'port': 'None',
            'type': 'vnc'}
     xml = get_xml(vm_)
-    ssock = StringIO.StringIO(xml)
+    ssock = _StringIO(xml)
     doc = minidom.parse(ssock)
-    for node in doc.getElementsByTagName("domain"):
-        g_nodes = node.getElementsByTagName("graphics")
+    for node in doc.getElementsByTagName('domain'):
+        g_nodes = node.getElementsByTagName('graphics')
         for g_node in g_nodes:
             for key in g_node.attributes.keys():
                 out[key] = g_node.getAttribute(key)
@@ -290,7 +607,7 @@ def get_disks(vm_):
         salt '*' virt.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -302,19 +619,133 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in target.attributes.keys() \
-                and 'file' in source.attributes.keys():
-            disks[target.getAttribute('dev')] = \
-                    {'file': source.getAttribute('file')}
+        if target.hasAttribute('dev'):
+            qemu_target = ''
+            if source.hasAttribute('file'):
+                qemu_target = source.getAttribute('file')
+            elif source.hasAttribute('dev'):
+                qemu_target = source.getAttribute('dev')
+            elif source.hasAttribute('protocol') and \
+                    source.hasAttribute('name'):  # For rbd network
+                qemu_target = '%s:%s' % (
+                        source.getAttribute('protocol'),
+                        source.getAttribute('name'))
+            if qemu_target:
+                disks[target.getAttribute('dev')] = {
+                    'file': qemu_target}
     for dev in disks:
         try:
-            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
-                + disks[dev]['file'],
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0]))
+            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
+            if hypervisor not in ['qemu', 'kvm']:
+                break
+
+            output = []
+            qemu_output = subprocess.Popen(['qemu-img', 'info',
+                disks[dev]['file']],
+                shell=False,
+                stdout=subprocess.PIPE).communicate()[0]
+            snapshots = False
+            columns = None
+            lines = qemu_output.strip().split('\n')
+            for line in lines:
+                if line.startswith('Snapshot list:'):
+                    snapshots = True
+                    continue
+
+                # If this is a copy-on-write image, then the backing file
+                # represents the base image
+                #
+                # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
+                elif line.startswith('backing file'):
+                    matches = re.match(r'.*\(actual path: (.*?)\)', line)
+                    if matches:
+                        output.append('backing file: {0}'.format(matches.group(1)))
+                    continue
+
+                elif snapshots:
+                    if line.startswith('ID'):  # Do not parse table headers
+                        line = line.replace('VM SIZE', 'VMSIZE')
+                        line = line.replace('VM CLOCK', 'TIME VMCLOCK')
+                        columns = re.split(r'\s+', line)
+                        columns = [c.lower() for c in columns]
+                        output.append('snapshots:')
+                        continue
+                    fields = re.split(r'\s+', line)
+                    for i, field in enumerate(fields):
+                        sep = ' '
+                        if i == 0:
+                            sep = '-'
+                        output.append(
+                            '{0} {1}: "{2}"'.format(
+                                sep, columns[i], field
+                            )
+                        )
+                    continue
+                output.append(line)
+            output = '\n'.join(output)
+            disks[dev].update(yaml.safe_load(output))
         except TypeError:
             disks[dev].update(yaml.safe_load('image: Does not exist'))
     return disks
+
+
+def setmem(vm_, memory, config=False):
+    '''
+    Changes the amount of memory allocated to VM. The VM must be shutdown
+    for this to work.
+
+    memory is to be specified in MB
+    If config is True then we ask libvirt to modify the config as well
+
+    CLI Example::
+
+        salt '*' virt.setmem myvm 768
+    '''
+    if vm_state(vm_) != 'shutdown':
+        return False
+
+    dom = _get_dom(vm_)
+
+    # libvirt has a funny bitwise system for the flags in that the flag
+    # to affect the "current" setting is 0, which means that to set the
+    # current setting we have to call it a second time with just 0 set
+    flags = libvirt.VIR_DOMAIN_MEM_MAXIMUM
+    if config:
+        flags = flags | libvirt.VIR_DOMAIN_AFFECT_CONFIG
+
+    ret1 = dom.setMemoryFlags(memory * 1024, flags)
+    ret2 = dom.setMemoryFlags(memory * 1024, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    # return True if both calls succeeded
+    return ret1 == ret2 == 0
+
+
+def setvcpus(vm_, vcpus, config=False):
+    '''
+    Changes the amount of vcpus allocated to VM. The VM must be shutdown
+    for this to work.
+
+    vcpus is an int representing the number to be assigned
+    If config is True then we ask libvirt to modify the config as well
+
+    CLI Example::
+
+        salt '*' virt.setvcpus myvm 2
+    '''
+    if vm_state(vm_) != 'shutdown':
+        return False
+
+    dom = _get_dom(vm_)
+
+    # see notes in setmem
+    flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
+    if config:
+        flags = flags | libvirt.VIR_DOMAIN_AFFECT_CONFIG
+
+    ret1 = dom.setVcpusFlags(vcpus, flags)
+    ret2 = dom.setVcpusFlags(vcpus, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    return ret1 == ret2 == 0
 
 
 def freemem():
@@ -371,7 +802,7 @@ def full_info():
 
 def get_xml(vm_):
     '''
-    Returns the xml for a given vm
+    Returns the XML for a given vm
 
     CLI Example::
 
@@ -390,8 +821,7 @@ def shutdown(vm_):
         salt '*' virt.shutdown <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.shutdown()
-    return True
+    return dom.shutdown() == 0
 
 
 def pause(vm_):
@@ -403,8 +833,7 @@ def pause(vm_):
         salt '*' virt.pause <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.suspend()
-    return True
+    return dom.suspend() == 0
 
 
 def resume(vm_):
@@ -416,8 +845,7 @@ def resume(vm_):
         salt '*' virt.resume <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.resume()
-    return True
+    return dom.resume() == 0
 
 
 def create(vm_):
@@ -429,8 +857,7 @@ def create(vm_):
         salt '*' virt.create <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.create()
-    return True
+    return dom.create() == 0
 
 
 def start(vm_):
@@ -444,33 +871,140 @@ def start(vm_):
     return create(vm_)
 
 
-def create_xml_str(xml):
+def stop(vm_):
     '''
-    Start a domain based on the xml passed to the function
+    Alias for the obscurely named 'destroy' function
 
     CLI Example::
 
-        salt '*' virt.create_xml_str <xml in string format>
+        salt '*' virt.stop <vm name>
+    '''
+    return destroy(vm_)
+
+
+def reboot(vm_):
+    '''
+    Reboot a domain via ACPI request
+
+    CLI Example::
+
+        salt '*' virt.reboot <vm name>
+    '''
+    dom = _get_dom(vm_)
+
+    # reboot has a few modes of operation, passing 0 in means the
+    # hypervisor will pick the best method for rebooting
+    return dom.reboot(0) == 0
+
+
+def reset(vm_):
+    '''
+    Reset a VM by emulating the reset button on a physical machine
+
+    CLI Example::
+
+        salt '*' virt.reset <vm name>
+    '''
+    dom = _get_dom(vm_)
+
+    # reset takes a flag, like reboot, but it is not yet used
+    # so we just pass in 0
+    # see: http://libvirt.org/html/libvirt-libvirt.html#virDomainReset
+    return dom.reset(0) == 0
+
+
+def ctrl_alt_del(vm_):
+    '''
+    Sends CTRL+ALT+DEL to a VM
+
+    CLI Example::
+
+        salt '*' virt.ctrl_alt_del <vm name>
+    '''
+    dom = _get_dom(vm_)
+    return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
+
+
+def create_xml_str(xml):
+    '''
+    Start a domain based on the XML passed to the function
+
+    CLI Example::
+
+        salt '*' virt.create_xml_str <XML in string format>
     '''
     conn = __get_conn()
-    conn.createXML(xml, 0)
-    return True
+    return conn.createXML(xml, 0) is not None
 
 
 def create_xml_path(path):
     '''
-    Start a defined domain
+    Start a domain based on the XML-file path passed to the function
 
     CLI Example::
 
-        salt '*' virt.create_xml_path <path to xml file on the node>
+        salt '*' virt.create_xml_path <path to XML file on the node>
     '''
     if not os.path.isfile(path):
         return False
-    return create_xml_str(open(path, 'r').read())
+    return create_xml_str(salt.utils.fopen(path, 'r').read())
 
 
-def migrate_non_shared(vm_, target):
+def define_xml_str(xml):
+    '''
+    Define a domain based on the XML passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_xml_str <XML in string format>
+    '''
+    conn = __get_conn()
+    return conn.defineXML(xml) is not None
+
+
+def define_xml_path(path):
+    '''
+    Define a domain based on the XML-file path passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_xml_path <path to XML file on the node>
+
+    '''
+    if not os.path.isfile(path):
+        return False
+    return define_xml_str(salt.utils.fopen(path, 'r').read())
+
+
+def define_vol_xml_str(xml):
+    '''
+    Define a volume based on the XML passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_vol_xml_str <XML in string format>
+    '''
+    poolname = __salt__['config.get']('libvirt:storagepool', 'default')
+    conn = __get_conn()
+    pool = conn.storagePoolLookupByName(str(poolname))
+    return pool.createXML(xml, 0) is not None
+
+
+def define_vol_xml_path(path):
+    '''
+    Define a volume based on the XML-file path passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_vol_xml_path <path to XML file on the node>
+
+    '''
+    if not os.path.isfile(path):
+        return False
+    return define_vol_xml_str(salt.utils.fopen(path, 'r').read())
+
+
+def migrate_non_shared(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
@@ -478,15 +1012,15 @@ def migrate_non_shared(vm_, target):
 
         salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live --copy-storage-all ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' --copy-storage-all ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
 
 
-def migrate_non_shared_inc(vm_, target):
+def migrate_non_shared_inc(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
@@ -494,15 +1028,15 @@ def migrate_non_shared_inc(vm_, target):
 
         salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live --copy-storage-inc ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' --copy-storage-inc ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
 
 
-def migrate(vm_, target):
+def migrate(vm_, target, ssh=False):
     '''
     Shared storage migration
 
@@ -510,13 +1044,12 @@ def migrate(vm_, target):
 
         salt '*' virt.migrate <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
-
 
 def seed_non_shared_migrate(disks, force=False):
     '''
@@ -528,17 +1061,17 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     '''
-    for dev, data in disks.items():
+    for _, data in disks.items():
         fn_ = data['file']
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
         if os.path.isfile(fn_) and not force:
-            # the target exists, check to see if is is compatible
+            # the target exists, check to see if it is compatible
             pre = yaml.safe_load(subprocess.Popen('qemu-img info arch',
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0])
-            if not pre['file format'] == data['file format']\
-                    and not pre['virtual size'] == data['virtual size']:
+            if pre['file format'] != data['file format']\
+                    and pre['virtual size'] != data['virtual size']:
                 return False
         if not os.path.isdir(os.path.dirname(fn_)):
             os.makedirs(os.path.dirname(fn_))
@@ -574,6 +1107,7 @@ def set_autostart(vm_, state='on'):
         # return False if state is set to something other then on or off
         return False
 
+
 def destroy(vm_):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the
@@ -583,12 +1117,8 @@ def destroy(vm_):
 
         salt '*' virt.destroy <vm name>
     '''
-    try:
-        dom = _get_dom(vm_)
-        dom.destroy()
-    except:
-        return False
-    return True
+    dom = _get_dom(vm_)
+    return dom.destroy() == 0
 
 
 def undefine(vm_):
@@ -600,12 +1130,8 @@ def undefine(vm_):
 
         salt '*' virt.undefine <vm name>
     '''
-    try:
-        dom = _get_dom(vm_)
-        dom.undefine()
-    except:
-        return False
-    return True
+    dom = _get_dom(vm_)
+    return dom.undefine() == 0
 
 
 def purge(vm_, dirs=False):
@@ -619,7 +1145,12 @@ def purge(vm_, dirs=False):
         salt '*' virt.purge <vm name>
     '''
     disks = get_disks(vm_)
-    destroy(vm_)
+    try:
+        if not destroy(vm_):
+            return False
+    except libvirt.libvirtError:
+        # This is thrown if the machine is already shut down
+        pass
     directories = set()
     for disk in disks:
         os.remove(disks[disk]['file'])
@@ -627,6 +1158,7 @@ def purge(vm_, dirs=False):
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
+    undefine(vm_)
     return True
 
 
@@ -652,12 +1184,13 @@ def is_kvm_hyper():
     if __grains__['virtual'] != 'physical':
         return False
     try:
-        if 'kvm_' not in open('/proc/modules').read():
+        if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
             return False
     except IOError:
-            # No /proc/modules? Are we on Windows? Or Solaris?
-            return False
+        # No /proc/modules? Are we on Windows? Or Solaris?
+        return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
 
 def is_xen_hyper():
     '''
@@ -671,22 +1204,188 @@ def is_xen_hyper():
         if __grains__['virtual_subtype'] != 'Xen Dom0':
             return False
     except KeyError:
-            # virtual_subtype isn't set everywhere.
-            return False
+        # virtual_subtype isn't set everywhere.
+        return False
     try:
-        if 'xen_' not in open('/proc/modules').read():
+        if 'xen_' not in salt.utils.fopen('/proc/modules').read():
             return False
     except IOError:
-            # No /proc/modules? Are we on Windows? Or Solaris?
-            return False
+        # No /proc/modules? Are we on Windows? Or Solaris?
+        return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
 
 def is_hyper():
     '''
-    Returns a bool whether or not this nos is a hypervisor of any kind
+    Returns a bool whether or not this node is a hypervisor of any kind
 
     CLI Example::
 
         salt '*' virt.is_hyper
     '''
     return is_xen_hyper() or is_kvm_hyper()
+
+def vm_cputime(vm_=None):
+    '''
+    Return cputime used by the vms on this hyper in a
+    list of dicts::
+
+        [
+            'your-vm': {
+                'cputime' <int>
+                'cputime_percent' <int>
+                },
+            ...
+            ]
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
+
+    CLI Example::
+
+        salt '*' virt.vm_cputime
+    '''
+    host_cpus = __get_conn().getInfo()[2]
+    def _info(vm_):
+        dom = _get_dom(vm_)
+        raw = dom.info()
+        vcpus = int(raw[3])
+        cputime = int(raw[4])
+        cputime_percent = 0
+        if cputime:
+            # Divide by vcpus to always return a number between 0 and 100
+            cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
+        return {
+                'cputime': int(raw[4]),
+                'cputime_percent': int('%.0f' % cputime_percent)
+               }
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+    return info
+
+def vm_netstats(vm_=None):
+    '''
+    Return combined network counters used by the vms on this hyper in a
+    list of dicts::
+
+        [
+            'your-vm': {
+                'rx_bytes'   : 0,
+                'rx_packets' : 0,
+                'rx_errs'    : 0,
+                'rx_drop'    : 0,
+                'tx_bytes'   : 0,
+                'tx_packets' : 0,
+                'tx_errs'    : 0,
+                'tx_drop'    : 0
+                },
+            ...
+            ]
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
+
+    CLI Example::
+
+        salt '*' virt.vm_netstats
+    '''
+    def _info(vm_):
+        dom = _get_dom(vm_)
+        nics = get_nics(vm_)
+        ret = {
+                'rx_bytes': 0,
+                'rx_packets': 0,
+                'rx_errs': 0,
+                'rx_drop': 0,
+                'tx_bytes': 0,
+                'tx_packets': 0,
+                'tx_errs': 0,
+                'tx_drop': 0
+               }
+        for attrs in nics.values():
+            if 'target' in attrs:
+                dev = attrs['target']
+                stats = dom.interfaceStats(dev)
+                ret['rx_bytes'] += stats[0]
+                ret['rx_packets'] += stats[1]
+                ret['rx_errs'] += stats[2]
+                ret['rx_drop'] += stats[3]
+                ret['tx_bytes'] += stats[4]
+                ret['tx_packets'] += stats[5]
+                ret['tx_errs'] += stats[6]
+                ret['tx_drop'] += stats[7]
+
+        return ret
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+    return info
+
+def vm_diskstats(vm_=None):
+    '''
+    Return disk usage counters used by the vms on this hyper in a
+    list of dicts::
+
+        [
+            'your-vm': {
+                'rd_req'   : 0,
+                'rd_bytes' : 0,
+                'wr_req'   : 0,
+                'wr_bytes' : 0,
+                'errs'     : 0
+                },
+            ...
+            ]
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
+
+    CLI Example::
+
+        salt '*' virt.vm_blockstats
+    '''
+    def get_disk_devs(vm_):
+        doc = minidom.parse(_StringIO(get_xml(vm_)))
+        disks = []
+        for elem in doc.getElementsByTagName('disk'):
+            targets = elem.getElementsByTagName('target')
+            target = targets[0]
+            disks.append(target.getAttribute('dev'))
+        return disks
+
+    def _info(vm_):
+        dom = _get_dom(vm_)
+        # Do not use get_disks, since it uses qemu-img and is very slow
+        # and unsuitable for any sort of real time statistics
+        disks = get_disk_devs(vm_)
+        ret = {
+                'rd_req': 0,
+                'rd_bytes': 0,
+                'wr_req': 0,
+                'wr_bytes': 0,
+                'errs': 0
+               }
+        for disk in disks:
+            stats = dom.blockStats(disk)
+            ret['rd_req'] += stats[0]
+            ret['rd_bytes'] += stats[1]
+            ret['wr_req'] += stats[2]
+            ret['wr_bytes'] += stats[3]
+            ret['errs'] += stats[4]
+
+        return ret
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        # Can not run function blockStats on inactive VMs
+        for vm_ in list_active_vms():
+            info[vm_] = _info(vm_)
+    return info

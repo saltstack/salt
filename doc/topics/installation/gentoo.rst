@@ -2,23 +2,15 @@
 Gentoo
 ======
 
-Salt can be easily installed on Gentoo:
+Salt can be easily installed on Gentoo via Portage:
 
 .. code-block:: bash
 
-    emerge pyyaml m2crypto pycrypto jinja pyzmq
+    emerge app-admin/salt
 
-Then download and install from source:
+Post-installation tasks
+=======================
 
-1.  Download the latest source tarball from the `GitHub downloads`_ directory for
-    the Salt project.
-
-2.  Untar the tarball and run the ``setup.py`` as root:
-
-.. code-block:: bash
-
-    tar xf salt-<version>.tar.gz
-    cd salt-<version>
-    python setup.py install
+Now go to the :doc:`Configuring Salt</topics/configuration>` page.
 
 .. _GitHub downloads: https://github.com/saltstack/salt/downloads

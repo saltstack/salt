@@ -1,18 +1,14 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 '''
 This script is used to kick off a salt minion daemon
 '''
 
-import os
-import salt
+from salt.scripts import salt_minion
+from multiprocessing import freeze_support
 
-
-def main():
-    '''
-    The main function
-    '''
-    minion = salt.Minion()
-    minion.start()
 
 if __name__ == '__main__':
-    main()
+    # This handles the bootstrapping code that is included with frozen
+    # scripts. It is a no-op on unfrozen code.
+    freeze_support()
+    salt_minion()

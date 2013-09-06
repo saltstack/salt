@@ -65,7 +65,9 @@ interval:
         m: minute
         s: second
 
-print-opts: a comma and/or space separated list of one or more of the following:
+print-opts: a comma and/or space separated list of one or more of
+the following:
+
     group: group name
     md5:   MD5 digest of file contents
     mode:  file permissions (as integer)
@@ -77,16 +79,26 @@ print-opts: a comma and/or space separated list of one or more of the following:
     user:  user name
 '''
 
-import grp
+# Import python libs
 import hashlib
 import logging
 import os
-import pwd
 import re
 import stat
 import sys
 import time
+try:
+    import grp
+    import pwd
+    # TODO: grp and pwd are both used in the code, we better make sure that
+    # that code never gets run if importing them does not succeed
+except ImportError:
+    pass
 
+# Import salt libs
+import salt.utils
+from salt._compat import MAX_SIZE
+from salt.utils.filebuffer import BufferedReader
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -132,19 +144,19 @@ def _parse_interval(value):
         m = minute
         s = second
     '''
-    m = _INTERVAL_REGEX.match(value)
-    if m is None:
+    match = _INTERVAL_REGEX.match(value)
+    if match is None:
         raise ValueError('invalid time interval: "{0}"'.format(value))
 
     result = 0
     resolution = None
     for name, multiplier in [('second', 1),
                              ('minute', 60),
-                             ('hour',   60 * 60),
-                             ('day',    60 * 60 * 24),
-                             ('week',   60 * 60 * 24 * 7)]:
-        if m.group(name) is not None:
-            result += float(m.group(name)) * multiplier
+                             ('hour', 60 * 60),
+                             ('day', 60 * 60 * 24),
+                             ('week', 60 * 60 * 24 * 7)]:
+        if match.group(name) is not None:
+            result += float(match.group(name)) * multiplier
             if resolution is None:
                 resolution = multiplier
 
@@ -161,10 +173,11 @@ def _parse_size(value):
         style = '='
 
     if len(scalar) > 0:
-        multiplier = {'k': 2 ** 10,
+        multiplier = {'b': 2 ** 0,
+                      'k': 2 ** 10,
                       'm': 2 ** 20,
                       'g': 2 ** 30,
-                      't': 2 ** 40}.get(scalar[-1])
+                      't': 2 ** 40}.get(scalar[-1].lower())
         if multiplier:
             scalar = scalar[:-1].strip()
         else:
@@ -185,7 +198,7 @@ def _parse_size(value):
         max_size = num
     elif style == '+':
         min_size = num
-        max_size = sys.maxint
+        max_size = MAX_SIZE
     else:
         min_size = num
         max_size = num + multiplier - 1
@@ -208,12 +221,12 @@ class NameOption(Option):
     The option name is 'name', e.g. {'name' : '*.txt'}.
     '''
     def __init__(self, key, value):
-        self.re = re.compile(value.replace('.', '\\.')
-                                  .replace('?', '.?')
-                                  .replace('*', '.*') + '$')
+        self.regex = re.compile(value.replace('.', '\\.')
+                                     .replace('?', '.?')
+                                     .replace('*', '.*') + '$')
 
     def match(self, dirname, filename, fstat):
-        return self.re.match(filename)
+        return self.regex.match(filename)
 
 
 class InameOption(Option):
@@ -223,43 +236,43 @@ class InameOption(Option):
     The option name is 'iname', e.g. {'iname' : '*.TXT'}.
     '''
     def __init__(self, key, value):
-        self.re = re.compile(value.replace('.', '\\.')
-                                  .replace('?', '.?')
-                                  .replace('*', '.*') + '$',
-                             re.IGNORECASE)
+        self.regex = re.compile(value.replace('.', '\\.')
+                                     .replace('?', '.?')
+                                     .replace('*', '.*') + '$',
+                                re.IGNORECASE)
 
     def match(self, dirname, filename, fstat):
-        return self.re.match(filename)
+        return self.regex.match(filename)
 
 
 class RegexOption(Option):
     '''Match files with a case-sensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
-    The option name is 'regex', e.g. {'regex' : '.*\.txt'}.
+    The option name is 'regex', e.g. {'regex' : '.*\\.txt'}.
     '''
     def __init__(self, key, value):
         try:
-            self.re = re.compile(value)
+            self.regex = re.compile(value)
         except re.error:
             raise ValueError('invalid regular expression: "{0}"'.format(value))
 
     def match(self, dirname, filename, fstat):
-        return self.re.match(filename)
+        return self.regex.match(filename)
 
 
 class IregexOption(Option):
     '''Match files with a case-insensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
-    The option name is 'iregex', e.g. {'iregex' : '.*\.txt'}.
+    The option name is 'iregex', e.g. {'iregex' : '.*\\.txt'}.
     '''
     def __init__(self, key, value):
         try:
-            self.re = re.compile(value, re.IGNORECASE)
+            self.regex = re.compile(value, re.IGNORECASE)
         except re.error:
             raise ValueError('invalid regular expression: "{0}"'.format(value))
 
     def match(self, dirname, filename, fstat):
-        return self.re.match(filename)
+        return self.regex.match(filename)
 
 
 class TypeOption(Option):
@@ -280,11 +293,11 @@ class TypeOption(Option):
         # remove whitespace and commas
         value = "".join(value.strip().replace(',', '').split())
         self.ftypes = set()
-        for ch in value:
+        for ftype in value:
             try:
-                self.ftypes.add(_FILE_TYPES[ch])
+                self.ftypes.add(_FILE_TYPES[ftype])
             except KeyError:
-                raise ValueError('invalid file type "{0}"'.format(ch))
+                raise ValueError('invalid file type "{0}"'.format(ftype))
 
     def requires(self):
         return _REQUIRES_STAT
@@ -307,7 +320,7 @@ class OwnerOption(Option):
                 self.uids.add(int(name))
             else:
                 try:
-                    self.uid = pwd.getpwnam(value).pw_uid
+                    self.uids.add(pwd.getpwnam(value).pw_uid)
                 except KeyError:
                     raise ValueError('no such user "{0}"'.format(name))
 
@@ -397,7 +410,7 @@ class GrepOption(Option):
     '''
     def __init__(self, key, value):
         try:
-            self.re = re.compile(value)
+            self.regex = re.compile(value)
         except re.error:
             raise ValueError('invalid regular expression: "{0}"'.format(value))
 
@@ -407,10 +420,11 @@ class GrepOption(Option):
     def match(self, dirname, filename, fstat):
         if not stat.S_ISREG(fstat[stat.ST_MODE]):
             return None
-        with open(os.path.join(dirname, filename), 'rb') as f:
-            for line in f:
-                if self.re.search(line):
-                    return os.path.join(dirname, filename)
+        dfilename = os.path.join(dirname, filename)
+        with BufferedReader(dfilename, mode='rb') as bread:
+            for chunk in bread:
+                if self.regex.search(chunk):
+                    return dfilename
         return None
 
 
@@ -453,7 +467,9 @@ class PrintOption(Option):
             elif arg == 'size':
                 result.append(fstat[stat.ST_SIZE])
             elif arg == 'type':
-                result.append(_FILE_TYPES.get(stat.S_IFMT(fstat[stat.ST_MODE]), '?'))
+                result.append(
+                    _FILE_TYPES.get(stat.S_IFMT(fstat[stat.ST_MODE]), '?')
+                )
             elif arg == 'mode':
                 result.append(fstat[stat.ST_MODE])
             elif arg == 'mtime':
@@ -472,13 +488,13 @@ class PrintOption(Option):
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):
-                    with open(fullpath, 'rb') as f:
-                        buf = f.read(8192)
-                        h = hashlib.md5()
+                    with salt.utils.fopen(fullpath, 'rb') as ifile:
+                        buf = ifile.read(8192)
+                        md5hash = hashlib.md5()
                         while buf:
-                            h.update(buf)
-                            buf = f.read(8192)
-                    result.append(h.hexdigest())
+                            md5hash.update(buf)
+                            buf = ifile.read(8192)
+                    result.append(md5hash.hexdigest())
                 else:
                     result.append('')
 
@@ -494,7 +510,7 @@ class Finder(object):
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
-        for key, value in options.iteritems():
+        for key, value in options.items():
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue
@@ -556,11 +572,12 @@ def find(path, options):
     '''
     WRITEME
     '''
-    f = Finder(options)
-    for path in f.find(path):
+    finder = Finder(options)
+    for path in finder.find(path):
         yield path
 
-if __name__ == '__main__':
+
+def _main():
     if len(sys.argv) < 2:
         sys.stderr.write('usage: {0} path [options]\n'.format(sys.argv[0]))
         sys.exit(1)
@@ -572,10 +589,13 @@ if __name__ == '__main__':
         key, value = arg.split('=')
         criteria[key] = value
     try:
-        f = Finder(criteria)
-    except ValueError, ex:
+        finder = Finder(criteria)
+    except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
         sys.exit(1)
 
-    for result in f.find(path):
+    for result in finder.find(path):
         print(result)
+
+if __name__ == '__main__':
+    _main()

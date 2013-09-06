@@ -2,13 +2,17 @@
 Print a stacktrace when sent a SIGUSR1 for debugging
 '''
 
+# Import python libs
 import os
 import sys
 import time
 import signal
-import datetime
 import tempfile
 import traceback
+
+# Import salt libs
+import salt.utils
+
 
 def _makepretty(printout, stack):
     '''
@@ -32,8 +36,9 @@ def _handle_sigusr1(sig, stack):
     else:
         filename = 'salt-debug-{0}.log'.format(int(time.time()))
         destfile = os.path.join(tempfile.gettempdir(), filename)
-        with open(destfile, 'w') as output:
+        with salt.utils.fopen(destfile, 'w') as output:
             _makepretty(output, stack)
+
 
 def enable_sigusr1_handler():
     '''
@@ -42,5 +47,5 @@ def enable_sigusr1_handler():
     '''
     #  Skip setting up this signal on Windows
     #  SIGUSR1 doesn't exist on Windows and causes the minion to crash
-    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
+    if not salt.utils.is_windows():
         signal.signal(signal.SIGUSR1, _handle_sigusr1)

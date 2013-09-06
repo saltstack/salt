@@ -1,21 +1,33 @@
 '''
-Management of rubygems
-=======================
+Installation of Ruby modules packaged as gems.
+==============================================
+
 A state module to manage rubygems. Gems can be set up to be installed
-or removed. This module will use RVM if it is installed. In that case
+or removed. This module will use RVM if it is installed. In that case,
 you can specify what ruby version and gemset to target.
 
 .. code-block:: yaml
 
     addressable:
-      gem:
-        - installed
+      gem.installed:
         - runas: rvm
         - ruby: jruby@jgemset
 '''
 
 
-def installed(name, ruby=None, runas=None):
+def __virtual__():
+    '''
+    Only load if gem module is available in __salt__
+    '''
+    return 'gem' if 'gem.list' in __salt__ else False
+
+
+def installed(name,          # pylint: disable=C0103
+              ruby=None,
+              runas=None,
+              version=None,
+              rdoc=False,
+              ri=False):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 
@@ -25,9 +37,22 @@ def installed(name, ruby=None, runas=None):
         For RVM installations: the ruby version and gemset to target.
     runas : None
         The user to run gem as.
+    version : None
+        Specify the version to install for the gem.
+        Doesn't play nice with multiple gems at once
+    rdoc : False
+        Generate RDoc documentation for the gem(s).
+    ri : False
+        Generate RI documentation for the gem(s).
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name in __salt__['gem.list'](name, ruby, runas=runas):
+
+    gems = __salt__['gem.list'](name, ruby, runas=runas)
+    if name in gems and version and version in gems[name]:
+        ret['result'] = True
+        ret['comment'] = 'Gem is already installed.'
+        return ret
+    elif name in gems:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret
@@ -35,7 +60,12 @@ def installed(name, ruby=None, runas=None):
     if __opts__['test']:
         ret['comment'] = 'The gem {0} would have been installed'.format(name)
         return ret
-    if __salt__['gem.install'](name, ruby, runas=runas):
+    if __salt__['gem.install'](name,
+                               ruby=ruby,
+                               runas=runas,
+                               version=version,
+                               rdoc=rdoc,
+                               ri=ri):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'

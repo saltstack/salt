@@ -2,7 +2,7 @@
 ``salt-minion``
 ===============
 
-The salt minion daemon, receives commands from a remote salt master.
+The Salt minion daemon, receives commands from a remote Salt master.
 
 Synopsis
 ========
@@ -12,7 +12,7 @@ salt-minion [ options ]
 Description
 ===========
 
-The salt minion receives commands from the central salt master and replies with
+The Salt minion receives commands from the central Salt master and replies with
 the results of said commands.
 
 Options
@@ -20,31 +20,15 @@ Options
 
 .. program:: salt-minion
 
-.. option:: -h, --help
+.. include:: _includes/common-options.rst
 
-    Print a usage message briefly summarizing these command-line options.
+.. include:: _includes/daemon-options.rst
+.. |salt-daemon| replace:: salt-minion
 
-.. option:: -d, --daemon
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/minion
+.. |loglevel| replace:: ``warning``
 
-    Run the salt minion as a daemon
-
-.. option:: -c CONFIG, --config=CONFIG
-
-    The minion configuration file to use, the default is /etc/salt/minion
-
-.. option:: -u USER, --user=USER
-
-    Specify user to run minion
-
-.. option:: --pid-file PIDFILE
-
-    Specify the location of the pidfile
-
-.. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
-
-    Console log level. One of ``info``, ``none``, ``garbage``,
-    ``trace``, ``warning``, ``error``, ``debug``. For the logfile
-    settings see the config file. Default: ``warning``.
 
 See also
 ========

@@ -1,13 +1,13 @@
 Batch Size
 ----------
 
-The batch size option allows commands to be executed while maintaining that
-only so many hosts are executing the command at one time. This option can
-take a percentage or a finite number:
+The ``-b`` (or ``--batch-size``) option allows commands to be executed on only
+a specifed number of minions at a time. Both percentages and finite numbers are
+supported.
 
 .. code-block:: bash
 
-    salt \* -b 10 test.ping
+    salt '*' -b 10 test.ping
 
     salt -G 'os:RedHat' --batch-size 25% apache.signal restart
 

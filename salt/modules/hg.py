@@ -2,15 +2,18 @@
 Support for the Mercurial SCM
 '''
 
+# Import salt libs
 from salt import utils
 
-__outputter__ = {
-  'clone': 'txt',
-  'revision': 'txt',
-}
+if utils.is_windows():
+    hg_binary = "hg.exe"
+else:
+    hg_binary = "hg"
+
 
 def _check_hg():
-    utils.check_or_die('hg')
+    utils.check_or_die(hg_binary)
+
 
 def revision(cwd, rev='tip', short=False, user=None):
     '''
@@ -28,15 +31,17 @@ def revision(cwd, rev='tip', short=False, user=None):
     user : None
         Run hg as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' hg.revision /path/to/repo mybranch
     '''
     _check_hg()
 
     cmd = 'hg id -i{short} {rev}'.format(
-        short = ' --debug' if not short else '',
-        rev = ' -r {0}'.format(rev))
+        short=' --debug' if not short else '',
+        rev=' -r {0}'.format(rev))
 
     result = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user)
 
@@ -44,6 +49,7 @@ def revision(cwd, rev='tip', short=False, user=None):
         return result['stdout']
     else:
         return ''
+
 
 def describe(cwd, rev='tip', user=None):
     '''
@@ -58,7 +64,9 @@ def describe(cwd, rev='tip', user=None):
     user : None
         Run hg as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' hg.describe /path/to/repo
     '''
@@ -69,6 +77,7 @@ def describe(cwd, rev='tip', user=None):
     desc = __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
 
     return desc or revision(cwd, rev, short=True)
+
 
 def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     '''
@@ -96,19 +105,22 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     If ``prefix`` is not specified it defaults to the basename of the repo
     directory.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' hg.archive /path/to/repo output=/tmp/archive.tgz fmt=tgz
     '''
     _check_hg()
 
     cmd = 'hg archive {output}{rev}{fmt}'.format(
-        rev = ' --rev {0}'.format(rev),
-        output = output,
-        fmt = ' --type {0}'.format(fmt) if fmt else '',
-        prefix = ' --prefix "{0}"'.format(prefix if prefix else ''))
+        rev=' --rev {0}'.format(rev),
+        output=output,
+        fmt=' --type {0}'.format(fmt) if fmt else '',
+        prefix=' --prefix "{0}"'.format(prefix if prefix else ''))
 
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
+
 
 def pull(cwd, opts=None, user=None):
     '''
@@ -123,7 +135,9 @@ def pull(cwd, opts=None, user=None):
     user : None
         Run hg as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' hg.pull /path/to/repo '-u'
     '''
@@ -132,6 +146,7 @@ def pull(cwd, opts=None, user=None):
     if not opts:
         opts = ''
     return __salt__['cmd.run']('hg pull {0}'.format(opts), cwd=cwd, runas=user)
+
 
 def update(cwd, rev, force=False, user=None):
     '''
@@ -149,7 +164,9 @@ def update(cwd, rev, force=False, user=None):
     user : None
         Run hg as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt devserver1 hg.update /path/to/repo somebranch
     '''
@@ -157,6 +174,7 @@ def update(cwd, rev, force=False, user=None):
 
     cmd = 'hg update {0}{1}'.format(rev, ' -C' if force else '')
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
+
 
 def clone(cwd, repository, opts=None, user=None):
     '''
@@ -166,7 +184,7 @@ def clone(cwd, repository, opts=None, user=None):
         The path to the Mercurial repository
 
     repository
-        The hg uri of the repository
+        The hg URI of the repository
 
     opts : None
         Any additional options to add to the command line
@@ -174,7 +192,9 @@ def clone(cwd, repository, opts=None, user=None):
     user : None
         Run hg as a user other than what the minion runs as
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
     '''

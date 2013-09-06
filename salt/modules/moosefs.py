@@ -2,12 +2,25 @@
 Module for gathering and managing information about MooseFS
 '''
 
+# Import salt libs
+import salt.utils
+
+def __virtual__():
+    '''
+    Only load if the mfs commands are installed
+    '''
+    if salt.utils.which('mfsgetgoal'):
+        return 'moosefs'
+    return False
+
 
 def dirinfo(path, opts=None):
     '''
     Return information on a directory located on the Moose
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' moosefs.dirinfo /path/to/dir/ [-[n][h|H]]
     '''
@@ -18,7 +31,7 @@ def dirinfo(path, opts=None):
     cmd += ' ' + path
     out = __salt__['cmd.run_all'](cmd)
 
-    output = out['stdout'].split('\n')
+    output = out['stdout'].splitlines()
     for line in output:
         if not line:
             continue
@@ -31,7 +44,9 @@ def fileinfo(path):
     '''
     Return information on a file located on the Moose
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' moosefs.fileinfo /path/to/dir/
     '''
@@ -40,7 +55,7 @@ def fileinfo(path):
     chunknum = ''
     out = __salt__['cmd.run_all'](cmd)
 
-    output = out['stdout'].split('\n')
+    output = out['stdout'].splitlines()
     for line in output:
         if not line:
             continue
@@ -75,7 +90,9 @@ def mounts():
     '''
     Return a list of current MooseFS mounts
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' moosefs.mounts
     '''
@@ -83,7 +100,7 @@ def mounts():
     ret = {}
     out = __salt__['cmd.run_all'](cmd)
 
-    output = out['stdout'].split('\n')
+    output = out['stdout'].splitlines()
     for line in output:
         if not line:
             continue
@@ -108,7 +125,9 @@ def getgoal(path, opts=None):
     '''
     Return goal(s) for a file or directory
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' moosefs.getgoal /path/to/file [-[n][h|H]]
         salt '*' moosefs.getgoal /path/to/dir/ [-[n][h|H][r]]
@@ -122,7 +141,7 @@ def getgoal(path, opts=None):
     cmd += ' ' + path
     out = __salt__['cmd.run_all'](cmd)
 
-    output = out['stdout'].split('\n')
+    output = out['stdout'].splitlines()
     if not 'r' in opts:
         goal = output[0].split(': ')
         ret = {

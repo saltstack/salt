@@ -1,138 +1,99 @@
 #!/bin/sh
-#
-# Salt master
-###################################
-
-# LSB header
-
 ### BEGIN INIT INFO
-# Provides: salt-master
-# Required-Start: $remote_fs $network
-# Required-Stop: $remote_fs $network
-# Default-Start: 2 3 4 5
-# Default-Stop:  0 1 6
+# Provides:          salt-master
+# Required-Start:    $remote_fs $network
+# Required-Stop:     $remote_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
 # Short-Description: salt master control daemon
-# Description: This is a daemon that controls the salt minions
+# Description:       This is a daemon that controls the salt minions
 ### END INIT INFO
 
-# chkconfig header
+# Author: Michael Prokop <mika@debian.org>
 
-# chkconfig: 2345 99 01
-# description:  This is a daemon that controls the salt mininons
-#
-# processname: /usr/bin/salt-master
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="salt master control daemon"
+NAME=salt-master
+DAEMON=/usr/bin/salt-master
+DAEMON_ARGS="-d"
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
 
-# Sanity checks.
-[ -x /usr/bin/salt-master ] || exit 0
+# Exit if the package is not installed
+[ -x "$DAEMON" ] || exit 0
 
-DEBIAN_VERSION=/etc/debian_version
-SUSE_RELEASE=/etc/SuSE-release
-# Source function library.
-if [ -f $DEBIAN_VERSION ]; then
-   break
-elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
-    . /etc/rc.status
-else
-    . /etc/rc.d/init.d/functions
-fi
+# Read configuration variable file if it is present
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
 
-SERVICE=salt-master
-PROCESS=salt-master
-CONFIG_ARGS=" "
+. /lib/init/vars.sh
+. /lib/lsb/init-functions
 
-PS_CMD="ps -e -o pid,args"
-PROC_LIST=""
-
-RETVAL=0
-
-findproc() {
-    PROC_LIST=`$PS_CMD | grep 'bin/python.*salt-master' | grep -v grep | grep -v sh | grep -v vi | awk '{ print $1 }'`
-}
-
-start() {
-    echo -n "Starting salt-master daemon: "
-    if [ -f $SUSE_RELEASE ]; then
-        startproc -f -p /var/run/$SERVICE.pid /usr/bin/salt-master -d $CONFIG_ARGS
-        rc_status -v
-    elif [ -e $DEBIAN_VERSION ]; then
-        findproc
-        if [ -n "$PROC_LIST" ]; then
-            echo -n "already started, lock file found" 
-            RETVAL=1
-        elif /usr/bin/python /usr/bin/salt-master -d; then
-            echo -n "OK"
-            RETVAL=0
-        fi
-    else
-        daemon --check $SERVICE $PROCESS -d $CONFIG_ARGS
+do_start() {
+    pid=$(pidofproc -p $PIDFILE $DAEMON)
+    if [ -n "$pid" ] ; then
+        log_begin_msg "$DESC already running."
+        log_end_msg 0
+        exit 0
     fi
-    RETVAL=$?
-    echo
-    return $RETVAL
+
+    log_daemon_msg "Starting salt-master daemon: "
+    start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_ARGS
+    log_end_msg $?
 }
 
-stop() {
-    echo -n "Stopping salt-master daemon: "
-    if [ -f $SUSE_RELEASE ]; then
-        killproc -TERM /usr/bin/salt-master
-        rc_status -v
-    elif [ -f $DEBIAN_VERSION ]; then
-        # Added this since Debian's start-stop-daemon doesn't support spawned processes
-        findproc
-        if echo $PROC_LIST | xargs kill >/dev/null 2>&1 ; then
-            echo -n "OK"
-            RETVAL=0
-        else
-            echo -n "Daemon is not started"
-            RETVAL=1
-        fi
-    else
-        killproc $PROCESS
-    fi
-    RETVAL=$?
-    echo
+do_stop() {
+    log_begin_msg "Stopping $DESC ..."
+    start-stop-daemon --stop --retry TERM/5 --quiet --oknodo --pidfile $PIDFILE
+    RC=$?
+    [ $RC -eq 0 ] && rm -f $PIDFILE
+    log_end_msg $RC
 }
 
-restart() {
-   stop
-   start
-}
-
-# See how we were called.
 case "$1" in
-    start|stop|restart)
-        $1
+    start)
+        [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+        do_start
+        case "$?" in
+            0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+              2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+        esac
+        ;;
+    stop)
+        [ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+        do_stop
+        case "$?" in
+            0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+              2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+        esac
         ;;
     status)
-        if [ -f $SUSE_RELEASE ]; then
-            echo -n "Checking for service salt-master "
-            checkproc /usr/bin/salt-master
-            rc_status -v
-        elif [ -f $DEBIAN_VERSION ]; then
-            findproc
-            if [ -n "$PROC_LIST" ]; then
-                RETVAL=0
-                echo "salt-master is running."
-            else
-                RETVAL=1
-                echo "salt-master is stopped."
-            fi
-        else
-            status $PROCESS
-            RETVAL=$?
-        fi
+        status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
         ;;
-    condrestart)
-        findproc
-        [ -n "$PROC_LIST" ] && restart || :
-        ;;
-    reload|force-reload)
-        echo "Can't reload configuration, you have to restart it"
-        RETVAL=$?
+    #reload)
+        # not implemented
+        #;;
+    restart|force-reload)
+        log_daemon_msg "Restarting $DESC" "$NAME"
+        do_stop
+        case "$?" in
+          0|1)
+              do_start
+              case "$?" in
+                  0) log_end_msg 0 ;;
+                  1) log_end_msg 1 ;; # Old process is still running
+                  *) log_end_msg 1 ;; # Failed to start
+              esac
+              ;;
+          *)
+              # Failed to stop
+              log_end_msg 1
+              ;;
+        esac
         ;;
     *)
-        echo "Usage: $0 {start|stop|status|restart|condrestart|reload|force-reload}"
-        exit 1
+        echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+        exit 3
         ;;
 esac
-exit $RETVAL
+
+exit 0

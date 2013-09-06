@@ -3,11 +3,24 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
-import fnmatch
+# Import python libs
 import os
 import re
+import fnmatch
+
+# Import salt libs
+import salt.utils
+
 
 __opts__ = {}
+
+
+# TODO: Make this module support windows hosts
+# TODO: Make this module support BSD hosts properly, this is very Linux specific
+def __virtual__():
+    if salt.utils.is_windows():
+        return False
+    return 'status'
 
 
 def _number(text):
@@ -17,20 +30,21 @@ def _number(text):
     point number if the string is a real number, or the string unchanged
     otherwise.
     '''
-    try:
+    if text.isdigit():
         return int(text)
+    try:
+        return float(text)
     except ValueError:
-        try:
-            return float(text)
-        except ValueError:
-            return text
+        return text
 
 
 def procs():
     '''
     Return the process data
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.procs
     '''
@@ -39,7 +53,7 @@ def procs():
     uind = 0
     pind = 0
     cind = 0
-    plines = __salt__['cmd.run'](__grains__['ps']).split('\n')
+    plines = __salt__['cmd.run'](__grains__['ps']).splitlines()
     guide = plines.pop(0).split()
     if 'USER' in guide:
         uind = guide.index('USER')
@@ -62,7 +76,7 @@ def procs():
 
 def custom():
     '''
-    Return a custom composite of status data and info for this minon,
+    Return a custom composite of status data and info for this minion,
     based on the minion config file. An example config like might be::
 
         status.cpustats.custom: [ 'cpu', 'ctxt', 'btime', 'processes' ]
@@ -77,19 +91,19 @@ def custom():
     By default, nothing is returned. Warning: Depending on what you
     include, there can be a LOT here!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.custom
     '''
     ret = {}
-    for opt in __opts__:
-        keys = opt.split('.')
-        if keys[0] != 'status':
-            continue
-        func = '%s()' % keys[1]
+    conf = __salt__['config.dot_vals']('status')
+    for key, val in conf.items():
+        func = '{0}()'.format(key.split('.')[1])
         vals = eval(func)
 
-        for item in __opts__[opt]:
+        for item in val:
             ret[item] = vals[item]
 
     return ret
@@ -99,43 +113,45 @@ def uptime():
     '''
     Return the uptime for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.uptime
     '''
-    return __salt__['cmd.run']('uptime').strip()
+    return __salt__['cmd.run']('uptime')
 
 
 def loadavg():
     '''
     Return the load averages for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.loadavg
     '''
-    procf = '/proc/loadavg'
-    if not os.path.isfile(procf):
-        return {}
-    comps = open(procf, 'r').read().strip()
-    load_avg = comps.split()
-    return {'1-min':  _number(load_avg[0]),
-            '5-min':  _number(load_avg[1]),
-            '15-min': _number(load_avg[2])}
+    load_avg = os.getloadavg()
+    return {'1-min': load_avg[0],
+            '5-min': load_avg[1],
+            '15-min': load_avg[2]}
 
 
 def cpustats():
     '''
-    Return the CPU stats for this minon
+    Return the CPU stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.cpustats
     '''
     procf = '/proc/stat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -165,14 +181,16 @@ def meminfo():
     '''
     Return the CPU stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.meminfo
     '''
     procf = '/proc/meminfo'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -180,7 +198,7 @@ def meminfo():
         comps = line.split()
         comps[0] = comps[0].replace(':', '')
         ret[comps[0]] = {
-            'value':    comps[1],
+            'value': comps[1],
         }
         if len(comps) > 2:
             ret[comps[0]]['unit'] = comps[2]
@@ -191,14 +209,16 @@ def cpuinfo():
     '''
     Return the CPU info for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.cpuinfo
     '''
     procf = '/proc/cpuinfo'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -216,14 +236,16 @@ def diskstats():
     '''
     Return the disk stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.diskstats
     '''
     procf = '/proc/diskstats'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -254,7 +276,9 @@ def diskusage(*args):
 
         salt '*' status.diskusage [paths and/or filesystem types]
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.diskusage         # usage for all filesystems
         salt '*' status.diskusage / /tmp  # usage for / and /tmp
@@ -278,17 +302,20 @@ def diskusage(*args):
                 # select fstype
                 fstypes.add(arg)
 
-    if len(fstypes) > 0:
-        # determine which mount points host the specifed fstypes
-        p = re.compile('|'.join(fnmatch.translate(fstype).format("(%s)")
-                            for fstype in fstypes))
-        with open(procf, 'r') as fp:
-            for line in fp:
+    if fstypes:
+        # determine which mount points host the specified fstypes
+        regex = re.compile(
+            '|'.join(
+                fnmatch.translate(fstype).format('(%s)') for fstype in fstypes
+            )
+        )
+        with salt.utils.fopen(procf, 'r') as ifile:
+            for line in ifile:
                 comps = line.split()
                 if len(comps) >= 3:
                     mntpt = comps[1]
                     fstype = comps[2]
-                    if p.match(fstype):
+                    if regex.match(fstype):
                         selected.add(mntpt)
 
     # query the filesystems disk usage
@@ -306,14 +333,16 @@ def vmstats():
     '''
     Return the virtual memory stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.vmstats
     '''
     procf = '/proc/vmstat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -327,14 +356,16 @@ def netstats():
     '''
     Return the network stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.netstats
     '''
     procf = '/proc/net/netstat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     headers = ['']
     for line in stats:
@@ -360,14 +391,16 @@ def netdev():
     '''
     Return the network device stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.netdev
     '''
     procf = '/proc/net/dev'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -378,7 +411,7 @@ def netdev():
         # Fix lines like eth0:9999..'
         comps[0] = line.split(':')[0].strip()
         #Support lines both like eth0:999 and eth0: 9999
-        comps.insert(1,line.split(':')[1].strip().split()[0])
+        comps.insert(1, line.split(':')[1].strip().split()[0])
         ret[comps[0]] = {'iface': comps[0],
                          'rx_bytes': _number(comps[1]),
                          'rx_compressed': _number(comps[7]),
@@ -399,16 +432,18 @@ def netdev():
     return ret
 
 
-def w():
+def w():  # pylint: disable=C0103
     '''
     Return a list of logged in users for this minion, using the w command
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.w
     '''
     user_list = []
-    users = __salt__['cmd.run']('w -h').split('\n')
+    users = __salt__['cmd.run']('w -h').splitlines()
     for row in users:
         if not row:
             continue
@@ -429,13 +464,16 @@ def all_status():
     Return a composite of all status data and info for this minion.
     Warning: There is a LOT here!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.all_status
     '''
     return {'cpuinfo': cpuinfo(),
             'cpustats': cpustats(),
             'diskstats': diskstats(),
+            'diskusage': diskusage(),
             'loadavg': loadavg(),
             'meminfo': meminfo(),
             'netdev': netdev(),
@@ -443,3 +481,25 @@ def all_status():
             'uptime': uptime(),
             'vmstats': vmstats(),
             'w': w()}
+
+
+def pid(sig):
+    '''
+    Return the PID or an empty string if the process is running or not.
+    Pass a signature to use to find the process via ps.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.pid <sig>
+    '''
+    # Check whether the sig is already quoted (we check at the end in case they
+    # send a sig like `-E 'someregex'` to use egrep) and doesn't begin with a
+    # dash (again, like `-E someregex`).  Quote sigs that qualify.
+    if (not sig.endswith('"') and not sig.endswith("'") and
+            not sig.startswith('-')):
+        sig = "'" + sig + "'"
+    cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
+        __grains__, sig)
+    return (__salt__['cmd.run_stdout'](cmd) or '')
