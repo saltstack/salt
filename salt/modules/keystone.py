@@ -51,7 +51,7 @@ def auth():
     tenant_id = __salt__['config.option']('keystone.tenant_id')
     auth_url = __salt__['config.option']('keystone.auth_url', 'http://127.0.0.1:35357/v2.0/')
     insecure = __salt__['config.option']('keystone.insecure', False)
-    token = __salt__['config.option']('keystone.token')
+    token = __salt__['config.option']('keystone.token', 'ADMIN')
     endpoint = __salt__['config.option']('keystone.endpoint', 'http://127.0.0.1:35357/v2.0')
 
     kwargs = {}
