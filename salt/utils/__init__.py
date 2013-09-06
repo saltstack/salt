@@ -435,12 +435,18 @@ def required_modules_error(name, docstring):
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
 
+def gen_jid():
+    '''
+    Generate a jid
+    '''
+    return '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+
 
 def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
-    jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+    jid = gen_jid()
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
