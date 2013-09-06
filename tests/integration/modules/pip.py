@@ -31,7 +31,7 @@ class PipModuleTest(integration.ModuleCase):
         if not ret:
             self.skipTest('virtualenv not installed')
 
-        self.venv_test_dir = tempfile.mkdtemp()
+        self.venv_test_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         for key in os.environ.copy():
             if key.startswith('PIP_'):

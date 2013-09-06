@@ -9,8 +9,8 @@ rules for allowing these incoming connections to the master.
 
 .. note::
 
-    **No firewall configuration needs to be done on Salt minions. These changes
-    refer to the master only.**
+    No firewall configuration needs to be done on Salt minions. These changes
+    refer to the master only.
 
 RHEL 6 / CENTOS 6
 =================

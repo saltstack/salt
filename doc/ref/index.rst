@@ -18,6 +18,8 @@ The primary interface used to extend Salt, is to simply use it. Salt executions
 can be called via the Salt client API, making programming master side solutions
 with Salt is easy.
 
+.. seealso:: :ref:`client-apis`
+
 Adding Loadable Plugins
 -----------------------
 

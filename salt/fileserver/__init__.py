@@ -14,6 +14,61 @@ import salt.loader
 
 log = logging.getLogger(__name__)
 
+def generate_mtime_map(path_map):
+    '''
+    Generate a dict of filename -> mtime
+    '''
+    file_map = {}
+    for env, path_list in path_map.iteritems():
+        for path in path_list:
+            for directory, dirnames, filenames in os.walk(path):
+                for item in filenames:
+                    file_path = os.path.join(directory, item)
+                    file_map[file_path] = os.path.getmtime(file_path)
+    return file_map
+
+def diff_mtime_map(map1, map2):
+    '''
+    Is there a change to the mtime map? return a boolean
+    '''
+    # check if the file lists are different
+    if cmp(sorted(map1.keys()), sorted(map2.keys())) != 0:
+        log.debug('diff_mtime_map: the keys are different')
+        return True
+
+    # check if the mtimes are the same
+    if cmp(sorted(map1), sorted(map2)) != 0:
+        log.debug('diff_mtime_map: the maps are different')
+        return True
+
+    # we made it, that means we have no changes
+    log.debug('diff_mtime_map: the maps are the same')
+    return False
+
+def reap_fileserver_cache_dir(cache_base, find_func):
+    '''
+    Remove unused cache items assuming the cache directory follows a directory convention:
+
+    cache_base -> env -> relpath
+    '''
+    for env in os.listdir(cache_base):
+        env_base = os.path.join(cache_base, env)
+        for root, dirs, files in os.walk(env_base):
+            # if we have an empty directory, lets cleanup
+            # This will only remove the directory on the second time "_reap_cache" is called (which is intentional)
+            if len(dirs) == 0 and len (files) == 0:
+                os.rmdir(root)
+                continue
+            # if not, lets check the files in the directory
+            for file_ in files:
+                file_path = os.path.join(root, file_)
+                file_rel_path = os.path.relpath(file_path, env_base)
+                filename, _, hash_type = file_rel_path.rsplit('.', 2)
+                # do we have the file?
+                ret = find_func(filename, env=env)
+                # if we don't actually have the file, lets clean up the cache object
+                if ret['path'] == '':
+                    os.unlink(file_path)
 
 def is_file_ignored(opts, fname):
     '''

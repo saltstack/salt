@@ -12,6 +12,7 @@ Full list of builtin state modules
 
     alias
     alternatives
+    apt
     cmd
     cron
     debconfmod
@@ -33,8 +34,8 @@ Full list of builtin state modules
     lvm
     makeconf
     mdadm
-    module
     modjk_worker
+    module
     mongodb_database
     mongodb_user
     mount
@@ -44,9 +45,9 @@ Full list of builtin state modules
     network
     npm
     pecl
-    pip
-    pkgng
+    pip_state
     pkg
+    pkgng
     pkgrepo
     portage_config
     postgres_database

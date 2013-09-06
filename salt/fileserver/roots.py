@@ -11,7 +11,7 @@ import os
 # Import salt libs
 import salt.fileserver
 import salt.utils
-
+from salt.utils.event import tagify
 
 def find_file(path, env='base', **kwargs):
     '''
@@ -76,6 +76,52 @@ def serve_file(load, fnd):
     return ret
 
 
+def update():
+    '''
+    When we are asked to update (regular interval) lets reap the cache
+    '''
+    try:
+        salt.fileserver.reap_fileserver_cache_dir(
+            os.path.join(__opts__['cachedir'], 'roots/hash'),
+            find_file
+        )
+    except (IOError, OSError):
+        # Hash file won't exist if no files have yet been served up
+        pass
+
+    mtime_map_path = os.path.join(__opts__['cachedir'], 'roots/mtime_map')
+    # data to send on event
+    data = {'changed': False,
+            'backend': 'roots'}
+
+    old_mtime_map = {}
+    # if you have an old map, load that
+    if os.path.exists(mtime_map_path):
+        with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
+            for line in fp_:
+                file_path, mtime = line.split(':', 1)
+                old_mtime_map[file_path] = mtime
+
+    # generate the new map
+    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
+
+    # compare the maps, set changed to the return value
+    data['changed'] = salt.fileserver.diff_mtime_map(old_mtime_map, new_mtime_map)
+
+    # write out the new map
+    mtime_map_path_dir = os.path.dirname(mtime_map_path)
+    if not os.path.exists(mtime_map_path_dir):
+        os.makedirs(mtime_map_path_dir)
+    with salt.utils.fopen(mtime_map_path, 'w') as fp_:
+        for file_path, mtime in new_mtime_map.iteritems():
+            fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
+                                                     mtime=mtime))
+
+    # if there is a change, fire an event
+    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+    event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
+
+
 def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
@@ -84,10 +130,40 @@ def file_hash(load, fnd):
         return ''
     path = fnd['path']
     ret = {}
-    if not path:
+
+    # if the file doesn't exist, we can't get a hash
+    if not path or not os.path.isfile(path):
         return ret
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+
+    # set the hash_type as it is determined by config-- so mechanism won't change that
     ret['hash_type'] = __opts__['hash_type']
+
+    # check if the hash is cached
+    # cache file's contents should be "hash:mtime"
+    cache_path = os.path.join(__opts__['cachedir'],
+                              'roots/hash',
+                              load['env'],
+                              '{0}.hash.{1}'.format(fnd['rel'],
+                              __opts__['hash_type']))
+    # if we have a cache, serve that if the mtime hasn't changed
+    if os.path.exists(cache_path):
+        with salt.utils.fopen(cache_path, 'rb') as fp_:
+            hsum, mtime = fp_.read().split(':')
+            if os.path.getmtime(path) == mtime:
+                # check if mtime changed
+                ret['hsum'] = hsum
+                return ret
+
+    # if we don't have a cache entry-- lets make one
+    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    cache_dir = os.path.dirname(cache_path)
+    # make cache directory if it doesn't exist
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+    # save the cache object "hash:mtime"
+    with salt.utils.fopen(cache_path, 'w') as fp_:
+        fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
+
     return ret
 
 
@@ -101,7 +177,10 @@ def file_list(load):
         return ret
 
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             for fname in files:
                 rel_fn = os.path.relpath(
@@ -121,7 +200,10 @@ def file_list_emptydirs(load):
     if load['env'] not in __opts__['file_roots']:
         return ret
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             if len(dirs) == 0 and len(files) == 0:
                 rel_fn = os.path.relpath(root, path)
@@ -138,7 +220,10 @@ def dir_list(load):
     if load['env'] not in __opts__['file_roots']:
         return ret
     for path in __opts__['file_roots'][load['env']]:
-        prefix = load['prefix'].strip('/')
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
             ret.append(os.path.relpath(root, path))
     return ret

@@ -1,28 +1,16 @@
-
-# Import python libs
-import os
-import sys
-
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
 import salt.modules.gem as gem
-
-# Import external libs
-try:
-    from mock import MagicMock, patch
-    has_mock = True
-except ImportError:
-    has_mock = False
 
 gem.__salt__ = {}
 
 
-@skipIf(has_mock is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestGemModule(TestCase):
 
     def test__gem(self):

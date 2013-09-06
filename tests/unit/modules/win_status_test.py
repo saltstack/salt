@@ -13,32 +13,20 @@ sys.modules['wmi'] = wmi
 
 pythoncom = new.module('pythoncom')
 sys.modules['pythoncom'] = pythoncom
-wrong_version = True
 
-try:
-    from mock import Mock, patch
-    has_mock = True
-    try:
-        from mock import call, ANY
-        wrong_version = False
-    except ImportError:
-        wrong_version = True
-        raise
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, call, ANY
+
+if NO_MOCK is False:
     WMI = Mock()
     wmi.WMI = Mock(return_value=WMI)
     pythoncom.CoInitialize = Mock()
     pythoncom.CoUninitialize = Mock()
-except ImportError:
-    has_mock = False
 
 # This is imported late so mock can do it's job
 import salt.modules.win_status as status
 
 
-@skipIf(has_mock is False,
-        wrong_version and
-        'you need to upgrade your mock version to >= 0.8.0' or
-        'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)

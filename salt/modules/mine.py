@@ -4,6 +4,7 @@ can be easily read by other minions
 '''
 
 # Import python libs
+import copy
 import logging
 
 # Import salt libs
@@ -39,7 +40,9 @@ def update(clear=False):
     The function cache will be populated with information from executing these
     functions
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mine.update
     '''
@@ -80,7 +83,9 @@ def send(func, *args, **kwargs):
     '''
     Send a specific function to the mine.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mine.send network.interfaces eth0
     '''
@@ -88,14 +93,13 @@ def send(func, *args, **kwargs):
         return False
     data = {}
     arg_data = salt.utils.arg_lookup(__salt__[func])
-    func_data = {}
-    for ind in range(len(arg_data.get('args', []))):
+    func_data = copy.deepcopy(kwargs)
+    for ind, _ in enumerate(arg_data.get('args', [])):
         try:
-            func_data[arg_data[ind]] = args[ind]
+            func_data[arg_data['args'][ind]] = args[ind]
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    func_data.update(kwargs)
     f_call = salt.utils.format_call(__salt__[func], func_data)
     try:
         if 'kwargs' in f_call:
@@ -125,7 +129,7 @@ def get(tgt, fun, expr_form='glob'):
     Get data from the mine based on the target, function and expr_form
 
     Targets can be matched based on any standard matching system that can be
-    matched on the master via these keywords:
+    matched on the master via these keywords::
 
         glob
         pcre
@@ -133,7 +137,9 @@ def get(tgt, fun, expr_form='glob'):
         grain_pcre
         pillar
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain

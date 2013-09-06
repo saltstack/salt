@@ -132,7 +132,7 @@ With correctly setup grains on the Minion, the Top file used in Pillar or during
         - match: grain
         - lb
         
-For this example to work, you would need the grain ``node_type`` and the correct value to match on.  This simple example is nice, but too much of the code is similar.  To go one step further, we can place in some JINJA into the Top file.
+For this example to work, you would need the grain ``node_type`` and the correct value to match on.  This simple example is nice, but too much of the code is similar.  To go one step further, we can place some Jinja template code into the Top file.
 
 .. code-block:: yaml
 
@@ -142,7 +142,7 @@ For this example to work, you would need the grain ``node_type`` and the correct
             - match: grain
             - {{ self }}
 
-With the JINJA, we simplified the Top file, and allowed SaltStack to work it's magic.
+The Jinja code simplified the Top file, and allowed SaltStack to work its magic.
 
 .. _writing-grains:
 

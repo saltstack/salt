@@ -13,6 +13,7 @@ import random
 # Import Salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only load if libguestfs python bindings are installed
@@ -26,9 +27,11 @@ def mount(location, access='rw'):
     '''
     Mount an image
 
-    CLI Example::
+    CLI Example:
 
-        salt 'guest.mount' /srv/images/fedora.qcow
+    .. code-block:: bash
+
+        salt '*' guest.mount /srv/images/fedora.qcow
     '''
     root = os.path.join(
             tempfile.gettempdir(),

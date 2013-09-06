@@ -98,7 +98,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         )
 
     def test_keys_generation(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
         try:
@@ -108,7 +108,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             shutil.rmtree(tempdir)
 
     def test_keys_generation_no_configdir(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_script('salt-key', arg_str)
         try:
@@ -118,7 +118,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
         try:
             data, error = self.run_key(

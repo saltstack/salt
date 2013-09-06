@@ -79,12 +79,17 @@ Running Salt
 
         salt-minion
 
+
 .. admonition:: Having trouble?
 
     The simplest way to troubleshoot Salt is to run the master and minion in
     the foreground with :option:`log level <salt-master -l>` set to ``debug``::
 
         salt-master --log-level=debug
+
+    For information on salt's logging system please see the :doc:`logging 
+    document</ref/configuration/logging/index>`.
+
 
 .. admonition:: Run as an unprivileged (non-root) user
 
@@ -95,6 +100,7 @@ Running Salt
 
 There is also a full :doc:`troubleshooting guide</topics/troubleshooting/index>`
 available.
+
 
 Key Management
 ==============

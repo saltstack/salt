@@ -32,7 +32,9 @@ def enable():
     '''
     Enable RDP the service on the server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rdp.enable
     '''
@@ -44,7 +46,9 @@ def disable():
     '''
     Disable RDP the service on the server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rdp.disable
     '''
@@ -56,7 +60,9 @@ def status():
     '''
     Show if rdp is enabled on the server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' rdp.status
     '''

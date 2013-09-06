@@ -90,7 +90,9 @@ def get_all():
     '''
     Return all installed services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -127,7 +129,9 @@ def available(job_label):
     '''
     Check that the given service is available.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.available com.openssh.sshd
     '''
@@ -139,7 +143,9 @@ def status(job_label, runas=None):
     Return the status for a service, returns a bool whether the service is
     running.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service label>
     '''
@@ -155,7 +161,9 @@ def stop(job_label, runas=None):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service label>
         salt '*' service.stop org.ntp.ntpd
@@ -173,7 +181,9 @@ def start(job_label, runas=None):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service label>
         salt '*' service.start org.ntp.ntpd
@@ -191,7 +201,9 @@ def restart(job_label, runas=None):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service label>
     '''

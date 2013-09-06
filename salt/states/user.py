@@ -367,7 +367,7 @@ def present(name,
                                 createhome=createhome):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
-            if password:
+            if all((password, _shadow_supported())):
                 __salt__['shadow.set_password'](name, password)
                 spost = __salt__['shadow.info'](name)
                 if spost['passwd'] != password:

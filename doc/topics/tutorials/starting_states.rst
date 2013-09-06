@@ -8,10 +8,10 @@ Many of the most powerful and useful engineering solutions are founded on
 simple principles. The Salt SLS system strives to do just that. K.I.S.S. 
 (Keep It Stupidly Simple)
 
-The core of the Salt State system is the SLS, or the SaLt State file. The SLS
-is a representation of the state in which a system should be in, and is set up
-to contain this data in a simple format. This is often called configuration 
-management.
+The core of the Salt State system is the SLS, or **S**\ a\ **L**\ t
+**S**\ tate file. The SLS is a representation of the state in which
+a system should be in, and is set up to contain this data in a simple format.
+This is often called configuration management.
 
 .. note::
 

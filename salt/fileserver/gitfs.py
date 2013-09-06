@@ -27,7 +27,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.fileserver
-
+from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +37,8 @@ def __virtual__():
     Only load if gitpython is available
     '''
     if not isinstance(__opts__['gitfs_remotes'], list):
+        return False
+    if not isinstance(__opts__['gitfs_root'], str):
         return False
     if not 'git' in __opts__['fileserver_backend']:
         return False
@@ -115,14 +117,14 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     repos = []
-    for ind in range(len(__opts__['gitfs_remotes'])):
+    for ind, opt in enumerate(__opts__['gitfs_remotes']):
         rp_ = os.path.join(bp_, str(ind))
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
         repo = git.Repo.init(rp_)
         if not repo.remotes:
             try:
-                repo.create_remote('origin', __opts__['gitfs_remotes'][ind])
+                repo.create_remote('origin', opt)
             except Exception:
                 # This exception occurs when two processes are trying to write
                 # to the git config at once, go ahead and pass over it since
@@ -138,6 +140,9 @@ def update():
     '''
     Execute a git pull on all of the repos
     '''
+    # data for the fileserver event
+    data = {'changed': False,
+            'backend': 'gitfs'}
     pid = os.getpid()
     repos = init()
     for repo in repos:
@@ -145,17 +150,36 @@ def update():
         lk_fn = os.path.join(repo.working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
-        origin.fetch()
+        try:
+            for fetch in origin.fetch():
+                if fetch.old_commit is not None:
+                    data['changed'] = True
+        except Exception as exc:
+            log.warning('GitPython exception caught while fetching: '
+                        '{0}'.format(exc))
         try:
             os.remove(lk_fn)
-        except (OSError, IOError):
+        except (IOError, OSError):
             pass
+
+    # if there is a change, fire an event
+    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+    event.fire_event(data, tagify(['gitfs', 'update'], prefix='fileserver'))
+    try:
+        salt.fileserver.reap_fileserver_cache_dir(
+            os.path.join(__opts__['cachedir'], 'gitfs/hash'),
+            find_file
+        )
+    except (IOError, OSError):
+        # Hash file won't exist if no files have yet been served up
+        pass
 
 
 def envs():
     '''
     Return a list of refs that can be used as environments
     '''
+    base_branch = __opts__['gitfs_base']
     ret = set()
     repos = init()
     for repo in repos:
@@ -164,7 +188,7 @@ def envs():
             parted = ref.name.partition('/')
             short = parted[2] if parted[2] else parted[0]
             if isinstance(ref, git.Head):
-                if short == 'master':
+                if short == base_branch:
                     short = 'base'
                 if ref not in remote.stale_refs:
                     ret.add(short)
@@ -180,10 +204,16 @@ def find_file(path, short='base', **kwargs):
     '''
     fnd = {'path': '',
            'rel': ''}
+    base_branch = __opts__['gitfs_base']
     if os.path.isabs(path):
         return fnd
+
+    local_path = path
+    if __opts__['gitfs_root']:
+        path = os.path.join(__opts__['gitfs_root'], local_path)
+
     if short == 'base':
-        short = 'master'
+        short = base_branch
     dest = os.path.join(__opts__['cachedir'], 'gitfs/refs', short, path)
     hashes_glob = os.path.join(__opts__['cachedir'],
                                'gitfs/hash',
@@ -228,7 +258,7 @@ def find_file(path, short='base', **kwargs):
             with salt.utils.fopen(blobshadest, 'r') as fp_:
                 sha = fp_.read()
                 if sha == blob.hexsha:
-                    fnd['rel'] = path
+                    fnd['rel'] = local_path
                     fnd['path'] = dest
                     return fnd
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
@@ -246,7 +276,7 @@ def find_file(path, short='base', **kwargs):
             os.remove(lk_fn)
         except (OSError, IOError):
             pass
-        fnd['rel'] = path
+        fnd['rel'] = local_path
         fnd['path'] = dest
         return fnd
     return fnd
@@ -282,8 +312,9 @@ def file_hash(load, fnd):
         return ''
     ret = {'hash_type': __opts__['hash_type']}
     short = load['env']
+    base_branch = __opts__['gitfs_base']
     if short == 'base':
-        short = 'master'
+        short = base_branch
     relpath = fnd['rel']
     path = fnd['path']
     hashdest = os.path.join(__opts__['cachedir'],
@@ -310,18 +341,27 @@ def file_list(load):
     environment
     '''
     ret = []
+    base_branch = __opts__['gitfs_base']
     if 'env' not in load:
         return ret
     if load['env'] == 'base':
-        load['env'] = 'master'
+        load['env'] = base_branch
     repos = init()
     for repo in repos:
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
         tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Blob):
+                continue
+            if __opts__['gitfs_root']:
+                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
                 continue
             ret.append(blob.path)
     return ret
@@ -332,20 +372,32 @@ def file_list_emptydirs(load):
     Return a list of all empty directories on the master
     '''
     ret = []
+    base_branch = __opts__['gitfs_base']
     if 'env' not in load:
         return ret
     if load['env'] == 'base':
-        load['env'] = 'master'
+        load['env'] = base_branch
     repos = init()
     for repo in repos:
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
+
         tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Tree):
                 continue
             if not blob.blobs:
+                if __opts__['gitfs_root']:
+                    ret.append(
+                        os.path.relpath(blob.path, __opts__['gitfs_root'])
+                    )
+                    continue
                 ret.append(blob.path)
     return ret
 
@@ -355,18 +407,28 @@ def dir_list(load):
     Return a list of all directories on the master
     '''
     ret = []
+    base_branch = __opts__['gitfs_base']
     if 'env' not in load:
         return ret
     if load['env'] == 'base':
-        load['env'] = 'master'
+        load['env'] = base_branch
     repos = init()
     for repo in repos:
         ref = _get_ref(repo, load['env'])
         if not ref:
             continue
+
         tree = ref.commit.tree
+        if __opts__['gitfs_root']:
+            try:
+                tree = tree / __opts__['gitfs_root']
+            except KeyError:
+                continue
         for blob in tree.traverse():
             if not isinstance(blob, git.Tree):
+                continue
+            if __opts__['gitfs_root']:
+                ret.append(os.path.relpath(blob.path, __opts__['gitfs_root']))
                 continue
             ret.append(blob.path)
     return ret

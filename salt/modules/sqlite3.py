@@ -31,7 +31,9 @@ def version():
     '''
     Return version of pysqlite
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sqlite3.version
     '''
@@ -42,7 +44,9 @@ def sqlite_version():
     '''
     Return version of sqlite
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sqlite3.sqlite_version
     '''
@@ -54,7 +58,9 @@ def modify(db=None, sql=None):
     Issue an SQL query to sqlite3 (with no return data), usually used
     to modify the database in some way (insert, delete, create, etc)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sqlite3.modify /root/test.db 'CREATE TABLE test(id INT, testdata TEXT);'
     '''
@@ -71,7 +77,9 @@ def fetch(db=None, sql=None):
     '''
     Retrieve data from an sqlite3 db (returns all rows, be careful!)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sqlite3.fetch /root/test.db 'SELECT * FROM test;'
     '''
@@ -89,7 +97,9 @@ def tables(db=None):
     '''
     Show all tables in the database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sqlite3.tables /root/test.db
     '''
@@ -109,7 +119,9 @@ def indices(db=None):
     '''
     Show all indices in the database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sqlite3.indices /root/test.db
     '''
@@ -129,7 +141,9 @@ def indexes(db=None):
     '''
     Show all indices in the database, for people with poor spelling skills
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' sqlite3.indexes /root/test.db
     '''

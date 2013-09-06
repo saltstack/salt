@@ -30,7 +30,9 @@ def default_hash():
     '''
     Returns the default hash used for unset passwords
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.default_hash
     '''
@@ -41,7 +43,9 @@ def info(name):
     '''
     Return information for the specified user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.info root
     '''
@@ -134,7 +138,9 @@ def set_maxdays(name, maxdays):
     Set the maximum number of days during which a password is valid. See man
     passwd.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_maxdays username 90
     '''
@@ -152,7 +158,9 @@ def set_mindays(name, mindays):
     '''
     Set the minimum number of days between password changes. See man passwd.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_mindays username 7
     '''
@@ -173,7 +181,9 @@ def set_password(name, password):
     hash, the password hash can be generated with this command:
     ``openssl passwd -1 <plaintext password>``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_password root $1$UYCIxa628.9qXjpQCjM4a..
     '''
@@ -202,7 +212,9 @@ def set_warndays(name, warndays):
     Set the number of days of warning before a password change is required.
     See man passwd.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_warndays username 7
     '''

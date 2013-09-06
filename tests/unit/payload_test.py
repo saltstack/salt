@@ -11,6 +11,7 @@
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath, MockWraps
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
 ensure_in_syspath('../')
 
 # Import salt libs
@@ -19,14 +20,9 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 import msgpack
-try:
-    from mock import MagicMock, patch, DEFAULT
-    HAS_MOCK = True
-except ImportError:
-    HAS_MOCK = False
 
 
-@skipIf(HAS_MOCK is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PayloadTestCase(TestCase):
 
     def assertNoOrderedDict(self, data):

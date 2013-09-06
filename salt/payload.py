@@ -6,6 +6,7 @@ in here
 
 # Import python libs
 #import sys  # Use of sys is commented out below
+import logging
 
 # Import salt libs
 import salt.log
@@ -20,7 +21,7 @@ except ImportError:
     # No need for zeromq in local mode
     pass
 
-log = salt.log.logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 try:
     # Attempt to import msgpack

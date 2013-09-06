@@ -1,18 +1,31 @@
+.. _conventions-formula:
+
 =============
 Salt Formulas
 =============
 
-Formulas are pre-written Salt States and optional Pillar configuration. They
-are as open-ended as Salt States themselves and can be used for tasks such as
-installing a package, configuring and starting a service, setting up users or
-permissions, and many other common tasks.
+Formulas are pre-written Salt States. They are as open-ended as Salt States
+themselves and can be used for tasks such as installing a package, configuring
+and starting a service, setting up users or permissions, and many other common
+tasks.
 
-.. seealso:: Salt Formula repositories
+.. note:: Formulas require Salt 0.17 or later.
 
-    All official Salt Formulas are found as separate Git repositories in the
-    "saltstack-formulas" organization on GitHub:
+    More accurately, Formulas are not tested on earlier versions of Salt so
+    your mileage may vary.
 
-    https://github.com/saltstack-formulas
+    All Formulas require the grains execution module that shipped with Salt
+    0.16.4. Earlier Salt versions may copy :blob:`salt/modules/formula_util.py`
+    into the :file:`/srv/salt/_modules` directory and it will be automatically
+    distributed to all minions.
+
+    Some Formula utilize features added in Salt 0.17 and will not work on
+    earlier Salt versions.
+
+All official Salt Formulas are found as separate Git repositories in the
+"saltstack-formulas" organization on GitHub:
+
+https://github.com/saltstack-formulas
 
 As an example, quickly install and configure the popular memcached server using
 sane defaults simply by including the :formula:`memcached-formula` repository
@@ -22,8 +35,8 @@ Installation
 ============
 
 Each Salt Formula is an individual Git repository designed as a drop-in
-addition to an existing Salt State tree either by using Salt's GitFS fileserver
-backend or by cloning the repository manually.
+addition to an existing Salt State tree. Formulas can be installed in the
+following ways.
 
 Adding a Formula as a GitFS remote
 ----------------------------------
@@ -43,6 +56,12 @@ Adding a Formula directory manually
 Since Formulas are simply directories they can be copied onto the local file
 system by using Git to clone the repository or by downloading and expanding a
 tarball or zip file of the directory.
+
+* Clone the repository manually and add a new entry to
+  :conf_master:`file_roots` pointing to the clone's directory.
+
+* Clone the repository manually and then copy or link the Formula directory
+  into ``file_roots``.
 
 Usage
 =====
@@ -110,10 +129,11 @@ done directly from a Top File and may look something like this:
 Configuring Formula using Pillar
 --------------------------------
 
-Although Salt Formulas are designed to work out of the box many Formula support
-additional configuration through :ref:`Pillar <pillar>`. Examples of available
-options can be found in a file named :file:`pillar.example` in the root
-directory of each Formula repository.
+Salt Formulas are designed to work out of the box with no additional
+configuration. However, many Formula support additional configuration and
+customization through :ref:`Pillar <pillar>`. Examples of available options can
+be found in a file named :file:`pillar.example` in the root directory of each
+Formula repository.
 
 Modifying default Formula behavior
 ----------------------------------
@@ -138,7 +158,7 @@ Writing Formulas
 Each Formula is a separate repository in the `saltstack-formulas`_ organization
 on GitHub.
 
-.. note:: Get involved creating new Formula
+.. note:: Get involved creating new Formulas
 
     The best way to create new Formula repositories for now is to create a
     repository in your own account on GitHub and notify a SaltStack employee
@@ -147,47 +167,229 @@ on GitHub.
     over. Ping a SaltStack employee on IRC (``#salt`` on Freenode) or send an
     email to the Salt mailing list.
 
-Each Salt Formula must be platform-agnostic and should be usable in a default
-state. Formula can be configured and parameterized using values from Pillar.
-
 Repository structure
 --------------------
 
-A basic Formula repository should have the following characteristics:
+A basic Formula repository should have the following layout::
 
-* The repository name must have the "-formula" suffix.
-* A :file:`LICENSE` file describing the software license governing the repo.
-* A :file:`README.rst` file describing each available ``.sls`` file, target
-  platforms, and any other installation or usage instructions or tips.
-* If the formula has any configuration parameters the repository should contain
-  a :file:`pillar.example` file containing all available parameters that is
-  suitable for copy-and-pasting into an existing Pillar tree.
-* Finally each repo must have a directory containing the ``.sls`` files.
+    foo-formula
+    |-- foo/
+    |   |-- map.jinja
+    |   |-- init.sls
+    |   `-- bar.sls
+    |-- LICENSE
+    |-- pillar.example
+    `-- README.rst
+
+``README.rst``
+--------------
+
+The README should detail each available ``.sls`` file by explaining what it
+does, whether it has any dependencies on other formulas, whether it has a
+target platform, and any other installation or usage instructions or tips.
+
+A sample skeleton for the ``README.rst`` file:
+
+.. code:: rest
+
+    foo
+    ===
+
+    Install and configure the FOO service.
+
+    .. note::
+
+        See the full `Salt Formulas installation and usage instructions
+        <http://docs.saltstack.com/topics/conventions/formulas.html>`_.
+
+    Available states
+    ----------------
+
+    ``foo``
+        Install the ``foo`` package and enable the service.
+    ``foo.bar``
+        Install the ``bar`` package.
+
+``map.jinja``
+-------------
+
+It is useful to have a single source for platform-specific or other
+parameterized information that can be reused throughout a Formula. See
+":ref:`conventions-formula-parameterization`" below for more information. Such
+a file should be named :file:`map.jinja` and live alongside the state
+files.
+
+The following is an example from the MySQL Formula.
+
+:file:`map.jinja`:
+
+.. code:: jinja
+
+    {% set mysql = salt['grains.filter_by']({
+        'Debian': {
+            'server': 'mysql-server',
+            'client': 'mysql-client',
+            'service': 'mysql',
+            'config': '/etc/mysql/my.cnf',
+        },
+        'RedHat': {
+            'server': 'mysql-server',
+            'client': 'mysql',
+            'service': 'mysqld',
+            'config': '/etc/my.cnf',
+        },
+        'Gentoo': {
+            'server': 'dev-db/mysql',
+            'mysql-client': 'dev-db/mysql',
+            'service': 'mysql',
+            'config': '/etc/mysql/my.cnf',
+        },
+    }, merge=salt['pillar.get']('mysql:lookup')) %}
+
+Any of the values defined above can be fetched for the current platform in any
+state file using the following syntax:
+
+.. code:: yaml
+
+    {% from "mysql/map.jinja" import mysql with context %}
+
+    mysql-server:
+      pkg:
+        - installed
+        - name: {{ mysql.server }}
+      service:
+        - running
+        - name: {{ mysql.service }}
+        - require:
+          - pkg: mysql-server
+
+    mysql-config:
+      file:
+        - managed
+        - name: {{ mysql.config }}
+        - source: salt://mysql/conf/my.cnf
+        - watch:
+          - service: mysql-server
 
 SLS files
 ---------
 
-* Individual standalone files
+Each state in a Formula should use sane defaults (as much as is possible) and
+use Pillar to allow for customization.
+
+The root state, in particular, and most states in general, should strive to do
+no more than the basic expected thing and advanced configuration should be put
+in child states build on top of the basic states.
+
+For example, the root Apache should only install the Apache httpd server and
+make sure the httpd service is running. It can then be used by more advanced
+states::
+
+    # apache/init.sls
+    httpd:
+      pkg:
+        - installed
+      service:
+        - running
+
+    # apache/mod_wsgi.sls
+    include:
+      - apache
+
+    mod_wsgi:
+      pkg:
+        - installed
+        - require:
+          - pkg: apache
+
+    # apache/debian/vhost_setup.sls
+    {% if grains['os_family'] == 'Debian' %}
+    a2dissite 000-default:
+      cmd.run:
+        - onlyif: test -L /etc/apache2/sites-enabled/000-default
+        - require:
+          - pkg: apache
+    {% endif %}
 
 Platform agnostic
------------------
+`````````````````
 
-* Parameterize platform-specific package names using Jinja variables.
-* Wrap platform-specific states within conditionals.
+Each Salt Formula must be able to be run without error on any platform. If the
+formula is not applicable to a platform it should do nothing. See the
+:formula:`epel-formula` for an example.
+
+Any platform-specific states must be wrapped in conditional statements:
+
+.. code:: jinja
+
+    {% if grains['os_family'] == 'Debian' %}
+    ...
+    {% endif %}
+
+A handy method for using platform-specific values is to create a lookup table
+using the :py:func:`~salt.modules.grains.filter_by` function:
+
+.. code:: jinja
+
+    {% set apache = salt['grains.filter_by']({
+        'Debian': {'conf': '/etc/apache2/conf.d'},
+        'RedHat': {'conf': '/etc/httpd/conf.d'},
+    }) %}
+
+    myconf:
+      file:
+        - managed
+        - name: {{ apache.conf }}/myconf.conf
+
+.. _conventions-formula-parameterization:
 
 Configuration and parameterization
 ----------------------------------
 
-* Use Pillar; use Pillar defaults
+Each Formula should strive for sane defaults that can then be customized using
+Pillar. Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get`
+and must provide a default value:
+
+.. code:: jinja
+
+    {% if salt['pillar.get']('horizon:use_ssl', False) %}
+    ssl_crt: {{ salt['pillar.get']('horizon:ssl_crt', '/etc/ssl/certs/horizon.crt') }}
+    ssl_key: {{ salt['pillar.get']('horizon:ssl_key', '/etc/ssl/certs/horizon.key') }}
+    {% endif %}
+
+Any default values used in the Formula must also be documented in the
+:file:`pillar.example` file in the root of the repository. Comments should be
+used liberally to explain the intent of each configuration value. In addition,
+users should be able copy-and-paste the contents of this file into their own
+Pillar to make any desired changes.
 
 Scripting
 ---------
 
-* Call out to Salt execution modules as much as needed.
-* Jinja macros are discouraged.
+Remember that both State files and Pillar files can easily call out to Salt
+:ref:`execution modules <all-salt.modules>` and have access to all the system
+grains as well.
+
+.. code:: jinja
+
+    {% if '/storage' in salt['mount.active']() %}
+    /usr/local/etc/myfile.conf:
+      file:
+        - symlink
+        - target: /storage/myfile.conf
+    {% endif %}
+
+Jinja macros are generally discouraged in favor of adding functions to existing
+Salt modules or adding new modules. An example of this is the
+:py:func:`~salt.modules.grains.filter_by` function.
+
+Versioning
+----------
+
+Formula versions are tracked using Git tags.
 
 Testing Formulas
-================
+----------------
 
 Salt Formulas are tested by running each ``.sls`` file via :py:func:`state.sls
 <salt.modules.state.sls>` and checking the output for success or failure. This

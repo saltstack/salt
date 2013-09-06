@@ -38,7 +38,9 @@ def search(pkg_name):
     '''
     Use `pkg search` if pkg is being used.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.search 'mysql-server'
     '''
@@ -58,7 +60,9 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
@@ -77,17 +81,12 @@ def latest_version(*names, **kwargs):
             if not line.startswith('\t'):
                 continue
             line = line.strip()
-            if line.startswith('Installing'):
-                _, pkg, ver = line.split()
-                pkg = pkg.rstrip(':')
-            elif line.startswith('Upgrading'):
-                _, pkg, _, _, ver = line.split()
-                pkg = pkg.rstrip(':')
-            elif line.startswith('Reinstalling'):
-                _, pkgver = line.split()
-                comps = pkgver.split('-')
-                pkg = ''.join(comps[:-1])
-                ver = comps[-1]
+            _words = line.split()
+            if _words[0] in ('Installing', 'Upgrading', 'Downgrading'):
+                pkg = _words[1].rstrip(':')
+                ver = _words[2] if _words[0] == 'Installing' else _words[4]
+            elif _words[0] in ('Reinstalling'):
+                pkg, ver = _words[1].split('-')
             else:
                 # unexpected string
                 continue
@@ -96,7 +95,7 @@ def latest_version(*names, **kwargs):
 
         # keep pkg.latest culm
         for pkg in set(names) - set(ret) - set(list_pkgs()):
-            for line in __salt__['cmd.run']('{0} search -fe {1}'.format(
+            for line in __salt__['cmd.run']('{0} search -fe -Sname {1}'.format(
                 _cmd('pkg'), pkg)
             ).splitlines():
                 if line.startswith('Version'):
@@ -121,7 +120,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -134,7 +135,9 @@ def refresh_db():
     Use pkg update to get latest repo.txz when using pkgng. Updating
     with portsnap is not yet supported.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -149,7 +152,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
@@ -209,7 +214,9 @@ def install(name=None,
         A list of packages to install from a software repository. Must be
         passed as a python list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install pkgs='["foo","bar"]'
 
@@ -218,7 +225,9 @@ def install(name=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
 
@@ -227,7 +236,9 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package name>
     '''
@@ -288,7 +299,9 @@ def upgrade():
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -323,7 +336,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -368,7 +383,9 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
@@ -383,7 +400,9 @@ def rehash():
     Use whenever a new command is created during the current
     session.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.rehash
     '''
@@ -398,7 +417,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's package database (not
     generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
@@ -418,7 +439,9 @@ def file_dict(*packages):
     specifying any packages will return a list of _every_ file on the
     system's package database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix

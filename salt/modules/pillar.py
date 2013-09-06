@@ -18,16 +18,18 @@ def get(key, default=''):
     available return the passed default. The default return is an empty string.
 
     The value can also represent a value in a nested dict using a ":" delimiter
-    for the dict. This means that if a dict in pillar looks like this:
+    for the dict. This means that if a dict in pillar looks like this::
 
-    {'pkg': {'apache': 'httpd'}}
+        {'pkg': {'apache': 'httpd'}}
 
     To retrieve the value associated with the apache key in the pkg dict this
-    key can be passed:
+    key can be passed::
 
-    pkg:apache
+        pkg:apache
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pillar.get pkg:apache
     '''
@@ -40,7 +42,9 @@ def items(*args):
     data on the fly, unlike pillar.raw which returns the pillar data which
     is currently loaded into the minion.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pillar.items
     '''
@@ -66,7 +70,9 @@ def item(*args):
 
     Return one ore more pillar entries
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pillar.item foo
         salt '*' pillar.item foo bar baz
@@ -86,7 +92,9 @@ def raw(key=None):
     Return the raw pillar data that is available in the module. This will
     show the pillar as it is loaded as the __pillar__ dict.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pillar.raw
 
@@ -107,7 +115,9 @@ def ext(external):
     '''
     Generate the pillar and apply an explicit external pillar
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pillar.ext 'libvirt: _'
     '''

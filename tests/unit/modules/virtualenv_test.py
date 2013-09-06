@@ -18,28 +18,19 @@ from salttesting.helpers import (
     TestsLoggingHandler,
     ForceImportErrorOn
 )
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 ensure_in_syspath('../../')
-
-# Import 3rd party libs
-try:
-    from mock import MagicMock, patch
-    has_mock = True
-except ImportError:
-    has_mock = False
-    patch = lambda x: lambda y: None
-
 
 # Import salt libs
 from salt.modules import virtualenv_mod
 from salt.exceptions import CommandExecutionError
 
 virtualenv_mod.__salt__ = {}
-
 base_virtualenv_mock = MagicMock()
 base_virtualenv_mock.__version__ = '1.9.1'
 
 
-@skipIf(has_mock is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.which', lambda bin_name: bin_name)
 @patch.dict('sys.modules', {'virtualenv': base_virtualenv_mock})
 class VirtualenvTestCase(TestCase):

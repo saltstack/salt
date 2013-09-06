@@ -10,6 +10,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import integration
 import salt.utils
 import salt.utils.find
 
@@ -17,7 +18,7 @@ import salt.utils.find
 class TestUtils(TestCase):
 
     def test_safe_walk_symlink_recursion(self):
-        tmp = mkdtemp()
+        tmp = mkdtemp(dir=integration.SYS_TMP_DIR)
         try:
             if os.stat(tmp).st_ino == 0:
                 self.skipTest('inodes not supported in {0}'.format(tmp))

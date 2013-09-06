@@ -37,7 +37,9 @@ def _publish(
 
         salt system.example.com publish.publish '*' user.add 'foo,1020,1020'
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
@@ -114,23 +116,28 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
 
     The expr_form argument is used to pass a target other than a glob into
     the execution, the available options are:
-    glob
-    pcre
-    grain
-    grain_pcre
-    pillar
-    ipcidr
-    range
-    compound
+
+    - glob
+    - pcre
+    - grain
+    - grain_pcre
+    - pillar
+    - ipcidr
+    - range
+    - compound
 
     The arguments sent to the minion publish function are separated with
     commas. This means that for a minion executing a command with multiple
-    args it will look like this::
+    args it will look like this:
+
+    .. code-block:: bash
 
         salt system.example.com publish.publish '*' user.add 'foo,1020,1020'
         salt system.example.com publish.publish 'os:Fedora' network.interfaces '' grain
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
@@ -142,7 +149,9 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     Return the full data about the publication, this is invoked in the same
     way as the publish function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt system.example.com publish.full_data '*' cmd.run 'ls -la /tmp'
     '''
@@ -154,7 +163,9 @@ def runner(fun, arg=None):
     Execute a runner on the master and return the data from the runner
     function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt publish.runner manage.down
     '''

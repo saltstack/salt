@@ -1,24 +1,20 @@
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 ensure_in_syspath('../../')
 
-# Import external libs
-try:
-    from mock import MagicMock, patch
-    has_mock = True
-except ImportError:
-    has_mock = False
 
-if has_mock:
-    import salt.modules.rvm as rvm
-    rvm.__salt__ = {
-        'cmd.has_exec': MagicMock(return_value=True),
-        'config.option': MagicMock(return_value=None)
-    }
+# Import salt libs
+import salt.modules.rvm as rvm
+
+rvm.__salt__ = {
+    'cmd.has_exec': MagicMock(return_value=True),
+    'config.option': MagicMock(return_value=None)
+}
 
 
-@skipIf(has_mock is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestRvmModule(TestCase):
 
     def test__rvm(self):

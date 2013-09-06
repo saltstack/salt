@@ -152,33 +152,64 @@ def query(database, query, **connection_args):
     Run an arbitrary SQL query and return the results or
     the number of affected rows.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.query mydb "UPDATE mytable set myfield=1 limit 1"
-        returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
-        'rows affected': 1L}
+
+    Return data:
+
+    .. code-block:: python
+
+        {'query time': {'human': '39.0ms', 'raw': '0.03899'}, 'rows affected': 1L}
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.query mydb "SELECT id,name,cash from users limit 3"
-        returns: {'columns': ('id', 'name', 'cash'),
+
+    Return data:
+
+    .. code-block:: python
+
+        {'columns': ('id', 'name', 'cash'),
             'query time': {'human': '1.0ms', 'raw': '0.001'},
             'results': ((1L, 'User 1', Decimal('110.000000')),
                         (2L, 'User 2', Decimal('215.636756')),
                         (3L, 'User 3', Decimal('0.040000'))),
             'rows returned': 3L}
 
-        salt '*' mysql.query mydb "INSERT into users values (null,'user 4', 5)"
-        returns: {'query time': {'human': '25.6ms', 'raw': '0.02563'},
-           'rows affected': 1L}
+    CLI Example:
 
-        salt '*' mysql.query mydb "DELETE from users where id = 4 limit 1"
-        returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
-            'rows affected': 1L}
+    .. code-block:: bash
 
-    Jinja Example::
+        salt '*' mysql.query mydb 'INSERT into users values (null,"user 4", 5)'
 
-        Run a query on "mydb" and use row 0, column 0's data.
-        {{ salt['mysql.query']("mydb","SELECT info from mytable limit 1")['results'][0][0] }}
+    Return data:
 
+    .. code-block:: python
+
+        {'query time': {'human': '25.6ms', 'raw': '0.02563'}, 'rows affected': 1L}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.query mydb 'DELETE from users where id = 4 limit 1'
+
+    Return data:
+
+    .. code-block:: python
+
+        {'query time': {'human': '39.0ms', 'raw': '0.03899'}, 'rows affected': 1L}
+
+    Jinja Example: Run a query on ``mydb`` and use row 0, column 0's data.
+
+    .. code-block:: jinja
+
+        {{ salt['mysql.query']('mydb', 'SELECT info from mytable limit 1')['results'][0][0] }}
     '''
     # Doesn't do anything about sql warnings, e.g. empty values on an insert.
     # I don't think it handles multiple queries at once, so adding "commit"
@@ -234,10 +265,12 @@ def query(database, query, **connection_args):
 
 def status(**connection_args):
     '''
-    Return the status of a MySQL server using the output
-    from the ``SHOW STATUS`` query.
+    Return the status of a MySQL server using the output from the ``SHOW
+    STATUS`` query.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.status
     '''
@@ -264,10 +297,12 @@ def status(**connection_args):
 
 def version(**connection_args):
     '''
-    Return the version of a MySQL server using the output
-    from the ``SELECT VERSION()`` query.
+    Return the version of a MySQL server using the output from the ``SELECT
+    VERSION()`` query.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.version
     '''
@@ -299,7 +334,9 @@ def slave_lag(**connection_args):
     -2 will be returned. If there was an error connecting to the database or
     checking the slave status, -3 will be returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.slave_lag
     '''
@@ -336,13 +373,15 @@ def free_slave(**connection_args):
     '''
     Frees a slave from its master.  This is a WIP, do not use.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.free_slave
     '''
     slave_db = _connect(**connection_args)
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
-    slave_cur.execute("show slave status")
+    slave_cur.execute('show slave status')
     slave_status = slave_cur.fetchone()
     master = {'host': slave_status['Master_Host']}
 
@@ -354,15 +393,15 @@ def free_slave(**connection_args):
         # function.
         master_db = _connect(**master)
         master_cur = master_db.cursor()
-        master_cur.execute("flush logs")
+        master_cur.execute('flush logs')
         master_db.close()
     except MySQLdb.OperationalError:
         pass
 
-    slave_cur.execute("stop slave")
-    slave_cur.execute("reset master")
-    slave_cur.execute("change master to MASTER_HOST=''")
-    slave_cur.execute("show slave status")
+    slave_cur.execute('stop slave')
+    slave_cur.execute('reset master')
+    slave_cur.execute('change master to MASTER_HOST=''')
+    slave_cur.execute('show slave status')
     results = slave_cur.fetchone()
 
     if results is None:
@@ -377,7 +416,9 @@ def db_list(**connection_args):
     Return a list of databases of a MySQL server using the output
     from the ``SHOW DATABASES`` query.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.db_list
     '''
@@ -408,12 +449,14 @@ def db_tables(name, **connection_args):
     '''
     Shows the tables in the given MySQL database (if exists)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.db_tables 'database'
     '''
     if not db_exists(name, **connection_args):
-        log.info("Database '{0}' does not exist".format(name,))
+        log.info('Database {0!r} does not exist'.format(name,))
         return False
 
     dbc = _connect(**connection_args)
@@ -442,7 +485,9 @@ def db_exists(name, **connection_args):
     '''
     Checks if a database exists on the MySQL server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.db_exists 'dbname'
     '''
@@ -450,7 +495,7 @@ def db_exists(name, **connection_args):
     if dbc is None:
         return False
     cur = dbc.cursor()
-    qry = 'SHOW DATABASES LIKE \'{0}\''.format(name)
+    qry = 'SHOW DATABASES LIKE {0!r}'.format(name)
     log.debug('Doing query: {0}'.format(qry))
     try:
         cur.execute(qry)
@@ -467,13 +512,15 @@ def db_create(name, **connection_args):
     '''
     Adds a databases to the MySQL server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.db_create 'dbname'
     '''
     # check if db exists
     if db_exists(name, **connection_args):
-        log.info('DB \'{0}\' already exists'.format(name))
+        log.info('DB {0!r} already exists'.format(name))
         return False
 
     # db doesn't exist, proceed
@@ -485,7 +532,7 @@ def db_create(name, **connection_args):
     log.debug('Query: {0}'.format(qry))
     try:
         if cur.execute(qry):
-            log.info('DB \'{0}\' created'.format(name))
+            log.info('DB {0!r} created'.format(name))
             return True
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
@@ -498,17 +545,19 @@ def db_remove(name, **connection_args):
     '''
     Removes a databases from the MySQL server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.db_remove 'dbname'
     '''
     # check if db exists
     if not db_exists(name, **connection_args):
-        log.info('DB \'{0}\' does not exist'.format(name))
+        log.info('DB {0!r} does not exist'.format(name))
         return False
 
     if name in ('mysql', 'information_scheme'):
-        log.info('DB \'{0}\' may not be removed'.format(name))
+        log.info('DB {0!r} may not be removed'.format(name))
         return False
 
     # db doesn't exist, proceed
@@ -527,10 +576,10 @@ def db_remove(name, **connection_args):
         return False
 
     if not db_exists(name, **connection_args):
-        log.info('Database \'{0}\' has been removed'.format(name))
+        log.info('Database {0!r} has been removed'.format(name))
         return True
 
-    log.info('Database \'{0}\' has not been removed'.format(name))
+    log.info('Database {0!r} has not been removed'.format(name))
     return False
 
 
@@ -539,7 +588,9 @@ def user_list(**connection_args):
     '''
     Return a list of users on a MySQL server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.user_list
     '''
@@ -573,7 +624,9 @@ def user_exists(user,
     .. versionadded:: 0.16.2
         The ``passwordless`` option was added.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.user_exists 'username' 'hostname' 'password'
         salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
@@ -584,15 +637,15 @@ def user_exists(user,
         return False
 
     cur = dbc.cursor()
-    qry = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
-           'Host = \'{1}\''.format(user, host))
+    qry = ('SELECT User,Host FROM mysql.user WHERE User = {0!r} AND '
+           'Host = {1!r}'.format(user, host))
 
     if salt.utils.is_true(passwordless):
         qry += ' AND Password = \'\''
     elif password:
-        qry += ' AND Password = PASSWORD(\'{0}\')'.format(password)
+        qry += ' AND Password = PASSWORD({0!r})'.format(password)
     elif password_hash:
-        qry += ' AND Password = \'{0}\''.format(password_hash)
+        qry += ' AND Password = {0!r}'.format(password_hash)
 
     log.debug('Doing query: {0}'.format(qry))
     try:
@@ -610,7 +663,9 @@ def user_info(user, host='localhost', **connection_args):
     '''
     Get full info on a MySQL user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.user_info root localhost
     '''
@@ -619,8 +674,8 @@ def user_info(user, host='localhost', **connection_args):
         return False
 
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = ('SELECT * FROM mysql.user WHERE User = \'{0}\' AND '
-           'Host = \'{1}\''.format(user, host))
+    qry = ('SELECT * FROM mysql.user WHERE User = {0!r} AND '
+           'Host = {1!r}'.format(user, host))
     log.debug('Query: {0}'.format(qry))
     try:
         cur.execute(qry)
@@ -670,14 +725,16 @@ def user_create(user,
     .. versionadded:: 0.16.2
         The ``allow_passwordless`` option was added.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' mysql.user_create 'username' 'hostname' 'password'
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
     if user_exists(user, host, **connection_args):
-        log.info('User \'{0}\'@\'{1}\' already exists'.format(user, host))
+        log.info('User {0!r}@{1!r} already exists'.format(user, host))
         return False
 
     dbc = _connect(**connection_args)
@@ -685,11 +742,11 @@ def user_create(user,
         return False
 
     cur = dbc.cursor()
-    qry = 'CREATE USER \'{0}\'@\'{1}\''.format(user, host)
+    qry = 'CREATE USER {0!r}@{1!r}'.format(user, host)
     if password is not None:
-        qry += ' IDENTIFIED BY \'{0}\''.format(password)
+        qry += ' IDENTIFIED BY {0!r}'.format(password)
     elif password_hash is not None:
-        qry += ' IDENTIFIED BY PASSWORD \'{0}\''.format(password_hash)
+        qry += ' IDENTIFIED BY PASSWORD {0!r}'.format(password_hash)
     elif not salt.utils.is_true(allow_passwordless):
         log.error('password or password_hash must be specified, unless '
                   'allow_passwordless=True')
@@ -705,13 +762,13 @@ def user_create(user,
         return False
 
     if user_exists(user, host, password, password_hash, **connection_args):
-        msg = 'User \'{0}\'@\'{1}\' has been created'.format(user, host)
+        msg = 'User {0!r}@{1!r} has been created'.format(user, host)
         if not any((password, password_hash)):
             msg += ' with passwordless login'
         log.info(msg)
         return True
 
-    log.info('User \'{0}\'@\'{1}\' was not created'.format(user, host))
+    log.info('User {0!r}@{1!r} was not created'.format(user, host))
     return False
 
 
@@ -751,16 +808,18 @@ def user_chpass(user,
     .. versionadded:: 0.16.2
         The ``allow_passwordless`` option was added.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' mysql.user_chpass frank localhost newpassword
         salt '*' mysql.user_chpass frank localhost password_hash='hash'
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
     if password is not None:
-        password_sql = 'PASSWORD(\'{0}\')'.format(password)
+        password_sql = 'PASSWORD({0!r})'.format(password)
     elif password_hash is not None:
-        password_sql = '\'{0}\''.format(password_hash)
+        password_sql = '{0!r}'.format(password_hash)
     elif not salt.utils.is_true(allow_passwordless):
         log.error('password or password_hash must be specified, unless '
                   'allow_passwordless=True')
@@ -773,8 +832,8 @@ def user_chpass(user,
         return False
 
     cur = dbc.cursor()
-    qry = ('UPDATE mysql.user SET password={0} WHERE User=\'{1}\' AND '
-           'Host = \'{2}\';'.format(password_sql, user, host))
+    qry = ('UPDATE mysql.user SET password={0} WHERE User={1!r} AND '
+           'Host = {2!r};'.format(password_sql, user, host))
     log.debug('Query: {0}'.format(qry))
     try:
         result = cur.execute(qry)
@@ -787,7 +846,7 @@ def user_chpass(user,
     if result:
         cur.execute('FLUSH PRIVILEGES;')
         log.info(
-            'Password for user \'{0}\'@\'{1}\' has been {2}'.format(
+            'Password for user {0!r}@{1!r} has been {2}'.format(
                 user, host,
                 'changed' if any((password, password_hash)) else 'cleared'
             )
@@ -795,7 +854,7 @@ def user_chpass(user,
         return True
 
     log.info(
-        'Password for user \'{0}\'@\'{1}\' was not {2}'.format(
+        'Password for user {0!r}@{1!r} was not {2}'.format(
             user, host,
             'changed' if any((password, password_hash)) else 'cleared'
         )
@@ -809,7 +868,9 @@ def user_remove(user,
     '''
     Delete MySQL user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.user_remove frank localhost
     '''
@@ -818,7 +879,7 @@ def user_remove(user,
         return False
 
     cur = dbc.cursor()
-    qry = 'DROP USER \'{0}\'@\'{1}\''.format(user, host)
+    qry = 'DROP USER {0!r}@{1!r}'.format(user, host)
     log.debug('Query: {0}'.format(qry))
     try:
         result = cur.execute(qry)
@@ -829,10 +890,10 @@ def user_remove(user,
         return False
 
     if not user_exists(user, host):
-        log.info('User \'{0}\'@\'{1}\' has been removed'.format(user, host))
+        log.info('User {0!r}@{1!r} has been removed'.format(user, host))
         return True
 
-    log.info('User \'{0}\'@\'{1}\' has NOT been removed'.format(user, host))
+    log.info('User {0!r}@{1!r} has NOT been removed'.format(user, host))
     return False
 
 
@@ -843,7 +904,9 @@ def db_check(name,
     '''
     Repairs the full database or just a given table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.db_check dbname
     '''
@@ -853,11 +916,11 @@ def db_check(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Checking table \'{0}\' in db \'{1}..\''.format(name, table)
+                'Checking table {0!r} in db {1!r}..'.format(name, table)
             )
             ret.append(__check_table(name, table, **connection_args))
     else:
-        log.info('Checking table \'{0}\' in db \'{1}\'..'.format(name, table))
+        log.info('Checking table {0!r} in db {1!r}..'.format(name, table))
         ret = __check_table(name, table, **connection_args)
     return ret
 
@@ -868,7 +931,9 @@ def db_repair(name,
     '''
     Repairs the full database or just a given table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.db_repair dbname
     '''
@@ -878,11 +943,11 @@ def db_repair(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Repairing table \'{0}\' in db \'{1}..\''.format(name, table)
+                'Repairing table {0!r} in db {1!r}..'.format(name, table)
             )
             ret.append(__repair_table(name, table, **connection_args))
     else:
-        log.info('Repairing table \'{0}\' in db \'{1}\'..'.format(name, table))
+        log.info('Repairing table {0!r} in db {1!r}..'.format(name, table))
         ret = __repair_table(name, table, **connection_args)
     return ret
 
@@ -893,7 +958,9 @@ def db_optimize(name,
     '''
     Optimizes the full database or just a given table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.db_optimize dbname
     '''
@@ -903,12 +970,12 @@ def db_optimize(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Optimizing table \'{0}\' in db \'{1}..\''.format(name, table)
+                'Optimizing table {0!r} in db {1!r}..'.format(name, table)
             )
             ret.append(__optimize_table(name, table, **connection_args))
     else:
         log.info(
-            'Optimizing table \'{0}\' in db \'{1}\'..'.format(name, table)
+            'Optimizing table {0!r} in db {1!r}..'.format(name, table)
         )
         ret = __optimize_table(name, table, **connection_args)
     return ret
@@ -939,7 +1006,7 @@ def __grant_generate(grant,
             dbc = '`{0}`'.format(dbc)
         if table is not '*':
             table = '`{0}`'.format(table)
-    qry = 'GRANT {0} ON {1}.{2} TO \'{3}\'@\'{4}\''.format(
+    qry = 'GRANT {0} ON {1}.{2} TO {3!r}@{4!r}'.format(
         grant, dbc, table, user, host
     )
     if grant_option:
@@ -953,19 +1020,21 @@ def user_grants(user,
     '''
     Shows the grants for the given MySQL user (if it exists)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.user_grants 'frank' 'localhost'
     '''
     if not user_exists(user, host, **connection_args):
-        log.info('User \'{0}\'@\'{1}\' does not exist'.format(user, host))
+        log.info('User {0!r}@{1!r} does not exist'.format(user, host))
         return False
 
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
     cur = dbc.cursor()
-    qry = 'SHOW GRANTS FOR \'{0}\'@\'{1}\''.format(user, host)
+    qry = 'SHOW GRANTS FOR {0!r}@{1!r}'.format(user, host)
     log.debug('Doing query: {0}'.format(qry))
     try:
         cur.execute(qry)
@@ -996,7 +1065,9 @@ def grant_exists(grant,
     '''
     Checks to see if a grant exists in the database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.grant_exists 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
@@ -1028,7 +1099,9 @@ def grant_add(grant,
 
     For database, make sure you specify database.table or database.*
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.grant_add 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
@@ -1051,14 +1124,14 @@ def grant_add(grant,
             grant, database, user, host, grant_option, escape,
             **connection_args):
         log.info(
-            'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been added'.format(
+            'Grant {0!r} on {1!r} for user {2!r} has been added'.format(
                 grant, database, user
             )
         )
         return True
 
     log.info(
-        'Grant \'{0}\' on \'{1}\' for user \'{2}\' has NOT been added'.format(
+        'Grant {0!r} on {1!r} for user {2!r} has NOT been added'.format(
             grant, database, user
         )
     )
@@ -1075,7 +1148,9 @@ def grant_revoke(grant,
     '''
     Removes a grant from the MySQL server.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.grant_revoke 'SELECT,INSERT,UPDATE' 'database.*' 'frank' 'localhost'
     '''
@@ -1087,7 +1162,7 @@ def grant_revoke(grant,
 
     if grant_option:
         grant += ', GRANT OPTION'
-    qry = 'REVOKE {0} ON {1} FROM \'{2}\'@\'{3}\';'.format(
+    qry = 'REVOKE {0} ON {1} FROM {2!r}@{3!r};'.format(
         grant, database, user, host
     )
     log.debug('Query: {0}'.format(qry))
@@ -1101,13 +1176,13 @@ def grant_revoke(grant,
 
     if not grant_exists(grant, database, user, host, grant_option, escape, **connection_args):
         log.info(
-            'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been '
+            'Grant {0!r} on {1!r} for user {2!r} has been '
             'revoked'.format(grant, database, user)
         )
         return True
 
     log.info(
-        'Grant \'{0}\' on \'{1}\' for user \'{2}\' has NOT been '
+        'Grant {0!r} on {1!r} for user {2!r} has NOT been '
         'revoked'.format(grant, database, user)
     )
     return False
@@ -1131,7 +1206,9 @@ def processlist(**connection_args):
                           'User': 'root',
                           'db': 'mysql'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.processlist
 
@@ -1208,7 +1285,9 @@ def get_master_status(**connection_args):
                          'File': 'mysql-bin.000021',
                          'Position': 107}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.get_master_status
 
@@ -1274,7 +1353,9 @@ def get_slave_status(**connection_args):
                        'Until_Log_File': '',
                        'Until_Log_Pos': 0}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mysql.get_slave_status
 

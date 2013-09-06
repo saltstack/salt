@@ -9,6 +9,7 @@ Author: David Boucha <boucha@gmail.com>
 # Import salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only available on systems with Riak installed.
@@ -22,7 +23,9 @@ def start():
     '''
     Start Riak
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' riak.start
     '''
@@ -33,7 +36,9 @@ def stop():
     '''
     Stop Riak
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' riak.stop
     '''
@@ -44,7 +49,9 @@ def cluster_join(riak_user=None, riak_host=None):
     '''
     Join a Riak cluster
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' riak.cluster_join <user> <host>
     '''
@@ -59,7 +66,9 @@ def cluster_plan():
     '''
     Review Cluster Plan
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' riak.cluster_plan
     '''
@@ -70,7 +79,9 @@ def cluster_commit():
     '''
     Commit Cluster Changes
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' riak.cluster_commit
     '''
@@ -81,7 +92,9 @@ def member_status():
     '''
     Get cluster member status
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' riak.member_status
     '''

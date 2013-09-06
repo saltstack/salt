@@ -12,6 +12,7 @@ import copy
 import os
 import hashlib
 import re
+import types
 import threading
 import time
 import traceback
@@ -47,6 +48,7 @@ import salt.payload
 import salt.utils.schedule
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
+from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
@@ -150,26 +152,36 @@ def yamlify_arg(arg):
     '''
     yaml.safe_load the arg unless it has a newline in it.
     '''
+    if not isinstance(arg, string_types):
+        return arg
     try:
-        original_arg = arg
+        original_arg = str(arg)
         if isinstance(arg, string_types):
             if '\n' not in arg:
                 arg = yaml.safe_load(arg)
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
             if (isinstance(original_arg, string_types) and
-                    not original_arg.startswith("{")):
+                    not original_arg.startswith('{')):
                 return original_arg
             else:
                 return arg
         elif isinstance(arg, (int, list, string_types)):
-            return arg
+            # yaml.safe_load will load '|' as '', don't let it do that.
+            if arg == '' and original_arg in ('|',):
+                return original_arg
+            # yaml.safe_load will treat '#' as a comment, so a value of '#'
+            # will become None. Keep this value from being stomped as well.
+            elif arg is None and original_arg.strip().startswith('#'):
+                return original_arg
+            else:
+                return arg
         else:
             # we don't support this type
-            return str(original_arg)
+            return original_arg
     except Exception:
         # In case anything goes wrong...
-        return str(original_arg)
+        return original_arg
 
 
 class SMinion(object):
@@ -486,12 +498,13 @@ class Minion(object):
         returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
-    def _fire_master(self, data=None, tag=None, events=None):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None):
         '''
         Fire an event on the master
         '''
         load = {'id': self.opts['id'],
-                'cmd': '_minion_event'}
+                'cmd': '_minion_event',
+                'pretag': pretag}
         if events:
             load['events'] = events
         elif data and tag:
@@ -624,15 +637,30 @@ class Minion(object):
             sdata.update(data)
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write(minion_instance.serial.dumps(sdata))
-        ret = {}
+        ret = {'success': False}
         function_name = data['fun']
         if function_name in minion_instance.functions:
-            ret['success'] = False
             try:
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
-                ret['return'] = func(*args, **kwargs)
+                return_data = func(*args, **kwargs)
+                if isinstance(return_data, types.GeneratorType):
+                    ind = 0
+                    iret = {}
+                    for single in return_data:
+                        if isinstance(single, dict) and isinstance(iret, list):
+                            iret.update(single)
+                        else:
+                            if not iret:
+                                iret = []
+                            iret.append(single)
+                        tag = tagify([data['jid'], 'ret', opts['id'], ind])
+                        minion_instance._fire_master({'return': single}, tag)
+                        ind += 1
+                    ret['return'] = iret
+                else:
+                    ret['return'] = return_data
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
                     'retcode',
                     0
@@ -1019,6 +1047,13 @@ class Minion(object):
             ),
             'minion_start'
         )
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'minion'),
+        )
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -1115,6 +1150,14 @@ class Minion(object):
             time.asctime()
             ),
             'minion_start'
+        )
+        # dup name spaced event
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'minion'),
         )
         loop_interval = int(self.opts['loop_interval'])
         while True:
@@ -1276,6 +1319,13 @@ class Syndic(Minion):
             ),
             'syndic_start'
         )
+        self._fire_master(
+            'Syndic {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'syndic'),
+        )
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -1315,7 +1365,7 @@ class Syndic(Minion):
                         if not 'retcode' in event['data']:
                             raw_events.append(event)
                 if raw_events:
-                    self._fire_master(events=raw_events)
+                    self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], base='syndic'))
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:
@@ -1377,6 +1427,9 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
+        if type(tgt) != str:
+            return False
+
         return fnmatch.fnmatch(self.opts['id'], tgt)
 
     def pcre_match(self, tgt):
@@ -1393,28 +1446,28 @@ class Matcher(object):
             tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
-    def grain_match(self, tgt):
+    def grain_match(self, tgt, delim=':'):
         '''
         Reads in the grains glob match
         '''
         log.debug('grains target: {0}'.format(tgt))
-        if ':' not in tgt:
+        if delim not in tgt:
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts['grains'], tgt, delim=':')
+        return salt.utils.subdict_match(self.opts['grains'], tgt, delim=delim)
 
-    def grain_pcre_match(self, tgt):
+    def grain_pcre_match(self, tgt, delim=':'):
         '''
         Matches a grain based on regex
         '''
         log.debug('grains pcre target: {0}'.format(tgt))
-        if ':' not in tgt:
+        if delim not in tgt:
             log.error('Got insufficient arguments for grains pcre match '
                       'statement from master')
             return False
         return salt.utils.subdict_match(self.opts['grains'], tgt,
-                                        delim=':', regex_match=True)
+                                        delim=delim, regex_match=True)
 
     def data_match(self, tgt):
         '''
@@ -1450,16 +1503,16 @@ class Matcher(object):
             return False
         return(self.functions[tgt]())
 
-    def pillar_match(self, tgt):
+    def pillar_match(self, tgt, delim=':'):
         '''
         Reads in the pillar glob match
         '''
         log.debug('pillar target: {0}'.format(tgt))
-        if ':' not in tgt:
+        if delim not in tgt:
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts['pillar'], tgt, delim=':')
+        return salt.utils.subdict_match(self.opts['pillar'], tgt, delim=delim)
 
     def ipcidr_match(self, tgt):
         '''
@@ -1508,12 +1561,10 @@ class Matcher(object):
             return False
         ref = {'G': 'grain',
                'P': 'grain_pcre',
-               'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
-               'E': 'pcre',
-               'D': 'data'}
+               'E': 'pcre'}
         if HAS_RANGE:
             ref['R'] = 'range'
         results = []

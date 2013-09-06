@@ -12,32 +12,46 @@ import salt.exceptions
 import salt.utils
 import salt.minion
 import salt.utils.event
+from salt.utils.event import tagify
 
 
 class RunnerClient(object):
     '''
-    A client for accessing runners
+    ``RunnerClient`` is the same interface used by the :command:`salt-run`
+    command-line tool on the Salt Master. It executes :ref:`runner modules
+    <all-salt.runners>` which run on the Salt Master.
+
+    Importing and using ``RunnerClient`` must be done on the same machine as
+    the Salt Master and it must be done using the same user that the Salt
+    Master is running as.
     '''
     def __init__(self, opts):
         self.opts = opts
         self.functions = salt.loader.runner(opts)
 
-    def _proc_runner(self, tag, fun, low):
+    def _proc_runner(self, tag, fun, low, user):
         '''
         Run this method in a multiprocess target to execute the runner in a
         multiprocess and fire the return data on the event bus
         '''
         salt.utils.daemonize()
-        data = {}
+        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        data = {'fun': "runner.{0}".format(fun),
+                'jid': low['jid'],
+                'user': user,
+                }
+        event.fire_event(data, tagify('new', base=tag))
+
         try:
             data['ret'] = self.low(fun, low)
+            data['success'] = True
         except Exception as exc:
             data['ret'] = 'Exception occured in runner {0}: {1}'.format(
-                    fun,
-                    exc,
-                    )
-        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-        event.fire_event(data, tag)
+                            fun,
+                            exc,
+                            )
+        data['user'] = user
+        event.fire_event(data, tagify('ret', base=tag))
 
     def _verify_fun(self, fun):
         '''
@@ -79,24 +93,28 @@ class RunnerClient(object):
         ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
 
-    def async(self, fun, low):
+    def async(self, fun, low, user='UNKNOWN'):
         '''
         Execute the runner in a multiprocess and return the event tag to use
         to watch for the return
         '''
-        tag = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
-        tag = tag = '{0}r'.format(tag[:-1])
+        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        tag = tagify(jid, prefix='run')
+        low['tag'] = tag
+        low['jid'] = jid
+
         proc = multiprocessing.Process(
                 target=self._proc_runner,
-                args=(tag, fun, low))
+                args=(tag, fun, low, user))
         proc.start()
         return tag
 
     def master_call(self, **kwargs):
         '''
-        Send a function call to a wheel module through the master network interface
-        Expects that one of the kwargs is key 'fun' whose value is the namestring
-        of the function to call
+        Send a function call to a wheel module through the master network
+        interface.
+        Expects that one of the kwargs is key 'fun' whose value is the
+        namestring of the function to call.
         '''
         load = kwargs
         load['cmd'] = 'runner'

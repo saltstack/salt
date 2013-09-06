@@ -4,7 +4,9 @@ Control the state system on the minion
 
 # Import python libs
 import os
+import json
 import copy
+import shutil
 import logging
 import tarfile
 import tempfile
@@ -64,20 +66,24 @@ def running():
     This function is used to prevent multiple state calls from being run at
     the same time.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.running
     '''
     ret = []
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
-        err = ('The function "{0}" is running as PID {1} and was started at '
-               '{2} with jid {3}').format(
-                data['fun'],
-                data['pid'],
-                salt.utils.jid_to_time(data['jid']),
-                data['jid'],
-                )
+        err = (
+            'The function "{0}" is running as PID {1} and was started at '
+            '{2} with jid {3}'
+        ).format(
+            data['fun'],
+            data['pid'],
+            salt.utils.jid_to_time(data['jid']),
+            data['jid'],
+        )
         ret.append(err)
     return ret
 
@@ -87,7 +93,9 @@ def low(data):
     Execute a single low data call
     This function is mostly intended for testing the state system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     '''
@@ -113,7 +121,9 @@ def high(data):
     Execute the compound calls stored in a single set of high data
     This function is mostly intended for testing the state system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
@@ -131,7 +141,9 @@ def template(tem):
     '''
     Execute the information stored in a template file on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.template '<Path to template on the minion>'
     '''
@@ -149,7 +161,9 @@ def template_str(tem):
     '''
     Execute the information stored in a string from an sls template
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.template_str '<Template String>'
     '''
@@ -167,7 +181,9 @@ def highstate(test=None, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.highstate
 
@@ -214,13 +230,14 @@ def highstate(test=None, **kwargs):
 
     # Not 100% if this should be fatal or not,
     # but I'm guessing it likely should not be.
+    cumask = os.umask(191)
     try:
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.highstate" cache file {0}'
         log.error(msg.format(cache_file))
-
+    os.umask(cumask)
     _set_retcode(ret)
     return ret
 
@@ -230,10 +247,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     Execute a set list of state modules from an environment, default
     environment is base
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.sls core,edit.vim dev
-
         salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
 
@@ -293,12 +311,14 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
+    cumask = os.umask(191)
     try:
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
+    os.umask(cumask)
     _set_retcode(ret)
     with salt.utils.fopen(cfn, 'w+') as fp_:
         try:
@@ -313,10 +333,11 @@ def top(topfn, test=None, **kwargs):
     '''
     Execute a specific top file instead of the default
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.top reverse_top.sls
-
         salt '*' state.top reverse_top.sls exclude=sls_to_exclude
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
@@ -352,7 +373,9 @@ def show_highstate():
     '''
     Retrieve the highstate data from the salt master and display it
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_highstate
     '''
@@ -375,7 +398,9 @@ def show_lowstate():
     '''
     List out the low data that will be applied to this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_lowstate
     '''
@@ -389,8 +414,6 @@ def show_lowstate():
         ret = st_.compile_low_chunks()
     finally:
         st_.pop_active()
-    if isinstance(ret, list):
-        __context__['retcode'] = 1
     return ret
 
 
@@ -399,7 +422,9 @@ def show_sls(mods, env='base', test=None, **kwargs):
     Display the state data from a specific sls or list of sls files on the
     master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_sls core,edit.vim dev
     '''
@@ -431,7 +456,9 @@ def show_top():
     '''
     Return the top data that the minion will use for a highstate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_top
     '''
@@ -440,27 +467,23 @@ def show_top():
         __context__['retcode'] = 1
         return conflict
     st_ = salt.state.HighState(__opts__)
-    ret = {}
-    static = st_.get_top()
-    ext = st_.client.ext_nodes()
-    for top_ in [static, ext]:
-        for env in top_:
-            if env not in ret:
-                ret[env] = top_[env]
-            else:
-                for match in top_[env]:
-                    if match not in ret[env]:
-                        ret[env][match] = top_[env][match]
-                    else:
-                        ret[env][match].extend(top_[env][match])
-    return ret
+    errors = []
+    top = st_.get_top()
+    errors += st_.verify_tops(top)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    matches = st_.top_matches(top)
+    return matches
 
 # Just commenting out, someday I will get this working
 #def show_masterstate():
 #    '''
 #    Display the data gathered from the master compiled state
 #
-#    CLI Example::
+#    CLI Example:
+#
+#    .. code-block:: bash
 #
 #        salt '*' state.show_masterstate
 #    '''
@@ -478,7 +501,9 @@ def single(fun, name, test=None, **kwargs):
     would in a YAML salt file. Alternatively, JSON format of keyword values
     is also supported.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.single pkg.installed name=vim
 
@@ -520,7 +545,9 @@ def clear_cache():
     Remember that the state cache is completely disabled by default, this
     execution only applies if cache=True is used in states
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.clear_cache
     '''
@@ -541,7 +568,9 @@ def pkg(pkg_path, test=False, **kwargs):
     tarball available locally. This packaged state
     can be generated using salt-ssh.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.pkg /tmp/state_pkg.tgz
     '''
@@ -549,16 +578,17 @@ def pkg(pkg_path, test=False, **kwargs):
     if not os.path.isfile(pkg_path):
         return {}
     root = tempfile.mkdtemp()
-    with tarfile.open(pkg_path, 'r:gz') as s_pkg:
+    s_pkg = tarfile.open(pkg_path, 'r:gz')
         # Verify that the tarball does not extract outside of the intended
         # root
-        members = s_pkg.getmembers()
-        for member in members:
-            if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
-                return {}
-            elif '..{0}'.format(os.sep()) in member.path:
-                return {}
-        s_pkg.extractall(s_pkg, root)
+    members = s_pkg.getmembers()
+    for member in members:
+        if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
+            return {}
+        elif '..{0}'.format(os.sep) in member.path:
+            return {}
+    s_pkg.extractall(root)
+    s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
@@ -573,11 +603,11 @@ def pkg(pkg_path, test=False, **kwargs):
         full = os.path.join(root, fn_)
         if not os.path.isdir(full):
             continue
-        popts['file_roots'][fn_] = full
+        popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts)
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)
-    except IOError, OSError:
+    except (IOError, OSError):
         pass
     return ret

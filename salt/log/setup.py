@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.log
-    ~~~~~~~~
+    salt.log.setup
+    ~~~~~~~~~~~~~~
 
     This is where Salt's logging gets set up.
 
@@ -18,13 +18,23 @@
 import os
 import re
 import sys
+import types
 import socket
 import urlparse
 import logging
 import logging.handlers
+import traceback
 
+# Let's define these custom logging levels before importing the salt.log.mixins
+# since they will be used there
 TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
+QUIET = logging.QUIET = 1000
+
+# Import salt libs
+from salt._compat import string_types
+from salt.log.handlers import TemporaryLoggingHandler
+from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
@@ -32,7 +42,7 @@ LOG_LEVELS = {
     'error': logging.ERROR,
     'garbage': GARBAGE,
     'info': logging.INFO,
-    'quiet': 1000,
+    'quiet': QUIET,
     'trace': TRACE,
     'warning': logging.WARNING,
 }
@@ -50,6 +60,7 @@ MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)')
 __CONSOLE_CONFIGURED = False
 __LOGFILE_CONFIGURED = False
 __TEMP_LOGGING_CONFIGURED = False
+__EXTERNAL_LOGGERS_CONFIGURED = False
 
 
 def is_console_configured():
@@ -68,89 +79,24 @@ def is_temp_logging_configured():
     return __TEMP_LOGGING_CONFIGURED
 
 
-if sys.version_info < (2, 7):
-    # Since the NullHandler is only available on python >= 2.7, here's a copy
-    class NullHandler(logging.Handler):
-        '''
-        This is 1 to 1 copy of python's 2.7 NullHandler
-        '''
-        def handle(self, record):
-            pass
-
-        def emit(self, record):
-            pass
-
-        def createLock(self):  # pylint: disable=C0103
-            self.lock = None
-
-    logging.NullHandler = NullHandler
+def is_extended_logging_configured():
+    return __EXTERNAL_LOGGERS_CONFIGURED
 
 
-# Store a reference to the null logging handler
-LOGGING_NULL_HANDLER = logging.NullHandler()
+# Store a reference to the temporary queue logging handler
+LOGGING_NULL_HANDLER = TemporaryLoggingHandler(logging.WARNING)
 
 # Store a reference to the temporary console logger
 LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
 
-
-class LoggingTraceMixIn(object):
-    '''
-    Simple mix-in class to add a trace method to python's logging.
-    '''
-
-    def trace(self, msg, *args, **kwargs):
-        self.log(TRACE, msg, *args, **kwargs)
+# Store a reference to the "storing" logging handler
+LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
 
 
-class LoggingGarbageMixIn(object):
-    '''
-    Simple mix-in class to add a garbage method to python's logging.
-    '''
-
-    def garbage(self, msg, *args, **kwargs):
-        self.log(GARBAGE, msg, *args, **kwargs)
-
-
-class LoggingMixInMeta(type):
-    '''
-    This class is called whenever a new instance of ``SaltLoggingClass`` is
-    created.
-
-    What this class does is check if any of the bases have a `trace()` or a
-    `garbage()` method defined, if they don't we add the respective mix-ins to
-    the bases.
-    '''
-    def __new__(mcs, name, bases, attrs):
-        include_trace = include_garbage = True
-        bases = list(bases)
-        if name == 'SaltLoggingClass':
-            for base in bases:
-                if hasattr(base, 'trace'):
-                    include_trace = False
-                if hasattr(base, 'garbage'):
-                    include_garbage = False
-        if include_trace:
-            bases.append(LoggingTraceMixIn)
-        if include_garbage:
-            bases.append(LoggingGarbageMixIn)
-        return super(LoggingMixInMeta, mcs).__new__(
-            mcs, name, tuple(bases), attrs
-        )
-
-
-class _NewStyleClassMixIn(object):
-    '''
-    Simple new style class to make pylint shut up!
-    This is required because SaltLoggingClass can't subclass object directly:
-
-        'Cannot create a consistent method resolution order (MRO) for bases'
-    '''
-
-
-class SaltLoggingClass(LOGGING_LOGGER_CLASS, _NewStyleClassMixIn):
+class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
     __metaclass__ = LoggingMixInMeta
 
-    def __new__(cls, *args):
+    def __new__(cls, *args):  # pylint: disable=W0613
         '''
         We override `__new__` in our logging logger class in order to provide
         some additional features like expand the module name padding if length
@@ -168,8 +114,10 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, _NewStyleClassMixIn):
             max_logger_length = len(max(
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
-            for handler in logging.getLogger().handlers:
-                if handler is LOGGING_NULL_HANDLER:
+            for handler in logging.root.handlers:
+                if handler in (LOGGING_NULL_HANDLER,
+                               LOGGING_STORE_HANDLER,
+                               LOGGING_TEMP_HANDLER):
                     continue
 
                 if not handler.lock:
@@ -240,18 +188,23 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, _NewStyleClassMixIn):
 if logging.getLoggerClass() is not SaltLoggingClass:
 
     logging.setLoggerClass(SaltLoggingClass)
+    logging.addLevelName(QUIET, 'QUIET')
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
 
     if len(logging.root.handlers) == 0:
         # No configuration to the logging system has been done so far.
         # Set the root logger at the lowest level possible
-        logging.getLogger().setLevel(GARBAGE)
+        logging.root.setLevel(GARBAGE)
 
         # Add a Null logging handler until logging is configured(will be
         # removed at a later stage) so we stop getting:
         #   No handlers could be found for logger 'foo'
-        logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
+        logging.root.addHandler(LOGGING_NULL_HANDLER)
+
+    # Add the queue logging handler so we can later sync all message records
+    # with the additional logging handlers
+    logging.root.addHandler(LOGGING_STORE_HANDLER)
 
 
 def getLogger(name):  # pylint: disable=C0103
@@ -275,9 +228,6 @@ def setup_temp_logger(log_level='error'):
         )
         return
 
-    # Remove the temporary null logging handler
-    __remove_null_logging_handler()
-
     if log_level is None:
         log_level = 'warning'
 
@@ -285,6 +235,13 @@ def setup_temp_logger(log_level='error'):
 
     handler = None
     for handler in logging.root.handlers:
+        if handler in (LOGGING_NULL_HANDLER, LOGGING_STORE_HANDLER):
+            continue
+
+        if not hasattr(handler, 'stream'):
+            # Not a stream handler, continue
+            continue
+
         if handler.stream is sys.stderr:
             # There's already a logging handler outputting to sys.stderr
             break
@@ -297,7 +254,19 @@ def setup_temp_logger(log_level='error'):
         '[%(levelname)-8s] %(message)s', datefmt='%H:%M:%S'
     )
     handler.setFormatter(formatter)
-    logging.getLogger().addHandler(handler)
+    logging.root.addHandler(handler)
+
+    # Sync the null logging handler messages with the temporary handler
+    if LOGGING_NULL_HANDLER is not None:
+        LOGGING_NULL_HANDLER.sync_with_handlers([handler])
+    else:
+        logging.getLogger(__name__).debug(
+            'LOGGING_NULL_HANDLER is already None, can\'t sync messages '
+            'with it'
+        )
+
+    # Remove the temporary null logging handler
+    __remove_null_logging_handler()
 
     global __TEMP_LOGGING_CONFIGURED
     __TEMP_LOGGING_CONFIGURED = True
@@ -321,6 +290,13 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     handler = None
     for handler in logging.root.handlers:
+        if handler is LOGGING_STORE_HANDLER:
+            continue
+
+        if not hasattr(handler, 'stream'):
+            # Not a stream handler, continue
+            continue
+
         if handler.stream is sys.stderr:
             # There's already a logging handler outputting to sys.stderr
             break
@@ -337,7 +313,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    logging.getLogger().addHandler(handler)
+    logging.root.addHandler(handler)
 
     global __CONSOLE_CONFIGURED
     __CONSOLE_CONFIGURED = True
@@ -397,7 +373,6 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         syslog_opts = {
             'facility': logging.handlers.SysLogHandler.LOG_USER,
             'socktype': socket.SOCK_DGRAM
-
         }
 
         if parsed_log_path.scheme == 'file' and parsed_log_path.path:
@@ -505,6 +480,90 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     __LOGFILE_CONFIGURED = True
 
 
+def setup_extended_logging(opts):
+    '''
+    Setup any additional logging handlers, internal or external
+    '''
+    if is_extended_logging_configured() is True:
+        # Don't re-configure external loggers
+        return
+
+    # Explicit late import of salt's loader
+    import salt.loader
+
+    # Let's keep a reference to the current logging handlers
+    initial_handlers = logging.root.handlers[:]
+
+    # Load any additional logging handlers
+    providers = salt.loader.log_handlers(opts)
+
+    # Let's keep track of the new logging handlers so we can sync the stored
+    # log records with them
+    additional_handlers = []
+
+    for name, get_handlers_func in providers.iteritems():
+        logging.getLogger(__name__).info(
+            'Processing `log_handlers.{0}`'.format(name)
+        )
+        # Keep a reference to the logging handlers count before getting the
+        # possible additional ones.
+        initial_handlers_count = len(logging.root.handlers)
+
+        handlers = get_handlers_func()
+        if isinstance(handlers, types.GeneratorType):
+            handlers = list(handlers)
+        elif isinstance(handlers, string_types):
+            handlers = [handlers]
+        elif handlers is False or handlers == [False]:
+            # A false return value means not configuring any logging handler on
+            # purpose
+            logging.getLogger(__name__).info(
+                'The `log_handlers.{0}.setup_handlers()` function returned '
+                '`False` which means no logging handler was configured on '
+                'purpose. Continuing...'.format(name)
+            )
+            continue
+
+        for handler in handlers:
+            if not handler and \
+                    len(logging.root.handlers) == initial_handlers_count:
+                logging.getLogger(__name__).info(
+                    'The `log_handlers.{0}`, did not return any handlers '
+                    'and the global handlers count did not increase. This '
+                    'could be a sign of `log_handlers.{0}` not working as '
+                    'supposed'.format(name)
+                )
+                continue
+
+            logging.getLogger(__name__).debug(
+                'Adding the {0!r} provided logging handler: {1!r}'.format(
+                    name, handler
+                )
+            )
+            additional_handlers.append(handler)
+            logging.root.addHandler(handler)
+
+    for handler in logging.root.handlers:
+        if handler in initial_handlers:
+            continue
+        additional_handlers.append(handler)
+
+    # Sync the null logging handler messages with the temporary handler
+    if LOGGING_STORE_HANDLER is not None:
+        LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
+    else:
+        logging.getLogger(__name__).debug(
+            'LOGGING_STORE_HANDLER is already None, can\'t sync messages '
+            'with it'
+        )
+
+    # Remove the temporary queue logging handler
+    __remove_queue_logging_handler()
+
+    global __EXTERNAL_LOGGERS_CONFIGURED
+    __EXTERNAL_LOGGERS_CONFIGURED = True
+
+
 def set_logger_level(logger_name, log_level='error'):
     '''
     Tweak a specific logger's logging level
@@ -534,6 +593,22 @@ def __remove_null_logging_handler():
             break
 
 
+def __remove_queue_logging_handler():
+    '''
+    This function will run once the additional loggers have been synchronized.
+    It just removes the QueueLoggingHandler from the logging handlers.
+    '''
+    root_logger = logging.getLogger()
+    global LOGGING_STORE_HANDLER
+
+    for handler in root_logger.handlers:
+        if handler is LOGGING_STORE_HANDLER:
+            root_logger.removeHandler(LOGGING_STORE_HANDLER)
+            # Redefine the null handler to None so it can be garbage collected
+            LOGGING_STORE_HANDLER = None
+            break
+
+
 def __remove_temp_logging_handler():
     '''
     This function will run once logging has been configured. It just removes
@@ -560,3 +635,31 @@ def __remove_temp_logging_handler():
         # Python versions >= 2.7 allow warnings to be redirected to the logging
         # system now that it's configured. Let's enable it.
         logging.captureWarnings(True)
+
+
+# Let's setup a global exception hook handler which will log all exceptions
+# Store a reference to the original handler
+__GLOBAL_EXCEPTION_HANDLER = sys.excepthook
+
+
+def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
+    '''
+    This function will log all python exceptions.
+    '''
+    # Log the exception
+    logging.getLogger(__name__).error(
+        'An un-handled exception was caught by salt\'s global exception '
+        'handler:\n{0}: {1}\n{2}'.format(
+            exc_type.__name__,
+            exc_value,
+            ''.join(traceback.format_exception(
+                exc_type, exc_value, exc_traceback
+            )).strip()
+        )
+    )
+    # Call the original sys.excepthook
+    __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
+
+
+# Set our own exception handler as the one to use
+sys.excepthook = __global_logging_exception_handler

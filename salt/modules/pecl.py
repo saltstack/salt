@@ -54,7 +54,9 @@ def install(pecls, defaults=False, force=False):
     .. note::
         The ``defaults`` option will be available in version 0.17.0.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.install fuse
     '''
@@ -71,7 +73,9 @@ def uninstall(pecls):
     pecls
         The pecl extensions to uninstall.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.uninstall fuse
     '''
@@ -85,7 +89,9 @@ def update(pecls):
     pecls
         The pecl extensions to update.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.update fuse
     '''
@@ -96,7 +102,9 @@ def list_():
     '''
     List installed pecl extensions.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.list
     '''

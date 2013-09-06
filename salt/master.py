@@ -372,11 +372,11 @@ class Publisher(multiprocessing.Process):
         pub_sock = context.socket(zmq.PUB)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
-            pub_sock.setsockopt(zmq.HWM, 1)
+            pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1))
         # in zmq >= 3.0, there are separate send and receive HWM settings
         except AttributeError:
-            pub_sock.setsockopt(zmq.SNDHWM, 1)
-            pub_sock.setsockopt(zmq.RCVHWM, 1)
+            pub_sock.setsockopt(zmq.SNDHWM, self.opts.get('pub_hwm', 1))
+            pub_sock.setsockopt(zmq.RCVHWM, self.opts.get('pub_hwm', 1))
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
@@ -998,11 +998,11 @@ class AESFuncs(object):
         if 'events' in load:
             for event in load['events']:
                 self.event.fire_event(event, event['tag']) # old dup event
-                self.event.fire_event(event, tagify([load['id'], event['tag']], 'minion'))
+                if load.get('pretag') != None:
+                    self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
-            self.event.fire_event(load, tag) #old dup event
-            self.event.fire_event(load, tagify([load['id'], tag], 'minion'))
+            self.event.fire_event(load, tag)
         return True
 
     def _return(self, load):
@@ -1703,8 +1703,10 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
 
         log.info('Authentication accepted from {id}'.format(**load))
-        with salt.utils.fopen(pubfn, 'w+') as fp_:
-            fp_.write(load['pub'])
+        # only write to disk if you are adding the file
+        if not os.path.isfile(pubfn):
+            with salt.utils.fopen(pubfn, 'w+') as fp_:
+                fp_.write(load['pub'])
         pub = None
 
         # The key payload may sometimes be corrupt when using auto-accept
@@ -1759,9 +1761,9 @@ class ClearFuncs(object):
 
     def runner(self, clear_load):
         '''
-        Send a master control function back to the wheel system
+        Send a master control function back to the runner system
         '''
-        # All wheel ops pass through eauth
+        # All runner ops pass through eauth
         if 'token' in clear_load:
             try:
                 token = self.loadauth.get_tok(clear_load['token'])
@@ -1793,7 +1795,10 @@ class ClearFuncs(object):
             try:
                 fun = clear_load.pop('fun')
                 runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(fun, clear_load.get('kwarg', {}))
+                return runner_client.async(
+                        fun,
+                        clear_load.get('kwarg', {}),
+                        clear_load.get('username', 'UNKNOWN'))
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1923,7 +1928,14 @@ class ClearFuncs(object):
 
             try:
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                new_data = {'fun': clear_load['fun'],
+                            'user': clear_load.get('username', 'UNKNOWN')}
+                jid = salt.utils.gen_jid()
+                self.event.fire_event(new_data, tagify([jid, 'new'], 'wheel'))
+                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                ret_data = {'ret': ret,
+                            'user': clear_load.get('username', 'UNKNOWN')}
+                self.event.fire_event(ret_data, tagify([jid, 'ret'], 'wheel'))
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1987,9 +1999,16 @@ class ClearFuncs(object):
 
         # check if the cmd is blacklisted
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
-            if re.match(module_re, clear_load['fun']):
-                good = False
-                break
+            # if this is a regular command, its a single function
+            if type(clear_load['fun']) == str:
+                funs_to_check = [ clear_load['fun'] ]
+            # if this a compound function
+            else:
+                funs_to_check = clear_load['fun']
+            for fun in funs_to_check:
+                if re.match(module_re, fun):
+                    good = False
+                    break
 
         if good is False:
             log.error(
@@ -2174,7 +2193,6 @@ class ClearFuncs(object):
                 'jid': clear_load['jid'],
                 'tgt_type':clear_load['tgt_type'],
                 'tgt': clear_load['tgt'],
-                'ret': clear_load['ret'],
                 'user': clear_load['user'],
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],

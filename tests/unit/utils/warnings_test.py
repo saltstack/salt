@@ -16,20 +16,13 @@ import warnings
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
 ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import warn_until
 
-# Import 3rd party libs
-try:
-    from mock import patch
-    HAS_MOCK = True
-except ImportError:
-    HAS_MOCK = False
-
-
-@skipIf(HAS_MOCK is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WarnUntilTestCase(TestCase):
 
     @patch('salt.version')
@@ -65,8 +58,8 @@ class WarnUntilTestCase(TestCase):
         with self.assertRaisesRegexp(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)warnings_test.py\', '
-                r'line number ([\d]+), is supposed to be shown until salt '
-                r'\'0.17\' is released. Salt version is now \'0.17\'. Please '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'\'0.17\' is released. Current version is now \'0.17\'. Please '
                 r'remove the warning.'):
             raise_warning()
 
@@ -75,8 +68,8 @@ class WarnUntilTestCase(TestCase):
         with self.assertRaisesRegexp(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)warnings_test.py\', '
-                r'line number ([\d]+), is supposed to be shown until salt '
-                r'\'0.17\' is released. Salt version is now \'0.17\'. Please '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'\'0.17\' is released. Current version is now \'0.17\'. Please '
                 r'remove the warning.'):
             warn_until(
                 (0, 17), 'Foo', _dont_call_warnings=True

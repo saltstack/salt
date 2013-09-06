@@ -347,7 +347,8 @@ class Client(object):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
-        if url_data.username is not None:
+        if url_data.username is not None \
+                and url_data.scheme in ('http', 'https'):
             _, netloc = url_data.netloc.split('@', 1)
             fixed_url = urlunparse((url_data.scheme, netloc, url_data.path,
                 url_data.params, url_data.query, url_data.fragment))
@@ -601,7 +602,21 @@ class RemoteClient(Client):
         dest is omitted, then the downloaded file will be placed in the minion
         cache
         '''
-        log.info('Fetching file \'{0}\''.format(path))
+        #--  Hash compare local copy with master and skip download if no diference found.
+        dest2check = dest
+        if not dest2check:
+            rel_path = self._check_proto(path)
+            with self._cache_loc(rel_path, env) as cache_dest:
+                dest2check = cache_dest
+
+        if dest2check and os.path.isfile(dest2check):
+            hash_local = self.hash_file(dest2check, env)
+            hash_server = self.hash_file(path, env)
+            if hash_local == hash_server:
+                log.info('Fetching file ** skipped **, latest already in cache \'{0}\''.format(path))
+                return dest2check
+
+        log.debug('Fetching file ** attempting ** \'{0}\''.format(path))
         d_tries = 0
         path = self._check_proto(path)
         load = {'path': path,
@@ -671,6 +686,7 @@ class RemoteClient(Client):
             fn_.write(data)
         if fn_:
             fn_.close()
+            log.info('Fetching file ** done ** \'{0}\''.format(path))
         return dest
 
     def file_list(self, env='base', prefix=''):
@@ -739,8 +755,7 @@ class RemoteClient(Client):
                 return {}
             else:
                 ret = {}
-                with salt.utils.fopen(path, 'rb') as ifile:
-                    ret['hsum'] = hashlib.md5(ifile.read()).hexdigest()
+                ret['hsum'] = salt.utils.get_hash(path, form='md5', chunk_size=4096)
                 ret['hash_type'] = 'md5'
                 return ret
         load = {'path': path,

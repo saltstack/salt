@@ -21,7 +21,7 @@ class TestLog(TestCase):
     '''Test several logging settings'''
 
     def test_issue_2853_regex_TypeError(self):
-        from salt import log as saltlog
+        from salt.log import setup as saltlog
         # Now, python's logging logger class is ours.
         # Let's make sure we have at least one instance
         log = saltlog.SaltLoggingClass(__name__)

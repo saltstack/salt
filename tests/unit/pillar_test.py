@@ -13,20 +13,13 @@ import tempfile
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 ensure_in_syspath('../')
 
 # Import salt libs
 import salt.pillar
 
-# Import 3rd-party libs
-try:
-    from mock import MagicMock, patch
-    HAS_MOCK = True
-except ImportError:
-    HAS_MOCK = False
-
-
-@skipIf(HAS_MOCK is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PillarTestCase(TestCase):
 
     @patch('salt.pillar.compile_template')
@@ -172,7 +165,7 @@ ssh:
         def get_state(sls, env):
             return {
                 'ssh': {'path': '', 'dest': self.ssh_file.name},
-                'ssh.minion': {'path': '', 'dest': self.ssh_minion_file.name}, 
+                'ssh.minion': {'path': '', 'dest': self.ssh_minion_file.name},
             }[sls]
 
         client.get_state.side_effect = get_state

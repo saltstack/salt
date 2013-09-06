@@ -6,20 +6,14 @@ import tempfile
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 
-try:
-    from mock import Mock, patch
-    has_mock = True
-except ImportError:
-    has_mock = False
-    patch = lambda x: lambda y: None
 
-
-@skipIf(has_mock is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CMDModuleTest(integration.ModuleCase):
     '''
     Validate the cmd module

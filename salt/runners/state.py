@@ -40,6 +40,17 @@ def over(env='base', os_fn=None):
     return overstate.over_run
 
 
+def sls(mods, env, test=None, exclude=None):
+    '''
+    Execute a state run from the master, used as a powerful orchestration
+    system.
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    ret = minion.functions['state.sls'](mods, env, test, exclude)
+    salt.output.display_output(ret, 'highstate', opts=__opts__)
+    return ret
+
+
 def show_stages(env='base', os_fn=None):
     '''
     Display the stage data to be executed

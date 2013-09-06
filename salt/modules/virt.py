@@ -11,15 +11,15 @@ import os
 import re
 import shutil
 import subprocess
-from xml.dom import minidom
 
 # Import third party libs
+import yaml
 try:
     import libvirt
-    HAS_LIBVIRT = True
+    from xml.dom import minidom
+    HAS_ALL_IMPORTS = True
 except ImportError:
-    HAS_LIBVIRT = False
-import yaml
+    HAS_ALL_IMPORTS = False
 
 # Import salt libs
 import salt.utils
@@ -37,7 +37,7 @@ VIRT_STATE_NAME_MAP = {0: 'running',
 
 
 def __virtual__():
-    if not HAS_LIBVIRT:
+    if not HAS_ALL_IMPORTS:
         return False
     return 'virt'
 
@@ -56,18 +56,56 @@ def __get_conn():
 
         .. code-block:: yaml
 
-            virt:
+            libvirt:
               hypervisor: esxi
-              hostname: 192.168.9.9
+              connection: esx01
+
+        The connection setting can either be an explicit libvirt URI,
+        or a libvirt URI alias as in this example. No, it cannot be
+        just a hostname.
+
+
+        Example libvirt `/etc/libvirt/libvirt.conf`:
+
+        .. code-block::
+
+            uri_aliases = [
+              "esx01=esx://10.1.1.101/?no_verify=1&auto_answer=1",
+              "esx02=esx://10.1.1.102/?no_verify=1&auto_answer=1",
+            ]
+
+        Reference:
+
+         - http://libvirt.org/drvesx.html#uriformat
+         - http://libvirt.org/uri.html#URI_config
         '''
-        hostname = __salt__['config.get']('virt:hostname', 'localhost')
-        return 'esx://%s/?no_verify=1&auto_answer=1' % hostname
+        connection = __salt__['config.get']('libvirt:connection', 'esx')
+        if connection.startswith('esx://'):
+            return connection
+        return '%s' % connection
 
     def __esxi_auth():
         '''
         We rely on that the credentials is provided to libvirt through
-        it's built in mechanisms, see
-        http://libvirt.org/auth.html#Auth_client_config
+        it's built in mechanisms.
+
+        Example libvirt `/etc/libvirt/auth.conf`:
+
+        .. code-block::
+
+            [credentials-myvirt]
+            username=user
+            password=secret
+
+            [auth-esx-10.1.1.101]
+            credentials=myvirt
+
+            [auth-esx-10.1.1.102]
+            credentials=myvirt
+
+        Reference:
+
+          - http://libvirt.org/auth.html#Auth_client_config
         '''
         return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
 
@@ -78,7 +116,7 @@ def __get_conn():
         'qemu': [libvirt.open, ['qemu:///system']],
         }
 
-    hypervisor = __salt__['config.get']('virt:hypervisor', 'qemu')
+    hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
 
     try:
         conn = conn_func[hypervisor][0](*conn_func[hypervisor][1])
@@ -138,23 +176,78 @@ def _get_target(target, ssh):
     proto = 'qemu'
     if ssh:
         proto += '+ssh'
-    return ' %s://%s/%s' % (proto, target, 'system')
+    return ' {0}://{1}/{2}'.format(proto, target, 'system')
 
+def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **kwargs_sink):
+    '''
+    Prepares the serial and console sections of the VM xml
 
-def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
+    serial_type: presently 'pty' or 'tcp'(telnet)
+
+    telnet_port: When selecting tcp, which port to listen on
+
+    console: Is this serial device the console or for some other purpose
+
+    Returns string representing the serial and console devices suitable for
+    insertion into the VM XML definition
+    '''
+
+    import jinja2
+
+    templates = {
+            'pty': '''
+                <serial type='pty'>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='pty'>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+            ''',
+
+            'tcp': '''
+                <serial type='tcp'>
+                    <source mode='bind' host='' service='{{ telnet_port }}'/>
+                    <protocol type='telnet'/>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='tcp'>
+                    <source mode='bind' host='' service='{{telnet_port}}'/>
+                    <protocol type='telnet'/>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+            '''
+    }
+
+    dict_loader = jinja2.DictLoader(templates)
+    env = jinja2.Environment(loader=dict_loader)
+    template = env.get_template(serial_type)
+    return template.render(serial_type=serial_type,
+                           telnet_port=telnet_port,
+                           console=console)
+
+def _gen_xml(name,
+             cpu,
+             mem,
+             vda,
+             nicp,
+             hypervisor,
+             **kwargs):
     '''
     Generate the XML string to define a libvirt vm
     '''
-    mem = mem * 1024
-    print 'emulator: {}'.format(emulator)
+    mem = mem * 1024 # MB
     data = '''
-<domain type='%%EMULATOR%%'>
+<domain type='%%HYPERVISOR%%'>
         <name>%%NAME%%</name>
         <vcpu>%%CPU%%</vcpu>
-        <memory>%%MEM%%</memory>
+        <memory unit='KiB'>%%MEM%%</memory>
         <os>
                 <type>hvm</type>
-                <boot dev='hd'/>
+                %%BOOT%%
         </os>
         <devices>
                 <disk type='file' device='disk'>
@@ -164,18 +257,36 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
                 </disk>
                 %%NICS%%
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
+                %%SERIAL%%
         </devices>
         <features>
                 <acpi/>
         </features>
 </domain>
 '''
-    data = data.replace('%%EMULATOR%%', emulator)
+    data = data.replace('%%HYPERVISOR%%', hypervisor)
     data = data.replace('%%NAME%%', name)
     data = data.replace('%%CPU%%', str(cpu))
     data = data.replace('%%MEM%%', str(mem))
     data = data.replace('%%VDA%%', vda)
     data = data.replace('%%DISKTYPE%%', _image_type(vda))
+
+    if 'serial_type' in kwargs:
+        serial_section = _prepare_serial_port_xml(**kwargs)
+    else:
+        serial_section = ''
+    data = data.replace('%%SERIAL%%', serial_section)
+
+    boot_str = ''
+    if 'boot_dev' in kwargs:
+        for dev in kwargs['boot_dev']:
+            boot_part = "<boot dev='%%DEV%%' />"
+            boot_part = boot_part.replace('%%DEV%%', dev)
+            boot_str += boot_part
+    else:
+        boot_str = '''<boot dev='hd'/>'''
+    data = data.replace('%%BOOT%%', boot_str)
+
     nic_str = ''
     for dev, args in nicp.items():
         nic_t = '''
@@ -183,8 +294,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
                     <source %%SOURCE%%/>
                     <mac address='%%MAC%%'/>
                     <model type='%%MODEL%%'/>
-                </interface>
-'''
+                </interface>\n'''
         if 'bridge' in args:
             nic_t = nic_t.replace('%%SOURCE%%', 'bridge=\'{0}\''.format(args['bridge']))
             nic_t = nic_t.replace('%%TYPE%%', 'bridge')
@@ -202,13 +312,12 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
     data = data.replace('%%NICS%%', nic_str)
     return data
 
-
 def _image_type(vda):
     '''
     Detect what driver needs to be used for the given image
     '''
-    out = __salt__['cmd.run']('qemu-img {0}'.format(vda))
-    if 'qcow2' in out:
+    out = __salt__['cmd.run']('qemu-img info {0}'.format(vda))
+    if 'file format: qcow2' in out:
         return 'qcow2'
     else:
         return 'raw'
@@ -217,18 +326,37 @@ def _image_type(vda):
 def _nic_profile(nic):
     '''
     Gather the nic profile from the config or apply the default
+
+    This is the ``default`` profile, which can be overridden in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+          nic:
+            default:
+              eth0:
+                bridge: br0
+                model: virtio
     '''
     default = {'eth0': {'bridge': 'br0', 'model': 'virtio'}}
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
 
 
-def init(name, cpu, mem, image, nic='default', emulator='kvm', start=True, **kwargs):
+def init(name,
+         cpu,
+         mem,
+         image,
+         nic='default',
+         hypervisor='kvm',
+         start=True,
+         **kwargs):
     '''
     Initialize a new vm
 
     CLI Example::
 
-        salt 'hypervisor' vm_name 4 512 salt://path/to/image.raw
+        salt 'hypervisor' virt.init vm_name 4 512 salt://path/to/image.raw
     '''
     img_dir = os.path.join(__salt__['config.option']('virt.images'), name)
     img_dest = os.path.join(
@@ -240,11 +368,11 @@ def init(name, cpu, mem, image, nic='default', emulator='kvm', start=True, **kwa
         os.makedirs(img_dir)
     nicp = _nic_profile(nic)
     salt.utils.copyfile(sfn, img_dest)
-    xml = _gen_xml(name, cpu, mem, img_dest, nicp, emulator, **kwargs)
+    xml = _gen_xml(name, cpu, mem, img_dest, nicp, hypervisor, **kwargs)
     define_xml_str(xml)
     if kwargs.get('seed'):
         install = kwargs.get('install', True)
-        __salt__['img.seed'](img_dest, name, kwargs.get('config'),
+        __salt__['seed.apply'](img_dest, id_=name, config=kwargs.get('config'),
                 install=install)
     elif kwargs.get('seed_cmd'):
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
@@ -507,6 +635,10 @@ def get_disks(vm_):
                     'file': qemu_target}
     for dev in disks:
         try:
+            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
+            if hypervisor not in ['qemu', 'kvm']:
+                break
+
             output = []
             qemu_output = subprocess.Popen(['qemu-img', 'info',
                 disks[dev]['file']],
@@ -519,6 +651,17 @@ def get_disks(vm_):
                 if line.startswith('Snapshot list:'):
                     snapshots = True
                     continue
+
+                # If this is a copy-on-write image, then the backing file
+                # represents the base image
+                #
+                # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
+                elif line.startswith('backing file'):
+                    matches = re.match(r'.*\(actual path: (.*?)\)', line)
+                    if matches:
+                        output.append('backing file: {0}'.format(matches.group(1)))
+                    continue
+
                 elif snapshots:
                     if line.startswith('ID'):  # Do not parse table headers
                         line = line.replace('VM SIZE', 'VMSIZE')
@@ -728,6 +871,17 @@ def start(vm_):
     return create(vm_)
 
 
+def stop(vm_):
+    '''
+    Alias for the obscurely named 'destroy' function
+
+    CLI Example::
+
+        salt '*' virt.stop <vm name>
+    '''
+    return destroy(vm_)
+
+
 def reboot(vm_):
     '''
     Reboot a domain via ACPI request
@@ -785,7 +939,7 @@ def create_xml_str(xml):
 
 def create_xml_path(path):
     '''
-    Start a defined domain
+    Start a domain based on the XML-file path passed to the function
 
     CLI Example::
 
@@ -806,6 +960,49 @@ def define_xml_str(xml):
     '''
     conn = __get_conn()
     return conn.defineXML(xml) is not None
+
+
+def define_xml_path(path):
+    '''
+    Define a domain based on the XML-file path passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_xml_path <path to XML file on the node>
+
+    '''
+    if not os.path.isfile(path):
+        return False
+    return define_xml_str(salt.utils.fopen(path, 'r').read())
+
+
+def define_vol_xml_str(xml):
+    '''
+    Define a volume based on the XML passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_vol_xml_str <XML in string format>
+    '''
+    poolname = __salt__['config.get']('libvirt:storagepool', 'default')
+    conn = __get_conn()
+    pool = conn.storagePoolLookupByName(str(poolname))
+    return pool.createXML(xml, 0) is not None
+
+
+def define_vol_xml_path(path):
+    '''
+    Define a volume based on the XML-file path passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_vol_xml_path <path to XML file on the node>
+
+    '''
+    if not os.path.isfile(path):
+        return False
+    return define_vol_xml_str(salt.utils.fopen(path, 'r').read())
+
 
 def migrate_non_shared(vm_, target, ssh=False):
     '''

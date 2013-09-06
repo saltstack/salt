@@ -49,6 +49,7 @@ def __virtual__():
         'SUSE  Enterprise Server',
         'OEL',
         'Linaro',
+        'elementary OS'
     ))
     if __grains__.get('os', '') in disable:
         return False
@@ -69,7 +70,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -82,7 +85,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -95,7 +100,9 @@ def restart(name, **kwargs):
     '''
     Restart the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -110,7 +117,9 @@ def status(name, sig=None):
     service is running or not, pass a signature to use to find the service via
     ps
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name> [service signature]
     '''
@@ -121,7 +130,9 @@ def reload_(name):
     '''
     Restart the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.reload <service name>
     '''
@@ -134,7 +145,9 @@ def get_all():
     '''
     Return a list of all available services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -147,7 +160,9 @@ def available(name):
     '''
     Return if the specified service is available
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.available
     '''

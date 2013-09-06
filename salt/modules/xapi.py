@@ -269,13 +269,13 @@ def node_info():
             cpu_speeds = [int(host_cpu_rec["speed"])
                           for host_cpu_it in host_cpu_rec
                           if "speed" in host_cpu_it]
-            if len(cpu_speeds) > 0:
+            if cpu_speeds:
                 return sum(cpu_speeds) / len(cpu_speeds)
             else:
                 return 0
 
         def getCpuFeatures():
-            if len(host_cpu_rec) > 0:
+            if host_cpu_rec:
                 return host_cpu_rec['features']
 
         def getFreeCpuCount():

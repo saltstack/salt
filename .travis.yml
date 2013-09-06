@@ -17,8 +17,7 @@ before_install:
 
 install: pip install -r requirements.txt --use-mirrors --mirrors=http://g.pypi.python.org --mirrors=http://c.pypi.python.org --mirrors=http://pypi.crate.io
 
-script: "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/pylint --rcfile=.travis.pylintrc salt/ && \
-        sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='--run-destructive --sysinfo -v --coverage --no-coverage-report'"
+script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='--run-destructive --sysinfo -v --coverage --no-coverage-report'"
 
 after_success:
   - coveralls

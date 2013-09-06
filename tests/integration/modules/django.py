@@ -4,23 +4,17 @@ Test the django module
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 from salt.modules import djangomod as django
 
-try:
-    from mock import MagicMock, patch
-    has_mock = True
-except ImportError:
-    has_mock = False
-
-
 django.__salt__ = {}
 
 
-@skipIf(has_mock is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DjangoModuleTest(integration.ModuleCase):
     '''
     Test the django module

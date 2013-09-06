@@ -98,7 +98,10 @@ class Pillar(object):
         opts = dict(opts_in)
         opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
-        opts['grains'] = grains
+        if not grains:
+            opts['grains'] = {}
+        else:
+            opts['grains'] = grains
         opts['id'] = id_
         if 'environment' not in opts:
             opts['environment'] = env

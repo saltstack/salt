@@ -79,7 +79,10 @@ def _do_http(opts, profile='default'):
 
     for line in urllib2.urlopen(url, timeout=timeout).read().splitlines():
         splt = line.split('=', 1)
-        ret[splt[0]] = splt[1]
+        if splt[0] in ret:
+            ret[splt[0]] += ',{0}'.format(splt[1])
+        else:
+            ret[splt[0]] = splt[1]
 
     return ret
 
@@ -108,7 +111,9 @@ def version(profile='default'):
     '''
     Return the modjk version
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.version
         salt '*' modjk.version other-profile
@@ -125,7 +130,9 @@ def get_running(profile='default'):
     '''
     Get the current running config (not from disk)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.get_running
         salt '*' modjk.get_running other-profile
@@ -142,7 +149,9 @@ def dump_config(profile='default'):
     '''
     Dump the original configuration that was loaded from disk
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.dump_config
         salt '*' modjk.dump_config other-profile
@@ -164,7 +173,9 @@ def list_configured_members(lbn, profile='default'):
     '''
     Return a list of member workers from the configuration files
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.list_configured_members loadbalancer1
         salt '*' modjk.list_configured_members loadbalancer1 other-profile
@@ -184,7 +195,9 @@ def list_running_members(lbn, profile='default'):
     '''
     Return a list of member workers
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.list_running_members loadbalancer1
         salt '*' modjk.list_running_members loadbalancer1 other-profile
@@ -201,7 +214,9 @@ def recover_all(lbn, profile='default'):
     '''
     Set the all the workers in lbn to recover and activate them if they are not
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.recover_all loadbalancer1
         salt '*' modjk.recover_all loadbalancer1 other-profile
@@ -225,7 +240,9 @@ def reset_stats(lbn, profile='default'):
     '''
     Reset all runtime statistics for the load balancer
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.reset_stats loadbalancer1
         salt '*' modjk.reset_stats loadbalancer1 other-profile
@@ -246,7 +263,9 @@ def lb_edit(lbn, settings, profile='default'):
     Note: http://tomcat.apache.org/connectors-doc/reference/status.html
     Data Parameters for the standard Update Action
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.lb_edit loadbalancer1 "{'vlr': 1, 'vlt': 60}"
         salt '*' modjk.lb_edit loadbalancer1 "{'vlr': 1, 'vlt': 60}" other-profile
@@ -268,7 +287,9 @@ def worker_status(worker, profile='default'):
     '''
     Return the state of the worker
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.worker_status node1
         salt '*' modjk.worker_status node1 other-profile
@@ -289,7 +310,9 @@ def worker_recover(worker, lbn, profile='default'):
     Set the worker to recover
     this module will fail if it is in OK state
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.worker_recover node1 loadbalancer1
         salt '*' modjk.worker_recover node1 loadbalancer1 other-profile
@@ -308,7 +331,9 @@ def worker_disable(worker, lbn, profile='default'):
     '''
     Set the worker to disable state in the lbn load balancer
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.worker_disable node1 loadbalancer1
         salt '*' modjk.worker_disable node1 loadbalancer1 other-profile
@@ -321,7 +346,9 @@ def worker_activate(worker, lbn, profile='default'):
     '''
     Set the worker to activate state in the lbn load balancer
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.worker_activate node1 loadbalancer1
         salt '*' modjk.worker_activate node1 loadbalancer1 other-profile
@@ -334,7 +361,9 @@ def worker_stop(worker, lbn, profile='default'):
     '''
     Set the worker to stopped state in the lbn load balancer
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' modjk.worker_activate node1 loadbalancer1
         salt '*' modjk.worker_activate node1 loadbalancer1 other-profile
@@ -350,12 +379,12 @@ def worker_edit(worker, lbn, settings, profile='default'):
     Note: http://tomcat.apache.org/connectors-doc/reference/status.html
     Data Parameters for the standard Update Action
 
-    CLI Examples::
+    CLI Examples:
 
-        salt '*' modjk.worker_edit node1 loadbalancer1 \
-                "{'vwf': 500, 'vwd': 60}"
-        salt '*' modjk.worker_edit node1 loadbalancer1 \
-                "{'vwf': 500, 'vwd': 60}" other-profile
+    .. code-block:: bash
+
+        salt '*' modjk.worker_edit node1 loadbalancer1 "{'vwf': 500, 'vwd': 60}"
+        salt '*' modjk.worker_edit node1 loadbalancer1 "{'vwf': 500, 'vwd': 60}" other-profile
     '''
 
     settings['cmd'] = 'update'

@@ -399,7 +399,38 @@ def _check_touch(name, atime, mtime):
     return True, 'File {0} exists and has the correct times'.format(name)
 
 
-def _symlink_check(name, target, force):
+def _get_symlink_ownership(path):
+    return (
+        __salt__['file.get_user'](path, follow_symlinks=False),
+        __salt__['file.get_group'](path, follow_symlinks=False)
+    )
+
+
+def _check_symlink_ownership(path, user, group):
+    '''
+    Check if the symlink ownership matches the specified user and group
+    '''
+    cur_user, cur_group = _get_symlink_ownership(path)
+    return ((cur_user == user) and (cur_group == group))
+
+
+def _set_symlink_ownership(path, uid, gid):
+    '''
+    Set the ownership of a symlink and return a boolean indicating
+    success/failure
+    '''
+    try:
+        os.lchown(path, uid, gid)
+    except OSError:
+        pass
+    return _check_symlink_ownership(
+        path,
+        __salt__['file.uid_to_user'](uid),
+        __salt__['file.gid_to_group'](gid)
+   )
+
+
+def _symlink_check(name, target, force, user, group):
     '''
     Check the symlink function
     '''
@@ -413,7 +444,15 @@ def _symlink_check(name, target, force):
                 name, target
             )
         else:
-            return True, 'The symlink {0} is present'.format(name)
+            result = True
+            msg = 'The symlink {0} is present'.format(name)
+            if not _check_symlink_ownership(name, user, group):
+                result = None
+                msg += (
+                    ', but the ownership of the symlink would be changed '
+                    'from {2}:{3} to {0}:{1}'
+                ).format(user, group, *_get_symlink_ownership(name))
+            return result, msg
     else:
         if force:
             return None, ('The file or directory {0} is set for removal to '
@@ -532,12 +571,39 @@ def symlink(
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if user is None:
+        user = __opts__['user']
+
+    if group is None:
+        group = __salt__['file.gid_to_group'](
+            __salt__['user.info'](user).get('gid', 0)
+        )
+
+    preflight_errors = []
+    uid = __salt__['file.user_to_uid'](user)
+    gid = __salt__['file.group_to_gid'](group)
+
+    if uid == '':
+        preflight_errors.append('User {0} does not exist'.format(user))
+
+    if gid == '':
+        preflight_errors.append('Group {0} does not exist'.format(group))
+
     if not os.path.isabs(name):
-        return _error(
-            ret, 'Specified file {0} is not an absolute path'.format(name))
+        preflight_errors.append(
+            'Specified file {0} is not an absolute path'.format(name)
+        )
+
+    if preflight_errors:
+        msg = '. '.join(preflight_errors)
+        if len(preflight_errors) > 1:
+            msg += '.'
+        return _error(ret, msg)
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = _symlink_check(name, target, force)
+        ret['result'], ret['comment'] = _symlink_check(name, target, force,
+                                                       user, group)
         return ret
 
     if not os.path.isdir(os.path.dirname(name)):
@@ -560,9 +626,23 @@ def symlink(
             # The target is wrong, delete the link
             os.remove(name)
         else:
-            # The link looks good!
-            ret['comment'] = 'The symlink {0} is present'.format(name)
+            if _check_symlink_ownership(name, user, group):
+                # The link looks good!
+                ret['comment'] = ('Symlink {0} is present and owned by '
+                                  '{1}:{2}'.format(name, user, group))
+            else:
+                if _set_symlink_ownership(name, uid, gid):
+                    ret['comment'] = ('Set ownership of symlink {0} to '
+                                      '{1}:{2}'.format(name, user, group))
+                    ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
+                else:
+                    ret['result'] = False
+                    ret['comment'] += (
+                        'Failed to set ownership of symlink {0} to '
+                        '{1}:{2}'.format(name, user, group)
+                    )
             return ret
+
     elif os.path.isfile(name):
         # Since it is not a link, and is a file, error out
         if force:
@@ -579,10 +659,24 @@ def symlink(
                                'should be'.format(name))
     if not os.path.exists(name):
         # The link is not present, make it
-        os.symlink(target, name)
-        ret['comment'] = 'Created new symlink {0} -> {1}'.format(name, target)
-        ret['changes']['new'] = name
-        return ret
+        try:
+            os.symlink(target, name)
+        except OSError as exc:
+            ret['result'] = False
+            ret['comment'] = ('Unable to create new symlink {0} -> '
+                              '{1}: {2}'.format(name, target, exc))
+            return ret
+        else:
+            ret['comment'] = ('Created new symlink {0} -> '
+                              '{1}'.format(name, target))
+            ret['changes']['new'] = name
+
+        if not _check_symlink_ownership(name, user, group):
+            if not _set_symlink_ownership(name, uid, gid):
+                ret['result'] = False
+                ret['comment'] += (', but was unable to set ownership to '
+                                   '{0}:{1}'.format(user, group))
+    return ret
 
 
 def absent(name):
@@ -2315,3 +2409,134 @@ def serialize(name,
                                         template=None,
                                         show_diff=show_diff,
                                         contents=contents)
+
+def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
+    '''
+    Create a special file similar to the 'nix mknod command. The supported device types are
+    p (fifo pipe), c (character device), and b (block device). Provide the major and minor
+    numbers when specifying a character device or block device. A fifo pipe does not require
+    this information. The command will create the necessary dirs if needed. If a file of the 
+    same name not of the same type/major/minor exists, it will not be overwritten or unlinked
+    (deleted). This is logically in place as a safety measure because you can really shoot 
+    yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
+    note that not just anyone can create special devices. Usually this is only done as root.
+    If the state is executed as none other than root on a minion, you may recieve a permision
+    error.
+
+    name
+        name of the file
+
+    ntype
+        node type 'p' (fifo pipe), 'c' (character device), or 'b' (block device)
+
+    major
+        major number of the device
+        does not apply to a fifo pipe
+
+    minor
+        minor number of the device
+        does not apply to a fifo pipe
+
+    user
+        owning user of the device/pipe
+
+    group
+        owning group of the device/pipe
+
+    mode
+        permissions on the device/pipe
+
+    Usage::
+
+        /dev/chr:
+          file.mknod:
+            - ntype: c
+            - major: 180
+            - minor: 31
+            - user: root
+            - group: root
+            - mode: 660
+ 
+        /dev/blk:
+          file.mknod:
+            - ntype: b
+            - major: 8
+            - minor: 999
+            - user: root
+            - group: root
+            - mode: 660
+ 
+       /dev/fifo:
+         file.mknod:
+           - ntype: p
+           - user: root
+           - group: root
+           - mode: 660
+
+    .. versionadded:: 0.17.0
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+
+    if ntype == 'c':
+        #check for file existence
+        if __salt__['file.file_exists'](name):
+            ret['comment'] = "File exists and is not a character device {0}. Cowardly refusing to continue".format(name)
+
+        #if it is a character device
+        elif not __salt__['file.is_chrdev'](name):
+            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+
+        #check the major/minor
+        else:
+            devmaj, devmin = __salt__['file.get_devmm'](name)
+            if (major, minor) != (devmaj, devmin):
+                ret['comment'] = "Character device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
+            #check the perms
+            else:
+                ret, perms = __salt__['file.check_perms'](name, None, user, group, mode)
+                if not ret['changes']:
+                    ret['comment'] = "Character device {0} is in the correct state".format(name)
+
+    elif ntype == 'b':
+        #check for file existence
+        if __salt__['file.file_exists'](name):
+            ret['comment'] = "File exists and is not a block device {0}. Cowardly refusing to continue".format(name)
+
+        #if it is a block device
+        elif not __salt__['file.is_blkdev'](name):
+            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+
+        #check the major/minor
+        else:
+            devmaj, devmin = __salt__['file.get_devmm'](name)
+            if (major, minor) != (devmaj, devmin):
+                ret['comment'] = "Block device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
+            #check the perms
+            else:
+                ret, perms = __salt__['file.check_perms'](name, None, user, group, mode)
+                if not ret['changes']:
+                    ret['comment'] = "Block device {0} is in the correct state".format(name)
+
+    elif ntype == 'p':
+        #check for file existence, if it is a fifo, user, group, and mode
+        if __salt__['file.file_exists'](name):
+            ret['comment'] = "File exists and is not a fifo pipe {0}. Cowardly refusing to continue".format(name)
+
+        #if it is a fifo
+        elif not __salt__['file.is_fifo'](name):
+            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+
+        #check the perms
+        else:
+            ret, perms = __salt__['file.check_perms'](name, None, user, group, mode)
+            if not ret['changes']:
+                ret['comment'] = "Fifo pipe {0} is in the correct state".format(name)
+
+    else:
+        ret['comment'] = "Node type unavailable: '{0}. Available node types are character ('c'), block ('b'), and pipe ('p')".format(ntype)
+
+    return ret
+

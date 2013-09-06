@@ -70,7 +70,9 @@ def read_file(file_name):
     '''
     This is just a test function, to make sure parsing works
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pam.read_file /etc/pam.d/login
     '''

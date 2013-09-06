@@ -3,9 +3,9 @@ Reactor System
 ==============
 
 Salt version 0.11.0 introduced the reactor system. The premise behind the
-reactor system is that with Salt's events and the ability to execute commands a
-logic engine could be put in place to allow events to trigger actions, or more
-accurately, reactions. 
+reactor system is that with Salt's events and the ability to execute commands,
+a logic engine could be put in place to allow events to trigger actions, or 
+more accurately, reactions. 
 
 This system binds sls files to event tags on the master. These sls files then
 define reactions. This means that the reactor system has two parts. First, the
@@ -24,9 +24,9 @@ other systems about operations.
 
 The event system fires events with a very specific criteria. Every event has a
 :strong:`tag` which is comprised of a maximum of 20 characters. Event tags
-allow for fast top level filtering of events. In addition to the tag, an event
-has a data structure. This data structure is a dict containing information
-about the event.
+allow for fast top level filtering of events. In addition to the tag, each
+event has a data structure. This data structure is a dict, which contains
+information about the event.
 
 Mapping Events to Reactor SLS Files
 ===================================
@@ -44,11 +44,11 @@ with lists of reactor sls formulas (globs can be used for matching):
       - 'minion_start':
         - /srv/reactor/start.sls
 
-When an event with a tag of auth is fired the reactor will catch the event and
-render the two listed files. The rendered files are standard sls files, so by
-default they are yaml + Jinja. The Jinja is packed with a few data structures
-similar to state and pillar sls files. The data available is found in the
-``tag`` and ``data`` variables. The ``tag`` variable is just the tag in the
+When an event with a tag of ``auth`` is fired, the reactor will catch the event 
+and render the two listed files. The rendered files are standard sls files, so 
+by default they are yaml + Jinja. The Jinja is packed with a few data 
+structures similar to state and pillar sls files. The data available is in 
+``tag`` and ``data`` variables. The ``tag`` variable is just the tag in the 
 fired event and the ``data`` variable is the event's data dict. Here is a
 simple reactor sls:
 
@@ -65,9 +65,9 @@ If the ``id`` in the event data is ``mysql1`` (in other words, if the name of
 the minion is ``mysql1``) then the following reaction is defined.  The same
 data structure and compiler used for the state system is used for the reactor
 system. The only difference is that the data is matched up to the salt command
-API and the runner system.  In this example a command is published to the
-mysql1 minion with a function of ``state.highstate``. Similarly, a runner can
-be called:
+API and the runner system.  In this example, a command is published to the
+``mysql1`` minion with a function of ``state.highstate``. Similarly, a runner
+can be called:
 
 .. code-block:: yaml
 
@@ -79,12 +79,26 @@ be called:
 This example will execute the state.overstate runner and initiate an overstate
 execution.
 
+Fire an event
+=============
+
+From a minion, run bellow command
+
+.. code-block:: bash
+
+    salt-call event.fire_master '{"overstate": "refresh"}' 'foo'
+
+In reactor fomular files that are associated with tag ``foo``, data can be
+accessed via ``data['data']``. Above command passed a dictionary as data, its
+``overstate`` key can be accessed via ``data['data']['overstate']``. See
+:py:mod:`salt.modules.event` for more information.
+
 Understanding the Structure of Reactor Formulas
 ===============================================
 
 While the reactor system uses the same data structure as the state system, this
-data does not translate the same way to operations. In state formulas
-information is mapped to the state functions, but in the reactor system
+data does not translate the same way to operations. In state, formulas
+information is mapped to the state functions, but in the reactor system,
 information is mapped to a number of available subsystems on the master. These
 systems are the :strong:`LocalClient` and the :strong:`Runners`. The
 :strong:`state declaration` field takes a reference to the function to call in
@@ -111,9 +125,9 @@ Executing remote commands maps to the :strong:`LocalClient` interface which is
 used by the :strong:`salt` command. This interface more specifically maps to
 the :strong:`cmd_async` method inside of the :strong:`LocalClient` class. This
 means that the arguments passed are being passed to the :strong:`cmd_async`
-method, not the remote method. The field starts with :strong:`cmd` to use the
-:strong:`LocalClient` subsystem. The result is that to execute a remote command
-it looks like this:
+method, not the remote method. A field starts with :strong:`cmd` to use the
+:strong:`LocalClient` subsystem. The result is, to execute a remote command, 
+a reactor fomular would look like this:
 
 .. code-block:: yaml
 

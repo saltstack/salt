@@ -113,7 +113,9 @@ def available():
     '''
     Return a list of all available kernel modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.available
     '''
@@ -130,7 +132,9 @@ def check_available(mod):
     '''
     Check to see if the specified kernel module is available
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.check_available kvm
     '''
@@ -141,7 +145,9 @@ def lsmod():
     '''
     Return a dict containing information about currently loaded modules
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.lsmod
     '''
@@ -169,7 +175,9 @@ def mod_list(only_persist=False):
     '''
     Return a list of the loaded module names
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.mod_list
     '''
@@ -197,7 +205,9 @@ def load(mod, persist=False):
     persist
         Write module to /etc/modules to make it load on system reboot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.load kvm
     '''
@@ -218,7 +228,9 @@ def is_loaded(mod):
     '''
     Check to see if the specified kernel module is loaded
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.is_loaded kvm
     '''
@@ -239,7 +251,9 @@ def remove(mod, persist=False, comment=True):
         If persist is set don't remove line from /etc/modules but only
         comment it
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kmod.remove kvm
     '''

@@ -111,6 +111,31 @@ it will be pulled from the :strong:`git://github.com/example/second.git` git
 repo. If :strong:`salt://haproxy/haproxy.conf` is requested then it will be
 pulled from the third repo.
 
+Serving from a Subdirectory
+===========================
+
+The ``gitfs_root`` option gives the ability to serve files from a subdirectory
+within the repository. The path is defined relative to the root of the
+repository.
+
+With this repository structure:
+
+.. code-block:: yaml
+
+    repository.git:
+        somefolder
+            otherfolder
+                top.sls
+                edit/vim.sls
+                edit/vimrc
+                nginx/init.sls
+
+Configuration and files can be accessed normally with:
+
+.. code-block:: yaml
+
+    gitfs_root: somefolder/otherfolder
+
 Multiple Backends
 =================
 
@@ -147,4 +172,19 @@ for the user running the salt-master.
 
 .. note::
 
-    GitFS requires library ``gitpython`` > 0.3.0.
+    GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
+
+.. _faq-gitfs-bug:
+
+Why aren't my custom modules/states/etc. syncing to my Minions?
+===============================================================
+
+In versions 0.16.3 and older, when using the :doc:`git fileserver backend
+</topics/tutorials/gitfs>`, certain versions of GitPython may generate errors
+when fetching, which Salt fails to catch. While not fatal to the fetch process,
+these interrupt the fileserver update that takes place before custom types are
+synced, and thus interrupt the sync itself. Try disabling the git fileserver
+backend in the master config, restarting the master, and attempting the sync
+again.
+
+This issue will be worked around in Salt 0.16.4 and newer.

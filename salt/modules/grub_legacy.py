@@ -35,7 +35,9 @@ def version():
     '''
     Return server version from grub --version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grub.version
     '''
@@ -48,7 +50,9 @@ def conf():
     '''
     Parse GRUB conf file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' grub.conf
     '''

@@ -139,14 +139,10 @@ class Shell(object):
             )
 
             data = proc.communicate()
-            if data[0]:
-                return data[0]
-            if data[1]:
-                ret = {'local': self.get_error(data[1])}
-                return json.dumps(ret)
+            return data
         except Exception:
-            return '{"local": "Unknown Error"}'
-        return '{"local": "Unknown Error"}'
+            return ('local', 'Unknown Error')
+        return ('local', 'Unknown Error')
 
     def _run_nb_cmd(self, cmd):
         '''
@@ -195,7 +191,8 @@ class Shell(object):
         if self.sudo:
             cmd = 'sudo {0}'.format(cmd)
         cmd = self._cmd_str(cmd)
-        return self._run_cmd(cmd)
+        ret = self._run_cmd(cmd)
+        return ret
 
     def send(self, local, remote):
         '''

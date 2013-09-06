@@ -313,6 +313,11 @@
 # environments.
 # Note:  file:// repos will be treated as a remote, so refs you want used must
 # exist in that repo as *local* refs.
+#     
+# The gitfs_root option gives the ability to serve files from a subdirectory
+# within the repository. The path is defined relative to the root of the
+# repository and defaults to the repository root.
+#gitfs_root: somefolder/otherfolder
 
 
 #####         Pillar settings        #####

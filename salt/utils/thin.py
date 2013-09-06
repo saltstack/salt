@@ -41,18 +41,21 @@ def gen_thin(cachedir):
             ]
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
-    with tarfile.open(thintar, 'w:gz') as tfp:
-        start_dir = os.getcwd()
-        for top in tops:
-            base = os.path.basename(top)
-            os.chdir(os.path.dirname(top))
-            for root, dirs, files in os.walk(base):
-                for name in files:
-                    if not name.endswith(('.pyc', '.pyo')):
-                        tfp.add(os.path.join(root, name))
-        os.chdir(os.path.dirname(salt.utils.which('salt-call')))
-        tfp.add('salt-call')
-        os.chdir(start_dir)
+    tfp = tarfile.open(thintar, 'w:gz')
+    start_dir = os.getcwd()
+    for top in tops:
+        base = os.path.basename(top)
+        os.chdir(os.path.dirname(top))
+        for root, dirs, files in os.walk(base):
+            for name in files:
+                if not name.endswith(('.pyc', '.pyo')):
+                    tfp.add(os.path.join(root, name))
+    os.chdir(os.path.dirname(salt.utils.which('salt-call')))
+    tfp.add('salt-call')
     with open(thinver, 'w+') as fp_:
         fp_.write(salt.__version__)
+    os.chdir(os.path.dirname(thinver))
+    tfp.add('version')
+    os.chdir(start_dir)
+    tfp.close()
     return thintar

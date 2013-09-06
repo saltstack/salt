@@ -336,19 +336,26 @@ def jid_to_time(jid):
     return ret
 
 
-def gen_mac(prefix='52:54:'):
+def gen_mac(prefix='AC:DE:48'):
     '''
-    Generates a mac addr with the defined prefix
+    Generates a MAC address with the defined OUI prefix.
+
+    Common prefixes:
+
+     - ``00:16:3E`` -- Xen
+     - ``00:18:51`` -- OpenVZ
+     - ``00:50:56`` -- VMware (manually generated)
+     - ``52:54:00`` -- QEMU/KVM
+     - ``AC:DE:48`` -- PRIVATE
+
+    References:
+
+     - http://standards.ieee.org/develop/regauth/oui/oui.txt
+     - https://www.wireshark.org/tools/oui-lookup.html
+     - https://en.wikipedia.org/wiki/MAC_address
     '''
-    src = ['1', '2', '3', '4', '5', '6', '7', '8',
-           '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
-    mac = prefix
-    while len(mac) < 18:
-        if len(mac) < 3:
-            mac = random.choice(src) + random.choice(src) + ':'
-        if mac.endswith(':'):
-            mac += random.choice(src) + random.choice(src) + ':'
-    return mac[:-1]
+    r = random.randint
+    return '%s:%02X:%02X:%02X' % (prefix, r(0, 0xff), r(0, 0xff), r(0, 0xff))
 
 
 def ip_bracket(addr):
@@ -428,12 +435,18 @@ def required_modules_error(name, docstring):
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
 
+def gen_jid():
+    '''
+    Generate a jid
+    '''
+    return '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+
 
 def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
-    jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+    jid = gen_jid()
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
@@ -582,7 +595,7 @@ def path_join(*parts):
     if not parts:
         return root
 
-    if platform.system().lower() == 'windows':
+    if is_windows():
         if len(root) == 1:
             root += ':'
         root = root.rstrip(os.sep) + os.sep
@@ -672,25 +685,20 @@ def format_call(fun, data):
     ret = {}
     ret['args'] = []
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
     if aspec.keywords:
         # This state accepts kwargs
         ret['kwargs'] = {}
         for key in data:
-            # Passing kwargs the conflict with args == stack trace
+            # Passing kwargs the conflict with args == traceback
             if key in aspec.args:
                 continue
             ret['kwargs'][key] = data[key]
-    kwargs = {}
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            kwargs[aspec.args[ind]] = aspec.defaults[-minus]
+
+    try:
+        kwargs = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    except TypeError:
+        # aspec.defaults is None
+        kwargs = {}
     for arg in kwargs:
         if arg in data:
             kwargs[arg] = data[arg]
@@ -711,24 +719,11 @@ def arg_lookup(fun):
     Return a dict containing the arguments and default arguments to the
     function.
     '''
-    ret = {'args': [],
-           'kwargs': {}}
+    ret = {'kwargs': {}}
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec[0], list):
-        arglen = len(aspec[0])
-    if isinstance(aspec[3], tuple):
-        deflen = len(aspec[3])
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            ret['kwargs'][aspec[0][ind]] = aspec[3][-minus]
-    for arg in aspec[0]:
-        if arg in ret:
-            continue
-        else:
-            ret['args'].append(arg)
+    if aspec.defaults:
+        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    ret['args'] = aspec.args
     return ret
 
 
@@ -869,8 +864,8 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         splits = expr.split(delim)
         key = delim.join(splits[:idx])
         matchstr = delim.join(splits[idx:])
-        log.debug('Attempting to match \'{0}\' in '
-                    '\'{1}\''.format(matchstr, key))
+        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
+                  '\'{2}\''.format(matchstr, key, delim))
         match = traverse_dict(data, key, {}, delim=delim)
         if match == {}:
             continue
@@ -1210,11 +1205,10 @@ def get_hash(path, form='md5', chunk_size=4096):
         raise ValueError('Invalid hash type: {0}'.format(form))
     with salt.utils.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
-        while True:
-            chunk = ifile.read(chunk_size)
-            if not chunk:
-                return hash_obj.hexdigest()
+        # read the file in in chunks, not the entire file
+        for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
+        return hash_obj.hexdigest()
 
 
 def namespaced_function(function, global_dict, defaults=None):
@@ -1333,6 +1327,7 @@ def warn_until(version_info,
                message,
                category=DeprecationWarning,
                stacklevel=None,
+               _version_info_=None,
                _dont_call_warnings=False):
     '''
     Helper function to raise a warning, by default, a ``DeprecationWarning``,
@@ -1347,6 +1342,9 @@ def warn_until(version_info,
                      ``DeprecationWarning``
     :param stacklevel: There should be no need to set the value of
                        ``stacklevel`` salt should be able to do the right thing
+    :param _version_info_: In order to reuse this function for other SaltStack
+                           projects, they need to be able to provide the
+                           version info to compare to.
     :param _dont_call_warnings: This parameter is used just to get the
                                 functionality until the actual error is to be
                                 issued. When we're only after the salt version
@@ -1361,17 +1359,20 @@ def warn_until(version_info,
         # Attribute the warning to the calling function, not to warn_until()
         stacklevel = 2
 
-    if salt.version.__version_info__ >= version_info:
+    if _version_info_ is None:
+        _version_info_ = salt.version.__version_info__
+
+    if _version_info_ >= version_info:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
-            '{lineno}, is supposed to be shown until salt {until_version!r} '
-            'is released. Salt version is now {salt_version!r}. Please '
-            'remove the warning.'.format(
+            '{lineno}, is supposed to be shown until version '
+            '{until_version!r} is released. Current version is now '
+            '{salt_version!r}. Please remove the warning.'.format(
                 filename=caller.filename,
                 lineno=caller.lineno,
                 until_version='.'.join(map(str, version_info)),
-                salt_version='.'.join(map(str, salt.version.__version_info__))
+                salt_version='.'.join(map(str, _version_info_))
             ),
         )
 

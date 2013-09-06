@@ -730,7 +730,7 @@ _OS_FAMILY_MAP = {
     'Trisquel': 'Debian',
     'GCEL': 'Debian',
     'Linaro': 'Debian',
-    'Pidora': 'RedHat'
+    'elementary OS': 'Debian'
 }
 
 

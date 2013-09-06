@@ -25,7 +25,7 @@ To help in this deprecation task, salt provides :func:`salt.utils.warn_until
 <salt.utils.warn_until>`. The idea behind this helper function is to show the 
 deprecation warning until salt reaches the provided version. Once that provided 
 version is equaled :func:`salt.utils.warn_until <salt.utils.warn_until>` will 
-raise a :py:exc:`RuntimeError` making salt stop it's execution. This stoppage 
+raise a :py:exc:`RuntimeError` making salt stop its execution. This stoppage 
 is unpleasant and will remind the developer that the deprecation limit has been 
 reached and that the code can then be safely removed.
 
@@ -37,8 +37,8 @@ Consider the following example:
         if foo is not None:
             salt.utils.warn_until(
                 (0, 18),
-                'The \'foo\' argument has been deprecated and it\'s '
-                'functionality removed, as such, it\'s usage is no longer '
+                'The \'foo\' argument has been deprecated and its '
+                'functionality removed, as such, its usage is no longer '
                 'required.'
             )
 

@@ -38,7 +38,9 @@ def connect(image):
     '''
     Activate nbd for an image file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' qemu_nbd.connect /tmp/image.raw
     '''
@@ -72,7 +74,9 @@ def mount(nbd):
     Pass in the nbd connection device location, mount all partitions and return
     a dict of mount points
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' qemu_nbd.mount /dev/nbd0
     '''
@@ -98,7 +102,9 @@ def init(image):
     '''
     Mount the named image via qemu-nbd and return the mounted roots
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' qemu_nbd.init /srv/image.qcow2
     '''
@@ -115,9 +121,11 @@ def clear(mnt):
     empty dict, otherwise return a dict containing the still mounted
     partitions
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' qemu_nbd.clear '{/mnt/foo: /dev/nbd0p1}'
+    .. code-block:: bash
+
+        salt '*' qemu_nbd.clear '{"/mnt/foo": "/dev/nbd0p1"}'
     '''
     if isinstance(mnt, str):
         mnt = yaml.load(mnt)

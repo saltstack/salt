@@ -126,8 +126,8 @@ Setting up a Salt Minion
 
 The Salt Minion only needs to be aware of one piece of information to run, the
 network location of the master. By default the minion will look for the DNS
-name `salt` for the master, making the easiest approach to set internal DNS to
-resolve the name `salt` back to the Salt Master IP. Otherwise the minion
+name ``salt`` for the master, making the easiest approach to set internal DNS
+to resolve the name ``salt`` back to the Salt Master IP. Otherwise the minion
 configuration file will need to be edited, edit the configuration option
 ``master`` to point to the DNS name or the IP of the Salt Master:
 
@@ -161,6 +161,31 @@ In the foreground in debug mode:
 Now that the minion is started it will generate cryptographic keys and attempt
 to connect to the master. The next step is to venture back to the master server
 and accept the new minion's public key.
+
+.. _minion-id-generation:
+
+When the minion is started, it will generate an ``id`` value. This is the name
+by which the minion will attempt to authenticate to the master. The following
+steps are attempted, in order to try to find a value that is not ``localhost``:
+
+1. ``/etc/hostname`` is checked (non-Windows only) **Note: Not used currently,
+   will be as of version 0.17.0.**
+2. The Python function ``socket.getfqdn()`` is run
+3. ``/etc/hosts`` (``%WINDIR%\system32\drivers\etc\hosts`` on Windows hosts) is
+   checked for hostnames that map to anything within :strong:`127.0.0.0/8`.
+
+If none of the above are able to produce an id which is not ``localhost``, then
+a sorted list of IP addresses on the minion (excluding any within
+:strong:`127.0.0.0/8`) is inspected. The first publicly-routable IP address is
+used, if there is one. Otherwise, the first privately-routable IP address is
+used.
+
+If all else fails, then ``localhost`` is used as a fallback.
+
+.. note:: Overriding the ``id``
+
+    The minion id can be manually specified using the :conf_minion:`id`
+    parameter in the minion config file.
 
 
 Using salt-key
@@ -306,6 +331,12 @@ yum on Red Hat based systems, apt on Debian systems, etc.:
 .. code-block:: bash
 
     salt '*' pkg.install vim
+
+.. note::
+    Some custom Linux spins and derivatives of other distros are not properly
+    detected by Salt. If the above command returns an error message saying that
+    ``pkg.install`` is not available, then you may need to override the pkg
+    provider. This process is explained :doc:`here </ref/states/providers>`.
 
 The :mod:`network.interfaces <salt.modules.network.interfaces>` function will
 list all interfaces on a minion, along with their IP addresses, netmasks, MAC
