@@ -131,7 +131,7 @@ def pkill(pattern, user=None, signal=15, full=False):
 
     .. code-block:: bash
 
-        salt '*' ps.pkill pattern [user=username] [signal=signal_number] \
+        salt '*' ps.pkill pattern [user=username] [signal=signal_number] \\
                 [full=(true|false)]
 
     pattern
