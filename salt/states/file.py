@@ -63,14 +63,14 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - mode: 644
 
 Special files can managed via the ``mknod`` function. This function will create
-and enforce the permissions on a special file. The function supports the creation 
-of character devices, block devices, and fifo pipes. The function will create 
-the directory structure up to the special file if it is needed on the minion. 
-The function will not overwrite or operate on (change major/minor numbers) existing 
-special files with the exception of user, group, and permissions. In most cases 
-the creation of some special files require root permisisons on the minion. This 
-would require that the minion to be run as the root user. 
-Here is an example of a character device:
+and enforce the permissions on a special file. The function supports the 
+creation of character devices, block devices, and fifo pipes. The function will 
+create the directory structure up to the special file if it is needed on the 
+minion. The function will not overwrite or operate on (change major/minor 
+numbers) existing special files with the exception of user, group, and 
+permissions. In most cases the creation of some special files require root 
+permisisons on the minion. This would require that the minion to be run as the 
+root user. Here is an example of a character device:
 
 .. code-block:: yaml
 
