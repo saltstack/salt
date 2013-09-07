@@ -201,7 +201,10 @@ def latest(name,
             if force:
                 log.debug(('target {0} found, but not a git repository. Since '
                            'force option is in use, deleting.').format(target))
-                shutil.rmtree(target)
+                if os.path.islink(target):
+                    os.remove(target)
+                else:
+                    shutil.rmtree(target)
             # git clone is required, but target exists and is non-empty
             elif os.listdir(target):
                 return _fail(ret, 'Directory exists, is non-empty, and force '
@@ -294,7 +297,10 @@ def present(name, bare=True, runas=None, force=False):
                                    ' creation at {0}').format(name))
 
     if force and os.path.isdir(name):
-        shutil.rmtree(name)
+        if os.path.islink(name):
+            os.remove(name)
+        else:
+            shutil.rmtree(name)
 
     opts = '--bare' if bare else ''
     __salt__['git.init'](cwd=name, user=runas, opts=opts)
