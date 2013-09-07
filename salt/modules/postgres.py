@@ -164,7 +164,7 @@ def _psql_cmd(*args, **kwargs):
     if host:
         cmd += ['--host', host]
     if port:
-        cmd += ['--port', port]
+        cmd += ['--port', str(port)]
     if not maintenance_db:
         maintenance_db = 'postgres'
     cmd += ['--dbname', maintenance_db]
