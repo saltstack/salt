@@ -72,7 +72,8 @@ def running(name,
         path to supervisorctl config file
 
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -168,7 +169,8 @@ def running(name,
         # check if any processes in this group are stopped
         is_stopped = False
         for proc in all_processes:
-            if proc.startswith(name) and _is_stopped_state(all_processes[proc]['state']):
+            if proc.startswith(name) \
+                    and _is_stopped_state(all_processes[proc]['state']):
                 is_stopped = True
                 break
 
@@ -204,6 +206,7 @@ def running(name,
             )
             result = comment
             ret.update({'comment': comment})
+
     elif not just_updated:
         comment = 'Starting {0}: {1}'.format(process_type, name)
         changes.append(comment)
@@ -217,6 +220,7 @@ def running(name,
 
         ret.update(_check_error(result, comment))
         log.debug(unicode(result))
+
     if ret['result'] and len(changes):
         ret['changes'][name] = ' '.join(changes)
     return ret
@@ -247,7 +251,8 @@ def dead(name,
         path to supervisorctl config file
 
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
