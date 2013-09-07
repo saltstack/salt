@@ -1,4 +1,27 @@
 -------------------------------------------------------------------
+Sat Sep  7 22:44:41 UTC 2013 - aboe76@gmail.com
+
+- Update 0.16.4 bugfix release:
+  - Multiple documentation improvements/additions
+  - Added the osfinger and osarch grains
+  - Fix bug in :mod:`hg.latest <salt.states.hg.latest>` state 
+  that would erroneously delete directories (:issue:`6661`)
+  - Fix bug related to pid not existing for 
+  :mod:`ps.top <salt.modules.ps.top>` (:issue:`6679`)
+  - Fix regression in :mod:`MySQL returner <salt.returners.mysql>` 
+  (:issue:`6695`)
+  - Fix IP addresses grains (ipv4 and ipv6) to include all addresses
+  (:issue:`6656`)
+  - Fix regression preventing authenticated FTP (:issue:`6733`)
+  - Fix :mod:`file.contains <salt.modules.file.contains>` on values 
+  YAML parses as non-string (:issue:`6817`)
+  - Fix :mod:`file.get_gid <salt.modules.file.get_gid>`, 
+  :mod:`file.get_uid <salt.modules.file.get_uid>`, and 
+  :mod:`file.chown <salt.modules.file.chown>` for broken symlinks 
+  (:issue:`6826`)
+  - Fix comment for service reloads in service state (:issue:`6851`)
+  
+-------------------------------------------------------------------
 Fri Aug  9 18:08:12 UTC 2013 - aboe76@gmail.com
 
 - Update 0.16.3 bugfix release:
