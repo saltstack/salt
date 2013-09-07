@@ -52,6 +52,7 @@ def _get_return(ret):
 def start(name='all', user=None, conf_file=None, bin_env=None):
     '''
     Start the named service.
+    Process group names should not include a trailing asterisk.
 
     user
         user to run supervisorctl as
@@ -65,6 +66,7 @@ def start(name='all', user=None, conf_file=None, bin_env=None):
     .. code-block:: bash
 
         salt '*' supervisord.start <service>
+        salt '*' supervisord.start <group>:
     '''
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('start', name, conf_file, bin_env), runas=user
@@ -75,6 +77,7 @@ def start(name='all', user=None, conf_file=None, bin_env=None):
 def restart(name='all', user=None, conf_file=None, bin_env=None):
     '''
     Restart the named service.
+    Process group names should not include a trailing asterisk.
 
     user
         user to run supervisorctl as
@@ -88,6 +91,7 @@ def restart(name='all', user=None, conf_file=None, bin_env=None):
     .. code-block:: bash
 
         salt '*' supervisord.restart <service>
+        salt '*' supervisord.restart <group>:
     '''
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('restart', name, conf_file, bin_env), runas=user
@@ -98,6 +102,7 @@ def restart(name='all', user=None, conf_file=None, bin_env=None):
 def stop(name='all', user=None, conf_file=None, bin_env=None):
     '''
     Stop the named service.
+    Process group names should not include a trailing asterisk.
 
     user
         user to run supervisorctl as
@@ -111,6 +116,7 @@ def stop(name='all', user=None, conf_file=None, bin_env=None):
     .. code-block:: bash
 
         salt '*' supervisord.stop <service>
+        salt '*' supervisord.stop <group>:
     '''
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('stop', name, conf_file, bin_env), runas=user
@@ -135,6 +141,8 @@ def add(name, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.add <name>
     '''
+    if name.endswith(':'):
+        name = name[:-1]
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('add', name, conf_file, bin_env), runas=user
     )
@@ -158,6 +166,8 @@ def remove(name, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.remove <name>
     '''
+    if name.endswith(':'):
+        name = name[:-1]
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('remove', name, conf_file, bin_env), runas=user
     )
