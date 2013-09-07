@@ -1,16 +1,22 @@
 '''
 Manages configuration files via augeas
 
-:depends:   - Augeas Python adapter
+:strong:`NOTE:` This state requires the ``augeas`` Python module.
 '''
 
-# Load third party libs
+# Import python libs
+import os
+
+# Make sure augeas python interface is installed
 HAS_AUGEAS = False
 try:
     from augeas import Augeas
     HAS_AUGEAS = True
 except ImportError:
     pass
+
+# Import salt libs
+from salt.exceptions import SaltInvocationError
 
 
 def __virtual__():
@@ -125,21 +131,25 @@ def setvalue(*args):
     tuples = filter(lambda x: not x.startswith('prefix='), args)
     prefix = filter(lambda x: x.startswith('prefix='), args)
     if prefix:
-        prefix = prefix[0].split('=', 1)[1]
+        if len(prefix) > 1:
+            raise SaltInvocationError(
+                'Only one \'prefix=\' value is permitted'
+            )
+        else:
+            prefix = prefix[0].split('=', 1)[1]
 
     if len(tuples) % 2 != 0:
-        return ret  # ensure we have multiple of twos
+        raise SaltInvocationError('Uneven number of path/value arguments')
 
     tuple_iter = iter(tuples)
-
     for path, value in zip(tuple_iter, tuple_iter):
         target_path = path
         if prefix:
-            target_path = "{0}/{1}".format(prefix.rstrip('/'), path.lstrip('/'))
+            target_path = os.path.join(prefix.rstrip('/'), path.lstrip('/'))
         try:
             aug.set(target_path, str(value))
         except ValueError as err:
-            ret['error'] = "Multiple values: " + str(err)
+            ret['error'] = 'Multiple values: {0}'.format(err)
 
     try:
         aug.save()
