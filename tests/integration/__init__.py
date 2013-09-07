@@ -619,7 +619,9 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        know_to_return_none = ('file.chown', 'file.chgrp')
+        know_to_return_none = (
+            'file.chown', 'file.chgrp', 'ssh.recv_known_host'
+        )
         orig = self.client.cmd(
             minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )

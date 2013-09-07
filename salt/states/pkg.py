@@ -390,6 +390,8 @@ def installed(
                                      for x in targets])
             comment = 'The following packages are set to be ' \
                       'installed/updated: {0}.'.format(summary)
+        else:
+            comment = ''
         return {'name': name,
                 'changes': {},
                 'result': None,

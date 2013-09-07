@@ -2062,10 +2062,12 @@ def get_devmm(name):
        salt '*' file.get_devmm /dev/ttyUSB0
     '''
     if is_chrdev(name) or is_blkdev(name):
-       stat_structure = os.stat(name)
-       return (os.major(stat_structure.st_rdev),os.minor(stat_structure.st_rdev))
+        stat_structure = os.stat(name)
+        return (
+                os.major(stat_structure.st_rdev),
+                os.minor(stat_structure.st_rdev))
     else:
-       return (0,0)
+        return (0, 0)
 
 
 def is_chrdev(name):
@@ -2123,11 +2125,12 @@ def mknod_chrdev(name,
                 ret['changes'] = {'new' : 'Character device {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
-        #be happy it is already there....however, if you are trying to change the major/minor, you will need to unlink it first as os.mknod will not overwrite
+        # be happy it is already there....however, if you are trying to change the
+        # major/minor, you will need to unlink it first as os.mknod will not overwrite
         if exc.errno != errno.EEXIST:
             raise
         else:
-           ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
+            ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
     #quick pass at verifying the permissions of the newly created character device
     check_perms(name,
                 None,
@@ -2191,11 +2194,12 @@ def mknod_blkdev(name,
                 ret['changes'] = {'new' : 'Block device {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
-        #be happy it is already there....however, if you are trying to change the major/minor, you will need to unlink it first as os.mknod will not overwrite
+        # be happy it is already there....however, if you are trying to change the
+        # major/minor, you will need to unlink it first as os.mknod will not overwrite
         if exc.errno != errno.EEXIST:
             raise
         else:
-           ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
+            ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
     #quick pass at verifying the permissions of the newly created block device
     check_perms(name,
                 None,
@@ -2248,7 +2252,7 @@ def mknod_fifo(name,
             ret['changes'] = {'new' : 'Fifo pipe {0} created.'.format(name)}
             ret['result'] = None
         else:
-            if os.mkfifo(name,int(str(mode).lstrip('0'),8)) is None:
+            if os.mkfifo(name, int(str(mode).lstrip('0'), 8)) is None:
                 ret['changes'] = {'new' : 'Fifo pipe {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
@@ -2256,7 +2260,7 @@ def mknod_fifo(name,
         if exc.errno != errno.EEXIST:
             raise
         else:
-           ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
+            ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
     #quick pass at verifying the permissions of the newly created fifo
     check_perms(name,
                 None,
@@ -2296,14 +2300,14 @@ def mknod(name,
                            group,
                            mode)
     elif ntype == 'b':
-         ret = mknod_blkdev(name,
+        ret = mknod_blkdev(name,
                             major,
                             minor,
                             user,
                             group,
                             mode)
     elif ntype == 'p':
-         ret = mknod_fifo(name,
+        ret = mknod_fifo(name,
                           user,
                           group,
                           mode)

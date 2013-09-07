@@ -12,6 +12,8 @@ Full list of builtin state modules
 
     alias
     alternatives
+    apt
+    augeas
     cmd
     cron
     debconfmod
