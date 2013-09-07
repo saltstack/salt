@@ -1,6 +1,6 @@
 '''
-Operations on files, directories and symlinks.
-==============================================
+Operations on regular files, special files, directories, and symlinks.
+=======================================================================
 
 Salt States can aggressively manipulate files on a system. There are a number
 of ways in which files can be managed.
@@ -61,6 +61,51 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - user: foo
         - group: users
         - mode: 644
+
+Special files can managed via the ``mknod`` function. This function will create
+and enforce the permissions on a special file. The function supports the creation 
+of character devices, block devices, and fifo pipes. The function will create 
+the directory structure up to the special file if it is needed on the minion. 
+The function will not overwrite or operate on (change major/minor numbers) existing 
+special files with the exception of user, group, and permissions. In most cases 
+the creation of some special files require root permisisons on the minion. This 
+would require that the minion to be run as the root user. 
+Here is an example of a character device:
+
+.. code-block:: yaml
+
+    /var/named/chroot/dev/random:
+      file.mknod:
+        - ntype: c
+        - major: 1
+        - minor: 8
+        - user: named
+        - group: named
+        - mode: 660
+
+Here is an example of a block device:
+
+.. code-block:: yaml
+
+    /var/named/chroot/dev/loop0:
+      file.mknod:
+        - ntype: b
+        - major: 7
+        - minor: 0
+        - user: named
+        - group: named
+        - mode: 660
+
+Here is an example of a fifo pipe:
+
+.. code-block:: yaml
+
+    /var/named/chroot/var/log/logfifo:
+      file.mknod:
+        - ntype: p
+        - user: named
+        - group: named
+        - mode: 660
 
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
@@ -2496,7 +2541,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                 ret['comment'] = "Character device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
             #check the perms
             else:
-                ret, perms = __salt__['file.check_perms'](name, None, user, group, mode)
+                ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
                 if not ret['changes']:
                     ret['comment'] = "Character device {0} is in the correct state".format(name)
 
@@ -2516,7 +2561,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                 ret['comment'] = "Block device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
             #check the perms
             else:
-                ret, perms = __salt__['file.check_perms'](name, None, user, group, mode)
+                ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
                 if not ret['changes']:
                     ret['comment'] = "Block device {0} is in the correct state".format(name)
 
@@ -2531,7 +2576,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
         #check the perms
         else:
-            ret, perms = __salt__['file.check_perms'](name, None, user, group, mode)
+            ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
             if not ret['changes']:
                 ret['comment'] = "Fifo pipe {0} is in the correct state".format(name)
 
