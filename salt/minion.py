@@ -12,6 +12,7 @@ import copy
 import os
 import hashlib
 import re
+import types
 import threading
 import time
 import traceback
@@ -643,7 +644,23 @@ class Minion(object):
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
-                ret['return'] = func(*args, **kwargs)
+                return_data = func(*args, **kwargs)
+                if isinstance(return_data, types.GeneratorType):
+                    ind = 0
+                    iret = {}
+                    for single in return_data:
+                        if isinstance(single, dict) and isinstance(iret, list):
+                            iret.update(single)
+                        else:
+                            if not iret:
+                                iret = []
+                            iret.append(single)
+                        tag = tagify([data['jid'], 'ret', opts['id'], ind])
+                        minion_instance._fire_master({'return': single}, tag)
+                        ind += 1
+                    ret['return'] = iret
+                else:
+                    ret['return'] = return_data
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
                     'retcode',
                     0
