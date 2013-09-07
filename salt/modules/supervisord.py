@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Provide the service module for system supervisord or supervisord in a virtualenv
+Provide the service module for system supervisord or supervisord in a
+virtualenv
 '''
 
 # Import python libs
@@ -19,7 +20,9 @@ def _get_supervisorctl_bin(bin_env):
     if not bin_env:
         which_result = __salt__['cmd.which_bin']([cmd])
         if which_result is None:
-            raise CommandNotFoundError('Could not find a `{0}` binary'.format(cmd))
+            raise CommandNotFoundError(
+                'Could not find a `{0}` binary'.format(cmd)
+            )
         return which_result
 
     # try to get binary from env
@@ -59,7 +62,8 @@ def start(name='all', user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -84,7 +88,8 @@ def restart(name='all', user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -109,7 +114,8 @@ def stop(name='all', user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -133,7 +139,8 @@ def add(name, user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -158,7 +165,8 @@ def remove(name, user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -183,7 +191,8 @@ def reread(user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -206,7 +215,8 @@ def update(user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -229,7 +239,8 @@ def status(name=None, user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -256,7 +267,8 @@ def status_raw(name=None, user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -279,7 +291,8 @@ def custom(command, user=None, conf_file=None, bin_env=None):
     conf_file
         path to supervisorctl config file
     bin_env
-        path to supervisorctl bin or path to virtualenv with supervisor installed
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
 
     CLI Example:
 
@@ -287,5 +300,7 @@ def custom(command, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.custom "mstop '*gunicorn*'"
     '''
-    ret = __salt__['cmd.run_all'](_ctl_cmd(command, None, conf_file, bin_env), runas=user)
+    ret = __salt__['cmd.run_all'](
+        _ctl_cmd(command, None, conf_file, bin_env), runas=user
+    )
     return _get_return(ret)
