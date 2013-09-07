@@ -54,7 +54,7 @@ def __virtual__():
     return 'augeas' if 'augeas.setvalue' in __salt__ else False
 
 
-def setvalue(name, prefix=None, changes=[], **kwargs):
+def setvalue(name, prefix=None, changes=None, **kwargs):
     '''
     Set a value for a specific augeas path
     '''
@@ -62,7 +62,7 @@ def setvalue(name, prefix=None, changes=[], **kwargs):
 
     args = []
     if not changes:
-        ret['comment'] = '\'changes\' must be specified and not empty'
+        ret['comment'] = '\'changes\' must be specified'
         return ret
     else:
         if not isinstance(changes, list):
