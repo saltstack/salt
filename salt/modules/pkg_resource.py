@@ -219,38 +219,6 @@ def _verify_binary_pkg(srcinfo):
     return problems
 
 
-def check_desired(desired=None):
-    '''
-    Examines desired package names to make sure they were formatted properly.
-    Returns a list of problems encountered.
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' pkg_resource.check_desired
-    '''
-    problems = []
-
-    # If minion is Gentoo-based, ensure packages are properly submitted as
-    # category/pkgname. For any package that does not follow this format, offer
-    # matches from the portage tree.
-    if __grains__['os_family'] == 'Gentoo':
-        for pkg in (desired or []):
-            if '/' not in pkg:
-                matches = __salt__['pkg.porttree_matches'](pkg)
-                if matches:
-                    msg = 'Package category missing for "{0}" (possible ' \
-                          'matches: {1}).'.format(pkg, ', '.join(matches))
-                else:
-                    msg = 'Package category missing for "{0}" and no match ' \
-                          'found in portage tree.'.format(pkg)
-                log.error(msg)
-                problems.append(msg)
-
-    return problems
-
-
 def parse_targets(name=None, pkgs=None, sources=None, **kwargs):
     '''
     Parses the input to pkg.install and returns back the package(s) to be
