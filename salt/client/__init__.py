@@ -1220,6 +1220,39 @@ class LocalClient(object):
             del self.event
 
 
+class SSHClient(object):
+    '''
+    Create a client object for executing routines via the salt-ssh backend
+    '''
+    def __init__(self,
+                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
+                 mopts=None):
+        if mopts:
+            self.opts = mopts
+        else:
+            self.opts = salt.config.client_config(c_path)
+        self.salt_user = self.__get_user()
+
+    def cmd_iter(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            kwarg=None,
+            **kwargs):
+        '''
+        Execute a single command via the salt-ssh subsystem
+        '''
+        arg = condition_kwarg(arg, kwarg)
+        self.opts['arg_str'] = '{0} {1}'.format(fun, ' '.join(arg))
+        self.opts['selected_target_option'] = expr_form
+        ssh = salt.client.ssh.SSH(self.opts)
+        for ret in ssh.run_iter():
+            yield ret
+
+
 class FunctionWrapper(dict):
     '''
     Create a function wrapper that looks like the functions dict on the minion
