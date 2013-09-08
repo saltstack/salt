@@ -79,8 +79,8 @@ def echo_parseable_environment(platform, provider):
         'JENKINS_SALTCLOUD_VM_PROVIDER={provider}\n'
         'JENKINS_SALTCLOUD_VM_PLATFORM={platform}\n'
         'JENKINS_SALTCLOUD_VM_NAME={name}\n').format(name=name,
-                                                       provider=provider,
-                                                       platform=platform)
+                                                     provider=provider,
+                                                     platform=platform)
     sys.stdout.write(output)
     sys.stdout.flush()
 
@@ -92,13 +92,10 @@ def download_unittest_reports(vm_name):
     os.makedirs('xml-test-reports')
 
     cmds = (
-        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' '
-            'cwd=/tmp/salt-tests-tmpdir/xml-test-reports/',
+        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\ cwd=/tmp/salt-tests-tmpdir/xml-test-reports/',
         'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
-        'tar zxvf /var/cache/salt/master/minions/{0}/files/tmp/'
-            'xml-test-reports.tar.gz -C xml-test-reports',
-        'rm /var/cache/salt/master/minions/{0}/files/tmp/'
-            'xml-test-reports.tar.gz'
+        'tar zxvf /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz -C xml-test-reports',
+        'rm /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz'
     )
 
     for cmd in cmds:
@@ -124,8 +121,7 @@ def download_unittest_reports(vm_name):
 def download_coverage_report(vm_name):
     cmds = (
         'salt {0} cp.push /tmp/coverage.xml',
-        'mv /var/cache/salt/master/minions/{0}/files/tmp/'
-            'coverage.xml .',
+        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml .',
     )
 
     for cmd in cmds:
