@@ -121,6 +121,34 @@ def download_unittest_reports(vm_name):
                 )
             )
 
+def download_coverage_report(vm_name):
+    cmds = (
+        'salt {0} cp.push /tmp/coverage.xml',
+        'mv /var/cache/salt/master/minions/{0}/files/tmp/'
+            'coverage.xml .',
+    )
+
+    for cmd in cmds:
+        print('Running CMD: {0}'.format(cmd.format(vm_name)))
+        sys.stdout.flush()
+
+        proc = NonBlockingPopen(
+            cmd.format(vm_name),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
+            print(
+                'Failed to download coverage report: Exit code: {0}'.format(
+                    proc.returncode
+                )
+            )
+
+
 
 def run(opts):
     '''
@@ -255,7 +283,12 @@ def parse():
     parser.add_option(
         '--download-unittest-reports',
         default=os.environ.get('JENKINS_SALTCLOUD_VM_NAME', None),
-        help='Delete a running VM'
+        help='Download the XML unittest results'
+    )
+    parser.add_option(
+        '--download-coverage-report',
+        default=os.environ.get('JENKINS_SALTCLOUD_VM_NAME', None),
+        help='Download the XML coverage reports'
     )
 
     options, args = parser.parse_args()
@@ -266,6 +299,10 @@ def parse():
 
     if options.download_unittest_reports is not None and not options.commit:
         download_unittest_reports(options.download_unittest_reports)
+        parser.exit(0)
+
+    if options.download_coverage_report is not None and not options.commit:
+        download_coverage_report(options.download_coverage_report)
         parser.exit(0)
 
     if not options.platform:
