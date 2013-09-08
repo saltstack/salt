@@ -1508,12 +1508,12 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
         self.add_option(
-            '-d', '--doc', '--documentation',
-            dest='doc',
+            '-r', '--raw', '--raw-shell',
+            dest='raw_shell',
             default=False,
             action='store_true',
-            help=('Display documentation for runners, pass a module or a '
-                  'runner to see documentation on only that module/runner.')
+            help=('Don\'t execute a salt routine on the targets, execute a '
+                  'raw shell command')
         )
 
     def _mixin_after_parsed(self):
