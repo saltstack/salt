@@ -81,7 +81,11 @@ def _fulfills_version_spec(versions, oper, desired_version):
     return False
 
 
-def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
+def _find_install_targets(name=None,
+                          version=None,
+                          pkgs=None,
+                          sources=None,
+                          **kwargs):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
     be installed. Return a dict of desired packages
@@ -143,12 +147,29 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
     if sources:
         targets = [x for x in desired if x not in cur_pkgs]
     else:
-        problems = __salt__['pkg_resource.check_desired'](desired)
-        if problems:
+        # Perform platform-specific pre-flight checks
+        problems = _preflight_check(desired, **kwargs)
+        comments = []
+        if problems.get('no_suggest'):
+            comments.append(
+                'The following package(s) were not found, and no possible '
+                'matches were found in the package db: '
+                '{0}'.format(', '.join(sorted(problems['no_suggest'])))
+            )
+        if problems.get('suggest'):
+            for pkgname, suggestions in problems['suggest'].iteritems():
+                comments.append(
+                    'Package {0!r} not found (possible matches: {1})'
+                    .format(pkgname, ', '.join(suggestions))
+                )
+        if comments:
+            if len(comments) > 1:
+                comments.append('')
             return {'name': name,
                     'changes': {},
                     'result': False,
-                    'comment': ' '.join(problems)}
+                    'comment': '. '.join(comments).rstrip()}
+
         # Check current versions against desired versions
         targets = {}
         problems = []
@@ -243,6 +264,25 @@ def _get_desired_pkg(name, desired):
         oper = '='
     return '{0}{1}{2}'.format(name, oper,
                               '' if not desired[name] else desired[name])
+
+
+def _preflight_check(desired, fromrepo, **kwargs):
+    '''
+    Perform platform-specifc checks on desired packages
+    '''
+    if 'pkg.check_db' not in __salt__:
+        return {}
+    ret = {'suggest': {}, 'no_suggest': []}
+    pkginfo = __salt__['pkg.check_db'](
+        *desired.keys(), fromrepo=fromrepo, **kwargs
+    )
+    for pkgname in pkginfo:
+        if pkginfo[pkgname]['found'] is False:
+            if pkginfo[pkgname]['suggestions']:
+                ret['suggest'][pkgname] = pkginfo[pkgname]['suggestions']
+            else:
+                ret['no_suggest'].append(pkgname)
+    return ret
 
 
 def installed(
@@ -368,7 +408,8 @@ def installed(
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
 
-    result = _find_install_targets(name, version, pkgs, sources)
+    result = _find_install_targets(name, version, pkgs, sources,
+                                   fromrepo=fromrepo, **kwargs)
     try:
         desired, targets = result
     except ValueError:
