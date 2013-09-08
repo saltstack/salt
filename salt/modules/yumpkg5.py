@@ -122,16 +122,17 @@ def _get_repo_options(**kwargs):
 
     repo_arg = ''
     if fromrepo:
-        log.info('Restricting to repo "{0}"'.format(fromrepo))
-        repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
+        log.info('Restricting to repo {0!r}'.format(fromrepo))
+        repo_arg = ('--disablerepo={0!r} --enablerepo={1!r}'
+                    .format('*', fromrepo))
     else:
         repo_arg = ''
         if disablerepo:
-            log.info('Disabling repo "{0}"'.format(disablerepo))
-            repo_arg += '--disablerepo="{0}" '.format(disablerepo)
+            log.info('Disabling repo {0!r}'.format(disablerepo))
+            repo_arg += '--disablerepo={0!r} '.format(disablerepo)
         if enablerepo:
-            log.info('Enabling repo "{0}"'.format(enablerepo))
-            repo_arg += '--enablerepo="{0}" '.format(enablerepo)
+            log.info('Enabling repo {0!r}'.format(enablerepo))
+            repo_arg += '--enablerepo={0!r} '.format(enablerepo)
     return repo_arg
 
 
@@ -165,7 +166,7 @@ def latest_version(*names, **kwargs):
 
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
-    updates = _repoquery('{0} --pkgnarrow=available --queryformat "{1}" '
+    updates = _repoquery('{0} --pkgnarrow=available --queryformat {1!r} '
                          '{2}'.format(repo_arg,
                                       __QUERYFORMAT,
                                       ' '.join(names)))
@@ -258,6 +259,49 @@ def list_upgrades(refresh=True, **kwargs):
     updates = _repoquery('{0} --all --pkgnarrow=updates --queryformat '
                          '"{1}"'.format(repo_arg, __QUERYFORMAT))
     return dict([(x.name, x.version) for x in updates])
+
+
+def check_db(*names, **kwargs):
+    '''
+    .. versionadded:: 0.17.0
+
+    Returns a dict containing the following information for each specified
+    package:
+
+    1. A key ``found``, which will be a boolean value denoting if a match was
+       found in the package database.
+    2. If ``found`` is ``False``, then a second key called ``suggestions`` will
+       be present, which will contain a list of possible matches.
+
+    The ``fromrepo``, ``enablerepo``, and ``disablerepo`` arguments are
+    supported, as used in pkg states.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.check_db <package1> <package2> <package3>
+        salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
+    '''
+    repo_arg = _get_repo_options(**kwargs)
+    deplist_base = 'yum {0} deplist --quiet'.format(repo_arg) + ' {0!r}'
+    repoquery_base = ('{0} -a --quiet --whatprovides --queryformat '
+                      '{1!r}'.format(repo_arg, __QUERYFORMAT))
+
+    ret = {}
+    for name in names:
+        ret.setdefault(name, {})['found'] = bool(
+            __salt__['cmd.run'](deplist_base.format(name))
+        )
+        if ret[name]['found'] is False:
+            repoquery_cmd = repoquery_base + ' {0!r}'.format(name)
+            provides = set([x.name for x in _repoquery(repoquery_cmd)])
+            if provides:
+                for pkg in provides:
+                    ret[name]['suggestions'] = list(provides)
+            else:
+                ret[name]['suggestions'] = []
+    return ret
 
 
 def refresh_db():
