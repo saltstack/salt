@@ -280,17 +280,17 @@ def parse():
     )
     parser.add_option(
         '--delete-vm',
-        default=os.environ.get('JENKINS_SALTCLOUD_VM_NAME', None),
+        default=None,
         help='Delete a running VM'
     )
     parser.add_option(
         '--download-unittest-reports',
-        default=os.environ.get('JENKINS_SALTCLOUD_VM_NAME', None),
+        default=None,
         help='Download the XML unittest results'
     )
     parser.add_option(
         '--download-coverage-report',
-        default=os.environ.get('JENKINS_SALTCLOUD_VM_NAME', None),
+        default=None,
         help='Download the XML coverage reports'
     )
 
