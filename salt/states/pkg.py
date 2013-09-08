@@ -81,7 +81,11 @@ def _fulfills_version_spec(versions, oper, desired_version):
     return False
 
 
-def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
+def _find_install_targets(name=None,
+                          version=None,
+                          pkgs=None,
+                          sources=None,
+                          **kwargs):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
     be installed. Return a dict of desired packages
@@ -144,7 +148,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
         targets = [x for x in desired if x not in cur_pkgs]
     else:
         # Perform platform-specific pre-flight checks
-        problems = _preflight_check(desired)
+        problems = _preflight_check(desired, **kwargs)
         comments = []
         if problems.get('no_suggest'):
             comments.append(
@@ -262,14 +266,16 @@ def _get_desired_pkg(name, desired):
                               '' if not desired[name] else desired[name])
 
 
-def _preflight_check(desired):
+def _preflight_check(desired, fromrepo, **kwargs):
     '''
     Perform platform-specifc checks on desired packages
     '''
-    if 'pkg.checkdb' not in __salt__:
+    if 'pkg.check_db' not in __salt__:
         return {}
     ret = {'suggest': {}, 'no_suggest': []}
-    pkginfo = __salt__['pkg.checkdb'](*desired.keys())
+    pkginfo = __salt__['pkg.check_db'](
+        *desired.keys(), fromrepo=fromrepo, **kwargs
+    )
     for pkgname in pkginfo:
         if pkginfo[pkgname]['found'] is False:
             if pkginfo[pkgname]['suggestions']:
@@ -402,7 +408,8 @@ def installed(
     if not isinstance(version, basestring) and version is not None:
         version = str(version)
 
-    result = _find_install_targets(name, version, pkgs, sources)
+    result = _find_install_targets(name, version, pkgs, sources,
+                                   fromrepo=fromrepo, **kwargs)
     try:
         desired, targets = result
     except ValueError:

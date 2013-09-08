@@ -101,7 +101,7 @@ def _process_emerge_err(stderr):
     return ret
 
 
-def checkdb(*names):
+def check_db(*names, **kwargs):
     '''
     .. versionadded:: 0.17.0
 
@@ -120,12 +120,14 @@ def checkdb(*names):
 
     .. code-block:: bash
 
-        salt '*' pkg.checkdb <package1> <package2> <package3>
+        salt '*' pkg.check_db <package1> <package2> <package3>
     '''
+    ### NOTE: kwargs is not used here but needs to be present due to it being
+    ### required in the check_db function in other package providers.
     ret = {}
     for name in names:
         if name in ret:
-            log.warning('pkg.checkdb: Duplicate package name {0!r} '
+            log.warning('pkg.check_db: Duplicate package name {0!r} '
                         'submitted'.format(name))
             continue
         if '/' not in name:
