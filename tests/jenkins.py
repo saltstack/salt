@@ -248,23 +248,23 @@ def parse():
     Parse the CLI options
     '''
     parser = optparse.OptionParser()
-    parser.add_option('--platform',
-        dest='platform',
+    parser.add_option(
+        '--platform',
         default=os.environ.get('JENKINS_SALTCLOUD_VM_PLATFORM', None),
         help='The target platform, choose from:\ncent6\ncent5\nubuntu12.04')
-    parser.add_option('--provider',
-        dest='provider',
+    parser.add_option(
+        '--provider',
         default=os.environ.get('JENKINS_SALTCLOUD_VM_PROVIDER', None),
         help='The vm provider')
-    parser.add_option('--commit',
-        dest='commit',
+    parser.add_option(
+        '--commit',
         help='The git commit to track')
-    parser.add_option('--sls',
-        dest='sls',
+    parser.add_option(
+        '--sls',
         default='testrun',
         help='The sls file to execute')
-    parser.add_option('--pillar',
-        dest='pillar',
+    parser.add_option(
+        '--pillar',
         default='{{git_commit: {commit}}}',
         help='Pillar values to pass to the sls file')
     parser.add_option('--no-clean',
@@ -301,11 +301,17 @@ def parse():
         parser.exit(0)
 
     if options.download_unittest_reports is not None and not options.commit:
-        download_unittest_reports(options.download_unittest_reports)
+        try:
+            download_unittest_reports(options.download_unittest_reports)
+        except Exception as exc:
+            print 'Caught exception while downloading unittest reports', exc
         parser.exit(0)
 
     if options.download_coverage_report is not None and not options.commit:
-        download_coverage_report(options.download_coverage_report)
+        try:
+            download_coverage_report(options.download_coverage_report)
+        except Exception as exc:
+            print 'Caught exception while downloading coverage reports', exc
         parser.exit(0)
 
     if not options.platform:
