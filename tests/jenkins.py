@@ -86,13 +86,16 @@ def echo_parseable_environment(platform, provider):
 
 
 def download_unittest_reports(vm_name):
+    print('Downloading remote unittest reports...')
+    sys.stdout.flush()
+
     if os.path.isdir('xml-test-reports'):
         shutil.rmtree('xml-test-reports')
 
     os.makedirs('xml-test-reports')
 
     cmds = (
-        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\ cwd=/tmp/salt-tests-tmpdir/xml-test-reports/',
+        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/salt-tests-tmpdir/xml-test-reports/',
         'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
         'tar zxvf /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz -C xml-test-reports',
         'rm /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz'
@@ -120,17 +123,21 @@ def download_unittest_reports(vm_name):
 
 
 def download_coverage_report(vm_name):
+    print('Downloading remote coverage report...')
+    sys.stdout.flush()
+
     cmds = (
         'salt {0} cp.push /tmp/coverage.xml',
-        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml .',
+        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml {1}'
     )
 
     for cmd in cmds:
-        print('Running CMD: {0}'.format(cmd.format(vm_name)))
+        cmd = cmd.format(vm_name, os.environ.get('WORKSPACE', '.'))
+        print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
         proc = NonBlockingPopen(
-            cmd.format(vm_name),
+            cmd,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
