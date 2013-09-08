@@ -58,6 +58,15 @@ def _p_to_cp(p):
     return None
 
 
+def _allnodes():
+    if 'portage._allnodes' in __context__:
+        return __context__['portage._allnodes']
+    else:
+        ret = _porttree().getallnodes()
+        __context__['portage._allnodes'] = ret
+        return ret
+
+
 def _cpv_to_cp(cpv):
     ret = portage.cpv_getkey(cpv)
     if ret:
@@ -89,6 +98,45 @@ def _process_emerge_err(stderr):
         elif 'The following mask changes' in section:
             changes['mask'] = rexp.findall(section)
     ret['changes'] = changes
+    return ret
+
+
+def check_db(*names, **kwargs):
+    '''
+    .. versionadded:: 0.17.0
+
+    Returns a dict containing the following information for each specified
+    package:
+
+    1. A key ``found``, which will be a boolean value denoting if a match was
+       found in the package database.
+    2. If ``found`` is ``False``, then a second key called ``suggestions`` will
+       be present, which will contain a list of possible matches. This list
+       will be empty if the package name was specified in ``category/pkgname``
+       format, since the suggestions are only intended to disambiguate
+       ambiguous package names (ones submitted without a category).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.check_db <package1> <package2> <package3>
+    '''
+    ### NOTE: kwargs is not used here but needs to be present due to it being
+    ### required in the check_db function in other package providers.
+    ret = {}
+    for name in names:
+        if name in ret:
+            log.warning('pkg.check_db: Duplicate package name {0!r} '
+                        'submitted'.format(name))
+            continue
+        if '/' not in name:
+            ret.setdefault(name, {})['found'] = False
+            ret[name]['suggestions'] = porttree_matches(name)
+        else:
+            ret.setdefault(name, {})['found'] = name in _allnodes()
+            if ret[name]['found'] is False:
+                ret[name]['suggestions'] = []
     return ret
 
 
