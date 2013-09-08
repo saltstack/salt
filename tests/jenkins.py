@@ -75,9 +75,9 @@ def echo_parseable_environment(platform, provider):
     '''
     name = generate_vm_name(platform)
     output = (
-        'JENKINS_SALTCLOUD_VM_PROVIDER="{provider}"\n'
-        'JENKINS_SALTCLOUD_VM_PLATFORM="{platform}"\n'
-        'JENKINS_SALTCLOUD_VM_NAME="{name}"\n').format(name=name,
+        'JENKINS_SALTCLOUD_VM_PROVIDER={provider}\n'
+        'JENKINS_SALTCLOUD_VM_PLATFORM={platform}\n'
+        'JENKINS_SALTCLOUD_VM_NAME={name}\n').format(name=name,
                                                        provider=provider,
                                                        platform=platform)
     sys.stdout.write(output)
