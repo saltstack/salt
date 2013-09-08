@@ -32,6 +32,7 @@ The data structure needs to be:
 import os
 import glob
 import time
+import copy
 import getpass
 
 # Import salt libs
@@ -1233,6 +1234,26 @@ class SSHClient(object):
             self.opts = salt.config.client_config(c_path)
         self.salt_user = self.__get_user()
 
+    def _prep_ssh(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            kwarg=None,
+            **kwargs):
+        '''
+        Prepare the arguments
+        '''
+        opts = copy.deepcopy(self.opts)
+        opts.update(kwargs)
+        opts['timeout'] = timeout
+        arg = condition_kwarg(arg, kwarg)
+        opts['arg_str'] = '{0} {1}'.format(fun, ' '.join(arg))
+        opts['selected_target_option'] = expr_form
+        return salt.client.ssh.SSH(opts)
+
     def cmd_iter(
             self,
             tgt,
@@ -1243,14 +1264,45 @@ class SSHClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Execute a single command via the salt-ssh subsystem
+        Execute a single command via the salt-ssh subsystem and return a
+        generator
         '''
-        arg = condition_kwarg(arg, kwarg)
-        self.opts['arg_str'] = '{0} {1}'.format(fun, ' '.join(arg))
-        self.opts['selected_target_option'] = expr_form
-        ssh = salt.client.ssh.SSH(self.opts)
+        ssh = self._prep_ssh(
+                tgt,
+                fun,
+                arg,
+                timeout,
+                expr_form,
+                kwarg,
+                **kwargs)
         for ret in ssh.run_iter():
             yield ret
+
+    def cmd(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            kwarg=None,
+            **kwargs):
+        '''
+        Execute a single command via the salt-ssh subsystem and return all
+        routines at once
+        '''
+        ssh = self._prep_ssh(
+                tgt,
+                fun,
+                arg,
+                timeout,
+                expr_form,
+                kwarg,
+                **kwargs)
+        final = {}
+        for ret in ssh.run_iter():
+            final.update(ret)
+        return final
 
 
 class FunctionWrapper(dict):
