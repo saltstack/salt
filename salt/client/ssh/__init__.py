@@ -277,6 +277,13 @@ class SSH(object):
             if len(rets) >= len(self.targets):
                 break
 
+    def run_iter(self):
+        '''
+        Execute and yield returns as they come in, do not print to the display
+        '''
+        for ret in self.handle_ssh():
+            yield ret
+
     def run(self):
         '''
         Execute the overall routine
