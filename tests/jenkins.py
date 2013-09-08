@@ -106,7 +106,7 @@ def download_unittest_reports(vm_name):
             cmd.format(vm_name),
             shell=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE,
             stream_stds=True
         )
         proc.poll_and_read_until_finish()
@@ -117,6 +117,7 @@ def download_unittest_reports(vm_name):
                     proc.returncode
                 )
             )
+
 
 def download_coverage_report(vm_name):
     cmds = (
@@ -132,7 +133,7 @@ def download_coverage_report(vm_name):
             cmd.format(vm_name),
             shell=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE,
             stream_stds=True
         )
         proc.poll_and_read_until_finish()
@@ -143,7 +144,6 @@ def download_coverage_report(vm_name):
                     proc.returncode
                 )
             )
-
 
 
 def run(opts):
