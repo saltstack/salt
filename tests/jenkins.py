@@ -12,6 +12,7 @@ import re
 import sys
 import time
 import random
+import shutil
 import hashlib
 import optparse
 import subprocess
@@ -82,6 +83,43 @@ def echo_parseable_environment(platform, provider):
                                                        platform=platform)
     sys.stdout.write(output)
     sys.stdout.flush()
+
+
+def download_unittest_reports(vm_name):
+    if os.path.isdir('xml-test-reports'):
+        shutil.rmtree('xml-test-reports')
+
+    os.makedirs('xml-test-reports')
+
+    cmds = (
+        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' '
+            'cwd=/tmp/salt-tests-tmpdir/xml-test-reports/',
+        'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
+        'tar zxvf /var/cache/salt/master/minions/{0}/files/tmp/'
+            'xml-test-reports.tar.gz -C xml-test-reports',
+        'rm /var/cache/salt/master/minions/{0}/files/tmp/'
+            'xml-test-reports.tar.gz'
+    )
+
+    for cmd in cmds:
+        print('Running CMD: {0}'.format(cmd.format(vm_name)))
+        sys.stdout.flush()
+
+        proc = NonBlockingPopen(
+            cmd.format(vm_name),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
+            print(
+                'Failed to download unittest data: Exit code: {0}'.format(
+                    proc.returncode
+                )
+            )
 
 
 def run(opts):
@@ -214,11 +252,20 @@ def parse():
         default=os.environ.get('JENKINS_SALTCLOUD_VM_NAME', None),
         help='Delete a running VM'
     )
+    parser.add_option(
+        '--download-unittest-reports',
+        default=os.environ.get('JENKINS_SALTCLOUD_VM_NAME', None),
+        help='Delete a running VM'
+    )
 
     options, args = parser.parse_args()
 
     if options.delete_vm is not None and not options.commit:
         delete_vm(options.delete_vm)
+        parser.exit(0)
+
+    if options.download_unittest_reports is not None and not options.commit:
+        download_unittest_reports(options.download_unittest_reports)
         parser.exit(0)
 
     if not options.platform:
