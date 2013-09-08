@@ -225,7 +225,7 @@ class SSH(object):
                 else:
                     ret['ret'] = data
         except Exception:
-            ret['ret'] = 'Bad Return'
+            ret['ret'] = stdout
         que.put(ret)
 
     def handle_ssh(self):
@@ -369,7 +369,7 @@ class Single(object):
         3. Execute a wrapper func
         '''
         if self.opts.get('raw_shell'):
-            return self.shell.exec_cmd(self.opts['raw_shell'])
+            return self.shell.exec_cmd(self.arg_str)
         elif self.fun in self.wfuncs:
             # Ensure that opts/grains are up to date
             # Execute routine
