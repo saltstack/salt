@@ -62,7 +62,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
-def low(data, test=False):
+def low(data):
     '''
     Execute a single low data call
     This function is mostly intended for testing the state system
@@ -85,7 +85,7 @@ def low(data, test=False):
             file_refs)
     single = salt.client.ssh.Single(
             __opts__,
-            'state.pkg /tmp/salt_state.tgz test={0}'.format(test),
+            'state.pkg /tmp/salt_state.tgz',
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
@@ -114,7 +114,7 @@ def high(data):
             file_refs)
     single = salt.client.ssh.Single(
             __opts__,
-            'state.pkg /tmp/salt_state.tgz test={0}'.format(test),
+            'state.pkg /tmp/salt_state.tgz',
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
