@@ -1798,7 +1798,7 @@ class ClearFuncs(object):
                 return runner_client.async(
                         fun,
                         clear_load.get('kwarg', {}),
-                        clear_load.get('username', 'UNKNOWN'))
+                        clear_load.get('user', 'UNKNOWN'))
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1840,7 +1840,9 @@ class ClearFuncs(object):
             try:
                 fun = clear_load.pop('fun')
                 runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(fun, clear_load.get('kwarg', {}))
+                return runner_client.async(fun,
+                                           clear_load.get('kwarg', {}),
+                                           clear_load.get('user', 'UNKNOWN'))
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1884,11 +1886,20 @@ class ClearFuncs(object):
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
-
             try:
+                log.debug("ClearFunc.wheel with {0}".format(clear_load))
+                jid = salt.utils.gen_jid()
                 fun = clear_load.pop('fun')
-                return self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                data = {'fun': "wheel.{0}".format(fun),
+                            'jid': jid,
+                            'user': clear_load.get('user', 'UNKNOWN')}
+                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
+                ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
+                data['ret'] = ret
+                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))                
+                return data
             except Exception as exc:
+                log.error(exc)
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
                 return ''
@@ -1904,7 +1915,7 @@ class ClearFuncs(object):
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
             return ''
-
+        
         try:
             name = self.loadauth.load_name(clear_load)
             if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
@@ -1927,15 +1938,16 @@ class ClearFuncs(object):
                 return ''
 
             try:
-                fun = clear_load.pop('fun')
-                new_data = {'fun': clear_load['fun'],
-                            'user': clear_load.get('username', 'UNKNOWN')}
                 jid = salt.utils.gen_jid()
-                self.event.fire_event(new_data, tagify([jid, 'new'], 'wheel'))
+                fun = clear_load.pop('fun')
+                data = {'fun':  "wheel.{0}".format(fun),
+                            'jid': jid,
+                            'user': clear_load.get('user', 'UNKNOWN')}
+                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
-                ret_data = {'ret': ret,
-                            'user': clear_load.get('username', 'UNKNOWN')}
-                self.event.fire_event(ret_data, tagify([jid, 'ret'], 'wheel'))
+                data['ret'] = ret
+                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+                return data
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
