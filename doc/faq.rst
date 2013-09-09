@@ -19,21 +19,37 @@ Minions need to be able to connect to the master on TCP ports 4505 and 4506.
 Minions do not need any inbound ports open. More detailed information on
 firewall settings can be found :doc:`here </topics/tutorials/firewall>`.
 
-Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states.cmd.wait>`?
-----------------------------------------------------------------------------------------------------
+My script runs every time I run a :mod:`state.highstate <salt.states.state.highstate>`. Why?
+--------------------------------------------------------------------------------------------
 
-These states are often confused. A description of the difference between the
-two can be found in the docmentation for the :mod:`cmd states
-<salt.states.cmd>`.
+You are probably using :mod:`cmd.run <salt.states.cmd.run>` rather
+than :mod:`cmd.wait <salt.states.cmd.wait>`. :mod:`cmd.wait
+<salt.states.cmd.wait>` will only run when there has been a change in
+a state that it is watching.
 
-How does Salt guess the Minion's hostname?
-------------------------------------------
+A script using :mod:`cmd.run <salt.states.cmd.run>` will run every
+time (unless the unless or onlyif arguments prevent it).
 
-This process is explained in detail :ref:`here <minion-id-generation>`.
+More details can be found in :mod:`cmd states <salt.states.cmd>`.
 
-Why aren't my custom modules/states/etc. syncing to my Minions?
----------------------------------------------------------------
+How does Salt determine the Minion's id?
+----------------------------------------
 
-If you are using the :doc:`git fileserver backend </topics/tutorials/gitfs>`,
-and Salt 0.16.3 or older, then this may be due to a bug in gitfs. More
-information about this can be found :ref:`here <faq-gitfs-bug>`.
+If the minion id is not configured explicitly, salt will determine the
+id based on the hostname. Exactly how this is determined varies a
+little between operating systems and is described in detail :ref:`here
+<minion-id-generation>`.
+
+I'm using gitfs and my customg modules/states/etc are not syncing. Why?
+-----------------------------------------------------------------------
+
+In versions of Salt 0.16.3 or older, there is a bug in :doc:`gitfs
+</topics/tutorials/gitfs>`. Upgrading to 0.16.4 or new will fix this.
+
+Why aren't my custom modules/states/etc. available on my minions?
+-----------------------------------------------------------------
+
+Custom modules are only synced out to minions when either a
+`state.highstate` or `saltutil.sync_modules` runs. Similarly, custom
+states are only synced out to minions when a `state.highstate` or
+`saltutil.sync_states` runs.
