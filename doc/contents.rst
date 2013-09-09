@@ -26,6 +26,7 @@ Full Table of Contents
     topics/event/index
     topics/mine/*
     topics/virt/*
+    topics/ssh/*
     topics/tests/*
     topics/reactor/*
     topics/conventions/*
