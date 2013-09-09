@@ -319,6 +319,50 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
+def check_db(*names, **kwargs):
+    '''
+    .. versionadded:: 0.17.0
+
+    Returns a dict containing the following information for each specified
+    package:
+
+    1. A key ``found``, which will be a boolean value denoting if a match was
+       found in the package database.
+    2. If ``found`` is ``False``, then a second key called ``suggestions`` will
+       be present, which will contain a list of possible matches.
+
+    The ``fromrepo``, ``enablerepo``, and ``disablerepo`` arguments are
+    supported, as used in pkg states.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.check_db <package1> <package2> <package3>
+        salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
+    '''
+    yumbase = yum.YumBase()
+    error = _set_repo_options(yumbase, **kwargs)
+    if error:
+        log.error(error)
+        return {}
+
+    ret = {}
+    for name in names:
+        ret.setdefault(name, {})['found'] = bool(
+            [x for x in yumbase.searchPackages(('name',), (name,))
+             if x.name == name]
+        )
+        if ret[name]['found'] is False:
+            provides = yumbase.whatProvides(name, None, None).returnPackages()
+            if provides:
+                for pkg in provides:
+                    ret[name].setdefault('suggestions', []).append(pkg.name)
+            else:
+                ret[name]['suggestions'] = []
+    return ret
+
+
 def refresh_db():
     '''
     Since yum refreshes the database automatically, this runs a yum clean,

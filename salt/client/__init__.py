@@ -32,6 +32,7 @@ The data structure needs to be:
 import os
 import glob
 import time
+import copy
 import getpass
 
 # Import salt libs
@@ -1218,6 +1219,90 @@ class LocalClient(object):
         if hasattr(self, 'event'):
             # The call bellow will take care of calling 'self.event.destroy()'
             del self.event
+
+
+class SSHClient(object):
+    '''
+    Create a client object for executing routines via the salt-ssh backend
+    '''
+    def __init__(self,
+                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
+                 mopts=None):
+        if mopts:
+            self.opts = mopts
+        else:
+            self.opts = salt.config.client_config(c_path)
+        self.salt_user = self.__get_user()
+
+    def _prep_ssh(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            kwarg=None,
+            **kwargs):
+        '''
+        Prepare the arguments
+        '''
+        opts = copy.deepcopy(self.opts)
+        opts.update(kwargs)
+        opts['timeout'] = timeout
+        arg = condition_kwarg(arg, kwarg)
+        opts['arg_str'] = '{0} {1}'.format(fun, ' '.join(arg))
+        opts['selected_target_option'] = expr_form
+        return salt.client.ssh.SSH(opts)
+
+    def cmd_iter(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            kwarg=None,
+            **kwargs):
+        '''
+        Execute a single command via the salt-ssh subsystem and return a
+        generator
+        '''
+        ssh = self._prep_ssh(
+                tgt,
+                fun,
+                arg,
+                timeout,
+                expr_form,
+                kwarg,
+                **kwargs)
+        for ret in ssh.run_iter():
+            yield ret
+
+    def cmd(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            kwarg=None,
+            **kwargs):
+        '''
+        Execute a single command via the salt-ssh subsystem and return all
+        routines at once
+        '''
+        ssh = self._prep_ssh(
+                tgt,
+                fun,
+                arg,
+                timeout,
+                expr_form,
+                kwarg,
+                **kwargs)
+        final = {}
+        for ret in ssh.run_iter():
+            final.update(ret)
+        return final
 
 
 class FunctionWrapper(dict):

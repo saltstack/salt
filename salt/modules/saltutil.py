@@ -527,6 +527,7 @@ def cmd(tgt,
         expr_form='glob',
         ret='',
         kwarg=None,
+        ssh=False,
         **kwargs):
     '''
     Assuming this minion is a master, execute a salt command
@@ -537,9 +538,14 @@ def cmd(tgt,
 
         salt '*' saltutil.cmd
     '''
-    local = salt.client.LocalClient(os.path.dirname(__opts__['conf_path']))
+    if ssh:
+        client = salt.client.SSHClient(
+                os.path.dirname(__opts__['conf_path']))
+    else:
+        client = salt.client.LocalClient(
+                os.path.dirname(__opts__['conf_path']))
     ret = {}
-    for ret_comp in local.cmd_iter(
+    for ret_comp in client.cmd_iter(
             tgt,
             fun,
             arg,
@@ -550,3 +556,39 @@ def cmd(tgt,
             **kwargs):
         ret.update(ret_comp)
     return ret
+
+
+def cmd_iter(tgt,
+             fun,
+             arg=(),
+             timeout=None,
+             expr_form='glob',
+             ret='',
+             kwarg=None,
+             ssh=False,
+             **kwargs):
+    '''
+    Assuming this minion is a master, execute a salt command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.cmd
+    '''
+    if ssh:
+        client = salt.client.SSHClient(
+                os.path.dirname(__opts__['conf_path']))
+    else:
+        client = salt.client.LocalClient(
+                os.path.dirname(__opts__['conf_path']))
+    for ret in client.cmd_iter(
+            tgt,
+            fun,
+            arg,
+            timeout,
+            expr_form,
+            ret,
+            kwarg,
+            **kwargs):
+        yield ret
