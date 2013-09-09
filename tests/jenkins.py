@@ -95,8 +95,8 @@ def download_unittest_reports(vm_name):
     os.makedirs('xml-test-reports')
 
     cmds = (
-        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/salt-tests-tmpdir/xml-test-reports/',
-        'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
+        'salt {0} archive.tar zcvf /tmp/xml-unittest-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
+        'salt {0} cp.push /tmp/xml-unittest-reports.tar.gz',
         'tar zxvf /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz -C xml-test-reports',
         'rm /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz'
     )
@@ -126,9 +126,14 @@ def download_coverage_report(vm_name):
     print('Downloading remote coverage report...')
     sys.stdout.flush()
 
+    if os.path.isfile('coverage.xml'):
+        os.unlink('coverage.xml')
+
     cmds = (
-        'salt {0} cp.push /tmp/coverage.xml',
-        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml {1}'
+        'salt {0} archive.gzip /tmp/coverage.xml',
+        'salt {0} cp.push /tmp/coverage.xml.gz',
+        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml.gz {1}',
+        'gunzip {1}/coverage.xml.gz'
     )
 
     for cmd in cmds:
@@ -267,7 +272,8 @@ def parse():
         '--pillar',
         default='{{git_commit: {commit}}}',
         help='Pillar values to pass to the sls file')
-    parser.add_option('--no-clean',
+    parser.add_option(
+        '--no-clean',
         dest='clean',
         default=True,
         action='store_false',
@@ -301,17 +307,11 @@ def parse():
         parser.exit(0)
 
     if options.download_unittest_reports is not None and not options.commit:
-        try:
-            download_unittest_reports(options.download_unittest_reports)
-        except Exception as exc:
-            print 'Caught exception while downloading unittest reports', exc
+        download_unittest_reports(options.download_unittest_reports)
         parser.exit(0)
 
     if options.download_coverage_report is not None and not options.commit:
-        try:
-            download_coverage_report(options.download_coverage_report)
-        except Exception as exc:
-            print 'Caught exception while downloading coverage reports', exc
+        download_coverage_report(options.download_coverage_report)
         parser.exit(0)
 
     if not options.platform:
