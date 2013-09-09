@@ -195,7 +195,7 @@ def run(opts):
     print('VM Bootstrapped. Exit code: {0}'.format(retcode))
     sys.stdout.flush()
 
-    print('Sleeping for 5 seconds to allow the minion to breath a little')
+    print('Sleeping for 5 seconds to allow the minion to breathe a little')
     sys.stdout.flush()
     time.sleep(5)
 
