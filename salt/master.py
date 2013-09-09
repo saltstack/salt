@@ -1883,16 +1883,16 @@ class ClearFuncs(object):
                     clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                       'user {0}.').format(token['user'])
                 log.warning(msg)
                 return ''
             try:
-                log.debug("ClearFunc.wheel with {0}".format(clear_load))
+                log.debug('ClearFunc.wheel with {0}'.format(clear_load))
                 jid = salt.utils.gen_jid()
                 fun = clear_load.pop('fun')
                 data = {'fun': "wheel.{0}".format(fun),
                             'jid': jid,
-                            'user': clear_load.get('user', 'UNKNOWN')}
+                            'user': token['name']}
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
                 data['ret'] = ret
