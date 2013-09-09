@@ -227,7 +227,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
         response = result.read()
     except Exception as exc:
         log.error('There was an error::')
-        log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
+        if hasattr(exc, 'code') and hasattr(exc, 'msg'):
+            log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
         log.error('    Content: \n{0}'.format(exc.read()))
         return False
 
