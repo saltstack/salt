@@ -254,6 +254,16 @@ def parse():
     '''
     parser = optparse.OptionParser()
     parser.add_option(
+        '-w', '--workspace',
+        default=os.path.abspath(
+            os.environ.get(
+                'WORKSPACE',
+                os.path.dirname(os.path.dirname(__file__))
+            )
+        ),
+        help='Path the execution workspace'
+    )
+    parser.add_option(
         '--platform',
         default=os.environ.get('JENKINS_SALTCLOUD_VM_PLATFORM', None),
         help='The target platform, choose from:\ncent6\ncent5\nubuntu12.04')
