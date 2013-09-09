@@ -116,7 +116,7 @@ def download_unittest_reports(vm_name):
         proc.communicate()
         if proc.returncode != 0:
             print(
-                'Failed to download unittest data: Exit code: {0}'.format(
+                '\nFailed to execute command. Exit code: {0}'.format(
                     proc.returncode
                 )
             )
@@ -152,7 +152,7 @@ def download_coverage_report(vm_name):
         proc.communicate()
         if proc.returncode != 0:
             print(
-                'Failed to download coverage report: Exit code: {0}'.format(
+                '\nFailed to execute command. Exit code: {0}'.format(
                     proc.returncode
                 )
             )
