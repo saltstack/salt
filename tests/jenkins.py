@@ -95,15 +95,17 @@ def download_unittest_reports(options):
     os.makedirs('xml-test-reports')
 
     cmds = (
-        'salt {0} archive.tar zcvf /tmp/xml-unittest-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
-        'salt {0} cp.push /tmp/xml-unittest-reports.tar.gz',
-        'tar zxvf /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz -C xml-test-reports',
-        'rm /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz'
+        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
+        'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
+        'mv -f /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz {1}',
+        'tar zxvf {1}/xml-test-reports.tar.gz -C {1}/xml-test-reports',
+        'rm -f {1}/xml-test-reports.tar.gz'
     )
 
     vm_name = options.download_unittest_reports
+    workspace = options.workspace
     for cmd in cmds:
-        cmd = cmd.format(vm_name)
+        cmd = cmd.format(vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -128,18 +130,19 @@ def download_coverage_report(options):
     print('Downloading remote coverage report...')
     sys.stdout.flush()
 
-    if os.path.isfile('coverage.xml'):
-        os.unlink('coverage.xml')
+    workspace = options.workspace
+    vm_name = options.download_unittest_reports
+
+    if os.path.isfile(os.path.join(workspace, 'coverage.xml')):
+        os.unlink(os.path.join(workspace, 'coverage.xml'))
 
     cmds = (
         'salt {0} archive.gzip /tmp/coverage.xml',
         'salt {0} cp.push /tmp/coverage.xml.gz',
-        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml.gz {1}',
-        'gunzip {1}/coverage.xml.gz'
+        'gunzip /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml.gz',
+        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml {1}'
     )
 
-    vm_name = options.download_unittest_reports
-    workspace = options.workspace
     for cmd in cmds:
         cmd = cmd.format(vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
