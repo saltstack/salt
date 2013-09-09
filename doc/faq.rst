@@ -42,16 +42,24 @@ parameter), Salt will determine the id based on the hostname. Exactly how this
 is determined varies a little between operating systems and is described in
 detail :ref:`here <minion-id-generation>`.
 
-I'm using gitfs and my customg modules/states/etc are not syncing. Why?
------------------------------------------------------------------------
+I'm using gitfs and my custom modules/states/etc are not syncing. Why?
+----------------------------------------------------------------------
 
 In versions of Salt 0.16.3 or older, there is a bug in :doc:`gitfs
-</topics/tutorials/gitfs>`. Upgrading to 0.16.4 or new will fix this.
+</topics/tutorials/gitfs>` which can affect the syncing of custom types.
+Upgrading to 0.16.4 or newer will fix this.
 
 Why aren't my custom modules/states/etc. available on my minions?
 -----------------------------------------------------------------
 
-Custom modules are only synced out to minions when either a
-`state.highstate` or `saltutil.sync_modules` runs. Similarly, custom
-states are only synced out to minions when a `state.highstate` or
-`saltutil.sync_states` runs.
+Custom modules are only synced to minions when :mod:`state.highstate
+<salt.modules.state.highstate>`, :mod:`saltutil.sync_modules
+<salt.modules.saltutil.sync_modules>`, or :mod:`saltutil.sync_all
+<salt.modules.saltutil.sync_all>` is run. Similarly, custom states are only
+synced to minions when :mod:`state.highstate <salt.modules.state.highstate>`,
+:mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
+:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
+
+Other custom types (renderers, outputters, etc.) have similar behavior, see the
+documentation for the :mod:`saltutil <salt.modules.saltutil>` module for more
+information.
