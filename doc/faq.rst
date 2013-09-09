@@ -35,10 +35,10 @@ More details can be found in :mod:`cmd states <salt.states.cmd>`.
 How does Salt determine the Minion's id?
 ----------------------------------------
 
-If the minion id is not configured explicitly, salt will determine the
-id based on the hostname. Exactly how this is determined varies a
-little between operating systems and is described in detail :ref:`here
-<minion-id-generation>`.
+If the minion id is not configured explicitly (using the :conf_minion:`id`
+parameter), Salt will determine the id based on the hostname. Exactly how this
+is determined varies a little between operating systems and is described in
+detail :ref:`here <minion-id-generation>`.
 
 I'm using gitfs and my customg modules/states/etc are not syncing. Why?
 -----------------------------------------------------------------------
