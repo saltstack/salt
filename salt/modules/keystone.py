@@ -95,7 +95,7 @@ def ec2_credentials_get(user_id=None,
         for user in kstone.users.list():
             if user.name == name:
                 user_id = user.id
-                continue
+                break
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
     if not access:
@@ -126,7 +126,7 @@ def ec2_credentials_list(user_id=None, name=None):
         for user in kstone.users.list():
             if user.name == name:
                 user_id = user.id
-                continue
+                break
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
     for ec2_credential in kstone.ec2.list(user_id):
@@ -191,7 +191,7 @@ def role_get(role_id=None, name=None):
         for role in kstone.roles.list():
             if role.name == name:
                 role_id = role.id
-                continue
+                break
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
     role = kstone.roles.get(role_id)
@@ -236,7 +236,7 @@ def service_get(service_id=None, name=None):
         for service in kstone.services.list():
             if service.name == name:
                 service_id = service.id
-                continue
+                break
     if not service_id:
         return {'Error': 'Unable to resolve service id'}
     service = kstone.services.get(service_id)
@@ -267,6 +267,22 @@ def service_list():
     return ret
 
 
+def tenant_create(name, description=None, enabled=True):
+    '''
+    Create a keystone tenant
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.tenant_create nova description='nova tenant'
+        salt '*' keystone.tenant_create test enabled=False
+    '''
+    kstone = auth()
+    new = kstone.tenants.create(name, description, enabled)
+    return tenant_get(new.id)
+
+
 def tenant_get(tenant_id=None, name=None):
     '''
     Return a specific tenants (keystone tenant-get)
@@ -285,7 +301,7 @@ def tenant_get(tenant_id=None, name=None):
         for tenant in kstone.tenants.list():
             if tenant.name == name:
                 tenant_id = tenant.id
-                continue
+                break
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
     tenant = kstone.tenants.get(tenant_id)
@@ -314,6 +330,38 @@ def tenant_list():
                             'description': tenant.description,
                             'enabled': tenant.enabled}
     return ret
+
+
+def tenant_update(tenant_id=None, name=None, email=None, enabled=None):
+    '''
+    Update a tenant's information (keystone tenant-update)
+    The following fields may be updated: name, email, enabled.
+    Can only update name if targeting by ID
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.tenant_update name=admin enabled=True
+        salt '*' keystone.tenant_update c965f79c4f864eaaa9c3b41904e67082 name=admin email=admin@domain.com
+    '''
+    kstone = auth()
+    if not tenant_id:
+        for tenant in kstone.tenants.list():
+            if tenant.name == name:
+                tenant_id = tenant.id
+                break
+    if not tenant_id:
+        return {'Error': 'Unable to resolve tenant id'}
+
+    tenant = kstone.tenants.get(tenant_id)
+    if not name:
+        name = tenant.name
+    if not email:
+        email = tenant.email
+    if enabled is None:
+        enabled = tenant.enabled
+    kstone.tenants.update(tenant_id, name, email, enabled)
 
 
 def token_get():
@@ -373,7 +421,7 @@ def user_get(user_id=None, name=None):
         for user in kstone.users.list():
             if user.name == name:
                 user_id = user.id
-                continue
+                break
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
     user = kstone.users.get(user_id)
@@ -421,7 +469,7 @@ def user_delete(user_id=None, name=None):
         for user in kstone.users.list():
             if user.name == name:
                 user_id = user.id
-                continue
+                break
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
     kstone.users.delete(user_id)
@@ -449,7 +497,20 @@ def user_update(user_id=None,
     '''
     kstone = auth()
     if not user_id:
-        return {'Error': 'Unable to resolve user id'}
+        for user in kstone.users.list():
+            if user.name == name:
+                user_id = user.id
+                break
+        if not user_id:
+            return {'Error': 'Unable to resolve user id'}
+    user = kstone.users.get(user_id)
+    # Keep previous settings if not updating them
+    if not name:
+        name = user.name
+    if not email:
+        email = user.email
+    if enabled is None:
+        enabled = user.enabled
     kstone.users.update(user=user_id, name=name, email=email, enabled=enabled)
     ret = 'Info updated for user ID {0}'.format(user_id)
     return ret
@@ -475,7 +536,7 @@ def user_verify_password(user_id=None,
         for user in kstone.users.list():
             if user.id == user_id:
                 name = user.name
-                continue
+                break
     if not name:
         return {'Error': 'Unable to resolve user name'}
     kwargs = {'username': name,
@@ -507,7 +568,7 @@ def user_password_update(user_id=None,
         for user in kstone.users.list():
             if user.name == name:
                 user_id = user.id
-                continue
+                break
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
     kstone.users.update_password(user=user_id, password=password)
@@ -539,12 +600,12 @@ def user_role_list(user_id=None,
         for user in kstone.users.list():
             if user.name == user_name:
                 user_id = user.id
-                continue
+                break
     if tenant_name:
         for tenant in kstone.tenants.list():
             if tenant.name == tenant_name:
                 tenant_id = tenant.id
-                continue
+                break
     if not user_id and not tenant_id:
         return {'Error': 'Unable to resolve user or tenant id'}
     for role in kstone.roles.roles_for_user(user=user_id, tenant=tenant_id):
@@ -590,7 +651,6 @@ def _item_list():
     #role-delete         Delete role
     #service-create      Add service to Service Catalog
     #service-delete      Delete service from Service Catalog
-    #tenant-create       Create new tenant
     #tenant-delete       Delete tenant
     #tenant-update       Update tenant name, description, enabled status
     #user-role-add       Add role to user
