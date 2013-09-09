@@ -19,18 +19,20 @@ Minions need to be able to connect to the master on TCP ports 4505 and 4506.
 Minions do not need any inbound ports open. More detailed information on
 firewall settings can be found :doc:`here </topics/tutorials/firewall>`.
 
-My script runs every time I run a :mod:`state.highstate <salt.states.state.highstate>`. Why?
---------------------------------------------------------------------------------------------
+My script runs every time I run a :mod:`state.highstate <salt.modules.state.highstate>`. Why?
+---------------------------------------------------------------------------------------------
 
-You are probably using :mod:`cmd.run <salt.states.cmd.run>` rather
-than :mod:`cmd.wait <salt.states.cmd.wait>`. :mod:`cmd.wait
-<salt.states.cmd.wait>` will only run when there has been a change in
-a state that it is watching.
+You are probably using :mod:`cmd.run <salt.states.cmd.run>` rather than
+:mod:`cmd.wait <salt.states.cmd.wait>`. A :mod:`cmd.wait
+<salt.states.cmd.wait>` state will only run when there has been a change in a
+state that it is watching.
 
-A script using :mod:`cmd.run <salt.states.cmd.run>` will run every
-time (unless the unless or onlyif arguments prevent it).
+A :mod:`cmd.run <salt.states.cmd.run>` state will run the corresponding command
+*every time* (unless it is prevented from running by the ``unless`` or ``onlyif``
+arguments).
 
-More details can be found in :mod:`cmd states <salt.states.cmd>`.
+More details can be found in the docmentation for the :mod:`cmd
+<salt.states.cmd>` states.
 
 How does Salt determine the Minion's id?
 ----------------------------------------
