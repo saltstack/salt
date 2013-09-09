@@ -1507,6 +1507,8 @@ def recurse(name,
         # empty dir(if include_empty==true).
 
         relname = os.path.relpath(fn_, srcpath)
+        if relname.startswith('..'):
+            continue
 
         # Check for maxdepth of the relative path
         if maxdepth is not None:
