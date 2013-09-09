@@ -51,11 +51,11 @@ def generate_vm_name(platform):
     return 'ZJENKINS-{0}-{1}'.format(platform, random_part)
 
 
-def delete_vm(vm_name):
+def delete_vm(options):
     '''
     Stop a VM
     '''
-    cmd = 'salt-cloud -d {0} -y'.format(vm_name)
+    cmd = 'salt-cloud -d {0} -y'.format(options.delete_vm)
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -70,22 +70,22 @@ def delete_vm(vm_name):
     proc.communicate()
 
 
-def echo_parseable_environment(platform, provider):
+def echo_parseable_environment(options):
     '''
     Echo NAME=VAL parseable output
     '''
-    name = generate_vm_name(platform)
+    name = generate_vm_name(options.platform)
     output = (
         'JENKINS_SALTCLOUD_VM_PROVIDER={provider}\n'
         'JENKINS_SALTCLOUD_VM_PLATFORM={platform}\n'
         'JENKINS_SALTCLOUD_VM_NAME={name}\n').format(name=name,
-                                                     provider=provider,
-                                                     platform=platform)
+                                                     provider=options.provider,
+                                                     platform=options.platform)
     sys.stdout.write(output)
     sys.stdout.flush()
 
 
-def download_unittest_reports(vm_name):
+def download_unittest_reports(options):
     print('Downloading remote unittest reports...')
     sys.stdout.flush()
 
@@ -101,12 +101,14 @@ def download_unittest_reports(vm_name):
         'rm /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz'
     )
 
+    vm_name = options.download_unittest_reports
     for cmd in cmds:
-        print('Running CMD: {0}'.format(cmd.format(vm_name)))
+        cmd = cmd.format(vm_name)
+        print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
         proc = NonBlockingPopen(
-            cmd.format(vm_name),
+            cmd,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -122,7 +124,7 @@ def download_unittest_reports(vm_name):
             )
 
 
-def download_coverage_report(vm_name):
+def download_coverage_report(options):
     print('Downloading remote coverage report...')
     sys.stdout.flush()
 
@@ -136,8 +138,10 @@ def download_coverage_report(vm_name):
         'gunzip {1}/coverage.xml.gz'
     )
 
+    vm_name = options.download_unittest_reports
+    workspace = options.workspace
     for cmd in cmds:
-        cmd = cmd.format(vm_name, os.environ.get('WORKSPACE', '.'))
+        cmd = cmd.format(vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -313,15 +317,15 @@ def parse():
     options, args = parser.parse_args()
 
     if options.delete_vm is not None and not options.commit:
-        delete_vm(options.delete_vm)
+        delete_vm(options)
         parser.exit(0)
 
     if options.download_unittest_reports is not None and not options.commit:
-        download_unittest_reports(options.download_unittest_reports)
+        download_unittest_reports(options)
         parser.exit(0)
 
     if options.download_coverage_report is not None and not options.commit:
-        download_coverage_report(options.download_coverage_report)
+        download_coverage_report(options)
         parser.exit(0)
 
     if not options.platform:
@@ -331,7 +335,7 @@ def parse():
         parser.exit('--provider is required')
 
     if options.echo_parseable_environment:
-        echo_parseable_environment(options.platform, options.provider)
+        echo_parseable_environment(options)
         parser.exit(0)
 
     if not options.commit:
