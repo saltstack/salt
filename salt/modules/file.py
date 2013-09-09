@@ -1,6 +1,7 @@
 '''
-Manage information about files on the minion, set/read user, group, and mode
-data
+Manage information about regular files, directories, 
+and special files on the minion, set/read user,
+group, mode, and data
 '''
 
 # TODO: We should add the capability to do u+r type operations here
@@ -2059,7 +2060,7 @@ def get_devmm(name):
 
     .. code-block:: bash
 
-       salt '*' file.get_devmm /dev/ttyUSB0
+       salt '*' file.get_devmm /dev/chr
     '''
     if is_chrdev(name) or is_blkdev(name):
         stat_structure = os.stat(name)
@@ -2078,7 +2079,7 @@ def is_chrdev(name):
 
     .. code-block:: bash
 
-       salt '*' file.is_chrdev /dev/ttyUSB0
+       salt '*' file.is_chrdev /dev/chr
     '''
     stat_structure = None
     try:
@@ -2104,7 +2105,7 @@ def mknod_chrdev(name,
 
     .. code-block:: bash
 
-       salt '*' file.mknod_chrdev /dev/tty0 4 0
+       salt '*' file.mknod_chrdev /dev/chr 180 31
     '''
     ret = {'name': name,
            'changes': {},
@@ -2147,7 +2148,7 @@ def is_blkdev(name):
 
     .. code-block:: bash
 
-       salt '*' file.is_blkdev /dev/sda1
+       salt '*' file.is_blkdev /dev/blk
     '''
     stat_structure = None
     try:
@@ -2173,7 +2174,7 @@ def mknod_blkdev(name,
 
     .. code-block:: bash
 
-       salt '*' file.mknod_blkdev /dev/loop8 7 8
+       salt '*' file.mknod_blkdev /dev/blk 8 999
     '''
     ret = {'name': name,
            'changes': {},
@@ -2216,7 +2217,7 @@ def is_fifo(name):
 
     .. code-block:: bash
 
-       salt '*' file.is_fifo /dev/mypipe
+       salt '*' file.is_fifo /dev/fifo
     '''
     stat_structure = None
     try:
@@ -2240,7 +2241,7 @@ def mknod_fifo(name,
 
     .. code-block:: bash
 
-       salt '*' file.mknod_fifo /dev/fifopipe
+       salt '*' file.mknod_fifo /dev/fifo
     '''
     ret = {'name': name,
            'changes': {},
@@ -2277,16 +2278,16 @@ def mknod(name,
           group=None,
           mode='0600'):
     '''
-    Create a block device, character device, or fifi pipe.
+    Create a block device, character device, or fifo pipe.
     Identical to the gnu mknod.
 
-    CLI Example:
+    CLI Examples:
 
    .. code-block:: bash
 
-      salt '*' file.mknod /dev/gadget c 134 8
-      salt '*' file.mknod /dev/sza1 b 8 900
-      salt '*' file.nknod /dev/pipe p
+      salt '*' file.mknod /dev/chr c 180 31
+      salt '*' file.mknod /dev/blk b 8 999
+      salt '*' file.nknod /dev/fifo p
     '''
     ret = False
     makedirs(name,

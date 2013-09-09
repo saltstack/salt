@@ -34,6 +34,7 @@ def __virtual__():
 def state(
         name,
         tgt,
+        ssh=False,
         tgt_type=None,
         ret='',
         highstate=None,
@@ -69,6 +70,9 @@ def state(
     env
         The default environment to pull sls files from
 
+    ssh
+        Use the ssh client instaed of the standard salt client
+
     fail_minions
         An optional list of targeted minions where failure is an option
     '''
@@ -82,6 +86,7 @@ def state(
     if not tgt_type:
         tgt_type = 'glob'
     cmd_kw['expr_form'] = tgt_type
+    cmd_kw['ssh'] = ssh
     if highstate:
         cmd_kw['fun'] = 'state.highstate'
     elif sls:

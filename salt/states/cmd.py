@@ -149,6 +149,7 @@ import yaml
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -245,23 +246,25 @@ def _run_check(cmd_kwargs, onlyif, unless, group):
             return {'comment': 'The group {0} is not available'.format(group),
                     'result': False}
 
-    if onlyif:
-        if not isinstance(onlyif, str):
+    if onlyif is not None:
+        if not isinstance(onlyif, string_types):
             if not onlyif:
-                return {'comment': 'onlyif execution succeeded',
+                return {'comment': 'onlyif execution failed',
                         'result': True}
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif execution failed',
-                    'result': True}
+        elif isinstance(onlyif, string_types):
+            if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+                return {'comment': 'onlyif execution failed',
+                        'result': True}
 
-    if unless:
-        if not isinstance(unless, str):
+    if unless is not None:
+        if not isinstance(unless, string_types):
             if unless:
                 return {'comment': 'unless execution succeeded',
                         'result': True}
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless execution succeeded',
-                    'result': True}
+        elif isinstance(unless, string_types):
+            if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+                return {'comment': 'unless execution succeeded',
+                        'result': True}
 
     # No reason to stop, return True
     return True

@@ -15,9 +15,8 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
-
 Name:           salt
-Version:        0.16.3
+Version:        0.16.4
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -44,6 +43,9 @@ BuildRequires:  python-PyYAML
 BuildRequires:  python-msgpack-python
 BuildRequires:  python-pycrypto
 BuildRequires:  python-pyzmq >= 2.1.9
+BuildRequires:  unzip
+# Disabled for now when salt-testing and salt 0.17 is available.
+#BuildRequires:  salt-testing
 Requires:       logrotate
 Requires:       python-Jinja2
 Requires:       python-M2Crypto
@@ -51,6 +53,7 @@ Requires:       python-PyYAML
 Requires:       python-msgpack-python
 Requires:       python-pycrypto
 Requires:       python-pyzmq >= 2.1.9
+Requires:		python-GitPython
 Requires(pre): %fillup_prereq
 Requires(pre): %insserv_prereq
 %if 0%{?suse_version} >= 1210
@@ -68,6 +71,16 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %else
 BuildArch:      noarch
 %endif
+
+# Disabled for now when salt-testing and salt 0.17 is available.
+#%if 0%{?suse_version} != 1220 && 0%{?suse_version} != 1230
+BuildRequires: python-unittest2
+# this BR causes windows tests to happen
+# clearly, that's not desired
+# https://github.com/saltstack/salt/issues/3749
+BuildRequires: python-mock
+BuildRequires: git
+#%endif
 
 %description
 Salt is a distributed remote execution system used to execute commands and
@@ -154,6 +167,13 @@ install -Dpm 0644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 #
 ##SuSEfirewall2 file
 install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
+
+# Disabled for now when salt-testing and salt 0.17 is available.
+#%if 0%{?suse_version} != 1220 && 0%{?suse_version} != 1230
+#%check
+#export only_local_network=False
+#%{__python} setup.py test --runtests-opts=-u
+#%endif
 
 %preun -n salt-syndic
 %stop_on_removal salt-syndic
@@ -243,6 +263,8 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
 %{_bindir}/salt-run
+# Salt-ssh only available in salt 0.17
+#%{_bindir}/salt-ssh
 %{_mandir}/man1/salt-master.1.*
 %{_mandir}/man1/salt.1.*
 %{_mandir}/man1/salt-cp.1.*

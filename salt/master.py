@@ -2134,8 +2134,10 @@ class ClearFuncs(object):
                         'Authentication failure of type "eauth" occurred.'
                     )
                     return ''
+
             clear_load['user'] = name
             log.debug('Minion eauth user = "{0}"'.format(clear_load['user']))
+
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):

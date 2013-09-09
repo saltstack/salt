@@ -2,32 +2,37 @@
 Configuration management using Augeas
 =====================================
 
-:strong:`NOTE:` This state requires the Augeas Python adapter. See the
-documentation for the :mod:`augeas_cfg <salt.modules.augeas_cfg>` module for
-more information.
+:strong:`NOTE:` This state requires the ``augeas`` Python module.
 
-Augeas can be used to manage configuration files. Currently only the 'set'
-command is supported through this state file. The Augeas module also has
-support for get, match, remove, etc.
+.. _Augeas: http://augeas.net/
+
+Augeas_ can be used to manage configuration files. Currently only the ``set``
+command is supported via this state. The :mod:`augeas
+<salt.modules.augeas_cfg>` module also has support for get, match, remove, etc.
 
 Examples:
 
-Set the first entry in ``/etc/hosts`` to localhost:
+Set the first entry in ``/etc/hosts`` to ``localhost``:
 
 .. code-block:: yaml
+
     hosts:
       augeas.setvalue:
         - changes:
-          - /files/etc/hosts/1/canonical localhost
+          - /files/etc/hosts/1/canonical: localhost
 
-Add a new host to /etc/hosts with the ip address 192.168.1.1 and hostname test
+Add a new host to ``/etc/hosts`` with the IP address ``192.168.1.1`` and
+hostname ``test``:
 
 .. code-block:: yaml
+
     hosts:
       augeas.setvalue:
         - changes:
-          - /files/etc/hosts/01/ipaddr 192.168.1.1
-          - /files/etc/hosts/01/canonical test
+          - /files/etc/hosts/2/ipaddr: 192.168.1.1
+          - /files/etc/hosts/2/canonical: foo.bar.com
+          - /files/etc/hosts/2/alias[1]: foosite
+          - /files/etc/hosts/2/alias[2]: foo
 
 You can also set a prefix if you want to avoid redundancy:
 
@@ -37,33 +42,41 @@ You can also set a prefix if you want to avoid redundancy:
       augeas.setvalue:
         - prefix: /files/etc/nginx/nginx.conf
         - changes:
-          - user www-data
-          - worker_processes 2
-          - http/server_tokens off
-          - http/keepalive_timeout 65
+          - user: www-data
+          - worker_processes: 2
+          - http/server_tokens: off
+          - http/keepalive_timeout: 65
 
 '''
 
 
-def setvalue(name, prefix=None, changes=(), **kwargs):
+def __virtual__():
+    return 'augeas' if 'augeas.setvalue' in __salt__ else False
+
+
+def setvalue(name, prefix=None, changes=None, **kwargs):
     '''
     Set a value for a specific augeas path
     '''
-
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
 
     args = []
-    for change in changes:
-        tpl = change.split(None, 1)
-        if len(tpl) != 2:
-            raise ValueError('Change must have format "foo bar", was given {0}'
-                             .format(change))
-
-        args.append(str(tpl[0]))
-        args.append(str(tpl[1]))
+    if not changes:
+        ret['comment'] = '\'changes\' must be specified'
+        return ret
+    else:
+        if not isinstance(changes, list):
+            ret['comment'] = '\'changes\' must be formatted as a list'
+            return ret
+        for change in changes:
+            if not isinstance(change, dict) or len(change) > 1:
+                ret['comment'] = 'Invalidly-formatted change'
+                return ret
+            key = next(iter(change))
+            args.extend([key, change[key]])
 
     if prefix is not None:
-        args.insert(0, 'prefix=%s' % prefix)
+        args.insert(0, 'prefix={0}'.format(prefix))
 
     if __opts__['test']:
         ret['result'] = None
@@ -75,10 +88,10 @@ def setvalue(name, prefix=None, changes=(), **kwargs):
     ret['result'] = call['retval']
 
     if ret['result'] is False:
-        ret['comment'] = 'Error: %s' % call['error']
+        ret['comment'] = 'Error: {0}'.format(call['error'])
         return ret
 
     ret['comment'] = 'Success'
-    ret['changes'] = '%s' % changes
-
+    for change in changes:
+        ret['changes'].update(change)
     return ret

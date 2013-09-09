@@ -375,7 +375,7 @@ def _memdata(osdata):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
             if (osdata['kernel'] == 'NetBSD' and mem.startswith('-')):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
-            grains['mem_total'] = str(int(mem) / 1024 / 1024)
+            grains['mem_total'] = int(mem) / 1024 / 1024
     elif osdata['kernel'] == 'SunOS':
         prtconf = '/usr/sbin/prtconf 2>/dev/null'
         for line in __salt__['cmd.run'](prtconf).splitlines():
@@ -691,7 +691,8 @@ _OS_NAME_MAP = {
     'alt': 'ALT',
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
-    'pidora': 'Fedora'
+    'pidora': 'Fedora',
+    'scientific': 'ScientificLinux'
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -730,7 +731,8 @@ _OS_FAMILY_MAP = {
     'Trisquel': 'Debian',
     'GCEL': 'Debian',
     'Linaro': 'Debian',
-    'elementary OS': 'Debian'
+    'elementary OS': 'Debian',
+    'ScientificLinux': 'RedHat'
 }
 
 

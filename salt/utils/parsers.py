@@ -1508,13 +1508,22 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
         self.add_option(
-            '-d', '--doc', '--documentation',
-            dest='doc',
+            '-r', '--raw', '--raw-shell',
+            dest='raw_shell',
             default=False,
             action='store_true',
-            help=('Display documentation for runners, pass a module or a '
-                  'runner to see documentation on only that module/runner.')
+            help=('Don\'t execute a salt routine on the targets, execute a '
+                  'raw shell command')
         )
+        self.add_option(
+            '--refresh', '--refresh-cache',
+            dest='refresh_cache',
+            default=False,
+            action='store_true',
+            help=('Force a refresh of the master side data cache of the '
+                  'target\'s data. This is needed if a target\'s grains have '
+                  'been changed and the auto refresh timeframe has not been '
+                  'reached.'))
 
     def _mixin_after_parsed(self):
         if self.options.list:
