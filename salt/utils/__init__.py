@@ -1380,6 +1380,65 @@ def warn_until(version_info,
         warnings.warn(message, category, stacklevel=stacklevel)
 
 
+def kwargs_warn_until(kwargs,
+               version_info,
+               category=DeprecationWarning,
+               stacklevel=None,
+               _version_info_=None,
+               _dont_call_warnings=False):
+    '''
+    Helper function to raise a warning (by default, a ``DeprecationWarning``)
+    when unhandled keyword arguments are passed to function, until the
+    provided ``version_info``, after which, a ``RuntimeError`` will be raised
+    to remind the developers to remove the ``**kwargs`` because the target
+    version has been reached.
+    This function is used to help deprecate unused legacy ``**kwargs`` that
+    were added to function parameters lists to preserve backwards compatibility
+    when removing a parameter. See
+    :doc:`the deprecation development docs </topics/development/deprecations>`
+    for the modern strategy for deprecating a function parameter.
+
+    :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
+    :param version_info: The version info after which the warning becomes a
+                         ``RuntimeError``. For example ``(0, 17)``.
+    :param category: The warning class to be thrown, by default
+                     ``DeprecationWarning``
+    :param stacklevel: There should be no need to set the value of
+                       ``stacklevel``. Salt should be able to do the right thing.
+    :param _version_info_: In order to reuse this function for other SaltStack
+                           projects, they need to be able to provide the
+                           version info to compare to.
+    :param _dont_call_warnings: This parameter is used just to get the
+                                functionality until the actual error is to be
+                                issued. When we're only after the salt version
+                                checks to raise a ``RuntimeError``.
+    '''
+    if not isinstance(version_info, tuple):
+        raise RuntimeError(
+            'The \'version_info\' argument should be passed as a tuple.'
+        )
+
+    if stacklevel is None:
+        # Attribute the warning to the calling function,
+        # not to kwargs_warn_until() or warn_until()
+        stacklevel = 3
+
+    if _version_info_ is None:
+        _version_info_ = salt.version.__version_info__
+
+    if kwargs or _version_info_ >= version_info:
+        removal_version = '.'.join(str(component) for component in version_info)
+        arg_names = ', '.join('\'{0}\''.format(key) for key in kwargs)
+        warn_until(version_info,
+           message='The following parameter(s) have been deprecated and '
+           'will be removed in {0}: {1}.'.format(removal_version, arg_names),
+           category=category,
+           stacklevel=stacklevel,
+           _version_info_=_version_info_,
+           _dont_call_warnings=_dont_call_warnings
+        )
+
+
 def version_cmp(pkg1, pkg2):
     '''
     Compares two version strings using distutils.version.LooseVersion. This is
