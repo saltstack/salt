@@ -41,7 +41,7 @@ def managed(name,
         Path to the virtualenv
     requirements
         Path to a pip requirements file. If the path begins with ``salt://``
-        the file will be transfered from the master file server.
+        the file will be transferred from the master file server.
     cwd
         Path to the working directory where "pip install" is executed.
 
