@@ -72,7 +72,7 @@ on the hypervisor and is bridged to an active network device.
 Libvirt State
 -------------
 
-One of the challanges of deploying a libvirt based cloud is the distribution
+One of the challenges of deploying a libvirt based cloud is the distribution
 of libvirt certificates. These certificates allow for virtual machine
 migration. Salt comes with a system used to auto deploy these certificates.
 Salt manages the signing authority key and generates keys for libvirt clients
