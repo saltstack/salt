@@ -1,0 +1,162 @@
+
+
+.tight {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+kvl {
+  padding: 0;
+  margin: 0px 0 10px 0px;
+  display: block;
+}
+
+kvl.indent {
+  margin-left: 12px;
+}
+
+kvi {
+  line-height: 20px;
+  display: block;
+}
+
+kvi.key {
+  font-weight: bold;
+  font-style: italic;
+}
+
+kvi.val {
+  font-weight: normal;
+  font-style: normal;
+}
+
+
+
+n {
+  font-weight: normal;
+  display: inline;
+}
+
+
+
+.animate-fade.ng-hide-add, 
+.animate-fade.ng-hide-remove {
+  -webkit-transition: all linear 0.25s;
+  -moz-transition: all linear 0.25s;
+  -o-transition: all linear 0.25s;
+  transition: all linear 0.25s;
+  display: block !important;
+}
+
+.animate-fade.ng-hide-add, /* starting animation for show */
+.animate-fade.ng-hide-remove.ng-hide-remove-active { /* terminal animation for hide */
+  opacity: 1;
+}
+
+.animate-fade.ng-hide-remove, /* starting animation for hide */
+.animate-fade.ng-hide-add.ng-hide-add-active { /* terminal animation for show */
+  opacity: 0;
+}
+
+.monitor {
+  margin: 5px 0px 0px 0px;
+}
+
+.box { 
+  border: 1px solid #888;
+  border-radius: 3px;
+  padding: 0px 4px;
+  margin: 0px 0px -1px 0px;
+}
+
+.slat { 
+  border: 1px solid #888; 
+  border-radius: 3px;
+  margin: 3px 0px 0px 0px;
+  background: #fafafa;
+}
+
+.slat-head { 
+  padding: 4px 5px;
+} 
+
+.slat-body { 
+  border-top-style: solid;
+  border-width: 1px;
+  border-color: #ccc; 
+  padding: 4px 5px;
+  /*overflow: auto;*/
+}
+
+
+
+.filter-active {background: #ccc}
+
+.leftmost { 
+  border-top-right-radius: 0px !important; 
+  border-bottom-right-radius: 0px !important; 
+}
+
+.rightmost { 
+  border-top-left-radius: 0px !important; 
+  border-bottom-left-radius: 0px !important; 
+}
+
+/* extra icon colors for font icons */
+.icon-white {color: white;}
+.icon-blue { color: blue;}
+.icon-green {color: green;}
+.icon-red { color: red; }
+.icon-black {color: black;}
+
+/* Additional sizes for bootstrap labels and badges not in default bootstrap*/
+.label-mini,
+.badge-mini {
+  font-size: 11px;
+  font-weight: bold;
+}
+.label-mini {
+  padding: 1px 3px 2px;
+}
+.badge-mini {
+  padding: 1px 8px 2px;
+}
+.label-small,
+.badge-small {
+  font-size: 11px;
+  font-weight: bold;
+}
+.label-small {
+  padding: 2px 8px 4px;
+}
+.badge-small {
+  padding: 2px 13px 4px;
+}
+.label-big,
+.badge-big {
+  font-size: 12px;
+  font-weight: bold;
+}
+.label-big {
+  padding: 5px 10px 6px;
+}
+.badge-big {
+  padding: 5px 15px 6px;
+  -webkit-border-radius: 14px 14px 14px 14px;
+  -moz-border-radius: 14px 14px 14px 14px;
+  border-radius: 14px 14px 14px 14px;
+}
+.label-ultra,
+.badge-ultra {
+  font-size: 14px;
+  font-weight: bold;
+}
+.label-ultra {
+  padding: 8px 14px 9px;
+}
+.badge-ultra {
+  padding: 8px 19px 9px;
+  -webkit-border-radius: 18px 18px 18px 18px;
+  -moz-border-radius: 18px 18px 18px 18px;
+  border-radius: 18px 18px 18px 18px;
+}

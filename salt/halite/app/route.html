@@ -1,0 +1,22 @@
+<pre class="pre-scrollable" ng-show="debug" ng-controller="RouteCtlr">
+  window.location.href = {{winLoc.href}}
+  window.location.pathname = {{winLoc.pathname}}
+  $location.absUrl() = {{location.absUrl()}}
+  $location.url() = {{location.url()}}
+  $location.protocol() = {{location.protocol()}}
+  $location.host() = {{location.host()}}
+  $location.port() = {{location.port()}}
+  $location.path() = {{location.path()}}  Document Root Path
+  $location.search() = {{location.search()}}
+  $location.hash() = {{location.hash()}}
+  $route.current.$$route = {{route.current.$$route}}
+  $route.current.templateUrl = {{route.current.templateUrl}}
+  $route.current.controller = {{route.current.controller}}
+  $route.current.params = {{route.current.params}}
+  $route.current.pathParams = {{route.current.pathParams}}
+  $route.routes = {{route.routes}}
+  
+  <span ng-repeat="(name, data) in route.routes" ng-show="debug">
+    {{name}}  {{data.redirectTo}} {{data.templateUrl}} {{data.controller}}</span>
+</pre>
+

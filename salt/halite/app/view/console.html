@@ -1,0 +1,602 @@
+
+
+<div class="row-fluid">
+  <div class="span12">
+    <alert type="'error'" close="closeAlert()" ng-cloak ng-show="!!$parent.errorMsg">Error! {{errorMsg}}</alert>
+    <div class="box">
+      <form class="form-inline">
+        <div class="btn-toolbar"> 
+          <label>Command &nbsp;</label>
+          <div class="btn-group">
+            <div class="input-prepend">
+              <div class="btn-group">
+                <button class="btn" ng-click="ply(actions.Test.ping)" 
+                  title="Ping minions that match target">
+                  <i class="fa-icon-bullhorn" 
+                    ng-class="pinging?'fa-icon-spinner fa-icon-spin icon-blue':'fa-icon-bullhorn';">
+                  </i>
+                </button>
+                <button class="btn dropdown-toggle">Action
+                  <b class="caret"></b>
+                </button>
+                <ul class="dropdown-menu">
+                  <li class="nav-header">State</li>
+                  <li ng-repeat="(name, cmd) in actions.State track by $index">
+                    <a ng-href="" ng-click="ply(cmd)">{{name}}</a>
+                  </li>
+                  <li class="divider"></li>
+                  <li class="nav-header">Test</li>
+                  <li ng-repeat="(name, cmd) in actions.Test track by $index">
+                    <a ng-href="" ng-click="ply(cmd)">{{name}}</a>
+                  </li>
+                </ul>
+              </div>
+              <input type="text" class="input-large" placeholder="Enter target pattern" 
+                ng-model="commandTarget" title="Minion command target pattern">
+            </div>
+          </div>
+          
+          <div class="btn-group">
+            <button class="btn"  ng-init="collapsed=true" ng-click="collapsed = !collapsed"
+              title="Execute salt command">
+              <i class="fa-icon-chevron-down icon-black" title="Click to toggle command form display" 
+                ng-class="collapsed?'fa-icon-chevron-down':'fa-icon-chevron-up'"></i>
+            </button>
+            <button class="btn dropdown-toggle" 
+              ng-disabled="command.size(command.history)==0"
+              title="Execute saved lowstate command">
+              <i class="fa-icon-book" 
+                ng-class="commanding?'fa-icon-spinner fa-icon-spin icon-blue':'fa-icon-book';">
+              </i>
+              <b class="caret"></b>
+            </button>
+            <ul class="dropdown-menu">
+              <li ng-repeat="(name, cmds) in command.history track by $index">
+                <a ng-href="" ng-click="action(cmds)">{{name}}</a>
+              </li>
+            </ul>
+          </div>
+          <div class="btn-group pull-right">
+            <button class="btn" ng-click="openEventStream()" 
+              title="Open event stream">
+              <i class="fa-icon-rss"
+                ng-class="eventing?'fa-icon-spinner fa-icon-spin icon-blue':'fa-icon-rss';">
+              </i>
+            </button>
+            <button class="btn" ng-click="fetchGrains()" 
+              title="Fetch grains from all minions">
+              <i class="fa-icon-briefcase" 
+                ng-class="graining?'fa-icon-spinner fa-icon-spin icon-blue':'fa-icon-briefcase';">
+              </i>
+            </button>
+            <button class="btn" ng-click="fetchActives()" 
+              title="Fetch up/down status of all minions">
+              <i class="fa-icon-refresh" 
+                ng-class="statusing?'fa-icon-spinner fa-icon-spin icon-blue':'fa-icon-refresh';">
+              </i>
+            </button>
+          </div>
+        </div>
+      </form> 
+      <form class="form-inline animate-fade" name="commandForm" ng-show="!collapsed" ng-cloak>
+        <div class="controls" >
+          <label class="control-label">Function<br/>
+            <input type="text" class="input-large" placeholder="Enter module.function"
+              ng-model="command.cmd.fun" title="Module function" required>
+          </label>
+          <label class="control-label">Target<br/>
+            <input type="text" class="input-medium" placeholder="Enter minion target pattern"
+              ng-model="command.cmd.tgt" title="Minion target pattern">
+          </label>
+          <label class="control-label">Arguments<br/>
+            <div class="input-append">
+              <input type="text" class="input-medium"
+                placeholder="Enter argument"
+                ng-repeat="arg in command.cmd.arg track by $index"
+                ng-model="command.cmd.arg[$index]">
+    
+              <button class="btn" ng-class="command.cmd.arg.length==1?'disabled':''" 
+                type="button" title="Remove last argument"
+                ng-click="command.delArg()"><i class="fa-icon-minus"></i></button>
+              <button class="btn " type="button" title="Add another argument"
+                ng-click="command.addArg()"><i class="fa-icon-plus"></i></button>
+            </div>
+          </label>
+          <button class="btn" type="submit" ng-click="action()" ng-disabled="commandForm.$invalid">
+            <i class="fa-icon-play" 
+                ng-class="commanding?'fa-icon-spinner fa-icon-spin icon-blue':'fa-icon-play';">
+              </i>Execute 
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <form class="form-inline box">
+      <div class="btn-toolbar">
+        <label>Monitor &nbsp;</label>
+        <div class="btn-group">
+          <button type="button" class="btn" ng-model="monitorMode" btn-radio="'command'">Command</button>
+          <button type="button" class="btn" ng-model="monitorMode" btn-radio="'job'">Job</button>
+          <button type="button" class="btn" ng-model="monitorMode" btn-radio="'minion'">Minion</button>
+          <button type="button" class="btn" ng-model="monitorMode" btn-radio="'event'">Event</button>
+        </div>
+        
+        <label ng-show="monitorMode == 'minion'">&nbsp; Filter &nbsp;
+          <div class="btn-group">
+            <div class="input-append">
+              <input type="text" class="input-large" placeholder="Enter filter string" 
+                ng-model="filterage.target" ng-change="setFilterExpress()" title="Minon filter string">
+              <div class="btn-group">
+                <button class="btn dropdown-toggle leftmost" title="Select grain to filter against">
+                  <i class="fa-icon-filter"></i>
+                </button>
+                <ul class="dropdown-menu">
+                  <li ng-repeat="grain in filterage.grains track by $index">
+                    <a ng-href="" ng-click="setFilterGrain($index)" 
+                      ng-class="filterage.grain==grain?'filter-active':''">
+                      {{grain}}
+                    </a>
+                  </li>
+                </ul>
+                <button class="btn disabled" title="Filter against this grain">in {{filterage.grain}}
+                </button>
+              </div>
+            </div>
+          </div>
+        </label>
+        
+        <label ng-show="monitorMode == 'minion'">&nbsp; Sort &nbsp;
+          <div class="btn-group" >
+            <button class="btn dropdown-toggle leftmost" title="Select grain to sort by against">
+              <i class="fa-icon-list"></i>
+            </button>
+            <ul class="dropdown-menu">
+              <li ng-repeat="target in sortage.targets track by $index">
+                <a ng-href="" ng-click="setSortTarget($index)" 
+                  ng-class="sortage.target==target?'filter-active':''">
+                  {{target}}
+                </a>
+              </li>
+            </ul>
+            <button class="btn disabled" title="Sort by this trait">by {{sortage.target}}
+            </button>
+            <button class="btn" ng-click="sortage.reverse=!sortage.reverse" title="Reverse sort">
+              <i ng-class="sortage.reverse?'fa-icon-arrow-up':'fa-icon-arrow-down'"></i>
+            </button>
+          </div>
+        </label>
+      </div>
+    </form>
+  </div><!--/span-->
+</div><!--/row-->
+
+<!--<div class="container-fluid">-->
+<div class="row-fluid monitor" ng-show="monitorMode == 'command'">
+  <div class="span12" >
+    <div class="slat" ng-repeat="command in commands.values() | orderBy:sortCommands:commandReverse">
+      <div class="slat-head" ng-init="collapsed=true" ng-click="collapsed = !collapsed" 
+        title="Click to toggle results display">
+        <span class="pull-left" title="Event Tag">
+          <button class="btn" ng-click="ply(command.cmds); $event.stopPropagation();">{{command.name}}</button>
+        </span>
+        <div class="pull-right">
+          <a href="" ng-click="collapsed = !collapsed; $event.stopPropagation();">
+            <i class="fa-icon-chevron-down icon-black" title="Click to toggle results disoplay" 
+              ng-class="collapsed?'fa-icon-chevron-down':'fa-icon-chevron-up'"></i>
+          </a> 
+        </div>  
+        <div class="clearfix"></div>
+      </div>
+      <div class="slat-body" ng-show="!collapsed">
+        <div class="span12">
+          <p ng-repeat="job in command.jobs.values() | orderBy:sortJobs:jobReverse">
+            <span class="label pull-left" title="Job Id: Gray=done, Blue=not yet done" 
+              ng-class="job.done?'':'label-info'">
+              <b style="font-size: larger">{{job.jid}}</b>
+            </span>
+            <span title="Module function">&nbsp;&nbsp;{{job.name}}</span>
+            <span class="badge pull-right" title="Failure status: Green=success, Red=fail"
+              ng-class="job.fail?'badge-important':'badge-success'">
+              <i class="fa-icon-certificate icon-white"></i>
+            </span>
+          </p>  
+        </div>
+        <div class="clearfix"></div>
+      </div><!--/slat-body-->
+    </div> <!--/slat-->
+  </div><!--/span-->
+</div><!--/row-->
+<!--</div>--><!--/container-->
+
+<!--<div class="container-fluid">-->
+<div class="row-fluid monitor" ng-show="monitorMode == 'job'">
+  <div class="span12" >
+    <div class="slat" ng-repeat="job in jobs.values() | orderBy:sortJobs:jobReverse">
+      <div class="slat-head" ng-init="collapsed=true" ng-click="collapsed = !collapsed" 
+        title="Click to toggle results display">
+        <span class="label pull-left" title="Job Id: Gray=done, Blue=not yet done" 
+          ng-class="job.done?'':'label-info'">
+          <b  style="font-size: larger">{{job.jid}}</b>
+        </span>
+        <span title="Module function">&nbsp;&nbsp;{{job.name}}</span>
+        <div class="pull-right">
+          <span class="badge" title="Failure status: Green=success, Red=fail"
+            ng-class="job.fail?'badge-important':'badge-success'">
+            <i class="fa-icon-certificate icon-white"></i>
+          </span>
+          <a href="" ng-click="collapsed = !collapsed; $event.stopPropagation();">
+            <i class="fa-icon-chevron-down icon-black" title="Click to toggle results disoplay" 
+              ng-class="collapsed?'fa-icon-chevron-down':'fa-icon-chevron-up'"></i>
+          </a> 
+        </div>  
+        <div class="clearfix"></div>
+      </div>
+      <div class="slat-body" ng-show="!collapsed">
+        <tabset>
+          <tab heading="Result">
+            <div class="span12" ng-if="job.results">
+              <kvl ng-repeat="result in job.results.values()">
+                <kvi>
+                  <span class="label" ng-class="result.done?'':'label-info'">
+                    {{result.id}}
+                  </span>
+                  <span class="badge" ng-class="result.fail?'badge-important':'badge-success'">
+                    <i ng-if="result.retcode == null" class="fa-icon-certificate icon-white"></i>
+                    <b ng-if="result.retcode != null">{{result.retcode}}</b>
+                  </span>
+                  <span ng-repeat="ensual in result.results()" 
+                    ng-include="'ensual_nested.html'">
+                  </span>
+                </kvi>
+              </kvl>
+            </div>
+          </tab>
+          <tab heading="Event">
+            <div class="span12">
+              <kvl ng-repeat="event in job.events.values().reverse()">
+                <kvi>
+                  <span><b><i>{{event.tag}}</i></b></span>
+                  <span ng-repeat="ensual in ensuals(event.data)" 
+                    ng-include="'ensual_nested.html'">
+                  </span>
+                </kvi>
+              </kvl>
+            </div>
+          </tab>
+        </tabset>
+      </div><!--/slat-body-->
+    </div> <!--/slat-->
+  </div><!--/span-->
+</div><!--/row-->
+<!--</div>--><!--/container-->
+
+<!--<div class="container-fluid">-->
+<div class="row-fluid monitor"  ng-show="monitorMode == 'minion'">
+  <div class="span12" >
+    <div class="slat" ng-repeat="minion in minions.values() | filter:filterage.express | orderBy:sortMinions:sortage.reverse">
+      <div class="slat-head" ng-init="collapsed=true" ng-click="collapsed = !collapsed" 
+        title="Click to toggle grains display">
+        <span class="label pull-left" title="Minion Id: Green=grains, Orange=no grains" 
+          ng-class="minion.grains.keys().length?'label-info':'label-warning'">
+          <b style="font-size: larger">{{minion.id}}</b>
+        </span>
+        <div class="pull-right">
+          <span class="badge" title="Latest active status: Green=up, Red=down"
+            ng-class="minion.active?'badge-success':'badge-important'">
+            <i class="fa-icon-fire icon-white"></i>
+          </span>
+          <a href="" ng-click="collapsed = !collapsed; $event.stopPropagation();">
+            <i class="fa-icon-chevron-down icon-black" title="Click to toggle grains disoplay" 
+              ng-class="collapsed?'fa-icon-chevron-down':'fa-icon-chevron-up'"></i>
+          </a> 
+        </div>  
+        <div class="clearfix"></div>
+      </div>
+      <div class="slat-body animate-fade" ng-show="!collapsed">
+        <tabset>
+          <tab heading="Info">
+            <div class="span4">
+              <table class="table table-striped table-bordered table-hover table-condensed">
+                <tr>
+                  <td>id</td>
+                  <td>{{minion.grains.get("id")}}</td>
+                </tr> 
+                <tr>
+                  <td>host</td>
+                  <td>{{minion.grains.get("host")}}</td>
+                </tr> 
+                <tr>
+                  <td>domain</td>
+                  <td>{{minion.grains.get("domain")}}</td>
+                </tr> 
+                <tr>
+                  <td>fqdn</td>
+                  <td>{{minion.grains.get("fqdn")}}</td>
+                </tr> 
+                <tr>
+                  <td>nodename</td>
+                  <td>{{minion.grains.get("nodename")}}</td>
+                </tr> 
+                <tr>
+                  <td>localhost</td>
+                  <td>{{minion.grains.get("id")}}</td>
+                </tr>    
+                <tr>
+                  <td>server_id</td>
+                  <td>{{minion.grains.get("server_id")}}</td>
+                </tr>
+                <tr>
+                  <td>master</td>
+                  <td>{{minion.grains.get("master")}}</td>
+                </tr> 
+                <tr>
+                  <td>ipv4</td>
+                  <td>{{minion.grains.get("ipv4")[0]}}</td>
+                </tr> 
+              </table>
+            </div>
+            <div class="span4">
+              <table class="table table-striped table-bordered table-hover table-condensed">
+                <tr>
+                  <td>saltversion</td>
+                  <td>{{minion.grains.get("saltversion")}}</td>
+                </tr> 
+                <tr>
+                  <td>pythonversion</td>
+                  <td>{{minion.grains.get("pythonversion").join(".")}}</td>
+                </tr> 
+                <tr>
+                  <td>shell</td>
+                  <td>{{minion.grains.get("shell")}}</td>
+                </tr> 
+                <tr>
+                  <td>defaultencoding</td>
+                  <td>{{minion.grains.get("defaultencoding")}}</td>
+                </tr> 
+                <tr>
+                  <td>defaultlanguage</td>
+                  <td>{{minion.grains.get("defaultlanguage")}}</td>
+                </tr> 
+                <tr>
+                  <td>os</td>
+                  <td>{{minion.grains.get("os")}}</td>
+                </tr> 
+                <tr>
+                  <td>os_family</td>
+                  <td>{{minion.grains.get("os_family")}}</td>
+                </tr>    
+                <tr>
+                  <td>kernel</td>
+                  <td>{{minion.grains.get("kernel")}}</td>
+                </tr>
+                <tr>
+                  <td>kernelrelease</td>
+                  <td>{{minion.grains.get("kernelrelease")}}</td>
+                </tr> 
+              </table>
+            </div>
+            <div class="span4">
+              <table class="table table-striped table-bordered table-hover table-condensed">
+                <tr>
+                  <td>ps</td>
+                  <td>{{minion.grains.get("ps")}}</td>
+                </tr> 
+                <tr>
+                  <td>virtual</td>
+                  <td>{{minion.grains.get("virtual")}}</td>
+                </tr> 
+                <tr>
+                  <td>cpu_model</td>
+                  <td>{{minion.grains.get("cpu_model")}}</td>
+                </tr> 
+                <tr>
+                  <td>cpuarch</td>
+                  <td>{{minion.grains.get("cpuarch")}}</td>
+                </tr> 
+                <tr>
+                  <td>num_cpus</td>
+                  <td>{{minion.grains.get("num_cpus")}}</td>
+                </tr> 
+                <tr>
+                  <td>cpu_flags</td>
+                  <td>{{minion.grains.get("cpu_flags").join()}}</td>
+                </tr>    
+                <tr>
+                  <td>num_gpus</td>
+                  <td>{{minion.grains.get("num_gpus")}}</td>
+                </tr>
+                <tr>
+                  <td>gpus</td>
+                  <td>{{minion.grains.get("gpus").join()}}</td>
+                </tr> 
+                <tr>
+                  <td>mem_total</td>
+                  <td>{{minion.grains.get("mem_total")}}</td>
+                </tr> 
+              </table>
+            </div>
+          </tab>
+          <tab heading="IP">
+            <div class="span6">
+              <table class="table table-striped table-bordered table-hover table-condensed">
+                <tr ng-repeat="(key, val) in minion.grains.get('ip_interfaces') track by $index">
+                  <td>{{key}}</td>
+                  <td>{{val.join(', ')}}</td>
+                </tr> 
+              </table>
+            </div>
+            <div class="span6">
+              <table class="table table-striped table-bordered table-hover table-condensed">
+                <tr ng-repeat="ip in minion.grains.get('ipv4')">
+                  <td>ipv4 {{$index}}</td>
+                  <td>{{ip}}</td>
+                </tr> 
+              </table>
+            </div>
+          </tab>
+          <tab heading="Path">
+            <div class="span12">
+              <table class="table table-striped table-bordered table-hover table-condensed">
+                <tr>
+                  <td>path</td>
+                  <td>{{minion.grains.get("path")}}</td>
+                </tr> 
+                <tr>
+                  <td>saltpath</td>
+                  <td>{{minion.grains.get("saltpath")}}</td>
+                </tr> 
+                <tr>
+                  <td>pythonpath</td>
+                  <td>
+                    <table class="table table-striped table-bordered table-hover table-condensed">
+                      <tr ng-repeat="path in minion.grains.get('pythonpath')">
+                        <td>{{path}}</td>
+                      </tr> 
+                    </table>
+                  </td>
+                </tr> 
+                
+              </table>
+              
+            </div>
+          </tab>
+          <tab heading="Grain">
+            <div class="span12">
+              <kvl ng-repeat="grain in minion.grains.items()">
+                <kvi>
+                  <span><b><i>{{grain.key}}: </i></b></span>
+                  <span ng-repeat="ensual in ensuals(grain.val)" 
+                    ng-include="'ensual_nested.html'">
+                  </span>
+                </kvi>
+              </kvl>
+              <p ng-if="minion.events.keys().length==0">Minion events not job events"</p>
+            </div>
+          </tab>
+          <tab heading="Event">
+            <div class="span12">
+              <kvl ng-repeat="event in minion.events.values().reverse()">
+                <kvi>
+                  <span><b><i>{{event.tag}}</i></b></span>
+                  <span ng-repeat="ensual in ensuals(event.data)" 
+                    ng-include="'ensual_nested.html'">
+                  </span>
+                </kvi>
+              </kvl>
+              <p ng-if="minion.events.keys().length==0">Minion events not job events"</p>
+            </div>
+          </tab>
+          <tab heading="Command">
+            <div class="span12">
+              <p>Commands associated with this minion</p>
+            </div>
+          </tab>
+          
+        </tabset>
+      </div><!--/slat-body-->
+    </div> <!--/slat-->
+  </div><!--/span-->
+</div><!--/row-->
+<!--</div>--><!--/container-->
+
+<!--<div class="container-fluid">-->
+<div class="row-fluid monitor" ng-show="monitorMode == 'event'">
+  <div class="span12" >
+    <div class="slat" ng-repeat="event in events.values().reverse()">
+      <div class="slat-head" ng-init="expanded={'value': false}" ng-click="expanded.value = !expanded.value"
+        title="Click to toggle results display">
+        <span class="label pull-left" title="Event Tag">
+          <b style="font-size: larger">{{event.tag}}</b>
+        </span>
+        <span title="Module function">&nbsp;&nbsp;{{humanize(event.data)}}</span>
+        <div class="pull-right">
+          <a href="" ng-click="expanded.value = !expanded.value; $event.stopPropagation();">
+            <i class="fa-icon-chevron-down icon-black" title="Click to toggle results disoplay" 
+              ng-class="!expanded.value?'fa-icon-chevron-down':'fa-icon-chevron-up'"></i>
+          </a> 
+        </div>  
+        <div class="clearfix"></div>
+      </div>
+      <div class="slat-body" ng-show="expanded.value">
+        <div class="span12">
+          <kvl>
+            <kvi>
+              <span ng-repeat="ensual in ensuals(event.data)" 
+                ng-include="'ensual_nested_list.html'">
+              </span>
+            </kvi>
+          </kvl>
+        </div>
+        <div class="clearfix"></div>
+      </div><!--/slat-body-->
+    </div> <!--/slat-->
+  </div><!--/span-->
+</div><!--/row-->
+<!--</div>--><!--/container-->
+
+
+<script type="text/ng-template" id="ensual_nested.html">
+  <span ng-switch on="expandMode(ensual)">
+    <span ng-switch-when="lone" >
+      <n>{{ensual}}</n>
+    </span>
+    <span ng-switch-when="vect" >[
+      <span ng-repeat="value in ensual track by $index">
+        <n>{{value}}{{!$last ? " ," : ""}}</n>
+      </span>]
+    </span>
+    <span ng-switch-when="list"> 
+      <i class="btn btn-small" ng-class="expanded.value?'fa-icon-caret-down':'fa-icon-caret-right'"
+        ng-init="expanded={'value': false}" ng-click="expanded.value = !expanded.value">
+      </i>
+      <kvl class="indent tight" ng-if="expanded.value">[
+        <kvi ng-repeat="ensual in ensual track by $index">
+          <span ng-include="'ensual_nested_list.html'"></span>{{!$last?",":""}}
+        </kvi>
+        ]
+      </kvl>
+    </span>
+    <span ng-switch-when="dict" >
+      <i class="btn btn-small" ng-class="expanded.value?'fa-icon-caret-down':'fa-icon-caret-right'"
+        ng-init="expanded={'value': false}" ng-click="expanded.value = !expanded.value">
+      </i>
+      <kvl class="indent" ng-if="expanded.value">
+        <kvi ng-repeat="(key, ensual) in ensual track by $index">
+          <b><i>{{key}}: </i></b>
+          <span ng-include="'ensual_nested.html'"></span>
+        </kvi>
+      </kvl>
+    </span>
+    <span ng-switch-default>Whoops</span>
+  </span>
+</script>
+
+<script type="text/ng-template" id="ensual_nested_list.html">
+  <span ng-switch on="expandMode(ensual)">
+    <span ng-switch-when="lone" >
+      <n>{{ensual}}</n>
+    </span>
+    <span ng-switch-when="vect">[
+      <span ng-repeat="value in ensual track by $index">
+        <n>{{value}}{{!$last ? " ," : ""}}</n>
+      </span>]
+    </span>
+    <span ng-switch-when="list">
+      <kvl class="indent tight" ng-if="expanded.value">[
+        <kvi ng-repeat="ensual in ensual track by $index">
+          <span ng-include="'ensual_nested_list.html'"></span>{{!$last?",":""}}
+        </kvi>
+        ]
+      </kvl>
+    </span>
+    <span ng-switch-when="dict">
+      <kvl class="indent tight" ng-if="expanded.value">
+        <kvi ng-repeat="(key, ensual) in ensual track by $index">
+          <b><i>{{key}}: </i></b>
+          <span ng-include="'ensual_nested.html'"></span>
+        </kvi>
+      </kvl>
+    </span>
+    <span ng-switch-default>Whoops</span>
+  </span>
+</script>

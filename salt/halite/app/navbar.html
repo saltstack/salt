@@ -1,0 +1,39 @@
+<div ng-controller="NavbarCtlr">
+  <div class="navbar navbar-fixed-top" >
+    <div class="navbar-inner ">
+      <div class="container">
+        <button type="button" class="btn btn-navbar" ng-click="isCollapsed = !isCollapsed">
+          <span class="fa-icon-reorder"></span>
+        </button>
+        <a class="brand" ng-href="{{views.home.url}}">
+          <img ng-src="{{baseUrl}}/static/app/SaltStackLogoBlackHoriz18.png" />
+        </a>
+        <div class="nav-collapse" collapse="isCollapsed" style="height: 0px;">
+          <ul class="nav">
+            <li ng-repeat="view in views.tabs" ng-class="navery.navs[view.label].state">
+              <a ng-href="{{view.url}}">{{view.label | capitalcase}}</a>
+            </li>
+            
+          </ul>
+          <form class="navbar-form pull-right" name="loginForm" ng-cloak ng-show="!loggedIn">
+            <div>
+              <span ng-style="{color:'red'}" ng-cloak ng-show="errorMsg">{{errorMsg}}  </span>
+              <span ng-style="{color:'red'}" ng-cloak ng-show="loginFormError()">{{loginFormError()}}  </span>
+            </div>
+            <input class="span2" type="text" placeholder="Username" ng-model="login.username" name="username" required>
+            <input class="span2" type="password" placeholder="Password" ng-model="login.password" name="password" required>
+            <button type="submit" class="btn" ng-click="loginUser()" ng-disabled="loginForm.$invalid">Login</button>
+          </form>
+          <form class="navbar-form pull-right" name="logoutForm" ng-cloak ng-show="!!loggedIn">
+            <div>
+              <span ng-style="{color:'red'}" ng-cloak ng-show="errorMsg">{{errorMsg}}  </span>
+            </div>
+            <span class="label label-big label-info" style="vertical-align:text-top">{{username}}</span>
+            <button type="submit" class="btn" ng-click="logoutUser()">Logout</button>
+          </form>
+        </div><!-- /nav collapse -->
+      </div><!-- /containter -->
+    </div><!-- /navbar-inner -->
+  </div><!-- /navbar -->
+</div>
+
