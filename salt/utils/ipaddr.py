@@ -635,7 +635,7 @@ class _BaseNet(_IPAddrBase):
     def __contains__(self, other):
         # always false if one is v4 and the other is v6.
         if self._version != other._version:
-          return False
+            return False
         # dealing with another network.
         if isinstance(other, _BaseNet):
             return (self.network <= other.network and
@@ -1104,14 +1104,14 @@ class _BaseV4(object):
 
     @property
     def is_reserved(self):
-       """Test if the address is otherwise IETF reserved.
+        """Test if the address is otherwise IETF reserved.
 
         Returns:
             A boolean, True if the address is within the
             reserved IPv4 Network range.
 
-       """
-       return self in IPv4Network('240.0.0.0/4')
+        """
+        return self in IPv4Network('240.0.0.0/4')
 
     @property
     def is_private(self):
@@ -1491,7 +1491,7 @@ class _BaseV6(object):
         if not self._HEX_DIGITS.issuperset(hextet_str):
             raise ValueError
         if len(hextet_str) > 4:
-          raise ValueError
+            raise ValueError
         hextet_int = int(hextet_str, 16)
         if hextet_int > 0xFFFF:
             raise ValueError
