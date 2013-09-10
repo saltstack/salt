@@ -130,7 +130,7 @@ def latest(name,
             ret['changes']['revision'] = "{0} => {1}".format(current_rev, new_rev)
     
     else:
-        out = __salt__[svn_cmd](cwd, name, basename, user, username, password, trus, *opts)
+        out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
 
         ret['changes']['new'] = name
         ret['changes']['revision'] = __salt__['svn.info'](cwd=target,
