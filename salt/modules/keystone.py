@@ -283,6 +283,33 @@ def tenant_create(name, description=None, enabled=True):
     return tenant_get(new.id)
 
 
+def tenant_delete(tenant_id=None, name=None):
+    '''
+    Delete a tenant (keystone tenant-delete)
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.tenant_delete c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.tenant_delete tenant_id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.tenant_delete name=demo
+    '''
+    kstone = auth()
+    if name:
+        for tenant in kstone.tenants.list():
+            if tenant.name == name:
+                tenant_id = tenant.id
+                break
+    if not tenant_id:
+        return {'Error': 'Unable to resolve tenant id'}
+    kstone.tenants.delete(tenant_id)
+    ret = 'Tenant ID {0} deleted'.format(tenant_id)
+    if name:
+        ret += ' ({0})'.format(name)
+    return ret
+
+
 def tenant_get(tenant_id=None, name=None):
     '''
     Return a specific tenants (keystone tenant-get)
@@ -482,10 +509,11 @@ def user_delete(user_id=None, name=None):
 def user_update(user_id=None,
                 name=None,
                 email=None,
-                enabled=None):
+                enabled=None,
+                tenant=None):
     '''
     Update a user's information (keystone user-update)
-    The following fields may be updated: name, email, enabled.
+    The following fields may be updated: name, email, enabled, tenant.
     Because the name is one of the fields, a valid user id is required.
 
     CLI Examples:
@@ -512,6 +540,12 @@ def user_update(user_id=None,
     if enabled is None:
         enabled = user.enabled
     kstone.users.update(user=user_id, name=name, email=email, enabled=enabled)
+    if tenant:
+        for t in kstone.tenants.list():
+            if t.name == tenant:
+                tenant_id = t.id
+                break
+        kstone.users.update_tenant(user_id, tenant_id)
     ret = 'Info updated for user ID {0}'.format(user_id)
     return ret
 
@@ -651,8 +685,6 @@ def _item_list():
     #role-delete         Delete role
     #service-create      Add service to Service Catalog
     #service-delete      Delete service from Service Catalog
-    #tenant-delete       Delete tenant
-    #tenant-update       Update tenant name, description, enabled status
     #user-role-add       Add role to user
     #user-role-remove    Remove role from user
     #discover            Discover Keystone servers and show authentication
