@@ -91,8 +91,7 @@ def latest(name,
     if not target:
         return _fail(ret, '"target" option is required')
 
-    run_check_cmd_kwargs = {'cwd': target,
-                            'runas': runas}
+    run_check_cmd_kwargs = {'runas': runas}
 
     # check if git.latest should be applied
     cret = _run_check(

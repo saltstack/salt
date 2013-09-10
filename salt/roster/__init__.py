@@ -23,6 +23,10 @@ class Roster(object):
         Return a list of loaded roster backends
         '''
         back = set()
+        if self.opts.get('roster'):
+            fun = '{0}.targets'.format(self.opts['roster'])
+            if fun in self.rosters:
+                return [self.opts['roster']]
         for roster in self.rosters:
             back.add(roster.split('.')[0])
         return sorted(back)

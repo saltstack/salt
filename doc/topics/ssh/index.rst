@@ -12,10 +12,10 @@ Master.
 
     The Salt SSH system does not supercede the standard Salt communication
     systems, it simply offers an SSH based alternative that does not require
-    ZeroMQ and a remote agent. Since all communication with Salt SSH is
-    executed via SSH it is SUBSTANTIALLY slower than standard Salt with ZeroMQ.
+    ZeroMQ and a remote agent. Be aware that since all communication with Salt SSH is
+    executed via SSH it is substantially slower than standard Salt with ZeroMQ.
 
-Salt SSH is VERY easy to use, simply set up a basic `roster` file of the
+Salt SSH is very easy to use, simply set up a basic `roster` file of the
 systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
@@ -26,7 +26,7 @@ The roster system in Salt allows for remote minions to be easily defined.
 
 .. note::
 
-    The roster system is fully documented here:
+    See the :doc:`Roster documentation </topics/ssh/roster>` for more details.
 
 Simply create the roster file, the default location is `/etc/salt/roster`:
 
@@ -34,15 +34,16 @@ Simply create the roster file, the default location is `/etc/salt/roster`:
 
     web1: 192.168.42.1
 
-This is a VERY simple roster file where a Salt ID is being assigned to an ip
+This is a very basic roster file where a Salt ID is being assigned to an IP
 address. A more elaborate roster can be created:
 
 .. code-block:: yaml
 
     web1:
-      host: 192.168.42.1 # The ip addr or dns hostname
-      user: fred # Remote executions will be executed as user fred
-      passwd: foobarbaz # The password to use for login, if omited keys are used
+      host: 192.168.42.1 # The IP addr or DNS hostname
+      user: fred         # Remote executions will be executed as user fred
+      passwd: foobarbaz  # The password to use for login, if omitted, keys are used
+      sudo: True         # Whether to sudo to root, not enabled by default
     web2:
       host: 192.168.42.2
 

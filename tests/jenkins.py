@@ -131,7 +131,7 @@ def download_coverage_report(options):
     sys.stdout.flush()
 
     workspace = options.workspace
-    vm_name = options.download_unittest_reports
+    vm_name = options.download_coverage_report
 
     if os.path.isfile(os.path.join(workspace, 'coverage.xml')):
         os.unlink(os.path.join(workspace, 'coverage.xml'))
@@ -173,6 +173,10 @@ def run(opts):
         'JENKINS_SALTCLOUD_VM_NAME',
         generate_vm_name(opts.platform)
     )
+
+    if opts.download_remote_reports:
+        opts.download_coverage_report = vm_name
+        opts.download_unittest_reports = vm_name
 
     cmd = (
         'salt-cloud -l debug --script-args "-D -n git {commit}" -p '
@@ -250,6 +254,12 @@ def run(opts):
             # Anything else, raise the exception
             raise
 
+    if opts.download_remote_reports:
+        # Download unittest reports
+        download_unittest_reports(opts)
+        # Download coverage report
+        download_coverage_report(opts)
+
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(vm_name)
     return retcode
@@ -307,6 +317,12 @@ def parse():
         help='Delete a running VM'
     )
     parser.add_option(
+        '--download-remote-reports',
+        default=False,
+        action='store_true',
+        help='Download remote reports when running remote \'testrun\' state'
+    )
+    parser.add_option(
         '--download-unittest-reports',
         default=None,
         help='Download the XML unittest results'
@@ -343,6 +359,7 @@ def parse():
 
     if not options.commit:
         parser.exit('--commit is required')
+
     return options
 
 if __name__ == '__main__':
