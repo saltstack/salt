@@ -174,9 +174,9 @@ def run(opts):
         generate_vm_name(opts.platform)
     )
 
-    if options.download_remote_reports:
-        options.download_coverage_report = vm_name
-        options.download_unittest_reports = vm_name
+    if opts.download_remote_reports:
+        opts.download_coverage_report = vm_name
+        opts.download_unittest_reports = vm_name
 
     cmd = (
         'salt-cloud -l debug --script-args "-D -n git {commit}" -p '
@@ -254,11 +254,11 @@ def run(opts):
             # Anything else, raise the exception
             raise
 
-    if options.download_remote_reports:
+    if opts.download_remote_reports:
         # Download unittest reports
-        download_unittest_reports(options)
+        download_unittest_reports(opts)
         # Download coverage report
-        download_coverage_report(options)
+        download_coverage_report(opts)
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(vm_name)
