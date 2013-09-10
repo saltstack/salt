@@ -2,7 +2,7 @@
 Salt Rosters
 ============
 
-Salt rosters are plugabble systems added in Salt 0.17.0 to facilitate the
+Salt rosters are plugable systems added in Salt 0.17.0 to facilitate the
 ``salt-ssh`` system.
 The roster system was created because ``salt-ssh`` needs a means to
 identify which systems need to be targetted for execution.
