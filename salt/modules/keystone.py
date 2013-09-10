@@ -509,10 +509,11 @@ def user_delete(user_id=None, name=None):
 def user_update(user_id=None,
                 name=None,
                 email=None,
-                enabled=None):
+                enabled=None,
+                tenant=None):
     '''
     Update a user's information (keystone user-update)
-    The following fields may be updated: name, email, enabled.
+    The following fields may be updated: name, email, enabled, tenant.
     Because the name is one of the fields, a valid user id is required.
 
     CLI Examples:
@@ -539,6 +540,12 @@ def user_update(user_id=None,
     if enabled is None:
         enabled = user.enabled
     kstone.users.update(user=user_id, name=name, email=email, enabled=enabled)
+    if tenant:
+        for t in kstone.tenants.list():
+            if t.name == tenant:
+                tenant_id = t.id
+                break
+        kstone.users.update_tenant(user_id, tenant_id)
     ret = 'Info updated for user ID {0}'.format(user_id)
     return ret
 
