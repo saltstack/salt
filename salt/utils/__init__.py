@@ -1341,7 +1341,7 @@ def warn_until(version_info,
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
     :param stacklevel: There should be no need to set the value of
-                       ``stacklevel`` salt should be able to do the right thing
+                       ``stacklevel``. Salt should be able to do the right thing.
     :param _version_info_: In order to reuse this function for other SaltStack
                            projects, they need to be able to provide the
                            version info to compare to.
