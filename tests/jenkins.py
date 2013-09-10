@@ -131,7 +131,7 @@ def download_coverage_report(options):
     sys.stdout.flush()
 
     workspace = options.workspace
-    vm_name = options.download_unittest_reports
+    vm_name = options.download_coverage_report
 
     if os.path.isfile(os.path.join(workspace, 'coverage.xml')):
         os.unlink(os.path.join(workspace, 'coverage.xml'))
@@ -355,6 +355,7 @@ def parse():
 
     if not options.commit:
         parser.exit('--commit is required')
+
     return options
 
 if __name__ == '__main__':
