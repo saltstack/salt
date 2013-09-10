@@ -63,3 +63,21 @@ synced to minions when :mod:`state.highstate <salt.modules.state.highstate>`,
 Other custom types (renderers, outputters, etc.) have similar behavior, see the
 documentation for the :mod:`saltutil <salt.modules.saltutil>` module for more
 information.
+
+Module ``X`` isn't available, even though the shell command it uses is installed. Why?
+--------------------------------------------------------------------------------------
+This is most likely a PATH issue. Did you custom-compile the software which the
+module requires? RHEL/CentOS/etc. in particular override the root user's path
+in ``/etc/init.d/functions``, setting it to ``/sbin:/usr/sbin:/bin:/usr/bin``,
+making software installed into ``/usr/local/bin`` unavailable to Salt when the
+minion is started using the initscript. In version 0.18.0, Salt will have a
+better solution for these sort of PATH-related issues, but recompiling the
+software to install it into a location within the PATH should resolve the
+issue in the meantime. Alternatively, you can create a symbolic link within the
+PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
+
+.. code-block:: yaml
+
+    /usr/bin/foo:
+      file.symlink:
+        - target: /usr/local/bin/foo
