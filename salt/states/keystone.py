@@ -135,3 +135,26 @@ def tenant_present(name, description=None, enabled=True):
         ret['comment'] = 'Keystone tenant {0} has been added'.format(name)
         ret['changes']['Tenant'] = 'Created'
     return ret
+
+
+def tenant_absent(name):
+    '''
+    Ensure that the keystone tenant is absent.
+
+    name
+        The name of the tenant that should not exist
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Keystone tenant {0} is already absent'.format(name)}
+
+    # Check if tenant is present
+    tenant = __salt__['keystone.tenant_get'](name=name)
+    if 'Error' not in tenant:
+        # Delete tenant
+        __salt__['keystone.tenant_delete'](name=name)
+        ret['comment'] = 'Keystone tenant {0} has been deleted'.format(name)
+        ret['changes']['Tenant'] = 'Deleted'
+
+    return ret

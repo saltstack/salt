@@ -283,6 +283,33 @@ def tenant_create(name, description=None, enabled=True):
     return tenant_get(new.id)
 
 
+def tenant_delete(tenant_id=None, name=None):
+    '''
+    Delete a tenant (keystone tenant-delete)
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.tenant_delete c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.tenant_delete tenant_id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.tenant_delete name=demo
+    '''
+    kstone = auth()
+    if name:
+        for tenant in kstone.tenants.list():
+            if tenant.name == name:
+                tenant_id = tenant.id
+                break
+    if not tenant_id:
+        return {'Error': 'Unable to resolve tenant id'}
+    kstone.tenants.delete(tenant_id)
+    ret = 'Tenant ID {0} deleted'.format(tenant_id)
+    if name:
+        ret += ' ({0})'.format(name)
+    return ret
+
+
 def tenant_get(tenant_id=None, name=None):
     '''
     Return a specific tenants (keystone tenant-get)
@@ -651,8 +678,6 @@ def _item_list():
     #role-delete         Delete role
     #service-create      Add service to Service Catalog
     #service-delete      Delete service from Service Catalog
-    #tenant-delete       Delete tenant
-    #tenant-update       Update tenant name, description, enabled status
     #user-role-add       Add role to user
     #user-role-remove    Remove role from user
     #discover            Discover Keystone servers and show authentication
