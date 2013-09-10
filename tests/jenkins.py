@@ -174,6 +174,10 @@ def run(opts):
         generate_vm_name(opts.platform)
     )
 
+    if options.download_remote_reports:
+        options.download_coverage_report = vm_name
+        options.download_unittest_reports = vm_name
+
     cmd = (
         'salt-cloud -l debug --script-args "-D -n git {commit}" -p '
         '{provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
