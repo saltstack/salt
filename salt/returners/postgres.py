@@ -51,6 +51,7 @@ correctly::
     CREATE INDEX ON salt_returns (id);
     CREATE INDEX ON salt_returns (jid);
     CREATE INDEX ON salt_returns (fun);
+    EOF
 
 Required python modules: psycopg2
 '''
