@@ -31,7 +31,7 @@ The information which can be stored in a roster `target` is the following:
 
 .. code-block:: yaml
 
-    <Salt id>: # The id to reference the target system with
-        host: # The ip address or dns name of the remote host
-        passwd: # The password to log in with
-        user: # The user to log in as
+    <Salt ID>:   # The id to reference the target system with
+        host:    # The IP address or DNS name of the remote host
+        user:    # The user to log in as
+        passwd:  # The password to log in with
