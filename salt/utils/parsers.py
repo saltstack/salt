@@ -1516,6 +1516,11 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'raw shell command')
         )
         self.add_option(
+            '--roster',
+            dest='roster',
+            default='',
+            help=('Define which roster system to use'))
+        self.add_option(
             '--refresh', '--refresh-cache',
             dest='refresh_cache',
             default=False,
