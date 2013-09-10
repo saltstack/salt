@@ -250,6 +250,12 @@ def run(opts):
             # Anything else, raise the exception
             raise
 
+    if options.download_remote_reports:
+        # Download unittest reports
+        download_unittest_reports(options)
+        # Download coverage report
+        download_coverage_report(options)
+
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(vm_name)
     return retcode
@@ -305,6 +311,12 @@ def parse():
         '--delete-vm',
         default=None,
         help='Delete a running VM'
+    )
+    parser.add_option(
+        '--download-remote-reports',
+        default=False,
+        action='store_true',
+        help='Download remote reports when running remote \'testrun\' state'
     )
     parser.add_option(
         '--download-unittest-reports',
