@@ -499,7 +499,7 @@ if __name__ == '__main__':
         print('Coverage data file exists? {0}'.format(os.path.isfile('.coverage')))
 
         if opts.no_coverage_report is False:
-            report_dir = options.coverage_html or os.path.join(
+            report_dir = opts.coverage_html or os.path.join(
                 os.path.dirname(__file__), 'coverage-report'
             )
             print(
