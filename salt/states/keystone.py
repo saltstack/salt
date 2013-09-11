@@ -14,12 +14,6 @@ Management of Keystone users.
 
 '''
 
-# Import python libs
-import sys
-
-# Import salt libs
-import salt.utils
-
 
 def __virtual__():
     '''
