@@ -378,7 +378,7 @@ def list_queues_vhost(vhost, *kwargs):
 
 def list_policies(runas=None):
     '''
-    Return a dictionary of policies nested by vhost and name 
+    Return a dictionary of policies nested by vhost and name
     based on the data returned from rabbitmqctl list_policies.
 
     Reference: http://www.rabbitmq.com/ha.html
