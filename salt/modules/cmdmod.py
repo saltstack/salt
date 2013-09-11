@@ -328,7 +328,7 @@ def _run(cmd,
 
     elif not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
-            'specified cwd {0!r} either not absolute or does not exist'
+            'Specified cwd {0!r} either not absolute or does not exist'
             .format(cwd)
         )
 
