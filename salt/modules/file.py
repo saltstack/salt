@@ -1,5 +1,5 @@
 '''
-Manage information about regular files, directories, 
+Manage information about regular files, directories,
 and special files on the minion, set/read user,
 group, mode, and data
 '''
