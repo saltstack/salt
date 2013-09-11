@@ -356,7 +356,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # Le't make sure we have pip 1.3.1 installed
             self.assertEqual(
-                self.run_function('pip.list', ['pip']),
+                self.run_function('pip.list', ['pip'], bin_env=venv_dir),
                 {'pip': '1.3.1'}
             )
 
