@@ -531,7 +531,7 @@ if __name__ == '__main__':
             ),
             sys.stdout.flush()
             code_coverage.xml_report(
-                outfile=self.opts.coverage_xml
+                outfile=opts.coverage_xml
             )
             print('Done.')
 
