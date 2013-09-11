@@ -303,6 +303,19 @@ def parse_opts():
         help='Don\'t build the coverage HTML report'
     )
     output_options_group.add_option(
+        '--coverage-xml',
+        default=None,
+        help='If provided, the path to where a XML report of the code '
+              'coverage will be written to'
+    )
+    output_options_group.add_option(
+        '--coverage-html',
+        default=None,
+        help=('The directory where the generated HTML coverage report '
+              'will be saved to. The directory, if existing, will be '
+              'deleted before the report is generated.')
+    )
+    output_options_group.add_option(
         '--no-colors',
         '--no-colours',
         default=False,
@@ -318,6 +331,9 @@ def parse_opts():
             '\'--xml\' is not available. The xmlrunner library is not '
             'installed.'
         )
+
+    if options.coverage_xml or options.coverage_html and not options.coverage:
+        options.coverage = True
 
     if options.coverage and code_coverage is None:
         parser.error(
@@ -483,7 +499,9 @@ if __name__ == '__main__':
         print('Coverage data file exists? {0}'.format(os.path.isfile('.coverage')))
 
         if opts.no_coverage_report is False:
-            report_dir = os.path.join(os.path.dirname(__file__), 'coverage-report')
+            report_dir = options.coverage_html or os.path.join(
+                os.path.dirname(__file__), 'coverage-report'
+            )
             print(
                 '\nGenerating Coverage HTML Report Under {0!r} ...'.format(
                     report_dir
@@ -495,7 +513,23 @@ if __name__ == '__main__':
                 import shutil
                 shutil.rmtree(report_dir)
             code_coverage.html_report(directory=report_dir)
-            print('Done.\n')
+            print('Done.')
+
+        if opts.coverage_xml:
+            if os.path.isfile(opts.coverage_xml):
+                os.unlink(opts.coverage_xml)
+
+            print(
+                '\nGenerating Coverage XML Report Under {0!r} ...'.format(
+                    opts.coverage_xml
+                )
+            ),
+            sys.stdout.flush()
+            code_coverage.xml_report(
+                outfile=self.opts.coverage_xml
+            )
+            print('Done.')
+
 
     if false_count > 0:
         sys.exit(1)
