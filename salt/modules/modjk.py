@@ -203,7 +203,7 @@ def list_running_members(lbn, profile='default'):
         salt '*' modjk.list_running_members loadbalancer1 other-profile
     '''
 
-    config = get_running()
+    config = get_running(profile)
     try:
         return config['worker.{0}.balance_workers'.format(lbn)].split(',')
     except KeyError:
