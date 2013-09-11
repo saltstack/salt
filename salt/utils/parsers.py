@@ -1422,6 +1422,13 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Exit with the salt call retcode and not the salt binary '
                   'retcode')
         )
+        self.add_option(
+            '--id',
+            default='',
+            dest='id',
+            help=('Specify the minion id to use. If this option is omitted, '
+                  'the id option from the minion config will be used.')
+        )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run \
