@@ -9,6 +9,7 @@ Work with virtual machines managed by libvirt
 # Import python libs
 import os
 import re
+import sys
 import shutil
 import subprocess
 import string
@@ -1063,16 +1064,13 @@ def get_profiles(hypervisor=None):
     else:
         hypervisor = __salt__['config.get']('libvirt:hypervisor', VIRT_DEFAULT_HYPER)
     virt_ = __salt__['config.get']('virt', {})
-    ret['disk'] = {'default': _disk_profile('default', hypervisor)}
-    ret['nic'] = {'default': _nic_profile('default', hypervisor)}
-    if 'disk' in virt_:
-        ret.setdefault('disk', {})
-        for prf in virt_['disk']:
-            ret['disk'][prf] = _disk_profile(prf, hypervisor)
-    if 'nic' in virt_:
-        ret.setdefault('nic', {})
-        for prf in virt_['nic']:
-            ret['nic'][prf] = _nic_profile(prf, hypervisor)
+    for type_ in ['disk', 'nic']:
+        _func = getattr(sys.modules[__name__], '_{0}_profile'.format(type_))
+        ret[type_] = {'default': _func('default', hypervisor)}
+        if type_ in virt_:
+            ret.setdefault(type_, {})
+            for prf in virt_[type_]:
+                ret[type_][prf] = _func(prf, hypervisor)
     return ret
 
 
