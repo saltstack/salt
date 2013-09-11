@@ -64,13 +64,13 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
 
 .. warning::
 
-        When using a mode that includes a leading zero you must wrap the 
+        When using a mode that includes a leading zero you must wrap the
         value in single quotes. If the value is not wrapped in quotes it
         will be read by YAML as an integer and evaluated as an octal.
 
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
-creation of character devices, block devices, and fifo pipes. The function will 
+creation of character devices, block devices, and fifo pipes. The function will
 create the directory structure up to the special file if it is needed on the
 minion. The function will not overwrite or operate on (change major/minor
 numbers) existing special files with the exception of user, group, and
@@ -2468,9 +2468,9 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     Create a special file similar to the 'nix mknod command. The supported device types are
     p (fifo pipe), c (character device), and b (block device). Provide the major and minor
     numbers when specifying a character device or block device. A fifo pipe does not require
-    this information. The command will create the necessary dirs if needed. If a file of the 
+    this information. The command will create the necessary dirs if needed. If a file of the
     same name not of the same type/major/minor exists, it will not be overwritten or unlinked
-    (deleted). This is logically in place as a safety measure because you can really shoot 
+    (deleted). This is logically in place as a safety measure because you can really shoot
     yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
     note that not just anyone can create special devices. Usually this is only done as root.
     If the state is executed as none other than root on a minion, you may recieve a permision
@@ -2509,7 +2509,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             - user: root
             - group: root
             - mode: 660
- 
+
         /dev/blk:
           file.mknod:
             - ntype: b
@@ -2518,7 +2518,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             - user: root
             - group: root
             - mode: 660
- 
+
        /dev/fifo:
          file.mknod:
            - ntype: p
