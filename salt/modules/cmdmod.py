@@ -6,15 +6,15 @@ access to the master root execution access to all salt minions
 '''
 
 # Import python libs
+import functools
+import json
 import logging
 import os
 import shutil
 import subprocess
-import functools
 import sys
-import json
-import yaml
 import traceback
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -174,8 +174,9 @@ def _run(cmd,
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
-    # Set the default working directory to the home directory
-    # of the user salt-minion is running as.  Default:  /root
+    # Set the default working directory to the home directory of the user
+    # salt-minion is running as. Defaults to home directory of user under which
+    # the minion is running.
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
 
@@ -187,6 +188,10 @@ def _run(cmd,
             cwd = '/'
             if salt.utils.is_windows():
                 cwd = os.tempnam()[:3]
+    else:
+        # Handle edge cases where numeric/other input is entered, and would be
+        # yaml-ified into non-string types
+        cwd = str(cwd)
 
     if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
@@ -296,7 +301,7 @@ def _run(cmd,
               'stdin': str(stdin) if stdin is not None else stdin,
               'stdout': stdout,
               'stderr': stderr,
-              'with_communicate' : with_communicate}
+              'with_communicate': with_communicate}
 
     if umask:
         try:
@@ -321,8 +326,18 @@ def _run(cmd,
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
+    elif not os.path.isabs(cwd) or not os.path.isdir(cwd):
+        raise CommandExecutionError(
+            'specified cwd {0!r} either not absolute or does not exist'
+            .format(cwd)
+        )
+
     # This is where the magic happens
-    proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+    try:
+        proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError('Unable to run command: {0}'.format(exc))
+
     try:
         proc.wait(timeout)
     except salt.exceptions.TimedProcTimeoutError, e:
