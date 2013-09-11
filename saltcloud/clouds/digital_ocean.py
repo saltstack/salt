@@ -124,6 +124,13 @@ def avail_sizes():
     return ret
 
 
+def avail_private_networks():
+    '''
+    Returns a list of region ids which support private networking.
+    '''
+    return ['4']  # Note: currently only available in NY2 (region id: 4)
+
+
 def list_nodes():
     '''
     Return a list of the VMs that are on the provider
@@ -270,6 +277,17 @@ def create(vm_):
             'The defined key_filename {0!r} does not exist'.format(
                 key_filename
             )
+        )
+
+    private_networking = config.get_config_value(
+        'private_networking', vm_, __opts__, search_global=False, default=None
+    )
+
+    if private_networking and kwargs['region_id'] in avail_private_networks():
+        kwargs['private_networking'] = 'true'
+    else:
+        raise SaltCloudConfigError(
+            'Private networking not available in {0!r}'.format(kwargs['region_id'])
         )
 
     saltcloud.utils.fire_event(
