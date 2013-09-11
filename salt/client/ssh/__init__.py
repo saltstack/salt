@@ -616,11 +616,11 @@ def prep_trans_tar(opts, chunks, file_refs):
                     break
                 files = file_client.cache_dir(name, env, True)
                 if files:
-                    for file in files:
+                    for filename in files:
                         tgt = os.path.join(
                                 env_root,
                                 short,
-                                file[file.find(short) + len(short):],
+                                filename[filename.find(short) + len(short):],
                                 )
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):
