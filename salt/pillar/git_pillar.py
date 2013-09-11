@@ -12,7 +12,6 @@ ext_pillar:
 from copy import deepcopy
 import logging
 import os
-import time
 
 # Import third party libs
 HAS_GIT = False
@@ -23,7 +22,6 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
 from salt.pillar import Pillar
 
 # Set up logging
