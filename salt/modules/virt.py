@@ -480,14 +480,24 @@ def _disk_profile(profile, hypervisor):
                 size: 8192
                 format: qcow2
                 model: virtio
+
+    The ``format`` and ``model`` parameters are optional, and will
+    default to whatever is best suitable for the active hypervisor.
     '''
-    default = {'system': {'size': '8192'}}
+    default = [{'system': {'size': '8192'}}]
     if hypervisor in ['esxi', 'vmware']:
-        default['system'].update(format='vmdk', model='scsi')
+        overlay = {'format': 'vmdk', 'model': 'scsi'}
     elif hypervisor in ['qemu', 'kvm']:
-        default['system'].update(format='qcow2', model='virtio')
-    # FIXME: if format and model is not specified (in config file), then the above defaults should be set as defaults
-    return __salt__['config.get']('virt:disk', {}).get(profile, default)
+        overlay = {'format': 'qcow2', 'model': 'virtio'}
+    else:
+        overlay = {}
+    disklist = __salt__['config.get']('virt:disk', {}).get(profile, default)
+    for key, val in overlay.items():
+        for i, disks in enumerate(disklist):
+            for disk in disks:
+                if key not in disks[disk]:
+                    disklist[i][disk][key] = val
+    return disklist
 
 
 def _nic_profile(profile, hypervisor):
@@ -506,13 +516,23 @@ def _nic_profile(profile, hypervisor):
               eth0:
                 bridge: br0
                 model: virtio
+
+    The ``model`` parameter is optional, and will default to whatever
+    is best suitable for the active hypervisor.
     '''
+    default = {'eth0': {}}
     if hypervisor in ['esxi', 'vmware']:
-        default = {'eth0': {'bridge': 'DEFAULT', 'model': 'e1000'}}
+        overlay = {'bridge': 'DEFAULT', 'model': 'e1000'}
     elif hypervisor in ['qemu', 'kvm']:
-        default = {'eth0': {'bridge': 'br0', 'model': 'virtio'}}
-    # FIXME: if format and model is not specified (in config file), then the above defaults should be set as the defaults
-    return __salt__['config.get']('virt:nic', {}).get(profile, default)
+        overlay = {'bridge': 'br0', 'model': 'virtio'}
+    else:
+        overlay = {}
+    nics = __salt__['config.get']('virt:nic', {}).get(profile, default)
+    for key, val in overlay.items():
+        for nic in nics:
+            if key not in nics[nic]:
+                nics[nic][key] = val
+    return nics
 
 
 def init(name,
@@ -1043,15 +1063,24 @@ def get_profiles(hypervisor=None):
         salt '*' virt.get_profile
         salt '*' virt.get_profile hypervisor=esxi
     '''
+    ret = {}
     if hypervisor:
         hypervisor = hypervisor
     else:
         hypervisor = __salt__['config.get']('libvirt:hypervisor', VIRT_DEFAULT_HYPER)
     virt_ = __salt__['config.get']('virt', {})
-    if not virt_:
-        virt_.update(disk={'default': _disk_profile('default', hypervisor)})
-        virt_.update(nic={'default': _nic_profile('default', hypervisor)})
-    return virt_
+    ret['disk'] = {'default': _disk_profile('default', hypervisor)}
+    ret['nic'] = {'default': _nic_profile('default', hypervisor)}
+    if 'disk' in virt_:
+        ret.setdefault('disk', {})
+        for prf in virt_['disk']:
+            ret['disk'][prf] = _disk_profile(prf, hypervisor)
+    if 'nic' in virt_:
+        ret.setdefault('nic', {})
+        for prf in virt_['nic']:
+            log.error('prf\n' + str(prf))
+            ret['nic'][prf] = _nic_profile(prf, hypervisor)
+    return ret
 
 
 def shutdown(vm_):
