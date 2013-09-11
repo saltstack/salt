@@ -38,7 +38,8 @@ def latest(name,
            username=None,
            password=None,
            force=False,
-           externals=True):
+           externals=True,
+           trust=False):
     '''
     Checkout or update the working directory to the latest revision from the
     remote repository.
@@ -69,6 +70,9 @@ def latest(name,
 
     externals : True
         Change to False to not checkout or update externals
+
+    trust : False
+        Automatically trust the remote server. SVN's --trust-server-cert
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -109,6 +113,9 @@ def latest(name,
     if externals is False:
         opts += ('--ignore-externals',)
 
+    if trust:
+        opts += ('--trust-server-cert',)
+
     if svn_cmd == 'svn.update':
         out = __salt__[svn_cmd](cwd, basename, user, username, password, *opts)
 
@@ -121,6 +128,7 @@ def latest(name,
                                        fmt='dict')[0]['Revision']
         if current_rev != new_rev:
             ret['changes']['revision'] = "{0} => {1}".format(current_rev, new_rev)
+    
     else:
         out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
 
