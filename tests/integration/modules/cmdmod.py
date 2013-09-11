@@ -202,7 +202,8 @@ sys.stdout.write('cheese')
 
     def test_run_cwd_doesnt_exist_issue_7154(self):
         '''
-        cmd.run should fail and return ENOENT if the cwd dir does not
+        cmd.run should fail and raise
+        salt.exceptions.CommandExecutionError if the cwd dir does not
         exist
         '''
         from salt.exceptions import CommandExecutionError
