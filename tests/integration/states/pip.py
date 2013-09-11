@@ -318,6 +318,68 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.unlink(req_filename)
         # <---- Using user ---------------------------------------------------
 
+    def test_issue_6833_pip_upgrade_pip(self):
+        # Create the testing virtualenv
+        venv_dir = os.path.join(
+            integration.TMP, '6833-pip-upgrade-pip'
+        )
+        ret = self.run_function('virtualenv.create', [venv_dir])
+        try:
+            try:
+                self.assertEqual(ret['retcode'], 0)
+                self.assertIn(
+                    'New python executable',
+                    ret['stdout']
+                )
+            except AssertionError:
+                import pprint
+                pprint.pprint(ret)
+                raise
+
+            # Let's install a fixed version pip over whatever pip was
+            # previously installed
+            ret = self.run_function(
+                'pip.install', ['pip==1.3.1'], upgrade=True,
+                ignore_installed=True,
+                bin_env=venv_dir
+            )
+            try:
+                self.assertEqual(ret['retcode'], 0)
+                self.assertIn(
+                    'Successfully installed pip',
+                    ret['stdout']
+                )
+            except AssertionError:
+                import pprint
+                pprint.pprint(ret)
+                raise
+
+            # Le't make sure we have pip 1.3.1 installed
+            self.assertEqual(
+                self.run_function('pip.list', ['pip']),
+                {'pip': '1.3.1'}
+            )
+
+            # Now the actual pip upgrade pip test
+            ret = self.run_state(
+                'pip.installed', name='pip==1.4.1', upgrade=True,
+                bin_env=venv_dir
+            )
+            try:
+                self.assertSaltTrueReturn(ret)
+                self.assertInSaltReturn(
+                    'Installed',
+                    ret,
+                    ['changes', 'pip==1.4.1']
+                )
+            except AssertionError:
+                import pprint
+                pprint.pprint(ret)
+                raise
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
 
 if __name__ == '__main__':
     from integration import run_tests
