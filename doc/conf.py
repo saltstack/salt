@@ -195,6 +195,8 @@ html_sidebars = {
         'sourcelink.html',
         'searchbox.html',
     ],
+    'ref/formula/all/*': [
+    ],
 }
 
 html_context = {
