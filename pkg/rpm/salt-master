@@ -24,16 +24,6 @@
 # processname: /usr/bin/salt-master
 
 
-if [ -f /etc/default/salt ]; then
-    . /etc/default/salt
-else
-    SALTMASTER=/usr/bin/salt-master
-    PYTHON=/usr/bin/python
-fi
-
-# Sanity checks.
-[ -x $SALTMASTER ] || exit 0
-
 DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
@@ -44,6 +34,16 @@ elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
 else
     . /etc/rc.d/init.d/functions
 fi
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+    SALTMASTER=/usr/bin/salt-master
+    PYTHON=/usr/bin/python
+fi
+
+# Sanity checks.
+[ -x $SALTMASTER ] || exit 0
 
 SERVICE=salt-master
 PROCESS=salt-master

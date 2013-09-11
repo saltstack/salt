@@ -13,5 +13,8 @@ stop on runlevel [!2345]
 #respawn limit 10 5
 
 script
-exec salt-minion
+  # Read configuration variable file if it is present
+  [ -f /etc/default/$UPSTART_JOB ] && . /etc/default/$UPSTART_JOB
+
+  exec salt-minion
 end script
