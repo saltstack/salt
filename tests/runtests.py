@@ -72,6 +72,7 @@ def run_suite(opts, path, display_name, suffix='[!_]*.py'):
             stream=sys.stdout,
             verbosity=opts.verbosity
         ).run(tests)
+        TEST_RESULTS.append((header, runner))
     else:
         if not os.path.isdir(XML_OUTPUT_DIR):
             os.makedirs(XML_OUTPUT_DIR)
