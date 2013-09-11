@@ -552,8 +552,6 @@ def init(name,
         salt 'hypervisor' virt.init vm_name 4 512 salt://path/to/image.raw
         salt 'hypervisor' virt.init vm_name 4 512 nic=profile disk=profile
     '''
-    ret = {}
-
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     nicp = _nic_profile(nic, hypervisor)
     diskp = None
@@ -596,13 +594,11 @@ def init(name,
             for disk in diskp:
                 for disk_name, args in disk.items():
                     xml = _gen_vol_xml(name, disk_name, args['size'], hypervisor)
-                    ret['vol_%s' % disk_name] = xml
                     define_vol_xml_str(xml)
 
     assert diskp != None, "diskp should be defined here"
 
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
-    ret['vm'] = xml
     define_xml_str(xml)
 
     if kwargs.get('seed') and seedable:
@@ -613,8 +609,6 @@ def init(name,
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
     if start:
         create(name)
-
-    return ret
 
 
 def list_vms():
@@ -1078,7 +1072,6 @@ def get_profiles(hypervisor=None):
     if 'nic' in virt_:
         ret.setdefault('nic', {})
         for prf in virt_['nic']:
-            log.error('prf\n' + str(prf))
             ret['nic'][prf] = _nic_profile(prf, hypervisor)
     return ret
 
