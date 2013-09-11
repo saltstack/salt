@@ -15,6 +15,11 @@ import salt.utils
 # Set up logging
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'list_': 'list'
+}
+
 
 def __virtual__():
     if not salt.utils.which('lxc'):
@@ -217,7 +222,7 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         return {'created': False, 'error': 'container could not be created'}
 
 
-def list():
+def list_():
     '''
     List defined containers (running, stopped, and frozen).
 
