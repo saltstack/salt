@@ -1883,20 +1883,20 @@ class ClearFuncs(object):
                     clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                       'user {0}.').format(token['user'])
                 log.warning(msg)
                 return ''
             try:
-                log.debug("ClearFunc.wheel with {0}".format(clear_load))
+                log.debug('ClearFunc.wheel with {0}'.format(clear_load))
                 jid = salt.utils.gen_jid()
                 fun = clear_load.pop('fun')
                 data = {'fun': "wheel.{0}".format(fun),
                             'jid': jid,
-                            'user': clear_load.get('user', 'UNKNOWN')}
+                            'user': token['name']}
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
                 data['ret'] = ret
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))                
+                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
                 return data
             except Exception as exc:
                 log.error(exc)
@@ -1915,7 +1915,7 @@ class ClearFuncs(object):
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
             return ''
-        
+
         try:
             name = self.loadauth.load_name(clear_load)
             if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
@@ -2104,6 +2104,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "eauth" occurred.'
                     )
                     return ''
+            clear_load['user'] = self.loadauth.load_name(extra)
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):

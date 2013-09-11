@@ -135,7 +135,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.start_coverage(
             branch=True,
             source=[os.path.join(SALT_ROOT, 'salt')],
-            track_processes=True
         )
 
     def run_integration_suite(self, suite_folder, display_name):

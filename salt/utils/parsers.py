@@ -1422,6 +1422,13 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Exit with the salt call retcode and not the salt binary '
                   'retcode')
         )
+        self.add_option(
+            '--id',
+            default='',
+            dest='id',
+            help=('Specify the minion id to use. If this option is omitted, '
+                  'the id option from the minion config will be used.')
+        )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run \
@@ -1515,6 +1522,11 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Don\'t execute a salt routine on the targets, execute a '
                   'raw shell command')
         )
+        self.add_option(
+            '--roster',
+            dest='roster',
+            default='',
+            help=('Define which roster system to use'))
         self.add_option(
             '--refresh', '--refresh-cache',
             dest='refresh_cache',

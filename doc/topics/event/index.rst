@@ -57,3 +57,80 @@ method also accepts a tag, but not a wait time:
 
     for data in event.iter_events(tag='auth'):
         print(data)
+
+
+Firing Events
+=============
+
+It is possible to fire events on either the minion's local bus, or to fire
+events intended for the master. To fire a local event from the minion, on the
+command line:
+
+.. code-block:: bash
+
+    salt-call event.fire 'message to be sent in the event' 'tag'
+
+To fire an event to be sent to the master, from the minion:
+
+.. code-block:: bash
+
+    salt-call event.fire_master 'message for the master' 'tag'
+
+If a process is listening on the minion, it may be useful for a user on the
+master to fire an event to it:
+
+.. code-block:: bash
+
+    salt minionname event.fire 'message for the minion' 'tag'
+
+
+Firing Events From Code
+=======================
+
+Events can be very useful when writing execution modules, in order to inform
+various processes on the master when a certain task has taken place. In Salt
+versions previous to 0.17.0, the basic code looks like:
+
+.. code-block:: python
+
+    # Import the proper library
+    import salt.utils.event
+    # Fire deploy action
+    sock_dir = '/var/run/salt/minion'
+    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event.fire_event('Message to be sent', 'tag')
+
+In Salt version 0.17.0, the ability to send a payload with a more complex data
+structure than a string was added. When using this interface, a Python
+dictionary should be sent instead.
+
+.. code-block:: python
+
+    # Import the proper library
+    import salt.utils.event
+    # Fire deploy action
+    sock_dir = '/var/run/salt/minion'
+    payload = {'sample-msg': 'this is a test',
+               'example': 'this is the same test'}
+    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event.fire_event(payload, 'tag')
+
+It should be noted that this code can be used in 3rd party applications as well.
+So long as the salt-minion process is running, the minion socket can be used:
+
+.. code-block:: python
+
+    sock_dir = '/var/run/salt/minion'
+
+So long as the salt-master process is running, the master socket can be used:
+
+.. code-block:: python
+
+    sock_dir = '/var/run/salt/master'
+
+This allows 3rd party applications to harness the power of the Salt event bus
+programmatically, without having to make other calls to Salt. A 3rd party
+process can listen to the event bus on the master, and another 3rd party
+process can fire events to the process on the master, which Salt will happily
+pass along.
+

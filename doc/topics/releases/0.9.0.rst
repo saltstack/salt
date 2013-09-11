@@ -33,11 +33,9 @@ New Features
 Salt Syndic
 ```````````
 
-The new Syndic interface allows a master to be commanded via another higher
-level salt master. This is a powerful solution allowing a master control 
+The new :doc:`Syndic interface </ref/syndic>` allows a master to be commanded via another higher
+level salt master. This is a powerful solution allowing a master control
 structure to exist, allowing salt to scale to much larger levels then before.
-
-http://saltstack.org/ref/syndic.html
 
 Peer Communication
 ``````````````````
@@ -48,10 +46,8 @@ to act as a communication channel between minions and as a general
 infrastructure message bus.
 
 Peer communication is turned off by default but can be enabled via the ``peer``
-option in the master configuration file. Documentation on the new peer
-interface can be found here:
-
-http://saltstack.org/ref/peer.html
+option in the master configuration file. Documentation on the new :doc:`Peer
+interface </ref/peer>`.
 
 Easily Extensible API
 `````````````````````
@@ -126,4 +122,3 @@ publish
 ~~~~~~~
 
 Used by the peer interface to allow minions to make publications
-

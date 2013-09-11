@@ -51,11 +51,11 @@ def generate_vm_name(platform):
     return 'ZJENKINS-{0}-{1}'.format(platform, random_part)
 
 
-def delete_vm(vm_name):
+def delete_vm(options):
     '''
     Stop a VM
     '''
-    cmd = 'salt-cloud -d {0} -y'.format(vm_name)
+    cmd = 'salt-cloud -d {0} -y'.format(options.delete_vm)
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -70,22 +70,22 @@ def delete_vm(vm_name):
     proc.communicate()
 
 
-def echo_parseable_environment(platform, provider):
+def echo_parseable_environment(options):
     '''
     Echo NAME=VAL parseable output
     '''
-    name = generate_vm_name(platform)
+    name = generate_vm_name(options.platform)
     output = (
         'JENKINS_SALTCLOUD_VM_PROVIDER={provider}\n'
         'JENKINS_SALTCLOUD_VM_PLATFORM={platform}\n'
         'JENKINS_SALTCLOUD_VM_NAME={name}\n').format(name=name,
-                                                     provider=provider,
-                                                     platform=platform)
+                                                     provider=options.provider,
+                                                     platform=options.platform)
     sys.stdout.write(output)
     sys.stdout.flush()
 
 
-def download_unittest_reports(vm_name):
+def download_unittest_reports(options):
     print('Downloading remote unittest reports...')
     sys.stdout.flush()
 
@@ -95,18 +95,22 @@ def download_unittest_reports(vm_name):
     os.makedirs('xml-test-reports')
 
     cmds = (
-        'salt {0} archive.tar zcvf /tmp/xml-unittest-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
-        'salt {0} cp.push /tmp/xml-unittest-reports.tar.gz',
-        'tar zxvf /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz -C xml-test-reports',
-        'rm /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz'
+        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
+        'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
+        'mv -f /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz {1}',
+        'tar zxvf {1}/xml-test-reports.tar.gz -C {1}/xml-test-reports',
+        'rm -f {1}/xml-test-reports.tar.gz'
     )
 
+    vm_name = options.download_unittest_reports
+    workspace = options.workspace
     for cmd in cmds:
-        print('Running CMD: {0}'.format(cmd.format(vm_name)))
+        cmd = cmd.format(vm_name, workspace)
+        print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
         proc = NonBlockingPopen(
-            cmd.format(vm_name),
+            cmd,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -122,22 +126,25 @@ def download_unittest_reports(vm_name):
             )
 
 
-def download_coverage_report(vm_name):
+def download_coverage_report(options):
     print('Downloading remote coverage report...')
     sys.stdout.flush()
 
-    if os.path.isfile('coverage.xml'):
-        os.unlink('coverage.xml')
+    workspace = options.workspace
+    vm_name = options.download_coverage_report
+
+    if os.path.isfile(os.path.join(workspace, 'coverage.xml')):
+        os.unlink(os.path.join(workspace, 'coverage.xml'))
 
     cmds = (
         'salt {0} archive.gzip /tmp/coverage.xml',
         'salt {0} cp.push /tmp/coverage.xml.gz',
-        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml.gz {1}',
-        'gunzip {1}/coverage.xml.gz'
+        'gunzip /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml.gz',
+        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml {1}'
     )
 
     for cmd in cmds:
-        cmd = cmd.format(vm_name, os.environ.get('WORKSPACE', '.'))
+        cmd = cmd.format(vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -166,6 +173,10 @@ def run(opts):
         'JENKINS_SALTCLOUD_VM_NAME',
         generate_vm_name(opts.platform)
     )
+
+    if opts.download_remote_reports:
+        opts.download_coverage_report = vm_name
+        opts.download_unittest_reports = vm_name
 
     cmd = (
         'salt-cloud -l debug --script-args "-D -n git {commit}" -p '
@@ -243,6 +254,12 @@ def run(opts):
             # Anything else, raise the exception
             raise
 
+    if opts.download_remote_reports:
+        # Download unittest reports
+        download_unittest_reports(opts)
+        # Download coverage report
+        download_coverage_report(opts)
+
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(vm_name)
     return retcode
@@ -253,6 +270,16 @@ def parse():
     Parse the CLI options
     '''
     parser = optparse.OptionParser()
+    parser.add_option(
+        '-w', '--workspace',
+        default=os.path.abspath(
+            os.environ.get(
+                'WORKSPACE',
+                os.path.dirname(os.path.dirname(__file__))
+            )
+        ),
+        help='Path the execution workspace'
+    )
     parser.add_option(
         '--platform',
         default=os.environ.get('JENKINS_SALTCLOUD_VM_PLATFORM', None),
@@ -290,6 +317,12 @@ def parse():
         help='Delete a running VM'
     )
     parser.add_option(
+        '--download-remote-reports',
+        default=False,
+        action='store_true',
+        help='Download remote reports when running remote \'testrun\' state'
+    )
+    parser.add_option(
         '--download-unittest-reports',
         default=None,
         help='Download the XML unittest results'
@@ -303,15 +336,15 @@ def parse():
     options, args = parser.parse_args()
 
     if options.delete_vm is not None and not options.commit:
-        delete_vm(options.delete_vm)
+        delete_vm(options)
         parser.exit(0)
 
     if options.download_unittest_reports is not None and not options.commit:
-        download_unittest_reports(options.download_unittest_reports)
+        download_unittest_reports(options)
         parser.exit(0)
 
     if options.download_coverage_report is not None and not options.commit:
-        download_coverage_report(options.download_coverage_report)
+        download_coverage_report(options)
         parser.exit(0)
 
     if not options.platform:
@@ -321,11 +354,12 @@ def parse():
         parser.exit('--provider is required')
 
     if options.echo_parseable_environment:
-        echo_parseable_environment(options.platform, options.provider)
+        echo_parseable_environment(options)
         parser.exit(0)
 
     if not options.commit:
         parser.exit('--commit is required')
+
     return options
 
 if __name__ == '__main__':

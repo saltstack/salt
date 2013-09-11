@@ -26,12 +26,12 @@ def render(template, env='', sls='', tmplpath=None, **kws):
     tmp_data = salt.utils.templates.py(
             template,
             True,
-            salt=__salt__,
-            grains=__grains__,
-            opts=__opts__,
-            pillar=__pillar__,
-            env=env,
-            sls=sls,
+            __salt__=__salt__,
+            __grains__=__grains__,
+            __opts__=__opts__,
+            __pillar__=__pillar__,
+            __env__=env,
+            __sls__=sls,
             **kws)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
