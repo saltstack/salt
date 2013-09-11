@@ -135,6 +135,7 @@ class TestDaemon(object):
         self.sub_minion_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
         )
+        self.sub_minion_opts['root_dir'] = os.path.join(TMP, 'subsalt')
         self.sub_minion_opts['user'] = running_tests_user
         #if sys.version_info < (2, 7):
         #    self.sub_minion_opts['multiprocessing'] = False
