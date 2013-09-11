@@ -5,6 +5,7 @@ import logging
 import inspect
 import re
 import boto
+import boto.vpc
 
 log = logging.getLogger(__name__)
 
@@ -18,14 +19,14 @@ whitelist = { "VPCConnection": [    re.compile("^create"),
 
 for key in whitelist:
     # Get the actual class object.
-    _class = boto[key]
+    _class = getattr( boto.vpc, key )
 
     # Iterate over all the members of that class.
-    for member_name, member_method in inspect.getmembers( _class )
+    for member_name, member_method in inspect.getmembers( _class ):
 
         # Iterate over all the valid patterns for this class, if we find a match then break out.
         found = False
-        for _regex in whitelist[key]
+        for _regex in whitelist[key]:
             if _regex.match( member_name ):
                 found = True
                 break
