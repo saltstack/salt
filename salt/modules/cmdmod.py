@@ -211,9 +211,9 @@ def _run(cmd,
     (cmd, cwd) = _render_cmd(cmd, cwd, template)
 
     if not os.path.isdir(cwd):
-      # cwd is not a directory - fatal error
-      msg = 'Working directory {0!r} does not exist'
-      raise CommandExecutionError(msg.format(cwd))
+        # cwd is not a directory - fatal error
+        msg = 'Working directory {0!r} does not exist'
+        raise CommandExecutionError(msg.format(cwd))
 
     ret = {}
 
