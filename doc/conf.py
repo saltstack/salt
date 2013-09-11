@@ -100,6 +100,7 @@ for path in addtl_paths:
 import salt.version
 
 
+formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # ----- Intersphinx Settings ------------------------------------------------>
@@ -129,6 +130,7 @@ exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 
 extensions = [
     'saltdomain', # Must come early
+    'lit_code',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
