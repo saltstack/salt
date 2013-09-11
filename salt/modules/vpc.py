@@ -41,15 +41,14 @@ def _create_func( function_name, function_obj ):
     spec = inspect.getargspec( function_obj )
 
     # Define the actual function we will return.
+    # Consider using compile..
     def _f( *args ):
         '''
-        Todo.
+        This is a dynamically generated function from boto.
         '''
         # Use spec to reconcile what we get from *args
         # and call the boto function.
-
-        # getattr( _get_connection( ), function_name ) is the actual boto obj.
-
+        
         pass
 
     return _f
