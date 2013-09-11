@@ -77,7 +77,7 @@ of libvirt certificates. These certificates allow for virtual machine
 migration. Salt comes with a system used to auto deploy these certificates.
 Salt manages the signing authority key and generates keys for libvirt clients
 on the master, signs them with the certificate authority and uses pillar to
-distrbute them. This is managed via the ``libvirt`` state. Simply execute this
+distribute them. This is managed via the ``libvirt`` state. Simply execute this
 formula on the minion to ensure that the certificate is in place and up to
 date:
 
