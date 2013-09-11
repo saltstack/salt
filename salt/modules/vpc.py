@@ -10,13 +10,10 @@ import boto.vpc
 
 log = logging.getLogger(__name__)
 
-#__func_alias__ = { }
+__func_alias__ = { }
 
 def __virtual__( ):
     return 'vpc'
-
-def debug( ):
-    return "Go away,now"
 
 def _get_connection( ):
     '''
@@ -45,6 +42,9 @@ def _create_func( function_name, function_obj ):
 
     # Define the actual function we will return.
     def _f( *args ):
+        '''
+        Todo.
+        '''
         # Use spec to reconcile what we get from *args
         # and call the boto function.
 
@@ -77,7 +77,4 @@ for member_name, member_method in inspect.getmembers( _get_connection( ) ):
     )
 
     # Update func alias so that salt finds the new function.
-    #__func_alias__['{0}_'.format( member_name )] = member_name
-
-def foo( ):
-    return "bar"
+    __func_alias__['{0}_'.format( member_name )] = member_name
