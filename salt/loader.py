@@ -190,7 +190,7 @@ def fileserver(opts, backends):
 
 def roster(opts, whitelist=None):
     '''
-    Returns the file server modules
+    Returns the roster modules
     '''
     load = _create_loader(opts, 'roster', 'roster')
     ret = load.gen_functions(whitelist=whitelist)
