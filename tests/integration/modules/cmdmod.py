@@ -200,6 +200,22 @@ sys.stdout.write('cheese')
             'hello' == self.run_function(
                 'cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
 
+    def test_run_cwd_doesnt_exist_issue_7154(self):
+        '''
+        cmd.run should fail and raise
+        salt.exceptions.CommandExecutionError if the cwd dir does not
+        exist
+        '''
+        from salt.exceptions import CommandExecutionError
+        import salt.modules.cmdmod as cmdmod
+        cmd = 'echo OHAI'
+        cwd = '/path/to/nowhere'
+        try:
+            cmdmod.run_all(cmd, cwd=cwd)
+        except CommandExecutionError:
+            pass
+        else:
+            raise RuntimeError
 
 if __name__ == '__main__':
     from integration import run_tests
