@@ -3,6 +3,51 @@ Pure python state renderer
 
 The sls file should contain a function called ``run`` which returns high state
 data
+
+In this module, a few objects are defined for you, including the usual
+(with``__`` added) ``__salt__`` dictionary, ``__grains__``,
+``__pillar__``, ``__opts__``, ``__env__``, and ``__sls__``.
+
+.. code-block:: python
+   :linenos:
+
+    #!py
+
+    def run():
+        config = {}
+
+        if __grains__['os'] == 'Ubuntu':
+            user = 'ubuntu'
+            group = 'ubuntu'
+            home = '/home/{0}'.format(user)
+        else:
+            user = 'root'
+            group = 'root'
+            home = '/root/'
+
+        config['s3cmd'] = {
+            'pkg': [
+                'installed',
+                {'name': 's3cmd'},
+                ],
+            }
+
+        config[home + '/.s3cfg'} = {
+            'file.managed': [{
+                'source': 'salt://s3cfg/templates/s3cfg',
+                'template': 'jinja',
+                'user': user,
+                'group': group,
+                'mode': 600,
+                'context': {
+                    'aws_key': __pillar__['AWS_ACCESS_KEY_ID'],
+                    'aws_secret_key': __pillar__['AWS_SECRET_ACCESS_KEY'],
+                    },
+                }],
+            }
+
+        return config
+
 '''
 
 # Import python libs
