@@ -188,6 +188,10 @@ def _run(cmd,
             cwd = '/'
             if salt.utils.is_windows():
                 cwd = os.tempnam()[:3]
+    else:
+        # Handle edge cases where numeric/other input is entered, and would be
+        # yaml-ified into non-string types
+        cwd = str(cwd)
 
     if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
@@ -322,14 +326,18 @@ def _run(cmd,
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
-    elif not os.path.isabs(str(cwd)) or not os.path.isdir(str(cwd)):
+    elif not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
             'specified cwd {0!r} either not absolute or does not exist'
             .format(cwd)
         )
 
     # This is where the magic happens
-    proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+    try:
+        proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError('Unable to run command: {0}'.format(exc))
+
     try:
         proc.wait(timeout)
     except salt.exceptions.TimedProcTimeoutError, e:
