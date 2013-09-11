@@ -293,7 +293,7 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def full_restart(name, **kwargs):
+def full_restart(name):
     '''
     Do a full restart (stop/start) of the named service
 
