@@ -23,6 +23,11 @@ __outputter__ = {
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'set_': 'set'
+}
+
 
 def __virtual__():
     '''
@@ -151,7 +156,7 @@ def auto(name):
     return out['stdout']
 
 
-def set(name, path):
+def set_(name, path):
     '''
     Manually set the alternative <path> for <name>.
 
