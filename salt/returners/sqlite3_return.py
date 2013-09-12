@@ -18,7 +18,7 @@ minion config::
 
 Use the commands to create the sqlite3 database and tables::
 
-    sqlite3 /home/salt/salt.db << EOF
+    sqlite3 /usr/lib/salt/salt.db << EOF
     --
     -- Table structure for table 'jids'
     --
