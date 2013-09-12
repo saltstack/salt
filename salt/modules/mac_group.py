@@ -1,5 +1,5 @@
 '''
-Manage groups on Linux and OpenBSD
+Manage groups on Mac OS 10.7+
 '''
 
 # Import python libs
@@ -9,6 +9,7 @@ except ImportError:
     pass
 
 import salt.utils
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _osmajor, _dscl, _flush_dscl_cache
 
 
