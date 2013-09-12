@@ -111,7 +111,7 @@ class RunnerClient(object):
 
     def master_call(self, **kwargs):
         '''
-        Send a function call to a wheel module through the master network
+        Send a function call to a runner module through the master network
         interface.
         Expects that one of the kwargs is key 'fun' whose value is the
         namestring of the function to call.
