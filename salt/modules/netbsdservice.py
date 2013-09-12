@@ -48,7 +48,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 
@@ -62,7 +62,7 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload_(name, **kwargs):
+def reload_(name):
     '''
     Reload the named service
 
