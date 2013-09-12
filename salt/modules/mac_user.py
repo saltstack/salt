@@ -1,5 +1,5 @@
 '''
-Manage users with the useradd command
+Manage users on Mac OS 10.7+
 '''
 
 # Import python libs
