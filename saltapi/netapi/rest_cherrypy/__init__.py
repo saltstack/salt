@@ -6,6 +6,7 @@ This is run by ``salt-api`` and started in a multiprocess.
 # pylint: disable=C0103
 
 # Import Python libs
+import logging
 import os
 import signal
 import sys
@@ -24,7 +25,7 @@ except ImportError as exc:
 # Import Salt libs
 import salt.log
 
-logger = salt.log.logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 cpy_min = '3.2.2'
 
 def __virtual__():

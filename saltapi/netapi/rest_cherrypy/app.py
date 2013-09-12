@@ -157,6 +157,7 @@ functionality.
 
 # Import Python libs
 import functools
+import logging
 import os
 import json
 import textwrap
@@ -173,7 +174,7 @@ import salt.log
 # Import salt-api libs
 import saltapi
 
-logger = salt.log.logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def salt_token_tool():
