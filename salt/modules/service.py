@@ -96,7 +96,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the specified service
 
