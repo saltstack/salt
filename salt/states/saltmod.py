@@ -20,8 +20,13 @@ The salt.state declaration can call out a highstate or a list of sls:
         - highstate: True
 '''
 
+# Import python libs
+import logging
+
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -88,9 +93,9 @@ def state(
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     if highstate:
-        cmd_kw['fun'] = 'state.highstate'
+        fun = 'state.highstate'
     elif sls:
-        cmd_kw['fun'] = 'state.sls'
+        fun = 'state.sls'
         if isinstance(sls, list):
             sls = ','.join(sls)
         cmd_kw['arg'].append(sls)
@@ -104,13 +109,13 @@ def state(
         cmd_kw['arg'].append('env={0}'.format(env))
     if ret:
         cmd_kw['ret'] = ret
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['comment'] = (
                 'State run to be executed on target {0} as test={1}'
                 ).format(tgt, str(test))
         ret['result'] = None
         return ret
-    cmd_ret = __salt__['saltutil.cmd'](**cmd_kw)
+    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     ret['changes'] = cmd_ret
     m_results = {}
     fail = set()
