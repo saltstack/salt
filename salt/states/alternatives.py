@@ -144,7 +144,7 @@ def auto(name):
     if line.endswith(' auto mode'):
         ret['comment'] = '{0} already in auto mode'.format(name)
         return ret
-    
+
     ret['changes']['result'] = __salt__['alternatives.auto'](name)
     return ret
 
@@ -172,14 +172,14 @@ def set(name, path):
     if current == path:
         ret['comment'] = 'Alternative for {0} already set to {1}'.format(name, path)
         return ret
-    
+
     display = __salt__['alternatives.display'](name)
     isinstalled = False
     for line in display.splitlines():
         if line.startswith(path):
             isinstalled = True
             break
-    
+
     if isinstalled:
         __salt__['alternatives.set'](name, path)
         current = __salt__['alternatives.show_current'](name)
