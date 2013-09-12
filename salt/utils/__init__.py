@@ -435,6 +435,7 @@ def required_modules_error(name, docstring):
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
 
+
 def gen_jid():
     '''
     Generate a jid
@@ -801,6 +802,13 @@ def mysql_to_dict(data, key):
         else:
             headers = comps
     return ret
+
+
+def contains_whitespace(text):
+    '''
+    Returns True if there are any whitespace characters in the string
+    '''
+    return any(x.isspace() for x in text)
 
 
 def str_to_num(text):
@@ -1602,6 +1610,6 @@ def is_bin_str(data):
 
     # If more than 30% non-text characters, then
     # this is considered a binary file
-    if len(text)/len(data) > 0.30:
+    if len(text) / len(data) > 0.30:
         return True
     return False
