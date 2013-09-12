@@ -1,20 +1,19 @@
 '''
 Insert minion return data into a sqlite3 database
 
-:maintainer:    Mickey Malone
+:maintainer:    Mickey Malone <mickey.malone@gmail.com>
 :maturity:      New
 :depends:       None
 :platform:      All
 
 Sqlite3 is a serverless database that lives in a single file.
-In order to use this returner, the database file must exist,
-have the appropriate schema defined, and accessible to the 
-user whon is running the minion process.
-
-This returner requires the following values configured
-in the minion of master config::
-
-    returner.sqlite3.database: /home/salt/salt.db
+In order to use this returner the database file must exist,
+have the appropriate schema defined, and be accessible to the 
+user whom the minion process is running as. This returner 
+requires the following values configured in the master or
+minion config::
+    
+    returner.sqlite3.database: /usr/lib/salt/salt.db
     returner.sqlite3.timeout: 5.0
 
 Use the commands to create the sqlite3 database and tables::
@@ -30,7 +29,7 @@ Use the commands to create the sqlite3 database and tables::
       );
 
     --
-    -- Table structure for tabl 'salt_returns'
+    -- Table structure for table 'salt_returns'
     --
 
     CREATE TABLE salt_returns (
@@ -41,7 +40,6 @@ Use the commands to create the sqlite3 database and tables::
       full_ret TEXT NOT NULL,
       success TEXT NOT NULL,
       );
-
     EOF
 '''
 
@@ -106,7 +104,7 @@ def returner(ret):
 
 def save_load(jid, load):
     '''
-    Save the load to the specified jid id
+    Save the load to the specified jid
     '''
     log.debug('sqlite3 returner <save_load> called jid:{0} load:{1}'
               .format(jid, load))
