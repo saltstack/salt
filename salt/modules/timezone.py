@@ -26,7 +26,9 @@ def get_zone():
     '''
     Get current timezone (i.e. America/Denver)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_zone
     '''
@@ -58,7 +60,9 @@ def get_zonecode():
     '''
     Get current timezone (i.e. PST, MDT, etc)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_zonecode
     '''
@@ -71,7 +75,9 @@ def get_offset():
     '''
     Get current numeric timezone offset from UCT (i.e. -0700)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_offset
     '''
@@ -88,7 +94,9 @@ def set_zone(timezone):
     be restarted (for instance, whatever you system uses as its cron and
     syslog daemons). This will not be magically done for you!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
@@ -133,7 +141,9 @@ def zone_compare(timezone):
     /etc/localtime. Returns True if they match, and False if not. Mostly useful
     for running state checks.
 
-    Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.zone_compare 'America/Denver'
     '''
@@ -161,7 +171,9 @@ def get_hwclock():
     '''
     Get current hardware clock setting (UTC or localtime)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_hwclock
     '''
@@ -208,7 +220,9 @@ def set_hwclock(clock):
     '''
     Sets the hardware clock to be either UTC or localtime
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.set_hwclock UTC
     '''
