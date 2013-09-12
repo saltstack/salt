@@ -14,6 +14,10 @@ from salt.utils import namespaced_function as _namespaced_function
 from salt.modules.yumpkg import (mod_repo, _parse_repo_file, list_repos,
                                  get_repo, expand_repo_def, del_repo)
 
+# Import libs required by functions imported from yumpkg
+# DO NOT REMOVE THESE, ON PAIN OF DEATH
+import os
+
 log = logging.getLogger(__name__)
 
 # This is imported in salt.modules.pkg_resource._parse_pkg_meta. Don't change
