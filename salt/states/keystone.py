@@ -101,7 +101,7 @@ def user_present(name,
                         else:
                             ret['changes']['roles'] = [newrole]
     else:
-    # Create that user!
+        # Create that user!
         __salt__['keystone.user_create'](name=name,
                                          password=password,
                                          email=email,
