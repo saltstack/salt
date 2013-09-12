@@ -7,7 +7,7 @@
 
     This module should be imported as soon as possible, preferably the first
     module salt or any salt depending library imports so any new logging
-    logger instance uses our ``salt.log.SaltLoggingClass``.
+    logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 
 
     :copyright: 2011-2012 :email:`Pedro Algarvio (pedro@algarvio.me)`
