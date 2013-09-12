@@ -216,6 +216,8 @@ def workers(profile='default'):
         except KeyError:
             pass
     
+    worker_list = list(set(worker_list))
+    
     for worker in worker_list:
         ret[worker] = {
             'activation': config['worker.{0}.activation'.format(worker)],
