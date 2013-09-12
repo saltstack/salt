@@ -10,7 +10,7 @@ import boto.vpc
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = { }
+__func_alias__  = { }
 
 def __virtual__( ):
     return 'vpc'
@@ -33,9 +33,7 @@ def _get_connection( ):
     Also checks if one already exists.
     '''
 
-    # Just a placeholder for now. ( Dummy values to simply trick boto into 
-    # not throwing an exception ).
-    return boto.vpc.VPCConnection( "foo", "bar" )
+    return boto.vpc.VPCConnection( "Foo", "bar" )
 
 def _create_func( function_name, function_obj ):
     '''
@@ -43,16 +41,15 @@ def _create_func( function_name, function_obj ):
     function_obj. Note that introspection is used to do this.
     '''
 
+    spec = inspect.getargspec( function_obj )
+
     # Define the actual function we will return.
     def _f( *args, **kwargs ):
         '''
         This is a dynamically generated function from boto.
         '''
         # Reconcile the arguments we got with the arguments that are required
-        # for the actual boto function.
-        call_args = inspect.getcallargs( function_obj, args, kwargs )
-
-        log.debug( "I have call args of {0}".format( call_args ) )
+        return spec
 
     # Get the documentation from the object.
     doc = inspect.getdoc( function_obj )
