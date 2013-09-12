@@ -26,7 +26,8 @@ def user_present(name,
                  password,
                  email,
                  tenant=None,
-                 enabled=True):
+                 enabled=True,
+                 roles=None):
     '''
     Ensure that the keystone user is present with the specified properties.
 
@@ -44,6 +45,9 @@ def user_present(name,
 
     enabled
         Availability state for this user
+
+    roles
+        The roles the user should have under tenants
     '''
     ret = {'name': name,
            'changes': {},
@@ -72,7 +76,7 @@ def user_present(name,
             __salt__['keystone.user_update'](name=name, enabled=enabled)
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Enabled'] = 'Now {0}'.format(enabled)
-        if user[name]['tenant_id'] != tenant_id:
+        if tenant and user[name]['tenant_id'] != tenant_id:
             __salt__['keystone.user_update'](name=name, tenant=tenant)
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Tenant'] = 'Added to "{0}" tenant'.format(tenant)
@@ -82,15 +86,29 @@ def user_present(name,
                                                       password=password)
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Password'] = 'Updated'
-    else:
+        if roles:
+            for tenant_role in roles[0].keys():
+                args = {'user_name': name, 'tenant_name': tenant_role}
+                tenant_roles = __salt__['keystone.user_role_list'](**args)
+                for role in roles[0][tenant_role]:
+                    if role not in tenant_roles:
+                        addargs = {'user': name,
+                                   'role': role,
+                                   'tenant': tenant_role}
+                        newrole = __salt__['keystone.user_role_add'](**addargs)
+                        if 'roles' in ret['changes']:
+                            ret['changes']['roles'].append(newrole)
+                        else:
+                            ret['changes']['roles'] = [newrole]
+        else:
         # Create that user!
-        __salt__['keystone.user_create'](name=name,
-                                         password=password,
-                                         email=email,
-                                         tenant_id=tenant_id,
-                                         enabled=enabled)
-        ret['comment'] = 'Keystone user {0} has been added'.format(name)
-        ret['changes']['User'] = 'Created'
+            __salt__['keystone.user_create'](name=name,
+                                             password=password,
+                                             email=email,
+                                             tenant_id=tenant_id,
+                                             enabled=enabled)
+            ret['comment'] = 'Keystone user {0} has been added'.format(name)
+            ret['changes']['User'] = 'Created'
 
     return ret
 
