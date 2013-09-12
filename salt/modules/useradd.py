@@ -29,20 +29,10 @@ def __virtual__():
     Set the user module if the kernel is Linux or OpenBSD
     and remove some of the functionality on OS X
     '''
-    if __grains__['kernel'] not in ('Linux', 'Darwin', 'OpenBSD', 'NetBSD'):
-        # This module is not meant to be handling user accounts
-        return False
-
-    if __grains__['kernel'] == 'Darwin':
-        # Functionality on OS X needs to be limited
-        mod = sys.modules[__name__]
-        for attr in dir(mod):
-            if _callable(getattr(mod, attr)):
-                if not attr in ('_format_info', 'getent', 'info',
-                                'list_groups', 'list_users', '__virtual__'):
-                    delattr(mod, attr)
-
-    return 'user'
+    return (
+        'user' if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD')
+        else False
+    )
 
 
 def _get_gecos(name):
