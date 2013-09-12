@@ -248,7 +248,6 @@ def role_get(role_id=None, name=None):
 def role_list():
     '''
     Return a list of available roles (keystone role-list)
-    Supply user and tenant to see roles for that combination.
 
     CLI Example:
 
