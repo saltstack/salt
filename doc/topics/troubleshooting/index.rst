@@ -159,8 +159,13 @@ to this issue is to set the execution context of ``salt-call`` and
 
 .. code-block:: bash
 
+    # CentOS 5 and RHEL 5:
     # chcon -t system_u:system_r:rpm_exec_t:s0 /usr/bin/salt-minion
     # chcon -t system_u:system_r:rpm_exec_t:s0 /usr/bin/salt-call
+
+    # CentOS 6 and RHEL 6:
+    # chcon system_u:object_r:rpm_exec_t:s0 /usr/bin/salt-minion
+    # chcon system_u:object_r:rpm_exec_t:s0 /usr/bin/salt-call
 
 This works well, because the ``rpm_exec_t`` context has very broad control over
 other types.
