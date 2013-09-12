@@ -77,7 +77,7 @@ def user_present(name,
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Tenant'] = 'Added to "{0}" tenant'.format(tenant)
         if not __salt__['keystone.user_verify_password'](name=name,
-                                                     password=password):
+                                                         password=password):
             __salt__['keystone.user_password_update'](name=name,
                                                       password=password)
             ret['comment'] = 'User "{0}" has been updated'.format(name)
