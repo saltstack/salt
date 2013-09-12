@@ -863,7 +863,7 @@ def subdict_match(data, expr, delim=':', regex_match=False):
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
-                log.error('Invalid regex \'{0}\' in match'.format(pattern))
+                log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
@@ -872,8 +872,8 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         splits = expr.split(delim)
         key = delim.join(splits[:idx])
         matchstr = delim.join(splits[idx:])
-        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
-                  '\'{2}\''.format(matchstr, key, delim))
+        log.debug('Attempting to match {0!r} in {1!r} using delimiter '
+                  '{2!r}'.format(matchstr, key, delim))
         match = traverse_dict(data, key, {}, delim=delim)
         if match == {}:
             continue
