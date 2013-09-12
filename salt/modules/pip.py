@@ -727,7 +727,9 @@ def list_(prefix=None,
     '''
     packages = {}
 
-    cmd = [_get_pip_bin(bin_env), 'freeze']
+    pip_bin = _get_pip_bin(bin_env)
+    pip_version_cmd = [pip_bin, '--version']
+    cmd = [pip_bin, 'freeze']
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
@@ -751,6 +753,14 @@ def list_(prefix=None,
     cmd_kwargs = dict(runas=user, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+
+    if not prefix or prefix in ('p', 'pi', 'pip'):
+        pip_version_result = __salt__['cmd.run_all'](' '.join(pip_version_cmd),
+                                                     **cmd_kwargs)
+        if pip_version_result['retcode'] > 0:
+            raise CommandExecutionError(pip_version_result['stderr'])
+        packages['pip'] = pip_version_result['stdout'].split()[1]
+
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])

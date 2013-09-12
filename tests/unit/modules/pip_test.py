@@ -783,14 +783,14 @@ class PipTestCase(TestCase):
             'pycrypto==2.6'
         ]
         mock = MagicMock(
-            return_value={
-                'retcode': 0,
-                'stdout': '\n'.join(eggs)
-            }
+            side_effect=[
+                {'retcode': 0, 'stdout': 'pip MOCKED_VERSION'},
+                {'retcode': 0, 'stdout': '\n'.join(eggs)}
+            ]
         )
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             ret = pip.list_()
-            mock.assert_called_once_with(
+            mock.assert_called_with(
                 'pip freeze',
                 runas=None,
                 cwd=None
@@ -801,6 +801,7 @@ class PipTestCase(TestCase):
                     'M2Crypto': '0.21.1',
                     'bbfreeze-loader': '1.1.0',
                     'bbfreeze': '1.1.0',
+                    'pip': 'MOCKED_VERSION',
                     'pycrypto': '2.6'
                 }
             )
@@ -829,7 +830,7 @@ class PipTestCase(TestCase):
         )
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             ret = pip.list_(prefix='bb')
-            mock.assert_called_once_with(
+            mock.assert_called_with(
                 'pip freeze',
                 runas=None,
                 cwd=None
@@ -923,7 +924,7 @@ class PipTestCase(TestCase):
         warnings.resetwarnings()
         warnings.filterwarnings('always', '', DeprecationWarning, __name__)
 
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': 'pip VERSION'})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             with warnings.catch_warnings(record=True) as w:
                 pip.list_('blah', runas='me!')

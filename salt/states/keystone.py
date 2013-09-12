@@ -14,12 +14,6 @@ Management of Keystone users.
 
 '''
 
-# Import python libs
-import sys
-
-# Import salt libs
-import salt.utils
-
 
 def __virtual__():
     '''
@@ -144,7 +138,7 @@ def tenant_present(name, description=None, enabled=True):
 
     # Check if user is already present
     tenant = __salt__['keystone.tenant_get'](name=name)
-    
+
     if 'Error' not in tenant:
         if tenant[name]['description'] != description:
             __salt__['keystone.tenant_update'](name, description, enabled)

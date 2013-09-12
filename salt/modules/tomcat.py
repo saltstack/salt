@@ -166,7 +166,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
             ret['msg'] = urllib2.urlopen(url6, timeout=timeout).read().splitlines()
         except Exception:
             ret['msg'] = 'Failed to create HTTP request'
-    
+
     if not ret['msg'][0].startswith('OK'):
         ret['res'] = False
 

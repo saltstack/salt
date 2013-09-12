@@ -1896,7 +1896,7 @@ class ClearFuncs(object):
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
                 data['ret'] = ret
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))                
+                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
                 return data
             except Exception as exc:
                 log.error(exc)
@@ -1915,7 +1915,7 @@ class ClearFuncs(object):
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
             return ''
-        
+
         try:
             name = self.loadauth.load_name(clear_load)
             if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
