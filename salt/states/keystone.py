@@ -100,15 +100,22 @@ def user_present(name,
                             ret['changes']['roles'].append(newrole)
                         else:
                             ret['changes']['roles'] = [newrole]
-        else:
-        # Create that user!
-            __salt__['keystone.user_create'](name=name,
-                                             password=password,
-                                             email=email,
-                                             tenant_id=tenant_id,
-                                             enabled=enabled)
-            ret['comment'] = 'Keystone user {0} has been added'.format(name)
-            ret['changes']['User'] = 'Created'
+    else:
+    # Create that user!
+        __salt__['keystone.user_create'](name=name,
+                                         password=password,
+                                         email=email,
+                                         tenant_id=tenant_id,
+                                         enabled=enabled)
+        if roles:
+            for tenant_role in roles[0].keys():
+                for role in roles[0][tenant_role]:
+                    args = {'user': name,
+                            'role': role,
+                            'tenant': tenant_role}
+                    __salt__['keystone.user_role_add'](**args)
+        ret['comment'] = 'Keystone user {0} has been added'.format(name)
+        ret['changes']['User'] = 'Created'
 
     return ret
 
