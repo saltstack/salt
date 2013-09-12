@@ -173,6 +173,51 @@ def endpoint_list():
     return ret
 
 
+def role_create(name):
+    '''
+    Create named role
+
+    .. code-block:: bash
+
+        salt '*' keystone.role_create admin
+    '''
+
+    kstone = auth()
+    if 'Error' not in role_get(name=name):
+        return {'Error': 'Role "{0}" already exists'.format(name)}
+    role = kstone.roles.create(name)
+    return role_get(name=name)
+
+
+def role_delete(role_id=None, name=None):
+    '''
+    Delete a role (keystone role-delete)
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.role_delete c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.role_delete role_id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.role_delete name=admin
+    '''
+    kstone = auth()
+
+    if name:
+        for role in kstone.roles.list():
+            if role.name == name:
+                role_id = role.id
+                break
+    if not role_id:
+        return {'Error': 'Unable to resolve role id'}
+    role = role_get(role_id)
+    kstone.roles.delete(role)
+    ret = 'Role ID {0} deleted'.format(role_id)
+    if name:
+        ret += ' ({0})'.format(name)
+    return ret
+
+
 def role_get(role_id=None, name=None):
     '''
     Return a specific roles (keystone role-get)
@@ -681,8 +726,6 @@ def _item_list():
     #                    Delete EC2-compatible credentials
     #endpoint-create     Create a new endpoint associated with a service
     #endpoint-delete     Delete a service endpoint
-    #role-create         Create new role
-    #role-delete         Delete role
     #service-create      Add service to Service Catalog
     #service-delete      Delete service from Service Catalog
     #user-role-add       Add role to user
