@@ -15,6 +15,15 @@ __func_alias__ = { }
 def __virtual__( ):
     return 'vpc'
 
+def _add_doc( func, doc, prefix='\n\n    ' ):
+    '''
+    Quick helper that allows for documentation
+    to be added to a function.
+    '''
+    if not func.__doc__:
+        func.__doc__ = '';
+    func.__doc__ += '{0}{1}'.format(prefix, doc)
+
 def _get_connection( ):
     '''
     Helper method to handle creation of the actual
@@ -34,22 +43,22 @@ def _create_func( function_name, function_obj ):
     function_obj. Note that introspection is used to do this.
     '''
 
-    # Get the documentation from the object.
-    doc = inspect.getdoc( function_obj )
-
-    # Get the signature of the function.
-    spec = inspect.getargspec( function_obj )
-
     # Define the actual function we will return.
-    # Consider using compile..
-    def _f( *args ):
+    def _f( *args, **kwargs ):
         '''
         This is a dynamically generated function from boto.
         '''
-        # Use spec to reconcile what we get from *args
-        # and call the boto function.
-        
-        pass
+        # Reconcile the arguments we got with the arguments that are required
+        # for the actual boto function.
+        call_args = inspect.getcallargs( function_obj, args, kwargs )
+
+        log.debug( "I have call args of {0}".format( call_args ) )
+
+    # Get the documentation from the object.
+    doc = inspect.getdoc( function_obj )
+    if doc:
+        for line in doc.splitlines( ):
+            _add_doc( _f, line )
 
     return _f
 
