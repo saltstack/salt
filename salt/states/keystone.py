@@ -179,3 +179,51 @@ def tenant_absent(name):
         ret['changes']['Tenant'] = 'Deleted'
 
     return ret
+
+
+def role_present(name):
+    ''''
+    Ensures that the keystone role exists
+
+    name
+        The name of the tenant to manage
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Role "{0}" already exists'.format(name)}
+
+    # Check if user is already present
+    role = __salt__['keystone.role_get'](name=name)
+
+    if 'Error' not in role:
+        return ret
+    else:
+        # Create tenant
+        __salt__['keystone.role_create'](name)
+        ret['comment'] = 'Role "{0}" has been added'.format(name)
+        ret['changes']['Role'] = 'Created'
+    return ret
+
+
+def role_absent(name):
+    '''
+    Ensure that the keystone role is absent.
+
+    name
+        The name of the role that should not exist
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Role "{0}" is already absent'.format(name)}
+
+    # Check if tenant is present
+    role = __salt__['keystone.role_get'](name=name)
+    if 'Error' not in role:
+        # Delete tenant
+        __salt__['keystone.role_delete'](name=name)
+        ret['comment'] = 'Role "{0}" has been deleted'.format(name)
+        ret['changes']['Role'] = 'Deleted'
+
+    return ret
