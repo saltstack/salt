@@ -18,7 +18,9 @@ def echo(text):
     '''
     Return a string - used for testing the connection
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.echo 'foo bar baz quo qux'
     '''
@@ -30,7 +32,9 @@ def ping():
     Just used to make sure the minion is up and responding
     Return True
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.ping
     '''
@@ -42,7 +46,9 @@ def sleep(length):
     Instruct the minion to initiate a process that will sleep for a given
     period of time.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.sleep 20
     '''
@@ -55,7 +61,9 @@ def rand_sleep(max=60):
     Sleep for a random number of seconds, used to test long-running commands
     and minions returning at differing intervals
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.rand_sleep 60
     '''
@@ -67,7 +75,9 @@ def version():
     '''
     Return the version of salt on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.version
     '''
@@ -78,7 +88,9 @@ def versions_information():
     '''
     Returns versions of components used by salt as a dict
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.versions_information
     '''
@@ -89,7 +101,9 @@ def versions_report():
     '''
     Returns versions of components used by salt
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.versions_report
     '''
@@ -101,7 +115,9 @@ def conf_test():
     Return the value for test.foo in the minion configuration file, or return
     the default value
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.conf_test
     '''
@@ -112,7 +128,9 @@ def get_opts():
     '''
     Return the configuration options passed to this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.get_opts
     '''
@@ -125,7 +143,9 @@ def cross_test(func, args=None):
     module, used to verify that the minion functions can be called
     via the __salt__ module.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.cross_test file.gid_to_group 0
     '''
@@ -140,7 +160,9 @@ def kwarg(**kwargs):
     both test the publication data and cli kwarg passing, but also to display
     the information available within the publication data.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.kwarg num=1 txt="two" env='{a: 1, b: "hello"}'
     '''
@@ -154,7 +176,9 @@ def arg(*args, **kwargs):
     also to display the information available within the publication data.
     Returns {"args": args, "kwargs": kwargs}.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.arg 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
     '''
@@ -168,7 +192,9 @@ def arg_repr(*args, **kwargs):
     also to display the information available within the publication data.
     Returns {"args": repr(args), "kwargs": repr(kwargs)}.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.arg_repr 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
     '''
@@ -180,7 +206,9 @@ def fib(num):
     Return a Fibonacci sequence up to the passed number, and the
     timeit took to compute in seconds. Used for performance tests
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.fib 3
     '''
@@ -200,7 +228,9 @@ def collatz(start):
     returns the sequence and the time it took to compute. Used for
     performance tests.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.collatz 3
     '''
@@ -221,7 +251,9 @@ def outputter(data):
     '''
     Test the outputter, pass in data to return
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.outputter foobar
     '''
@@ -232,7 +264,9 @@ def retcode(code=42):
     '''
     Test that the returncode system is functioning correctly
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.retcode 42
     '''
@@ -244,7 +278,9 @@ def provider(module):
     '''
     Pass in a function name to discover what provider is being used
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.provider service
     '''
@@ -265,7 +301,9 @@ def providers():
     '''
     Return a dict of the provider names and the files that provided them
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.providers
     '''
@@ -281,7 +319,9 @@ def not_loaded():
     '''
     List the modules that were not loaded by the salt loader system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.not_loaded
     '''
@@ -308,7 +348,9 @@ def opts_pkg():
     This is primarily used to create the options used for master side
     state compiling routines
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.opts_pkg
     '''
@@ -322,7 +364,9 @@ def tty(device, echo=None):
     '''
     Echo a string to a specific tty
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' test.tty tty0 'This is a test'
         salt '*' test.tty pts3 'This is a test'

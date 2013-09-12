@@ -105,6 +105,11 @@ version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
 release = '0.16.3'
 
+language = 'en'
+locale_dirs = [
+    '_locale',
+]
+
 master_doc = 'contents'
 templates_path = ['_templates']
 exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
