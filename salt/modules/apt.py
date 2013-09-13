@@ -131,6 +131,13 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
     pkgs = list_pkgs(versions_as_list=True)
+    if 'repo' in kwargs:
+        # Remember to kill _get_repo() too when removing this warning.
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'repo\' argument to apt.latest_version is deprecated, and will be '
+            'removed in 0.18.0. Please use \'fromrepo\' instead.'
+        )
     fromrepo = _get_repo(**kwargs)
     repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
         if fromrepo else ''
