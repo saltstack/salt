@@ -69,6 +69,11 @@ for member_name, member_method in inspect.getmembers( _get_connection( ) ):
     if not inspect.ismethod( member_method ):
         continue
 
+    # Limit the search to methods that are only in boto.vpc.VPCConnection, not
+    # parents..
+    if member_name in dir(boto.vpc.EC2Connection):
+        continue
+
     # Blacklist __ functions..
     if re.compile( "^__" ).match( member_name ):
         continue
