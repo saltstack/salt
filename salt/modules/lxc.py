@@ -66,8 +66,7 @@ def _nic_profile(nic):
     return __salt__['config.option']('lxc.nic', {}).get(nic, default)
 
 
-def _gen_config(name,
-                nicp,
+def _gen_config(nicp,
                 cpuset=None,
                 cpushare=None,
                 memory=None):
@@ -135,7 +134,7 @@ def init(name,
     nicp = _nic_profile(nic)
     start_ = kwargs.pop('start', False)
     with tempfile.NamedTemporaryFile() as cfile:
-        cfile.write(_gen_config(name, cpuset=cpuset, cpushare=cpushare,
+        cfile.write(_gen_config(cpuset=cpuset, cpushare=cpushare,
                                 memory=memory, nicp=nicp))
         cfile.flush()
         ret = create(name, config=cfile.name, profile=profile)
