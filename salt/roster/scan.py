@@ -35,7 +35,7 @@ class RosterMatcher(object):
         ret = {}
         try:
             salt.utils.ipaddr.IPAddress(self.tgt)
-            addrs = (self.tgt)
+            addrs = [self.tgt]
         except ValueError:
             try:
                 addrs = salt.utils.ipaddr.IPNetwork(self.tgt).iterhosts()
