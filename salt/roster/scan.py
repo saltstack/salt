@@ -42,10 +42,11 @@ class RosterMatcher(object):
             except ValueError:
                 pass
         for addr in addrs:
+            addr = str(addr)
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(0.01)
-                sock.connect((str(addr), 22))
+                sock.connect((addr, 22))
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
                 ret[addr] = {'host': addr}
