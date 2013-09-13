@@ -27,9 +27,6 @@ as either absent or present
 import logging
 import sys
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 
