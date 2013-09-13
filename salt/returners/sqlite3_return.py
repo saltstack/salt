@@ -8,11 +8,11 @@ Insert minion return data into a sqlite3 database
 
 Sqlite3 is a serverless database that lives in a single file.
 In order to use this returner the database file must exist,
-have the appropriate schema defined, and be accessible to the 
-user whom the minion process is running as. This returner 
+have the appropriate schema defined, and be accessible to the
+user whom the minion process is running as. This returner
 requires the following values configured in the master or
 minion config::
-    
+
     returner.sqlite3.database: /usr/lib/salt/salt.db
     returner.sqlite3.timeout: 5.0
 
@@ -65,7 +65,7 @@ def _get_conn():
     '''
     Return a sqlite3 database connection
     '''
-    # Possible todo: support detect_types, isolation_level, check_same_thread, 
+    # Possible todo: support detect_types, isolation_level, check_same_thread,
     # factory, cached_statements. Do we really need to though?
     if not __salt__['config.option']('returner.sqlite3.database'):
         raise Exception(
