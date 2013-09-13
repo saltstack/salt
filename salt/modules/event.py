@@ -42,4 +42,7 @@ def fire(data, tag):
 
         salt '*' event.fire 'stuff to be in the event' 'tag'
     '''
-    return salt.utils.event.MinionEvent(**__opts__).fire_event(data, tag)
+    try:
+        return salt.utils.event.MinionEvent(**__opts__).fire_event(data, tag)
+    except Exception:
+        return False
