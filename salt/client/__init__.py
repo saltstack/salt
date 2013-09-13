@@ -1232,7 +1232,6 @@ class SSHClient(object):
             self.opts = mopts
         else:
             self.opts = salt.config.client_config(c_path)
-        self.salt_user = self.__get_user()
 
     def _prep_ssh(
             self,
