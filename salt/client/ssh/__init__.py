@@ -126,10 +126,14 @@ class SSH(object):
                     arg_str,
                     host,
                     **target)
-            ret = single.cmd_block()
-            if ret.startswith('deploy'):
-                single.deploy()
+            if salt.utils.which('ssh-copy-id'):
+                # we have ssh-copy-id, use it!
+                single.shell.copy_id()
+            else:
                 ret = single.cmd_block()
+                if ret[0].startswith('deploy'):
+                    single.deploy()
+                    ret = single.cmd_block()
             target.pop('passwd')
             single = Single(
                     self.opts,
@@ -217,7 +221,10 @@ class SSH(object):
         # This job is done, yield
         try:
             if not stdout and stderr:
-                ret['ret'] = stderr
+                if 'Permission denied' in stderr:
+                    ret['ret'] = 'Permission denied'
+                else:
+                    ret['ret'] = stderr
             else:
                 data = json.loads(stdout)
                 if len(data) < 2 and 'local' in data:
