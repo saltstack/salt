@@ -169,7 +169,6 @@ import yaml
 # Import Salt libs
 import salt
 import salt.auth
-import salt.log
 
 # Import salt-api libs
 import saltapi

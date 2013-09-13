@@ -22,9 +22,6 @@ try:
 except ImportError as exc:
     cpy_error = exc
 
-# Import Salt libs
-import salt.log
-
 logger = logging.getLogger(__name__)
 cpy_min = '3.2.2'
 

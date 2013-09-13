@@ -2,15 +2,13 @@
 The main entry point for salt-api
 '''
 # Import python libs
+import logging
 import multiprocessing
-
-# Import salt libs
-import salt.log
 
 # Import salt-api libs
 import saltapi.loader
 
-logger = salt.log.logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 class SaltAPIClient(object):
     '''
