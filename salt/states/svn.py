@@ -128,7 +128,7 @@ def latest(name,
                                        fmt='dict')[0]['Revision']
         if current_rev != new_rev:
             ret['changes']['revision'] = "{0} => {1}".format(current_rev, new_rev)
-    
+
     else:
         out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
 
