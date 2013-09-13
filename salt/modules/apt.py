@@ -124,13 +124,8 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> fromrepo=unstable
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
-        return ''
-    ret = {}
-    # Initialize the dict with empty strings
-    for name in names:
-        ret[name] = ''
-    pkgs = list_pkgs(versions_as_list=True)
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
     if 'repo' in kwargs:
         # Remember to kill _get_repo() too when removing this warning.
         salt.utils.warn_until(
@@ -139,11 +134,24 @@ def latest_version(*names, **kwargs):
             'removed in 0.18.0. Please use \'fromrepo\' instead.'
         )
     fromrepo = _get_repo(**kwargs)
+    kwargs.pop('fromrepo', None)
+    kwargs.pop('repo', None)
+
+    if kwargs:
+        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
+
+    if len(names) == 0:
+        return ''
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+    pkgs = list_pkgs(versions_as_list=True)
     repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
         if fromrepo else ''
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     for name in names:

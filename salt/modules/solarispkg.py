@@ -127,6 +127,10 @@ def latest_version(*names, **kwargs):
     pkgadd, this function will always return an empty string for a given
     package.
     '''
+    kwargs.pop('refresh', True)
+    if kwargs:
+        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
+
     ret = {}
     if not names:
         return ''
