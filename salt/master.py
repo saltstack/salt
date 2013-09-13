@@ -1888,20 +1888,20 @@ class ClearFuncs(object):
                        'user {0}.').format(token['name'])
                 log.warning(msg)
                 return ''
-            
+
             jid = salt.utils.gen_jid()
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
                     'jid': jid,
                     'tag': tag,
-                    'user': token['name']}            
+                    'user': token['name']}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
                 data['ret'] = ret
                 data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))                
+                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
                 return tag
             except Exception as exc:
                 log.error(exc)
@@ -1949,14 +1949,14 @@ class ClearFuncs(object):
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
-            
+
             jid = salt.utils.gen_jid()
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
                     'jid': jid,
                     'tag': tag,
-                    'user': clear_load.get('username', 'UNKNOWN')}               
+                    'user': clear_load.get('username', 'UNKNOWN')}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
