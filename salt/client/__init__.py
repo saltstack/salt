@@ -1251,6 +1251,8 @@ class SSHClient(object):
         arg = condition_kwarg(arg, kwarg)
         opts['arg_str'] = '{0} {1}'.format(fun, ' '.join(arg))
         opts['selected_target_option'] = expr_form
+        opts['tgt'] = tgt
+        opts['arg'] = arg
         return salt.client.ssh.SSH(opts)
 
     def cmd_iter(
@@ -1260,6 +1262,7 @@ class SSHClient(object):
             arg=(),
             timeout=None,
             expr_form='glob',
+            ret='',
             kwarg=None,
             **kwargs):
         '''
