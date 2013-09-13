@@ -47,7 +47,8 @@ def sls(mods, env='base', test=None, exclude=None):
     '''
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
-    ret = minion.functions['state.sls'](mods, env, test, exclude)
+    running = minion.functions['state.sls'](mods, env, test, exclude)
+    ret = {minion.opts['id']: running}
     salt.output.display_output(ret, 'highstate', opts=__opts__)
     return ret
 
