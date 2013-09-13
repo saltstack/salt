@@ -75,6 +75,64 @@ def auth():
     return client.Client(**kwargs)
 
 
+def ec2_credentials_create(user_id=None, name=None,
+                           tenant_id=None, tenant=None):
+    '''
+    Create EC2-compatibile credentials for user per tenant
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.ec2_credentials_create name=admin tenant=admin
+        salt '*' keystone.ec2_credentials_create \
+            user_id=c965f79c4f864eaaa9c3b41904e67082 \
+            tenant_id=722787eb540849158668370dc627ec5f
+    '''
+    kstone = auth()
+
+    if name:
+        user_id = user_get(name=name)[name]['id']
+    if not user_id:
+        return {'Error': 'Could not resolve User ID'}
+
+    if tenant:
+        tenant_id = tenant_get(name=tenant)[tenant]['id']
+    if not tenant_id:
+        return {'Error': 'Could not resolve Tenant ID'}
+
+    newec2 = kstone.ec2.create(user_id, tenant_id)
+    return {'access': newec2.access,
+            'secret': newec2.secret,
+            'tenant_id': newec2.tenant_id,
+            'user_id': newec2.user_id}
+
+def ec2_credentials_delete(user_id=None, name=None,
+                           access_key=None):
+    '''
+    Delete EC2-compatibile credentials
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.ec2_credentials_delete \
+            860f8c2c38ca4fab989f9bc56a061a64
+            access_key=5f66d2f24f604b8bb9cd28886106f442
+        salt '*' keystone.ec2_credentials_delete name=admin \
+            access_key=5f66d2f24f604b8bb9cd28886106f442
+    '''
+    kstone = auth()
+
+    if name:
+        user_id = user_get(name=name)[name]['id']
+    if not user_id:
+        return {'Error': 'Could not resolve User ID'}
+    kstone.ec2.delete(user_id, access_key)
+    return 'ec2 key "{0}" deleted under user id "{1}"'.format(access_key,
+                                                              user_id)
+
+
 def ec2_credentials_get(user_id=None,
                         name=None,
                         access=None):
@@ -261,6 +319,40 @@ def role_list():
         ret[role.name] = {'id': role.id,
                           'name': role.name}
     return ret
+
+
+def service_create(name, service_type, description=None):
+    '''
+    Add service to Keystone service catalog
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.service_create nova compute \
+                'OpenStack Compute Service'
+    '''
+    kstone = auth()
+    service = kstone.services.create(name, service_type, description)
+    return service_get(service.id)
+
+
+def service_delete(service_id=None, name=None):
+    '''
+    Delete a service from Keystone service catalog
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.service_delete c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.service_delete name=nova
+    '''
+    kstone = auth()
+    if name:
+        service_id = service_get(name=name)[name]['id']
+    service = kstone.services.delete(service_id)
+    return 'Keystone service ID "{0}" deleted'.format(service_id)
 
 
 def service_get(service_id=None, name=None):
@@ -806,14 +898,8 @@ def _item_list():
     #The following is a list of functions that need to be incorporated in the
     #keystone module. This list should be updated as functions are added.
     #
-    #ec2-credentials-create
-    #                    Create EC2-compatible credentials for user per tenant
-    #ec2-credentials-delete
-    #                    Delete EC2-compatible credentials
     #endpoint-create     Create a new endpoint associated with a service
     #endpoint-delete     Delete a service endpoint
-    #service-create      Add service to Service Catalog
-    #service-delete      Delete service from Service Catalog
     #discover            Discover Keystone servers and show authentication
     #                    protocols and
     #bootstrap           Grants a new role to a new user on a new tenant, after
