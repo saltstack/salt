@@ -213,6 +213,11 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> fromrepo=epel-testing
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    # FIXME: do stricter argument checking that somehow takes _get_repo_options() into account
+    # if kwargs:
+    #     raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
+
     if len(names) == 0:
         return ''
     ret = {}
@@ -221,7 +226,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     yumbase = yum.YumBase()

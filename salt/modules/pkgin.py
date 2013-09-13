@@ -112,13 +112,17 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> ...
     '''
 
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    if kwargs:
+        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
+
     pkglist = {}
     pkgin = _check_pkgin()
     if not pkgin:
         return pkglist
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     for name in names:
