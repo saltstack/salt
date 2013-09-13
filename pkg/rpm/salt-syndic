@@ -25,16 +25,6 @@
 # processname: /usr/bin/salt-syndic
 
 
-if [ -f /etc/default/salt ]; then
-    . /etc/default/salt
-else
-    SALTSYNDIC=/usr/bin/salt-syndic
-    PYTHON=/usr/bin/python
-fi
-
-# Sanity checks.
-[ -x $SALTSYNDIC ] || exit 0
-
 DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
@@ -45,6 +35,16 @@ elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
 else
     . /etc/rc.d/init.d/functions
 fi
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+    SALTSYNDIC=/usr/bin/salt-syndic
+    PYTHON=/usr/bin/python
+fi
+
+# Sanity checks.
+[ -x $SALTSYNDIC ] || exit 0
 
 SERVICE=salt-syndic
 PROCESS=salt-syndic
