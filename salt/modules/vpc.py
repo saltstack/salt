@@ -41,15 +41,17 @@ def _create_func( function_name, function_obj ):
     function_obj. Note that introspection is used to do this.
     '''
 
-    spec = inspect.getargspec( function_obj )
+    arguments,vararguments,keywords,defaults = inspect.getargspec( function_obj )
 
     # Define the actual function we will return.
-    def _f( *args, **kwargs ):
+    def _f( *args ):
         '''
         This is a dynamically generated function from boto.
         '''
-        # Reconcile the arguments we got with the arguments that are required
-        return spec
+        try:
+            return function_obj( *args )
+        except Exception as e:
+            return "ERROR: {0}".format(e)
 
     # Get the documentation from the object.
     doc = inspect.getdoc( function_obj )
