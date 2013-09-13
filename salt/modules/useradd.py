@@ -4,7 +4,6 @@ Manage users with the useradd command
 
 # Import python libs
 import re
-import sys
 
 try:
     import grp
