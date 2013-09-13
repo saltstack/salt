@@ -788,7 +788,7 @@ def script(source,
             'Passing a salt environment should be done using \'__env__\' not '
             '\'env\'.'
         )
-        # Backwards compatility
+        # Backwards compatibility
         __env__ = env
 
     if not salt.utils.is_windows():
