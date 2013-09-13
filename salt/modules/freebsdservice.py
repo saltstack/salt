@@ -337,7 +337,7 @@ def status(name, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def available(name, **kwargs):
+def available(name):
     '''
     Check that the given service is available.
 
