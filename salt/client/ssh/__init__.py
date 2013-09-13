@@ -470,7 +470,11 @@ class Single(object):
         # 3. deploy salt-thin
         # 4. execute command
         cmd = HEREDOC.format(self.arg_str)
-        return self.shell.exec_cmd(cmd)
+        stdout, stderr = self.shell.exec_cmd(cmd)
+        if stdout.startswith('deploy'):
+            self.deploy()
+            stdout, stderr = self.shell.exec_cmd(cmd)
+        return stdout, stderr
 
     def sls_seed(self, mods, env='base', test=None, exclude=None, **kwargs):
         '''
