@@ -107,6 +107,7 @@ def ec2_credentials_create(user_id=None, name=None,
             'tenant_id': newec2.tenant_id,
             'user_id': newec2.user_id}
 
+
 def ec2_credentials_delete(user_id=None, name=None,
                            access_key=None):
     '''
