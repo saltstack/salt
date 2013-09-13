@@ -752,9 +752,9 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cp', arg_str)
 
-    def run_call(self, arg_str):
+    def run_call(self, arg_str, with_retcode=False):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode)
 
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
