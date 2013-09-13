@@ -308,6 +308,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed Sep 11 2013 David Anderson <dave@dubkat.com>
+- Change sourcing order of init functions and salt default file
+
 * Sun Aug 25 2013 Florian La Roche <Florian.LaRoche@gmx.net>
 - fixed preun/postun scripts for salt-minion
 
