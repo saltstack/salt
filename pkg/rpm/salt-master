@@ -35,15 +35,23 @@ else
     . /etc/rc.d/init.d/functions
 fi
 
+# Default values, can be overridden below in /etc/default/salt
+SALTMASTER=/usr/bin/salt-master
+PYTHON=/usr/bin/python
+
 if [ -f /etc/default/salt ]; then
     . /etc/default/salt
-else
-    SALTMASTER=/usr/bin/salt-master
-    PYTHON=/usr/bin/python
 fi
 
 # Sanity checks.
-[ -x $SALTMASTER ] || exit 0
+if [ ! -x "$SALTMASTER" ]; then
+    echo "Unable to execute $SALTMASTER!"
+    exit 2
+fi
+if [ ! -x "$PYTHON" ]; then
+    echo "$PYTHON does not exist or is not executable"
+    exit 2
+fi
 
 SERVICE=salt-master
 PROCESS=salt-master

@@ -36,15 +36,23 @@ else
     . /etc/rc.d/init.d/functions
 fi
 
+# Default values, can be overridden below in /etc/default/salt
+SALTMINION=/usr/bin/salt-minion
+PYTHON=/usr/bin/python
+
 if [ -f /etc/default/salt ]; then
     . /etc/default/salt
-else
-    SALTMINION=/usr/bin/salt-minion
-    PYTHON=/usr/bin/python
 fi
 
 # Sanity checks.
-[ -x $SALTMINION ] || exit 0
+if [ ! -x "$SALTMINION" ]; then
+    echo "Unable to execute $SALTMINION!"
+    exit 2
+fi
+if [ ! -x "$PYTHON" ]; then
+    echo "$PYTHON does not exist or is not executable"
+    exit 2
+fi
 
 SERVICE=salt-minion
 PROCESS=salt-minion
