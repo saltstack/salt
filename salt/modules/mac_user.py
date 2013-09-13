@@ -8,7 +8,6 @@ try:
     import pwd
 except ImportError:
     pass
-import copy
 import logging
 import random
 import string

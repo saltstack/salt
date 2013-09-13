@@ -4,7 +4,6 @@ Manage users with the useradd command
 
 # Import python libs
 import re
-import sys
 
 try:
     import grp
@@ -16,7 +15,7 @@ import copy
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types, callable as _callable
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 RETCODE_12_ERROR_REGEX = re.compile(

@@ -13,7 +13,6 @@ The following packages are required packages for this module:
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.modules.service
 
 log = logging.getLogger(__name__)
