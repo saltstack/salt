@@ -140,7 +140,7 @@ class SSH(object):
                     self.opts['arg_str'],
                     host,
                     **target)
-            stdout = single.cmd_block()
+            stdout, stderr = single.cmd_block()
             try:
                 data = json.loads(stdout)
                 if 'local' in data:
