@@ -24,16 +24,6 @@
 # processname: /usr/bin/salt-master
 
 
-if [ -f /etc/default/salt ]; then
-    . /etc/default/salt
-else
-    SALTMASTER=/usr/bin/salt-master
-    PYTHON=/usr/bin/python
-fi
-
-# Sanity checks.
-[ -x $SALTMASTER ] || exit 0
-
 DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
@@ -43,6 +33,24 @@ elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
     . /etc/rc.status
 else
     . /etc/rc.d/init.d/functions
+fi
+
+# Default values, can be overridden below in /etc/default/salt
+SALTMASTER=/usr/bin/salt-master
+PYTHON=/usr/bin/python
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+fi
+
+# Sanity checks.
+if [ ! -x "$SALTMASTER" ]; then
+    echo "Unable to execute $SALTMASTER!"
+    exit 2
+fi
+if [ ! -x "$PYTHON" ]; then
+    echo "$PYTHON does not exist or is not executable"
+    exit 2
 fi
 
 SERVICE=salt-master

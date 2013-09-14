@@ -4,7 +4,6 @@ The purpose is to have a simplified consistent interface for various client appl
 
 '''
 # Import Python libs
-import inspect
 import os
 
 # Import Salt libs

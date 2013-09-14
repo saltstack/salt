@@ -290,7 +290,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 
@@ -337,7 +337,7 @@ def status(name, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def available(name, **kwargs):
+def available(name):
     '''
     Check that the given service is available.
 

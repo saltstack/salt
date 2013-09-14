@@ -346,6 +346,16 @@ addresses, etc:
 
     salt '*' network.interfaces
 
+``salt-call``
+~~~~~~~~~~~~~
+
+The examples so far have described running commands from the Master using the
+``salt`` command, but when troubleshooting it can be more beneficial to login
+to the minion directly and use ``salt-call``. Doing so allows you to see the
+minion log messages specific to the command you are running (which are *not*
+part of the return data you see when running the command from the Master using
+``salt``), making it unnecessary to tail the minion log. More information on
+``salt-call`` and how to use it can be found :ref:`here <using-salt-call>`.
 
 Grains
 ~~~~~~

@@ -3,6 +3,8 @@
     salt.log.handlers
     ~~~~~~~~~~~~~~~~~
 
+    .. versionadded:: 0.17.0
+
     Custom logging handlers to be used in salt.
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
@@ -54,6 +56,8 @@ class TemporaryLoggingHandler(logging.NullHandler):
     initial log messages to the function
     :func:`TemporaryLoggingHandler.sync_with_handlers` and all stored log
     records will be dispatched to the provided handlers.
+
+    .. versionadded:: 0.17.0
     '''
 
     def __init__(self, level=logging.NOTSET, max_queue_size=10000):

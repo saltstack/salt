@@ -435,6 +435,7 @@ def required_modules_error(name, docstring):
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
 
+
 def gen_jid():
     '''
     Generate a jid
@@ -803,6 +804,13 @@ def mysql_to_dict(data, key):
     return ret
 
 
+def contains_whitespace(text):
+    '''
+    Returns True if there are any whitespace characters in the string
+    '''
+    return any(x.isspace() for x in text)
+
+
 def str_to_num(text):
     '''
     Convert a string to a number.
@@ -855,7 +863,7 @@ def subdict_match(data, expr, delim=':', regex_match=False):
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
-                log.error('Invalid regex \'{0}\' in match'.format(pattern))
+                log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
@@ -864,8 +872,8 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         splits = expr.split(delim)
         key = delim.join(splits[:idx])
         matchstr = delim.join(splits[idx:])
-        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
-                  '\'{2}\''.format(matchstr, key, delim))
+        log.debug('Attempting to match {0!r} in {1!r} using delimiter '
+                  '{2!r}'.format(matchstr, key, delim))
         match = traverse_dict(data, key, {}, delim=delim)
         if match == {}:
             continue
@@ -1228,7 +1236,7 @@ def namespaced_function(function, global_dict, defaults=None):
     return new_namespaced_function
 
 
-def parse_kwarg(string):
+def parse_kwarg(string_):
     '''
     Parses the string and looks for the kwarg format:
     "{argument name}={argument value}"
@@ -1241,7 +1249,7 @@ def parse_kwarg(string):
     Or else it returns:
     (None, None)
     '''
-    match = KWARG_REGEX.match(string)
+    match = KWARG_REGEX.match(string_)
     if match:
         return match.groups()
     else:
@@ -1602,6 +1610,6 @@ def is_bin_str(data):
 
     # If more than 30% non-text characters, then
     # this is considered a binary file
-    if len(text)/len(data) > 0.30:
+    if len(text) / len(data) > 0.30:
         return True
     return False

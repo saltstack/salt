@@ -25,16 +25,6 @@
 # processname: /usr/bin/salt-minion
 
 
-if [ -f /etc/default/salt ]; then
-    . /etc/default/salt
-else
-    SALTMINION=/usr/bin/salt-minion
-    PYTHON=/usr/bin/python
-fi
-
-# Sanity checks.
-[ -x $SALTMINION ] || exit 0
-
 DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
@@ -44,6 +34,24 @@ elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
     . /etc/rc.status
 else
     . /etc/rc.d/init.d/functions
+fi
+
+# Default values, can be overridden below in /etc/default/salt
+SALTMINION=/usr/bin/salt-minion
+PYTHON=/usr/bin/python
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+fi
+
+# Sanity checks.
+if [ ! -x "$SALTMINION" ]; then
+    echo "Unable to execute $SALTMINION!"
+    exit 2
+fi
+if [ ! -x "$PYTHON" ]; then
+    echo "$PYTHON does not exist or is not executable"
+    exit 2
 fi
 
 SERVICE=salt-minion
