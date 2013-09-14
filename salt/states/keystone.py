@@ -7,10 +7,62 @@ Management of Keystone users.
 
 .. code-block:: yaml
 
-    frank:
+    Keystone tenants:
+      keystone.tenant_present:
+        - names:
+          - admin
+          - demo
+          - service
+
+    Keystone roles:
+      keystone.role_present:
+        - names:
+          - admin
+          - Member
+
+    admin:
       keystone.user_present:
-        - password: creds4you
-        - email: test@example.com
+        - password: R00T_4CC3SS
+        - email: admin@domain.com
+        - roles:
+          - admin:   # tenants
+            - admin  # roles
+          - service:
+            - admin
+            - Member
+        - require:
+          - keystone: Keystone tenants
+          - keystone: Keystone roles
+
+    nova:
+      keystone.user_present:
+        - password: '$up3rn0v4'
+        - email: nova@domain.com
+        - tenant: service
+        - roles:
+          - service:
+            - admin
+        - require:
+          - keystone: Keystone tenants
+          - keystone: Keystone roles
+
+    demo:
+      keystone.user_present:
+        - password: 'd3m0n$trati0n'
+        - email: demo@domain.com
+        - tenant: demo
+        - roles:
+          - demo:
+            - Member
+        - require:
+          - keystone: Keystone tenants
+          - keystone: Keystone roles
+
+    nova service:
+      keystone.service_present:
+        - name: nova
+        - service_type: compute
+        - description: OpenStack Compute Service
 
 '''
 
@@ -218,13 +270,13 @@ def role_present(name):
            'result': True,
            'comment': 'Role "{0}" already exists'.format(name)}
 
-    # Check if user is already present
+    # Check if role is already present
     role = __salt__['keystone.role_get'](name=name)
 
     if 'Error' not in role:
         return ret
     else:
-        # Create tenant
+        # Create role
         __salt__['keystone.role_create'](name)
         ret['comment'] = 'Role "{0}" has been added'.format(name)
         ret['changes']['Role'] = 'Created'
@@ -243,12 +295,66 @@ def role_absent(name):
            'result': True,
            'comment': 'Role "{0}" is already absent'.format(name)}
 
-    # Check if tenant is present
+    # Check if role is present
     role = __salt__['keystone.role_get'](name=name)
     if 'Error' not in role:
-        # Delete tenant
+        # Delete role
         __salt__['keystone.role_delete'](name=name)
         ret['comment'] = 'Role "{0}" has been deleted'.format(name)
         ret['changes']['Role'] = 'Deleted'
+
+    return ret
+
+
+def service_present(name, service_type, description=None):
+    '''
+    Ensure service present in Keystone catalog
+
+    name
+        The name of the service
+
+    service_type
+        The type of Openstack Service
+
+    description (optional)
+        Description of the service
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Service "{0}" already exists'.format(name)}
+
+    # Check if service is already present
+    role = __salt__['keystone.service_get'](name=name)
+
+    if 'Error' not in role:
+        return ret
+    else:
+        # Create service
+        __salt__['keystone.service_create'](name, service_type, description)
+        ret['comment'] = 'Service "{0}" has been added'.format(name)
+        ret['changes']['Service'] = 'Created'
+    return ret
+
+
+def service_absent(name):
+    '''
+    Ensure that the service doesn't exist in Keystone catalog
+
+    name
+        The name of the service that should not exist
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Service "{0}" is already absent'.format(name)}
+
+    # Check if service is present
+    role = __salt__['keystone.service_get'](name=name)
+    if 'Error' not in role:
+        # Delete service
+        __salt__['keystone.service_delete'](name=name)
+        ret['comment'] = 'Service "{0}" has been deleted'.format(name)
+        ret['changes']['Service'] = 'Deleted'
 
     return ret
