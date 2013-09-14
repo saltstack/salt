@@ -468,12 +468,12 @@ def show_top():
         return conflict
     st_ = salt.state.HighState(__opts__)
     errors = []
-    top = st_.get_top()
-    errors += st_.verify_tops(top)
+    top_ = st_.get_top()
+    errors += st_.verify_tops(top_)
     if errors:
         __context__['retcode'] = 1
         return errors
-    matches = st_.top_matches(top)
+    matches = st_.top_matches(top_)
     return matches
 
 # Just commenting out, someday I will get this working
