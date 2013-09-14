@@ -1236,7 +1236,7 @@ def namespaced_function(function, global_dict, defaults=None):
     return new_namespaced_function
 
 
-def parse_kwarg(string):
+def parse_kwarg(string_):
     '''
     Parses the string and looks for the kwarg format:
     "{argument name}={argument value}"
@@ -1249,7 +1249,7 @@ def parse_kwarg(string):
     Or else it returns:
     (None, None)
     '''
-    match = KWARG_REGEX.match(string)
+    match = KWARG_REGEX.match(string_)
     if match:
         return match.groups()
     else:
