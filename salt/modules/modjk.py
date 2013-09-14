@@ -226,8 +226,7 @@ def workers(profile='default'):
 
     return ret
 
-
-def recover_all(profile='default'):
+def recover_all(lbn, profile='default'):
     '''
     Set the all the workers in lbn to recover and activate them if they are not
 
@@ -235,17 +234,22 @@ def recover_all(profile='default'):
 
     .. code-block:: bash
 
-        salt '*' modjk.recover_all
-        salt '*' modjk.recover_all other-profile
+        salt '*' modjk.recover_all loadbalancer1
+        salt '*' modjk.recover_all loadbalancer1 other-profile
     '''
 
     ret = {}
-
-    workers = workers(profile)
+    config = get_running(profile)
+    try:
+        workers = config['worker.{0}.balance_workers'.format(lbn)].split(',')
+    except KeyError:
+        return ret
+    
     for worker in workers:
-        if workers[worker]['activation'] != 'ACT':
+        curr_state = worker_status(worker, profile)
+        if curr_state['activation'] != 'ACT':
             worker_activate(worker, lbn, profile)
-        if not workers[worker]['state'].startswith('OK'):
+        if not curr_state['state'].startswith('OK'):
             worker_recover(worker, lbn, profile)
         ret[worker] = worker_status(worker, profile)
 
