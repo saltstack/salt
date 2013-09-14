@@ -19,9 +19,9 @@ import yaml
 # Import salt libs
 import salt.utils
 import salt.utils.timed_subprocess
-from salt.exceptions import CommandExecutionError
-import salt.exceptions
 import salt.grains.extra
+from salt._compat import string_types
+from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -342,7 +342,7 @@ def _run(cmd,
 
     try:
         proc.wait(timeout)
-    except salt.exceptions.TimedProcTimeoutError as exc:
+    except TimedProcTimeoutError as exc:
         ret['stdout'] = str(exc)
         ret['stderr'] = ''
         ret['pid'] = proc.process.pid
@@ -747,11 +747,12 @@ def script(source,
            stdin=None,
            runas=None,
            shell=DEFAULT_SHELL,
-           env='base',
+           env=(),
            template='jinja',
            umask=None,
            timeout=None,
            reset_system_locale=True,
+           __env__='base',
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -780,10 +781,20 @@ def script(source,
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+
+    if isinstance(env, string_types):
+        salt.utils.warn_until(
+            (0, 19),
+            'Passing a salt environment should be done using \'__env__\' not '
+            '\'env\'.'
+        )
+        # Backwards compatibility
+        __env__ = env
+
     if not salt.utils.is_windows():
         path = salt.utils.mkstemp(dir=cwd)
     else:
-        path = __salt__['cp.cache_file'](source, env)
+        path = __salt__['cp.cache_file'](source, __env__)
         if not path:
             return {'pid': 0,
                     'retcode': 1,
@@ -791,10 +802,10 @@ def script(source,
                     'stderr': '',
                     'cache_error': True}
     if template:
-        __salt__['cp.get_template'](source, path, template, env, **kwargs)
+        __salt__['cp.get_template'](source, path, template, __env__, **kwargs)
     else:
         if not salt.utils.is_windows():
-            fn_ = __salt__['cp.cache_file'](source, env)
+            fn_ = __salt__['cp.cache_file'](source, __env__)
             if not fn_:
                 return {'pid': 0,
                         'retcode': 1,
@@ -823,11 +834,12 @@ def script_retcode(source,
                    stdin=None,
                    runas=None,
                    shell=DEFAULT_SHELL,
-                   env='base',
+                   env=(),
                    template='jinja',
                    umask=None,
                    timeout=None,
                    reset_system_locale=True,
+                   __env__='base',
                    **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
