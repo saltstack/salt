@@ -706,19 +706,19 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
 
-    def run_salt(self, arg_str):
+    def run_salt(self, arg_str, with_retcode=False):
         '''
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode)
 
-    def run_run(self, arg_str):
+    def run_run(self, arg_str, with_retcode=False):
         '''
         Execute salt-run
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-run', arg_str)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode)
 
     def run_run_plus(self, fun, options='', *arg):
         '''
@@ -738,23 +738,28 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
             ret['fun'] = runner.run()
         return ret
 
-    def run_key(self, arg_str, catch_stderr=False):
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
         '''
         Execute salt-key
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-key', arg_str, catch_stderr=catch_stderr)
+        return self.run_script(
+            'salt-key',
+            arg_str,
+            catch_stderr=catch_stderr,
+            with_retcode=with_retcode
+        )
 
-    def run_cp(self, arg_str):
+    def run_cp(self, arg_str, with_retcode=False):
         '''
         Execute salt-cp
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cp', arg_str)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode)
 
-    def run_call(self, arg_str):
+    def run_call(self, arg_str, with_retcode=False):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode)
 
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
