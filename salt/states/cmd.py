@@ -148,6 +148,7 @@ import logging
 import yaml
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
 
