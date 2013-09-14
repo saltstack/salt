@@ -660,7 +660,7 @@ def script(name,
                        'cwd': cwd,
                        'template': template,
                        'umask': umask,
-                       'timeout': timeout
+                       'timeout': timeout,
                        '__env__': __env__})
 
     run_check_cmd_kwargs = {
