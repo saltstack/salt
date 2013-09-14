@@ -191,26 +191,43 @@ def list_configured_members(lbn, profile='default'):
     return filter(None, ret.strip().split(','))
 
 
-def list_running_members(lbn, profile='default'):
+def workers(profile='default'):
     '''
-    Return a list of member workers
+    Return a list of member workers and their status
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' modjk.list_running_members loadbalancer1
-        salt '*' modjk.list_running_members loadbalancer1 other-profile
+        salt '*' modjk.workers 
+        salt '*' modjk.workers other-profile
     '''
 
-    config = get_running(profile)
-    try:
-        return config['worker.{0}.balance_workers'.format(lbn)].split(',')
-    except KeyError:
-        return []
+    config = get_running()
+    lbn = config['worker.list'].split(',')
+    worker_list = []
+    ret = {}
+    
+    for lb in lbn:
+        try:
+            worker_list.extend(
+                config['worker.{0}.balance_workers'.format(lb)].split(',')
+            )
+        except KeyError:
+            pass
+    
+    worker_list = list(set(worker_list))
+    
+    for worker in worker_list:
+        ret[worker] = {
+            'activation': config['worker.{0}.activation'.format(worker)],
+            'state': config['worker.{0}.state'.format(worker)],
+        }
+    
+    return ret
+    
 
-
-def recover_all(lbn, profile='default'):
+def recover_all(profile='default'):
     '''
     Set the all the workers in lbn to recover and activate them if they are not
 
@@ -218,18 +235,17 @@ def recover_all(lbn, profile='default'):
 
     .. code-block:: bash
 
-        salt '*' modjk.recover_all loadbalancer1
-        salt '*' modjk.recover_all loadbalancer1 other-profile
+        salt '*' modjk.recover_all 
+        salt '*' modjk.recover_all other-profile
     '''
 
     ret = {}
 
-    workers = list_running_members(lbn, profile)
+    workers = workers(profile)
     for worker in workers:
-        curr_state = worker_status(worker, profile)
-        if curr_state['activation'] != 'ACT':
+        if workers[worker]['activation'] != 'ACT':
             worker_activate(worker, lbn, profile)
-        if not curr_state['state'].startswith('OK'):
+        if not workers[worker]['state'].startswith('OK'):
             worker_recover(worker, lbn, profile)
         ret[worker] = worker_status(worker, profile)
 
@@ -281,6 +297,122 @@ def lb_edit(lbn, settings, profile='default'):
 ########################
 ### Worker Functions ###
 ########################
+
+
+def bulk_stop(workers, lbn, profile='default'):
+    '''
+    Stop all the given workers in the spepcific load balancer
+    
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' modjk.bulk_stop node1,node2,node3
+        salt '*' modjk.bulk_stop node1,node2,node3 other-profile
+        
+        salt '*' modjk.bulk_stop ["node1","node2","node3"]
+        salt '*' modjk.bulk_stop ["node1","node2","node3"] other-profile
+    '''
+    
+    ret = {}
+    
+    if type(workers) == str:
+        workers = workers.split(',')
+    
+    for worker in workers:
+        try:
+            ret[worker] = worker_stop(worker, lbn, profile)
+        except Exception:
+            ret[worker] = False
+    
+    return ret
+    
+    
+def bulk_activate(workers, lbn, profile='default'):
+    '''
+    Activate all the given workers in the spepcific load balancer
+    
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' modjk.bulk_activate node1,node2,node3
+        salt '*' modjk.bulk_activate node1,node2,node3 other-profile
+        
+        salt '*' modjk.bulk_activate ["node1","node2","node3"]
+        salt '*' modjk.bulk_activate ["node1","node2","node3"] other-profile
+    '''
+    
+    ret = {}
+    
+    if type(workers) == str:
+        workers = workers.split(',')
+    
+    for worker in workers:
+        try:
+            ret[worker] = worker_activate(worker, lbn, profile)
+        except Exception:
+            ret[worker] = False
+    
+    return ret
+
+
+def bulk_disable(workers, lbn, profile='default'):
+    '''
+    Disable all the given workers in the spepcific load balancer
+    
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' modjk.bulk_disable node1,node2,node3
+        salt '*' modjk.bulk_disable node1,node2,node3 other-profile
+        
+        salt '*' modjk.bulk_disable ["node1","node2","node3"]
+        salt '*' modjk.bulk_disable ["node1","node2","node3"] other-profile
+    '''
+    
+    ret = {}
+    
+    if type(workers) == str:
+        workers = workers.split(',')
+    
+    for worker in workers:
+        try:
+            ret[worker] = worker_disable(worker, lbn, profile)
+        except Exception:
+            ret[worker] = False
+    
+    return ret
+
+
+def bulk_recover(workers, lbn, profile='default'):
+    '''
+    Recover all the given workers in the spepcific load balancer
+    
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' modjk.bulk_recover node1,node2,node3
+        salt '*' modjk.bulk_recover node1,node2,node3 other-profile
+        
+        salt '*' modjk.bulk_recover ["node1","node2","node3"]
+        salt '*' modjk.bulk_recover ["node1","node2","node3"] other-profile
+    '''
+    
+    ret = {}
+    
+    if type(workers) == str:
+        workers = workers.split(',')
+    
+    for worker in workers:
+        try:
+            ret[worker] = worker_recover(worker, lbn, profile)
+        except Exception:
+            ret[worker] = False
+    
+    return ret
 
 
 def worker_status(worker, profile='default'):
