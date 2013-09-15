@@ -29,7 +29,9 @@ def usage():
     '''
     Return usage information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.usage
     '''

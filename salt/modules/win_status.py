@@ -40,7 +40,9 @@ def procs():
     '''
     Return the process data
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.procs
     '''

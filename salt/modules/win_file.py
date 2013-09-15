@@ -74,7 +74,9 @@ def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     '''
@@ -87,7 +89,9 @@ def group_to_gid(group):
     '''
     Convert the group to the gid on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.group_to_gid administrators
     '''
@@ -99,7 +103,9 @@ def get_gid(path):
     '''
     Return the id of the group that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_gid c:\\temp\\test.txt
     '''
@@ -116,7 +122,9 @@ def get_group(path):
     '''
     Return the group that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_group c:\\temp\\test.txt
     '''
@@ -134,7 +142,9 @@ def uid_to_user(uid):
     '''
     Convert a uid to a user name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.uid_to_user S-1-5-21-626487655-2533044672-482107328-1010
     '''
@@ -147,7 +157,9 @@ def user_to_uid(user):
     '''
     Convert user name to a uid
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.user_to_uid myusername
     '''
@@ -159,7 +171,9 @@ def get_uid(path):
     '''
     Return the id of the user that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_uid c:\\temp\\test.txt
     '''
@@ -180,7 +194,9 @@ def get_mode(path):
     because Windows' doesn't have a mode
     like Linux
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_mode /etc/passwd
     '''
@@ -194,7 +210,9 @@ def get_user(path):
     '''
     Return the user that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_user c:\\temp\\test.txt
     '''
@@ -210,7 +228,9 @@ def chown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.chown c:\\temp\\test.txt myusername administrators
     '''
@@ -249,7 +269,9 @@ def chgrp(path, group):
     '''
     Change the group of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.chgrp c:\\temp\\test.txt administrators
     '''
@@ -270,7 +292,9 @@ def stats(path, hash_type='md5', follow_symlink=False):
     '''
     Return a dict containing the stats for a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.stats /etc/passwd
     '''
