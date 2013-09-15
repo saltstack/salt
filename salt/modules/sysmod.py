@@ -27,7 +27,7 @@ def _strip_rst(docs):
     for func, docstring in docs.iteritems():
         if not docstring:
             continue
-        docstring_new = re.sub(' *.. code-block:: \S+\n{1,2}',
+        docstring_new = re.sub(r' *.. code-block:: \S+\n{1,2}',
                                    '', docstring)
         docstring_new = re.sub('.. note::',
                                'Note:', docstring_new)
