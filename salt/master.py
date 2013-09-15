@@ -53,6 +53,13 @@ from salt.utils.debug import enable_sigusr1_handler
 from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
 
+# Import halite libs
+try:
+    import halite
+    HAS_HALITE = True
+except ImportError:
+    HAS_HALITE = False
+
 log = logging.getLogger(__name__)
 
 
@@ -322,6 +329,7 @@ class Master(SMaster):
         reqserv.start_publisher()
         reqserv.start_event_publisher()
         reqserv.start_reactor()
+        reqserv.start_halite()
 
         def sigterm_clean(signum, frame):
             '''
@@ -337,6 +345,8 @@ class Master(SMaster):
             clean_proc(clear_old_jobs_proc)
             clean_proc(reqserv.publisher)
             clean_proc(reqserv.eventpublisher)
+            if hasattr(reqserv, 'halite'):
+                clean_proc(reqserv.halite)
             if hasattr(reqserv, 'reactor'):
                 clean_proc(reqserv.reactor)
             for proc in reqserv.work_procs:
@@ -351,6 +361,21 @@ class Master(SMaster):
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
             raise SystemExit('\nExiting on Ctrl-c')
+
+
+class Halite(multiprocessing.Process):
+    '''
+    Manage the Halite server
+    '''
+    def __init__(self, hopts):
+        super(Halite, self).__init__()
+        self.hopts = hopts
+
+    def run(self):
+        '''
+        Fire up halite!
+        '''
+        halite.start(self.hopts)
 
 
 class Publisher(multiprocessing.Process):
@@ -499,6 +524,14 @@ class ReqServer(object):
         if self.opts.get('reactor'):
             self.reactor = salt.utils.event.Reactor(self.opts)
             self.reactor.start()
+
+    def start_halite(self):
+        '''
+        If halite is configured and installed, fire it up!
+        '''
+        if HAS_HALITE and 'halite' in self.opts:
+            self.halite = Halite(self.opts['halite'])
+            self.halite.start()
 
     def run(self):
         '''
