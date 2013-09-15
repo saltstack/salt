@@ -34,7 +34,9 @@ def ping(host):
     '''
     Performs a ping to a host
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.ping archlinux.org
     '''
@@ -46,7 +48,9 @@ def netstat():
     '''
     Return information on open ports and states
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.netstat
     '''
@@ -74,7 +78,9 @@ def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.traceroute archlinux.org
     '''
@@ -126,7 +132,9 @@ def nslookup(host):
     '''
     Query DNS for information about a domain or ip address
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.nslookup archlinux.org
     '''
@@ -159,7 +167,9 @@ def dig(host):
 
     Note: dig must be installed on the Windows minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.dig archlinux.org
     '''
@@ -171,7 +181,9 @@ def interfaces():
     '''
     Return a dictionary of information about all the interfaces on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.interfaces
     '''
@@ -182,7 +194,9 @@ def hw_addr(iface):
     '''
     Return the hardware address (a.k.a. MAC address) for a given interface
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.hw_addr 'Wireless Connection #1'
     '''
@@ -196,7 +210,9 @@ def subnets():
     '''
     Returns a list of subnets to which the host belongs
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.subnets
     '''
@@ -207,7 +223,9 @@ def in_subnet(cidr):
     '''
     Returns True if host is within specified subnet, otherwise False
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.in_subnet 10.0.0.0/16
     '''
@@ -220,7 +238,9 @@ def ip_addrs(interface=None, include_loopback=False):
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.ip_addrs
     '''
@@ -236,7 +256,9 @@ def ip_addrs6(interface=None, include_loopback=False):
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.ip_addrs6
     '''

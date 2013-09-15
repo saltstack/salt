@@ -75,7 +75,9 @@ def create(path,
     runas : None
         Set ownership for the virtualenv
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virtualenv.create /path/to/new/virtualenv
     '''
@@ -274,7 +276,9 @@ def get_site_packages(venv):
     '''
     Returns the path to the site-packages directory inside a virtualenv
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virtualenv.get_site_packages /path/to/my/venv
     '''
