@@ -17,6 +17,12 @@ booleans can be set.
 
 '''
 
+def __virtual__():
+    '''
+    Only make this state available if the selinux module is available.
+    '''
+    return 'selinux' if 'selinux.getenforce' in __salt__ else False
+
 
 def _refine_mode(mode):
     '''
