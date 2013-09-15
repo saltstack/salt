@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.modules.alternatives
-    ~~~~~~~~~~~~~~~~~~~~~~~~~
+Support for Alternatives system
 
-    Support for Alternatives system
-
-    :codeauthor: Radek Rada <radek.rada@gmail.com>
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
-
+:codeauthor: Radek Rada <radek.rada@gmail.com>
+:copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+:license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
