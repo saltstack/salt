@@ -772,15 +772,15 @@ def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
         # Return a warning to the user explaining what's going on
         ret.setdefault('warnings', []).append(
             '{0}. If you were trying to pass additional data to be used '
-            'in a template context, please pass a dictionary to '
-            '\'template_context\'. Your approach will work until salt>=0.20.0 '
+            'in a template context, please populate \'context\' with '
+            '\'key: val\' pairs. Your approach will work until salt>=0.20.0 '
             'is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
         )
         # Lets set the current extra kwargs as kwargs for the template context
-        ret.setdefault('template_context', {}).update(extra)
+        ret.setdefault('context', {}).update(extra)
 
     return ret
 
