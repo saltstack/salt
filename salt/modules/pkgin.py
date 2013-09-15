@@ -1,5 +1,5 @@
 '''
-Package support for pkgin based systems, inspired from freebsdpkg.py
+Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
