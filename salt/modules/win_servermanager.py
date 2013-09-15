@@ -40,7 +40,9 @@ def list_available():
     '''
     List available features to install
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' win_servermanager.list_available
     '''
@@ -51,7 +53,9 @@ def list_installed():
     '''
     List installed features
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' win_servermanager.list_installed
     '''
@@ -78,7 +82,9 @@ def install(feature, recurse=False):
     Note:
     Some features takes a long time to complete un/installation, set -t with a long timeout
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' win_servermanager.install Telnet-Client
         salt '*' win_servermanager.install SNMP-Services True
@@ -94,16 +100,18 @@ def remove(feature):
     '''
     Remove an installed feature
 
-    Note:
-    Some features requires reboot after un/installation, if so until the server is restarted
-    Other features can not be installed !
+    .. note::
+        Some features require a reboot after installation/uninstallation. If
+        one of these features are modified, then other features cannot be
+        installed until the server is restarted. Additionally, some features
+        take a while to complete installation/uninstallation, so it is a good
+        idea to use the ``-t`` option to set a longer timeout.
 
-    Note:
-    Some features takes a long time to complete un/installation, set -t with a long timeout
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
-        salt '*' win_servermanager.remove Telnet-Client
+        salt -t 600 '*' win_servermanager.remove Telnet-Client
     '''
     out = _srvmgr('Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list'.format(feature))
     return _parse_powershell_list(out)

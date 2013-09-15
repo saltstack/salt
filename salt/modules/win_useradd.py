@@ -46,7 +46,9 @@ def add(name,
     '''
     Add a user to the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.add name password
     '''
@@ -70,7 +72,9 @@ def delete(name,
     Remove a user from the minion
     NOTE: purge and force have not been implemented on Windows yet
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.delete name
     '''
@@ -82,7 +86,9 @@ def setpassword(name, password):
     '''
     Set a user's password
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.setpassword name password
     '''
@@ -94,7 +100,9 @@ def addgroup(name, group):
     '''
     Add user to a group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.addgroup username groupname
     '''
@@ -113,7 +121,9 @@ def removegroup(name, group):
     '''
     Remove user from a group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.removegroup username groupname
     '''
@@ -135,7 +145,9 @@ def chhome(name, home):
     '''
     Change the home directory of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chhome foo \\\\fileserver\\home\\foo
     '''
@@ -162,7 +174,9 @@ def chprofile(name, profile):
     '''
     Change the profile directory of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chprofile foo \\\\fileserver\\profiles\\foo
     '''
@@ -188,7 +202,9 @@ def chfullname(name, fullname):
     '''
     Change the full name of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chfullname user 'First Last'
     '''
@@ -215,7 +231,9 @@ def chgroups(name, groups, append=False):
     Change the groups this user belongs to, add append to append the specified
     groups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chgroups foo wheel,root True
     '''
@@ -246,7 +264,9 @@ def info(name):
     '''
     Return user information
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.info root
     '''
@@ -284,7 +304,9 @@ def list_groups(name):
     '''
     Return a list of groups the named user belongs to
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.list_groups foo
     '''
@@ -303,7 +325,9 @@ def getent():
     '''
     Return the list of all info for all users
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.getent
     '''

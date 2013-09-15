@@ -18,7 +18,9 @@ def halt(timeout=5):
     '''
     Halt a running system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.halt
     '''
@@ -29,7 +31,9 @@ def init(runlevel):
     '''
     Change the system runlevel on sysV compatible systems
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.init 3
     '''
@@ -47,7 +51,9 @@ def poweroff(timeout=5):
     '''
     Poweroff a running system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.poweroff
     '''
@@ -58,7 +64,9 @@ def reboot(timeout=5):
     '''
     Reboot the system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.reboot
     '''
@@ -71,7 +79,9 @@ def shutdown(timeout=5):
     '''
     Shutdown a running system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.shutdown
     '''
@@ -84,7 +94,9 @@ def shutdown_hard():
     '''
     Shutdown a running system with no timeout or warning
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' system.shutdown_hard
     '''
