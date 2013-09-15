@@ -20,4 +20,5 @@ Full list of builtin returner modules
     redis_return
     sentry_return
     smtp_return
+    sqlite3_return
     syslog_return

@@ -126,17 +126,21 @@ class SSH(object):
                     arg_str,
                     host,
                     **target)
-            ret = single.cmd_block()
-            if ret.startswith('deploy'):
-                single.deploy()
+            if salt.utils.which('ssh-copy-id'):
+                # we have ssh-copy-id, use it!
+                single.shell.copy_id()
+            else:
                 ret = single.cmd_block()
+                if ret[0].startswith('deploy'):
+                    single.deploy()
+                    ret = single.cmd_block()
             target.pop('passwd')
             single = Single(
                     self.opts,
                     self.opts['arg_str'],
                     host,
                     **target)
-            stdout = single.cmd_block()
+            stdout, stderr = single.cmd_block()
             try:
                 data = json.loads(stdout)
                 if 'local' in data:
@@ -217,7 +221,10 @@ class SSH(object):
         # This job is done, yield
         try:
             if not stdout and stderr:
-                ret['ret'] = stderr
+                if 'Permission denied' in stderr:
+                    ret['ret'] = 'Permission denied'
+                else:
+                    ret['ret'] = stderr
             else:
                 data = json.loads(stdout)
                 if len(data) < 2 and 'local' in data:
@@ -463,7 +470,11 @@ class Single(object):
         # 3. deploy salt-thin
         # 4. execute command
         cmd = HEREDOC.format(self.arg_str)
-        return self.shell.exec_cmd(cmd)
+        stdout, stderr = self.shell.exec_cmd(cmd)
+        if stdout.startswith('deploy'):
+            self.deploy()
+            stdout, stderr = self.shell.exec_cmd(cmd)
+        return stdout, stderr
 
     def sls_seed(self, mods, env='base', test=None, exclude=None, **kwargs):
         '''

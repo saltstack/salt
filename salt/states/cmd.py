@@ -148,6 +148,7 @@ import logging
 import yaml
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
 
@@ -559,6 +560,7 @@ def script(name,
            stateful=False,
            umask=None,
            timeout=None,
+           __env__='base',
            **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
@@ -601,8 +603,8 @@ def script(name,
         The shell to use for execution, defaults to the shell grain
 
     env
-        The root directory of the environment for the referencing script. The
-        environments are defined in the master config file.
+        Pass in a list or dict of environment variables to be applied to the
+        command upon execution
 
     umask
          The umask (in octal) to use when running the command.
@@ -619,6 +621,10 @@ def script(name,
         String of command line args to pass to the script.  Only used if no
         args are specified as part of the `name` argument.
 
+    __env__
+        The root directory of the environment for the referencing script. The
+        environments are defined in the master config file.
+
     '''
     ret = {'changes': {},
            'comment': '',
@@ -629,8 +635,17 @@ def script(name,
         ret['comment'] = 'Desired working directory is not available'
         return ret
 
-    if env is None:
-        env = kwargs.get('__env__', 'base')
+    if isinstance(env, string_types):
+        msg = (
+            'Passing a salt environment should be done using \'__env__\' not '
+            '\'env\'. This warning will go away in salt 0.19.0 and this will '
+            'be the default and expected behaviour. Please update your state '
+            'files.'
+        )
+        salt.utils.warn_until((0, 19), msg)
+        ret.setdefault('warnings', []).append(msg)
+        # Backwards compatibility
+        __env__ = env
 
     if HAS_GRP:
         pgid = os.getegid()
@@ -646,7 +661,8 @@ def script(name,
                        'cwd': cwd,
                        'template': template,
                        'umask': umask,
-                       'timeout': timeout})
+                       'timeout': timeout,
+                       '__env__': __env__})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,
@@ -700,7 +716,10 @@ def script(name,
             os.setegid(pgid)
 
 
-def call(name, func, args=(), kws=None,
+def call(name,
+         func,
+         args=(),
+         kws=None,
          onlyif=None,
          unless=None,
          **kwargs):

@@ -264,7 +264,7 @@ class SaltEvent(object):
         if not self.cpush:
             self.connect_pull()
 
-        data['__stamp__'] = datetime.datetime.now().isoformat('_')
+        data['_stamp'] = datetime.datetime.now().isoformat('_')
 
         tagend = ''
         if len(tag) <= 20:  # old style compatible tag
@@ -318,6 +318,7 @@ class SaltEvent(object):
                             data['success'] = False
                             data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
                             data['fun'] = load['fun']
+                            data['user'] = load['user']
                             self.fire_event(
                                 data,
                                 tagify([load['jid'],

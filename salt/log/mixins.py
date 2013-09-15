@@ -3,6 +3,8 @@
     salt.log.mixins
     ~~~~~~~~~~~~~~~
 
+    .. versionadded:: 0.17.0
+
     Some mix-in classes to be used in salt's logging
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`

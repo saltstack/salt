@@ -4,8 +4,6 @@ Return/control aspects of the grains data
 
 # Import python libs
 import math
-import os
-import yaml
 
 # Import salt libs
 import salt.utils

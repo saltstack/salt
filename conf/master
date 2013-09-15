@@ -109,11 +109,11 @@
 #
 #
 # Include a config file from some other path:
-# include: /etc/salt/extra_config
+#include: /etc/salt/extra_config
 #
 # Include config from several files and directories:
-# include:
-#   - /etc/salt/extra_config
+#include:
+#  - /etc/salt/extra_config
 
 
 #####        Security settings       #####
@@ -146,10 +146,10 @@
 # capabilities to non root users. By default this capability is completely
 # disabled.
 #
-# client_acl:
-#   larry:
-#     - test.ping
-#     - network.*
+#client_acl:
+#  larry:
+#    - test.ping
+#    - network.*
 #
 
 # Blacklist any of the following users or modules
@@ -159,28 +159,28 @@
 # module.
 # This is completely disabled by default.
 #
-# client_acl_blacklist:
-#   users:
-#     - root
-#     - '^(?!sudo_).*$'   #  all non sudo users
-#   modules:
-#     - cmd
+#client_acl_blacklist:
+#  users:
+#    - root
+#    - '^(?!sudo_).*$'   #  all non sudo users
+#  modules:
+#    - cmd
 
 # The external auth system uses the Salt auth modules to authenticate and
 # validate users to access areas of the Salt system.
 #
-# external_auth:
-#   pam:
-#     fred:
-#       - test.*
+#external_auth:
+#  pam:
+#    fred:
+#      - test.*
 #
 
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
-# token_expire: 43200
+#token_expire: 43200
 
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
-# file_recv: False 
+#file_recv: False 
 
 #####    Master Module Management    #####
 ##########################################
@@ -275,18 +275,20 @@
 # For example, if you manage your custom modules and states in subversion
 # and don't want all the '.svn' folders and content synced to your minions,
 # you could set this to '/\.svn($|/)'. By default nothing is ignored.
-# file_ignore_regex:
-#   - '/\.svn($|/)'
-#   - '/\.git($|/)'
+#
+#file_ignore_regex:
+#  - '/\.svn($|/)'
+#  - '/\.git($|/)'
 
 # A file glob (or list of file globs) that will be matched against the file
 # path before syncing the modules and states to the minions. This is similar
 # to file_ignore_regex above, but works on globs instead of regex. By default
 # nothing is ignored.
+#
 # file_ignore_glob:
-#   - '*.pyc'
-#   - '*/somefolder/*.bak'
-#   - '*.swp'
+#  - '*.pyc'
+#  - '*/somefolder/*.bak'
+#  - '*.swp'
 
 # File Server Backend
 # Salt supports a modular fileserver backend system, this system allows
@@ -295,19 +297,24 @@
 # configured and will be searched for the requested file in the order in which
 # they are defined here. The default setting only enables the standard backend
 # "roots" which uses the "file_roots" option.
+#
 #fileserver_backend:
 #  - roots
+#
 # To use multiple backends list them in the order they are searched:
-# fileserver_backend:
-#   - git
-#   - roots
+#
+#fileserver_backend:
+#  - git
+#  - roots
 
 # Git fileserver backend configuration
 # When using the git fileserver backend at least one git remote needs to be
 # defined. The user running the salt master will need read access to the repo.
-# gitfs_remotes:
-#   - git://github.com/saltstack/salt-states.git
-#   - file:///var/git/saltmaster
+#
+#gitfs_remotes:
+#  - git://github.com/saltstack/salt-states.git
+#  - file:///var/git/saltmaster
+#
 # The repos will be searched in order to find the file requested by a client
 # and the first repo to have the file will return it.
 # When using the git backend branches and tags are translated into salt
@@ -333,9 +340,9 @@
 #  base:
 #    - /srv/pillar
 
-# ext_pillar:
-#   - hiera: /etc/hiera.yaml
-#   - cmd_yaml: cat /etc/salt/yaml
+#ext_pillar:
+#  - hiera: /etc/hiera.yaml
+#  - cmd_yaml: cat /etc/salt/yaml
 
 # The pillar_opts option adds the master configuration file data to a dict in
 # the pillar called "master". This is used to set simple configurations in the
@@ -380,15 +387,18 @@
 # of regular expressions to match functions. The following will allow the
 # minion authenticated as foo.example.com to execute functions from the test
 # and pkg modules.
-# peer:
-#   foo.example.com:
-#       - test.*
-#       - pkg.*
+#
+#peer:
+#  foo.example.com:
+#    - test.*
+#    - pkg.*
 #
 # This will allow all minions to execute all commands:
-# peer:
-#   .*:
-#       - .*
+#
+#peer:
+#  .*:
+#    - .*
+#
 # This is not recommended, since it would allow anyone who gets root on any
 # single minion to instantly have root on all of the minions!
 
@@ -400,15 +410,15 @@
 # All peer runner support is turned off by default and must be enabled before
 # using. This will enable all peer runners for all minions:
 #
-# peer_run:
-#   .*:
-#     - .*
+#peer_run:
+#  .*:
+#    - .*
 #
 # To enable just the manage.up runner for the minion foo.example.com:
 #
-# peer_run:
-#   foo.example.com:
-#     - manage.up
+#peer_run:
+#  foo.example.com:
+#    - manage.up
 
 
 #####         Logging settings       #####
@@ -458,9 +468,9 @@
 # Node groups allow for logical groupings of minion nodes.
 # A group consists of a group name and a compound target.
 #
-# nodegroups:
-#   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
-#   group2: 'G@os:Debian and foo.domain.com'
+#nodegroups:
+#  group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+#  group2: 'G@os:Debian and foo.domain.com'
 
 
 #####     Range Cluster settings     #####
@@ -468,17 +478,17 @@
 # The range server (and optional port) that serves your cluster information
 # https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
 #
-# range_server: range:80
+#range_server: range:80
 
 
 #####     Windows Software Repo settings #####
 ##############################################
 # Location of the repo on the master
-# win_repo: '/srv/salt/win/repo'
+#win_repo: '/srv/salt/win/repo'
 
 # Location of the master's repo cache file
-# win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
+#win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
 
 # List of git repositories to include with the local repo
-# win_gitrepos:
-#   - 'https://github.com/saltstack/salt-winrepo.git'
+#win_gitrepos:
+#  - 'https://github.com/saltstack/salt-winrepo.git'

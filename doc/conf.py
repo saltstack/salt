@@ -103,7 +103,12 @@ copyright = '2013 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '0.16.3'
+release = '0.16.4'
+
+language = 'en'
+locale_dirs = [
+    '_locale',
+]
 
 master_doc = 'contents'
 templates_path = ['_templates']

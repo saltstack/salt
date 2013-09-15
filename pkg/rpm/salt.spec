@@ -11,7 +11,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.16.3
+Version: 0.16.4
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -308,6 +308,12 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed Sep 11 2013 David Anderson <dave@dubkat.com>
+- Change sourcing order of init functions and salt default file
+
+* Sat Sep 07 2013 Erik Johnson <erik@saltstack.com> - 0.16.4-1
+- Update to patch release 0.16.4
+
 * Sun Aug 25 2013 Florian La Roche <Florian.LaRoche@gmx.net>
 - fixed preun/postun scripts for salt-minion
 

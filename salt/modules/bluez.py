@@ -12,10 +12,6 @@ The following packages are required packages for this module:
 # Import python libs
 import logging
 
-# Import salt libs
-import salt.utils
-import salt.modules.service
-
 log = logging.getLogger(__name__)
 HAS_PYBLUEZ = False
 try:

@@ -80,6 +80,10 @@ def latest_version(*names, **kwargs):
 
         salt '*' pkg.latest_version <package name>
     '''
+    kwargs.pop('refresh', True)
+    if kwargs:
+        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
+
     pkgs = list_pkgs()
     ret = {}
     # Initialize the dict with empty strings
