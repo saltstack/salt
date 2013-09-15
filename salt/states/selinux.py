@@ -15,6 +15,9 @@ booleans can be set.
           - value: True
           - persist: True
 
+.. note::
+    Use of these states require that the :mod:`selinux <salt.modules.selinux>`
+    execution module is available.
 '''
 
 def __virtual__():
