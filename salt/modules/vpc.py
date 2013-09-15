@@ -15,7 +15,7 @@ __func_alias__  = { }
 def __virtual__( ):
     return 'vpc'
 
-def _add_doc( func, doc, prefix='\n\n    ' ):
+def _add_doc( func, doc, prefix='\n        ' ):
     '''
     Quick helper that allows for documentation
     to be added to a function.
