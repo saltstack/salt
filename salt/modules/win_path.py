@@ -24,6 +24,7 @@ import salt.utils
 # Settings
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Load only on Windows
@@ -32,17 +33,20 @@ def __virtual__():
         return 'win_path'
     return False
 
+
 def _normalize_dir(string):
     '''
     Normalize the directory to make comparison possible
     '''
     return  re.sub(r'\\$', '', string.lower())
 
+
 def rehash():
     '''
     Send a WM_SETTINGCHANGE Broadcast to Windows to rehash the Environment variables
     '''
     return win32gui.SendMessageTimeout(win32con.HWND_BROADCAST, win32con.WM_SETTINGCHANGE, 0, 'Environment', 0, 10000)[0] == 1
+
 
 def get_path():
     '''
@@ -53,12 +57,15 @@ def get_path():
     # Trim ending backslash
     return map(_normalize_dir, ret)
 
+
 def exists(path):
     '''
     Check if the directory is configured in the SYSTEM path
     Case-insensitive and ignores trailing backslash
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' win_path.exists 'c:\\python27'
         salt '*' win_path.exists 'c:\\python27\\'
@@ -69,11 +76,15 @@ def exists(path):
 
     return path in sysPath
 
+
 def add(path, index=0):
     '''
     Add the directory to the SYSTEM path in the index location
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
+
         # Will add to the beginning of the path
         salt '*' win_path.add 'c:\\python27' 0
 
@@ -116,6 +127,7 @@ def add(path, index=0):
         return rehash()
     else:
         return False
+
 
 def remove(path):
     '''

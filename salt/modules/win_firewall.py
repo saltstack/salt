@@ -22,7 +22,9 @@ def get_config():
     '''
     Get the status of all the firewall profiles
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' firewall.get_config
     '''
@@ -46,7 +48,9 @@ def disable():
     '''
     Disable all the firewall profiles
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' firewall.disable
     '''
