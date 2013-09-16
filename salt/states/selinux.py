@@ -15,7 +15,16 @@ booleans can be set.
           - value: True
           - persist: True
 
+.. note::
+    Use of these states require that the :mod:`selinux <salt.modules.selinux>`
+    execution module is available.
 '''
+
+def __virtual__():
+    '''
+    Only make this state available if the selinux module is available.
+    '''
+    return 'selinux' if 'selinux.getenforce' in __salt__ else False
 
 
 def _refine_mode(mode):
