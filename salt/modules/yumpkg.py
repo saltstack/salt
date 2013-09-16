@@ -512,6 +512,7 @@ def install(name=None,
         CLI Example:
 
         .. code-block:: bash
+
             salt '*' pkg.install <package name>
 
     refresh
@@ -1020,6 +1021,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     name
         a human-readable name for the repo
     baseurl
+        the URL for yum to reference
     mirrorlist
         the URL for yum to reference
 
