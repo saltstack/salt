@@ -11,6 +11,13 @@ def over(env='base', os_fn=None):
     '''
     Execute an overstate sequence to orchestrate the executing of states
     over a group of systems
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run state.over
+        salt-run state.over env=dev /root/overstate.sls
     '''
     stage_num = 0
     overstate = salt.overstate.OverState(__opts__, env, os_fn)
@@ -44,6 +51,13 @@ def sls(mods, env='base', test=None, exclude=None):
     '''
     Execute a state run from the master, used as a powerful orchestration
     system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run state.sls webserver
+        salt-run state.sls webserver env=dev test=True
     '''
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
@@ -56,6 +70,13 @@ def sls(mods, env='base', test=None, exclude=None):
 def show_stages(env='base', os_fn=None):
     '''
     Display the stage data to be executed
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run state.show_stages
+        salt-run state.show_stages env=dev /root/overstate.sls
     '''
     overstate = salt.overstate.OverState(__opts__, env, os_fn)
     salt.output.display_output(
