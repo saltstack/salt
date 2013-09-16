@@ -55,6 +55,32 @@ def _auth():
     )
 
 
+def boot(name, flavor_id=0, image_id=0):
+    '''
+    Boot (create) a new instance
+
+    <name>        Name of the new instance (must be first)
+    <flavor_id>   Unique integer ID for the flavor
+    <image_id>    Unique integer ID for the image
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.boot myinstance flavor_id=4596 image_id=2
+    '''
+    nt_ks = _auth()
+    response = nt_ks.servers.create(
+        name=name, flavor=flavor_id, image=image_id
+    )
+    ret = {
+        'id': response.id,
+        'image': response.image,
+        'flavor': response.flavor,
+    }
+    return ret
+
+
 def flavor_list():
     '''
     Return a list of available flavors (nova flavor-list)
@@ -453,7 +479,6 @@ def _item_list():
 #                    Update the metadata associated with the aggregate.
 #aggregate-update    Update the aggregate's name and optionally
 #                    availability zone.
-#boot                Boot a new server.
 #cloudpipe-create    Create a cloudpipe instance for the given project
 #cloudpipe-list      Print a list of all cloudpipe instances.
 #console-log         Get console log output of a server.
