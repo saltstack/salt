@@ -68,6 +68,14 @@ def boot(name, flavor_id=0, image_id=0):
     .. code-block:: bash
 
         salt '*' nova.boot myinstance flavor_id=4596 image_id=2
+
+    The flavor_id and image_id are obtained from nova.flavor_list and
+    nova.image_list
+
+    .. code-block:: bash
+
+        salt '*' nova.flavor_list
+        salt '*' nova.image_list
     '''
     nt_ks = _auth()
     response = nt_ks.servers.create(
