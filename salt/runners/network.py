@@ -14,7 +14,9 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
     Send a "Magic Packet" to wake up a list of Minions.
     This list must contain one MAC hardware address per line
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-run network.wollist '/path/to/maclist'
         salt-run network.wollist '/path/to/maclist' 255.255.255.255 7
@@ -37,7 +39,9 @@ def wol(mac, bcast='255.255.255.255', destport=9):
     '''
     Send a "Magic Packet" to wake up a Minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-run network.wol 08-00-27-13-69-77
         salt-run network.wol 080027136977 255.255.255.255 7
