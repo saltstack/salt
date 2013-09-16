@@ -15,6 +15,12 @@ import salt.output
 def status(output=True):
     '''
     Print the status of all known salt minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.status
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
@@ -48,6 +54,12 @@ def key_regen():
 
     Only Execute this runner after upgrading minions and master to 0.15.1 or
     higher!
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.key_regen
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     minions = client.cmd('*', 'saltutil.regen_keys')
@@ -75,6 +87,12 @@ def key_regen():
 def down():
     '''
     Print a list of all the down or unresponsive salt minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.down
     '''
     ret = status(output=False).get('down', [])
     for minion in ret:
@@ -85,6 +103,12 @@ def down():
 def up():  # pylint: disable=C0103
     '''
     Print a list of all of the minions that are up
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.up
     '''
     ret = status(output=False).get('up', [])
     for minion in ret:
@@ -95,6 +119,12 @@ def up():  # pylint: disable=C0103
 def versions():
     '''
     Check the version of active minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.versions
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
