@@ -76,11 +76,12 @@ def flavor_list():
                 'id': flavor.id,
                 'name': flavor.name,
                 'ram': flavor.ram,
-                'rxtx_factor': flavor.rxtx_factor,
                 'swap': flavor.swap,
                 'vcpus': flavor.vcpus,
                 'links': links,
             }
+        if hasattr(flavor, 'rxtx_factor'):
+            ret[flavor.name]['rxtx_factor'] = flavor.rxtx_factor
     return ret
 
 
@@ -214,11 +215,13 @@ def image_list(name=None):
                 'progress': image.progress,
                 'created': image.created,
                 'updated': image.updated,
-                'minDisk': image.minDisk,
-                'minRam': image.minRam,
                 'metadata': image.metadata,
                 'links': links,
             }
+        if hasattr(image, 'minDisk'):
+            ret[image.name]['minDisk'] = image.minDisk
+        if hasattr(image, 'minRam'):
+            ret[image.name]['minRam'] = image.minRam
     if name:
         return {name: ret[name]}
     return ret
