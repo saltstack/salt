@@ -530,8 +530,14 @@ class ReqServer(object):
         If halite is configured and installed, fire it up!
         '''
         if HAS_HALITE and 'halite' in self.opts:
+            log.info('Halite: Starting up ...')
             self.halite = Halite(self.opts['halite'])
             self.halite.start()
+        else:
+            log.info('Halite: Not starting. '
+                     'Package available is {0}. '
+                     'Opts for "halite" exists is {1}.'\
+                     .format(HAS_HALITE, 'halite' in self.opts))
 
     def run(self):
         '''
