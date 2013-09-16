@@ -73,8 +73,6 @@ def latest_version(pkg_name, **kwargs):
     '''
 
     kwargs.pop('refresh', True)
-    if kwargs:
-        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
 
     cmd = 'pkg info {0}'.format(pkg_name)
     out = __salt__['cmd.run'](cmd).split()

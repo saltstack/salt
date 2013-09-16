@@ -186,8 +186,6 @@ def latest_version(*names, **kwargs):
         salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-    if kwargs:
-        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
 
     if not names:
         return ''
