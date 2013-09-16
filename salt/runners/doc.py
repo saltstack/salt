@@ -19,6 +19,12 @@ def __virtual__():
 def runner():
     '''
     Return all inline documetation for runner modules
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run doc.runner
     '''
     client = salt.runner.RunnerClient(__opts__)
     ret = client.get_docs()
@@ -29,6 +35,12 @@ def runner():
 def wheel():
     '''
     Return all inline documentation for wheel modules
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run doc.wheel
     '''
     client = salt.wheel.Wheel(__opts__)
     ret = client.get_docs()
@@ -39,6 +51,12 @@ def wheel():
 def execution():
     '''
     Collect all the sys.doc output from each minion and return the aggregate
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run doc.execution
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
 

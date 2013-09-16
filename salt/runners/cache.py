@@ -16,14 +16,21 @@ log = logging.getLogger(__name__)
 deprecation_warning = ("The 'minion' arg will be removed from "
                     "cache.py runner. Specify minion with 'tgt' arg!")
 
+
 def grains(tgt=None, expr_form='glob', **kwargs):
     '''
     Return cached grains of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.grains
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
         log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
-        tgt = '*' # targat all minions for backward compatibility
+        tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
         log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
         tgt = deprecated_minion
@@ -41,11 +48,17 @@ def grains(tgt=None, expr_form='glob', **kwargs):
 def pillar(tgt=None, expr_form='glob', **kwargs):
     '''
     Return cached pillars of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.pillar
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
         log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
-        tgt = '*' # targat all minions for backward compatibility
+        tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
         log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
         tgt = deprecated_minion
