@@ -131,6 +131,8 @@ def remove(name, path):
 
 def auto(name):
     '''
+    .. versionadded:: 0.17.0
+
     Instruct alternatives to use the highest priority
     path for <name>
 
@@ -157,6 +159,8 @@ def auto(name):
 
 def set_(name, path):
     '''
+    .. versionadded:: 0.17.0
+
     Removes installed alternative for defined <name> and <path>
     or fallback to default alternative, if some defined before.
 
@@ -207,5 +211,3 @@ def set_(name, path):
             ).format(path, name)
 
     return ret
-
-
