@@ -11,11 +11,6 @@
 import os
 import logging
 
-# As of 2013/8/15:
-# Import inspect for sole purpose of determining if salt.utils.valid_id
-# takes one or two args. git develop it takes two, in 16.3 it takes one
-import inspect
-
 # Import salt libs
 import salt.log
 import salt.client
@@ -87,17 +82,10 @@ class MasterPillarUtil(object):
             return grains, pillars
         serial = salt.payload.Serial(self.opts)
         mdir = os.path.join(self.opts['cachedir'], 'minions')
-        # salt.utils.verify.valid_id has changed in git development to require opts arg
-        valid_id_args = inspect.getargspec(salt.utils.verify.valid_id).args
-        log.debug('salt.utils.verify.valid_id accepts args: {0}'.format(valid_id_args))
         try:
             for minion_id in minion_ids:
-                if 'opts' in valid_id_args:
-                    if not salt.utils.verify.valid_id(self.opts, minion_id):
-                        continue
-                else:
-                    if not salt.utils.verify.valid_id(self.opts, minion_id):
-                        continue
+                if not salt.utils.verify.valid_id(self.opts, minion_id):
+                    continue
                 path = os.path.join(mdir, minion_id, 'data.p')
                 if os.path.isfile(path):
                     with salt.utils.fopen(path) as fp_:
