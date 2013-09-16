@@ -59,8 +59,8 @@
     .. _`Sentry`: http://getsentry.com
     .. _`Raven`: http://raven.readthedocs.org
     .. _`Raven client documentation`: http://raven.readthedocs.org/en/latest/config/index.html#client-arguments
-
-
+'''
+'''
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
