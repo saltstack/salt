@@ -1,10 +1,10 @@
 '''
-The sys module provides information about the available functions on the
-minion.
+The sys module provides information about the available functions on the minion
 '''
 
 # Import python libs
 import logging
+import re
 
 # Import salt libs
 import salt.utils
@@ -19,7 +19,28 @@ def __virtual__():
     return 'sys'
 
 
-def doc(*args, **kwargs):
+def _strip_rst(docs):
+    '''
+    Strip/replace reStructuredText directives in docstrings
+    '''
+    for func, docstring in docs.iteritems():
+        if not docstring:
+            continue
+        docstring_new = re.sub(r' *.. code-block:: \S+\n{1,2}',
+                                   '', docstring)
+        docstring_new = re.sub('.. note::',
+                               'Note:', docstring_new)
+        docstring_new = re.sub('.. warning::',
+                               'Warning:', docstring_new)
+        docstring_new = re.sub('.. versionadded::',
+                               'New in version', docstring_new)
+        docstring_new = re.sub('.. versionchanged::',
+                               'Changed in version', docstring_new)
+        if docstring != docstring_new:
+            docs[func] = docstring_new
+
+
+def doc(*args):
     '''
     Return the docstrings for all modules. Optionally, specify a module or a
     function to narrow the selection.
@@ -38,12 +59,11 @@ def doc(*args, **kwargs):
         salt '*' sys.doc sys.doc
         salt '*' sys.doc network.traceroute user.info
     '''
-    ### NOTE: **kwargs is used here to prevent a traceback when garbage
-    ###       arguments are tacked on to the end.
     docs = {}
     if not args:
         for fun in __salt__:
             docs[fun] = __salt__[fun].__doc__
+        _strip_rst(docs)
         return docs
 
     for module in args:
@@ -56,6 +76,7 @@ def doc(*args, **kwargs):
         for fun in __salt__:
             if fun == module or fun.startswith(target_mod):
                 docs[fun] = __salt__[fun].__doc__
+    _strip_rst(docs)
     return docs
 
 

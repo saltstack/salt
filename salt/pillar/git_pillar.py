@@ -143,7 +143,7 @@ def ext_pillar(minion_id, pillar, repo_string):
 
     # Don't recurse forever-- the Pillar object will re-call the ext_pillar
     # function
-    if __opts__['pillar_roots'][branch_env] == [repo.working_dir]:
+    if __opts__['pillar_roots'].get(branch_env, []) == [repo.working_dir]:
         return {}
 
     opts = deepcopy(__opts__)

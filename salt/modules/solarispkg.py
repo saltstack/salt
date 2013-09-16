@@ -127,6 +127,8 @@ def latest_version(*names, **kwargs):
     pkgadd, this function will always return an empty string for a given
     package.
     '''
+    kwargs.pop('refresh', True)
+
     ret = {}
     if not names:
         return ''

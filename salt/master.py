@@ -53,6 +53,13 @@ from salt.utils.debug import enable_sigusr1_handler
 from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
 
+# Import halite libs
+try:
+    import halite
+    HAS_HALITE = True
+except ImportError:
+    HAS_HALITE = False
+
 log = logging.getLogger(__name__)
 
 
@@ -322,6 +329,7 @@ class Master(SMaster):
         reqserv.start_publisher()
         reqserv.start_event_publisher()
         reqserv.start_reactor()
+        reqserv.start_halite()
 
         def sigterm_clean(signum, frame):
             '''
@@ -337,6 +345,8 @@ class Master(SMaster):
             clean_proc(clear_old_jobs_proc)
             clean_proc(reqserv.publisher)
             clean_proc(reqserv.eventpublisher)
+            if hasattr(reqserv, 'halite'):
+                clean_proc(reqserv.halite)
             if hasattr(reqserv, 'reactor'):
                 clean_proc(reqserv.reactor)
             for proc in reqserv.work_procs:
@@ -351,6 +361,21 @@ class Master(SMaster):
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
             raise SystemExit('\nExiting on Ctrl-c')
+
+
+class Halite(multiprocessing.Process):
+    '''
+    Manage the Halite server
+    '''
+    def __init__(self, hopts):
+        super(Halite, self).__init__()
+        self.hopts = hopts
+
+    def run(self):
+        '''
+        Fire up halite!
+        '''
+        halite.start(self.hopts)
 
 
 class Publisher(multiprocessing.Process):
@@ -499,6 +524,14 @@ class ReqServer(object):
         if self.opts.get('reactor'):
             self.reactor = salt.utils.event.Reactor(self.opts)
             self.reactor.start()
+
+    def start_halite(self):
+        '''
+        If halite is configured and installed, fire it up!
+        '''
+        if HAS_HALITE and 'halite' in self.opts:
+            self.halite = Halite(self.opts['halite'])
+            self.halite.start()
 
     def run(self):
         '''
@@ -1788,7 +1821,7 @@ class ClearFuncs(object):
                     clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+                       'user {0}.').format(token['name'])
                 log.warning(msg)
                 return ''
 
@@ -1798,7 +1831,7 @@ class ClearFuncs(object):
                 return runner_client.async(
                         fun,
                         clear_load.get('kwarg', {}),
-                        clear_load.get('user', 'UNKNOWN'))
+                        token['name'])
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1842,7 +1875,7 @@ class ClearFuncs(object):
                 runner_client = salt.runner.RunnerClient(self.opts)
                 return runner_client.async(fun,
                                            clear_load.get('kwarg', {}),
-                                           clear_load.get('user', 'UNKNOWN'))
+                                           clear_load.get('username', 'UNKNOWN'))
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
@@ -1879,30 +1912,40 @@ class ClearFuncs(object):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                    self.opts['external_auth'][token['eauth']][token['name']] \
+                        if token['name'] in self.opts['external_auth'][token['eauth']] \
+                        else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(token['user'])
+                       'user {0}.').format(token['name'])
                 log.warning(msg)
                 return ''
+
+            jid = salt.utils.gen_jid()
+            fun = clear_load.pop('fun')
+            tag = tagify(jid, prefix='wheel')
+            data = {'fun': "wheel.{0}".format(fun),
+                    'jid': jid,
+                    'tag': tag,
+                    'user': token['name']}
             try:
-                log.debug('ClearFunc.wheel with {0}'.format(clear_load))
-                jid = salt.utils.gen_jid()
-                fun = clear_load.pop('fun')
-                data = {'fun': "wheel.{0}".format(fun),
-                            'jid': jid,
-                            'user': token['name']}
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
                 data['ret'] = ret
+                data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return data
+                return tag
             except Exception as exc:
                 log.error(exc)
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                return ''
+                data['ret'] = 'Exception occured in wheel {0}: {1}'.format(
+                                            fun,
+                                            exc,
+                                            )
+                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+                return tag
 
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -1918,7 +1961,8 @@ class ClearFuncs(object):
 
         try:
             name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
+                    ('*' in self.opts['external_auth'][clear_load['eauth']])):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
@@ -1929,7 +1973,9 @@ class ClearFuncs(object):
                 log.warning(msg)
                 return ''
             good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                    self.opts['external_auth'][clear_load['eauth']][name] \
+                        if name in self.opts['external_auth'][clear_load['eauth']] \
+                        else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
@@ -1937,21 +1983,29 @@ class ClearFuncs(object):
                 log.warning(msg)
                 return ''
 
+            jid = salt.utils.gen_jid()
+            fun = clear_load.pop('fun')
+            tag = tagify(jid, prefix='wheel')
+            data = {'fun': "wheel.{0}".format(fun),
+                    'jid': jid,
+                    'tag': tag,
+                    'user': clear_load.get('username', 'UNKNOWN')}
             try:
-                jid = salt.utils.gen_jid()
-                fun = clear_load.pop('fun')
-                data = {'fun':  "wheel.{0}".format(fun),
-                            'jid': jid,
-                            'user': clear_load.get('user', 'UNKNOWN')}
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load.get('kwarg', {}))
                 data['ret'] = ret
+                data['success'] = True
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return data
+                return tag
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                return ''
+                data['ret'] = 'Exception occured in wheel {0}: {1}'.format(
+                                                            fun,
+                                                            exc,
+                                                            )
+                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+                return tag
 
         except Exception as exc:
             log.error(
@@ -1973,7 +2027,8 @@ class ClearFuncs(object):
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
+                    ('*' in self.opts['external_auth'][clear_load['eauth']])):
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             if not self.loadauth.time_auth(clear_load):
@@ -2053,11 +2108,14 @@ class ClearFuncs(object):
             if token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not ((token['name'] in self.opts['external_auth'][token['eauth']]) | ('*' in self.opts['external_auth'][token['eauth']])):
+            if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
+                    ('*' in self.opts['external_auth'][token['eauth']])):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                    self.opts['external_auth'][token['eauth']][token['name']] \
+                        if token['name'] in self.opts['external_auth'][token['eauth']] \
+                        else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob'))
@@ -2068,6 +2126,8 @@ class ClearFuncs(object):
                         'Authentication failure of type "token" occurred.'
                     )
                     return ''
+            clear_load['user'] = token['name']
+            log.debug('Minion tokenized user = "{0}"'.format(clear_load['user']))
         elif 'eauth' in extra:
             if extra['eauth'] not in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
@@ -2077,7 +2137,8 @@ class ClearFuncs(object):
                 return ''
             try:
                 name = self.loadauth.load_name(extra)
-                if not ((name in self.opts['external_auth'][extra['eauth']]) | ('*' in self.opts['external_auth'][extra['eauth']])):
+                if not ((name in self.opts['external_auth'][extra['eauth']]) |
+                        ('*' in self.opts['external_auth'][extra['eauth']])):
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -2093,7 +2154,9 @@ class ClearFuncs(object):
                 )
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*'],
+                    self.opts['external_auth'][extra['eauth']][name] \
+                        if name in self.opts['external_auth'][extra['eauth']] \
+                        else self.opts['external_auth'][extra['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob'))
@@ -2104,7 +2167,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "eauth" occurred.'
                     )
                     return ''
-            clear_load['user'] = self.loadauth.load_name(extra)
+            clear_load['user'] = name
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):

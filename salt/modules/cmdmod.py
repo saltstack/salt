@@ -19,9 +19,9 @@ import yaml
 # Import salt libs
 import salt.utils
 import salt.utils.timed_subprocess
-from salt.exceptions import CommandExecutionError
-import salt.exceptions
 import salt.grains.extra
+from salt._compat import string_types
+from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -170,7 +170,8 @@ def _run(cmd,
          template=None,
          umask=None,
          timeout=None,
-         with_communicate=True):
+         with_communicate=True,
+         reset_system_locale=True):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -279,14 +280,15 @@ def _run(cmd,
             )
         )
 
-    if not salt.utils.is_windows():
-        # Default to C!
-        # Salt only knows how to parse English words
-        # Don't override if the user has passed LC_ALL
-        env.setdefault('LC_ALL', 'C')
-    else:
-        # On Windows set the codepage to US English.
-        cmd = 'chcp 437 > nul & ' + cmd
+    if reset_system_locale is True:
+        if not salt.utils.is_windows():
+            # Default to C!
+            # Salt only knows how to parse English words
+            # Don't override if the user has passed LC_ALL
+            env.setdefault('LC_ALL', 'C')
+        else:
+            # On Windows set the codepage to US English.
+            cmd = 'chcp 437 > nul & ' + cmd
 
     if clean_env:
         run_env = env
@@ -340,8 +342,8 @@ def _run(cmd,
 
     try:
         proc.wait(timeout)
-    except salt.exceptions.TimedProcTimeoutError, e:
-        ret['stdout'] = e.message
+    except TimedProcTimeoutError as exc:
+        ret['stdout'] = str(exc)
         ret['stderr'] = ''
         ret['pid'] = proc.process.pid
         # ok return code for timeouts?
@@ -376,7 +378,8 @@ def _run_quiet(cmd,
                env=(),
                template=None,
                umask=None,
-               timeout=None):
+               timeout=None,
+               reset_system_locale=True):
     '''
     Helper for running commands quietly for minion startup
     '''
@@ -390,7 +393,8 @@ def _run_quiet(cmd,
                 env=env,
                 template=template,
                 umask=umask,
-                timeout=timeout)['stdout']
+                timeout=timeout,
+                reset_system_locale=reset_system_locale)['stdout']
 
 
 def _run_all_quiet(cmd,
@@ -401,7 +405,8 @@ def _run_all_quiet(cmd,
                    env=(),
                    template=None,
                    umask=None,
-                   timeout=None):
+                   timeout=None,
+                   reset_system_locale=True):
     '''
     Helper for running commands quietly for minion startup.
     Returns a dict of return data
@@ -415,7 +420,8 @@ def _run_all_quiet(cmd,
                 quiet=True,
                 template=template,
                 umask=umask,
-                timeout=timeout)
+                timeout=timeout,
+                reset_system_locale=reset_system_locale)
 
 
 def run(cmd,
@@ -430,6 +436,7 @@ def run(cmd,
         umask=None,
         quiet=False,
         timeout=None,
+        reset_system_locale=True,
         **kwargs):
     '''
     Execute the passed command and return the output as a string
@@ -477,7 +484,8 @@ def run(cmd,
                rstrip=rstrip,
                umask=umask,
                quiet=quiet,
-               timeout=timeout)['stdout']
+               timeout=timeout,
+               reset_system_locale=reset_system_locale)['stdout']
     if not quiet:
         log.debug('output: {0}'.format(out))
     return out
@@ -495,6 +503,7 @@ def run_stdout(cmd,
                umask=None,
                quiet=False,
                timeout=None,
+               reset_system_locale=True,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -535,7 +544,8 @@ def run_stdout(cmd,
                   rstrip=rstrip,
                   umask=umask,
                   quiet=quiet,
-                  timeout=timeout)["stdout"]
+                  timeout=timeout,
+                  reset_system_locale=reset_system_locale)["stdout"]
     if not quiet:
         log.debug('stdout: {0}'.format(stdout))
     return stdout
@@ -553,6 +563,7 @@ def run_stderr(cmd,
                umask=None,
                quiet=False,
                timeout=None,
+               reset_system_locale=True,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -593,7 +604,8 @@ def run_stderr(cmd,
                   rstrip=rstrip,
                   umask=umask,
                   quiet=quiet,
-                  timeout=timeout)["stderr"]
+                  timeout=timeout,
+                  reset_system_locale=reset_system_locale)["stderr"]
     if not quiet:
         log.debug('stderr: {0}'.format(stderr))
     return stderr
@@ -611,6 +623,7 @@ def run_all(cmd,
             umask=None,
             quiet=False,
             timeout=None,
+            reset_system_locale=True,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -651,7 +664,8 @@ def run_all(cmd,
                rstrip=rstrip,
                umask=umask,
                quiet=quiet,
-               timeout=timeout)
+               timeout=timeout,
+               reset_system_locale=reset_system_locale)
 
     if not quiet:
         if ret['retcode'] != 0:
@@ -682,7 +696,8 @@ def retcode(cmd,
             template=None,
             umask=None,
             quiet=False,
-            timeout=None):
+            timeout=None,
+            reset_system_locale=True):
     '''
     Execute a shell command and return the command's return code.
 
@@ -711,33 +726,34 @@ def retcode(cmd,
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    return _run(
-            cmd,
-            runas=runas,
-            cwd=cwd,
-            stdin=stdin,
-            shell=shell,
-            env=env,
-            clean_env=clean_env,
-            template=template,
-            umask=umask,
-            quiet=quiet,
-            timeout=timeout,
-            with_communicate=False)['retcode']
+    return _run(cmd,
+                runas=runas,
+                cwd=cwd,
+                stdin=stdin,
+                shell=shell,
+                env=env,
+                clean_env=clean_env,
+                template=template,
+                umask=umask,
+                quiet=quiet,
+                timeout=timeout,
+                with_communicate=False,
+                reset_system_locale=reset_system_locale)['retcode']
 
 
-def script(
-        source,
-        args=None,
-        cwd=None,
-        stdin=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        env='base',
-        template='jinja',
-        umask=None,
-        timeout=None,
-        **kwargs):
+def script(source,
+           args=None,
+           cwd=None,
+           stdin=None,
+           runas=None,
+           shell=DEFAULT_SHELL,
+           env=(),
+           template='jinja',
+           umask=None,
+           timeout=None,
+           reset_system_locale=True,
+           __env__='base',
+           **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
     The script can be located on the salt master file server or on an HTTP/FTP
@@ -765,10 +781,20 @@ def script(
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+
+    if isinstance(env, string_types):
+        salt.utils.warn_until(
+            (0, 19),
+            'Passing a salt environment should be done using \'__env__\' not '
+            '\'env\'.'
+        )
+        # Backwards compatibility
+        __env__ = env
+
     if not salt.utils.is_windows():
         path = salt.utils.mkstemp(dir=cwd)
     else:
-        path = __salt__['cp.cache_file'](source, env)
+        path = __salt__['cp.cache_file'](source, __env__)
         if not path:
             return {'pid': 0,
                     'retcode': 1,
@@ -776,10 +802,10 @@ def script(
                     'stderr': '',
                     'cache_error': True}
     if template:
-        __salt__['cp.get_template'](source, path, template, env, **kwargs)
+        __salt__['cp.get_template'](source, path, template, __env__, **kwargs)
     else:
         if not salt.utils.is_windows():
-            fn_ = __salt__['cp.cache_file'](source, env)
+            fn_ = __salt__['cp.cache_file'](source, __env__)
             if not fn_:
                 return {'pid': 0,
                         'retcode': 1,
@@ -790,30 +816,31 @@ def script(
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
-    ret = _run(
-            path + ' ' + str(args) if args else path,
-            cwd=cwd,
-            stdin=stdin,
-            quiet=kwargs.get('quiet', False),
-            runas=runas,
-            shell=shell,
-            umask=umask,
-            timeout=timeout)
+    ret = _run(path + ' ' + str(args) if args else path,
+               cwd=cwd,
+               stdin=stdin,
+               quiet=kwargs.get('quiet', False),
+               runas=runas,
+               shell=shell,
+               umask=umask,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale)
     os.remove(path)
     return ret
 
 
-def script_retcode(
-        source,
-        cwd=None,
-        stdin=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        env='base',
-        template='jinja',
-        umask=None,
-        timeout=None,
-        **kwargs):
+def script_retcode(source,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   env=(),
+                   template='jinja',
+                   umask=None,
+                   timeout=None,
+                   reset_system_locale=True,
+                   __env__='base',
+                   **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
     The script can be located on the salt master file server or on an HTTP/FTP
@@ -840,17 +867,17 @@ def script_retcode(
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    return script(
-            source=source,
-            cwd=cwd,
-            stdin=stdin,
-            runas=runas,
-            shell=shell,
-            env=env,
-            template=template,
-            umask=umask,
-            timeout=timeout,
-            **kwargs)['retcode']
+    return script(source=source,
+                  cwd=cwd,
+                  stdin=stdin,
+                  runas=runas,
+                  shell=shell,
+                  env=env,
+                  template=template,
+                  umask=umask,
+                  timeout=timeout,
+                  reset_system_locale=reset_system_locale,
+                  **kwargs)['retcode']
 
 
 def which(cmd):

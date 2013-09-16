@@ -72,6 +72,8 @@ def latest_version(pkg_name, **kwargs):
         salt '*' pkgng.latest_version <package name>
     '''
 
+    kwargs.pop('refresh', True)
+
     cmd = 'pkg info {0}'.format(pkg_name)
     out = __salt__['cmd.run'](cmd).split()
     return out[0]

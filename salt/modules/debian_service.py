@@ -1,6 +1,5 @@
 '''
-Service support for Debian systems - uses update-rc.d and service to modify the
-system
+Service support for Debian systems (uses update-rc.d and /sbin/service)
 '''
 
 # Import python libs
@@ -110,7 +109,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 

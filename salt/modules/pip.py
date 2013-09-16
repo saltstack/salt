@@ -771,19 +771,19 @@ def list_(prefix=None,
             continue
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
-            version, name = line.split('#egg=')
+            version_, name = line.split('#egg=')
         elif len(line.split('==')) >= 2:
             name = line.split('==')[0]
-            version = line.split('==')[1]
+            version_ = line.split('==')[1]
         else:
             logger.error("Can't parse line '%s'", line)
             continue
 
         if prefix:
             if name.lower().startswith(prefix.lower()):
-                packages[name] = version
+                packages[name] = version_
         else:
-            packages[name] = version
+            packages[name] = version_
     return packages
 
 

@@ -51,7 +51,9 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
@@ -110,7 +112,9 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
@@ -121,7 +125,9 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
@@ -141,7 +147,9 @@ def list_available(*names):
     '''
     Return a list of available versions of the specified package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_available <package name>
         salt '*' pkg.list_available <package name01> <package name02>
@@ -167,7 +175,9 @@ def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
     '''
@@ -205,14 +215,16 @@ def version(*names, **kwargs):
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-        List the packages currently installed in a dict::
+    List the packages currently installed in a dict::
 
-            {'<package_name>': '<version>'}
+        {'<package_name>': '<version>'}
 
-        CLI Example::
+    CLI Example:
 
-            salt '*' pkg.list_pkgs
-            salt '*' pkg.list_pkgs versions_as_list=True
+    .. code-block:: bash
+
+        salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
     # 'removed' not yet implemented or not applicable
@@ -425,7 +437,9 @@ def refresh_db():
 
         {'<database name>': Bool}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -451,7 +465,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package name>
     '''
@@ -529,7 +545,9 @@ def upgrade(refresh=True):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -565,7 +583,9 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -637,7 +657,9 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
@@ -650,7 +672,9 @@ def get_repo_data():
     '''
     Returns the cached winrepo data
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.get_repo_data
     '''

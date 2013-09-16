@@ -3,6 +3,8 @@
     Logstash Logging Handler
     ========================
 
+    .. versionadded:: 0.17.0
+
     This module provides some `Logstash`_ logging handlers.
 
 

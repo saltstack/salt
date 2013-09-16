@@ -3,6 +3,8 @@
     Sentry Logging Handler
     ======================
 
+    .. versionadded:: 0.17.0
+
     Configuring the python `Sentry`_ client, `Raven`_, should be done under the
     ``sentry_handler`` configuration key.
     At the bare minimum, you need to define the `DSN`_. As an example:

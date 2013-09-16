@@ -27,6 +27,12 @@ Control the alternatives system
 
 '''
 
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'set_': 'set'
+}
+
+
 def install(name, link, path, priority):
     '''
     Install new alternative for defined <name>
@@ -125,6 +131,8 @@ def remove(name, path):
 
 def auto(name):
     '''
+    .. versionadded:: 0.17.0
+
     Instruct alternatives to use the highest priority
     path for <name>
 
@@ -149,8 +157,10 @@ def auto(name):
     return ret
 
 
-def set(name, path):
+def set_(name, path):
     '''
+    .. versionadded:: 0.17.0
+
     Removes installed alternative for defined <name> and <path>
     or fallback to default alternative, if some defined before.
 
@@ -201,5 +211,3 @@ def set(name, path):
             ).format(path, name)
 
     return ret
-
-

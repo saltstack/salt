@@ -1,6 +1,5 @@
 '''
-The function cache system allows for data to be stored on the master so it
-can be easily read by other minions
+The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
 
 # Import python libs

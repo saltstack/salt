@@ -20,7 +20,9 @@ def get_enabled():
     '''
     Return the enabled services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_enabled
     '''
@@ -47,7 +49,9 @@ def get_disabled():
     '''
     Return the disabled services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_disabled
     '''
@@ -76,11 +80,14 @@ def get_all():
     '''
     Return all installed services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
     return sorted(get_enabled() + get_disabled())
+
 
 def get_service_name(*args):
     '''
@@ -95,10 +102,11 @@ def get_service_name(*args):
 
     If arguments are passed, create a dict of Display Names and Service Names
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_service_name
-
         salt '*' service.get_service_name 'Google Update Service (gupdate)' 'DHCP Client'
     '''
     ret = {}
@@ -128,11 +136,14 @@ def get_service_name(*args):
             ret[arg] = service_dict[arg]
     return ret
 
+
 def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -144,7 +155,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -156,7 +169,9 @@ def restart(name):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -179,7 +194,9 @@ def status(name, sig=None):
     service is running or not, pass a signature to use to find the service via
     ps
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name> [service signature]
     '''
@@ -197,7 +214,9 @@ def getsid(name):
     '''
     Return the sid for this windows service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.getsid <service name>
     '''
@@ -216,7 +235,9 @@ def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
@@ -228,7 +249,9 @@ def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
@@ -240,7 +263,9 @@ def enabled(name):
     '''
     Check to see if the named service is enabled to start on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enabled <service name>
     '''
@@ -251,7 +276,9 @@ def disabled(name):
     '''
     Check to see if the named service is disabled to start on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disabled <service name>
     '''
