@@ -68,17 +68,38 @@ def boot(name, flavor_id=0, image_id=0):
     .. code-block:: bash
 
         salt '*' nova.boot myinstance flavor_id=4596 image_id=2
+
+    The flavor_id and image_id are obtained from nova.flavor_list and
+    nova.image_list
+
+    .. code-block:: bash
+
+        salt '*' nova.flavor_list
+        salt '*' nova.image_list
     '''
     nt_ks = _auth()
     response = nt_ks.servers.create(
         name=name, flavor=flavor_id, image=image_id
     )
-    ret = {
-        'id': response.id,
-        'image': response.image,
-        'flavor': response.flavor,
-    }
-    return ret
+    return server_show(response.id)
+
+
+def delete(instance_id):
+    '''
+    Boot (create) a new instance
+
+    <instance_id>        ID of the instance to be deleted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.delete 1138
+
+    '''
+    nt_ks = _auth()
+    response = nt_ks.servers.delete(instance_id)
+    return True
 
 
 def flavor_list():
@@ -352,13 +373,8 @@ def server_show(server_id):
     for item in nt_ks.servers.list():
         if item.id == server_id:
             ret[item.name] = {
-                'OS-DCF': {'diskConfig': item.__dict__['OS-DCF:diskConfig']},
-                'OS-EXT-SRV-ATTR': {'host': item.__dict__['OS-EXT-SRV-ATTR:host'],
-                                    'hypervisor_hostname': item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname'],
-                                    'instance_name': item.__dict__['OS-EXT-SRV-ATTR:instance_name']},
-                'OS-EXT-STS': {'power_state': item.__dict__['OS-EXT-STS:power_state'],
-                               'task_state': item.__dict__['OS-EXT-STS:task_state'],
-                               'vm_state': item.__dict__['OS-EXT-STS:vm_state']},
+                'OS-EXT-SRV-ATTR': {},
+                'OS-EXT-STS': {},
                 'accessIPv4': item.accessIPv4,
                 'accessIPv6': item.accessIPv6,
                 'addresses': item.addresses,
@@ -380,7 +396,23 @@ def server_show(server_id):
                 'tenant_id': item.tenant_id,
                 'updated': item.updated,
                 'user_id': item.user_id,
-                }
+            }
+        if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
+            ret[item.name]['OS-DCF'] = {
+                'diskConfig': item.__dict__['OS-DCF:diskConfig']
+            }
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:host'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['host'] = item.__dict__['OS-EXT-SRV-ATTR:host']
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:hypervisor_hostname'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['hypervisor_hostname'] = item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname']
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:instance_name'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['instance_name'] = item.__dict__['OS-EXT-SRV-ATTR:instance_name']
+        if hasattr(item.__dict__, 'OS-EXT-STS:power_state'):
+            ret[item.name]['OS-EXT-STS']['power_state'] = item.__dict__['OS-EXT-STS:power_state']
+        if hasattr(item.__dict__, 'OS-EXT-STS:task_state'):
+            ret[item.name]['OS-EXT-STS']['task_state'] = item.__dict__['OS-EXT-STS:task_state']
+        if hasattr(item.__dict__, 'OS-EXT-STS:vm_state'):
+            ret[item.name]['OS-EXT-STS']['vm_state'] = item.__dict__['OS-EXT-STS:vm_state']
     return ret
 
 
