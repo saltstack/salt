@@ -10,6 +10,28 @@ Module for handling openstack nova calls.
         keystone.password: verybadpass
         keystone.tenant: admin
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+
+    If configuration for multiple openstack accounts is required, they can be
+    set up as different configuration profiles:
+    For example::
+
+        openstack1:
+          keystone.user: admin
+          keystone.password: verybadpass
+          keystone.tenant: admin
+          keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+
+        openstack2:
+          keystone.user: admin
+          keystone.password: verybadpass
+          keystone.tenant: admin
+          keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
+
+    With this configuration in place, any of the nova functions can make use of
+    a configuration profile by declaring it explicitly.
+    For example::
+
+        salt '*' nova.flavor_list profile=openstack1
 '''
 
 # Import third party libs
@@ -42,20 +64,27 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth():
+def _auth(profile=None):
     '''
     Set up nova credentials
     '''
-    user = __salt__['config.option']('keystone.user')
-    password = __salt__['config.option']('keystone.password')
-    tenant = __salt__['config.option']('keystone.tenant')
-    auth_url = __salt__['config.option']('keystone.auth_url')
+    if profile:
+        credentials = __salt__['config.option'](profile)
+        user = credentials['keystone.user']
+        password = credentials['keystone.password']
+        tenant = credentials['keystone.tenant']
+        auth_url = credentials['keystone.auth_url']
+    else:
+        user = __salt__['config.option']('keystone.user')
+        password = __salt__['config.option']('keystone.password')
+        tenant = __salt__['config.option']('keystone.tenant')
+        auth_url = __salt__['config.option']('keystone.auth_url')
     return client.Client(
         user, password, tenant, auth_url, service_type="compute"
     )
 
 
-def boot(name, flavor_id=0, image_id=0):
+def boot(name, flavor_id=0, image_id=0, profile=None):
     '''
     Boot (create) a new instance
 
@@ -77,14 +106,14 @@ def boot(name, flavor_id=0, image_id=0):
         salt '*' nova.flavor_list
         salt '*' nova.image_list
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     response = nt_ks.servers.create(
         name=name, flavor=flavor_id, image=image_id
     )
     return server_show(response.id)
 
 
-def delete(instance_id):
+def delete(instance_id, profile=None):
     '''
     Boot (create) a new instance
 
@@ -97,12 +126,12 @@ def delete(instance_id):
         salt '*' nova.delete 1138
 
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     response = nt_ks.servers.delete(instance_id)
     return True
 
 
-def flavor_list():
+def flavor_list(profile=None):
     '''
     Return a list of available flavors (nova flavor-list)
 
@@ -112,7 +141,7 @@ def flavor_list():
 
         salt '*' nova.flavor_list
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = {}
     for flavor in nt_ks.flavors.list():
         links = {}
@@ -136,7 +165,8 @@ def flavor_create(name,      # pylint: disable=C0103
                   id=0,      # pylint: disable=C0103
                   ram=0,
                   disk=0,
-                  vcpus=1):
+                  vcpus=1,
+                  profile=None):
     '''
     Add a flavor to nova (nova flavor-create). The following parameters are
     required:
@@ -153,7 +183,7 @@ def flavor_create(name,      # pylint: disable=C0103
 
         salt '*' nova.flavor_create myflavor id=6 ram=4096 disk=10 vcpus=1
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     nt_ks.flavors.create(
         name=name, flavorid=id, ram=ram, disk=disk, vcpus=vcpus
     )
@@ -164,7 +194,7 @@ def flavor_create(name,      # pylint: disable=C0103
             'vcpus': vcpus}
 
 
-def flavor_delete(id):  # pylint: disable=C0103
+def flavor_delete(id, profile=None):  # pylint: disable=C0103
     '''
     Delete a flavor from nova by id (nova flavor-delete)
 
@@ -174,12 +204,12 @@ def flavor_delete(id):  # pylint: disable=C0103
 
         salt '*' nova.flavor_delete 7'
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     nt_ks.flavors.delete(id)
     return 'Flavor deleted: {0}'.format(id)
 
 
-def keypair_list():
+def keypair_list(profile=None):
     '''
     Return a list of available keypairs (nova keypair-list)
 
@@ -189,7 +219,7 @@ def keypair_list():
 
         salt '*' nova.keypair_list
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = {}
     for keypair in nt_ks.keypairs.list():
         ret[keypair.name] = {
@@ -200,7 +230,7 @@ def keypair_list():
     return ret
 
 
-def keypair_add(name, pubfile=None, pubkey=None):
+def keypair_add(name, pubfile=None, pubkey=None, profile=None):
     '''
     Add a keypair to nova (nova keypair-add)
 
@@ -211,7 +241,7 @@ def keypair_add(name, pubfile=None, pubkey=None):
         salt '*' nova.keypair_add mykey pubfile='/home/myuser/.ssh/id_rsa.pub'
         salt '*' nova.keypair_add mykey pubkey='ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAuGj4A7HcPLPl/etc== myuser@mybox'
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     if pubfile:
         ifile = salt.utils.fopen(pubfile, 'r')
         pubkey = ifile.read()
@@ -222,7 +252,7 @@ def keypair_add(name, pubfile=None, pubkey=None):
     return ret
 
 
-def keypair_delete(name):
+def keypair_delete(name, profile=None):
     '''
     Add a keypair to nova (nova keypair-delete)
 
@@ -232,12 +262,12 @@ def keypair_delete(name):
 
         salt '*' nova.keypair_delete mykey'
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     nt_ks.keypairs.delete(name)
     return 'Keypair deleted: {0}'.format(name)
 
 
-def image_list(name=None):
+def image_list(name=None, profile=None):
     '''
     Return a list of available images (nova images-list + nova image-show)
     If a name is provided, only that image will be displayed.
@@ -249,7 +279,7 @@ def image_list(name=None):
         salt '*' nova.image_list
         salt '*' nova.image_list myimage
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = {}
     for image in nt_ks.images.list():
         links = {}
@@ -274,7 +304,7 @@ def image_list(name=None):
     return ret
 
 
-def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable=C0103
+def image_meta_set(id=None, name=None, profile=None, **kwargs):  # pylint: disable=C0103
     '''
     Sets a key=value pair in the metadata for an image (nova image-meta set)
 
@@ -285,7 +315,7 @@ def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable=C0103
         salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
@@ -298,7 +328,8 @@ def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable=C0103
 
 def image_meta_delete(id=None,     # pylint: disable=C0103
                       name=None,
-                      keys=None):
+                      keys=None,
+                      profile=None):
     '''
     Delete a key=value pair from the metadata for an image (nova image-meta set)
 
@@ -309,7 +340,7 @@ def image_meta_delete(id=None,     # pylint: disable=C0103
         salt '*' nova.image_meta_delete id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
@@ -321,15 +352,15 @@ def image_meta_delete(id=None,     # pylint: disable=C0103
     return {id: 'Deleted: {0}'.format(pairs)}
 
 
-def list_():
+def list_(profile=None):
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_list function.
     '''
-    return server_list()
+    return server_list(profile=None)
 
 
-def server_list():
+def server_list(profile=None):
     '''
     Return detailed information for an active server
 
@@ -339,7 +370,7 @@ def server_list():
 
         salt '*' nova.show
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = {}
     for item in nt_ks.servers.list():
         ret[item.name] = {
@@ -350,7 +381,7 @@ def server_list():
     return ret
 
 
-def show(server_id):
+def show(server_id, profile=None):
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_show function.
@@ -358,7 +389,7 @@ def show(server_id):
     return server_show(server_id)
 
 
-def server_show(server_id):
+def server_show(server_id, profile=None):
     '''
     Return detailed information for an active server
 
@@ -368,7 +399,7 @@ def server_show(server_id):
 
         salt '*' nova.show
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = {}
     for item in nt_ks.servers.list():
         if item.id == server_id:
@@ -416,7 +447,7 @@ def server_show(server_id):
     return ret
 
 
-def secgroup_create(name, description):
+def secgroup_create(name, description, profile=None):
     '''
     Add a secgroup to nova (nova secgroup-create)
 
@@ -426,13 +457,13 @@ def secgroup_create(name, description):
 
         salt '*' nova.secgroup_create mygroup 'This is my security group'
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     nt_ks.security_groups.create(name, description)
     ret = {'name': name, 'description': description}
     return ret
 
 
-def secgroup_delete(name):
+def secgroup_delete(name, profile=None):
     '''
     Delete a secgroup to nova (nova secgroup-delete)
 
@@ -442,7 +473,7 @@ def secgroup_delete(name):
 
         salt '*' nova.secgroup_delete mygroup
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     for item in nt_ks.security_groups.list():
         if item.name == name:
             nt_ks.security_groups.delete(item.id)
@@ -450,7 +481,7 @@ def secgroup_delete(name):
     return 'Security group not found: {0}'.format(name)
 
 
-def secgroup_list():
+def secgroup_list(profile=None):
     '''
     Return a list of available security groups (nova items-list)
 
@@ -460,7 +491,7 @@ def secgroup_list():
 
         salt '*' nova.secgroup_list
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = {}
     for item in nt_ks.security_groups.list():
         ret[item.name] = {
@@ -473,7 +504,7 @@ def secgroup_list():
     return ret
 
 
-def _item_list():
+def _item_list(profile=None):
     '''
     Template for writing list functions
     Return a list of available items (nova items-list)
@@ -484,7 +515,7 @@ def _item_list():
 
         salt '*' nova.item_list
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = []
     for item in nt_ks.items.list():
         ret.append(item.__dict__)
@@ -515,7 +546,6 @@ def _item_list():
 #cloudpipe-list      Print a list of all cloudpipe instances.
 #console-log         Get console log output of a server.
 #credentials         Show user credentials returned from auth
-#delete              Immediately shut down and delete a server.
 #describe-resource   Show details about a resource
 #diagnostics         Retrieve server diagnostics.
 #dns-create          Create a DNS entry for domain, name and ip.
