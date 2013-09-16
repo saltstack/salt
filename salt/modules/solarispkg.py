@@ -128,8 +128,6 @@ def latest_version(*names, **kwargs):
     package.
     '''
     kwargs.pop('refresh', True)
-    if kwargs:
-        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
 
     ret = {}
     if not names:
