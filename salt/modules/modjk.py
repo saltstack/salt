@@ -305,7 +305,7 @@ def lb_edit(lbn, settings, profile='default'):
 
 def bulk_stop(workers, lbn, profile='default'):
     '''
-    Stop all the given workers in the spepcific load balancer
+    Stop all the given workers in the specific load balancer
 
     CLI Examples:
 
@@ -334,7 +334,7 @@ def bulk_stop(workers, lbn, profile='default'):
 
 def bulk_activate(workers, lbn, profile='default'):
     '''
-    Activate all the given workers in the spepcific load balancer
+    Activate all the given workers in the specific load balancer
 
     CLI Examples:
 
@@ -363,7 +363,7 @@ def bulk_activate(workers, lbn, profile='default'):
 
 def bulk_disable(workers, lbn, profile='default'):
     '''
-    Disable all the given workers in the spepcific load balancer
+    Disable all the given workers in the specific load balancer
 
     CLI Examples:
 
@@ -392,7 +392,7 @@ def bulk_disable(workers, lbn, profile='default'):
 
 def bulk_recover(workers, lbn, profile='default'):
     '''
-    Recover all the given workers in the spepcific load balancer
+    Recover all the given workers in the specific load balancer
 
     CLI Examples:
 
