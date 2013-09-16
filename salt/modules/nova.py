@@ -76,11 +76,12 @@ def flavor_list():
                 'id': flavor.id,
                 'name': flavor.name,
                 'ram': flavor.ram,
-                'rxtx_factor': flavor.rxtx_factor,
                 'swap': flavor.swap,
                 'vcpus': flavor.vcpus,
                 'links': links,
             }
+        if hasattr(flavor, 'rxtx_factor'):
+            ret[flavor.name]['rxtx_factor'] = flavor.rxtx_factor
     return ret
 
 
