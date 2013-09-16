@@ -81,12 +81,25 @@ def boot(name, flavor_id=0, image_id=0):
     response = nt_ks.servers.create(
         name=name, flavor=flavor_id, image=image_id
     )
-    ret = {
-        'id': response.id,
-        'image': response.image,
-        'flavor': response.flavor,
-    }
-    return ret
+    return server_show(response.id)
+
+
+def delete(instance_id):
+    '''
+    Boot (create) a new instance
+
+    <instance_id>        ID of the instance to be deleted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.delete 1138
+
+    '''
+    nt_ks = _auth()
+    response = nt_ks.servers.delete(instance_id)
+    return True
 
 
 def flavor_list():
