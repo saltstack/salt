@@ -360,13 +360,8 @@ def server_show(server_id):
     for item in nt_ks.servers.list():
         if item.id == server_id:
             ret[item.name] = {
-                'OS-DCF': {'diskConfig': item.__dict__['OS-DCF:diskConfig']},
-                'OS-EXT-SRV-ATTR': {'host': item.__dict__['OS-EXT-SRV-ATTR:host'],
-                                    'hypervisor_hostname': item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname'],
-                                    'instance_name': item.__dict__['OS-EXT-SRV-ATTR:instance_name']},
-                'OS-EXT-STS': {'power_state': item.__dict__['OS-EXT-STS:power_state'],
-                               'task_state': item.__dict__['OS-EXT-STS:task_state'],
-                               'vm_state': item.__dict__['OS-EXT-STS:vm_state']},
+                'OS-EXT-SRV-ATTR': {},
+                'OS-EXT-STS': {},
                 'accessIPv4': item.accessIPv4,
                 'accessIPv6': item.accessIPv6,
                 'addresses': item.addresses,
@@ -388,7 +383,23 @@ def server_show(server_id):
                 'tenant_id': item.tenant_id,
                 'updated': item.updated,
                 'user_id': item.user_id,
-                }
+            }
+        if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
+            ret[item.name]['OS-DCF'] = {
+                'diskConfig': item.__dict__['OS-DCF:diskConfig']
+            }
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:host'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['host'] = item.__dict__['OS-EXT-SRV-ATTR:host']
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:hypervisor_hostname'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['hypervisor_hostname'] = item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname']
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:instance_name'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['instance_name'] = item.__dict__['OS-EXT-SRV-ATTR:instance_name']
+        if hasattr(item.__dict__, 'OS-EXT-STS:power_state'):
+            ret[item.name]['OS-EXT-STS']['power_state'] = item.__dict__['OS-EXT-STS:power_state']
+        if hasattr(item.__dict__, 'OS-EXT-STS:task_state'):
+            ret[item.name]['OS-EXT-STS']['task_state'] = item.__dict__['OS-EXT-STS:task_state']
+        if hasattr(item.__dict__, 'OS-EXT-STS:vm_state'):
+            ret[item.name]['OS-EXT-STS']['vm_state'] = item.__dict__['OS-EXT-STS:vm_state']
     return ret
 
 
