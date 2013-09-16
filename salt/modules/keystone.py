@@ -35,8 +35,8 @@ Module for handling openstack keystone calls.
           keystone.tenant_id: f80919baedab48ec8931f200c65a50df
           keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
 
-    With this configuration in place, any of the nova functions can make use of
-    a configuration profile by declaring it explicitly.
+    With this configuration in place, any of the keystone functions can make use
+    of a configuration profile by declaring it explicitly.
     For example::
 
         salt '*' keystone.tenant_list profile=openstack1
