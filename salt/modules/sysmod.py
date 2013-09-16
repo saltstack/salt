@@ -1,6 +1,5 @@
 '''
-The sys module provides information about the available functions on the
-minion.
+The sys module provides information about the available functions on the minion
 '''
 
 # Import python libs
