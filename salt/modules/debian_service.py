@@ -1,6 +1,5 @@
 '''
-Service support for Debian systems - uses update-rc.d and service to modify the
-system
+Service support for Debian systems (uses update-rc.d and /sbin/service)
 '''
 
 # Import python libs

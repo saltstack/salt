@@ -1,7 +1,5 @@
 '''
-Service support for RHEL-based systems. This interface uses the service and
-chkconfig commands, and for upstart support uses helper functions from the
-upstart module, as well as the ``start``, ``stop``, and ``status`` commands.
+Service support for RHEL-based systems, including support for both upstart and sysvinit
 '''
 
 # Import python libs
