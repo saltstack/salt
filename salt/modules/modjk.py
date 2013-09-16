@@ -244,7 +244,7 @@ def recover_all(lbn, profile='default'):
         workers = config['worker.{0}.balance_workers'.format(lbn)].split(',')
     except KeyError:
         return ret
-    
+
     for worker in workers:
         curr_state = worker_status(worker, profile)
         if curr_state['activation'] != 'ACT':
