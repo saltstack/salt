@@ -23,6 +23,7 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'saltify.avail_sizes',
     'saltify.avail_images',
     'saltify.avail_locations',
+    'rackspace.reboot'
 )
 
 
