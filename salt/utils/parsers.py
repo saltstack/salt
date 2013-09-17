@@ -1506,8 +1506,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          LogLevelMixIn, TargetOptionsMixIn,
-                          OutputOptionsMixIn):
+                          LogLevelMixIn, OutputOptionsMixIn):
     __metaclass__ = OptionParserMeta
 
     usage = '%prog [options]'
