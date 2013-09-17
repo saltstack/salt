@@ -106,7 +106,7 @@ def getval(key):
     '''
     store = load()
     if key in store:
-      return store[key]
+        return store[key]
 
 
 def getvals(*keys):
