@@ -98,24 +98,48 @@ def _clear_cache(tgt=None,
 def clear_pillar(tgt, expr_form='glob'):
     '''
     Clear the cached pillar data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_pillar
     '''
     return _clear_cache(tgt, expr_form, clear_pillar=True)
 
 def clear_grains(tgt=None, expr_form='glob'):
     '''
     Clear the cached grains data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_grains
     '''
     return _clear_cache(tgt, expr_form, clear_grains=True)
 
 def clear_mine(tgt=None, expr_form='glob'):
     '''
     Clear the cached mine data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_mine
     '''
     return _clear_cache(tgt, expr_form, clear_mine=True)
 
 def clear_all(tgt=None, expr_form='glob'):
     '''
     Clear the cached pillar, grains, and mine data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_all
     '''
     return _clear_cache(tgt,
                         expr_form,
