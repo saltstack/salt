@@ -73,3 +73,76 @@ def pillar(tgt=None, expr_form='glob', **kwargs):
     cached_pillar = pillar_util.get_minion_pillar()
     salt.output.display_output(cached_pillar, None, __opts__)
     return cached_pillar
+
+
+def _clear_cache(tgt=None,
+                 expr_form='glob',
+                 clear_pillar=False,
+                 clear_grains=False,
+                 clear_mine=False):
+    '''
+    Clear the cached data/files for the targeted minions.
+    '''
+    if tgt is None:
+        return False
+    pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
+                                            use_cached_grains=True,
+                                            grains_fallback=False,
+                                            use_cached_pillar=True,
+                                            pillar_fallback=False,
+                                            opts=__opts__)
+    return pillar_util.clear_cached_minion_data(clear_pillar=clear_pillar,
+                                                clear_grains=clear_grains,
+                                                clear_mine=clear_mine)
+
+def clear_pillar(tgt, expr_form='glob'):
+    '''
+    Clear the cached pillar data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_pillar
+    '''
+    return _clear_cache(tgt, expr_form, clear_pillar=True)
+
+def clear_grains(tgt=None, expr_form='glob'):
+    '''
+    Clear the cached grains data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_grains
+    '''
+    return _clear_cache(tgt, expr_form, clear_grains=True)
+
+def clear_mine(tgt=None, expr_form='glob'):
+    '''
+    Clear the cached mine data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_mine
+    '''
+    return _clear_cache(tgt, expr_form, clear_mine=True)
+
+def clear_all(tgt=None, expr_form='glob'):
+    '''
+    Clear the cached pillar, grains, and mine data of the targeted minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_all
+    '''
+    return _clear_cache(tgt,
+                        expr_form,
+                        clear_pillar=True,
+                        clear_grains=True,
+                        clear_mine=True)

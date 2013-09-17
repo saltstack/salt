@@ -946,6 +946,26 @@ class AESFuncs(object):
                 fp_.write(self.serial.dumps(load['data']))
         return True
 
+    def _mine_flush(self, load):
+        '''
+        Allow the minion to delete all of its own mine contents
+        '''
+        if 'id' not in load:
+            return False
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
+        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                return True
+            datap = os.path.join(cdir, 'mine.p')
+            if os.path.isfile(datap):
+                try:
+                    os.remove(datap)
+                except OSError:
+                    return False
+        return True
+
     def _file_recv(self, load):
         '''
         Allows minions to send files to the master, files are sent to the
