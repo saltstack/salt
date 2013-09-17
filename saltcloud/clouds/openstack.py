@@ -144,6 +144,7 @@ avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())
 destroy = namespaced_function(destroy, globals())
+reboot = namespaced_function(reboot, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
@@ -274,7 +275,7 @@ def ssh_interface(vm_):
 
 def rackconnect(vm_):
     '''
-    Determine if we should wait for rackconnect automation before running. Either 
+    Determine if we should wait for rackconnect automation before running. Either
     'False' (default) or 'True'.
     '''
     return config.get_config_value(
@@ -495,8 +496,8 @@ def create(vm_):
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
     elif (rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips'):
-            ip_address = data.public_ips        
-    else: 
+            ip_address = data.public_ips
+    else:
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
