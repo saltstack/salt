@@ -414,8 +414,7 @@ class Client(object):
                 url_data.netloc,
                 url_data.path
             )
-            # SAH If Salt generated the dest name
-            #     create any required dirs 
+            # If Salt generated the dest name create any required dirs 
             makedirs = True
             
         destdir = os.path.dirname(dest)

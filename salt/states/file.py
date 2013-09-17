@@ -580,62 +580,74 @@ def _test_owner(kwargs, user=None):
     return user
 
 
-def _unify_sources_and_hashes(source=None,source_hash=None,sources=[],source_hashes=[]):
-  '''
-  Silly lil function to give us a standard tuple list for sources and source_hashes
-  '''
-  # SAH - 2013/09/16 
-  if ( source and sources ):
-    return (False, "the 'source' and 'sources' parameters are mutally exclusive", [] )
+def _unify_sources_and_hashes(source=None,source_hash=None,
+                              sources=[],source_hashes=[]):
+    '''
+    Silly lil function to give us a standard tuple list for sources and 
+    source_hashes
+    '''
+    if ( source and sources ):
+        return (False, 
+                "source and sources are mutally exclusive", [] )
 
-  if ( source_hash and sources_hash ):
-    return (False, "the 'source_hash' and 'source_hashes' parameters are mutally exclusive", [] )
+    if ( source_hash and sources_hash ):
+        return (False, 
+                "source_hash and source_hashes are mutally exclusive", [] )
 
-  if ( source ): return (True,'', [ (source,source_hash) ] )
+    if ( source ): 
+        return (True,'', [ (source,source_hash) ] )
 
-  # Make a nice neat list of tuples exactly len(sources) long..
-  return (True, '', map(None, sources, source_hashes[:len(sources)]) )
+    # Make a nice neat list of tuples exactly len(sources) long..
+    return (True, '', map(None, sources, source_hashes[:len(sources)]) )
 
-def _get_template_texts(source_list = [], template='jinja', defaults = None, context = None, env = 'base', **kwargs):
-  '''
-  Iterate a list of sources and process them as templates.
-  Returns a list of 'chunks' containing the rendered templates.
-  '''
-  # SAH 2013/09/16 Initial implementation
+def _get_template_texts(source_list = [], template='jinja', defaults = None, 
+                        context = None, env = 'base', **kwargs):
+    '''
+    Iterate a list of sources and process them as templates.
+    Returns a list of 'chunks' containing the rendered templates.
+    '''
 
-  ret = {'name': '_get_template_texts', 'changes': {}, 'result': True, 'comment': '', 'data': []}
+    ret = {'name': '_get_template_texts', 'changes': {}, 
+           'result': True, 'comment': '', 'data': []}
 
-  if not source_list:
-    return _error(ret, '_get_template_texts called with empty source_list'.format(source) )
+    if not source_list:
+        return _error(ret, 
+                      '_get_template_texts called with empty source_list')
   
-  txtl = []
+    txtl = []
   
-  for (source, source_hash) in source_list:
+    for (source, source_hash) in source_list:
 
-    # FIX TODO: Remove this when http://github.com/saltstack/salt/issues/7290 
-    #           is closed. Until then, that bug is why its broke :-P
+        # FIX TODO: Remove this when 
+        #           http://github.com/saltstack/salt/issues/7290 
+        #           is closed. Until then, that bug is why its broke :-P
 
-    tmpctx = defaults if defaults else {}
-    if context:
-      tmpctx.update(context)
-    rendered_template_fn = __salt__['cp.get_template'](source,'',template=template,env=env, context = tmpctx, **kwargs )
-    log.debug('cp.get_template returned {0} (Called with: {1}'.format(rendered_template_fn,source))
-    if rendered_template_fn:
-      tmplines = None
-      with salt.utils.fopen(rendered_template_fn, 'rb') as fp_:
-        tmplines = fp_.readlines()
-      if not tmplines:
-        log.debug('Failed to read rendered template file {0} ({1})'.format(rendered_template_fn,source))
-        ret['name'] = source
-        return _error(ret, 'Failed to read rendered template file {0} ({1})'.format(rendered_template_fn,source) )
-      txtl.append( ''.join(tmplines))
-    else:
-      log.debug('Failed to load template file {0}'.format(source))
-      ret['name'] = source
-      return _error(ret, 'Failed to load template file {0}'.format(source) )
+        tmpctx = defaults if defaults else {}
+        if context:
+            tmpctx.update(context)
+        rndrd_templ_fn = __salt__['cp.get_template'](source,'',
+                                  template=template, env=env, 
+                                  context = tmpctx, **kwargs )
+        msg = 'cp.get_template returned {0} (Called with: {1})'
+        log.debug(msg.format(rndrd_templ_fn,source))
+        if rndrd_templ_fn:
+            tmplines = None
+            with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
+                tmplines = fp_.readlines()
+            if not tmplines:
+                msg = 'Failed to read rendered template file {0} ({1})'
+                log.debug( msg.format(rndrd_templ_fn,source))
+                ret['name'] = source
+                return _error(ret, msg.format( rndrd_templ_fn,source) )
+            txtl.append( ''.join(tmplines))
+        else:
+            msg = 'Failed to load template file {0}'.format(source)
+            log.debug(msg)
+            ret['name'] = source
+            return _error(ret, msg )
 
-  ret['data'] = txtl
-  return ret
+    ret['data'] = txtl
+    return ret
 
 
 def symlink(
@@ -1954,13 +1966,15 @@ def append(name,
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    # SAH - 2013/09/14 Add sources and source_hashes with template support
-    # NOTE: FIX 'text' and any 'source' are mutally exclusive as 'text' is re-assigned
-    #       in the original code.
-    (ok, err, sl) = _unify_sources_and_hashes(source = source,source_hash = source_hash, 
-                                              sources = sources, source_hashes = source_hashes )
+    # Add sources and source_hashes with template support
+    # NOTE: FIX 'text' and any 'source' are mutally exclusive as 'text' 
+    #       is re-assigned in the original code.
+    (ok, err, sl) = _unify_sources_and_hashes(source = source,
+                                              source_hash = source_hash, 
+                                              sources = sources, 
+                                              source_hashes = source_hashes )
     if not ok:
-      return _error(ret, err)
+        return _error(ret, err)
 
     
     if makedirs is True:
@@ -1980,12 +1994,16 @@ def append(name,
     if not check_res:
         return _error(ret, check_msg)
 
-    #SAH Follow the original logic and re-assign 'text' if using source(s)...
+    #Follow the original logic and re-assign 'text' if using source(s)...
     if sl:
-      tmpret = _get_template_texts(source_list = sl, template = template, defaults = defaults, context = context, env = __env__)
-      if not tmpret['result']:
-        return tmpret
-      text = tmpret['data']
+        tmpret = _get_template_texts(source_list = sl, 
+                                     template = template, 
+                                     defaults = defaults, 
+                                     context = context, 
+                                     env = __env__)
+        if not tmpret['result']:
+            return tmpret
+        text = tmpret['data']
 
     if isinstance(text, string_types):
         text = (text,)
