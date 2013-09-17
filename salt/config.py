@@ -10,14 +10,6 @@ import socket
 import logging
 import urlparse
 
-# import third party libs
-import yaml
-try:
-    yaml.Loader = yaml.CLoader
-    yaml.Dumper = yaml.CDumper
-except Exception:
-    pass
-
 # Import salt libs
 import salt.crypt
 import salt.loader
@@ -25,6 +17,14 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths as syspaths
+from salt.utils.contextmanagers import ignored
+
+# import third party libs
+import yaml
+with ignored(Exception):
+    yaml.Loader = yaml.CLoader
+    yaml.Dumper = yaml.CDumper
+
 
 log = logging.getLogger(__name__)
 
@@ -675,7 +675,7 @@ def get_id():
     )
 
     # Check /etc/hostname
-    try:
+    with ignored(Exception):
         with salt.utils.fopen('/etc/hostname') as hfl:
             name = hfl.read().strip()
         if re.search(r'\s', name):
@@ -684,8 +684,6 @@ def get_id():
         else:
             if name != 'localhost':
                 return name, False
-    except Exception:
-        pass
 
     # Nothing in /etc/hostname or /etc/hostname not found
     fqdn = socket.getfqdn()
@@ -694,7 +692,7 @@ def get_id():
         return fqdn, False
 
     # Can /etc/hosts help us?
-    try:
+    with ignored(Exception):
         with salt.utils.fopen('/etc/hosts') as hfl:
             for line in hfl:
                 names = line.split()
@@ -705,11 +703,9 @@ def get_id():
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
                             return name, False
-    except Exception:
-        pass
 
     # Can Windows 'hosts' file help?
-    try:
+    with ignored(Exception):
         windir = os.getenv("WINDIR")
         with salt.utils.fopen(windir + '\\system32\\drivers\\etc\\hosts') as hfl:
             for line in hfl:
@@ -717,17 +713,14 @@ def get_id():
                 if line[0] == '#' or len(line) <= 1:
                     continue
                 # process lines looking for '127.' in first column
-                try:
+                with ignored(IndexError):
+                    # Ignore if we could not split line (malformed entry?)
                     entry = line.split()
                     if entry[0].startswith('127.'):
                         for name in entry[1:]:  # try each name in the row
                             if name != 'localhost':
                                 log.info('Found minion id in hosts file: {0}'.format(name))
                                 return name, False
-                except IndexError:
-                    pass  # could not split line (malformed entry?)
-    except Exception:
-        pass
 
     # What IP addresses do we have?
     ip_addresses = [salt.utils.network.IPv4Address(addr) for addr
