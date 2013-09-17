@@ -297,8 +297,8 @@ class MasterPillarUtil(object):
                 if ((clear_pillar and clear_grains) or
                     (clear_pillar and not minion_grains) or
                     (clear_grains and not minion_pillar)):
-                        # Not saving pillar or grains, so just delete the cache file
-                        os.remove(os.path.join(data_file))
+                    # Not saving pillar or grains, so just delete the cache file
+                    os.remove(os.path.join(data_file))
                 elif clear_pillar and minion_grains:
                     with salt.utils.fopen(data_file, 'w+') as fp_:
                         fp_.write(self.serial.dumps({'grains': minion_grains}))
