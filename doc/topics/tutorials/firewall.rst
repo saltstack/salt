@@ -3,7 +3,7 @@ Opening the Firewall up for Salt
 ================================
 
 The Salt master communicates with the minions using an AES-encrypted ZeroMQ
-connection. These communications are done over ports 4505 and 4506, which need
+connection. These communications are done over TCP ports 4505 and 4506, which need
 to be accessible on the master only. This document outlines suggested firewall
 rules for allowing these incoming connections to the master.
 
@@ -15,7 +15,7 @@ rules for allowing these incoming connections to the master.
 RHEL 6 / CENTOS 6
 =================
 
-The lokkit command packaged with some Linux distributions makes opening
+The ``lokkit`` command packaged with some Linux distributions makes opening
 iptables firewall ports very simple via the command line. Just be careful
 to not lock out access to the server by neglecting to open the ssh
 port.
@@ -26,7 +26,7 @@ port.
 
    lokkit -p 22:tcp -p 4505:tcp -p 4506:tcp
 
-The system-config-firewall-tui command provides a text-based interface to modifying
+The ``system-config-firewall-tui`` command provides a text-based interface to modifying
 the firewall.
 
 **system-config-firewall-tui**:
@@ -73,6 +73,8 @@ Different Linux distributions store their `iptables`_ rules in different places,
 which makes it difficult to standardize firewall documentation. Included are
 some of the more common locations, but your mileage may vary.
 
+.. _`iptables`: http://www.netfilter.org/
+
 **Fedora / RHEL / CentOS**:
 
 .. code-block:: bash
@@ -105,9 +107,6 @@ Salt installs firewall rules in :blob:`/etc/ufw/applications.d/salt.ufw
 .. code-block:: bash
 
     ufw allow salt
-
-.. _`salt.ufw`: http://github.com/saltstack/salt/blob/develop/pkg/salt.ufw
-.. _`iptables`: http://www.netfilter.org/
 
 pf.conf
 =======
