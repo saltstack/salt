@@ -203,7 +203,7 @@ def workers(profile='default'):
         salt '*' modjk.workers other-profile
     '''
 
-    config = get_running()
+    config = get_running(profile)
     lbn = config['worker.list'].split(',')
     worker_list = []
     ret = {}
