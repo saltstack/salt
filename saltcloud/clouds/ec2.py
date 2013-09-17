@@ -1052,7 +1052,8 @@ def create(vm_=None, call=None):
 
         if 'ipAddress' in data[0]['instancesSet']['item']:
             return data
-        if 'privateIpAddress' in data[0]['instancesSet']['item']:
+        if ssh_interface(vm_) == 'private_ips' and \
+           'privateIpAddress' in data[0]['instancesSet']['item']:
             return data
 
     try:
