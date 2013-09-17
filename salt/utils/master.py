@@ -64,6 +64,7 @@ class MasterPillarUtil(object):
                 self.__class__.__name__))
         else:
             self.opts = opts
+        self.serial = salt.payload.Serial(self.opts)
         self.tgt = tgt
         self.expr_form = expr_form
         self.env = env
@@ -80,7 +81,6 @@ class MasterPillarUtil(object):
         if not self.opts.get('minion_data_cache', False):
             log.debug('Skipping cached data because minion_data_cache is not enabled.')
             return grains, pillars
-        serial = salt.payload.Serial(self.opts)
         mdir = os.path.join(self.opts['cachedir'], 'minions')
         try:
             for minion_id in minion_ids:
@@ -89,7 +89,7 @@ class MasterPillarUtil(object):
                 path = os.path.join(mdir, minion_id, 'data.p')
                 if os.path.isfile(path):
                     with salt.utils.fopen(path) as fp_:
-                        mdata = serial.loads(fp_.read())
+                        mdata = self.serial.loads(fp_.read())
                         if mdata.get('grains', False):
                             grains[minion_id] = mdata['grains']
                         if mdata.get('pillar', False):
@@ -251,3 +251,62 @@ class MasterPillarUtil(object):
                                         *minion_ids,
                                         cached_grains = cached_minion_grains)
         return minion_grains
+
+    def clear_cached_minion_data(self,
+                                 clear_pillar=False,
+                                 clear_grains=False,
+                                 clear_mine=False):
+        '''
+        Clear the cached data/files for the targeted minions.
+        '''
+        clear_what = []
+        if clear_pillar:
+            clear_what.append('pillar')
+        if clear_grains:
+            clear_what.append('grains')
+        if clear_mine:
+            clear_what.append('mine')
+        if not len(clear_what):
+            log.debug('No cached data types specified for clearing.')
+            return False
+
+        minion_ids = self._tgt_to_list()
+        log.debug('Clearing cached {0} data for: {1}'.format(
+            ', '.join(clear_what),
+            minion_ids))
+        if clear_pillar and clear_grains:
+            grains = {}
+            pillars = {}
+        else:
+            # Unless both clear_pillar and clear_grains are True, we need
+            # to read in the pillar/grains data since they are both stored
+            # in the same file, 'data.p'
+            grains, pillars = self._get_cached_minion_data(*minion_ids)
+        try:
+            for minion_id in minion_ids:
+                if not salt.utils.verify.valid_id(self.opts, minion_id):
+                    continue
+                cdir = os.path.join(self.opts['cachedir'], 'minions', minion_id)
+                if not os.path.isdir(cdir):
+                    # Cache dir for this minion does not exist. Nothing to do.
+                    continue
+                data_file = os.path.join(cdir, 'data.p')
+                mine_file = os.path.join(cdir, 'mine.p')
+                minion_pillar = pillars.pop(minion_id, False)
+                minion_grains = grains.pop(minion_id, False)
+                if ((clear_pillar and clear_grains) or
+                    (clear_pillar and not minion_grains) or
+                    (clear_grains and not minion_pillar)):
+                        # Not saving pillar or grains, so just delete the cache file
+                        os.remove(os.path.join(data_file))
+                elif clear_pillar and minion_grains:
+                    with salt.utils.fopen(data_file, 'w+') as fp_:
+                        fp_.write(self.serial.dumps({'grains': minion_grains}))
+                elif clear_grains and minion_pillar:
+                    with salt.utils.fopen(data_file, 'w+') as fp_:
+                        fp_.write(self.serial.dumps({'pillar': minion_pillar}))
+                if clear_mine:
+                    os.remove(os.path.join(mine_file))
+        except (OSError, IOError):
+            return True
+        return True
