@@ -36,6 +36,36 @@ the firewall.
    system-config-firewall-tui
 
 
+openSUSE
+========
+
+Salt installs firewall rules in :blob:`/etc/sysconfig/SuSEfirewall2.d/services/salt <pkg/suse/SuSEfirewall2-salt>`.
+Enable with:
+
+.. code-block:: bash
+
+    SuSEfirewall2 open
+    SuSEfirewall2 start
+
+If you have an older package of Salt where the above configuration file is not included, the ``SuSEfirewall2`` command makes opening iptables firewall ports
+very simple via the command line.
+
+**SuSEfirewall example**:
+
+.. code-block:: bash
+
+   SuSEfirewall2 open EXT TCP 4505
+   SuSEfirewall2 open EXT TCP 4506
+
+The firewall module in YaST2 provides a text-based interface to modifying the firewall.
+
+**YaST2**:
+
+.. code-block:: bash
+
+   yast2 firewall
+
+
 iptables
 ========
 
