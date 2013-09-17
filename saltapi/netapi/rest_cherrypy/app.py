@@ -31,6 +31,8 @@ A REST API for Salt
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
+
+        .. versionadded:: 0.8.3
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
