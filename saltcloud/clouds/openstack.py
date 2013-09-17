@@ -205,15 +205,17 @@ def get_conn():
         'ex_tenant_name': config.get_config_value(
             'tenant', vm_, __opts__, search_global=False
         ),
-        'ex_force_service_type': config.get_config_value(
+   }
+
+    service_type = config.get_config_value(
             'service_type', vm_, __opts__, search_global=False
         )
-    }
+    if service_type:
+	    authinfo['ex_force_service_type'] = service_type
 
     insecure = config.get_config_value(
         'insecure', vm_, __opts__, search_global=False
     )
-
     if insecure:
         import libcloud.security
         libcloud.security.VERIFY_SSL_CERT = False
