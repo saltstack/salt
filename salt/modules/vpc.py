@@ -30,28 +30,20 @@ def _get_connection( ):
     boto.vpc.VPCConnection object.
 
     Note that this is more complicated because when the module
-    starts up we don't have access to __salt__.. so
-    a dummy connection is made, with a dirty flag set.
+    starts up we don't have access to __salt__. If that is
+    the case, a dummy instance is created. Note that the 
+    next time _get_connection is called, an attempt will 
+    be made again.
     '''
-
-    # Exit out if we've already got a connection obj.
-    _conn   = getattr( sys.modules[__name__], "_conn", False )
-    if _conn:
-        return _conn
-
-    # Try and grab the configuration. If this fails, use dummy
-    # values. Also set the dirty flag.
+    # If we're unable to get valid configuration values,
+    # simply return a dummy instance.
     try:
         _key        = __salt__['config.option']('aws.key')
         _key_id     = __salt__['config.option']('aws.key_id')
-        _dirty      = False
     except Exception:
         return boto.vpc.VPCConnection( "", "" )
 
-    # We've got a valid configuration, so create the new object.
-    conn   = boto.vpc.VPCConnection( _key, _key_id )
-    setattr( sys.modules[__name__], "_conn", conn )
-    return conn
+    return boto.vpc.VPCConnection( _key, _key_id )
 
 def _create_func( function_name, function_obj ):
     '''
