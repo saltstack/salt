@@ -27,13 +27,31 @@ def _add_doc( func, doc, prefix='\n        ' ):
 def _get_connection( ):
     '''
     Helper method to handle creation of the actual
-    boto.vpc.VPCConnection object. This uses
-    configuration values from salt.
+    boto.vpc.VPCConnection object.
 
-    Also checks if one already exists.
+    Note that this is more complicated because when the module
+    starts up we don't have access to __salt__.. so
+    a dummy connection is made, with a dirty flag set.
     '''
 
-    return boto.vpc.VPCConnection( "Foo", "bar" )
+    # Exit out if we've already got a connection obj.
+    _conn   = getattr( sys.modules[__name__], "_conn", False )
+    if _conn:
+        return _conn
+
+    # Try and grab the configuration. If this fails, use dummy
+    # values. Also set the dirty flag.
+    try:
+        _key        = __salt__['config.option']('aws.key')
+        _key_id     = __salt__['config.option']('aws.key_id')
+        _dirty      = False
+    except Exception:
+        return boto.vpc.VPCConnection( "", "" )
+
+    # We've got a valid configuration, so create the new object.
+    conn   = boto.vpc.VPCConnection( _key, _key_id )
+    setattr( sys.modules[__name__], "_conn", conn )
+    return conn
 
 def _create_func( function_name, function_obj ):
     '''
@@ -48,8 +66,15 @@ def _create_func( function_name, function_obj ):
         '''
         This is a dynamically generated function from boto.
         '''
+
+        # Currently the only input types for boto are list, string, or tuple.
+        # Check the particular type, and change the execution args accordingly.
+        # TODO
+
+        # We wrap this in a try/catch as the boto function could 
+        # raise an exception.
         try:
-            return function_obj( *args )
+            _result = function_obj( *args )
         except Exception as e:
             return "ERROR: {0}".format(e)
 
