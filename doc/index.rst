@@ -212,7 +212,7 @@ Salt is many splendid things.
     builds.
 
 :doc:`Windows Software Manager / Package Repository <ref/windows-package-manager>`
-    Looking for an easy way to manage software on Windows machines? 
+    Looking for an easy way to manage software on Windows machines?
     Search no more! Salt has an integrated software package manager for
     Windows machines! Install software hosted on the master, somewhere on the
     network, or any HTTP, HTTPS, or ftp server.
