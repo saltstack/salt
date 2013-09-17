@@ -768,9 +768,10 @@ def stash(cwd, opts=None, user=None):
     return _git_run('git stash {0}'.format(opts), cwd=cwd, runas=user)
 
 
-def config_set(cwd, setting_name, setting_value, user=None):
+def config_set(cwd, setting_name, setting_value, user=None, is_global=False):
     '''
-    Set a key in the git configuration file (.git/config) of the repository.
+    Set a key in the git configuration file (.git/config) of the repository or
+    globally.
 
     cwd
         The path to the Git repository
@@ -784,15 +785,22 @@ def config_set(cwd, setting_name, setting_value, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
+    is_global : False
+        Set to True to use the '--global' flag with 'git config'
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' git.config_set /path/to/repo user.email me@example.com
     '''
+    scope = '--local'
+    if is_global:
+        scope = '--global'
+
     _check_git()
 
-    return _git_run('git config {0} {1}'.format(setting_name, setting_value), cwd=cwd, runas=user)
+    return _git_run('git config {0} {1} {2}'.format(scope, setting_name, setting_value), cwd=cwd, runas=user)
 
 
 def config_get(cwd, setting_name, user=None):

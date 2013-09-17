@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     Logstash Logging Handler
     ========================
 
@@ -107,9 +112,6 @@
     .. _`ZeroMQ input`: http://logstash.net/docs/latest/inputs/zeromq
     .. _`high water mark`: http://api.zeromq.org/3-2:zmq-setsockopt
 
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs

@@ -137,9 +137,6 @@ def latest_version(*names, **kwargs):
     kwargs.pop('fromrepo', None)
     kwargs.pop('repo', None)
 
-    if kwargs:
-        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
-
     if len(names) == 0:
         return ''
     ret = {}

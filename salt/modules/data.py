@@ -105,7 +105,8 @@ def getval(key):
         salt '*' data.getval <key>
     '''
     store = load()
-    return store[key]
+    if key in store:
+        return store[key]
 
 
 def getvals(*keys):

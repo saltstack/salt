@@ -73,10 +73,12 @@ def __virtual__():
         return 'zfs'
     return False
 
+
 def _add_doc(func, doc, prefix='\n\n    '):
     if not func.__doc__:
         func.__doc__ = ''
     func.__doc__ += '{0}{1}'.format(prefix, doc)
+
 
 def _make_function(cmd_name, doc):
     '''
@@ -107,7 +109,7 @@ def _make_function(cmd_name, doc):
 
     _add_doc(_cmd, 'This function is dynamically generated.', '\n    ')
     _add_doc(_cmd, doc)
-    _add_doc(_cmd, '\n    CLI Example::\n')
+    _add_doc(_cmd, '\n    CLI Example:\n\n')
     _add_doc(_cmd, '\n        salt \'*\' zfs.{0} <args>'.format(cmd_name))
 
     # At this point return the function we've just defined.

@@ -10,6 +10,12 @@ import salt.output
 def query(term):
     '''
     Query the search system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run search.query foo
     '''
     search = salt.search.Search(__opts__)
     result = search.query(term)

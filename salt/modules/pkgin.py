@@ -1,5 +1,5 @@
 '''
-Package support for pkgin based systems, inspired from freebsdpkg.py
+Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
@@ -113,8 +113,6 @@ def latest_version(*names, **kwargs):
     '''
 
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-    if kwargs:
-        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
 
     pkglist = {}
     pkgin = _check_pkgin()

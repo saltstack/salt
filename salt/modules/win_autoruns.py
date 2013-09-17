@@ -30,7 +30,9 @@ def list_():
     '''
     Get a list of automatically running programs
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' autoruns.list
     '''

@@ -38,7 +38,9 @@ def genrepo():
     r'''
     Generate win_repo_cachefile based on sls files in the win_repo
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-call winrepo.genrepo -c c:\salt\conf
     '''

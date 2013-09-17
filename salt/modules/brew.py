@@ -121,8 +121,6 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
     kwargs.pop('refresh', True)
-    if kwargs:
-        raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
 
     if len(names) <= 1:
         return ''

@@ -15,7 +15,7 @@ tasks.
     your mileage may vary.
 
     All Formulas require the grains execution module that shipped with Salt
-    0.16.4. Earlier Salt versions may copy :blob:`salt/modules/formula_util.py`
+    0.16.4. Earlier Salt versions may copy :blob:`salt/modules/grains.py`
     into the :file:`/srv/salt/_modules` directory and it will be automatically
     distributed to all minions.
 
