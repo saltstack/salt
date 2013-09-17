@@ -39,7 +39,7 @@ the firewall.
 openSUSE
 ========
 
-Salt installs firewall rules in :blob:`/etc/sysconfig/SuSEfirewall2.d/services/salt <pkg/suse/SuSEfirewall2-salt>`.
+Salt installs firewall rules in :blob:`/etc/sysconfig/SuSEfirewall2.d/services/salt <pkg/suse/salt.SuSEfirewall2>`.
 Enable with:
 
 .. code-block:: bash
