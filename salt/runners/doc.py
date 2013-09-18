@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A runner module to collect and display the inline documentation from the
 various module types

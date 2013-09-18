@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage Windows features via the ServerManager powershell module
 '''

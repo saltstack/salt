@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A flexible renderer that takes a templating engine and a data format
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Alex Martelli's soulution for recursive dict update from
 http://stackoverflow.com/a/3233356

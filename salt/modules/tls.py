@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)

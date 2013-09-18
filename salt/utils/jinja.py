@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Jinja loading utils to enable a more powerful backend for jinja templates
 '''

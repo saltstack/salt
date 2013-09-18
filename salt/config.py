@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 All salt configuration loading and defaults should be in this module
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Operations on regular files, special files, directories, and symlinks.
 =======================================================================

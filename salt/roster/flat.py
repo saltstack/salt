@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Read in the roster from a flat file using the renderer system
 '''

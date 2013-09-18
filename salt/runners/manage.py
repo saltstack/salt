@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 General management functions for salt, tools like seeing what hosts are up
 and what hosts are down

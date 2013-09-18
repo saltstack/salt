@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The sys module provides information about the available functions on the minion
 '''

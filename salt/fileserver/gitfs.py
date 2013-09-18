@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The backend for the git based file server system.
 

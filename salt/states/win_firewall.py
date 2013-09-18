@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 State for configuring Windows Firewall
 '''

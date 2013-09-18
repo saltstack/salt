@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Service support for Debian systems (uses update-rc.d and /sbin/service)
 '''

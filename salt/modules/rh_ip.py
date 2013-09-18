@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The networking module for RHEL/Fedora based distros
 '''

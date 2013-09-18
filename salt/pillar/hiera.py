@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Take in a hiera configuration file location and execute it.
 Adds the hiera data to pillar

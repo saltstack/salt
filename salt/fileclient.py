@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Classes that manage file clients
 '''

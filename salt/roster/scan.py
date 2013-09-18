@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Scan a netmask or ipaddr for open ssh ports
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Display output for minions that did not return
 '''

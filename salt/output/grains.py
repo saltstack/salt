@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Special outputter for grains
 '''

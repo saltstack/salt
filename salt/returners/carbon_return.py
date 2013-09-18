@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Take data from salt and "return" it into a carbon receiver
 

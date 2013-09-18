@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Return/control aspects of the grains data
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for the management of upstart systems. The Upstart system only supports
 service starting, stopping and restarting.

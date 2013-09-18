@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage grains on the minion.
 ============================
