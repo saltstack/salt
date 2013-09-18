@@ -1640,7 +1640,8 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     if not __salt__['file.sed_contains'](name,
                                          before,
                                          limit=limit,
-                                         flags=flags):
+                                         flags=flags,
+                                         limit_flags=limit_flags):
         # Pattern not found; don't try to guess why, just tell the user there
         # were no changes made, as the changes should only be made once anyway.
         # This makes it so users can use backreferences without the state

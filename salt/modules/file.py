@@ -619,7 +619,8 @@ def sed(path,
 def sed_contains(path,
                  text,
                  limit='',
-                 flags='g'):
+                 flags='g',
+                 limit_flags=''):
     '''
     Return True if the file at ``path`` contains ``text``. Utilizes sed to
     perform the search (line-wise search).
@@ -643,9 +644,14 @@ def sed_contains(path,
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
 
+    if limit:
+        limit = '/{0}/'.format(limit)
+        if limit_flags:
+            limit += limit_flags
+
     cmd = r"sed {options} '{limit}s/{before}/$/{flags}' {path}".format(
         options=options,
-        limit='/{0}/ '.format(limit) if limit else '',
+        limit=limit,
         before=before,
         flags='p{0}'.format(flags),
         path=path)
