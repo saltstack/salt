@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import salt libs
 from salt.utils.winservice import Service, instart
 import salt

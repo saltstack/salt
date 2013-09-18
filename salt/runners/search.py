@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Runner frontend to search system
 '''

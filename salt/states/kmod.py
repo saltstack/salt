@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Loading and unloading of kernel modules.
 ========================================

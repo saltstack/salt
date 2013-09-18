@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for RFC 2136 dynamic DNS updates.
 Requires dnspython module.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''

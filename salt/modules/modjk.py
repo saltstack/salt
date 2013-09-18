@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Control Modjk via the Apache Tomcat "Status" worker
 (http://tomcat.apache.org/connectors-doc/reference/status.html)

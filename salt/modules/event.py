@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Use the :doc:`Salt Event System </topics/event/index>` to fire events from the
 master to the minion and vice-versa.

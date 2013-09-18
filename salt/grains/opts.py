@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Simple grain to merge the opts into the grains directly if the grain_opts
 configuration value is set

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage information about files on the minion, set/read user, group
 data

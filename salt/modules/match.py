@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The match module allows for match routines to be run and determine target specs
 '''

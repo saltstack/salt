@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The default service module, if not otherwise specified salt will fall back
 to this basic module

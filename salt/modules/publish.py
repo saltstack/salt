@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Publish a command from a minion to a target
 '''

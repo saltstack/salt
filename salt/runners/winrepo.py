@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Runner to manage Windows software repo
 '''

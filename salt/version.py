@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Set up the version of Salt
 '''

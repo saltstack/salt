@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 r'''
 Module to manage Windows software repo on a Standalone Minion
 

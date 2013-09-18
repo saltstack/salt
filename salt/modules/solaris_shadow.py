@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the password database on Solaris systems
 '''

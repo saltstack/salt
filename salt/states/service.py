@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Starting or restarting of services and daemons.
 ===============================================

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The backend for a fileserver based on Amazon S3
 

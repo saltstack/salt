@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Send commands to a :strong:`modjk` load balancer via the peer system
 

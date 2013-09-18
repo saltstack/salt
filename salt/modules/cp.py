@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Minion side functions for salt-cp
 '''

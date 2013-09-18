@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Print a stacktrace when sent a SIGUSR1 for debugging
 '''
