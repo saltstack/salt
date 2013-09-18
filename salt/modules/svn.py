@@ -49,6 +49,8 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
     password
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     opts
         Any additional options to add to the command line
 
@@ -96,6 +98,8 @@ def info(cwd,
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     fmt : str
         How to fmt the output from info.
@@ -157,6 +161,8 @@ def checkout(cwd,
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     CLI Example:
 
     .. code-block:: bash
@@ -186,6 +192,8 @@ def update(cwd, targets=None, user=None, username=None, password=None, *opts):
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     username : None
         Connect to the Subversion server as another user
@@ -221,6 +229,8 @@ def diff(cwd, targets=None, user=None, username=None, password=None, *opts):
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     CLI Example:
 
@@ -263,6 +273,8 @@ def commit(cwd,
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     CLI Example:
 
     .. code-block:: bash
@@ -294,6 +306,8 @@ def add(cwd, targets, user=None, username=None, password=None, *opts):
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     CLI Example:
 
@@ -334,6 +348,8 @@ def remove(cwd,
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     CLI Example:
 
     .. code-block:: bash
@@ -367,6 +383,8 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     CLI Example:
 
@@ -406,6 +424,8 @@ def export(cwd,
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     CLI Example:
 
