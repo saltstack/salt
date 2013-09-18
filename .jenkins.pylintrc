@@ -14,7 +14,8 @@ init-hook="
 # Pickle collected data for later comparisons.
 persistent=no
 
-load-plugins=tests/_pylint.pep263
+load-plugins=salttesting.pylintplugins.pep263
+
 
 [MESSAGES CONTROL]
 
@@ -106,7 +107,6 @@ reports=no
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html
 # output-format=parseable
-# The below is equivalent to the deprecated parsable output format
 msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
 # Put messages in a separate file for each module / package specified on the
