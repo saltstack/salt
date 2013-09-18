@@ -16,7 +16,7 @@ before_install:
 
 install: pip install -r requirements.txt --use-mirrors --mirrors=http://testpypi.python.org/pypi
 
-script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='-v --coverage --no-coverage-report'"
+script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='-v --coverage'"
 
 after_script:
   - coveralls
