@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Execute an unmodified puppet_node_classifier and read the output as YAML.
 The YAML data is then directly overlaid onto the minion's pillar data.

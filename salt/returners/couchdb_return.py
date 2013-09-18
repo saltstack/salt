@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Simple returner for CouchDB. Optional configuration
 settings are listed below, along with sane defaults.

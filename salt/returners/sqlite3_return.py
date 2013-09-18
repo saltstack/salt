@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Insert minion return data into a sqlite3 database
 

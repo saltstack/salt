@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Network tools to run from the Master
 '''

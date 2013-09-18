@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Directly manage the salt fileserver plugins
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This state uses the manager webapp to manage Apache tomcat webapps
 This state requires the manager webapp to be enabled

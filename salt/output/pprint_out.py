@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The python pretty print system was the default outputter. This outputter
 simply passed the data passed into it through the pprint module.

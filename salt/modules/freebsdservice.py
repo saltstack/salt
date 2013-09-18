@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The service module for FreeBSD
 '''
