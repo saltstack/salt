@@ -144,6 +144,91 @@ def latest(name,
     return ret
 
 
+def export(name,
+           target=None,
+           rev=None,
+           user=None,
+           username=None,
+           password=None,
+           force=False,
+           externals=True,
+           trust=False):
+    '''
+    Export a file or directory from an SVN repository
+
+    name
+        Address and path to the file or directory to be exported.
+
+    target
+        Name of the target directory where the checkout will put the working
+        directory
+
+    rev : None
+        The name revision number to checkout. Enable "force" if the directory
+        already exists.
+
+    user : None
+        Name of the user performing repository management operations
+
+    username : None
+        The user to access the name repository with. The svn default is the
+        current user
+
+    password
+        Connect to the Subversion server with this password
+
+    force : False
+        Continue if conflicts are encountered
+
+    externals : True
+        Change to False to not checkout or update externals
+
+    trust : False
+        Automatically trust the remote server. SVN's --trust-server-cert
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if not target:
+        return _fail(ret, 'Target option is required')
+
+    svn_cmd = 'svn.export'
+    cwd, basename = os.path.split(target)
+    opts = tuple()
+
+    if os.path.exists(target) and not os.path.isdir(target):
+        return _fail(ret,
+                     'The path "{0}" exists and is not '
+                     'a directory.'.format(target)
+                     )
+    if __opts__['test']:
+        if not os.path.exists(target):
+            return _neutral_test(
+                    ret,
+                    ('{0} doesn\'t exist and is set to be checked out.').format(target))
+        svn_cmd = 'svn.list'
+        opts += ('-r', 'HEAD')
+        out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
+        return _neutral_test(
+                ret,
+                ('{0}').format(out))
+
+    if rev:
+        opts += ('-r', str(rev))
+
+    if force:
+        opts += ('--force',)
+
+    if externals is False:
+        opts += ('--ignore-externals',)
+
+    if trust:
+        opts += ('--trust-server-cert',)
+  
+    out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
+    ret['changes'] = name + ' was Exported to ' + target
+
+   return ret
+
+
 def dirty(name,
           target,
           user=None,
