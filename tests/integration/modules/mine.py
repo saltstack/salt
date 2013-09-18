@@ -19,52 +19,52 @@ class MineTest(integration.ModuleCase):
         '''
         self.assertTrue(self.run_function('mine.update', minion_tgt='minion'))
         self.assertTrue(
-                self.run_function(
-                    'mine.update',
-                    minion_tgt='sub_minion'
-                    )
-                )
+            self.run_function(
+                'mine.update',
+                minion_tgt='sub_minion'
+            )
+        )
         self.assertTrue(
-                self.run_function(
-                    'mine.get',
-                    ['minion', 'test.ping']
-                    )
-                )
+            self.run_function(
+                'mine.get',
+                ['minion', 'test.ping']
+            )
+        )
 
     def test_send(self):
         '''
         test mine.send
         '''
         self.assertFalse(
-                self.run_function(
-                    'mine.send',
-                    ['foo.__spam_and_cheese']
-                    )
-                )
+            self.run_function(
+                'mine.send',
+                ['foo.__spam_and_cheese']
+            )
+        )
         self.assertTrue(
-                self.run_function(
-                    'mine.send',
-                    ['grains.items'],
-                    minion_tgt='minion',
-                    )
-                )
+            self.run_function(
+                'mine.send',
+                ['grains.items'],
+                minion_tgt='minion',
+            )
+        )
         self.assertTrue(
-                self.run_function(
-                    'mine.send',
-                    ['grains.items'],
-                    minion_tgt='sub_minion',
-                    )
-                )
+            self.run_function(
+                'mine.send',
+                ['grains.items'],
+                minion_tgt='sub_minion',
+            )
+        )
         ret = self.run_function(
-                    'mine.get',
-                    ['sub_minion', 'grains.items']
-                    )
+            'mine.get',
+            ['sub_minion', 'grains.items']
+        )
         self.assertEqual(ret['sub_minion']['id'], 'sub_minion')
         ret = self.run_function(
-                    'mine.get',
-                    ['minion', 'grains.items'],
-                    minion_tgt='sub_minion'
-                    )
+            'mine.get',
+            ['minion', 'grains.items'],
+            minion_tgt='sub_minion'
+        )
         self.assertEqual(ret['minion']['id'], 'minion')
 
     def test_mine_flush(self):
