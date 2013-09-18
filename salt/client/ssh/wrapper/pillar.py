@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Extract the pillar data for this minion
 '''

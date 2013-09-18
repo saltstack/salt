@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Functions to view the minion's public key information
 '''

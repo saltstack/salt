@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration

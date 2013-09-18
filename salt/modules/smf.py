@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Service support for Solaris 10 and 11, should work with other systems
 that use SMF also. (e.g. SmartOS)

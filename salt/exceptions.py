@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module is a central location for all salt exceptions
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Configuration of the Linux kernel using sysctrl.
 ================================================

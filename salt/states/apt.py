@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Package management operations specific to APT- and DEB-based systems
 ====================================================================

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A few checks to make sure the environment is sane
 '''

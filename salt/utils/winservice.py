@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # winservice.py
 
 # Import python libs

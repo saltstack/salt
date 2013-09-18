@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for the management of MacOS systems that use launchd/launchctl
 

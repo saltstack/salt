@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage transport commands via ssh
 '''

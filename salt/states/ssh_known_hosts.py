@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Control of SSH known_hosts entries.
 ===================================

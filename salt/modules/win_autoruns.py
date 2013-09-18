@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for listing programs that automatically run on startup
 (very alpha...not tested on anything but my Win 7x64)

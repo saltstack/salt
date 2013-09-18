@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage libvirt certs. This state uses the external pillar in the master to call
 for the generation and signing of certificates for systems running libvirt:

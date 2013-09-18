@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module to integrate with the returner system and retrieve data sent to a salt returner
 '''

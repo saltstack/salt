@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import python libs
 import logging
 import os

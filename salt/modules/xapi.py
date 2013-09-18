@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module (mostly) uses the XenAPI to manage Xen virtual machines.
 

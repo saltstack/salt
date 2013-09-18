@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A convenience system to manage jobs, both active and already run
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Recursively display nested data, this is the default outputter.
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The module used to execute states in salt. A state is unlike a module
 execution in that instead of just executing a command it ensure that a

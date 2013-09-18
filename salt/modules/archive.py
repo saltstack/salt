@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A module to wrap archive calls
 '''

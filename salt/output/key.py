@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Salt Key makes use of the outputter system to format information sent to the
 ``salt-key`` command. This outputter is geared towards ingesting very specific

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage a local persistent data structure that can hold any arbitrary data
 specific to the minion

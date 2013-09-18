@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''

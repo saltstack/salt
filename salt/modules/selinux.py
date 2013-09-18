@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Execute calls on selinux
 

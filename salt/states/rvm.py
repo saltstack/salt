@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Managing Ruby installations and gemsets with Ruby Version Manager (RVM).
 ========================================================================

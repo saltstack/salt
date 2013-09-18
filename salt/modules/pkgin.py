@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Package support for pkgin based systems, inspired from freebsdpkg module
 '''

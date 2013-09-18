@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The client module is used to create a client connection to the publisher
 The data structure needs to be:

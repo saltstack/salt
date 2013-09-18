@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module provides the point of entry for client applications to interface to salt.
 The purpose is to have a simplified consistent interface for various client applications

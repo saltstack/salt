@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Apache Solr Salt Module
 =======================

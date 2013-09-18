@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Execution of arbitrary commands
 ===============================
