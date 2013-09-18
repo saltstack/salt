@@ -76,7 +76,6 @@ class SaltCloudTestingParser(SaltCoverageTestingParser):
         self.start_coverage(
             branch=True,
             source=[os.path.join(SALTCLOUD_ROOT, 'saltcloud')],
-            track_processes=True
         )
 
     def run_integration_suite(self, suite_folder, display_name):
