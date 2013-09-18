@@ -545,7 +545,8 @@ def sed(path,
         backup='.bak',
         options='-r -e',
         flags='g',
-        escape_all=False):
+        escape_all=False,
+        negate_match=False):
     '''
     .. versionadded:: 0.9.5
 
@@ -572,6 +573,10 @@ def sed(path,
     flags : ``g``
         Flags to modify the sed search; e.g., ``i`` for case-insensitve pattern
         matching
+    negate_match : False
+        Negate the search command (``!``)
+
+        .. versionadded:: 0.17
 
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
@@ -595,7 +600,7 @@ def sed(path,
         options = options.replace('-r', '-E')
 
     cmd = (
-        r'''sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}'''
+        r'''sed {backup}{options} '{limit}{negate_match}s/{before}/{after}/{flags}' {path}'''
         .format(
             backup='-i{0} '.format(backup) if backup else '-i ',
             options=options,
@@ -603,7 +608,8 @@ def sed(path,
             before=before,
             after=after,
             flags=flags,
-            path=path
+            path=path,
+            negate_match='!' if negate_match else '',
         )
     )
 
