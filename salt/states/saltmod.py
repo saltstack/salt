@@ -157,7 +157,7 @@ def function(
         The target specification, aka '*' for all minions
 
     tgt_type | expr_form
-        The target type, defaults to glob, 
+        The target type, defaults to glob
 
     arg
         The list of arguments to pass into the function
