@@ -79,6 +79,9 @@ def state(
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
 
+    roster
+        In the event of using salt-ssh, a roster system can be set
+
     fail_minions
         An optional list of targeted minions where failure is an option
     '''
