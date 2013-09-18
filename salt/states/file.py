@@ -1579,8 +1579,14 @@ def recurse(name,
     return ret
 
 
-def sed(name, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g', negate_match=False):
+def sed(name,
+        before,
+        after,
+        limit='',
+        backup='.bak',
+        options='-r -e',
+        flags='g',
+        negate_match=False):
     '''
     Maintain a simple edit to a file
 
