@@ -1666,13 +1666,14 @@ def sed(name,
         slines = fp_.readlines()
 
     # should be ok now; perform the edit
-    retcode = __salt__['file.sed'](name,
-                                   before,
-                                   after,
-                                   limit,
-                                   backup,
-                                   options,
-                                   flags)['retcode']
+    retcode = __salt__['file.sed'](path=name,
+                                   before=before,
+                                   after=after,
+                                   limit=limit,
+                                   backup=backup,
+                                   options=options,
+                                   flags=flags,
+                                   negate_match=negate_match)['retcode']
 
     if retcode != 0:
         ret['result'] = False
