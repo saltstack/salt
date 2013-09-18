@@ -52,8 +52,8 @@
     information.
 
 
-    Threaded Raven Transports
-    -------------------------
+    Threaded Transports
+    -------------------
 
     Raven's documents rightly suggest using its threaded transport for
     critical applications. However, don't forget that if you start having
