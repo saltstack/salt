@@ -343,6 +343,23 @@ class LocalClient(object):
             client = salt.client.LocalClient()
             ret = client.cmd('*', 'cmd.run', ['whoami'])
 
+        With authentication:
+
+        .. code:: yaml
+
+            # Master config 
+            ...
+            external_auth:
+              pam:
+                fred:
+                  - test.*
+            ...
+        
+
+        .. code:: python
+
+            ret = client.cmd('*', 'test.ping', [], username='fred', password='pw', eauth='pam')
+
         Compound command usage:
 
         .. code:: python

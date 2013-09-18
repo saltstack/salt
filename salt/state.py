@@ -118,7 +118,10 @@ def format_log(ret):
             # Yep, looks like a valid state return
             chg = ret['changes']
             if not chg:
-                msg = 'No changes made for {0[name]}'.format(ret)
+                if ret['comment']:
+                    msg = ret['comment']
+                else:
+                    msg = 'No changes made for {0[name]}'.format(ret)
             elif isinstance(chg, dict):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
