@@ -26,6 +26,14 @@ def __virtual__():
 @decorators.which('tar')
 def tar(options, tarfile, sources, cwd=None, template=None):
     '''
+    .. note::
+
+        This function has changed for version 0.17.0. In prior versions, the
+        ``cwd`` and ``template`` arguments must be specified, with the source
+        directories/files coming as a space-separated list at the end of the
+        command. Beginning with 0.17.0, ``sources`` must be a comma-separated
+        list, and the ``cwd`` and ``template`` arguments are optional.
+
     Uses the tar command to pack, unpack, etc tar files
 
     CLI Example:
@@ -34,9 +42,8 @@ def tar(options, tarfile, sources, cwd=None, template=None):
 
         salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
 
-    The template arg can be set to 'jinja' or another supported template
-    engine to render the command arguments before execution.
-    For example:
+    The template arg can be set to ``jinja`` or another supported template
+    engine to render the command arguments before execution. For example:
 
     .. code-block:: bash
 
