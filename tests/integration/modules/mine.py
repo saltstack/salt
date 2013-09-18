@@ -67,6 +67,36 @@ class MineTest(integration.ModuleCase):
                     )
         self.assertEqual(ret['minion']['id'], 'minion')
 
+    def test_mine_flush(self):
+        '''
+        Test mine.flush
+        '''
+        for minion_id in ('minion', 'sub_minion'):
+            self.assertTrue(
+                self.run_function(
+                    'mine.send',
+                    ['grains.items'],
+                    minion_tgt=minion_id
+                )
+            )
+            ret = self.run_function(
+                'mine.get',
+                [minion_id, 'grains.items'],
+                minion_tgt=minion_id
+            )
+            self.assertEqual(ret[minion_id]['id'], minion_id)
+        self.assertTrue(
+            self.run_function(
+                'mine.flush',
+                minion_tgt='minion'
+            )
+        )
+        ret_flushed = self.run_function(
+            'mine.get',
+            ['*', 'grains.items']
+        )
+        self.assertEqual(ret_flushed.get('minion', None), None)
+        self.assertEqual(ret_flushed['sub_minion']['id'], 'sub_minion')
 
 if __name__ == '__main__':
     from integration import run_tests
