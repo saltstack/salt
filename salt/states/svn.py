@@ -222,11 +222,11 @@ def export(name,
 
     if trust:
         opts += ('--trust-server-cert',)
-  
+
     out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
     ret['changes'] = name + ' was Exported to ' + target
 
-   return ret
+    return ret
 
 
 def dirty(name,
