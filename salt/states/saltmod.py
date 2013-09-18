@@ -145,6 +145,7 @@ def function(
         ssh=False,
         tgt_type=None,
         ret='',
+        arg=(),
         **kwargs):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
@@ -157,6 +158,9 @@ def function(
 
     tgt_type | expr_form
         The target type, defaults to glob, 
+
+    arg
+        The list of arguments to pass into the function
 
     ret
         Optionally set a single or a list of returners to use
