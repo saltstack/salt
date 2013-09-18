@@ -255,7 +255,8 @@ class MasterPillarUtil(object):
     def clear_cached_minion_data(self,
                                  clear_pillar=False,
                                  clear_grains=False,
-                                 clear_mine=False):
+                                 clear_mine=False,
+                                 clear_mine_func=None):
         '''
         Clear the cached data/files for the targeted minions.
         '''
@@ -266,6 +267,8 @@ class MasterPillarUtil(object):
             clear_what.append('grains')
         if clear_mine:
             clear_what.append('mine')
+        if clear_mine_func is not None:
+            clear_what.append('mine_func: {0!r}'.format(clear_mine_func))
         if not len(clear_what):
             log.debug('No cached data types specified for clearing.')
             return False
@@ -274,7 +277,9 @@ class MasterPillarUtil(object):
         log.debug('Clearing cached {0} data for: {1}'.format(
             ', '.join(clear_what),
             minion_ids))
-        if clear_pillar and clear_grains:
+        if clear_pillar == clear_grains:
+            # clear_pillar and clear_grains are both True or both False.
+            # This means we don't deal with pillar/grains caches at all.
             grains = {}
             pillars = {}
         else:
@@ -306,7 +311,16 @@ class MasterPillarUtil(object):
                     with salt.utils.fopen(data_file, 'w+') as fp_:
                         fp_.write(self.serial.dumps({'pillar': minion_pillar}))
                 if clear_mine:
+                    # Delete the whole mine file
                     os.remove(os.path.join(mine_file))
+                elif clear_mine_func is not None:
+                    # Delete a specific function from the mine file
+                    with salt.utils.fopen(mine_file) as fp_:
+                        mine_data = self.serial.loads(fp_.read())
+                    if isinstance(mine_data, dict):
+                        if mine_data.pop(clear_mine_func, False):
+                            with salt.utils.fopen(mine_file, 'w+') as fp_:
+                                fp_.write(self.serial.dumps(mine_data))
         except (OSError, IOError):
             return True
         return True
