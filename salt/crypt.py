@@ -183,7 +183,7 @@ class Auth(object):
             pub = RSA.load_pub_key(
                 os.path.join(self.opts['pki_dir'], self.mpub)
             )
-            payload['load']['token'] = pub.public_encrypt(self.token, 4)
+            payload['load']['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
         except Exception:
             pass
         with salt.utils.fopen(tmp_pub, 'r') as fp_:
@@ -202,7 +202,7 @@ class Auth(object):
         '''
         log.debug('Decrypting the current master AES key')
         key = self.get_keys()
-        key_str = key.private_decrypt(payload['aes'], 4)
+        key_str = key.private_decrypt(payload['aes'], RSA.pkcs1_oaep_padding)
         if 'sig' in payload:
             m_path = os.path.join(self.opts['pki_dir'], self.mpub)
             if os.path.exists(m_path):
@@ -220,7 +220,7 @@ class Auth(object):
             return key_str.split('_|-')
         else:
             if 'token' in payload:
-                token = key.private_decrypt(payload['token'], 4)
+                token = key.private_decrypt(payload['token'], RSA.pkcs1_oaep_padding)
                 return key_str, token
             elif not master_pub:
                 return key_str, ''
