@@ -29,7 +29,8 @@ import logging
 
 # Import Salt libs
 import salt.utils
-import salt.utils.s3
+import salt.utils.aws
+import salt.utils.aws.s3
 
 log = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
 '''
-Connection library for Amazon S3
+Connection library for Amazon AWS
 '''
 
 # Import Python libs
@@ -19,7 +19,6 @@ import salt.utils
 import salt.utils.xmlutil as xml
 
 log = logging.getLogger(__name__)
-
 
 def _retry_get_url(url, num_retries=10, timeout=5):
     '''
