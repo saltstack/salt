@@ -545,7 +545,8 @@ def sed(path,
         backup='.bak',
         options='-r -e',
         flags='g',
-        escape_all=False):
+        escape_all=False,
+        limit_flags=''):
     '''
     .. versionadded:: 0.9.5
 
@@ -594,12 +595,17 @@ def sed(path,
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
 
+    if limit:
+        limit = '/{0}/'.format(limit)
+        if limit_flags:
+            limit += limit_flags
+
     cmd = (
         r'''sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}'''
         .format(
             backup='-i{0} '.format(backup) if backup else '-i ',
             options=options,
-            limit='/{0}/ '.format(limit) if limit else '',
+            limit=limit,
             before=before,
             after=after,
             flags=flags,
@@ -613,7 +619,8 @@ def sed(path,
 def sed_contains(path,
                  text,
                  limit='',
-                 flags='g'):
+                 flags='g',
+                 limit_flags=''):
     '''
     Return True if the file at ``path`` contains ``text``. Utilizes sed to
     perform the search (line-wise search).
@@ -637,9 +644,14 @@ def sed_contains(path,
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
 
+    if limit:
+        limit = '/{0}/'.format(limit)
+        if limit_flags:
+            limit += limit_flags
+
     cmd = r"sed {options} '{limit}s/{before}/$/{flags}' {path}".format(
         options=options,
-        limit='/{0}/ '.format(limit) if limit else '',
+        limit=limit,
         before=before,
         flags='p{0}'.format(flags),
         path=path)
