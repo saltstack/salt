@@ -98,6 +98,49 @@ class MineTest(integration.ModuleCase):
         self.assertEqual(ret_flushed.get('minion', None), None)
         self.assertEqual(ret_flushed['sub_minion']['id'], 'sub_minion')
 
+    def test_mine_delete(self):
+        '''
+        Test mine.delete
+        '''
+        self.assertTrue(
+            self.run_function(
+                'mine.send',
+                ['grains.items']
+            )
+        )
+        self.assertTrue(
+            self.run_function(
+                'mine.send',
+                ['test.echo', 'foo']
+            )
+        )
+        ret_grains = self.run_function(
+            'mine.get',
+            ['minion', 'grains.items']
+        )
+        self.assertEqual(ret_grains['minion']['id'], 'minion')
+        ret_echo = self.run_function(
+            'mine.get',
+            ['minion', 'test.echo']
+        )
+        self.assertEqual(ret_echo['minion'], 'foo')
+        self.assertTrue(
+            self.run_function(
+                'mine.delete',
+                ['grains.items']
+            )
+        )
+        ret_grains_deleted = self.run_function(
+            'mine.get',
+            ['minion', 'grains.items']
+        )
+        self.assertEqual(ret_grains_deleted.get('minion', None), None)
+        ret_echo_stays = self.run_function(
+            'mine.get',
+            ['minion', 'test.echo']
+        )
+        self.assertEqual(ret_echo_stays['minion'], 'foo')
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(MineTest)
