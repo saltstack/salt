@@ -14,7 +14,7 @@ init-hook="
 # Pickle collected data for later comparisons.
 persistent=no
 
-load-plugins=tests/_pylint.style
+load-plugins=tests/salt-pylint.style
 
 [MESSAGES CONTROL]
 
