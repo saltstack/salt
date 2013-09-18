@@ -1579,7 +1579,7 @@ def recurse(name,
 
 
 def sed(name, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g'):
+        flags='g', limit_flags=''):
     '''
     Maintain a simple edit to a file
 
@@ -1604,6 +1604,9 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     flags : ``g``
         Any flags to append to the sed expression. ``g`` specifies the edit
         should be made globally (and not stop after the first replacement).
+    limit_flags
+        Any flags that can be passed to a limit pattern, used as with the flags
+        option.
 
     Usage::
 
@@ -1661,7 +1664,8 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
                                    limit,
                                    backup,
                                    options,
-                                   flags)['retcode']
+                                   flags,
+                                   limit_flags=limit_flags)['retcode']
 
     if retcode != 0:
         ret['result'] = False

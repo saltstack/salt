@@ -545,8 +545,8 @@ def sed(path,
         backup='.bak',
         options='-r -e',
         flags='g',
-        limit_flags='',
-        escape_all=False):
+        escape_all=False,
+        limit_flags=''):
     '''
     .. versionadded:: 0.9.5
 
