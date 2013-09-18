@@ -19,7 +19,7 @@
     In order to setup the datagram handler for `Logstash`_, please define on
     the salt configuration file:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         logstash_udp_handler:
           host: 127.0.0.1
@@ -47,7 +47,7 @@
     In order to setup the ZMQ handler for `Logstash`_, please define on the
     salt configuration file:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         logstash_zmq_handler:
           address: tcp://127.0.0.1:2021
