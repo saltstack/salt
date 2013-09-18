@@ -671,10 +671,17 @@ def destroy(name, call=None):
         {'name': name},
     )
 
-    ret = {}
     node = show_instance(name, call='action')
-    conn = get_conn()
-    response = conn.deleteObject(id=node['id'])
+    conn = get_conn(service='SoftLayer_Ticket')
+    response = conn.createCancelServerTicket(
+        {
+            'id': node['id'],
+            'reason': 'Salt Cloud Hardware Server Cancelation',
+            'content': 'Please cancel this server',
+            'cancelAssociatedItems': True,
+            'attachmentType': 'HARDWARE',
+        }
+    )
 
     saltcloud.utils.fire_event(
         'event',
