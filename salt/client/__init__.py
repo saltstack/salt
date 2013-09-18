@@ -347,14 +347,14 @@ class LocalClient(object):
 
         .. code:: yaml
 
-            # Master config 
+            # Master config
             ...
             external_auth:
               pam:
                 fred:
                   - test.*
             ...
-        
+
 
         .. code:: python
 
