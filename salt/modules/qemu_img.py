@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Qemu-img Command Wrapper
 ========================

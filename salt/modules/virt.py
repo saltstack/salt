@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Work with virtual machines managed by libvirt
 

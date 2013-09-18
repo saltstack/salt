@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The txt outputter has been developed to make the output from shell
 commands on minions appear as they do when the command is executed
