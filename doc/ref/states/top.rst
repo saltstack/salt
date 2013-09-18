@@ -239,10 +239,11 @@ are set as in the :ref:`above multi-environment example
 
 1. The ``base`` environment's top file is processed first. Any environment which
    is defined in the ``base`` top.sls as well as another environment's top file,
-   will use the states configured in ``base`` and ignore all other instances.
-   In other words, the ``base`` top file is authoritative. Therefore, in the
-   example below, the ``dev`` section in ``/srv/salt/dev/top.sls`` would be
-   completely ignored.
+   will use the instance of the environment configured in ``base`` and ignore
+   all other instances.  In other words, the ``base`` top file is
+   authoritative when defining environments. Therefore, in the example below,
+   the ``dev`` section in ``/srv/salt/dev/top.sls`` would be completely
+   ignored.
 
 ``/srv/salt/base/top.sls:``
 
