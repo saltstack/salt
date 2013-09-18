@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the information in the aliases file
 '''
