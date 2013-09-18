@@ -1,4 +1,6 @@
-.TH "SALT-KEY" "1" "June 21, 2013" "0.15.90" "Salt"
+.\" Man page generated from reStructuredText.
+.
+.TH "SALT-KEY" "1" "September 17, 2013" "0.16.0-3482-g5aafbc5" "Salt"
 .SH NAME
 salt-key \- salt-key Documentation
 .
@@ -28,8 +30,6 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.\" Man page generated from reStructeredText.
-.
 .SH SYNOPSIS
 .sp
 salt\-key [ options ]
@@ -40,9 +40,104 @@ authentication.
 .SH OPTIONS
 .INDENT 0.0
 .TP
-.B \-h, \-\-help
-Print a usage message briefly summarizing these command\-line options.
+.B \-\-version
+Print the version of Salt that is running.
 .UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-q, \-\-quiet
+Suppress output
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-y, \-\-yes
+Answer \(aqYes\(aq to all questions presented, defaults to False
+.UNINDENT
+.SS Logging Options
+.sp
+Logging options which override any settings defined on the configuration files.
+.INDENT 0.0
+.TP
+.B \-\-log\-file=LOG_FILE
+Log file path. Default: /var/log/salt/minion\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file\-level=LOG_LEVEL_LOGFILE
+Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBwarning\fP\&.
+.UNINDENT
+.SS Output Options
+.INDENT 0.0
+.TP
+.B \-\-out
+Pass in an alternative outputter to display the return of data. This
+outputter can be any of the available outputters:
+.INDENT 7.0
+.INDENT 3.5
+\fBgrains\fP, \fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP
+.UNINDENT
+.UNINDENT
+.sp
+Some outputters are formatted only for data returned from specific
+functions; for instance, the \fBgrains\fP outputter will not work for non\-grains
+data.
+.sp
+If an outputter is used that does not support the data passed into it, then
+Salt will fall back on the \fBpprint\fP outputter and display the return data
+using the Python \fBpprint\fP standard library module.
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
+Without the static option, you will get a JSON string for each minion.
+This is due to using an iterative outputter. So if you want to feed it
+to a JSON parser, use \fB\-\-static\fP as well.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-indent OUTPUT_INDENT, \-\-output\-indent OUTPUT_INDENT
+Print the output indented by the provided value in spaces. Negative values
+disable indentation. Only applicable in outputters that support
+indentation.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-file=OUTPUT_FILE, \-\-output\-file=OUTPUT_FILE
+Write the output to the specified file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-no\-color
+Disable all colored output
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-force\-color
+Force colored output
+.UNINDENT
+.SS Actions
 .INDENT 0.0
 .TP
 .B \-l ARG, \-\-list=ARG
@@ -79,6 +174,16 @@ Rejects all pending public keys.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-p PRINT, \-\-print=PRINT
+Print the specified public key
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-P, \-\-print\-all
+Print all public keys
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-d DELETE, \-\-delete=DELETE
 Delete the named minion key or minion keys matching a glob for command
 execution.
@@ -90,36 +195,15 @@ Delete all keys
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
-The location of the Salt configuration directory, this directory contains
-the configuration files for Salt master and minions. The default location
-on most systems is /etc/salt.
+.B \-f FINGER, \-\-finger=FINGER
+Print the named key\(aqs fingerprint
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-p PRINT, \-\-print=PRINT
-Print the specified public key
+.B \-F, \-\-finger\-all
+Print all key\(aqs fingerprints
 .UNINDENT
-.INDENT 0.0
-.TP
-.B \-P, \-\-print\-all
-Print all public keys
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-q, \-\-quiet
-Supress output
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-y, \-\-yes
-Answer \(aqYes\(aq to all questions presented, defaults to False
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-key\-logfile=KEY_LOGFILE
-Send all output to a file. Default is /var/log/salt/key
-.UNINDENT
+.SS Key Generation Options
 .INDENT 0.0
 .TP
 .B \-\-gen\-keys=GEN_KEYS
@@ -139,40 +223,6 @@ the \(aq\-\-gen\-keys\(aq option, the key size must be 2048 or
 higher, otherwise it will be rounded up to 2048. The
 default is 2048.
 .UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-out
-Pass in an alternative outputter to display the return of data. This
-outputter can be any of the available outputters:
-grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
-Some outputters are formatted only for data returned from specific
-functions, for instance the grains outputter will not work for non grains
-data.
-If an outputter is used that does not support the data passed into it, then
-Salt will fall back on the pprint outputter and display the return data
-using the python pprint library.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-out\-indent OUTPUT_INDENT, \-\-output\-indent OUTPUT_INDENT
-Print the output indented by the provided value in spaces. Negative values
-disables indentation. Only applicable in outputters that support indentation.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-no\-color
-Disable all colored output
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-version
-Show program\(aqs version number and exit
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-versions\-report
-Show program\(aqs dependencies version number and exit
-.UNINDENT
 .SH SEE ALSO
 .sp
 \fIsalt(7)\fP
@@ -181,7 +231,6 @@ Show program\(aqs dependencies version number and exit
 .SH AUTHOR
 Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
 .SH COPYRIGHT
-2013, Thomas S. Hatch
+2013 SaltStack, Inc.
 .\" Generated by docutils manpage writer.
-.\" 
 .
