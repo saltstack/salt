@@ -4,11 +4,6 @@ Getting Started With SoftLayer
 
 SoftLayer is a public cloud provider
 
-Previously, the suggested provider for AWS EC2 was the `aws` provider. This has
-been deprecated in favor of the `ec2` provider. Configuration using the old
-`aws` provider will still function, but that driver is no longer in active
-development.
-
 Set up the cloud config at ``/etc/salt/cloud``:
 
 .. code-block:: yaml
@@ -27,7 +22,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
         user: MYUSER1138
         apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
 
-        provider: ec2
+        provider: softlayer
 
 
 Access Credentials
