@@ -545,6 +545,7 @@ def sed(path,
         backup='.bak',
         options='-r -e',
         flags='g',
+        limit_flags='',
         escape_all=False):
     '''
     .. versionadded:: 0.9.5
@@ -594,12 +595,17 @@ def sed(path,
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
 
+    if limit:
+        limit = '/{0}/'.format(limit)
+        if limit_flags:
+            limit += limit_flags
+
     cmd = (
         r'''sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}'''
         .format(
             backup='-i{0} '.format(backup) if backup else '-i ',
             options=options,
-            limit='/{0}/ '.format(limit) if limit else '',
+            limit=limit,
             before=before,
             after=after,
             flags=flags,
