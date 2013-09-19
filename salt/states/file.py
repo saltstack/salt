@@ -581,11 +581,17 @@ def _test_owner(kwargs, user=None):
 
 
 def _unify_sources_and_hashes(source=None, source_hash=None, 
-                              sources=[], source_hashes=[]):
+                              sources=None, source_hashes=None):
     '''
     Silly lil function to give us a standard tuple list for sources and 
     source_hashes
     '''
+    if sources is None:
+        sources = []
+        
+    if source_hashes is None:
+        source_hashes = []
+        
     if ( source and sources ):
         return (False, 
                 "source and sources are mutally exclusive", [] )
@@ -600,7 +606,7 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
     # Make a nice neat list of tuples exactly len(sources) long..
     return (True, '', map(None, sources, source_hashes[:len(sources)]) )
 
-def _get_template_texts(source_list = [], template='jinja', defaults = None, 
+def _get_template_texts(source_list = None, template='jinja', defaults = None, 
                         context = None, env = 'base', **kwargs):
     '''
     Iterate a list of sources and process them as templates.
@@ -609,8 +615,8 @@ def _get_template_texts(source_list = [], template='jinja', defaults = None,
 
     ret = {'name': '_get_template_texts', 'changes': {}, 
            'result': True, 'comment': '', 'data': []}
-
-    if not source_list:
+           
+    if source_list is None:
         return _error(ret, 
                       '_get_template_texts called with empty source_list')
   
@@ -1931,8 +1937,8 @@ def append(name,
            source_hash=None,
            __env__='base',
            template = 'jinja',
-           sources=[],
-           source_hashes=[],
+           sources=None,
+           source_hashes=None,
            defaults = None,
            context = None):
     '''
@@ -1973,6 +1979,12 @@ def append(name,
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if sources is None:
+        sources = []
+        
+    if source_hashes is None:
+        source_hashes = []
+        
     # Add sources and source_hashes with template support
     # NOTE: FIX 'text' and any 'source' are mutally exclusive as 'text' 
     #       is re-assigned in the original code.
