@@ -53,6 +53,8 @@ import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler
 from salt.exceptions import SaltMasterError, MasterExit
 from salt.utils.event import tagify
+from salt.utils.master import verify_minion_rsa_token
+from salt.utils import warn_until
 
 # Import halite libs
 try:
@@ -651,10 +653,44 @@ class MWorker(multiprocessing.Process):
             data = self.crypticle.loads(load)
         except Exception:
             return ''
-        if 'cmd' not in data:
-            log.error('Received malformed command {0}'.format(data))
-            return {}
-        log.info('AES payload received with command {0}'.format(data['cmd']))
+        # Allow AES Functions to be called without a signed token
+        # until release 0.20.0. The option 'require_aes_tokens' in
+        # the master config file controls whether to allow functions
+        # to be called by minions without a signed token.
+        # Until 0.20, the require_aes_tokens option is optional.
+        # After 0.20 the require_aes_tokens option will be removed and
+        # all minions will be required to provide signed aes tokens.
+        if not self.opts.get('require_aes_tokens', False):
+            if self.opts.get('log_aes_tokens_warning', True):
+                warn_until(
+                    (0, 20),
+                    'Master option "require_aes_tokens" was not found in '
+                    'the master options. AES tokens will be REQUIRED in '
+                    'the 0.20 release. All minions MUST be upgraded to '
+                    'version 0.17 prior to the master running 0.20! '
+                    'Refer to '
+                    'http://docs.saltstack.com/topics/releases/0.17.0.html '
+                    'for more information.'
+                )
+            if 'cmd' not in data:
+                log.error('Received malformed command {0!r}'.format(data))
+                return {}
+        else:
+            if not all(key in data for key in ('id', 'tok', 'cmd')):
+                if 'id' in data and not 'tok' in data:
+                    log.error(
+                        'Received command without aes token: {0!r}'
+                        .format(data)
+                    )
+                    return {}
+                else:
+                    log.error('Received malformed command {0!r}'.format(data))
+                    return {}
+            if not verify_minion_rsa_token(self.opts, data['id'], data['tok']):
+                log.warn('Received command with bad token: {0!r}'.format(data))
+                return False
+        # End AES token check
+        log.info('AES payload received with command {0!r}'.format(data['cmd']))
         if data['cmd'].startswith('__'):
             return False
         return self.aes_funcs.run_func(data['cmd'], data)
@@ -733,38 +769,6 @@ class AESFuncs(object):
         self._dir_list = fs_.dir_list
         self._file_envs = fs_.envs
 
-    def __verify_minion(self, id_, token):
-        '''
-        Take a minion id and a string signed with the minion private key
-        The string needs to verify as 'salt' with the minion public key
-        '''
-        if not salt.utils.verify.valid_id(self.opts, id_):
-            return False
-        pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
-        with salt.utils.fopen(pub_path, 'r') as fp_:
-            minion_pub = fp_.read()
-        tmp_pub = salt.utils.mkstemp()
-        with salt.utils.fopen(tmp_pub, 'w+') as fp_:
-            fp_.write(minion_pub)
-
-        pub = None
-        try:
-            pub = RSA.load_pub_key(tmp_pub)
-        except RSA.RSAError as err:
-            log.error('Unable to load temporary public key "{0}": {1}'
-                      .format(tmp_pub, err))
-        try:
-            os.remove(tmp_pub)
-            if pub.public_decrypt(token, 5) == 'salt':
-                return True
-        except RSA.RSAError as err:
-            log.error('Unable to decrypt token: {0}'.format(err))
-
-        log.error('Salt minion claiming to be {0} has attempted to'
-                  'communicate with the master and could not be verified'
-                  .format(id_))
-        return False
-
     def __verify_minion_publish(self, clear_load):
         '''
         Verify that the passed information authorized a minion to execute
@@ -780,7 +784,7 @@ class AESFuncs(object):
         if re.match('publish.*', clear_load['fun']):
             return False
         # Check the permissions for this minion
-        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
+        if not verify_minion_rsa_token(self.opts, clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warn(
@@ -1215,7 +1219,7 @@ class AESFuncs(object):
             return {}
         if any(key not in clear_load for key in ('fun', 'arg', 'id', 'tok')):
             return {}
-        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
+        if not verify_minion_rsa_token(self.opts, clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warn(
@@ -1253,7 +1257,7 @@ class AESFuncs(object):
         '''
         if any(key not in load for key in ('jid', 'id', 'tok')):
             return {}
-        if not self.__verify_minion(load['id'], load['tok']):
+        if not verify_minion_rsa_token(self.opts, load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warn(
@@ -1409,7 +1413,7 @@ class AESFuncs(object):
         '''
         if 'id' not in load or 'tok' not in load:
             return False
-        if not self.__verify_minion(load['id'], load['tok']):
+        if not verify_minion_rsa_token(self.opts, load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warn(

@@ -218,6 +218,8 @@ class SMinion(object):
                 self.gen_modules()
         else:
             self.gen_modules()
+        self.auth = salt.crypt.SAuth(self.opts)
+        self.aes_cmd_tok = self.auth.gen_token('salt')
 
     def gen_modules(self):
         '''
@@ -462,6 +464,8 @@ class Minion(object):
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
+        self.auth = salt.crypt.SAuth(opts)
+        self.aes_cmd_tok = self.auth.gen_token('salt')
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
@@ -504,6 +508,7 @@ class Minion(object):
         Fire an event on the master
         '''
         load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
                 'cmd': '_minion_event',
                 'pretag': pretag}
         if events:
@@ -787,6 +792,7 @@ class Minion(object):
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
+                    'tok': self.aes_cmd_tok,
                     'jid': jid,
                     'fun': fun,
                     'load': ret.get('__load__')}
@@ -797,7 +803,8 @@ class Minion(object):
                 load['return'][key] = value
         else:
             load = {'cmd': ret_cmd,
-                    'id': self.opts['id']}
+                    'id': self.opts['id'],
+                    'tok': self.aes_cmd_tok}
             for key, value in ret.items():
                 load[key] = value
         try:

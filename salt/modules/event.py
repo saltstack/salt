@@ -20,12 +20,14 @@ def fire_master(data, tag):
 
         salt '*' event.fire_master 'stuff to be in the event' 'tag'
     '''
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    auth = salt.crypt.SAuth(__opts__)
+    tok = auth.gen_token('salt')
     load = {'id': __opts__['id'],
+            'tok': tok,
             'tag': tag,
             'data': data,
             'cmd': '_minion_event'}
-    auth = salt.crypt.SAuth(__opts__)
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
     try:
         sreq.send('aes', auth.crypticle.dumps(load))
     except Exception:

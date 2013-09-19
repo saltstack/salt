@@ -597,6 +597,7 @@ class RemoteClient(Client):
     def __init__(self, opts):
         Client.__init__(self, opts)
         self.auth = salt.crypt.SAuth(opts)
+        self.aes_cmd_tok = self.auth.gen_token('salt')
         self.sreq = salt.payload.SREQ(self.opts['master_uri'])
 
     def get_file(self, path, dest='', makedirs=False, env='base', gzip=None):
@@ -623,7 +624,9 @@ class RemoteClient(Client):
         log.debug('Fetching file ** attempting ** \'{0}\''.format(path))
         d_tries = 0
         path = self._check_proto(path)
-        load = {'path': path,
+        load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
+                'path': path,
                 'env': env,
                 'cmd': '_serve_file'}
         if gzip:
@@ -697,7 +700,9 @@ class RemoteClient(Client):
         '''
         List the files on the master
         '''
-        load = {'env': env,
+        load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
+                'env': env,
                 'prefix': prefix,
                 'cmd': '_file_list'}
         try:
@@ -714,7 +719,9 @@ class RemoteClient(Client):
         '''
         List the empty dirs on the master
         '''
-        load = {'env': env,
+        load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
+                'env': env,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
         try:
@@ -731,7 +738,9 @@ class RemoteClient(Client):
         '''
         List the dirs on the master
         '''
-        load = {'env': env,
+        load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
+                'env': env,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
         try:
@@ -762,7 +771,9 @@ class RemoteClient(Client):
                 ret['hsum'] = salt.utils.get_hash(path, form='md5', chunk_size=4096)
                 ret['hash_type'] = 'md5'
                 return ret
-        load = {'path': path,
+        load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
+                'path': path,
                 'env': env,
                 'cmd': '_file_hash'}
         try:
@@ -779,7 +790,9 @@ class RemoteClient(Client):
         '''
         Return a list of the files in the file server's specified environment
         '''
-        load = {'env': env,
+        load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
+                'env': env,
                 'cmd': '_file_list'}
         try:
             return self.auth.crypticle.loads(
@@ -795,7 +808,10 @@ class RemoteClient(Client):
         '''
         Return the master opts data
         '''
-        load = {'cmd': '_master_opts'}
+        load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
+                'cmd': '_master_opts'
+                }
         try:
             return self.auth.crypticle.loads(
                 self.sreq.send('aes',
@@ -813,6 +829,7 @@ class RemoteClient(Client):
         '''
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
                 'opts': self.opts}
         try:
             return self.auth.crypticle.loads(

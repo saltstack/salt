@@ -585,6 +585,7 @@ class StateFire(object):
             self.auth = salt.crypt.SAuth(self.opts)
         else:
             self.auth = auth
+        self.aes_cmd_tok = self.auth.gen_token('salt')
 
     def fire_master(self, data, tag):
         '''
@@ -595,6 +596,7 @@ class StateFire(object):
             salt '*' event.fire_master 'stuff to be in the event' 'tag'
         '''
         load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
                 'tag': tag,
                 'data': data,
                 'cmd': '_minion_event'}
@@ -614,6 +616,7 @@ class StateFire(object):
         this can be configured.
         '''
         load = {'id': self.opts['id'],
+                'tok': self.aes_cmd_tok,
                 'events': [],
                 'cmd': '_minion_event'}
         for stag in sorted(

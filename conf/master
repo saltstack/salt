@@ -182,6 +182,22 @@
 # security purposes.
 #file_recv: False 
 
+# Require all minions to include a signed token for all commands sent to the
+# master. This enforces verification of the minion id on the master when
+# the master receives a command or return from a minion.
+# All minions will be required to provide signed tokens in 0.20.
+# See http://docs.saltstack.com/topics/releases/0.17.0.html for more info
+#
+# If set to True, all minions MUST be upgraded to version 0.17 or they will
+# not be able to send returns and certain commands to the master.
+# If set to False, allow minions older than 0.17 to continue to work with
+# master. Default False
+#require_aes_tokens: False
+
+# Log the deprecation warnings if require_aes_tokens is False or
+# not set. Default True
+#log_aes_tokens_warning: True
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded
