@@ -553,7 +553,8 @@ def sed(path,
         escape_all=False,
         negate_match=False):
     '''
-    .. versionadded:: 0.9.5
+    .. deprecated:: 0.17.1
+       Use :func:`replace` instead.
 
     Make a simple edit to a file
 
@@ -626,6 +627,9 @@ def sed_contains(path,
                  limit='',
                  flags='g'):
     '''
+    .. deprecated:: 0.17.1
+       Use :func:`search` instead.
+
     Return True if the file at ``path`` contains ``text``. Utilizes sed to
     perform the search (line-wise search).
 
@@ -669,7 +673,8 @@ def psed(path,
          escape_all=False,
          multi=False):
     '''
-    .. versionadded:: 0.9.5
+    .. deprecated:: 0.17.1
+       Use :func:`replace` instead.
 
     Make a simple edit to a file (pure Python version)
 
@@ -780,7 +785,8 @@ def uncomment(path,
               char='#',
               backup='.bak'):
     '''
-    .. versionadded:: 0.9.5
+    .. deprecated:: 0.17.1
+       Use :func:`replace` instead.
 
     Uncomment specified commented lines in a file
 
@@ -818,7 +824,8 @@ def comment(path,
             char='#',
             backup='.bak'):
     '''
-    .. versionadded:: 0.9.5
+    .. deprecated:: 0.17.1
+       Use :func:`replace` instead.
 
     Comment out specified lines in a file
 
@@ -1044,7 +1051,8 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
 def contains(path, text):
     '''
-    .. versionadded:: 0.9.5
+    .. deprecated:: 0.17.1
+       Use :func:`search` instead.
 
     Return ``True`` if the file at ``path`` contains ``text``
 
@@ -1070,6 +1078,9 @@ def contains(path, text):
 
 def contains_regex(path, regex, lchar=''):
     '''
+    .. deprecated:: 0.17.1
+       Use :func:`search` instead.
+
     Return True if the given regular expression matches on any line in the text
     of a given file.
 
@@ -1099,6 +1110,9 @@ def contains_regex(path, regex, lchar=''):
 
 def contains_regex_multiline(path, regex):
     '''
+    .. deprecated:: 0.17.1
+       Use :func:`search` instead.
+
     Return True if the given regular expression matches anything in the text
     of a given file
 
@@ -1126,6 +1140,9 @@ def contains_regex_multiline(path, regex):
 
 def contains_glob(path, glob):
     '''
+    .. deprecated:: 0.17.1
+       Use :func:`search` instead.
+
     Return True if the given glob matches a string in the named file
 
     CLI Example:
