@@ -430,9 +430,11 @@ def push(path):
     if not os.path.isfile(path):
         return False
     auth = _auth()
+    tok = auth.gen_token('salt')
 
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
+            'tok': tok,
             'path': path.lstrip(os.sep)}
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     with salt.utils.fopen(path) as fp_:

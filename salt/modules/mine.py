@@ -64,14 +64,16 @@ def update(clear=False):
             log.error('Function {0} in mine_functions failed to execute'
                       .format(func))
             continue
-    load = {
-            'cmd': '_mine',
-            'data': data,
-            'id': __opts__['id'],
-            'clear': clear,
-    }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
+    tok = auth.gen_token('salt')
+    load = {
+        'cmd': '_mine',
+        'data': data,
+        'id': __opts__['id'],
+        'tok': tok,
+        'clear': clear,
+    }
     try:
         sreq.send('aes', auth.crypticle.dumps(load), 1, 0)
     except Exception:
@@ -110,13 +112,15 @@ def send(func, *args, **kwargs):
         log.error('Function {0} in mine.send failed to execute: {1}'
                   .format(func, exc))
         return False
-    load = {
-            'cmd': '_mine',
-            'data': data,
-            'id': __opts__['id'],
-    }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
+    tok = auth.gen_token('salt')
+    load = {
+        'cmd': '_mine',
+        'data': data,
+        'id': __opts__['id'],
+        'tok': tok
+    }
     try:
         sreq.send('aes', auth.crypticle.dumps(load), 1, 10)
     except Exception:
@@ -144,15 +148,17 @@ def get(tgt, fun, expr_form='glob'):
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
     '''
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
+    tok = auth.gen_token('salt')
     load = {
             'cmd': '_mine_get',
             'id': __opts__['id'],
+            'tok': tok,
             'tgt': tgt,
             'fun': fun,
             'expr_form': expr_form,
     }
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
     ret = sreq.send('aes', auth.crypticle.dumps(load))
     return auth.crypticle.loads(ret)
 
@@ -166,13 +172,15 @@ def delete(fun):
 
         salt '*' mine.delete 'network.interfaces'
     '''
-    auth = _auth()
-    load = {
-            'cmd': '_mine_delete',
-            'id': __opts__['id'],
-            'fun': fun
-    }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
+    auth = _auth()
+    tok = auth.gen_token('salt')
+    load = {
+        'cmd': '_mine_delete',
+        'id': __opts__['id'],
+        'tok': tok,
+        'fun': fun
+    }
     ret = sreq.send('aes', auth.crypticle.dumps(load))
     return auth.crypticle.loads(ret)
 
@@ -186,11 +194,13 @@ def flush():
 
         salt '*' mine.flush
     '''
-    auth = _auth()
-    load = {
-            'cmd': '_mine_flush',
-            'id': __opts__['id'],
-    }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
+    auth = _auth()
+    tok = auth.gen_token('salt')
+    load = {
+        'cmd': '_mine_flush',
+        'id': __opts__['id'],
+        'tok': tok
+    }
     ret = sreq.send('aes', auth.crypticle.dumps(load))
     return auth.crypticle.loads(ret)

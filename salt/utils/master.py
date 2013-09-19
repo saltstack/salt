@@ -11,6 +11,9 @@
 import os
 import logging
 
+# Import third party libs
+from M2Crypto import RSA
+
 # Import salt libs
 import salt.log
 import salt.client
@@ -20,6 +23,34 @@ import salt.payload
 from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
+
+
+def verify_minion_auth_token(master_opts, id_, token):
+    '''
+    Take a minion id and a string signed with the minion private key
+    The string needs to verify as 'salt' with the minion public key
+    '''
+    if not salt.utils.verify.valid_id(master_opts, id_):
+        return False
+    pub_path = os.path.join(master_opts['pki_dir'], 'minions', id_)
+    with salt.utils.fopen(pub_path, 'r') as fp_:
+        minion_pub = fp_.read()
+    tmp_pub = salt.utils.mkstemp()
+    with salt.utils.fopen(tmp_pub, 'w+') as fp_:
+        fp_.write(minion_pub)
+    pub = None
+    try:
+        pub = RSA.load_pub_key(tmp_pub)
+    except RSA.RSAError as err:
+        log.error('Unable to load temporary public key "{0}": {1}'
+                  .format(tmp_pub, err))
+    try:
+        os.remove(tmp_pub)
+        if pub.public_decrypt(token, 5) == 'salt':
+            return True
+    except RSA.RSAError as err:
+        log.error('Unable to decrypt token: {0}'.format(err))
+    return False
 
 class MasterPillarUtil(object):
     '''
