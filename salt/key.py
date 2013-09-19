@@ -14,6 +14,7 @@ import salt.crypt
 import salt.utils
 import salt.utils.event
 from salt.utils.event import tagify
+from salt.utils.contextmanagers import ignored
 
 class KeyCLI(object):
     '''
@@ -391,7 +392,7 @@ class Key(object):
         matches = self.name_match(match)
         if 'minions_pre' in matches:
             for key in matches['minions_pre']:
-                try:
+                with ignored(IOError, OSError):
                     shutil.move(
                             os.path.join(
                                 self.opts['pki_dir'],
@@ -406,8 +407,6 @@ class Key(object):
                              'act': 'accept',
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (IOError, OSError):
-                    pass
         return self.name_match(match)
 
     def accept_all(self):
@@ -416,7 +415,7 @@ class Key(object):
         '''
         keys = self.list_keys()
         for key in keys['minions_pre']:
-            try:
+            with ignored(IOError, OSError):
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
@@ -431,8 +430,6 @@ class Key(object):
                          'act': 'accept',
                          'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
-            except (IOError, OSError):
-                pass
         return self.list_keys()
 
     def delete_key(self, match):
@@ -441,14 +438,12 @@ class Key(object):
         '''
         for status, keys in self.name_match(match).items():
             for key in keys:
-                try:
+                with ignored(OSError, IOError):
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                     eload = {'result': True,
                              'act': 'delete',
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (OSError, IOError):
-                    pass
         self.check_minion_cache()
         salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
@@ -459,14 +454,12 @@ class Key(object):
         '''
         for status, keys in self.list_keys().items():
             for key in keys:
-                try:
+                with ignored(OSError, IOError):
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                     eload = {'result': True,
                              'act': 'delete',
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (OSError, IOError):
-                    pass
         self.check_minion_cache()
         salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
@@ -478,7 +471,7 @@ class Key(object):
         matches = self.name_match(match)
         if 'minions_pre' in matches:
             for key in matches['minions_pre']:
-                try:
+                with ignored(IOError, OSError):
                     shutil.move(
                             os.path.join(
                                 self.opts['pki_dir'],
@@ -493,8 +486,6 @@ class Key(object):
                              'act': 'reject',
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (IOError, OSError):
-                    pass
         self.check_minion_cache()
         salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.name_match(match)
@@ -505,7 +496,7 @@ class Key(object):
         '''
         keys = self.list_keys()
         for key in keys['minions_pre']:
-            try:
+            with ignored(IOError, OSError):
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
@@ -520,8 +511,6 @@ class Key(object):
                          'act': 'reject',
                          'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
-            except (IOError, OSError):
-                pass
         self.check_minion_cache()
         salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
