@@ -621,20 +621,20 @@ def _get_template_texts(source_list = [], template='jinja', defaults = None,
         tmpctx = defaults if defaults else {}
         if context:
             tmpctx.update(context)
-        rndrd_templ_fn = __salt__['cp.get_template'](source,'',
+        rndrd_templ_fn = __salt__['cp.get_template'](source, '', 
                                   template=template, env=env, 
                                   context = tmpctx, **kwargs )
         msg = 'cp.get_template returned {0} (Called with: {1})'
-        log.debug(msg.format(rndrd_templ_fn,source))
+        log.debug(msg.format(rndrd_templ_fn, source))
         if rndrd_templ_fn:
             tmplines = None
             with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.readlines()
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
-                log.debug( msg.format(rndrd_templ_fn,source))
+                log.debug( msg.format(rndrd_templ_fn, source))
                 ret['name'] = source
-                return _error(ret, msg.format( rndrd_templ_fn,source) )
+                return _error(ret, msg.format( rndrd_templ_fn, source) )
             txtl.append( ''.join(tmplines))
         else:
             msg = 'Failed to load template file {0}'.format(source)
