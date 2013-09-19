@@ -24,12 +24,6 @@ import pprint
 import logging
 import time
 
-# Import libcloud
-from libcloud.compute.base import NodeAuthPassword
-
-# Import salt libs
-import salt.utils.xmlutil
-
 # Import salt cloud libs
 import saltcloud.config as config
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
@@ -37,7 +31,7 @@ from saltcloud.utils import namespaced_function
 
 # Attempt to import softlayer lib
 try:
-    import SoftLayer.API
+    import SoftLayer
     HAS_SLLIBS = True
 except Exception as exc:
     HAS_SLLIBS = False
@@ -81,17 +75,15 @@ def get_conn(service='SoftLayer_Virtual_Guest'):
     '''
     Return a conn object for the passed VM data
     '''
-    client = SoftLayer.API.Client(
-        service,
-        None,
-        config.get_config_value(
+    client = SoftLayer.Client(
+        username=config.get_config_value(
             'user', get_configured_provider(), __opts__, search_global=False
         ),
-        config.get_config_value(
+        api_key=config.get_config_value(
             'apikey', get_configured_provider(), __opts__, search_global=False
         ),
     )
-    return client
+    return client[service]
 
 
 def avail_locations():
@@ -367,8 +359,8 @@ def list_nodes_full(mask='id'):
     Return a list of the VMs that are on the provider
     '''
     ret = {}
-    conn = get_conn()
-    response = conn['Account'].getVirtualGuests(mask=mask)
+    conn = get_conn(service='Account')
+    response = conn.getVirtualGuests(mask=mask)
     for node_id in response:
         node_info = conn.getObject(id=node_id['id'])
         ret[node_info['hostname']] = node_info
@@ -423,6 +415,7 @@ def list_nodes_select():
 
     return ret
 
+
 def show_instance(name, call=None):
     '''
     Show the details from SoftLayer concerning a guest
@@ -451,7 +444,6 @@ def destroy(name, call=None):
         {'name': name},
     )
 
-    ret = {}
     node = show_instance(name, call='action')
     conn = get_conn()
     response = conn.deleteObject(id=node['id'])

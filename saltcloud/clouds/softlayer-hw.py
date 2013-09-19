@@ -25,12 +25,6 @@ import pprint
 import logging
 import time
 
-# Import libcloud
-from libcloud.compute.base import NodeAuthPassword
-
-# Import salt libs
-import salt.utils.xmlutil
-
 # Import salt cloud libs
 import saltcloud.config as config
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
@@ -38,7 +32,7 @@ from saltcloud.utils import namespaced_function
 
 # Attempt to import softlayer lib
 try:
-    import SoftLayer.API
+    import SoftLayer
     HAS_SLLIBS = True
 except Exception as exc:
     HAS_SLLIBS = False
@@ -82,17 +76,15 @@ def get_conn(service='SoftLayer_Hardware'):
     '''
     Return a conn object for the passed VM data
     '''
-    client = SoftLayer.API.Client(
-        service,
-        None,
-        config.get_config_value(
+    client = SoftLayer.Client(
+        username=config.get_config_value(
             'user', get_configured_provider(), __opts__, search_global=False
         ),
-        config.get_config_value(
+        api_key=config.get_config_value(
             'apikey', get_configured_provider(), __opts__, search_global=False
         ),
     )
-    return client
+    return client[service]
 
 
 def avail_locations():
@@ -100,7 +92,7 @@ def avail_locations():
     List all available locations
     '''
     ret = {}
-    conn = get_conn('SoftLayer_Product_Package')
+    conn = get_conn(service='SoftLayer_Product_Package')
 
     locations = conn.getLocations(id=50)
     for location in locations:
@@ -123,33 +115,34 @@ def avail_sizes():
     relevant data. This data is provided in three dicts.
 
     '''
-    ret = { 'Bare Metal Instance': {
-        '1921': {
-            'id': '1921',
-            'name': '2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram'},
-        '1922': {
-            'id': '1922',
-            'name': '4 x 2.0 GHz Core Bare Metal Instance - 4 GB Ram'},
-        '1923': {
-            'id': '1923',
-            'name': '8 x 2.0 GHz Core Bare Metal Instance - 8 GB Ram'},
-        '1924': {
-            'id': '1924',
-            'name': '16 x 2.0 GHz Core Bare Metal Instance - 16 GB Ram'},
-        '2164': {
-            'id': '2164',
-            'name': '2 x 2.0 GHz Core Bare Metal Instance - 8 GB Ram '},
-        '2165': {
-            'id': '2165',
-            'name': '4 x 2.0 GHz Core Bare Metal Instance - 16 GB Ram'},
-        '2166': {
-            'id': '2166',
-            'name': '8 x 2.0 GHz Core Bare Metal Instance - 32 GB Ram'},
-        '2167': {
-            'id': '2167',
-            'name': '16 x 2.0 GHz Core Bare Metal Instance - 64 GB Ram'},
+    ret = {
+        'Bare Metal Instance': {
+            '1921': {
+                'id': '1921',
+                'name': '2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram'},
+            '1922': {
+                'id': '1922',
+                'name': '4 x 2.0 GHz Core Bare Metal Instance - 4 GB Ram'},
+            '1923': {
+                'id': '1923',
+                'name': '8 x 2.0 GHz Core Bare Metal Instance - 8 GB Ram'},
+            '1924': {
+                'id': '1924',
+                'name': '16 x 2.0 GHz Core Bare Metal Instance - 16 GB Ram'},
+            '2164': {
+                'id': '2164',
+                'name': '2 x 2.0 GHz Core Bare Metal Instance - 8 GB Ram '},
+            '2165': {
+                'id': '2165',
+                'name': '4 x 2.0 GHz Core Bare Metal Instance - 16 GB Ram'},
+            '2166': {
+                'id': '2166',
+                'name': '8 x 2.0 GHz Core Bare Metal Instance - 32 GB Ram'},
+            '2167': {
+                'id': '2167',
+                'name': '16 x 2.0 GHz Core Bare Metal Instance - 64 GB Ram'},
+            }
         }
-    }
     return ret
 
 
@@ -395,7 +388,7 @@ def create(vm_):
             'hostname': vm_['name'],
             'domain': vm_['domain'],
         }],
-        'packageId': 50, # Baremetal Package
+        'packageId': 50,  # Baremetal Package
         'prices': [
             # Size Ex: 1921: 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
             {'id': vm_['size']},
@@ -583,15 +576,15 @@ def create(vm_):
     return ret
 
 
-def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, primaryBackendIpAddress, \
-        processorPhysicalCoreAmount, memoryCount]'):
+def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
+        primaryBackendIpAddress, processorPhysicalCoreAmount, memoryCount]'):
     '''
     Return a list of the VMs that are on the provider
     '''
     ret = {}
-    conn = get_conn()
-    response = conn['Account'].getBareMetalInstances(mask=mask)
-    
+    conn = get_conn(service='Account')
+    response = conn.getBareMetalInstances(mask=mask)
+
     for node in response:
         ret[node['hostname']] = node
     return ret
@@ -644,6 +637,7 @@ def list_nodes_select():
         ret[node] = pairs
 
     return ret
+
 
 def show_instance(name, call=None):
     '''
