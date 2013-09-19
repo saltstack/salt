@@ -920,6 +920,8 @@ def managed(name,
         file of any kind.  Ignores hashes and does not use a templating engine.
 
     contents_pillar
+        .. versionadded:: 0.17
+        
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
         <salt.modules.pillar.get>`. This is useful when the pillar value
