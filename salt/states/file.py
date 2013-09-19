@@ -580,8 +580,8 @@ def _test_owner(kwargs, user=None):
     return user
 
 
-def _unify_sources_and_hashes(source=None,source_hash=None,
-                              sources=[],source_hashes=[]):
+def _unify_sources_and_hashes(source=None, source_hash=None, 
+                              sources=[], source_hashes=[]):
     '''
     Silly lil function to give us a standard tuple list for sources and 
     source_hashes
@@ -590,12 +590,12 @@ def _unify_sources_and_hashes(source=None,source_hash=None,
         return (False, 
                 "source and sources are mutally exclusive", [] )
 
-    if ( source_hash and sources_hash ):
+    if ( source_hash and source_hashes ):
         return (False, 
                 "source_hash and source_hashes are mutally exclusive", [] )
 
     if ( source ): 
-        return (True,'', [ (source,source_hash) ] )
+        return (True, '', [ (source,source_hash) ] )
 
     # Make a nice neat list of tuples exactly len(sources) long..
     return (True, '', map(None, sources, source_hashes[:len(sources)]) )
