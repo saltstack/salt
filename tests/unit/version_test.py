@@ -30,7 +30,7 @@ class VersionTestCase(TestCase):
             ('v0.12.0-19-g767d4f9', (0, 12, 0, 0, 19, 'g767d4f9'), None),
             ('v0.12.0-85-g2880105', (0, 12, 0, 0, 85, 'g2880105'), None),
             ('debian/0.11.1+ds-1-3-ga0afcbd',
-             (0, 11, 1, 0, 3,'ga0afcbd'), '0.11.1-3-ga0afcbd'),
+             (0, 11, 1, 0, 3, 'ga0afcbd'), '0.11.1-3-ga0afcbd'),
             ('0.12.1', (0, 12, 1, 0, 0, None), None),
             ('0.12.1', (0, 12, 1, 0, 0, None), None),
             ('0.17.0rc1', (0, 17, 0, 1, 0, None), None),
@@ -48,7 +48,6 @@ class VersionTestCase(TestCase):
                     strip_initial_non_numbers_regex.search(vs).group('vs')
 
             self.assertEqual(saltstack_version.string, version)
-
 
     def test_version_comparison(self):
         examples = (
