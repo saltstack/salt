@@ -282,7 +282,7 @@ def _clean_dir(root, keep, exclude_pat):
             if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
-                if not _check_include_exclude(nfn[len(root):], None,
+                if not _check_include_exclude(nfn[len(root) + 1:], None,
                                               exclude_pat):
                     continue
                 removed.add(nfn)
