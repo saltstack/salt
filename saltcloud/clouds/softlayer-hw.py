@@ -391,10 +391,10 @@ def create(vm_):
     kwargs = {
         'complexType': 'SoftLayer_Container_Product_Order_Hardware_Server',
         'quantity': 1,
-        'hardware': {
+        'hardware': [{
             'hostname': vm_['name'],
             'domain': vm_['domain'],
-        },
+        }],
         'packageId': 50, # Baremetal Package
         'prices': [
             # Size Ex: 1921: 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
@@ -441,6 +441,7 @@ def create(vm_):
 
     try:
         response = conn.placeOrder(kwargs)
+
     except Exception as exc:
         log.error(
             'Error creating {0} on SoftLayer\n\n'
@@ -582,16 +583,17 @@ def create(vm_):
     return ret
 
 
-def list_nodes_full(mask='id'):
+def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, primaryBackendIpAddress, \
+        processorPhysicalCoreAmount, memoryCount]'):
     '''
     Return a list of the VMs that are on the provider
     '''
     ret = {}
     conn = get_conn()
     response = conn['Account'].getBareMetalInstances(mask=mask)
-    for node_id in response:
-        node_info = conn.getObject(id=node_id['id'])
-        ret[node_info['hostname']] = node_info
+    
+    for node in response:
+        ret[node['hostname']] = node
     return ret
 
 
@@ -610,8 +612,8 @@ def list_nodes():
     for node in nodes.keys():
         ret[node] = {
             'id': nodes[node]['hostname'],
-            #'ram': nodes[node]['maxMemory'],
-            #'cpus': nodes[node]['maxCpu'],
+            'ram': nodes[node]['memoryCount'],
+            'cpus': nodes[node]['processorPhysicalCoreAmount'],
             'private_ips': nodes[node]['primaryBackendIpAddress'],
             'public_ips': nodes[node]['primaryIpAddress'],
         }
