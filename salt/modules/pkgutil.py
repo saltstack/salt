@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Pkgutil support for Solaris
 '''

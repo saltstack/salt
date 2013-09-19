@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Wrapper module for at(1)
 

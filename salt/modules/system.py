@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for reboot, shutdown, etc
 '''

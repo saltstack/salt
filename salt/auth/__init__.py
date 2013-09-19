@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Salt's pluggable authentication system
 

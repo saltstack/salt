@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage groups on Mac OS 10.7+
 '''

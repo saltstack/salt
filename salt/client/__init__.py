@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The client module is used to create a client connection to the publisher
 The data structure needs to be:
@@ -342,6 +343,23 @@ class LocalClient(object):
             import salt.client
             client = salt.client.LocalClient()
             ret = client.cmd('*', 'cmd.run', ['whoami'])
+
+        With authentication:
+
+        .. code:: yaml
+
+            # Master config
+            ...
+            external_auth:
+              pam:
+                fred:
+                  - test.*
+            ...
+
+
+        .. code:: python
+
+            ret = client.cmd('*', 'test.ping', [], username='fred', password='pw', eauth='pam')
 
         Compound command usage:
 

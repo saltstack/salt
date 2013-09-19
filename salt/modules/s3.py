@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Connection module for Amazon S3
 

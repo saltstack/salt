@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Virtual machine image management tools
 '''

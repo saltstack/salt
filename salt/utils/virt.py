@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module contains routines shared by the virt system.
 '''

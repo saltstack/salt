@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Installation of packages using OS package managers such as yum or apt-get
 =========================================================================

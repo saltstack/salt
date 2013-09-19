@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Modules used to control the master itself
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 File server pluggable modules and generic backend functions
 '''

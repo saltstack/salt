@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Operations on regular files, special files, directories, and symlinks.
 =======================================================================
@@ -1578,8 +1579,14 @@ def recurse(name,
     return ret
 
 
-def sed(name, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g'):
+def sed(name,
+        before,
+        after,
+        limit='',
+        backup='.bak',
+        options='-r -e',
+        flags='g',
+        negate_match=False):
     '''
     Maintain a simple edit to a file
 
@@ -1604,6 +1611,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     flags : ``g``
         Any flags to append to the sed expression. ``g`` specifies the edit
         should be made globally (and not stop after the first replacement).
+    negate_match : False
+        Negate the search command (``!``)
+
+        .. versionadded:: 0.17
 
     Usage::
 
@@ -1655,13 +1666,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         slines = fp_.readlines()
 
     # should be ok now; perform the edit
-    retcode = __salt__['file.sed'](name,
-                                   before,
-                                   after,
-                                   limit,
-                                   backup,
-                                   options,
-                                   flags)['retcode']
+    retcode = __salt__['file.sed'](path=name,
+                                   before=before,
+                                   after=after,
+                                   limit=limit,
+                                   backup=backup,
+                                   options=options,
+                                   flags=flags,
+                                   negate_match=negate_match)['retcode']
 
     if retcode != 0:
         ret['result'] = False
@@ -2473,7 +2485,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     (deleted). This is logically in place as a safety measure because you can really shoot
     yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
     note that not just anyone can create special devices. Usually this is only done as root.
-    If the state is executed as none other than root on a minion, you may recieve a permision
+    If the state is executed as none other than root on a minion, you may recieve a permission
     error.
 
     name

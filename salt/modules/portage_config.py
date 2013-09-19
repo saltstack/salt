@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Configure ``portage(5)``
 '''

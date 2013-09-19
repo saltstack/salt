@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.

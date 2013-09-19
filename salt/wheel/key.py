@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Wheel system wrapper for key system
 '''

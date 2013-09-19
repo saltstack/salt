@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Mac OS X implementations of various commands in the "desktop" interface
 '''

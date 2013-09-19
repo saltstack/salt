@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Configuration of the Linux kernel using sysctrl.
 ================================================
@@ -6,7 +7,7 @@ Control the kernel sysctl system
 
 .. code-block:: yaml
 
-  vm.swappines:
+  vm.swappiness:
     sysctl.present:
       - value: 20
 '''

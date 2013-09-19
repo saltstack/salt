@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Scheduling routines are located here. To activate the scheduler make the
 schedule option available to the master or minion configurations (master config

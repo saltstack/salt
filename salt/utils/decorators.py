@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Helpful decorators module writing
 '''

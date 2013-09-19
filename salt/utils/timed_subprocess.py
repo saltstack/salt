@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """For running command line executables with a timeout"""
 
 import subprocess

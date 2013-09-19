@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for eselect, Gentoo's configuration and management tool.
 '''

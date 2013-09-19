@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage users on Mac OS 10.7+
 '''

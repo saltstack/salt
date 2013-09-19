@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Service support for RHEL-based systems, including support for both upstart and sysvinit
 '''

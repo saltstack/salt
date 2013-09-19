@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Clone a remote git repository and use the filesystem as a pillar directory.
 

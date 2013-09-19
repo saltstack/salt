@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
@@ -530,8 +531,14 @@ class ReqServer(object):
         If halite is configured and installed, fire it up!
         '''
         if HAS_HALITE and 'halite' in self.opts:
+            log.info('Halite: Starting up ...')
             self.halite = Halite(self.opts['halite'])
             self.halite.start()
+        else:
+            log.info('Halite: Not starting. '
+                     'Package available is {0}. '
+                     'Opts for "halite" exists is {1}.'\
+                     .format(HAS_HALITE, 'halite' in self.opts))
 
     def run(self):
         '''
@@ -938,6 +945,51 @@ class AESFuncs(object):
                         load['data'] = new
             with salt.utils.fopen(datap, 'w+') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
+        return True
+
+    def _mine_delete(self, load):
+        '''
+        Allow the minion to delete a specific function from its own mine
+        '''
+        if 'id' not in load or 'fun' not in load:
+            return False
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
+        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                return True
+            datap = os.path.join(cdir, 'mine.p')
+            if os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'r') as fp_:
+                        mine_data = self.serial.load(fp_)
+                    if isinstance(mine_data, dict):
+                        if mine_data.pop(load['fun'], False):
+                            with salt.utils.fopen(datap, 'w+') as fp_:
+                                fp_.write(self.serial.dumps(mine_data))
+                except OSError:
+                    return False
+        return True
+
+    def _mine_flush(self, load):
+        '''
+        Allow the minion to delete all of its own mine contents
+        '''
+        if 'id' not in load:
+            return False
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
+        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                return True
+            datap = os.path.join(cdir, 'mine.p')
+            if os.path.isfile(datap):
+                try:
+                    os.remove(datap)
+                except OSError:
+                    return False
         return True
 
     def _file_recv(self, load):

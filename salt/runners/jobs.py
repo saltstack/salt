@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A convenience system to manage jobs, both active and already run
 '''
@@ -17,6 +18,12 @@ def active():
     '''
     Return a report on all actively running jobs from a job id centric
     perspective
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.active
     '''
     ret = {}
     client = salt.client.LocalClient(__opts__['conf_file'])
@@ -54,6 +61,12 @@ def active():
 def lookup_jid(jid, ext_source=None):
     '''
     Return the printout from a previously executed job
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.lookup_jid 20130916125524463507
     '''
     ret = {}
     if __opts__['ext_job_cache'] or ext_source:
@@ -87,6 +100,12 @@ def lookup_jid(jid, ext_source=None):
 def list_jobs():
     '''
     List all detectable jobs and associated functions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.list_jobs
     '''
     serial = salt.payload.Serial(__opts__)
     ret = {}
@@ -112,6 +131,12 @@ def list_jobs():
 def print_job(job_id):
     '''
     Print job available details, including return data.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.print_job
     '''
     serial = salt.payload.Serial(__opts__)
     ret = {}

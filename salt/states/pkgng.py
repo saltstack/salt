@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage package remote repo using FreeBSD pkgng.
 ==========================================================================

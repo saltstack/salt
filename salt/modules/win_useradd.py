@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage Windows users with the net user command
 

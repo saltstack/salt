@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Salt module to manage unix mounts and the fstab file
 '''

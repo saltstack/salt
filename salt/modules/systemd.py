@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Provide the service module for systemd
 '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The backend for the git based file server system.
 
@@ -320,7 +321,7 @@ def file_hash(load, fnd):
     if __opts__['gitfs_root']:
         relpath = os.path.join(__opts__['gitfs_root'], relpath)
         path = os.path.join(__opts__['gitfs_root'], path)
-    
+
     hashdest = os.path.join(__opts__['cachedir'],
                             'gitfs/hash',
                             short,

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Riak Salt Module
 =======================

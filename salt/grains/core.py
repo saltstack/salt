@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The static grains, these are the core, or built in grains.
 
