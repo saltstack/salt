@@ -192,11 +192,11 @@
 # not be able to send returns and certain commands to the master.
 # If set to False, allow minions older than 0.17 to continue to work with
 # master. Default False
-#require_aes_tokens: False
+#require_cmd_auth_tokens: False
 
-# Log the deprecation warnings if require_aes_tokens is False or
+# Log the deprecation warnings if require_cmd_auth_tokens is False or
 # not set. Default True
-#log_aes_tokens_warning: True
+#log_cmd_auth_tokens_warning: True
 
 #####    Master Module Management    #####
 ##########################################

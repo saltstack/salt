@@ -25,7 +25,7 @@ from salt.exceptions import SaltException
 log = logging.getLogger(__name__)
 
 
-def verify_minion_rsa_token(master_opts, id_, token):
+def verify_minion_auth_token(master_opts, id_, token):
     '''
     Take a minion id and a string signed with the minion private key
     The string needs to verify as 'salt' with the minion public key
