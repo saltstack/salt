@@ -618,10 +618,6 @@ def _get_template_texts(source_list = [], template='jinja', defaults = None,
   
     for (source, source_hash) in source_list:
 
-        # FIX TODO: Remove this when 
-        #           http://github.com/saltstack/salt/issues/7290 
-        #           is closed. Until then, that bug is why its broke :-P
-
         tmpctx = defaults if defaults else {}
         if context:
             tmpctx.update(context)
