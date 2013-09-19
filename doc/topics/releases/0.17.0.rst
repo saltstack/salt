@@ -5,7 +5,7 @@ Salt 0.17.0 Release Notes
 The 0.17.0 release is a very exciting release of Salt, this brings to Salt
 some very powerful new features and advances. The advances range from the
 state system to the test suite, covering new transport capabilities and
-making states easier and moer powerful, to extending Salt Virt and much more!
+making states easier and more powerful, to extending Salt Virt and much more!
 
 The 0.17.0 release will also be the last release of Salt to follow the old
 0.XX.X numbering system, the next release of Salt will change the numbering to
@@ -40,7 +40,7 @@ Salt SSH
 
 The new ``salt-ssh`` command has been added to Salt. This system allows for
 remote execution and states to be run over ssh. The benefit here being, that
-salt can run relying only on the ssh agent, rather than requireing a minion
+salt can run relying only on the ssh agent, rather than requiring a minion
 to be deployed.
 
 The ``salt-ssh`` system runs states in a compatible way as Salt and states
@@ -62,13 +62,13 @@ State Auto Order
 This is a major change in how states are evaluated in Salt. State Auto Order
 is a new feature that makes states get evaluated and executed in the order in
 which they are defined in the sls file. This feature makes it very easy to
-see the finite order in whih things will be executed, making Salt now, fully
-imperitive AND fully declarative.
+see the finite order in which things will be executed, making Salt now, fully
+imperative AND fully declarative.
 
-The reuisite system still takes precidence over the order in which states are
+The requisite system still takes precedence over the order in which states are
 defined, so no existing states should break with this change. But this new
 feature can be turned off by setting ``state_auto_order: False`` in the master
-config, thus reverting tot he old lexographical order.
+config, thus reverting to the old lexicographical order.
 
 state.sls Runner
 ----------------
@@ -83,7 +83,7 @@ External Logging Handlers
 -------------------------
 sentry and logstash
 
-Jenkins Tetsing
+Jenkins Testing
 ---------------
 
 Salt Testing Project
