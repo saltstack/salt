@@ -4,6 +4,23 @@ Getting Started With SoftLayer
 
 SoftLayer is a public cloud provider, and baremetal hardware hosting provider.
 
+Dependencies
+============
+The SoftLayer driver for Salt Cloud requires the softlayer package, which is
+available at PyPi:
+
+https://pypi.python.org/pypi/SoftLayer
+
+This package can be installed using `pip` or `easy_install`:
+
+.. code-block:: bash
+
+  # pip install softlayer
+  # easy_install softlayer
+
+
+Configuration
+=============
 Set up the cloud config at ``/etc/salt/cloud.providers``:
 
 .. code-block:: yaml
