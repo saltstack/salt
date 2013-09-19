@@ -112,14 +112,16 @@ is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS
 file that contains them is applied. If it is more desirable to have a command
 that only runs after some other state changes, then :mod:`cmd.wait
 <salt.states.cmd.wait>` does just that. :mod:`cmd.wait <salt.states.cmd.wait>`
-is designed to be :doc:`watched </ref/states/requisites>` by other states, and
-executed when the state watching it changes. Example:
+is designed to :doc:`watch </ref/states/requisites>` other states, and is
+executed when the state it is watching changes. Example:
 
 .. code-block:: yaml
 
     /usr/local/bin/postinstall.sh:
       cmd:
         - wait
+        - watch:
+          - pkg: mycustompkg
       file:
         - managed
         - source: salt://utils/scripts/postinstall.sh
@@ -127,8 +129,6 @@ executed when the state watching it changes. Example:
     mycustompkg:
       pkg:
         - installed
-        - watch:
-          - cmd: /usr/local/bin/postinstall.sh
         - require:
           - file: /usr/local/bin/postinstall.sh
 '''
