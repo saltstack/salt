@@ -770,7 +770,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         if getattr(self, '_call_binary_', None) is None:
             self.skipTest('\'_call_binary_\' not defined.')
         from salt.utils import which
-        from salt.version import __version_info__, GIT_DESCRIBE_REGEX
+        from salt.version import __version_info__, SaltStackVersion
         git = which('git')
         if not git:
             self.skipTest('The git binary is not available')
@@ -792,28 +792,16 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
                 )
             )
 
-        match = re.search(GIT_DESCRIBE_REGEX, out)
-        if not match:
-            return version, version_info
+        parsed_version = SaltStackVersion.parse(out)
 
-        parsed_version = '{0}.{1}.{2}'.format(
-            match.group('major'),
-            match.group('minor'),
-            match.group('bugfix') or '0'
-        )
-        parsed_version_info = tuple([
-            int(g) for g in [h or '0' for h in match.groups()[:3]]
-            if g.isdigit()
-        ])
-
-        if parsed_version_info and parsed_version_info < __version_info__:
+        if parsed_version.info < __version_info__:
             self.skipTest(
                 'We\'re likely about to release a new version. This test '
                 'would fail. Parsed({0!r}) < Expected({1!r})'.format(
-                    parsed_version_info, __version_info__
+                    parsed_version.info, __version_info__
                 )
             )
-        elif parsed_version_info != __version_info__:
+        elif parsed_version.info != __version_info__:
             self.skipTest(
                 'In order to get the proper salt version with the '
                 'git hash you need to update salt\'s local git '
@@ -823,7 +811,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
                 'string WILL NOT include the git hash.'
             )
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(parsed_version, out)
+        self.assertIn(parsed_version.string, out)
 
 
 class SaltReturnAssertsMixIn(object):
