@@ -2,27 +2,36 @@
 Getting Started With SoftLayer
 ==============================
 
-SoftLayer is a public cloud provider
+SoftLayer is a public cloud provider, and baremetal hardware hosting provider.
 
-Set up the cloud config at ``/etc/salt/cloud``:
+Set up the cloud config at ``/etc/salt/cloud.providers``:
 
 .. code-block:: yaml
 
-    # Note: This example is for /etc/salt/cloud
+  # Note: These examples are for /etc/salt/cloud.providers
 
-    providers:
-      my-softlayer:
-        # Set up the location of the salt master
-        #
-        minion:
-          master: saltmaster.example.com
-  
-        # Set the SoftLayer access credentials (see below)
-        #
-        user: MYUSER1138
-        apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
+    my-softlayer:
+      # Set up the location of the salt master
+      minion:
+        master: saltmaster.example.com
 
-        provider: softlayer
+      # Set the SoftLayer access credentials (see below)
+      user: MYUSER1138
+      apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
+
+      provider: softlayer
+
+
+    my-softlayer-hw:
+      # Set up the location of the salt master
+      minion:
+        master: saltmaster.example.com
+
+      # Set the SoftLayer access credentials (see below)
+      user: MYUSER1138
+      apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
+
+      provider: softlayer-hw
 
 
 Access Credentials
@@ -36,8 +45,11 @@ logging in:
 * The `apikey` is located next to the `user` setting.
 
 
+Profiles
+========
+
 Cloud Profiles
-==============
+~~~~~~~~~~~~~~
 Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
@@ -137,6 +149,84 @@ it can be verified with Salt:
 .. code-block:: bash
 
     # salt 'myserver.example.com' test.ping
+
+
+Cloud Profiles
+~~~~~~~~~~~~~~
+Set up an initial profile at ``/etc/salt/cloud.profiles``:
+
+.. code-block:: yaml
+
+    base_softlayer_hw_centos:
+      provider: my-softlayer-hw
+      # CentOS 6.0 - Minimal Install (64 bit)
+      image: 13963
+      # 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
+      size: 1921
+      # 250GB SATA II
+      hdd: 19
+      # San Jose 01
+      location: 168642
+      domain: example.com
+
+
+The above items are all required; optional items may be added in future versions
+of Salt Cloud.
+
+image
+-----
+Images to build an instance can be found using the `--list-images` option:
+
+.. code-block:: bash
+
+    # salt-cloud --list-images my-softlayer-hw
+
+A list of `id`s and names will be provided. The `name` will describe the
+operating system and architecture. The `id` will be the setting to be used in
+the profile.
+
+size
+----
+Sizes to build an instance can be found using the `--list-sizes` option:
+
+.. code-block:: bash
+
+    # salt-cloud --list-sizes my-softlayer-hw
+
+A list of `id`s and names will be provided. The `name` will describe the speed
+and quantity of CPU cores, and the amount of memory that the hardware will
+contain. The `id` will be the setting to be used in the profile.
+
+
+hdd
+---
+There are currently two sizes of hard disk drive (HDD) that are available for
+hardware instances on SoftLayer:
+
+.. code-block:: yaml
+
+    19: 250GB SATA II
+    1267: 500GB SATA II
+
+The `hdd` setting in the profile will be either 19 or 1267. Other sizes may be
+added in the future.
+
+location
+--------
+Locations to build an instance can be found using the `--list-images` option:
+
+.. code-block:: bash
+
+    # salt-cloud --list-locations my-softlayer-hw
+
+A list of IDs and names will be provided. The `location` will describe the
+location in human terms. The `id` will be the setting to be used in the profile.
+
+domain
+------
+The domain name that will be used in the FQDN (Fully Qualified Domain Name) for
+this instance. The `domain` setting will be used in conjunction with the
+instance name to form the FQDN.
 
 
 Actions
