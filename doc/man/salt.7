@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT" "7" "September 17, 2013" "0.16.0-3482-g5aafbc5" "Salt"
+.TH "SALT" "7" "September 18, 2013" "0.17.0" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -13056,6 +13056,18 @@ This module provides some \fI\%Logstash\fP logging handlers.
 .sp
 In order to setup the datagram handler for \fI\%Logstash\fP, please define on
 the salt configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+logstash_udp_handler:
+  host: 127.0.0.1
+  port = 9999
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 On the \fI\%Logstash\fP configuration file you need something like:
 .INDENT 0.0
@@ -13079,6 +13091,17 @@ Please read the \fI\%UDP input\fP configuration page for additional information.
 .sp
 In order to setup the ZMQ handler for \fI\%Logstash\fP, please define on the
 salt configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+logstash_zmq_handler:
+  address: tcp://127.0.0.1:2021
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 On the \fI\%Logstash\fP configuration file you need something like:
 .INDENT 0.0
@@ -13132,48 +13155,6 @@ This work was inspired in \fI\%pylogstash\fP, \fI\%python\-logstash\fP, \fI\%can
 and the \fI\%PyZMQ logging handler\fP\&.
 .UNINDENT
 .UNINDENT
-.INDENT 0.0
-.TP
-.B class salt.log.handlers.logstash_mod.DatagramLogstashHandler(host, port)
-Logstash UDP logging handler.
-.INDENT 7.0
-.TP
-.B makePickle(record)
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class salt.log.handlers.logstash_mod.LogstashFormatter(msg_type=\(aqlogstash\(aq, msg_path=\(aqlogstash\(aq)
-.INDENT 7.0
-.TP
-.B format(record)
-.UNINDENT
-.INDENT 7.0
-.TP
-.B formatTime(record, datefmt=None)
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class salt.log.handlers.logstash_mod.ZMQLogstashHander(address, level=0, zmq_hwm=1000)
-Logstash ZMQ logging handler.
-.INDENT 7.0
-.TP
-.B close()
-.UNINDENT
-.INDENT 7.0
-.TP
-.B emit(record)
-.UNINDENT
-.INDENT 7.0
-.TP
-.B publisher None
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.log.handlers.logstash_mod.setup_handlers()
-.UNINDENT
 .SS Sentry Logging Handler
 .sp
 New in version 0.17.0.
@@ -13182,8 +13163,35 @@ New in version 0.17.0.
 Configuring the python \fI\%Sentry\fP client, \fI\%Raven\fP, should be done under the
 \fBsentry_handler\fP configuration key.
 At the bare minimum, you need to define the \fI\%DSN\fP\&. As an example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sentry_handler:
+  dsn: https://pub\-key:secret\-key@app.getsentry.com/app\-id
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 More complex configurations can be achieved, for example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sentry_handler:
+  servers:
+    \- https://sentry.example.com
+    \- http://192.168.1.1
+  project: app\-id
+  public_key: deadbeefdeadbeefdeadbeefdeadbeef
+  secret_key: beefdeadbeefdeadbeefdeadbeefdead
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 All the client configuration keys are supported, please see the
 \fI\%Raven client documentation\fP\&.
@@ -13191,25 +13199,28 @@ All the client configuration keys are supported, please see the
 The default logging level for the sentry handler is \fBERROR\fP\&. If you wish
 to define a different one, define \fBlog_level\fP under the
 \fBsentry_handler\fP configuration key:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sentry_handler:
+  dsn: https://pub\-key:secret\-key@app.getsentry.com/app\-id
+  log_level: warning
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 The available log levels are those also available for the salt \fBcli\fP
 tools and configuration; \fBsalt \-\-help\fP should give you the required
 information.
-.SS Threaded Raven Transports
+.SS Threaded Transports
 .sp
 Raven\(aqs documents rightly suggest using its threaded transport for
-critical applications. However, Salt handles this possible performance
-issue for us by dispatching log records on a dedicated thread. It\(aqs up
-to the user to use the threaded transports or not but it\(aqs not \fIrequired\fP
-for salt.
-.INDENT 0.0
-.TP
-.B salt.log.handlers.sentry_mod.get_config_value(name, default=None)
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.log.handlers.sentry_mod.setup_handlers()
-.UNINDENT
+critical applications. However, don\(aqt forget that if you start having
+troubles with Salt after enabling the threaded transport, please try
+switching to a non\-threaded transport to see if that fixes your problem.
 .SH LOGSTASH LOGGING HANDLER
 .sp
 New in version 0.17.0.
@@ -13220,6 +13231,18 @@ This module provides some \fI\%Logstash\fP logging handlers.
 .sp
 In order to setup the datagram handler for \fI\%Logstash\fP, please define on
 the salt configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+logstash_udp_handler:
+  host: 127.0.0.1
+  port = 9999
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 On the \fI\%Logstash\fP configuration file you need something like:
 .INDENT 0.0
@@ -13243,6 +13266,17 @@ Please read the \fI\%UDP input\fP configuration page for additional information.
 .sp
 In order to setup the ZMQ handler for \fI\%Logstash\fP, please define on the
 salt configuration file:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+logstash_zmq_handler:
+  address: tcp://127.0.0.1:2021
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 On the \fI\%Logstash\fP configuration file you need something like:
 .INDENT 0.0
@@ -13296,48 +13330,6 @@ This work was inspired in \fI\%pylogstash\fP, \fI\%python\-logstash\fP, \fI\%can
 and the \fI\%PyZMQ logging handler\fP\&.
 .UNINDENT
 .UNINDENT
-.INDENT 0.0
-.TP
-.B class salt.log.handlers.logstash_mod.DatagramLogstashHandler(host, port)
-Logstash UDP logging handler.
-.INDENT 7.0
-.TP
-.B makePickle(record)
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class salt.log.handlers.logstash_mod.LogstashFormatter(msg_type=\(aqlogstash\(aq, msg_path=\(aqlogstash\(aq)
-.INDENT 7.0
-.TP
-.B format(record)
-.UNINDENT
-.INDENT 7.0
-.TP
-.B formatTime(record, datefmt=None)
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class salt.log.handlers.logstash_mod.ZMQLogstashHander(address, level=0, zmq_hwm=1000)
-Logstash ZMQ logging handler.
-.INDENT 7.0
-.TP
-.B close()
-.UNINDENT
-.INDENT 7.0
-.TP
-.B emit(record)
-.UNINDENT
-.INDENT 7.0
-.TP
-.B publisher None
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.log.handlers.logstash_mod.setup_handlers()
-.UNINDENT
 .SH SENTRY LOGGING HANDLER
 .sp
 New in version 0.17.0.
@@ -13346,8 +13338,35 @@ New in version 0.17.0.
 Configuring the python \fI\%Sentry\fP client, \fI\%Raven\fP, should be done under the
 \fBsentry_handler\fP configuration key.
 At the bare minimum, you need to define the \fI\%DSN\fP\&. As an example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sentry_handler:
+  dsn: https://pub\-key:secret\-key@app.getsentry.com/app\-id
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 More complex configurations can be achieved, for example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sentry_handler:
+  servers:
+    \- https://sentry.example.com
+    \- http://192.168.1.1
+  project: app\-id
+  public_key: deadbeefdeadbeefdeadbeefdeadbeef
+  secret_key: beefdeadbeefdeadbeefdeadbeefdead
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 All the client configuration keys are supported, please see the
 \fI\%Raven client documentation\fP\&.
@@ -13355,25 +13374,28 @@ All the client configuration keys are supported, please see the
 The default logging level for the sentry handler is \fBERROR\fP\&. If you wish
 to define a different one, define \fBlog_level\fP under the
 \fBsentry_handler\fP configuration key:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sentry_handler:
+  dsn: https://pub\-key:secret\-key@app.getsentry.com/app\-id
+  log_level: warning
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .sp
 The available log levels are those also available for the salt \fBcli\fP
 tools and configuration; \fBsalt \-\-help\fP should give you the required
 information.
-.SS Threaded Raven Transports
+.SS Threaded Transports
 .sp
 Raven\(aqs documents rightly suggest using its threaded transport for
-critical applications. However, Salt handles this possible performance
-issue for us by dispatching log records on a dedicated thread. It\(aqs up
-to the user to use the threaded transports or not but it\(aqs not \fIrequired\fP
-for salt.
-.INDENT 0.0
-.TP
-.B salt.log.handlers.sentry_mod.get_config_value(name, default=None)
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.log.handlers.sentry_mod.setup_handlers()
-.UNINDENT
+critical applications. However, don\(aqt forget that if you start having
+troubles with Salt after enabling the threaded transport, please try
+switching to a non\-threaded transport to see if that fixes your problem.
 .SH INTRODUCTION TO EXTENDING SALT
 .sp
 Salt is made to be used, and made to be extended. The primary goal of Salt is
@@ -16124,6 +16146,18 @@ salt \(aq*\(aq archive.rar template=jinja /tmp/rarfile.rar /tmp/sourcefile1,/tmp
 .INDENT 0.0
 .TP
 .B salt.modules.archive.tar(options, tarfile, sources, cwd=None, template=None)
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+This function has changed for version 0.17.0. In prior versions, the
+\fBcwd\fP and \fBtemplate\fP arguments must be specified, with the source
+directories/files coming as a space\-separated list at the end of the
+command. Beginning with 0.17.0, \fBsources\fP must be a comma\-separated
+list, and the \fBcwd\fP and \fBtemplate\fP arguments are optional.
+.UNINDENT
+.UNINDENT
+.sp
 Uses the tar command to pack, unpack, etc tar files
 .sp
 CLI Example:
@@ -16138,9 +16172,8 @@ salt \(aq*\(aq archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
 .UNINDENT
 .UNINDENT
 .sp
-The template arg can be set to \(aqjinja\(aq or another supported template
-engine to render the command arguments before execution.
-For example:
+The template arg can be set to \fBjinja\fP or another supported template
+engine to render the command arguments before execution. For example:
 .INDENT 7.0
 .INDENT 3.5
 .sp
@@ -17439,7 +17472,7 @@ salt \(aq*\(aq cmd.has_exec cat
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.retcode(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/opt/local/bin/zsh\(aq, env=(), clean_env=False, template=None, umask=None, quiet=False, timeout=None, reset_system_locale=True)
+.B salt.modules.cmdmod.retcode(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/usr/bin/zsh\(aq, env=(), clean_env=False, template=None, umask=None, quiet=False, timeout=None, reset_system_locale=True)
 Execute a shell command and return the command\(aqs return code.
 .sp
 Note that \fBenv\fP represents the environment variables for the command, and
@@ -17487,7 +17520,7 @@ salt \(aq*\(aq cmd.retcode "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive\en
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/opt/local/bin/zsh\(aq, env=(), clean_env=False, template=None, rstrip=True, umask=None, quiet=False, timeout=None, reset_system_locale=True, **kwargs)
+.B salt.modules.cmdmod.run(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/usr/bin/zsh\(aq, env=(), clean_env=False, template=None, rstrip=True, umask=None, quiet=False, timeout=None, reset_system_locale=True, **kwargs)
 Execute the passed command and return the output as a string
 .sp
 Note that \fBenv\fP represents the environment variables for the command, and
@@ -17547,7 +17580,7 @@ salt \(aq*\(aq cmd.run "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive\en\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_all(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/opt/local/bin/zsh\(aq, env=(), clean_env=False, template=None, rstrip=True, umask=None, quiet=False, timeout=None, reset_system_locale=True, **kwargs)
+.B salt.modules.cmdmod.run_all(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/usr/bin/zsh\(aq, env=(), clean_env=False, template=None, rstrip=True, umask=None, quiet=False, timeout=None, reset_system_locale=True, **kwargs)
 Execute the passed command and return a dict of return data
 .sp
 Note that \fBenv\fP represents the environment variables for the command, and
@@ -17595,7 +17628,7 @@ salt \(aq*\(aq cmd.run_all "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive\en
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_stderr(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/opt/local/bin/zsh\(aq, env=(), clean_env=False, template=None, rstrip=True, umask=None, quiet=False, timeout=None, reset_system_locale=True, **kwargs)
+.B salt.modules.cmdmod.run_stderr(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/usr/bin/zsh\(aq, env=(), clean_env=False, template=None, rstrip=True, umask=None, quiet=False, timeout=None, reset_system_locale=True, **kwargs)
 Execute a command and only return the standard error
 .sp
 Note that \fBenv\fP represents the environment variables for the command, and
@@ -17643,7 +17676,7 @@ salt \(aq*\(aq cmd.run_stderr "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_stdout(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/opt/local/bin/zsh\(aq, env=(), clean_env=False, template=None, rstrip=True, umask=None, quiet=False, timeout=None, reset_system_locale=True, **kwargs)
+.B salt.modules.cmdmod.run_stdout(cmd, cwd=None, stdin=None, runas=None, shell=\(aq/usr/bin/zsh\(aq, env=(), clean_env=False, template=None, rstrip=True, umask=None, quiet=False, timeout=None, reset_system_locale=True, **kwargs)
 Execute a command, and only return the standard out
 .sp
 Note that \fBenv\fP represents the environment variables for the command, and
@@ -17691,7 +17724,7 @@ salt \(aq*\(aq cmd.run_stdout "grep f" stdin=\(aqone\entwo\enthree\enfour\enfive
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.script(source, args=None, cwd=None, stdin=None, runas=None, shell=\(aq/opt/local/bin/zsh\(aq, env=(), template=\(aqjinja\(aq, umask=None, timeout=None, reset_system_locale=True, __env__=\(aqbase\(aq, **kwargs)
+.B salt.modules.cmdmod.script(source, args=None, cwd=None, stdin=None, runas=None, shell=\(aq/usr/bin/zsh\(aq, env=(), template=\(aqjinja\(aq, umask=None, timeout=None, reset_system_locale=True, __env__=\(aqbase\(aq, **kwargs)
 Download a script from a remote location and execute the script locally.
 The script can be located on the salt master file server or on an HTTP/FTP
 server.
@@ -17732,7 +17765,7 @@ salt \(aq*\(aq cmd.script salt://scripts/runme.sh stdin=\(aqone\entwo\enthree\en
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.script_retcode(source, cwd=None, stdin=None, runas=None, shell=\(aq/opt/local/bin/zsh\(aq, env=(), template=\(aqjinja\(aq, umask=None, timeout=None, reset_system_locale=True, __env__=\(aqbase\(aq, **kwargs)
+.B salt.modules.cmdmod.script_retcode(source, cwd=None, stdin=None, runas=None, shell=\(aq/usr/bin/zsh\(aq, env=(), template=\(aqjinja\(aq, umask=None, timeout=None, reset_system_locale=True, __env__=\(aqbase\(aq, **kwargs)
 Download a script from a remote location and execute the script locally.
 The script can be located on the salt master file server or on an HTTP/FTP
 server.
@@ -21952,7 +21985,7 @@ salt \(aq*\(aq file.restorecon /home/user/.ssh/authorized_keys
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.file.sed(path, before, after, limit=\(aq\(aq, backup=\(aq.bak\(aq, options=\(aq\-r \-e\(aq, flags=\(aqg\(aq, escape_all=False)
+.B salt.modules.file.sed(path, before, after, limit=\(aq\(aq, backup=\(aq.bak\(aq, options=\(aq\-r \-e\(aq, flags=\(aqg\(aq, escape_all=False, negate_match=False)
 New in version 0.9.5.
 
 .sp
@@ -21998,6 +22031,13 @@ Options to pass to sed
 \fBg\fP
 Flags to modify the sed search; e.g., \fBi\fP for case\-insensitve pattern
 matching
+.TP
+.B negate_match
+False
+Negate the search command (\fB!\fP)
+.sp
+New in version 0.17.
+
 .UNINDENT
 .sp
 Forward slashes and single quotes will be escaped automatically in the
@@ -29164,6 +29204,23 @@ salt \(aq*\(aq raid.list
 .SS salt.modules.mine
 .sp
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
+.INDENT 0.0
+.TP
+.B salt.modules.mine.delete(fun)
+Remove specific function contents of minion. Returns True on success.
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq mine.delete \(aqnetwork.interfaces\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.mine.flush()
@@ -44019,6 +44076,9 @@ Connect to the Subversion server as another user
 .B password
 None
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .UNINDENT
 .sp
 CLI Example:
@@ -44063,6 +44123,9 @@ Connect to the Subversion server as another user
 .B password
 None
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .UNINDENT
 .sp
 CLI Example:
@@ -44107,6 +44170,9 @@ Connect to the Subversion server as another user
 .B password
 None
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .UNINDENT
 .sp
 CLI Example:
@@ -44147,6 +44213,9 @@ Connect to the Subversion server as another user
 .B password
 None
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .UNINDENT
 .sp
 CLI Example:
@@ -44156,6 +44225,52 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq svn.diff /path/to/repo
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.svn.export(cwd, remote, target=None, user=None, username=None, password=None, *opts)
+Create an unversioned copy of a tree.
+.INDENT 7.0
+.TP
+.B cwd
+The path to the Subversion repository
+.TP
+.B remote
+None
+URL and path to file or directory checkout
+.TP
+.B target
+None
+The name to give the file or directory working copy
+Default: svn uses the remote basename
+.TP
+.B user
+None
+Run svn as a user other than what the minion runs as
+.TP
+.B username
+None
+Connect to the Subversion server as another user
+.TP
+.B password
+None
+Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
+.UNINDENT
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq svn.export /path/to/repo svn://remote/repo
 .ft P
 .fi
 .UNINDENT
@@ -44186,6 +44301,9 @@ Connect to the Subversion server as another user
 .B password
 None
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .TP
 .B fmt
 str
@@ -44233,6 +44351,9 @@ Connect to the Subversion server as another user
 .B password
 None
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .UNINDENT
 .sp
 CLI Example:
@@ -44273,6 +44394,9 @@ Connect to the Subversion server as another user
 .B password
 None
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .UNINDENT
 .sp
 CLI Example:
@@ -44309,6 +44433,9 @@ Run svn as a user other than what the minion runs as
 .B password
 None
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .TP
 .B username
 None
@@ -53651,6 +53778,106 @@ logic systems. The Overstate allows for stateful and functional orchestration
 of routines from the master. The overstate defines in data execution stages
 which minions should execute states, or functions, and in what order using
 requisite logic.
+.SH REMOTE CONTROL STATES
+.sp
+New in version 0.17.0.
+
+.sp
+Remote Control States is the capability to organize routines on minions from the
+master, using state files.
+.sp
+This allows for the use of the Salt state system to execute state runs and
+function runs in a way more powerful than the overstate, will full command of
+the requisite and ordering systems inside of states.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+Remote Control States was added in 0.17.0 with the intent to eventually
+deprecate the overstate system in favor of this new, substantially more
+powerful system.
+.sp
+The Overstate will still be maintained for the forseable future.
+.UNINDENT
+.UNINDENT
+.SS Creating States Trigger Remote Executions
+.sp
+The new \fIsalt\fP state module allows for these new states to be defined in
+such a way to call out to the \fIsalt\fP and/or the \fIsalt\-ssh\fP remote execution
+systems, this also supports the addition of states to connect to remote
+embedded devices.
+.sp
+To create a state that calls out to minions simple specify the \fIsalt.state\fP
+or \fIsalt.function\fP states:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+webserver_setup:
+  salt.state:
+    \- tgt: \(aqweb*\(aq
+    \- highstate: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This sls file can now be referenced by the \fIstate.sls\fP runner the same way
+an sls is normally referenced, assuming the default configurtion with /srv/salt
+as the root of the state tree and the above file being saved as
+/srv/salt/webserver.sls, the state can be run from the master with the salt\-run
+command:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run state.sls webserver
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This will execute the defined state to fire up the webserver routine.
+.SS Calling Multiple State Runs
+.sp
+All of the concepts of states exist so building something more complex is
+easy:
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+As of Salt 0.17.0 states are run in the order in which they are defined,
+so the cmd.run defined below will always execute first
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+cmd.run:
+  salt.function:
+    \- roster: scan
+    \- tgt: 10.0.0.0/24
+    \- arg:
+      \- \(aqbootstrap\(aq
+
+storage_setup:
+  salt.state:
+    \- tgt: \(aqrole:storage\(aq
+    \- tgt_type: grain
+    \- sls: ceph
+
+webserver_setup:
+  salt.state:
+    \- tgt: \(aqweb*\(aq
+    \- highstate: True
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .SH ORDERING STATES
 .sp
 The way in which configuration management systems are executed is a hotly
@@ -55150,10 +55377,11 @@ are set as in the \fIabove multi\-environment example\fP\&.
 .IP 1. 3
 The \fBbase\fP environment\(aqs top file is processed first. Any environment which
 is defined in the \fBbase\fP top.sls as well as another environment\(aqs top file,
-will use the states configured in \fBbase\fP and ignore all other instances.
-In other words, the \fBbase\fP top file is authoritative. Therefore, in the
-example below, the \fBdev\fP section in \fB/srv/salt/dev/top.sls\fP would be
-completely ignored.
+will use the instance of the environment configured in \fBbase\fP and ignore
+all other instances.  In other words, the \fBbase\fP top file is
+authoritative when defining environments. Therefore, in the example below,
+the \fBdev\fP section in \fB/srv/salt/dev/top.sls\fP would be completely
+ignored.
 .UNINDENT
 .sp
 \fB/srv/salt/base/top.sls:\fP
@@ -56361,8 +56589,8 @@ These two states are often confused. The important thing to remember about them
 is that \fBcmd.run\fP states are run each time the SLS
 file that contains them is applied. If it is more desirable to have a command
 that only runs after some other state changes, then \fBcmd.wait\fP does just that. \fBcmd.wait\fP
-is designed to be \fBwatched\fP by other states, and
-executed when the state watching it changes. Example:
+is designed to \fBwatch\fP other states, and is
+executed when the state it is watching changes. Example:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -56371,6 +56599,8 @@ executed when the state watching it changes. Example:
 /usr/local/bin/postinstall.sh:
   cmd:
     \- wait
+    \- watch:
+      \- pkg: mycustompkg
   file:
     \- managed
     \- source: salt://utils/scripts/postinstall.sh
@@ -56378,8 +56608,6 @@ executed when the state watching it changes. Example:
 mycustompkg:
   pkg:
     \- installed
-    \- watch:
-      \- cmd: /usr/local/bin/postinstall.sh
     \- require:
       \- file: /usr/local/bin/postinstall.sh
 .ft P
@@ -57819,7 +58047,7 @@ If the target subdirectories don\(aqt exist create them
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.file.sed(name, before, after, limit=\(aq\(aq, backup=\(aq.bak\(aq, options=\(aq\-r \-e\(aq, flags=\(aqg\(aq)
+.B salt.states.file.sed(name, before, after, limit=\(aq\(aq, backup=\(aq.bak\(aq, options=\(aq\-r \-e\(aq, flags=\(aqg\(aq, negate_match=False)
 Maintain a simple edit to a file
 .sp
 The file will be searched for the \fBbefore\fP pattern before making the
@@ -57852,6 +58080,13 @@ expression that sed will execute.
 \fBg\fP
 Any flags to append to the sed expression. \fBg\fP specifies the edit
 should be made globally (and not stop after the first replacement).
+.TP
+.B negate_match
+False
+Negate the search command (\fB!\fP)
+.sp
+New in version 0.17.
+
 .UNINDENT
 .sp
 Usage:
@@ -61467,6 +61702,52 @@ Determine if the working directory has been changed.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.states.svn.export(name, target=None, rev=None, user=None, username=None, password=None, force=False, externals=True, trust=False)
+Export a file or directory from an SVN repository
+.INDENT 7.0
+.TP
+.B name
+Address and path to the file or directory to be exported.
+.TP
+.B target
+Name of the target directory where the checkout will put the working
+directory
+.TP
+.B rev
+None
+The name revision number to checkout. Enable "force" if the directory
+already exists.
+.TP
+.B user
+None
+Name of the user performing repository management operations
+.TP
+.B username
+None
+The user to access the name repository with. The svn default is the
+current user
+.TP
+.B password
+Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
+.TP
+.B force
+False
+Continue if conflicts are encountered
+.TP
+.B externals
+True
+Change to False to not checkout or update externals
+.TP
+.B trust
+False
+Automatically trust the remote server. SVN\(aqs \-\-trust\-server\-cert
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.states.svn.latest(name, target=None, rev=None, user=None, username=None, password=None, force=False, externals=True, trust=False)
 Checkout or update the working directory to the latest revision from the
 remote repository.
@@ -61495,6 +61776,9 @@ current user
 .TP
 .B password
 Connect to the Subversion server with this password
+.sp
+New in version 0.17.
+
 .TP
 .B force
 False
@@ -64230,6 +64514,23 @@ salt\-run cache.clear_mine
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.runners.cache.clear_mine_func(tgt=None, expr_form=\(aqglob\(aq, clear_mine_func=None)
+Clear the cached mine function data of the targeted minions
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run cache.clear_mine_func tgt=\(aq*\(aq,clear_mine_func=\(aqnetwork.interfaces\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.runners.cache.clear_pillar(tgt, expr_form=\(aqglob\(aq)
 Clear the cached pillar data of the targeted minions
 .sp
@@ -65398,7 +65699,7 @@ With authentication:
 .sp
 .nf
 .ft C
-# Master config 
+# Master config
 \&...
 external_auth:
   pam:
@@ -73371,6 +73672,117 @@ for broken symlinks (\fI\%issue 6826\fP)
 .IP \(bu 2
 Fix comment for service reloads in service state (\fI\%issue 6851\fP)
 .UNINDENT
+.SS Salt 0.17.0 Release Notes
+.sp
+The 0.17.0 release is a very exciting release of Salt, this brings to Salt
+some very powerful new features and advances. The advances range from the
+state system to the test suite, covering new transport capabilities and
+making states easier and more powerful, to extending Salt Virt and much more!
+.sp
+The 0.17.0 release will also be the last release of Salt to follow the old
+0.XX.X numbering system, the next release of Salt will change the numbering to
+be date based following this format:
+.sp
+<Year>.<Month>.<Minor>
+.sp
+So if the release happens in November of 2013 the number will be 13.11.0, the
+first bugfix release will be 13.11.1 and so forth.
+.SS Major Features
+.SS Halite
+.sp
+The new Halite web GUI is now available, a great deal of work has been put into
+Halite to make it fully event driven and amazingly fast. The Halite UI can be
+started from within the Salt Master, or standalone, and does not require an
+external database to run, it is very lightweight!
+.sp
+This initial release of Halite is primarily the framework for the UI and the
+communication systems making it easy to extend and build the UI up. It
+presently supports watching the event bus and firing commands over Salt.
+.sp
+Halite is, like the rest of Salt, Open Source!
+.sp
+Much more will be coming in the future of Halite!
+.SS Salt SSH
+.sp
+The new \fBsalt\-ssh\fP command has been added to Salt. This system allows for
+remote execution and states to be run over ssh. The benefit here being, that
+salt can run relying only on the ssh agent, rather than requiring a minion
+to be deployed.
+.sp
+The \fBsalt\-ssh\fP system runs states in a compatible way as Salt and states
+created and run with salt\-ssh can be moved over to a standard salt deployment
+without modification.
+.sp
+Since this is the initial release of salt\-ssh, there is plenty of room for
+improvement, but it is fully operational, not just a bootstrap tool.
+.SS Rosters
+.sp
+Salt is designed to have the minions be aware of the master and the master does
+not need to be aware of the location of the minions. The new salt roster system
+was created and designed to facilitate listing the targets for salt\-ssh.
+.sp
+The roster system, like most of Salt, is a plugin system, allowing for the list
+of systems to target to be derived from any pluggable backend. The rosters
+shipping with 0.17.0 are flat and scan. Flat is a file which is read in via the
+salt render system and the scan roster does simple network scanning to discover
+ssh servers.
+.SS State Auto Order
+.sp
+This is a major change in how states are evaluated in Salt. State Auto Order
+is a new feature that makes states get evaluated and executed in the order in
+which they are defined in the sls file. This feature makes it very easy to
+see the finite order in which things will be executed, making Salt now, fully
+imperative AND fully declarative.
+.sp
+The requisite system still takes precedence over the order in which states are
+defined, so no existing states should break with this change. But this new
+feature can be turned off by setting \fBstate_auto_order: False\fP in the master
+config, thus reverting to the old lexicographical order.
+.SS state.sls Runner
+.sp
+The \fBstate.sls\fP runner has been created to allow for a more powerful system
+for orchestrating state runs and function calls across the salt minions. This
+new system uses the state system for organizing executions.
+.sp
+This allows for states to be defined that are executed on the master to call
+states on minions via \fBsalt\-run state.sls\fP\&.
+.SS Event Namespacing
+.sp
+Events have been updated to be much more flexible. The tags in events have all
+been namespaced allowing easier tracking of event names.
+.SS Mercurial Fileserver Backend
+.sp
+The popular git fileserver backend has been joined by the mercurial fileserver
+backend, allowing the state tree to be managed entirely via mercurial.
+.SS External Logging Handlers
+.sp
+The external logging handler system allows for Salt to directly hook into any
+external logging system. Currently supported are sentry and logstash.
+.SS Jenkins Testing
+.sp
+The testing systems in Salt have been greatly enhanced, tests for salt are now
+executed, via jenkins.saltstack.com, across many supported platforms. Jenkins
+calls out to salt\-cloud to create virtual machines on Rackspace, then the
+minion on the virtual machine checks into the master running on Jenkins where
+a state run is executed that sets up the minion to run tests and executes the
+test suite.
+.sp
+This now automates the sequence of running platform tests and allows for
+continuous destructive tests to be run.
+.SS Salt Testing Project
+.sp
+The testing libraries for salt have been moved out of the main salt code base
+and into a standalone codebase. This has been done to ease the use of the
+testing systems being used in salt based projects other than Salt itself.
+.SS StormPath External Authentication
+.sp
+The external auth system now supports the fantastic Stormpath cloud based
+authentication system.
+.SS LXC Support
+.sp
+Extensive additions have been added to Salt for LXC support. This included
+the backend libs for managing LXC containers. Addition into the salt\-virt
+system is still in the works.
 .SS Salt 0.6.0 release notes
 .sp
 The Salt remote execution manager has reached initial functionality! Salt is a
