@@ -44,6 +44,8 @@ Options
 
 .. option:: --state-output=STATE_OUTPUT
 
+    .. versionadded:: 0.17
+    
     Override the configured state_output value for minion output.  Default: 
     full
 
