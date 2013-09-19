@@ -9,3 +9,4 @@ timeout: 1
 sock_dir: .salt-unix-syndic
 open_mode: True
 order_masters: True
+require_aes_tokens: True

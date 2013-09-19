@@ -15,6 +15,7 @@ peer:
 log_file: master
 key_logfile: key
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
+require_aes_tokens: True
 
 file_buffer_size: 8192
 
