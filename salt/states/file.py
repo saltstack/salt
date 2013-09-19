@@ -1631,6 +1631,9 @@ def sed(name,
         flags='g',
         negate_match=False):
     '''
+    .. deprecated:: 0.17.1
+       Use :func:`replace` instead.
+
     Maintain a simple edit to a file
 
     The file will be searched for the ``before`` pattern before making the
