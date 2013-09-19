@@ -309,7 +309,7 @@ class Pillar(object):
             msg = 'Rendering SLS {0!r} failed, render error:\n{1}'.format(
                 sls, exc
             )
-            log.error(msg)
+            log.critical(msg)
             errors.append(msg)
         mods.add(sls)
         nstate = None
