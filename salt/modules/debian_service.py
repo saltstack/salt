@@ -28,7 +28,16 @@ def _get_runlevel():
     '''
     returns the current runlevel
     '''
-    return __salt__['cmd.run']('runlevel').split()[1]
+    out = __salt__['cmd.run']('runlevel')
+    # unknown can be returned while inside a container environment, since
+    # this is due to a lack of init, it should be safe to assume runlevel
+    # 2, which is Debian's default. If not, all service related states
+    # will throw an out of range exception here which will cause
+    # other functions to fail.
+    if 'unknown' in out:
+        return '2'
+    else:
+        return out.split()[1]
 
 
 def get_enabled():
