@@ -109,7 +109,8 @@ def init(name,
         salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
                 [nic=nic_profile] [profile=lxc_profile] \\
-                [start=(true|false)]
+                [start=(true|false)] [seed=(true|false)] \\
+                [install=(true|false)] [config=minion_config]
 
     name
         Name of the container.
@@ -130,15 +131,38 @@ def init(name,
         A LXC profile (defined in config or pillar).
 
     start
-        If true, start the newly created container.
+        Start the newly created container.
+
+    seed
+        Seed the container with the minion config. Default: true
+
+    install
+        If salt-minion is not already installed, install it. Default: true
+
+    config
+        Optional config paramers. By default, the id is set to the name of the
+        container.
     '''
     nicp = _nic_profile(nic)
     start_ = kwargs.pop('start', False)
+    seed = kwargs.pop('seed', True)
+    install = kwargs.pop('install', True)
+    seed_cmd = kwargs.pop('seed_cmd', None)
+    config = kwargs.pop('config', None)
+
     with tempfile.NamedTemporaryFile() as cfile:
         cfile.write(_gen_config(cpuset=cpuset, cpushare=cpushare,
                                 memory=memory, nicp=nicp))
         cfile.flush()
-        ret = create(name, config=cfile.name, profile=profile)
+        ret = create(name, config=cfile.name, profile=profile, **kwargs)
+    if not ret['created']:
+        return ret
+    rootfs = info(name)['rootfs']
+    if seed:
+        __salt__['seed.apply'](rootfs, id_=name, config=config,
+                               install=install)
+    elif seed_cmd:
+        __salt__[seed_cmd](rootfs, name, config)
     if start_ and ret['created']:
         ret['state'] = start(name)['state']
     else:
@@ -192,14 +216,20 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     cmd = 'lxc-create -n {0}'.format(name)
 
     profile = _lxc_profile(profile)
-    template = kwargs.pop('template', profile.get('template'))
-    backing = kwargs.pop('backing', profile.get('backing'))
-    vgname = kwargs.pop('vgname', profile.get('vgname'))
-    size = kwargs.pop('size', profile.get('size', '1G'))
+
+    def select(k, default=None):
+        kw = kwargs.pop(k, None)
+        p = profile.pop(k, default)
+        return kw or p
+
+    template = select('template')
+    backing = select('backing')
+    vgname = select('vgname')
+    size = select('size', '1G')
 
     if config:
         cmd += ' -f {0}'.format(config)
-    if template or profile.get('template'):
+    if template:
         cmd += ' -t {0}'.format(template)
     if backing:
         cmd += ' -B {0}'.format(backing)
@@ -207,8 +237,14 @@ def create(name, config=None, profile=None, options=None, **kwargs):
             cmd += ' --vgname {0}'.format(vgname)
         if size:
             cmd += ' --fssize {0}'.format(size)
-    if options:
-        cmd += ' -- {0}'.format(options)
+    if profile:
+#    if kwargs or profile:
+        cmd += ' --'
+        options = profile
+        #for k, v in kwargs.items():
+        #    options[k] = v
+        for k, v in options.items():
+            cmd += ' --{0} {1}'.format(k, v)
 
     ret = __salt__['cmd.run_all'](cmd)
     if ret['retcode'] == 0 and exists(name):
@@ -219,7 +255,8 @@ def create(name, config=None, profile=None, options=None, **kwargs):
             cmd = 'lxc-destroy -n {0}'.format(name)
             __salt__['cmd.retcode'](cmd)
         log.warn('lxc-create failed to create container')
-        return {'created': False, 'error': 'container could not be created'}
+        return {'created': False, 'error':
+                'container could not be created: {0}'.format(ret['stderr'])}
 
 
 def list_():
@@ -322,15 +359,17 @@ def unfreeze(name):
     return _change_state('lxc-unfreeze', name, 'running')
 
 
-def destroy(name):
+def destroy(name, stop=True):
     '''
     Destroy the named container.
     WARNING: Destroys all data associated with the container.
 
     .. code-block:: bash
 
-        salt '*' lxc.destroy name
+        salt '*' lxc.destroy name [stop=(true|false)]
     '''
+    if stop:
+        _change_state('lxc-stop', name, 'stopped')
     return _change_state('lxc-destroy', name, None)
 
 
@@ -342,7 +381,7 @@ def exists(name):
 
         salt '*' lxc.exists name
     '''
-    l = list()
+    l = list_()
     return name in (l['running'] + l['stopped'] + l['frozen'])
 
 
@@ -398,7 +437,7 @@ def info(name):
         elif k.startswith('lxc.network.'):
             current[k.replace('lxc.network.', '', 1)] = v
     if ifaces:
-        ret['ifaces'] = ifaces
+        ret['nics'] = ifaces
 
     ret['rootfs'] = next((i[1] for i in config if i[0] == 'lxc.rootfs'), None)
     ret['state'] = state(name)
