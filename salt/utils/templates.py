@@ -138,14 +138,22 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             # in salt
             output = output.encode('utf-8')
     except jinja2.exceptions.TemplateSyntaxError as exc:
-        error = '{0}; line {1} in template'.format(
+        line = traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        marker = '    <======================'
+        context = get_template_context(tmplstr, line, marker=marker)
+        error = '{0}; line {1} in template:\n\n{2}'.format(
                 exc,
-                traceback.extract_tb(sys.exc_info()[2])[-1][1]
+                line,
+                context
         )
         raise SaltTemplateRenderError(error)
     except jinja2.exceptions.UndefinedError:
-        error = 'Undefined jinja variable; line {0} in template'.format(
-                traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        line = traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        marker = '    <======================'
+        context = get_template_context(tmplstr, line, marker=marker)
+        error = 'Undefined jinja variable; line {0} in template\n\n{1}'.format(
+                line,
+                context
         )
         raise SaltTemplateRenderError(error)
 
@@ -221,6 +229,40 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
+
+
+def get_template_context(template, line, num_lines=5, marker=None):
+    """Returns debugging context around a line in a given template.
+
+    Returns:: string
+    """
+    template_lines = template.splitlines()
+    num_template_lines = len(template_lines)
+
+    # in test, a single line template would return a crazy line number like,
+    # 357.  do this sanity check and if the given line is obviously wrong, just
+    # return the entire template
+    if line > num_template_lines:
+        return template
+
+    context_start = max(0, line-num_lines-1)  # subtract 1 for 0-based indexing
+    context_end = min(num_template_lines, line+num_lines)
+    error_line_in_context = line - context_start - 1  # subtract 1 for 0-based indexing
+
+    buf = []
+    if context_start > 0:
+        buf.append('[...]')
+        error_line_in_context += 1
+
+    buf.extend(template_lines[context_start:context_end])
+
+    if context_end < num_template_lines:
+        buf.append('[...]')
+
+    if marker:
+        buf[error_line_in_context] += marker
+
+    return '---\n{}\n---'.format('\n'.join(buf))
 
 
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
