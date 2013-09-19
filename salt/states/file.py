@@ -581,6 +581,72 @@ def _test_owner(kwargs, user=None):
     return user
 
 
+def _unify_sources_and_hashes(source=None,source_hash=None,
+                              sources=[],source_hashes=[]):
+    '''
+    Silly lil function to give us a standard tuple list for sources and 
+    source_hashes
+    '''
+    if ( source and sources ):
+        return (False, 
+                "source and sources are mutally exclusive", [] )
+
+    if ( source_hash and sources_hash ):
+        return (False, 
+                "source_hash and source_hashes are mutally exclusive", [] )
+
+    if ( source ): 
+        return (True,'', [ (source,source_hash) ] )
+
+    # Make a nice neat list of tuples exactly len(sources) long..
+    return (True, '', map(None, sources, source_hashes[:len(sources)]) )
+
+def _get_template_texts(source_list = [], template='jinja', defaults = None, 
+                        context = None, env = 'base', **kwargs):
+    '''
+    Iterate a list of sources and process them as templates.
+    Returns a list of 'chunks' containing the rendered templates.
+    '''
+
+    ret = {'name': '_get_template_texts', 'changes': {}, 
+           'result': True, 'comment': '', 'data': []}
+
+    if not source_list:
+        return _error(ret, 
+                      '_get_template_texts called with empty source_list')
+  
+    txtl = []
+  
+    for (source, source_hash) in source_list:
+
+        tmpctx = defaults if defaults else {}
+        if context:
+            tmpctx.update(context)
+        rndrd_templ_fn = __salt__['cp.get_template'](source,'',
+                                  template=template, env=env, 
+                                  context = tmpctx, **kwargs )
+        msg = 'cp.get_template returned {0} (Called with: {1})'
+        log.debug(msg.format(rndrd_templ_fn,source))
+        if rndrd_templ_fn:
+            tmplines = None
+            with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
+                tmplines = fp_.readlines()
+            if not tmplines:
+                msg = 'Failed to read rendered template file {0} ({1})'
+                log.debug( msg.format(rndrd_templ_fn,source))
+                ret['name'] = source
+                return _error(ret, msg.format( rndrd_templ_fn,source) )
+            txtl.append( ''.join(tmplines))
+        else:
+            msg = 'Failed to load template file {0}'.format(source)
+            log.debug(msg)
+            ret['name'] = source
+            return _error(ret, msg )
+
+    ret['data'] = txtl
+    return ret
+
+
 def symlink(
         name,
         target,
@@ -1877,7 +1943,12 @@ def append(name,
            makedirs=False,
            source=None,
            source_hash=None,
-           __env__='base'):
+           __env__='base',
+           template = 'jinja',
+           sources=[],
+           source_hashes=[],
+           defaults = None,
+           context = None):
     '''
     Ensure that some text appears at the end of a file
 
@@ -1901,10 +1972,32 @@ def append(name,
               - Trust no one unless you have eaten much salt with him.
               - "Salt is born of the purest of parents: the sun and the sea."
 
+    Gather text from multiple template files::
+        
+        /etc/motd:
+          file:
+              - append
+              - template: jinja
+              - sources:
+                  - salt://motd/devops-messages.tmpl
+                  - salt://motd/hr-messages.tmpl
+                  - salt://motd/general-messages.tmpl
+                  
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    # Add sources and source_hashes with template support
+    # NOTE: FIX 'text' and any 'source' are mutally exclusive as 'text' 
+    #       is re-assigned in the original code.
+    (ok, err, sl) = _unify_sources_and_hashes(source = source,
+                                              source_hash = source_hash, 
+                                              sources = sources, 
+                                              source_hashes = source_hashes )
+    if not ok:
+        return _error(ret, err)
+
+    
     if makedirs is True:
         dirname = os.path.dirname(name)
         if not __salt__['file.directory_exists'](dirname):
@@ -1922,26 +2015,16 @@ def append(name,
     if not check_res:
         return _error(ret, check_msg)
 
-    if source:
-        # get cached file or copy it to cache
-        cached_source_path = __salt__['cp.cache_file'](source, __env__)
-        log.debug(
-            'state file.append cached source {0} -> {1}'.format(
-                source, cached_source_path
-            )
-        )
-        cached_source = managed(
-            cached_source_path,
-            source=source,
-            source_hash=source_hash,
-            env=__env__
-        )
-        if cached_source['result'] is True:
-            log.debug(
-                'state file.append is loading text contents from '
-                'cached source {0}({1})'.format(source, cached_source_path)
-            )
-            text = salt.utils.fopen(cached_source_path, 'r').read()
+    #Follow the original logic and re-assign 'text' if using source(s)...
+    if sl:
+        tmpret = _get_template_texts(source_list = sl, 
+                                     template = template, 
+                                     defaults = defaults, 
+                                     context = context, 
+                                     env = __env__)
+        if not tmpret['result']:
+            return tmpret
+        text = tmpret['data']
 
     if isinstance(text, string_types):
         text = (text,)
@@ -1950,6 +2033,7 @@ def append(name,
         slines = fp_.readlines()
 
     count = 0
+
 
     for chunk in text:
 
