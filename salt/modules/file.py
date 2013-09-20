@@ -1000,6 +1000,12 @@ def search(path,
     .. versionadded:: 0.17.1
 
     Params are identical to :py:func:`~salt.modules.replace`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.search /etc/crontab 'mymaintenance.sh'
     '''
     # This function wraps file.replace on purpose in order to enforce
     # consistent usage, compatible regex's, expected behavior, *and* bugs. :)
