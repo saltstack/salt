@@ -11,6 +11,7 @@ from mako.lookup import TemplateCollection, TemplateLookup
 # Import salt libs
 import salt.fileclient
 
+
 class SaltMakoTemplateLookup(TemplateCollection):
     """
     Look up Mako template files on Salt master via salt://... URLs.

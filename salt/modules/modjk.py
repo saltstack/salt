@@ -227,6 +227,7 @@ def workers(profile='default'):
 
     return ret
 
+
 def recover_all(lbn, profile='default'):
     '''
     Set the all the workers in lbn to recover and activate them if they are not

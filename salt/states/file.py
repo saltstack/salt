@@ -581,55 +581,56 @@ def _test_owner(kwargs, user=None):
     return user
 
 
-def _unify_sources_and_hashes(source=None, source_hash=None, 
+def _unify_sources_and_hashes(source=None, source_hash=None,
                               sources=None, source_hashes=None):
     '''
-    Silly lil function to give us a standard tuple list for sources and 
+    Silly lil function to give us a standard tuple list for sources and
     source_hashes
     '''
     if sources is None:
         sources = []
-        
+
     if source_hashes is None:
         source_hashes = []
-        
+
     if ( source and sources ):
-        return (False, 
+        return (False,
                 "source and sources are mutally exclusive", [] )
 
     if ( source_hash and source_hashes ):
-        return (False, 
+        return (False,
                 "source_hash and source_hashes are mutally exclusive", [] )
 
-    if ( source ): 
+    if ( source ):
         return (True, '', [ (source, source_hash) ] )
 
     # Make a nice neat list of tuples exactly len(sources) long..
     return (True, '', map(None, sources, source_hashes[:len(sources)]) )
 
-def _get_template_texts(source_list = None, template='jinja', defaults = None, 
+
+def _get_template_texts(source_list = None, template='jinja', defaults = None,
                         context = None, env = 'base', **kwargs):
     '''
     Iterate a list of sources and process them as templates.
     Returns a list of 'chunks' containing the rendered templates.
     '''
 
-    ret = {'name': '_get_template_texts', 'changes': {}, 
+    ret = {'name': '_get_template_texts', 'changes': {},
            'result': True, 'comment': '', 'data': []}
-           
+
     if source_list is None:
-        return _error(ret, 
+        return _error(ret,
                       '_get_template_texts called with empty source_list')
-  
+
     txtl = []
-  
+
     for (source, source_hash) in source_list:
 
         tmpctx = defaults if defaults else {}
         if context:
             tmpctx.update(context)
-        rndrd_templ_fn = __salt__['cp.get_template'](source, '', 
-                                  template=template, env=env, 
+        rndrd_templ_fn = __salt__['cp.get_template'](source, '',
+                                  template=template, env=env,
                                   context = tmpctx, **kwargs )
         msg = 'cp.get_template returned {0} (Called with: {1})'
         log.debug(msg.format(rndrd_templ_fn, source))
@@ -993,7 +994,7 @@ def managed(name,
 
     contents_pillar
         .. versionadded:: 0.17
-        
+
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
         <salt.modules.pillar.get>`. This is useful when the pillar value
@@ -2025,7 +2026,7 @@ def append(name,
               - "Salt is born of the purest of parents: the sun and the sea."
 
     Gather text from multiple template files::
-        
+
         /etc/motd:
           file:
               - append
@@ -2034,28 +2035,27 @@ def append(name,
                   - salt://motd/devops-messages.tmpl
                   - salt://motd/hr-messages.tmpl
                   - salt://motd/general-messages.tmpl
-                  
+
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     if sources is None:
         sources = []
-        
+
     if source_hashes is None:
         source_hashes = []
-        
+
     # Add sources and source_hashes with template support
-    # NOTE: FIX 'text' and any 'source' are mutally exclusive as 'text' 
+    # NOTE: FIX 'text' and any 'source' are mutally exclusive as 'text'
     #       is re-assigned in the original code.
     (ok, err, sl) = _unify_sources_and_hashes(source = source,
-                                              source_hash = source_hash, 
-                                              sources = sources, 
+                                              source_hash = source_hash,
+                                              sources = sources,
                                               source_hashes = source_hashes )
     if not ok:
         return _error(ret, err)
 
-    
     if makedirs is True:
         dirname = os.path.dirname(name)
         if not __salt__['file.directory_exists'](dirname):
@@ -2075,10 +2075,10 @@ def append(name,
 
     #Follow the original logic and re-assign 'text' if using source(s)...
     if sl:
-        tmpret = _get_template_texts(source_list = sl, 
-                                     template = template, 
-                                     defaults = defaults, 
-                                     context = context, 
+        tmpret = _get_template_texts(source_list = sl,
+                                     template = template,
+                                     defaults = defaults,
+                                     context = context,
                                      env = __env__)
         if not tmpret['result']:
             return tmpret
@@ -2091,7 +2091,6 @@ def append(name,
         slines = fp_.readlines()
 
     count = 0
-
 
     for chunk in text:
 
@@ -2618,6 +2617,7 @@ def serialize(name,
                                         template=None,
                                         show_diff=show_diff,
                                         contents=contents)
+
 
 def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     '''

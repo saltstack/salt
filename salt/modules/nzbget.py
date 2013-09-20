@@ -10,6 +10,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+
 def __virtual__():
     '''
     Only load the module if apache is installed

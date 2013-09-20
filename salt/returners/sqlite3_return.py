@@ -48,7 +48,6 @@ Use the commands to create the sqlite3 database and tables::
 import logging
 import json
 import datetime
-log = logging.getLogger(__name__)
 
 # Better safe than sorry here. Even though sqlite3 is included in python
 try:
@@ -57,10 +56,14 @@ try:
 except ImportError:
     HAS_SQLITE3 = False
 
+log = logging.getLogger(__name__)
+
+
 def __virtual__():
     if not HAS_SQLITE3:
         return False
     return 'sqlite3'
+
 
 def _get_conn():
     '''
@@ -82,6 +85,7 @@ def _get_conn():
         timeout = float(__salt__['config.option']('returner.sqlite3.timeout')))
     return conn
 
+
 def _close_conn(conn):
     '''
     Close the sqlite3 database connection
@@ -89,6 +93,7 @@ def _close_conn(conn):
     log.debug('Closing the sqlite3 database connection')
     conn.commit()
     conn.close()
+
 
 def returner(ret):
     '''
@@ -109,6 +114,7 @@ def returner(ret):
                  'success':ret['success']})
     _close_conn(conn)
 
+
 def save_load(jid, load):
     '''
     Save the load to the specified jid
@@ -122,6 +128,7 @@ def save_load(jid, load):
                 {'jid':jid,
                  'load':json.dumps(load)})
     _close_conn(conn)
+
 
 def get_load(jid):
     '''
@@ -138,6 +145,7 @@ def get_load(jid):
         return json.loads(data)
     _close_conn(conn)
     return {}
+
 
 def get_jid(jid):
     '''
@@ -157,6 +165,7 @@ def get_jid(jid):
         log.debug("ret: {0}".format(ret))
     _close_conn(conn)
     return ret
+
 
 def get_fun(fun):
     '''
@@ -185,6 +194,7 @@ def get_fun(fun):
     _close_conn(conn)
     return ret
 
+
 def get_jids():
     '''
     Return a list of all job ids
@@ -200,6 +210,7 @@ def get_jids():
         ret.append(jid[0])
     _close_conn(conn)
     return ret
+
 
 def get_minions():
     '''

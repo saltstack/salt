@@ -9,21 +9,24 @@ Add the following configuration to your minion configuration files::
 
 '''
 
+# Import python libs
 import pickle
 import socket
 import logging
 import time
 import struct
 
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     return 'carbon'
 
+
 def _formatHostname(hostname, separator='_'):
     ''' carbon uses . as separator, so replace this in the hostname '''
     return hostname.replace('.', separator)
+
 
 def _send_picklemetrics(metrics, carbon_sock):
     ''' Uses pickle protocol to send data '''

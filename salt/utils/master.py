@@ -21,6 +21,7 @@ from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
+
 class MasterPillarUtil(object):
     '''
     Helper utility for easy access to targeted minion grain and

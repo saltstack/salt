@@ -397,6 +397,7 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
         opts += tuple(shlex.split(targets))
     return _run_svn('status', cwd, user, username, password, opts)
 
+
 def export(cwd,
              remote,
              target=None,

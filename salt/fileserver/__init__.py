@@ -12,8 +12,8 @@ import logging
 # Import salt libs
 import salt.loader
 
-
 log = logging.getLogger(__name__)
+
 
 def generate_mtime_map(path_map):
     '''
@@ -27,6 +27,7 @@ def generate_mtime_map(path_map):
                     file_path = os.path.join(directory, item)
                     file_map[file_path] = os.path.getmtime(file_path)
     return file_map
+
 
 def diff_mtime_map(map1, map2):
     '''
@@ -45,6 +46,7 @@ def diff_mtime_map(map1, map2):
     # we made it, that means we have no changes
     log.debug('diff_mtime_map: the maps are the same')
     return False
+
 
 def reap_fileserver_cache_dir(cache_base, find_func):
     '''
@@ -70,6 +72,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 # if we don't actually have the file, lets clean up the cache object
                 if ret['path'] == '':
                     os.unlink(file_path)
+
 
 def is_file_ignored(opts, fname):
     '''

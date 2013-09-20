@@ -98,6 +98,7 @@ def _clear_cache(tgt=None,
                                                 clear_mine=clear_mine,
                                                 clear_mine_func=clear_mine_func)
 
+
 def clear_pillar(tgt, expr_form='glob'):
     '''
     Clear the cached pillar data of the targeted minions
@@ -109,6 +110,7 @@ def clear_pillar(tgt, expr_form='glob'):
         salt-run cache.clear_pillar
     '''
     return _clear_cache(tgt, expr_form, clear_pillar=True)
+
 
 def clear_grains(tgt=None, expr_form='glob'):
     '''
@@ -122,6 +124,7 @@ def clear_grains(tgt=None, expr_form='glob'):
     '''
     return _clear_cache(tgt, expr_form, clear_grains=True)
 
+
 def clear_mine(tgt=None, expr_form='glob'):
     '''
     Clear the cached mine data of the targeted minions
@@ -134,6 +137,7 @@ def clear_mine(tgt=None, expr_form='glob'):
     '''
     return _clear_cache(tgt, expr_form, clear_mine=True)
 
+
 def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func=None):
     '''
     Clear the cached mine function data of the targeted minions
@@ -145,6 +149,7 @@ def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func=None):
         salt-run cache.clear_mine_func tgt='*',clear_mine_func='network.interfaces'
     '''
     return _clear_cache(tgt, expr_form, clear_mine_func=clear_mine_func)
+
 
 def clear_all(tgt=None, expr_form='glob'):
     '''

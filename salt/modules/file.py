@@ -2227,6 +2227,7 @@ def makedirs_perms(name,
                 group,
                 int('{0}'.format(mode)) if mode else None)
 
+
 def get_devmm(name):
     '''
     Get major/minor info from a device
@@ -2266,6 +2267,7 @@ def is_chrdev(name):
         else:
             raise
     return stat.S_ISCHR(stat_structure.st_mode)
+
 
 def mknod_chrdev(name,
                  major,
@@ -2315,6 +2317,7 @@ def mknod_chrdev(name,
                 int('{0}'.format(mode)) if mode else None)
     return ret
 
+
 def is_blkdev(name):
     '''
     Check if a file exists and is a block device.
@@ -2335,6 +2338,7 @@ def is_blkdev(name):
         else:
             raise
     return stat.S_ISBLK(stat_structure.st_mode)
+
 
 def mknod_blkdev(name,
                  major,
@@ -2384,6 +2388,7 @@ def mknod_blkdev(name,
                 int('{0}'.format(mode)) if mode else None)
     return ret
 
+
 def is_fifo(name):
     '''
     Check if a file exists and is a FIFO.
@@ -2404,6 +2409,7 @@ def is_fifo(name):
         else:
             raise
     return stat.S_ISFIFO(stat_structure.st_mode)
+
 
 def mknod_fifo(name,
                user=None,
@@ -2444,6 +2450,7 @@ def mknod_fifo(name,
                 group,
                 int('{0}'.format(mode)) if mode else None)
     return ret
+
 
 def mknod(name,
           ntype,
@@ -2490,6 +2497,7 @@ def mknod(name,
     else:
         raise Exception("Node type unavailable: '{0}'. Available node types are character ('c'), block ('b'), and pipe ('p').".format(ntype))
     return ret
+
 
 def list_backups(path, limit=None):
     '''

@@ -88,6 +88,7 @@ def zmq_version():
             sys.stderr.write('CRITICAL {0}\n'.format(msg))
     return False
 
+
 def lookup_family(hostname):
     '''
     Lookup a hostname and determine its address family. The first address returned
@@ -105,6 +106,7 @@ def lookup_family(hostname):
         return h[0]
     except socket.gaierror:
         return fallback
+
 
 def verify_socket(interface, pub_port, ret_port):
     '''

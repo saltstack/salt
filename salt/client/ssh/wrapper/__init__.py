@@ -39,6 +39,7 @@ class FunctionWrapper(object):
         '''
         if cmd in self.wfuncs:
             return self.wfuncs[cmd]
+
         def caller(*args, **kwargs):
             '''
             The remote execution function
