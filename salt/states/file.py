@@ -593,19 +593,19 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
     if source_hashes is None:
         source_hashes = []
 
-    if ( source and sources ):
+    if (source and sources):
         return (False,
-                "source and sources are mutally exclusive", [] )
+                "source and sources are mutally exclusive", [])
 
-    if ( source_hash and source_hashes ):
+    if (source_hash and source_hashes):
         return (False,
-                "source_hash and source_hashes are mutally exclusive", [] )
+                "source_hash and source_hashes are mutally exclusive", [])
 
-    if ( source ):
-        return (True, '', [ (source, source_hash) ] )
+    if (source):
+        return (True, '', [(source, source_hash)])
 
     # Make a nice neat list of tuples exactly len(sources) long..
-    return (True, '', map(None, sources, source_hashes[:len(sources)]) )
+    return (True, '', map(None, sources, source_hashes[:len(sources)]))
 
 
 def _get_template_texts(source_list=None,
@@ -635,7 +635,7 @@ def _get_template_texts(source_list=None,
             tmpctx.update(context)
         rndrd_templ_fn = __salt__['cp.get_template'](source, '',
                                   template=template, env=env,
-                                  context=tmpctx, **kwargs )
+                                  context=tmpctx, **kwargs)
         msg = 'cp.get_template returned {0} (Called with: {1})'
         log.debug(msg.format(rndrd_templ_fn, source))
         if rndrd_templ_fn:
@@ -644,15 +644,15 @@ def _get_template_texts(source_list=None,
                 tmplines = fp_.readlines()
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
-                log.debug( msg.format(rndrd_templ_fn, source))
+                log.debug(msg.format(rndrd_templ_fn, source))
                 ret['name'] = source
-                return _error(ret, msg.format( rndrd_templ_fn, source) )
-            txtl.append( ''.join(tmplines))
+                return _error(ret, msg.format(rndrd_templ_fn, source))
+            txtl.append(''.join(tmplines))
         else:
             msg = 'Failed to load template file {0}'.format(source)
             log.debug(msg)
             ret['name'] = source
-            return _error(ret, msg )
+            return _error(ret, msg)
 
     ret['data'] = txtl
     return ret
@@ -2056,7 +2056,7 @@ def append(name,
     (ok, err, sl) = _unify_sources_and_hashes(source=source,
                                               source_hash=source_hash,
                                               sources=sources,
-                                              source_hashes=source_hashes )
+                                              source_hashes=source_hashes)
     if not ok:
         return _error(ret, err)
 

@@ -2120,7 +2120,7 @@ class ClearFuncs(object):
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
             # if this is a regular command, its a single function
             if type(clear_load['fun']) == str:
-                funs_to_check = [ clear_load['fun'] ]
+                funs_to_check = [clear_load['fun']]
             # if this a compound function
             else:
                 funs_to_check = clear_load['fun']
