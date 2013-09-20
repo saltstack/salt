@@ -608,8 +608,12 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
     return (True, '', map(None, sources, source_hashes[:len(sources)]) )
 
 
-def _get_template_texts(source_list = None, template='jinja', defaults = None,
-                        context = None, env = 'base', **kwargs):
+def _get_template_texts(source_list=None,
+                        template='jinja',
+                        defaults=None,
+                        context=None,
+                        env='base',
+                        **kwargs):
     '''
     Iterate a list of sources and process them as templates.
     Returns a list of 'chunks' containing the rendered templates.
@@ -631,7 +635,7 @@ def _get_template_texts(source_list = None, template='jinja', defaults = None,
             tmpctx.update(context)
         rndrd_templ_fn = __salt__['cp.get_template'](source, '',
                                   template=template, env=env,
-                                  context = tmpctx, **kwargs )
+                                  context=tmpctx, **kwargs )
         msg = 'cp.get_template returned {0} (Called with: {1})'
         log.debug(msg.format(rndrd_templ_fn, source))
         if rndrd_templ_fn:
@@ -1997,11 +2001,11 @@ def append(name,
            source=None,
            source_hash=None,
            __env__='base',
-           template = 'jinja',
+           template='jinja',
            sources=None,
            source_hashes=None,
-           defaults = None,
-           context = None):
+           defaults=None,
+           context=None):
     '''
     Ensure that some text appears at the end of a file
 
@@ -2049,10 +2053,10 @@ def append(name,
     # Add sources and source_hashes with template support
     # NOTE: FIX 'text' and any 'source' are mutally exclusive as 'text'
     #       is re-assigned in the original code.
-    (ok, err, sl) = _unify_sources_and_hashes(source = source,
-                                              source_hash = source_hash,
-                                              sources = sources,
-                                              source_hashes = source_hashes )
+    (ok, err, sl) = _unify_sources_and_hashes(source=source,
+                                              source_hash=source_hash,
+                                              sources=sources,
+                                              source_hashes=source_hashes )
     if not ok:
         return _error(ret, err)
 
@@ -2075,11 +2079,11 @@ def append(name,
 
     #Follow the original logic and re-assign 'text' if using source(s)...
     if sl:
-        tmpret = _get_template_texts(source_list = sl,
-                                     template = template,
-                                     defaults = defaults,
-                                     context = context,
-                                     env = __env__)
+        tmpret = _get_template_texts(source_list=sl,
+                                     template=template,
+                                     defaults=defaults,
+                                     context=context,
+                                     env=__env__)
         if not tmpret['result']:
             return tmpret
         text = tmpret['data']
