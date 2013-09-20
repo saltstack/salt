@@ -113,7 +113,7 @@ class APIClient(object):
             cmd['fun'] = '.'.join(funparts[1:]) #strip prefix
 
         if not ('token' in cmd  or
-                ('eauth' in cmd and 'password' in cmd and 'username' in cmd) ):
+                ('eauth' in cmd and 'password' in cmd and 'username' in cmd)):
             raise EauthAuthenticationError('No authentication credentials given')
 
         executor = getattr(self, '{0}_{1}'.format(client, mode))
