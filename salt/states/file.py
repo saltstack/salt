@@ -584,7 +584,7 @@ def _test_owner(kwargs, user=None):
 def _unify_sources_and_hashes(source=None, source_hash=None,
                               sources=None, source_hashes=None):
     '''
-    Silly lil function to give us a standard tuple list for sources and
+    Silly little function to give us a standard tuple list for sources and
     source_hashes
     '''
     if sources is None:
@@ -593,20 +593,19 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
     if source_hashes is None:
         source_hashes = []
 
-    if (source and sources):
+    if source and sources:
         return (False,
-                "source and sources are mutally exclusive", [])
+                "source and sources are mutually exclusive", [])
 
-    if (source_hash and source_hashes):
+    if source_hash and source_hashes:
         return (False,
-                "source_hash and source_hashes are mutally exclusive", [])
+                "source_hash and source_hashes are mutually exclusive", [])
 
-    if (source):
+    if source:
         return (True, '', [(source, source_hash)])
 
     # Make a nice neat list of tuples exactly len(sources) long..
     return (True, '', map(None, sources, source_hashes[:len(sources)]))
-
 
 def _get_template_texts(source_list=None,
                         template='jinja',
@@ -619,8 +618,11 @@ def _get_template_texts(source_list=None,
     Returns a list of 'chunks' containing the rendered templates.
     '''
 
-    ret = {'name': '_get_template_texts', 'changes': {},
-           'result': True, 'comment': '', 'data': []}
+    ret = {'name': '_get_template_texts',
+           'changes': {},
+           'result': True,
+           'comment': '',
+           'data': []}
 
     if source_list is None:
         return _error(ret,
@@ -2052,7 +2054,7 @@ def append(name,
         source_hashes = []
 
     # Add sources and source_hashes with template support
-    # NOTE: FIX 'text' and any 'source' are mutally exclusive as 'text'
+    # NOTE: FIX 'text' and any 'source' are mutually exclusive as 'text'
     #       is re-assigned in the original code.
     (ok, err, sl) = _unify_sources_and_hashes(source=source,
                                               source_hash=source_hash,
