@@ -48,7 +48,7 @@ class Shell(object):
 
     def get_error(self, errstr):
         '''
-        Parse out an error and return a targetted error string
+        Parse out an error and return a targeted error string
         '''
         for line in errstr.split('\n'):
             if line.startswith('ssh:'):

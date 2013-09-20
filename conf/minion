@@ -112,7 +112,7 @@
 #random_reauth_delay: 60
 
 
-# If you dont have any problems with syn-floods, dont bother with the
+# If you don't have any problems with syn-floods, dont bother with the
 # three recon_* settings described below, just leave the defaults!
 #
 # The ZeroMQ pull-socket that binds to the masters publishing interface tries
