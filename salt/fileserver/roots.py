@@ -182,7 +182,10 @@ def file_list(load):
             prefix = load['prefix'].strip('/')
         except KeyError:
             prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
+        for root, dirs, files in os.walk(os.path.join(path, prefix), 
+                followlinks=True if __opts__['fileserver_followsymlinks'] 
+                else followlinks=False):
+                                         
             for fname in files:
                 rel_fn = os.path.relpath(
                             os.path.join(root, fname),
@@ -205,7 +208,9 @@ def file_list_emptydirs(load):
             prefix = load['prefix'].strip('/')
         except KeyError:
             prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
+        for root, dirs, files in os.walk(os.path.join(path, prefix),
+                followlinks=True if __opts__['fileserver_followsymlinks'] 
+                else followlinks=False):
             if len(dirs) == 0 and len(files) == 0:
                 rel_fn = os.path.relpath(root, path)
                 if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
@@ -225,6 +230,8 @@ def dir_list(load):
             prefix = load['prefix'].strip('/')
         except KeyError:
             prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
+        for root, dirs, files in os.walk(os.path.join(path, prefix),
+                followlinks=True if __opts__['fileserver_followsymlinks'] 
+                else followlinks=False):
             ret.append(os.path.relpath(root, path))
     return ret

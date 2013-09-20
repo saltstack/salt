@@ -306,6 +306,13 @@
 #fileserver_backend:
 #  - git
 #  - roots
+#
+# Uncomment the line below if you do not want the file_server to follow
+# symlinks when walking the filesystem tree. This is set to True 
+# by default. Currently this only applies to the default roots 
+# fileserver_backend.
+#
+#fileserver_followsymlinks: False
 
 # Git fileserver backend configuration
 # When using the git fileserver backend at least one git remote needs to be
