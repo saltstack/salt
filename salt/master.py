@@ -1682,7 +1682,7 @@ class ClearFuncs(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return ret
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
@@ -1697,7 +1697,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
@@ -1711,7 +1711,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return ret
             # This is a new key, stick it in pre
             log.info(
@@ -1725,7 +1725,7 @@ class ClearFuncs(object):
                      'act': 'pend',
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return ret
         elif os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
@@ -1740,7 +1740,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
@@ -1753,7 +1753,7 @@ class ClearFuncs(object):
                          'act': 'pend',
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': True}}
         elif os.path.isfile(pubfn_pend)\
@@ -1768,7 +1768,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
@@ -1783,7 +1783,7 @@ class ClearFuncs(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -1841,7 +1841,7 @@ class ClearFuncs(object):
                  'act': 'accept',
                  'id': load['id'],
                  'pub': load['pub']}
-        self.event.fire_event(eload, tagify(prefix = 'auth'))
+        self.event.fire_event(eload, tagify(prefix='auth'))
         return ret
 
     def runner(self, clear_load):

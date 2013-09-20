@@ -219,12 +219,12 @@ class MasterPillarUtil(object):
         log.debug('Getting minion grain data for: {0}'.format(minion_ids))
         minion_grains = self._get_minion_grains(
                                         *minion_ids,
-                                        cached_grains = cached_minion_grains)
+                                        cached_grains=cached_minion_grains)
         log.debug('Getting minion pillar data for: {0}'.format(minion_ids))
         minion_pillars = self._get_minion_pillar(
                                         *minion_ids,
-                                        grains = minion_grains,
-                                        cached_pillar = cached_minion_pillars)
+                                        grains=minion_grains,
+                                        cached_pillar=cached_minion_pillars)
         return minion_pillars
 
     def get_minion_grains(self):
@@ -250,7 +250,7 @@ class MasterPillarUtil(object):
         log.debug('Getting minion grain data for: {0}'.format(minion_ids))
         minion_grains = self._get_minion_grains(
                                         *minion_ids,
-                                        cached_grains = cached_minion_grains)
+                                        cached_grains=cached_minion_grains)
         return minion_grains
 
     def clear_cached_minion_data(self,
