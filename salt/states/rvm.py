@@ -176,20 +176,26 @@ def installed(name, default=False, runas=None, user=None):
 
     name
         The version of ruby to install
+
     default : False
         Whether to make this ruby the default.
+
     runas: None
         The user to run rvm as.
+
         .. deprecated:: 0.17.0
+
     user: None
         The user to run rvm as.
+
+        ..versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
         (0, 19),
-        'Let\'s support \'runas\' until salt 0.19.0 is out, after which '
-        'it will stop being supported',
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
         _dont_call_warnings=True
     )
     if runas:
@@ -231,20 +237,26 @@ def gemset_present(name, ruby='default', runas=None, user=None):
 
     name
         The name of the gemset.
+
     ruby: default
         The ruby version this gemset belongs to.
+
     runas: None
         The user to run rvm as.
+
         .. deprecated:: 0.17.0
+
     user: None
         The user to run rvm as.
+
+        .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
         (0, 19),
-        'Let\'s support \'runas\' until salt 0.19.0 is out, after which '
-        'it will stop being supported',
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
         _dont_call_warnings=True
     )
     if runas:
