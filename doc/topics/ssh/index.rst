@@ -83,8 +83,8 @@ standard ``salt``. The intent is that Salt Formulas defined for standard
 The standard Salt States walkthroughs function by simply replacing ``salt``
 commands with ``salt-ssh``.
 
-Targetting with Salt SSH
-========================
+Targeting with Salt SSH
+=======================
 
 Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
