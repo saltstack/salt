@@ -39,7 +39,7 @@ def _normalize_dir(string):
     '''
     Normalize the directory to make comparison possible
     '''
-    return  re.sub(r'\\$', '', string.lower())
+    return re.sub(r'\\$', '', string.lower())
 
 
 def rehash():

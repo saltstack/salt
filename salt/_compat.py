@@ -143,9 +143,11 @@ else:
     from urllib2 import HTTPBasicAuthHandler as url_auth_handler
     from urllib2 import build_opener as url_build_opener
     from urllib2 import install_opener as url_install_opener
+
     def url_unquote_text(v, encoding='utf-8', errors='replace'):
         v = url_unquote(v)
         return v.decode(encoding, errors)
+
     def url_unquote_native(v, encoding='utf-8', errors='replace'):
         return native_(url_unquote_text(v, encoding, errors))
 

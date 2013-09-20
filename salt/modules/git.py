@@ -24,6 +24,7 @@ def __virtual__():
         return False
     return 'git'
 
+
 def _git_ssh_helper(identity):
     '''
     Returns the path to a helper script which can be used in the GIT_SSH env

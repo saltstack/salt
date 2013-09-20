@@ -17,6 +17,7 @@ try:
 except ImportError:
     pass
 
+
 def __virtual__():
     '''
     Only works on Windows systems

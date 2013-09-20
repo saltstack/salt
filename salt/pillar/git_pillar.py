@@ -57,6 +57,7 @@ def _get_ref(repo, short):
                 return ref
     return False
 
+
 def init(branch, repo_location):
     '''
     Return the git repo object for this session

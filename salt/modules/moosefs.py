@@ -6,6 +6,7 @@ Module for gathering and managing information about MooseFS
 # Import salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only load if the mfs commands are installed

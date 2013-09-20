@@ -6,11 +6,13 @@ Manage the Windows System PATH
 # Python Libs
 import re
 
+
 def __virtual__():
     '''
     Load this state if the win_path module exists
     '''
     return 'win_path' if 'win_path.rehash' in __salt__ else False
+
 
 def _normalize_dir(string):
     '''
@@ -48,6 +50,7 @@ def absent(name):
     if not ret['result']:
         ret['comment'] = 'could not remove {0} from the PATH'.format(name)
     return ret
+
 
 def exists(name, index=0):
     '''

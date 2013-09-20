@@ -15,6 +15,7 @@ import salt.utils
 import salt.utils.event
 from salt.utils.event import tagify
 
+
 class KeyCLI(object):
     '''
     Manage key CLI operations

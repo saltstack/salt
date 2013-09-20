@@ -9,6 +9,7 @@ import re
 # Import salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only works on Windows systems

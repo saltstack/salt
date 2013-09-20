@@ -3,6 +3,7 @@
 Manage RDP Service on Windows servers
 '''
 
+
 def __virtual__():
     '''
     Load only if network_win is loaded
