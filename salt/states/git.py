@@ -118,7 +118,7 @@ def latest(name,
         return _fail(ret, '"target" option is required')
 
     salt.utils.warn_until(
-        (0, 19),
+        (0, 18),
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -338,7 +338,7 @@ def present(name, bare=True, runas=None, user=None, force=False):
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 19),
+        (0, 18),
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
