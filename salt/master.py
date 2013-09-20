@@ -537,7 +537,7 @@ class ReqServer(object):
         else:
             log.info('Halite: Not starting. '
                      'Package available is {0}. '
-                     'Opts for "halite" exists is {1}.'\
+                     'Opts for "halite" exists is {1}.'
                      .format(HAS_HALITE, 'halite' in self.opts))
 
     def run(self):
@@ -1964,8 +1964,8 @@ class ClearFuncs(object):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] \
-                        if token['name'] in self.opts['external_auth'][token['eauth']] \
+                    self.opts['external_auth'][token['eauth']][token['name']]
+                        if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
             if not good:
@@ -2025,8 +2025,8 @@ class ClearFuncs(object):
                 log.warning(msg)
                 return ''
             good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][clear_load['eauth']][name] \
-                        if name in self.opts['external_auth'][clear_load['eauth']] \
+                    self.opts['external_auth'][clear_load['eauth']][name]
+                        if name in self.opts['external_auth'][clear_load['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
             if not good:
@@ -2165,8 +2165,8 @@ class ClearFuncs(object):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] \
-                        if token['name'] in self.opts['external_auth'][token['eauth']] \
+                    self.opts['external_auth'][token['eauth']][token['name']]
+                        if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
@@ -2206,8 +2206,8 @@ class ClearFuncs(object):
                 )
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name] \
-                        if name in self.opts['external_auth'][extra['eauth']] \
+                    self.opts['external_auth'][extra['eauth']][name]
+                        if name in self.opts['external_auth'][extra['eauth']]
                         else self.opts['external_auth'][extra['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
