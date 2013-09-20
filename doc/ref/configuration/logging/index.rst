@@ -24,7 +24,7 @@ Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///de
 with rsyslogd(8) configured for network logging.  The format for remote addresses is:
 ``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``.
 
-Default: Dependant of the binary being executed, for example, for ``salt-master``,
+Default: Dependent of the binary being executed, for example, for ``salt-master``,
 ``/var/log/salt/master``.
 
 

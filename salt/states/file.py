@@ -2583,7 +2583,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     (deleted). This is logically in place as a safety measure because you can really shoot
     yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
     note that not just anyone can create special devices. Usually this is only done as root.
-    If the state is executed as none other than root on a minion, you may recieve a permission
+    If the state is executed as none other than root on a minion, you may receive a permission
     error.
 
     name
