@@ -1,6 +1,8 @@
 Frequently Asked Questions
 ==========================
 
+.. contents:: FAQ
+
 Is Salt open-core?
 ------------------
 
@@ -19,8 +21,8 @@ Minions need to be able to connect to the Master on TCP ports 4505 and 4506.
 Minions do not need any inbound ports open. More detailed information on
 firewall settings can be found :doc:`here </topics/tutorials/firewall>`.
 
-My script runs every time I run a :mod:`state.highstate <salt.modules.state.highstate>`. Why?
----------------------------------------------------------------------------------------------
+My script runs every time I run a *state.highstate*. Why?
+---------------------------------------------------------
 
 You are probably using :mod:`cmd.run <salt.states.cmd.run>` rather than
 :mod:`cmd.wait <salt.states.cmd.wait>`. A :mod:`cmd.wait
@@ -34,13 +36,13 @@ arguments).
 More details can be found in the docmentation for the :mod:`cmd
 <salt.states.cmd>` states.
 
-When I run :mod:`test.ping <salt.modules.test.ping>`, why don't the Minions that aren't responding return anything? Returning ``False`` would be helpful.
----------------------------------------------------------------------------------------------------------------------------------------------------------
+When I run *test.ping*, why don't the Minions that aren't responding return anything? Returning ``False`` would be helpful.
+---------------------------------------------------------------------------------------------------------------------------
 
-The reason for this is because the Master tells Minions to run
-commands/functions, and listens for the return data, printing it to the screen
-when it is received. If it doesn't receive anything back, it doesn't have
-anything to display for that Minion.
+When you run *test.ping* the Master tells Minions
+to run commands/functions, and listens for the return data, printing it to the
+screen when it is received. If it doesn't receive anything back, it doesn't
+have anything to display for that Minion.
 
 There are a couple options for getting information on Minions that are not
 responding. One is to use the verbose (``-v``) option when you run salt
