@@ -178,7 +178,10 @@ def installed(name, default=False, runas=None, user=None):
         The version of ruby to install
     default : False
         Whether to make this ruby the default.
-    runas : None
+    runas: None
+        The user to run rvm as.
+        .. deprecated:: 0.17.0
+    user: None
         The user to run rvm as.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
@@ -228,9 +231,12 @@ def gemset_present(name, ruby='default', runas=None, user=None):
 
     name
         The name of the gemset.
-    ruby : default
+    ruby: default
         The ruby version this gemset belongs to.
-    runas : None
+    runas: None
+        The user to run rvm as.
+        .. deprecated:: 0.17.0
+    user: None
         The user to run rvm as.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
