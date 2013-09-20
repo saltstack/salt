@@ -106,12 +106,12 @@ def returner(ret):
              (fun, jid, id, date, full_ret, success)
              VALUES (:fun, :jid, :id, :date, :full_ret, :success)'''
     cur.execute(sql,
-                {'fun':ret['fun'],
-                 'jid':ret['jid'],
-                 'id':ret['id'],
-                 'date':str(datetime.datetime.now()),
-                 'full_ret':json.dumps(ret['return']),
-                 'success':ret['success']})
+                {'fun': ret['fun'],
+                 'jid': ret['jid'],
+                 'id': ret['id'],
+                 'date': str(datetime.datetime.now()),
+                 'full_ret': json.dumps(ret['return']),
+                 'success': ret['success']})
     _close_conn(conn)
 
 
@@ -125,8 +125,8 @@ def save_load(jid, load):
     cur = conn.cursor()
     sql = '''INSERT INTO jids (jid, load) VALUES (:jid, :load)'''
     cur.execute(sql,
-                {'jid':jid,
-                 'load':json.dumps(load)})
+                {'jid': jid,
+                 'load': json.dumps(load)})
     _close_conn(conn)
 
 
@@ -139,7 +139,7 @@ def get_load(jid):
     cur = conn.cursor()
     sql = '''SELECT load FROM jids WHERE jid = :jid'''
     cur.execute(sql,
-                {'jid':jid})
+                {'jid': jid})
     data = cur.fetchone()
     if data:
         return json.loads(data)
@@ -156,12 +156,12 @@ def get_jid(jid):
     cur = conn.cursor()
     sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = :jid'''
     cur.execute(sql,
-                {'jid':jid})
+                {'jid': jid})
     data = cur.fetchone()
     log.debug('query result: {0}'.format(data))
     ret = {}
     if data and len(data) > 1:
-        ret = {str(data[0]):{u'return':json.loads(data[1])}}
+        ret = {str(data[0]): {u'return': json.loads(data[1])}}
         log.debug("ret: {0}".format(ret))
     _close_conn(conn)
     return ret
@@ -181,7 +181,7 @@ def get_fun(fun):
             WHERE s.fun = :fun
             '''
     cur.execute(sql,
-                {'fun':fun})
+                {'fun': fun})
     data = cur.fetchall()
     ret = {}
     if data:

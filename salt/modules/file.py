@@ -2298,8 +2298,8 @@ def mknod_chrdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'),8)|stat.S_IFCHR,
-                        os.makedev(major,minor)) is None:
+                        int(str(mode).lstrip('0'), 8)|stat.S_IFCHR,
+                        os.makedev(major, minor)) is None:
                 ret['changes'] = {'new' : 'Character device {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
@@ -2369,8 +2369,8 @@ def mknod_blkdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'),8)|stat.S_IFBLK,
-                        os.makedev(major,minor)) is None:
+                        int(str(mode).lstrip('0'), 8)|stat.S_IFBLK,
+                        os.makedev(major, minor)) is None:
                 ret['changes'] = {'new' : 'Block device {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
