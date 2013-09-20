@@ -51,17 +51,26 @@ def running(name,
 
     name
         Service name as defined in the supervisor configuration file
+
     restart
         Whether to force a restart
+
     update
         Whether to update the supervisor configuration.
+
     runas
         Name of the user to run the supervisorctl command
+
         .. deprecated:: 0.17.0
+
     user
         Name of the user to run the supervisorctl command
+
+        .. versionadded:: 0.17.0
+
     conf_file
         path to supervisorctl config file
+
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
@@ -70,8 +79,8 @@ def running(name,
 
     salt.utils.warn_until(
         (0, 19),
-        'Let\'s support \'runas\' until salt 0.19.0 is out, after which '
-        'it will stop being supported',
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
         _dont_call_warnings=True
     )
     if runas:
@@ -190,13 +199,20 @@ def dead(name,
 
     name
         Service name as defined in the supervisor configuration file
+
     runas
         Name of the user to run the supervisorctl command
+
         .. deprecated:: 0.17.0
+
     user
         Name of the user to run the supervisorctl command
+
+        .. versionadded:: 0.17.0
+
     conf_file
         path to supervisorctl config file
+
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
@@ -205,8 +221,8 @@ def dead(name,
 
     salt.utils.warn_until(
         (0, 19),
-        'Let\'s support \'runas\' until salt 0.19.0 is out, after which '
-        'it will stop being supported',
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
         _dont_call_warnings=True
     )
     if runas:
