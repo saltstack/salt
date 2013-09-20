@@ -554,7 +554,7 @@ def sed(path,
         negate_match=False):
     '''
     .. deprecated:: 0.17.1
-       Use :func:`replace` instead.
+       Use :py:func:`~salt.modules.file.replace` instead.
 
     Make a simple edit to a file
 
@@ -674,7 +674,7 @@ def psed(path,
          multi=False):
     '''
     .. deprecated:: 0.17.1
-       Use :func:`replace` instead.
+       Use :py:func:`~salt.modules.file.replace` instead.
 
     Make a simple edit to a file (pure Python version)
 
@@ -786,7 +786,7 @@ def uncomment(path,
               backup='.bak'):
     '''
     .. deprecated:: 0.17.1
-       Use :func:`replace` instead.
+       Use :py:func:`~salt.modules.file.replace` instead.
 
     Uncomment specified commented lines in a file
 
@@ -825,7 +825,7 @@ def comment(path,
             backup='.bak'):
     '''
     .. deprecated:: 0.17.1
-       Use :func:`replace` instead.
+       Use :py:func:`~salt.modules.file.replace` instead.
 
     Comment out specified lines in a file
 
@@ -999,7 +999,7 @@ def search(path,
 
     .. versionadded:: 0.17.1
 
-    Params are identical to :py:func:`~salt.modules.replace`.
+    Params are identical to :py:func:`~salt.modules.file.replace`.
 
     CLI Example:
 

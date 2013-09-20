@@ -1675,7 +1675,7 @@ def replace(name,
 
     .. versionadded:: 0.17.1
 
-    Params are identical to :py:func:`~salt.modules.replace`.
+    Params are identical to :py:func:`~salt.modules.file.replace`.
 
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1715,7 +1715,7 @@ def sed(name,
         negate_match=False):
     '''
     .. deprecated:: 0.17.1
-       Use :func:`replace` instead.
+       Use :py:func:`~salt.states.file.replace` instead.
 
     Maintain a simple edit to a file
 
