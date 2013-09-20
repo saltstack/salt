@@ -2752,4 +2752,3 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         ret['comment'] = "Node type unavailable: '{0}. Available node types are character ('c'), block ('b'), and pipe ('p')".format(ntype)
 
     return ret
-
