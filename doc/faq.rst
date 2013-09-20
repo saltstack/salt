@@ -34,8 +34,8 @@ arguments).
 More details can be found in the docmentation for the :mod:`cmd
 <salt.states.cmd>` states.
 
-When I run :mod:`test.ping <salt.modules.test.ping>`, why do the Minions that aren't responding return anything? Returning ``False`` would be helpful.
-------------------------------------------------------------------------------------------------------------------------------------------------------
+When I run :mod:`test.ping <salt.modules.test.ping>`, why don't the Minions that aren't responding return anything? Returning ``False`` would be helpful.
+---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 The reason for this is because the Master tells Minions to run
 commands/functions, and listens for the return data, printing it to the screen
