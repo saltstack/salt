@@ -3,7 +3,9 @@
 Display output for minions that did not return
 '''
 
+# Import salt libs
 import salt.utils
+
 
 class NestDisplay(object):
     '''
@@ -36,6 +38,7 @@ class NestDisplay(object):
                         self.colors['ENDC'])
                 out = self.display(val, indent + 4, '', out)
         return out
+
 
 def output(ret):
     '''

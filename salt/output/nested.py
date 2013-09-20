@@ -8,6 +8,7 @@ from numbers import Number
 # Import salt libs
 import salt.utils
 
+
 class NestDisplay(object):
     '''
     Manage the nested display contents
@@ -70,6 +71,7 @@ class NestDisplay(object):
                         self.colors['ENDC'])
                 out = self.display(val, indent + 4, '', out)
         return out
+
 
 def output(ret):
     '''
