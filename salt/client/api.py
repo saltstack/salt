@@ -189,7 +189,7 @@ class APIClient(object):
         eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
 
         '''
-        result =  {}
+        result = {}
 
         client = cmd.get('client', 'minion')
         if client == 'minion':
@@ -204,7 +204,7 @@ class APIClient(object):
                 functions = self.wheelClient.w_funcs
             elif client == 'runner':
                 functions = self.runnerClient.functions
-            result =  salt.utils.argspec_report(functions, module)
+            result = salt.utils.argspec_report(functions, module)
         return result
 
     def create_token(self, creds):
