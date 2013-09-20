@@ -12,6 +12,7 @@ import re
 import salt.loader
 from salt.template import compile_template
 
+
 def targets(tgt, tgt_type='glob', **kwargs):
     '''
     Return the targets from the flat yaml file, checks opts for location but

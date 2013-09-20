@@ -18,6 +18,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import SaltException, EauthAuthenticationError
 from salt.utils.event import tagify
 
+
 def tokenify(cmd, token=None):
     '''
     If token is not None Then assign token to 'token' key of cmd dict
@@ -102,17 +103,17 @@ class APIClient(object):
         eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
 
         '''
-        client = 'minion' #default to local minion client
-        mode = cmd.get('mode', 'async') #default to 'async'
+        client = 'minion'  # default to local minion client
+        mode = cmd.get('mode', 'async')  # default to 'async'
 
         # check for wheel or runner prefix to fun name to use wheel or runner client
         funparts = cmd.get('fun', '').split('.')
-        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']: #master
+        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']:  # master
             client = funparts[0]
-            cmd['fun'] = '.'.join(funparts[1:]) #strip prefix
+            cmd['fun'] = '.'.join(funparts[1:])  # strip prefix
 
-        if not ('token' in cmd  or
-                ('eauth' in cmd and 'password' in cmd and 'username' in cmd) ):
+        if not ('token' in cmd or
+                ('eauth' in cmd and 'password' in cmd and 'username' in cmd)):
             raise EauthAuthenticationError('No authentication credentials given')
 
         executor = getattr(self, '{0}_{1}'.format(client, mode))
@@ -145,7 +146,7 @@ class APIClient(object):
         '''
         return self.runnerClient.master_call(**kwargs)
 
-    runner_sync = runner_async # always runner async, so works in either mode
+    runner_sync = runner_async  # always runner async, so works in either mode
 
     def wheel_sync(self, **kwargs):
         '''
@@ -155,7 +156,7 @@ class APIClient(object):
         '''
         return self.wheelClient.master_call(**kwargs)
 
-    wheel_async = wheel_sync # always wheel_sync, so it works either mode
+    wheel_async = wheel_sync  # always wheel_sync, so it works either mode
 
     def signature(self, cmd):
         '''
@@ -188,7 +189,7 @@ class APIClient(object):
         eauth: the authentication type such as 'pam' or 'ldap'. Required if token is missing
 
         '''
-        result =  {}
+        result = {}
 
         client = cmd.get('client', 'minion')
         if client == 'minion':
@@ -198,12 +199,12 @@ class APIClient(object):
         elif client == 'master':
             parts = cmd['module'].split('.')
             client = parts[0]
-            module = '.'.join(parts[1:]) #strip prefix
+            module = '.'.join(parts[1:])  # strip prefix
             if client == 'wheel':
                 functions = self.wheelClient.w_funcs
-            elif  client == 'runner':
+            elif client == 'runner':
                 functions = self.runnerClient.functions
-            result =  salt.utils.argspec_report(functions, module)
+            result = salt.utils.argspec_report(functions, module)
         return result
 
     def create_token(self, creds):

@@ -4,6 +4,7 @@ Simple grain to merge the opts into the grains directly if the grain_opts
 configuration value is set
 '''
 
+
 def opts():
     '''
     Return the minion configuration settings

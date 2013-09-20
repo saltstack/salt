@@ -537,7 +537,7 @@ class ReqServer(object):
         else:
             log.info('Halite: Not starting. '
                      'Package available is {0}. '
-                     'Opts for "halite" exists is {1}.'\
+                     'Opts for "halite" exists is {1}.'
                      .format(HAS_HALITE, 'halite' in self.opts))
 
     def run(self):
@@ -1082,8 +1082,8 @@ class AESFuncs(object):
             return False
         if 'events' in load:
             for event in load['events']:
-                self.event.fire_event(event, event['tag']) # old dup event
-                if load.get('pretag') != None:
+                self.event.fire_event(event, event['tag'])  # old dup event
+                if load.get('pretag') is not None:
                     self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
@@ -1106,7 +1106,7 @@ class AESFuncs(object):
                     self.opts['hash_type'],
                     load.get('nocache', False))
         log.info('Got return from {id} for job {jid}'.format(**load))
-        self.event.fire_event(load, load['jid']) # old dup event
+        self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
         if self.opts['master_ext_job_cache']:
@@ -1682,7 +1682,7 @@ class ClearFuncs(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return ret
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
@@ -1697,7 +1697,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
@@ -1711,7 +1711,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return ret
             # This is a new key, stick it in pre
             log.info(
@@ -1725,7 +1725,7 @@ class ClearFuncs(object):
                      'act': 'pend',
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return ret
         elif os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
@@ -1740,7 +1740,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
@@ -1753,7 +1753,7 @@ class ClearFuncs(object):
                          'act': 'pend',
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': True}}
         elif os.path.isfile(pubfn_pend)\
@@ -1768,7 +1768,7 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, tagify(prefix = 'auth'))
+                self.event.fire_event(eload, tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
@@ -1783,7 +1783,7 @@ class ClearFuncs(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, tagify(prefix = 'auth'))
+            self.event.fire_event(eload, tagify(prefix='auth'))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -1841,7 +1841,7 @@ class ClearFuncs(object):
                  'act': 'accept',
                  'id': load['id'],
                  'pub': load['pub']}
-        self.event.fire_event(eload, tagify(prefix = 'auth'))
+        self.event.fire_event(eload, tagify(prefix='auth'))
         return ret
 
     def runner(self, clear_load):
@@ -1964,8 +1964,8 @@ class ClearFuncs(object):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] \
-                        if token['name'] in self.opts['external_auth'][token['eauth']] \
+                    self.opts['external_auth'][token['eauth']][token['name']]
+                        if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
             if not good:
@@ -2025,8 +2025,8 @@ class ClearFuncs(object):
                 log.warning(msg)
                 return ''
             good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][clear_load['eauth']][name] \
-                        if name in self.opts['external_auth'][clear_load['eauth']] \
+                    self.opts['external_auth'][clear_load['eauth']][name]
+                        if name in self.opts['external_auth'][clear_load['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
             if not good:
@@ -2120,7 +2120,7 @@ class ClearFuncs(object):
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
             # if this is a regular command, its a single function
             if type(clear_load['fun']) == str:
-                funs_to_check = [ clear_load['fun'] ]
+                funs_to_check = [clear_load['fun']]
             # if this a compound function
             else:
                 funs_to_check = clear_load['fun']
@@ -2165,8 +2165,8 @@ class ClearFuncs(object):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] \
-                        if token['name'] in self.opts['external_auth'][token['eauth']] \
+                    self.opts['external_auth'][token['eauth']][token['name']]
+                        if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
@@ -2206,8 +2206,8 @@ class ClearFuncs(object):
                 )
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name] \
-                        if name in self.opts['external_auth'][extra['eauth']] \
+                    self.opts['external_auth'][extra['eauth']][name]
+                        if name in self.opts['external_auth'][extra['eauth']]
                         else self.opts['external_auth'][extra['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
@@ -2317,9 +2317,9 @@ class ClearFuncs(object):
                 self.opts['hash_type']
                 )
 
-        new_job_load =  {
+        new_job_load = {
                 'jid': clear_load['jid'],
-                'tgt_type':clear_load['tgt_type'],
+                'tgt_type': clear_load['tgt_type'],
                 'tgt': clear_load['tgt'],
                 'user': clear_load['user'],
                 'fun': clear_load['fun'],
@@ -2328,7 +2328,7 @@ class ClearFuncs(object):
             }
 
         # Announce the job on the event bus
-        self.event.fire_event(new_job_load, 'new_job') # old dup event
+        self.event.fire_event(new_job_load, 'new_job')  # old dup event
         self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
         # Verify the jid dir

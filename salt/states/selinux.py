@@ -21,6 +21,7 @@ booleans can be set.
     execution module is available.
 '''
 
+
 def __virtual__():
     '''
     Only make this state available if the selinux module is available.
