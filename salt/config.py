@@ -140,7 +140,7 @@ VALID_OPTS = {
     'file_ignore_regex': bool,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
-    'fileserver_followsymlinks: bool,
+    'fileserver_followsymlinks': bool,
     'max_open_files': int,
     'auto_accept': bool,
     'master_tops': bool,
