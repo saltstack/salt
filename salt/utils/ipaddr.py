@@ -517,7 +517,7 @@ class _BaseIP(_IPAddrBase):
         return '%s(%r)' % (self.__class__.__name__, str(self))
 
     def __str__(self):
-        return  '%s' % self._string_from_ip_int(self._ip)
+        return '%s' % self._string_from_ip_int(self._ip)
 
     def __hash__(self):
         return hash(hex(long(self._ip)))
@@ -633,8 +633,8 @@ class _BaseNet(_IPAddrBase):
         return not eq
 
     def __str__(self):
-        return  '%s/%s' % (str(self.ip),
-                           str(self._prefixlen))
+        return '%s/%s' % (str(self.ip),
+                          str(self._prefixlen))
 
     def __hash__(self):
         return hash(int(self.network) ^ int(self.netmask))

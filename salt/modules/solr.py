@@ -956,9 +956,9 @@ def set_replication_enabled(status, host=None, core_name=None):
         return ret
     else:
         if status:
-            return  _replication_request(cmd, host=host, core_name=core_name)
+            return _replication_request(cmd, host=host, core_name=core_name)
         else:
-            return  _replication_request(cmd, host=host, core_name=core_name)
+            return _replication_request(cmd, host=host, core_name=core_name)
 
 
 def signal(signal=None):
