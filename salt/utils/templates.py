@@ -262,7 +262,7 @@ def get_template_context(template, line, num_lines=5, marker=None):
     if marker:
         buf[error_line_in_context] += marker
 
-    return '---\n{}\n---'.format('\n'.join(buf))
+    return '---\n{0}\n---'.format('\n'.join(buf))
 
 
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
