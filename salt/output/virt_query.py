@@ -3,6 +3,7 @@
 virt.query outputter
 '''
 
+
 def output(data):
     '''
     Display output for the salt-run virt.query function

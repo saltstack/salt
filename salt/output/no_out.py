@@ -3,8 +3,10 @@
 Display no output.
 '''
 
+
 def __virtual__():
     return 'quiet'
+
 
 def output(ret):
     '''

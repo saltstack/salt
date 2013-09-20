@@ -168,6 +168,7 @@ def _find_address_range(addresses):
             break
     return (first, last)
 
+
 def _get_prefix_length(number1, number2, bits):
     """Get the number of leading bits that are same for two numbers.
 
@@ -185,6 +186,7 @@ def _get_prefix_length(number1, number2, bits):
             return bits - i
     return 0
 
+
 def _count_righthand_zero_bits(number, bits):
     """Count the number of zero bits on the right hand side.
 
@@ -201,6 +203,7 @@ def _count_righthand_zero_bits(number, bits):
     for i in range(bits):
         if (number >> i) % 2:
             return i
+
 
 def summarize_address_range(first, last):
     """Summarize a network range given the first and last IP addresses.
@@ -265,6 +268,7 @@ def summarize_address_range(first, last):
         first_int = current + 1
         first = IPAddress(first_int, version=first._version)
     return networks
+
 
 def _collapse_address_list_recursive(addresses):
     """Loops through the addresses, collapsing concurrent netblocks.
@@ -391,6 +395,7 @@ except (NameError, TypeError):
         def __repr__(self):
             return 'Bytes(%s)' % str.__repr__(self)
 
+
 def get_mixed_type_key(obj):
     """Return a key suitable for sorting between networks and addresses.
 
@@ -414,6 +419,7 @@ def get_mixed_type_key(obj):
     elif isinstance(obj, _BaseIP):
         return obj._get_address_key()
     return NotImplemented
+
 
 class _IPAddrBase(object):
 
@@ -988,7 +994,6 @@ class _BaseNet(_IPAddrBase):
             if prefixlen_diff != 1:
                 raise ValueError('cannot set prefixlen_diff and new_prefix')
             prefixlen_diff = self._prefixlen - new_prefix
-
 
         if self.prefixlen - prefixlen_diff < 0:
             raise ValueError(
@@ -1806,7 +1811,6 @@ class IPv6Network(_BaseV6, _BaseNet):
         .prefixlen: 64
 
     """
-
 
     def __init__(self, address, strict=False):
         """Instantiate a new IPv6 Network object.

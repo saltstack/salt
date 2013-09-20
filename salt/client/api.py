@@ -18,6 +18,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import SaltException, EauthAuthenticationError
 from salt.utils.event import tagify
 
+
 def tokenify(cmd, token=None):
     '''
     If token is not None Then assign token to 'token' key of cmd dict
