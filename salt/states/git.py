@@ -113,6 +113,10 @@ def latest(name,
         try:
             current_rev = __salt__['git.revision'](target, user=runas)
 
+            branch = __salt__['git.current_branch'](target, user=runas)
+            if len(branch) > 0:
+                current_rev = branch
+
             #only do something, if the specified rev differs from the
             #current_rev
             if rev == current_rev:
