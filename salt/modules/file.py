@@ -957,8 +957,8 @@ def replace(path,
 
     # Search the file; track if any changes have been made for the return val
     has_changes = False
-    orig_file = [] # used if show_changes
-    new_file = [] # used if show_changes
+    orig_file = []  # used if show_changes
+    new_file = []  # used if show_changes
     for line in fileinput.input(path,
             inplace=not dry_run, backup=False if dry_run else backup,
             bufsize=bufsize, mode='rb'):
