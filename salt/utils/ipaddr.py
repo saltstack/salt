@@ -147,7 +147,7 @@ def v6_int_to_packed(address):
     Returns:
         The binary representation of this address.
     """
-    return Bytes(struct.pack('!QQ', address >> 64, address & (2**64 - 1)))
+    return Bytes(struct.pack('!QQ', address >> 64, address & (2 ** 64 - 1)))
 
 
 def _find_address_range(addresses):
@@ -255,7 +255,7 @@ def summarize_address_range(first, last):
         nbits = _count_righthand_zero_bits(first_int, ip_bits)
         current = None
         while nbits >= 0:
-            addend = 2**nbits - 1
+            addend = 2 ** nbits - 1
             current = first_int + addend
             nbits -= 1
             if current <= last_int:
@@ -1021,7 +1021,7 @@ class _BaseV4(object):
     """
 
     # Equivalent to 255.255.255.255 or 32 bits of 1's.
-    _ALL_ONES = (2**IPV4LENGTH) - 1
+    _ALL_ONES = (2 ** IPV4LENGTH) - 1
     _DECIMAL_DIGITS = frozenset('0123456789')
 
     def __init__(self, address):
@@ -1393,7 +1393,7 @@ class _BaseV6(object):
 
     """
 
-    _ALL_ONES = (2**IPV6LENGTH) - 1
+    _ALL_ONES = (2 ** IPV6LENGTH) - 1
     _HEXTET_COUNT = 8
     _HEX_DIGITS = frozenset('0123456789ABCDEFabcdef')
 
@@ -1572,7 +1572,7 @@ class _BaseV6(object):
         hex_str = '%032x' % ip_int
         hextets = []
         for x in range(0, 32, 4):
-            hextets.append('%x' % int(hex_str[x:x+4], 16))
+            hextets.append('%x' % int(hex_str[x:x + 4], 16))
 
         hextets = self._compress_hextets(hextets)
         return ':'.join(hextets)
