@@ -202,7 +202,7 @@ class APIClient(object):
             module = '.'.join(parts[1:]) #strip prefix
             if client == 'wheel':
                 functions = self.wheelClient.w_funcs
-            elif  client == 'runner':
+            elif client == 'runner':
                 functions = self.runnerClient.functions
             result =  salt.utils.argspec_report(functions, module)
         return result
