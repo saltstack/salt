@@ -82,7 +82,7 @@ def _get_conn():
               __salt__['config.option']('returner.sqlite3.timeout')))
     conn = sqlite3.connect(
                   __salt__['config.option']('returner.sqlite3.database'),
-        timeout = float(__salt__['config.option']('returner.sqlite3.timeout')))
+        timeout=float(__salt__['config.option']('returner.sqlite3.timeout')))
     return conn
 
 
