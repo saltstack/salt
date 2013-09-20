@@ -111,6 +111,16 @@ def _check_git():
     utils.check_or_die('git')
 
 
+def current_branch(cwd, user=None):
+    '''
+    Returns the current branch name, if on a branch.
+    '''
+    cmd = 'git branch --list | grep "^*\ " | cut -d " " -f 2 | ' + \
+        'grep -v "(detached"'
+
+    return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
+
+
 def revision(cwd, rev='HEAD', short=False, user=None):
     '''
     Returns the long hash of a given identifier (hash, branch, tag, HEAD, etc)
