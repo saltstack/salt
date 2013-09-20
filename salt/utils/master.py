@@ -112,7 +112,7 @@ class MasterPillarUtil(object):
 
     def _get_live_minion_pillar(self, minion_id=None, minion_grains=None):
         # Returns a dict of pillar data for one minion
-        if minion_id == None:
+        if minion_id is None:
             return {}
         if not minion_grains:
             log.warn('Cannot get pillar data for {0}: no grains supplied.'.format(minion_id))

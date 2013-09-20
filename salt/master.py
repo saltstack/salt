@@ -1083,7 +1083,7 @@ class AESFuncs(object):
         if 'events' in load:
             for event in load['events']:
                 self.event.fire_event(event, event['tag']) # old dup event
-                if load.get('pretag') != None:
+                if load.get('pretag') is not None:
                     self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']

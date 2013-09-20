@@ -770,7 +770,7 @@ class _BaseNet(_IPAddrBase):
                 s1, s2 = s2.subnet()
             else:
                 # If we got here, there's a bug somewhere.
-                assert True == False, ('Error performing exclusion: '
+                assert True is False, ('Error performing exclusion: '
                                        's1: %s s2: %s other: %s' %
                                        (str(s1), str(s2), str(other)))
         if s1 == other:
@@ -779,7 +779,7 @@ class _BaseNet(_IPAddrBase):
             ret_addrs.append(s1)
         else:
             # If we got here, there's a bug somewhere.
-            assert True == False, ('Error performing exclusion: '
+            assert True is False, ('Error performing exclusion: '
                                    's1: %s s2: %s other: %s' %
                                    (str(s1), str(s2), str(other)))
 
