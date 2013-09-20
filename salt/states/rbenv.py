@@ -102,13 +102,19 @@ def installed(name, default=False, runas=None, user=None):
 
     name
         The version of ruby to install
+
     default : False
         Whether to make this ruby the default.
+
     runas: None
         The user to run rbenv as.
+
         .. deprecated:: 0.17.0
+
     user: None
         The user to run rbenv as.
+
+        .. versionadded:: 0.17.0
 
     .. versionadded:: 0.16.0
     '''
@@ -116,8 +122,8 @@ def installed(name, default=False, runas=None, user=None):
 
     salt.utils.warn_until(
         (0, 19),
-        'Let\'s support \'runas\' until salt 0.19.0 is out, after which '
-        'it will stop being supported',
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
         _dont_call_warnings=True
     )
     if runas:
@@ -188,11 +194,16 @@ def absent(name, runas=None, user=None):
 
     name
         The version of ruby to uninstall
+
     runas: None
         The user to run rbenv as.
+
         .. deprecated:: 0.17.0
+
     user: None
         The user to run rbenv as.
+
+        .. versionadded:: 0.17.0
 
     .. versionadded:: 0.16.0
     '''
@@ -200,8 +211,8 @@ def absent(name, runas=None, user=None):
 
     salt.utils.warn_until(
         (0, 19),
-        'Let\'s support \'runas\' until salt 0.19.0 is out, after which '
-        'it will stop being supported',
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
         _dont_call_warnings=True
     )
     if runas:
