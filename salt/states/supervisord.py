@@ -57,6 +57,9 @@ def running(name,
         Whether to update the supervisor configuration.
     runas
         Name of the user to run the supervisorctl command
+        .. deprecated:: 0.17.0
+    user
+        Name of the user to run the supervisorctl command
     conf_file
         path to supervisorctl config file
     bin_env
@@ -188,6 +191,9 @@ def dead(name,
     name
         Service name as defined in the supervisor configuration file
     runas
+        Name of the user to run the supervisorctl command
+        .. deprecated:: 0.17.0
+    user
         Name of the user to run the supervisorctl command
     conf_file
         path to supervisorctl config file
