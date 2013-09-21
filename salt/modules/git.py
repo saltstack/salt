@@ -114,6 +114,12 @@ def _check_git():
 def current_branch(cwd, user=None):
     '''
     Returns the current branch name, if on a branch.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' git.current_branch /path/to/repo
     '''
     cmd = r'git branch --list | grep "^*\ " | cut -d " " -f 2 | ' + \
         'grep -v "(detached"'
