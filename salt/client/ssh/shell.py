@@ -112,8 +112,8 @@ class Shell(object):
             return 'sshpass -p {0} {1} {2} {3} {4}'.format(
                     self.passwd,
                     'ssh-copy-id',
-                    opts,
                     '-i {0}.pub'.format(self.priv),
+                    opts,
                     self.host)
         return None
 
