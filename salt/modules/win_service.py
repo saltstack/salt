@@ -72,7 +72,7 @@ def get_disabled():
         for line in lines:
             if 'DEMAND_START' in line:
                 ret.add(service)
-            elif  'DISABLED' in line:
+            elif 'DISABLED' in line:
                 ret.add(service)
     return sorted(ret)
 

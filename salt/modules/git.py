@@ -24,6 +24,7 @@ def __virtual__():
         return False
     return 'git'
 
+
 def _git_ssh_helper(identity):
     '''
     Returns the path to a helper script which can be used in the GIT_SSH env
@@ -108,6 +109,16 @@ def _check_git():
     Check if git is available
     '''
     utils.check_or_die('git')
+
+
+def current_branch(cwd, user=None):
+    '''
+    Returns the current branch name, if on a branch.
+    '''
+    cmd = 'git branch --list | grep "^*\ " | cut -d " " -f 2 | ' + \
+        'grep -v "(detached"'
+
+    return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
 
 
 def revision(cwd, rev='HEAD', short=False, user=None):

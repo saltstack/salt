@@ -4,6 +4,7 @@ Management of Mongodb users
 ===========================
 '''
 
+
 def present(name,
             passwd,
             database="admin",

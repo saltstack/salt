@@ -44,6 +44,7 @@ This is how a state configuration could look like:
 # Import python libs
 import re
 
+
 def _check_rbenv(ret, runas=None):
     '''
     Check to see if rbenv is installed.
@@ -52,6 +53,7 @@ def _check_rbenv(ret, runas=None):
         ret['result'] = False
         ret['comment'] = 'Rbenv is not installed.'
     return ret
+
 
 def _ruby_installed(ret, ruby, runas=None):
     '''
@@ -66,6 +68,7 @@ def _ruby_installed(ret, ruby, runas=None):
             break
 
     return ret
+
 
 def _check_and_install_ruby(ret, ruby, default=False, runas=None):
     '''
@@ -87,6 +90,7 @@ def _check_and_install_ruby(ret, ruby, default=False, runas=None):
         __salt__['rbenv.default'](ruby, runas=runas)
 
     return ret
+
 
 def installed(name, default=False, runas=None):
     '''
@@ -121,6 +125,7 @@ def installed(name, default=False, runas=None):
     else:
         return _check_and_install_ruby(ret, name, default, runas=runas)
 
+
 def _check_and_uninstall_ruby(ret, ruby, runas=None):
     '''
     Verify that ruby is uninstalled
@@ -144,6 +149,7 @@ def _check_and_uninstall_ruby(ret, ruby, runas=None):
         ret['comment'] = 'Ruby {0} is already absent'.format(ruby)
 
     return ret
+
 
 def absent(name, runas=None):
     '''
