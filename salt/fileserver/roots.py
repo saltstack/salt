@@ -234,3 +234,33 @@ def dir_list(load):
                                          followlinks=__opts__['fileserver_followsymlinks']):
             ret.append(os.path.relpath(root, path))
     return ret
+
+def symlink_list(load):
+    '''
+    Return a dict of all symlinks based on a given path on the Master
+    '''
+    ret = {}
+    if load['env'] not in __opts__['file_roots']:
+        return ret
+
+    for path in __opts__['file_roots'][load['env']]:
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
+        # No need to follow symlinks here, this is a symlink hunt :-)
+        for root, dirs, files in os.walk(os.path.join(path, prefix),
+                                         followlinks=False):
+            for fname in files:
+                if not os.path.islink(os.path.join(root, fname)):
+                    continue
+                rel_fn = os.path.relpath(
+                            os.path.join(root, fname),
+                            path
+                        )
+                if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
+                    ret[os.path.join(root, fname)] = os.readlink(os.path.join(root, fname))
+            for dname in dirs:
+                if os.path.islink(os.path.join(root, dname)):
+                    ret[os.path.join(root, dname)] = os.readlink(os.path.join(root, dname))
+    return ret

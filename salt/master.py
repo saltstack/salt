@@ -731,6 +731,7 @@ class AESFuncs(object):
         self._file_list = fs_.file_list
         self._file_list_emptydirs = fs_.file_list_emptydirs
         self._dir_list = fs_.dir_list
+        self._symlink_list = fs_.symlink_list
         self._file_envs = fs_.envs
 
     def __verify_minion(self, id_, token):
