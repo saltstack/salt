@@ -771,7 +771,7 @@ def remove(name=None, pkgs=None, **kwargs):
 def purge(name=None, pkgs=None, **kwargs):
     '''
     Package purges are not supported by yum, this function is identical to
-    ``remove()``.
+    :mod:`pkg.remove <salt.modules.yumpkg.remove>`.
 
     name
         The name of the package to be deleted.
