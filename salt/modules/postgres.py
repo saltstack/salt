@@ -53,7 +53,9 @@ def _run_psql(cmd, runas=None, password=None, host=None,
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
     '''
-    kwargs = {}
+    kwargs = {
+        'reset_system_locale': False
+    }
     if runas is None:
         if not host:
             host = __salt__['config.option']('postgres.host')
