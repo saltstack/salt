@@ -15,6 +15,7 @@ Control the kernel sysctl system
 # Import python libs
 import re
 
+
 def present(name, value, config='/etc/sysctl.conf'):
     '''
     Ensure that the named sysctl value is set in memory and persisted to the
