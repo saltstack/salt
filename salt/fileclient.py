@@ -752,7 +752,7 @@ class RemoteClient(Client):
 
     def symlink_list(self, env='base', prefix=''):
         '''
-        List the files on the master
+        List symlinked files and dirs on the master
         '''
         load = {'env': env,
                 'prefix': prefix,
