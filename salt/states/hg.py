@@ -2,9 +2,6 @@
 Interaction with Mercurial repositories.
 ========================================
 
-NOTE: This module is currently experimental. Most of this code is copied from
-git.py with changes to handle hg.
-
 Before using hg over ssh, make sure the remote host fingerprint already exists
 in ~/.ssh/known_hosts, and the remote host has this host's public key.
 
