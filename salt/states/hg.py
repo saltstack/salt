@@ -42,6 +42,7 @@ def __virtual__():
 def latest(name,
            rev=None,
            target=None,
+           clean=False,
            runas=None,
            force=False,
         ):
@@ -54,6 +55,8 @@ def latest(name,
         The remote branch, tag, or revision hash to clone/pull
     target
         Name of the target directory where repository is about to be cloned
+    clean
+        Force a clean update with -C (Default: False)
     runas
         Name of the user performing repository management operations
     force
@@ -87,7 +90,10 @@ def latest(name,
     return ret
 
 
-def _update_repo(ret, target, runas, rev):
+def _update_repo(ret, target, clean, runas, rev):
+    '''
+    Update the repo to a given revision. Using clean passes -C to the hg up
+    '''
     log.debug(
             'target {0} is found, '
             '"hg pull && hg up is probably required"'.format(target)
@@ -110,9 +116,9 @@ def _update_repo(ret, target, runas, rev):
     pull_out = __salt__['hg.pull'](target, user=runas)
 
     if rev:
-        __salt__['hg.update'](target, rev, user=runas)
+        __salt__['hg.update'](target, rev, force=clean, user=runas)
     else:
-        __salt__['hg.update'](target, 'tip', user=runas)
+        __salt__['hg.update'](target, 'tip', force=clean, user=runas)
 
     new_rev = __salt__['hg.revision'](cwd=target, user=runas)
 
