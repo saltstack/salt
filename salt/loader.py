@@ -97,19 +97,11 @@ def minion_mods(opts, context=None, whitelist=None):
         whitelist = opts.get('whitelist_modules', None)
     functions = load.gen_functions(
         pack,
-        whitelist=whitelist
+        whitelist=whitelist,
+        provider_overrides=True
     )
     # Enforce dependencies of module functions from "functions"
     Depends.enforce_dependencies(functions)
-
-    if opts.get('providers', False):
-        if isinstance(opts['providers'], dict):
-            for mod, provider in opts['providers'].items():
-                funcs = raw_mod(opts, provider, functions)
-                if funcs:
-                    for func in funcs:
-                        f_key = '{0}{1}'.format(mod, func[func.rindex('.'):])
-                        functions[f_key] = funcs[func]
     return functions
 
 
@@ -561,7 +553,8 @@ class Loader(object):
         mod.__context__ = context
         return funcs
 
-    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None):
+    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None,
+                      provider_overrides=False):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -843,6 +836,18 @@ class Loader(object):
                         'Added {0} to {1}'.format(module_func_name, self.tag)
                     )
                     self._apply_outputter(func, mod)
+
+        # Handle provider overrides
+        if provider_overrides and self.opts.get('providers', False):
+            if isinstance(self.opts['providers'], dict):
+                for mod, provider in self.opts['providers'].items():
+                    newfuncs = raw_mod(self.opts, provider, funcs)
+                    if newfuncs:
+                        for newfunc in newfuncs:
+                            f_key = '{0}{1}'.format(
+                                mod, newfunc[newfunc.rindex('.'):]
+                            )
+                            funcs[f_key] = newfuncs[newfunc]
 
         # now that all the functions have been collected, iterate back over
         # the available modules and inject the special __salt__ namespace that
