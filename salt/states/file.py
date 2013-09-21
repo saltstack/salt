@@ -410,11 +410,10 @@ def _check_directory(name,
     return True, 'The directory {0} is in the correct state'.format(name)
 
 
-def _check_dir_meta(
-        name,
-        user,
-        group,
-        mode):
+def _check_dir_meta(name,
+                    user,
+                    group,
+                    mode):
     '''
     Check the changes in directory metadata
     '''
@@ -573,9 +572,10 @@ def _test_owner(kwargs, user=None):
     if user:
         return user
     if 'owner' in kwargs:
-        msg = ('Use of argument owner found, "owner" is invalid, please use'
-               ' "user"')
-        log.warning(msg)
+        log.warnings(
+            'Use of argument owner found, "owner" is invalid, please '
+            'use "user"'
+        )
         return kwargs['owner']
 
     return user
@@ -661,15 +661,14 @@ def _get_template_texts(source_list=None,
     return ret
 
 
-def symlink(
-        name,
-        target,
-        force=False,
-        makedirs=False,
-        user=None,
-        group=None,
-        mode=None,
-        **kwargs):
+def symlink(name,
+            target,
+            force=False,
+            makedirs=False,
+            user=None,
+            group=None,
+            mode=None,
+            **kwargs):
     '''
     Create a symlink
 
@@ -2469,7 +2468,7 @@ def rename(name, source, force=False, makedirs=False):
 def accumulated(name, filename, text, **kwargs):
     '''
     Prepare accumulator which can be used in template in file.managed state.
-    accumulator dictionary becomes available in template.
+    Accumulator dictionary becomes available in template.
 
     name
         Accumulator name
@@ -2515,15 +2514,15 @@ def accumulated(name, filename, text, **kwargs):
 
 
 def serialize(name,
-            dataset,
-            user=None,
-            group=None,
-            mode=None,
-            env=None,
-            backup='',
-            show_diff=True,
-            create=True,
-            **kwargs):
+              dataset,
+              user=None,
+              group=None,
+              mode=None,
+              env=None,
+              backup='',
+              show_diff=True,
+              create=True,
+              **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
     simple configuration files.
@@ -2603,7 +2602,10 @@ def serialize(name,
     if formatter == 'yaml':
         contents = yaml.dump(dataset, default_flow_style=False)
     elif formatter == 'json':
-        contents = json.dumps(dataset, indent=2, separators=(',', ': '), sort_keys=True)
+        contents = json.dumps(dataset,
+                              indent=2,
+                              separators=(',', ': '),
+                              sort_keys=True)
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
@@ -2629,22 +2631,25 @@ def serialize(name,
 
 def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     '''
-    Create a special file similar to the 'nix mknod command. The supported device types are
-    p (fifo pipe), c (character device), and b (block device). Provide the major and minor
-    numbers when specifying a character device or block device. A fifo pipe does not require
-    this information. The command will create the necessary dirs if needed. If a file of the
-    same name not of the same type/major/minor exists, it will not be overwritten or unlinked
-    (deleted). This is logically in place as a safety measure because you can really shoot
-    yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
-    note that not just anyone can create special devices. Usually this is only done as root.
-    If the state is executed as none other than root on a minion, you may receive a permission
-    error.
+    Create a special file similar to the 'nix mknod command. The supported
+    device types are ``p`` (fifo pipe), ``c`` (character device), and ``b``
+    (block device). Provide the major and minor numbers when specifying a
+    character device or block device. A fifo pipe does not require this
+    information. The command will create the necessary dirs if needed. If a
+    file of the same name not of the same type/major/minor exists, it will not
+    be overwritten or unlinked (deleted). This is logically in place as a
+    safety measure because you can really shoot yourself in the foot here and
+    it is the behavior of 'nix ``mknod``. It is also important to note that not
+    just anyone can create special devices. Usually this is only done as root.
+    If the state is executed as none other than root on a minion, you may
+    receive a permission error.
 
     name
         name of the file
 
     ntype
-        node type 'p' (fifo pipe), 'c' (character device), or 'b' (block device)
+        node type 'p' (fifo pipe), 'c' (character device), or 'b'
+        (block device)
 
     major
         major number of the device
@@ -2698,61 +2703,120 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
            'result': False}
 
     if ntype == 'c':
-        #check for file existence
+        #  check for file existence
         if __salt__['file.file_exists'](name):
-            ret['comment'] = "File exists and is not a character device {0}. Cowardly refusing to continue".format(name)
+            ret['comment'] = (
+                'File exists and is not a character device {0}. Cowardly '
+                'refusing to continue'.format(name)
+            )
 
         #if it is a character device
         elif not __salt__['file.is_chrdev'](name):
-            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+            ret = __salt__['file.mknod'](name,
+                                         ntype,
+                                         major,
+                                         minor,
+                                         user,
+                                         group,
+                                         mode)
 
-        #check the major/minor
+        #  check the major/minor
         else:
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
-                ret['comment'] = "Character device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
+                ret['comment'] = (
+                    'Character device {0} exists and has a different '
+                    'major/minor {1}/{2}. Cowardly refusing to continue'
+                    .format(name, devmaj, devmin)
+                )
             #check the perms
             else:
-                ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+                ret = __salt__['file.check_perms'](name,
+                                                   None,
+                                                   user,
+                                                   group,
+                                                   mode)[0]
                 if not ret['changes']:
-                    ret['comment'] = "Character device {0} is in the correct state".format(name)
+                    ret['comment'] = (
+                        'Character device {0} is in the correct state'.format(
+                            name
+                        )
+                    )
 
     elif ntype == 'b':
-        #check for file existence
+        #  check for file existence
         if __salt__['file.file_exists'](name):
-            ret['comment'] = "File exists and is not a block device {0}. Cowardly refusing to continue".format(name)
+            ret['comment'] = (
+                'File exists and is not a block device {0}. Cowardly '
+                'refusing to continue'.format(name)
+            )
 
-        #if it is a block device
+        #  if it is a block device
         elif not __salt__['file.is_blkdev'](name):
-            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+            ret = __salt__['file.mknod'](name,
+                                         ntype,
+                                         major,
+                                         minor,
+                                         user,
+                                         group,
+                                         mode)
 
-        #check the major/minor
+        #  check the major/minor
         else:
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
-                ret['comment'] = "Block device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
-            #check the perms
+                ret['comment'] = (
+                    'Block device {0} exists and has a different major/minor '
+                    '{1}/{2}. Cowardly refusing to continue'.format(
+                        name, devmaj, devmin
+                    )
+                )
+            #  check the perms
             else:
-                ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+                ret = __salt__['file.check_perms'](name,
+                                                   None,
+                                                   user,
+                                                   group,
+                                                   mode)[0]
                 if not ret['changes']:
-                    ret['comment'] = "Block device {0} is in the correct state".format(name)
+                    ret['comment'] = (
+                        'Block device {0} is in the correct state'.format(name)
+                    )
 
     elif ntype == 'p':
-        #check for file existence, if it is a fifo, user, group, and mode
+        #  check for file existence, if it is a fifo, user, group, and mode
         if __salt__['file.file_exists'](name):
-            ret['comment'] = "File exists and is not a fifo pipe {0}. Cowardly refusing to continue".format(name)
+            ret['comment'] = (
+                'File exists and is not a fifo pipe {0}. Cowardly refusing '
+                'to continue'.format(name)
+            )
 
-        #if it is a fifo
+        #  if it is a fifo
         elif not __salt__['file.is_fifo'](name):
-            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+            ret = __salt__['file.mknod'](name,
+                                         ntype,
+                                         major,
+                                         minor,
+                                         user,
+                                         group,
+                                         mode)
 
-        #check the perms
+        #  check the perms
         else:
-            ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+            ret = __salt__['file.check_perms'](name,
+                                               None,
+                                               user,
+                                               group,
+                                               mode)[0]
             if not ret['changes']:
-                ret['comment'] = "Fifo pipe {0} is in the correct state".format(name)
+                ret['comment'] = (
+                    'Fifo pipe {0} is in the correct state'.format(name)
+                )
 
     else:
-        ret['comment'] = "Node type unavailable: '{0}. Available node types are character ('c'), block ('b'), and pipe ('p')".format(ntype)
+        ret['comment'] = (
+            'Node type unavailable: {0!r}. Available node types are '
+            'character (\'c\'), block (\'b\'), and pipe (\'p\')'.format(ntype)
+        )
 
     return ret

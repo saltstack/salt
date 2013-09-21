@@ -37,6 +37,28 @@ from salt.exceptions import SaltReqTimeoutError, SaltException
 log = logging.getLogger(__name__)
 
 
+STATE_INTERNAL_KEYWORDS = frozenset([
+    # These are keywords passed to state module functions which are to be used
+    # by salt in this state module and not on the actual state module function
+    'fun',
+    'order',
+    'state',
+    'require',
+    'fail_hard',
+    'reload_modules',
+    '__id__',
+    '__sls__',
+    '__env__',
+    '__pub_user',
+    '__pub_arg',
+    '__pub_jid',
+    '__pub_fun',
+    '__pub_tgt',
+    '__pub_ret',
+    '__pub_tgt_type'
+])
+
+
 def split_low_tag(tag):
     '''
     Take a low tag and split it back into the low dict that it came from
@@ -1204,11 +1226,7 @@ class State(object):
         cdata = salt.utils.format_call(
             self.states[state_func_name], data,
             initial_ret={'full': state_func_name},
-            expected_extra_kws=(
-                '__id__', 'fun', 'state', 'require', 'order', 'reload_modules',
-                '__sls__', '__env__', '__pub_user', '__pub_arg', '__pub_jid',
-                '__pub_fun', '__pub_tgt', '__pub_tgt_type', '__pub_ret'
-            )
+            expected_extra_kws=STATE_INTERNAL_KEYWORDS
         )
         if data.get('__prereq__'):
             test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
@@ -1232,11 +1250,18 @@ class State(object):
         finally:
             if data.get('__prereq__'):
                 sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = test
+
+        # If format_call got any warnings, let's show them to the user
+        if 'warnings' in cdata:
+            ret.setdefault('warnings', []).extend(cdata['warnings'])
+
         if 'provider' in data:
             self.load_modules()
+
         if data.get('__prereq__'):
             data['__prereq__'] = False
             return ret
+
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)

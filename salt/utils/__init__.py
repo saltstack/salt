@@ -5,6 +5,7 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
@@ -17,9 +18,9 @@ import random
 import re
 import shlex
 import shutil
-import string
 import socket
 import stat
+import string
 import subprocess
 import sys
 import tempfile
@@ -727,31 +728,28 @@ def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
                 pass
 
     # Now let gather any remaining and unexpected keyword arguments
-    extra = []
-    for key in data.keys():
+    extra = {}
+    for key, value in data.iteritems():
         if key in expected_extra_kws:
             continue
-        extra.append(key)
+        extra[key] = copy.deepcopy(value)
+
+    # We'll be showing errors to the users until salt 0.20 comes out, after
+    # which, errors will be raised instead.
+    warn_until(
+        (0, 20),
+        'It\'s time to start raising `SaltInvocationError` instead of '
+        'returning warnings',
+        # Let's not show the deprecation warning on the console, there's no
+        # need.
+        _dont_call_warnings=True
+    )
 
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
-            raise SaltInvocationError(
-                '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
-                    extra,
-                    ret.get(
-                        # In case this is being called for a state module
-                        'full',
-                        # Not a state module, build the name
-                        '{0}.{1}'.format(fun.__module__, fun.__name__)
-                    )
-                )
-            )
-
-        raise SaltInvocationError(
-            '{0} and {1!r} are invalid keyword arguments for {2}'.format(
-                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
-                extra[-1],
+            msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
+                extra.keys(),
                 ret.get(
                     # In case this is being called for a state module
                     'full',
@@ -759,7 +757,30 @@ def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
                     '{0}.{1}'.format(fun.__module__, fun.__name__)
                 )
             )
+        else:
+            '{0} and {1!r} are invalid keyword arguments for {2}'.format(
+                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
+                extra.keys()[-1],
+                ret.get(
+                    # In case this is being called for a state module
+                    'full',
+                    # Not a state module, build the name
+                    '{0}.{1}'.format(fun.__module__, fun.__name__)
+                )
+            )
+
+        # Return a warning to the user explaining what's going on
+        ret.setdefault('warnings', []).append(
+            '{0}. If you were trying to pass additional data to be used '
+            'in a template context, please pass a dictionary to '
+            '\'template_context\'. Your approach will work until salt>=0.20.0 '
+            'is out.{1}'.format(
+                msg,
+                '' if 'full' not in ret else ' Please update your state files.'
+            )
         )
+        # Lets set the current extra kwargs as kwargs for the template context
+        ret.setdefault('template_context', {}).update(extra)
 
     return ret
 
