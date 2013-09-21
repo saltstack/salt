@@ -5,6 +5,7 @@ Tests for the file state
 # Import python libs
 import os
 import shutil
+import tempfile
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -318,6 +319,25 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
         finally:
             shutil.rmtree(name, ignore_errors=True)
+
+    def test_replace(self):
+        '''
+        file.replace
+        '''
+        name = os.path.join(integration.TMP, 'replace_test')
+        with salt.utils.fopen(name, 'w+') as fp_:
+            fp_.write('change_me')
+
+        ret = self.run_state('file.replace',
+                name=name, pattern='change', repl='salt', backup=False)
+
+        try:
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertIn('salt', fp_.read())
+
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_sed(self):
         '''
