@@ -29,6 +29,7 @@ def managed(name,
             never_download=None,
             prompt=None,
             __env__='base',
+            user=None,
             runas=None,
             no_chown=False,
             cwd=None,
@@ -61,6 +62,30 @@ def managed(name,
         ret['result'] = False
         ret['comment'] = 'Virtualenv was not detected on this system'
         return ret
+
+    salt.utils.warn_until(
+        (0, 18),
+        'Let\'s support \'runas\' until salt 0.19.0 is out, after which '
+        'it will stop being supported',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
 
     if salt.utils.is_windows():
         venv_py = os.path.join(name, 'Scripts', 'python.exe')
@@ -125,7 +150,7 @@ def managed(name,
             extra_search_dir=extra_search_dir,
             never_download=never_download,
             prompt=prompt,
-            runas=runas
+            runas=user
         )
 
         ret['result'] = _ret['retcode'] == 0
@@ -144,7 +169,7 @@ def managed(name,
     if requirements:
         before = set(__salt__['pip.freeze'](bin_env=name))
         _ret = __salt__['pip.install'](
-            requirements=requirements, bin_env=name, runas=runas, cwd=cwd,
+            requirements=requirements, bin_env=name, runas=user, cwd=cwd,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
