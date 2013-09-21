@@ -11,6 +11,9 @@ The postgres_users module is used to create and manage Postgres users.
       postgres_user.present
 '''
 
+# Import salt libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -27,7 +30,8 @@ def present(name,
             replication=False,
             password=None,
             groups=None,
-            runas=None):
+            runas=None,
+            user=None):
     '''
     Ensure that the named user is present with the specified privileges
 
@@ -57,14 +61,45 @@ def present(name,
 
     runas
         System user all operations should be performed on behalf of
+
+        .. deprecated:: 0.17.0
+
+    user
+        System user all operations should be performed on behalf of
+
+        .. versionadded:: 0.17.0
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'User {0} is already present'.format(name)}
 
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
+
     # check if user exists
-    if __salt__['postgres.user_exists'](name, runas=runas):
+    if __salt__['postgres.user_exists'](name, runas=user):
         return ret
 
     # The user is not present, make it!
@@ -80,7 +115,7 @@ def present(name,
                                         replication=replication,
                                         rolepassword=password,
                                         groups=groups,
-                                        runas=runas):
+                                        runas=user):
         ret['comment'] = 'The user {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     else:
@@ -90,7 +125,7 @@ def present(name,
     return ret
 
 
-def absent(name, runas=None):
+def absent(name, runas=None, user=None):
     '''
     Ensure that the named user is absent
 
@@ -99,19 +134,50 @@ def absent(name, runas=None):
 
     runas
         System user all operations should be performed on behalf of
+
+        .. deprecated:: 0.17.0
+
+    user
+        System user all operations should be performed on behalf of
+
+        .. versionadded:: 0.17.0
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
+
     # check if user exists and remove it
-    if __salt__['postgres.user_exists'](name, runas=runas):
+    if __salt__['postgres.user_exists'](name, runas=user):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'User {0} is set to be removed'.format(name)
             return ret
-        if __salt__['postgres.user_remove'](name, runas=runas):
+        if __salt__['postgres.user_remove'](name, runas=user):
             ret['comment'] = 'User {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret

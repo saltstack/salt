@@ -15,6 +15,9 @@ Manage RabbitMQ Virtual Hosts.
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -30,6 +33,7 @@ def __virtual__():
 
 def present(name,
             user=None,
+            owner=None,
             conf=None,
             write=None,
             read=None,
@@ -41,6 +45,9 @@ def present(name,
         VHost name
     user
         Initial user permission to set on the VHost, if present
+        .. deprecated:: 0.17.0
+    owner
+        Initial owner permission to set on the VHost, if present
     conf
         Initial conf string to apply to the VHost and user. Defaults to .*
     write
@@ -54,6 +61,30 @@ def present(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
+    salt.utils.warn_until(
+        (0, 18),
+        'Please start deprecating \'runas\' at this stage. Ping s0undt3ch for '
+        'additional information or see #6961.',
+        _dont_call_warnings=True
+    )
+    if user:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'user\' argument is being deprecated in favor or \'owner\', '
+            'please update your state files.'
+        )
+    if user is not None and owner is not None:
+        # owner wins over user but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'owner\' and \'user\' arguments. Please don\'t. '
+            '\'user\' is being ignored in favor of \'owner\'.'
+        )
+        user = None
+    elif user is not None:
+        # Support old runas usage
+        owner = user
+        user = None
+
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)
 
     if __opts__['test']:
@@ -66,7 +97,7 @@ def present(name,
         if user is not None:
             ret['comment'] += (
                 ' Setting permissions for {0} {1} {2} {3}'.format(
-                    user,
+                    owner,
                     conf or '.*',
                     write or '.*',
                     read or '.*'
@@ -82,12 +113,12 @@ def present(name,
     else:
         ret['comment'] = 'VHost {0} already exists'.format(name)
 
-    if user is not None:
+    if owner is not None:
         conf = conf or '.*'
         write = write or '.*'
         read = read or '.*'
         result = __salt__['rabbitmq.set_permissions'](
-            name, user, conf, write, read, runas=runas)
+            name, owner, conf, write, read, runas=runas)
 
         if 'Error' in result:
             ret['result'] = False
