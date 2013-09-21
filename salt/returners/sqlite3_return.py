@@ -25,7 +25,7 @@ Use the commands to create the sqlite3 database and tables::
     --
 
     CREATE TABLE jids (
-      jid integer PRIMARY KEY,
+      jid TEXT PRIMARY KEY,
       load TEXT NOT NULL
       );
 
