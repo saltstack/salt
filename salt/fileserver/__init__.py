@@ -274,15 +274,12 @@ class Fileserver(object):
 
     def symlink_list(self, load):
         '''
-        Return a list of symlinks
-        This only applies to the default roots file server
+        Return a list of symlinked files and dirs
         '''
         ret = {}
         if 'env' not in load:
             return {}
         for fsb in self._gen_back(None):
-            if fsb != 'roots':
-                pass
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
