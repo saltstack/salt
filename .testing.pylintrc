@@ -14,6 +14,8 @@ init-hook="
 # Pickle collected data for later comparisons.
 persistent=no
 
+load-plugins=salttesting.pylintplugins.pep263
+
 
 [MESSAGES CONTROL]
 
@@ -101,6 +103,16 @@ symbols=no
 
 # Tells whether to display a full report or only the messages
 reports=no
+
+# Set the output format. Available formats are text, parseable, colorized, msvs
+# (visual studio) and html
+# output-format=parseable
+msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
+
+# Put messages in a separate file for each module / package specified on the
+# command line instead of printing them on stdout. Reports (if any) will be
+# written in a file name "pylint_global.[txt|html]".
+files-output=no
 
 
 [BASIC]
