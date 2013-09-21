@@ -14,6 +14,7 @@ The postgres_group module is used to create and manage Postgres groups.
 # Import salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only load if the postgres module is present
