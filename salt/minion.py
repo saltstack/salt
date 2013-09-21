@@ -668,17 +668,29 @@ class Minion(object):
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
-                msg = 'Command required for \'{0}\' not found: {1}'
-                log.debug(msg.format(function_name, str(exc)))
-                ret['return'] = msg.format(function_name, str(exc))
+                msg = 'Command required for {0!r} not found'.format(
+                    function_name
+                )
+                log.debug(msg, exc_info=True)
+                ret['return'] = '{0}: {1}'.format(msg, exc)
             except CommandExecutionError as exc:
-                msg = 'A command in {0} had a problem: {1}'
-                log.error(msg.format(function_name, str(exc)))
-                ret['return'] = 'ERROR: {0}'.format(str(exc))
+                log.error(
+                    'A command in {0!r} had a problem: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR: {0}'.format(exc)
             except SaltInvocationError as exc:
-                msg = 'Problem executing "{0}": {1}'
-                log.error(msg.format(function_name, str(exc)))
-                ret['return'] = 'ERROR executing {0}: {1}'.format(
+                log.error(
+                    'Problem executing {0!r}: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR executing {0!r}: {1}'.format(
                     function_name, exc
                 )
             except TypeError as exc:
@@ -688,21 +700,17 @@ class Minion(object):
                 )
                 msg = ('TypeError encountered executing {0}: {1}. See '
                        'debug log for more info.  Possibly a missing '
-                       'arguments issue:  {2}').format(function_name, exc,
+                       'arguments issue:  {2}').format(function_name,
+                                                       exc,
                                                        aspec)
-                log.warning(msg)
-                log.debug(
-                    'TypeError intercepted: {0}\n{1}'.format(exc, trb),
-                    exc_info=True
-                )
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
                 ret['return'] = msg
             except Exception:
-                trb = traceback.format_exc()
-                msg = 'The minion function caused an exception: {0}'
-                log.warning(msg.format(trb))
-                ret['return'] = trb
+                msg = 'The minion function caused an exception'
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
         else:
-            ret['return'] = '"{0}" is not available.'.format(function_name)
+            ret['return'] = '{0!r} is not available.'.format(function_name)
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
