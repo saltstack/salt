@@ -23,12 +23,12 @@ import os
 import shutil
 
 # Import salt libs
+import salt.utils
 from salt.states.git import _fail, _neutral_test
-from salt import utils
 
 log = logging.getLogger(__name__)
 
-if utils.is_windows():
+if salt.utils.is_windows():
     hg_binary = "hg.exe"
 else:
     hg_binary = "hg"
@@ -45,22 +45,59 @@ def latest(name,
            rev=None,
            target=None,
            runas=None,
+           user=None,
            force=False):
     '''
     Make sure the repository is cloned to the given directory and is up to date
 
     name
         Address of the remote repository as passed to "hg clone"
+
     rev
         The remote branch, tag, or revision hash to clone/pull
+
     target
         Name of the target directory where repository is about to be cloned
+
     runas
         Name of the user performing repository management operations
+
+        .. deprecated:: 0.17.0
+
+    user
+        Name of the user performing repository management operations
+
+        .. versionadded: 0.17.0
+
     force
         Force hg to clone into pre-existing directories (deletes contents)
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
+
     if not target:
         return _fail(ret, '"target option is required')
 
@@ -69,7 +106,7 @@ def latest(name,
             os.path.isdir('{0}/.hg'.format(target)))
 
     if is_repository:
-        ret = _update_repo(ret, target, runas, rev)
+        ret = _update_repo(ret, target, user, rev)
     else:
         if os.path.isdir(target):
             fail = _handle_existing(ret, target, force)
@@ -84,17 +121,17 @@ def latest(name,
                     ret,
                     'Repository {0} is about to be cloned to {1}'.format(
                         name, target))
-        _clone_repo(ret, target, name, runas, rev)
+        _clone_repo(ret, target, name, user, rev)
     return ret
 
 
-def _update_repo(ret, target, runas, rev):
+def _update_repo(ret, target, user, rev):
     log.debug(
             'target {0} is found, '
             '"hg pull && hg up is probably required"'.format(target)
     )
 
-    current_rev = __salt__['hg.revision'](target, user=runas)
+    current_rev = __salt__['hg.revision'](target, user=user)
     if not current_rev:
         return _fail(
                 ret,
@@ -108,14 +145,14 @@ def _update_repo(ret, target, runas, rev):
                 ret,
                 test_result)
 
-    pull_out = __salt__['hg.pull'](target, user=runas)
+    pull_out = __salt__['hg.pull'](target, user=user)
 
     if rev:
-        __salt__['hg.update'](target, rev, user=runas)
+        __salt__['hg.update'](target, rev, user=user)
     else:
-        __salt__['hg.update'](target, 'tip', user=runas)
+        __salt__['hg.update'](target, 'tip', user=user)
 
-    new_rev = __salt__['hg.revision'](cwd=target, user=runas)
+    new_rev = __salt__['hg.revision'](cwd=target, user=user)
 
     if current_rev != new_rev:
         revision_text = '{0} => {1}'.format(current_rev, new_rev)
@@ -149,16 +186,16 @@ def _handle_existing(ret, target, force):
         return _fail(ret, 'Directory exists, and is not empty')
 
 
-def _clone_repo(ret, target, name, runas, rev):
-    result = __salt__['hg.clone'](target, name, user=runas)
+def _clone_repo(ret, target, name, user, rev):
+    result = __salt__['hg.clone'](target, name, user=user)
 
     if not os.path.isdir(target):
         return _fail(ret, result)
 
     if rev:
-        __salt__['hg.update'](target, rev, user=runas)
+        __salt__['hg.update'](target, rev, user=user)
 
-    new_rev = __salt__['hg.revision'](cwd=target, user=runas)
+    new_rev = __salt__['hg.revision'](cwd=target, user=user)
     message = 'Repository {0} cloned to {1}'.format(name, target)
     log.info(message)
     ret['comment'] = message
