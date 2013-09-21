@@ -48,7 +48,6 @@ Use the commands to create the sqlite3 database and tables::
 import logging
 import json
 import datetime
-log = logging.getLogger(__name__)
 
 # Better safe than sorry here. Even though sqlite3 is included in python
 try:
@@ -57,10 +56,14 @@ try:
 except ImportError:
     HAS_SQLITE3 = False
 
+log = logging.getLogger(__name__)
+
+
 def __virtual__():
     if not HAS_SQLITE3:
         return False
     return 'sqlite3'
+
 
 def _get_conn():
     '''
@@ -79,8 +82,9 @@ def _get_conn():
               __salt__['config.option']('returner.sqlite3.timeout')))
     conn = sqlite3.connect(
                   __salt__['config.option']('returner.sqlite3.database'),
-        timeout = float(__salt__['config.option']('returner.sqlite3.timeout')))
+        timeout=float(__salt__['config.option']('returner.sqlite3.timeout')))
     return conn
+
 
 def _close_conn(conn):
     '''
@@ -89,6 +93,7 @@ def _close_conn(conn):
     log.debug('Closing the sqlite3 database connection')
     conn.commit()
     conn.close()
+
 
 def returner(ret):
     '''
@@ -101,13 +106,14 @@ def returner(ret):
              (fun, jid, id, date, full_ret, success)
              VALUES (:fun, :jid, :id, :date, :full_ret, :success)'''
     cur.execute(sql,
-                {'fun':ret['fun'],
-                 'jid':ret['jid'],
-                 'id':ret['id'],
-                 'date':str(datetime.datetime.now()),
-                 'full_ret':json.dumps(ret['return']),
-                 'success':ret['success']})
+                {'fun': ret['fun'],
+                 'jid': ret['jid'],
+                 'id': ret['id'],
+                 'date': str(datetime.datetime.now()),
+                 'full_ret': json.dumps(ret['return']),
+                 'success': ret['success']})
     _close_conn(conn)
+
 
 def save_load(jid, load):
     '''
@@ -119,9 +125,10 @@ def save_load(jid, load):
     cur = conn.cursor()
     sql = '''INSERT INTO jids (jid, load) VALUES (:jid, :load)'''
     cur.execute(sql,
-                {'jid':jid,
-                 'load':json.dumps(load)})
+                {'jid': jid,
+                 'load': json.dumps(load)})
     _close_conn(conn)
+
 
 def get_load(jid):
     '''
@@ -132,12 +139,13 @@ def get_load(jid):
     cur = conn.cursor()
     sql = '''SELECT load FROM jids WHERE jid = :jid'''
     cur.execute(sql,
-                {'jid':jid})
+                {'jid': jid})
     data = cur.fetchone()
     if data:
         return json.loads(data)
     _close_conn(conn)
     return {}
+
 
 def get_jid(jid):
     '''
@@ -148,15 +156,16 @@ def get_jid(jid):
     cur = conn.cursor()
     sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = :jid'''
     cur.execute(sql,
-                {'jid':jid})
+                {'jid': jid})
     data = cur.fetchone()
     log.debug('query result: {0}'.format(data))
     ret = {}
     if data and len(data) > 1:
-        ret = {str(data[0]):{u'return':json.loads(data[1])}}
+        ret = {str(data[0]): {u'return': json.loads(data[1])}}
         log.debug("ret: {0}".format(ret))
     _close_conn(conn)
     return ret
+
 
 def get_fun(fun):
     '''
@@ -172,7 +181,7 @@ def get_fun(fun):
             WHERE s.fun = :fun
             '''
     cur.execute(sql,
-                {'fun':fun})
+                {'fun': fun})
     data = cur.fetchall()
     ret = {}
     if data:
@@ -184,6 +193,7 @@ def get_fun(fun):
             ret[minion] = json.loads(ret)
     _close_conn(conn)
     return ret
+
 
 def get_jids():
     '''
@@ -200,6 +210,7 @@ def get_jids():
         ret.append(jid[0])
     _close_conn(conn)
     return ret
+
 
 def get_minions():
     '''

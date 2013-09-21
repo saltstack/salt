@@ -140,4 +140,3 @@ def absent(name,
             ret['comment'] = 'Policy {0} {1} is not present'.format(vhost, name)
 
     return ret
-

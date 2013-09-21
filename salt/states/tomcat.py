@@ -40,6 +40,7 @@ Notes:
       Apache Tomcat/7.0.37
 '''
 
+
 # Private
 def __virtual__():
     '''
@@ -47,6 +48,7 @@ def __virtual__():
     '''
 
     return 'tomcat' if 'tomcat.status' in __salt__ else False
+
 
 # Functions
 def war_deployed(name, war, url='http://localhost:8080/manager',
@@ -150,6 +152,7 @@ def war_deployed(name, war, url='http://localhost:8080/manager',
         ret['changes'].pop('deploy')
     return ret
 
+
 def wait(name, url='http://localhost:8080/manager', timeout=180):
     '''
     Wait for the tomcat manager to load
@@ -197,6 +200,7 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
        }
 
     return ret
+
 
 def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
     '''

@@ -18,6 +18,7 @@ Note: This does NOT override any grains set in the minion file.
         - value: edam
 '''
 
+
 def present(name, value):
     '''
     Ensure that a grain is set

@@ -14,6 +14,7 @@ import salt.fileserver
 import salt.utils
 from salt.utils.event import tagify
 
+
 def find_file(path, env='base', **kwargs):
     '''
     Search the environment for the relative path

@@ -12,8 +12,8 @@ import logging
 # Import salt libs
 import salt.loader
 
-
 log = logging.getLogger(__name__)
+
 
 def generate_mtime_map(path_map):
     '''
@@ -27,6 +27,7 @@ def generate_mtime_map(path_map):
                     file_path = os.path.join(directory, item)
                     file_map[file_path] = os.path.getmtime(file_path)
     return file_map
+
 
 def diff_mtime_map(map1, map2):
     '''
@@ -46,6 +47,7 @@ def diff_mtime_map(map1, map2):
     log.debug('diff_mtime_map: the maps are the same')
     return False
 
+
 def reap_fileserver_cache_dir(cache_base, find_func):
     '''
     Remove unused cache items assuming the cache directory follows a directory convention:
@@ -57,7 +59,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
         for root, dirs, files in os.walk(env_base):
             # if we have an empty directory, lets cleanup
             # This will only remove the directory on the second time "_reap_cache" is called (which is intentional)
-            if len(dirs) == 0 and len (files) == 0:
+            if len(dirs) == 0 and len(files) == 0:
                 os.rmdir(root)
                 continue
             # if not, lets check the files in the directory
@@ -70,6 +72,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 # if we don't actually have the file, lets clean up the cache object
                 if ret['path'] == '':
                     os.unlink(file_path)
+
 
 def is_file_ignored(opts, fname):
     '''

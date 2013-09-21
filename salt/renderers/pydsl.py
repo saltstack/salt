@@ -316,6 +316,7 @@ from salt.utils import pydsl
 
 __all__ = ['render']
 
+
 def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
     mod = imp.new_module(sls)
     # Note: mod object is transient. It's existence only lasts as long as

@@ -21,6 +21,7 @@ from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
+
 class MasterPillarUtil(object):
     '''
     Helper utility for easy access to targeted minion grain and
@@ -111,7 +112,7 @@ class MasterPillarUtil(object):
 
     def _get_live_minion_pillar(self, minion_id=None, minion_grains=None):
         # Returns a dict of pillar data for one minion
-        if minion_id == None:
+        if minion_id is None:
             return {}
         if not minion_grains:
             log.warn('Cannot get pillar data for {0}: no grains supplied.'.format(minion_id))
@@ -137,14 +138,14 @@ class MasterPillarUtil(object):
         lret = {}
         if self.use_cached_grains:
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_grains.iteritems() if mcache])
-            missed_minions = [ minion_id for minion_id in minion_ids if minion_id not in cret ]
+            missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion grains for: {0}'.format(missed_minions))
             if self.grains_fallback:
                 lret = self._get_live_minion_grains(missed_minions)
             ret = dict(dict([(minion_id, {}) for minion_id in minion_ids]).items() + lret.items() + cret.items())
         else:
             lret = self._get_live_minion_grains(minion_ids)
-            missed_minions = [ minion_id for minion_id in minion_ids if minion_id not in lret ]
+            missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion grains for: {0}'.format(missed_minions))
             if self.grains_fallback:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_grains.iteritems() if mcache])
@@ -162,14 +163,14 @@ class MasterPillarUtil(object):
         lret = {}
         if self.use_cached_pillar:
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_pillar.iteritems() if mcache])
-            missed_minions = [ minion_id for minion_id in minion_ids if minion_id not in cret ]
+            missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion pillars for: {0}'.format(missed_minions))
             if self.pillar_fallback:
                 lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in missed_minions])
             ret = dict(dict([(minion_id, {}) for minion_id in minion_ids]).items() + lret.items() + cret.items())
         else:
             lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in minion_ids])
-            missed_minions = [ minion_id for minion_id in minion_ids if minion_id not in lret ]
+            missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion pillars for: {0}'.format(missed_minions))
             if self.pillar_fallback:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_pillar.iteritems() if mcache])
@@ -218,12 +219,12 @@ class MasterPillarUtil(object):
         log.debug('Getting minion grain data for: {0}'.format(minion_ids))
         minion_grains = self._get_minion_grains(
                                         *minion_ids,
-                                        cached_grains = cached_minion_grains)
+                                        cached_grains=cached_minion_grains)
         log.debug('Getting minion pillar data for: {0}'.format(minion_ids))
         minion_pillars = self._get_minion_pillar(
                                         *minion_ids,
-                                        grains = minion_grains,
-                                        cached_pillar = cached_minion_pillars)
+                                        grains=minion_grains,
+                                        cached_pillar=cached_minion_pillars)
         return minion_pillars
 
     def get_minion_grains(self):
@@ -249,7 +250,7 @@ class MasterPillarUtil(object):
         log.debug('Getting minion grain data for: {0}'.format(minion_ids))
         minion_grains = self._get_minion_grains(
                                         *minion_ids,
-                                        cached_grains = cached_minion_grains)
+                                        cached_grains=cached_minion_grains)
         return minion_grains
 
     def clear_cached_minion_data(self,
