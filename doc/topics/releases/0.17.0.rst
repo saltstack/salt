@@ -137,3 +137,9 @@ LXC Support
 Extensive additions have been added to Salt for LXC support. This included
 the backend libs for managing LXC containers. Addition into the salt-virt
 system is still in the works.
+
+Mac OS X User/Group Support
+---------------------------
+
+Salt is now able to manage users and groups on Minions running Mac OS X.
+However, at this time user passwords cannot be managed.
