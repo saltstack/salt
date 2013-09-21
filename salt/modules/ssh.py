@@ -529,9 +529,9 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
     '''
     # The following list of OSes have an old version of openssh-clients
     # and thus require the '-t' option for ssh-keyscan
-    need_dash_t = ['CentOS-5',]
+    need_dash_t = ['CentOS-5']
 
-    chunks = ['ssh-keyscan', ]
+    chunks = ['ssh-keyscan']
     if port:
         chunks += ['-p', str(port)]
     if enc:

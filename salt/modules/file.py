@@ -2059,6 +2059,7 @@ def makedirs_perms(name,
                 group,
                 int('{0}'.format(mode)) if mode else None)
 
+
 def get_devmm(name):
     '''
     Get major/minor info from a device
@@ -2099,6 +2100,7 @@ def is_chrdev(name):
             raise
     return stat.S_ISCHR(stat_structure.st_mode)
 
+
 def mknod_chrdev(name,
                  major,
                  minor,
@@ -2124,13 +2126,13 @@ def mknod_chrdev(name,
                                                                                        mode))
     try:
         if __opts__['test']:
-            ret['changes'] = {'new' : 'Character device {0} created.'.format(name)}
+            ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'),8)|stat.S_IFCHR,
-                        os.makedev(major,minor)) is None:
-                ret['changes'] = {'new' : 'Character device {0} created.'.format(name)}
+                        int(str(mode).lstrip('0'), 8) | stat.S_IFCHR,
+                        os.makedev(major, minor)) is None:
+                ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
         # be happy it is already there....however, if you are trying to change the
@@ -2146,6 +2148,7 @@ def mknod_chrdev(name,
                 group,
                 int('{0}'.format(mode)) if mode else None)
     return ret
+
 
 def is_blkdev(name):
     '''
@@ -2167,6 +2170,7 @@ def is_blkdev(name):
         else:
             raise
     return stat.S_ISBLK(stat_structure.st_mode)
+
 
 def mknod_blkdev(name,
                  major,
@@ -2193,13 +2197,13 @@ def mknod_blkdev(name,
                                                                                    mode))
     try:
         if __opts__['test']:
-            ret['changes'] = {'new' : 'Block device {0} created.'.format(name)}
+            ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'),8)|stat.S_IFBLK,
-                        os.makedev(major,minor)) is None:
-                ret['changes'] = {'new' : 'Block device {0} created.'.format(name)}
+                        int(str(mode).lstrip('0'), 8) | stat.S_IFBLK,
+                        os.makedev(major, minor)) is None:
+                ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
         # be happy it is already there....however, if you are trying to change the
@@ -2215,6 +2219,7 @@ def mknod_blkdev(name,
                 group,
                 int('{0}'.format(mode)) if mode else None)
     return ret
+
 
 def is_fifo(name):
     '''
@@ -2237,6 +2242,7 @@ def is_fifo(name):
             raise
     return stat.S_ISFIFO(stat_structure.st_mode)
 
+
 def mknod_fifo(name,
                user=None,
                group=None,
@@ -2257,11 +2263,11 @@ def mknod_fifo(name,
     log.debug("Creating FIFO name:{0}".format(name))
     try:
         if __opts__['test']:
-            ret['changes'] = {'new' : 'Fifo pipe {0} created.'.format(name)}
+            ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
             ret['result'] = None
         else:
             if os.mkfifo(name, int(str(mode).lstrip('0'), 8)) is None:
-                ret['changes'] = {'new' : 'Fifo pipe {0} created.'.format(name)}
+                ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
         #be happy it is already there
@@ -2276,6 +2282,7 @@ def mknod_fifo(name,
                 group,
                 int('{0}'.format(mode)) if mode else None)
     return ret
+
 
 def mknod(name,
           ntype,
@@ -2322,6 +2329,7 @@ def mknod(name,
     else:
         raise Exception("Node type unavailable: '{0}'. Available node types are character ('c'), block ('b'), and pipe ('p').".format(ntype))
     return ret
+
 
 def list_backups(path, limit=None):
     '''

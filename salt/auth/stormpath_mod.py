@@ -33,6 +33,7 @@ def __virtual__():
     else:
         return False
 
+
 def auth(username, password):
     '''
     Try and authenticate

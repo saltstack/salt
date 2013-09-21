@@ -156,6 +156,7 @@ def get(tgt, fun, expr_form='glob'):
     ret = sreq.send('aes', auth.crypticle.dumps(load))
     return auth.crypticle.loads(ret)
 
+
 def delete(fun):
     '''
     Remove specific function contents of minion. Returns True on success.
@@ -175,6 +176,7 @@ def delete(fun):
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     ret = sreq.send('aes', auth.crypticle.dumps(load))
     return auth.crypticle.loads(ret)
+
 
 def flush():
     '''

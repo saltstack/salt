@@ -21,6 +21,7 @@ import salt.utils
 # Set up logger
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     mdadm provides raid functions for Linux
@@ -30,6 +31,7 @@ def __virtual__():
     if not salt.utils.which('mdadm'):
         return False
     return 'raid'
+
 
 def present(name, opts=None):
     '''
