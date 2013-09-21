@@ -115,7 +115,7 @@ def current_branch(cwd, user=None):
     '''
     Returns the current branch name, if on a branch.
     '''
-    cmd = 'git branch --list | grep "^*\ " | cut -d " " -f 2 | ' + \
+    cmd = r'git branch --list | grep "^*\ " | cut -d " " -f 2 | ' + \
         'grep -v "(detached"'
 
     return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
