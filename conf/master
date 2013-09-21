@@ -313,7 +313,14 @@
 # fileserver_backend.
 #
 #fileserver_followsymlinks: False
-
+#
+# Uncomment the line below if you do not want symlinks to be
+# treated as the files they are pointinig to. By default this is set to
+# False. By uncommenting the line below, any detected symlink while listing
+# files on the Master will not be returned to the Minion.
+#
+#fileserver_ignoresymlinks: True
+#
 # Git fileserver backend configuration
 # When using the git fileserver backend at least one git remote needs to be
 # defined. The user running the salt master will need read access to the repo.
