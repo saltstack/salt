@@ -191,7 +191,7 @@ def user_present(name,
     return ret
 
 
-def user_absent(name,profile=None,**connection_args):
+def user_absent(name, profile=None, **connection_args):
     '''
     Ensure that the keystone user is absent.
 
@@ -319,7 +319,7 @@ def role_present(name, profile=None, **connection_args):
         ret['changes']['Role'] = 'Created'
     return ret
 
- 
+
 def role_absent(name, profile=None, **connection_args):
     '''
     Ensure that the keystone role is absent.

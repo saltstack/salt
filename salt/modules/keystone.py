@@ -677,7 +677,7 @@ def user_create(name, password, email, tenant_id=None,
     return user_get(item.id, profile=profile, **connection_args)
 
 
-def user_delete(user_id=None, name=None, profile=None):
+def user_delete(user_id=None, name=None, profile=None, **connection_args):
     '''
     Delete a user (keystone user-delete)
 
