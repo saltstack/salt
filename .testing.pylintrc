@@ -96,7 +96,7 @@ disable=R,
 [REPORTS]
 
 # Include message's id in output
-include-ids=no
+include-ids=yes
 
 # Include symbolic ids of messages in output
 symbols=no

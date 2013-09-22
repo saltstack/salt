@@ -156,13 +156,15 @@ def user_present(name,
             ret['changes']['Password'] = 'Updated'
         if roles:
             for tenant_role in roles[0].keys():
-                args = {'user_name': name, 'tenant_name': tenant_role}
+                args = dict({'user_name': name, 'tenant_name':
+                             tenant_role, 'profile': profile}, **connection_args)
                 tenant_roles = __salt__['keystone.user_role_list'](**args)
                 for role in roles[0][tenant_role]:
                     if role not in tenant_roles:
-                        addargs = {'user': name,
-                                   'role': role,
-                                   'tenant': tenant_role}
+                        addargs = dict({'user': name, 'role': role,
+                                        'tenant': tenant_role,
+                                        'profile': profile},
+                                       **connection_args)
                         newrole = __salt__['keystone.user_role_add'](**addargs)
                         if 'roles' in ret['changes']:
                             ret['changes']['roles'].append(newrole)
@@ -191,7 +193,7 @@ def user_present(name,
     return ret
 
 
-def user_absent(name,profile=None,**connection_args):
+def user_absent(name, profile=None, **connection_args):
     '''
     Ensure that the keystone user is absent.
 
@@ -319,7 +321,7 @@ def role_present(name, profile=None, **connection_args):
         ret['changes']['Role'] = 'Created'
     return ret
 
- 
+
 def role_absent(name, profile=None, **connection_args):
     '''
     Ensure that the keystone role is absent.

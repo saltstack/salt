@@ -68,9 +68,8 @@ Usage
 
 Each Formula is intended to be immediately usable with sane defaults without
 any additional configuration. Many formulas are also configurable by including
-data in Pillar Many formulas are also configurable by including data in Pillar;
-see the :file:`pillar.example` file in each Formula repository for available
-options.
+data in Pillar; see the :file:`pillar.example` file in each Formula repository
+for available options.
 
 Including a Formula in an existing State tree
 ---------------------------------------------
