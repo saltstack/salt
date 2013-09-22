@@ -259,8 +259,8 @@ def symlink_list(load):
                             path
                         )
                 if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                    ret[os.path.join(root, fname)] = os.readlink(os.path.join(root, fname))
+                    ret[rel_fn] = os.readlink(os.path.join(root, fname))
             for dname in dirs:
                 if os.path.islink(os.path.join(root, dname)):
-                    ret[os.path.join(root, dname)] = os.readlink(os.path.join(root, dname))
+                    ret[dname] = os.readlink(os.path.join(root, dname))
     return ret
