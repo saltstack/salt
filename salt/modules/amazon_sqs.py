@@ -5,7 +5,7 @@ boto config must be in /etc/boto.cfg with your AWS credentials.
 '''
 
 # Import salt libs
-from salt.exceptions import CommandNotFoundError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 def _check_boto():
     '''
@@ -22,7 +22,13 @@ def _connect_to_region(region):
     Connect to the given region.
     '''
     from boto.sqs import connect_to_region
-    return connect_to_region(region)
+    sqs_region = connect_to_region(region)
+    
+    if sqs_region is None:
+        _msg = u'Could not connect to region {0}'.format(region)
+        raise CommandExecutionError(_msg)
+
+    return sqs_region
 
 def create_queue(name, region, default_timeout=None):
     '''
