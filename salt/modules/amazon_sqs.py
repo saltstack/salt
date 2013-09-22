@@ -24,7 +24,7 @@ def _connect_to_region(region):
     from boto.sqs import connect_to_region
     return connect_to_region(region)
 
-def create_queue(name, region, default_timeout=None, force=False):
+def create_queue(name, region, default_timeout=None):
     '''
     Creates a queue with the correct name.
     
@@ -34,8 +34,6 @@ def create_queue(name, region, default_timeout=None, force=False):
         Region to create the SQS queue in
     default_timeout
         The default message timeout to use
-    force
-        If set to True, deletes the queue and recreates it (Default: False)
     '''
     _check_boto()
 
@@ -46,18 +44,10 @@ def create_queue(name, region, default_timeout=None, force=False):
     rtn = 0
 
     if queue_exists(name, region):
-        # Force or quit
-        if force:
-            sqs_region = _connect_to_region(region)
-            out = u'Deleting {0} in {1} and recreating it'.format(
-                name, region)
-            sqs_region.delete_queue(name)
-        else:
-            err = (
-                u'Queue {0} in region {1} exists and force is not set'.format(
-                name, region))
-            create = False
-            rtn = 1
+        err = (
+            u'Queue {0} in region {1} exists'.format(name, region))
+        create = False
+        rtn = 1
 
     if create:
         # Create the queue
@@ -66,6 +56,7 @@ def create_queue(name, region, default_timeout=None, force=False):
         if not out:
             out = u'Creating queue {0} in region {1}'.format(
                 name, region)
+
     return {
         'stdout': out,
         'stderr': err,
