@@ -696,38 +696,67 @@ def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
     '''
     ret = initial_ret is not None and initial_ret or {}
     ret['args'] = []
+    ret['kwargs'] = {}
     aspec = get_function_argspec(fun)
+
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
 
-    if aspec.keywords:
-        # This state accepts **kwargs
-        ret['kwargs'] = {}
-        for key in data.copy():
-            # Passing kwargs the conflict with args == traceback
-            if key in aspec.args:
-                continue
-            ret['kwargs'][key] = data.pop(key)
+    args = []
+    kwargs = {}
+    missing_args = []
 
     try:
-        kwargs = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+        func_defaults = aspec.defaults[::-1]
     except TypeError:
-        # aspec.defaults is None
-        kwargs = {}
-    for arg in kwargs:
-        if arg in data.copy():
-            kwargs[arg] = data.pop(arg)
-    for arg in aspec.args:
-        if arg in kwargs:
-            ret['args'].append(kwargs[arg])
-        else:
-            try:
-                ret['args'].append(data.pop(arg))
-            except KeyError:
-                # Bad arg match, can safely proceed
-                pass
+        # There are no function defaults
+        func_defaults = []
+    for idx, arg in enumerate(aspec.args[::-1]):
+        try:
+            kwargs[arg] = func_defaults[idx]
+            if arg in data:
+                kwargs[arg] = data.pop(arg)
+        except IndexError:
+            args.append(arg)
 
-    # Now let gather any remaining and unexpected keyword arguments
+    while args:
+        # Get arguments in reverse order since we also reverted their order in
+        # the enumeration above
+        arg = args.pop()
+
+        try:
+            ret['args'].append(data.pop(arg))
+        except KeyError:
+            missing_args.append(arg)
+
+    if missing_args:
+        used_args_count = len(ret['args']) + len(args)
+        args_count = used_args_count + len(missing_args)
+        raise SaltInvocationError(
+            '{0} takes at least {1} argument{2} ({3} given)'.format(
+                fun.__name__,
+                args_count,
+                args_count > 1 and 's' or '',
+                used_args_count
+            )
+        )
+
+    ret['kwargs'].update(kwargs)
+
+    if aspec.keywords:
+        # The function accepts **kwargs, any non expected extra keyword
+        # arguments will made available.
+        for key, value in data.iteritems():
+            if key in expected_extra_kws:
+                continue
+            ret['kwargs'][key] = value
+
+        # No need to check for extra keyword arguments since they are all
+        # **kwargs now. Return
+        return ret
+
+    # Did not return yet? Lets gather any remaining and unexpected keyword
+    # arguments
     extra = {}
     for key, value in data.iteritems():
         if key in expected_extra_kws:
@@ -773,15 +802,15 @@ def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
         ret.setdefault('warnings', []).append(
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
-            '\'key: val\' pairs. Your approach will work until salt>=0.20.0 '
+            '\'key: value\' pairs. Your approach will work until salt>=0.20.0 '
             'is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
         )
-        # Lets set the current extra kwargs as kwargs for the template context
-        ret.setdefault('context', {}).update(extra)
 
+        # Lets pack the current extra kwargs as template context
+        ret.setdefault('context', {}).update(extra)
     return ret
 
 
