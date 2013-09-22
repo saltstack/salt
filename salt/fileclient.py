@@ -220,6 +220,12 @@ class Client(object):
         '''
         return []
 
+    def symlink_list(self, env='base', prefix=''):
+        '''
+        This function must be overwritten
+        '''
+        return {}
+
     def is_cached(self, path, env='base'):
         '''
         Returns the full path to a file if it is cached locally on the minion
@@ -734,6 +740,23 @@ class RemoteClient(Client):
         load = {'env': env,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
+        try:
+            return self.auth.crypticle.loads(
+                self.sreq.send('aes',
+                               self.auth.crypticle.dumps(load),
+                               3,
+                               60)
+            )
+        except SaltReqTimeoutError:
+            return ''
+
+    def symlink_list(self, env='base', prefix=''):
+        '''
+        List symlinked files and dirs on the master
+        '''
+        load = {'env': env,
+                'prefix': prefix,
+                'cmd': '_symlink_list'}
         try:
             return self.auth.crypticle.loads(
                 self.sreq.send('aes',
