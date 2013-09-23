@@ -27,8 +27,13 @@ import logging
 import saltcloud.config as config
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.utils import namespaced_function
+
 # CloudStackNetwork will be needed during creation of a new node
-from libcloud.compute.drivers.cloudstack import CloudStackNetwork
+try:
+    from libcloud.compute.drivers.cloudstack import CloudStackNetwork
+    HASLIBS=True
+except:
+    HASLIBS=False
 
 # Get logging started
 log = logging.getLogger(__name__)
