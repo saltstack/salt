@@ -7,7 +7,7 @@ Generate pillar data from Django models through the Django ORM
 
 
 Configuring the django_orm ext_pillar
-================================
+=====================================
 
 To use this module, your Django project must be on the saltmaster server with
 databse access. This assumes you are using virtualenv with all the project's
@@ -17,32 +17,32 @@ requirements installed.
 
     ext_pillar:
       - django_orm:
-        pillar_name: my_application
-        env: /path/to/virtualenv/
-        project_path: /path/to/project/
-        env_file: /path/to/env/file.sh
-        settings_module: my_application.settings
+          pillar_name: my_application
+          env: /path/to/virtualenv/
+          project_path: /path/to/project/
+          env_file: /path/to/env/file.sh
+          settings_module: my_application.settings
 
-        django_app:
+          django_app:
 
-          # Required: the app that is included in INSTALLED_APPS
-          my_application.clients:
+            # Required: the app that is included in INSTALLED_APPS
+            my_application.clients:
 
-            # Required: the model name
-            Client:
+              # Required: the model name
+              Client:
 
-              # Required: model field to use as a name in the
-              # rendered pillar, should be unique
-              name: shortname
+                # Required: model field to use as a name in the
+                # rendered pillar, should be unique
+                name: shortname
 
-              # Optional:
-              # See the Django QuerySet docuemntation for how to use .filter()
-              filter:  {'kw': 'args'}
+                # Optional:
+                # See Django's QuerySet docuemntation for how to use .filter()
+                filter:  {'kw': 'args'}
 
-              # Required: a list of field names
-              fields:
-                - field_1
-                - field_2
+                # Required: a list of field names
+                fields:
+                  - field_1
+                  - field_2
 
 
 This would return pillar data that would look like
@@ -87,8 +87,7 @@ def __virtual__():
     return 'django_orm'
 
 
-def ext_pillar(minion_id,
-               pillar,
+def ext_pillar(pillar,
                pillar_name,
                env,
                project_path,
@@ -183,4 +182,7 @@ def ext_pillar(minion_id,
         return {pillar_name: django_pillar}
     except ImportError, e:
         log.error('Failed to import library: {}'.format(e.message))
+        return {}
+    except Exception, e:
+        log.error('Failed on Error: {}'.format(e.message))
         return {}
