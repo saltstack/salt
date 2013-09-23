@@ -63,15 +63,15 @@ A map file can include grains and minion configuration options:
         - web1:
             minion:
                 log_level: debug
-            grains:
-                cheese: tasty
-                omelet: du fromage
+                grains:
+                    cheese: tasty
+                    omelet: du fromage
         - web2:
             minion:
                 log_level: warn
-            grains:
-                cheese: more tasty
-                omelet: with peppers
+                grains:
+                    cheese: more tasty
+                    omelet: with peppers
 
 A map file may also be used with the various query options:
 
