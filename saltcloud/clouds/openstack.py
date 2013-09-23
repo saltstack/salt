@@ -256,7 +256,7 @@ def ignore_ip_addr(vm_, ip):
     '''
     if HAS_NETADDR is False:
         log.error('Error: netaddr is not installed')
-        return False
+        return 'Error: netaddr is not installed'
 
     cidr = vm_.get('ip_ignore', __opts__.get('OPENSTACK.ignore_cidr', ''))
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
