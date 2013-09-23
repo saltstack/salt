@@ -261,3 +261,130 @@ instance.
 .. code-block:: bash
 
     $ salt-cloud -a show_instance myinstance
+
+
+Optional Products for SoftLayer HW
+==================================
+The softlayer-hw provider supports the ability to add optional products, which
+are supported by SoftLayer's API. These products each have an ID associated with
+them, that can be passed into Salt Cloud with the `optional_products` option:
+
+.. code-block:: yaml
+
+    softlayer_hw_test:
+      provider: techhat-softlayer-hw
+      # CentOS 6.0 - Minimal Install (64 bit)
+      image: 13963
+      # 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
+      size: 1921
+      # 250GB SATA II
+      hdd: 19
+      # San Jose 01
+      location: 168642
+      domain: example.com
+      optional_products:
+        # MySQL for Linux
+        - id: 28
+        # Business Continuance Insurance
+        - id: 104
+
+These values can be manually obtained by looking at the source of an order page
+on the SoftLayer web interface. For convenience, many of these values are listed
+here:
+
+Public Secondary IP Addresses
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* 22: 4 Public IP Addresses    
+* 23: 8 Public IP Addresses     
+
+Primary IPv6 Addresses
+~~~~~~~~~~~~~~~~~~~~~~
+* 17129: 1 IPv6 Address    
+
+Public Static IPv6 Addresses
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* 1481: /64 Block Static Public IPv6 Addresses    
+
+OS-Specific Addon
+~~~~~~~~~~~~~~~~~
+* 17139: XenServer Advanced for XenServer 6.x
+* 17141: XenServer Enterprise for XenServer 6.x
+* 2334: XenServer Advanced for XenServer 5.6
+* 2335: XenServer Enterprise for XenServer 5.6
+* 13915: Microsoft WebMatrix
+* 21276: VMware vCenter 5.1 Standard
+
+Control Panel Software
+~~~~~~~~~~~~~~~~~~~~~~
+* 121: cPanel/WHM with Fantastico and RVskin
+* 20778: Parallels Plesk Panel 11 (Linux) 100 Domain w/ Power Pack
+* 20786: Parallels Plesk Panel 11 (Windows) 100 Domain w/ Power Pack
+* 20787: Parallels Plesk Panel 11 (Linux) Unlimited Domain w/ Power Pack
+* 20792: Parallels Plesk Panel 11 (Windows) Unlimited Domain w/ Power Pack
+* 2340: Parallels Plesk Panel 10 (Linux) 100 Domain w/ Power Pack
+* 2339: Parallels Plesk Panel 10 (Linux) Unlimited Domain w/ Power Pack
+* 13704: Parallels Plesk Panel 10 (Windows) Unlimited Domain w/ Power Pack
+
+Database Software
+~~~~~~~~~~~~~~~~~
+* 29: MySQL 5.0 for Windows
+* 28: MySQL for Linux
+* 21501: Riak 1.x
+* 20893: MongoDB
+* 30: Microsoft SQL Server 2005 Express
+* 92: Microsoft SQL Server 2005 Workgroup
+* 90: Microsoft SQL Server 2005 Standard
+* 94: Microsoft SQL Server 2005 Enterprise
+* 1330: Microsoft SQL Server 2008 Express
+* 1340: Microsoft SQL Server 2008 Web
+* 1337: Microsoft SQL Server 2008 Workgroup
+* 1334: Microsoft SQL Server 2008 Standard
+* 1331: Microsoft SQL Server 2008 Enterprise
+* 2179: Microsoft SQL Server 2008 Express R2
+* 2173: Microsoft SQL Server 2008 Web R2
+* 2183: Microsoft SQL Server 2008 Workgroup R2
+* 2180: Microsoft SQL Server 2008 Standard R2
+* 2176: Microsoft SQL Server 2008 Enterprise R2
+
+Anti-Virus & Spyware Protection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* 594: McAfee VirusScan Anti-Virus - Windows
+* 414: McAfee Total Protection - Windows
+
+Insurance
+~~~~~~~~~
+* 104: Business Continuance Insurance
+
+Monitoring
+~~~~~~~~~~
+* 55: Host Ping
+* 56: Host Ping and TCP Service Monitoring
+
+Notification
+~~~~~~~~~~~~
+* 57: Email and Ticket
+
+Advanced Monitoring
+~~~~~~~~~~~~~~~~~~~
+* 2302: Monitoring Package - Basic
+* 2303: Monitoring Package - Advanced
+* 2304: Monitoring Package - Premium Application
+
+Response
+~~~~~~~~
+* 58: Automated Notification
+* 59: Automated Reboot from Monitoring
+* 60: 24x7x365 NOC Monitoring, Notification, and Response
+
+Intrusion Detection & Protection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* 413: McAfee Host Intrusion Protection w/Reporting
+
+Hardware & Software Firewalls
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* 411: APF Software Firewall for Linux
+* 894: Microsoft Windows Firewall
+* 410: 10Mbps Hardware Firewall
+* 409: 100Mbps Hardware Firewall
+* 408: 1000Mbps Hardware Firewall
+
