@@ -61,6 +61,14 @@ if salt.utils.is_windows():
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    '''
+    Only make these states available if a pkg provider has been detected or
+    assigned for this minion
+    '''
+    return 'pkg' if 'pkg.install' in __salt__ else False
+
+
 def __gen_rtag():
     '''
     Return the location of the refresh tag

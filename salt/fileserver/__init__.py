@@ -271,3 +271,16 @@ class Fileserver(object):
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         return sorted(ret)
+
+    def symlink_list(self, load):
+        '''
+        Return a list of symlinked files and dirs
+        '''
+        ret = {}
+        if 'env' not in load:
+            return {}
+        for fsb in self._gen_back(None):
+            symlstr = '{0}.symlink_list'.format(fsb)
+            if symlstr in self.servers:
+                ret = self.servers[symlstr](load)
+        return ret
