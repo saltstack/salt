@@ -9,8 +9,8 @@ Generate pillar data from Django models through the Django ORM
 Configuring the django_orm ext_pillar
 =====================================
 
-To use this module, your Django project must be on the saltmaster server with
-databse access. This assumes you are using virtualenv with all the project's
+To use this module, your Django project must be on the salt master server with
+database access. This assumes you are using virtualenv with all the project's
 requirements installed.
 
 .. code-block:: yaml
@@ -36,7 +36,7 @@ requirements installed.
                 name: shortname
 
                 # Optional:
-                # See Django's QuerySet docuemntation for how to use .filter()
+                # See Django's QuerySet documentation for how to use .filter()
                 filter:  {'kw': 'args'}
 
                 # Required: a list of field names
@@ -97,12 +97,12 @@ def ext_pillar(pillar,
                *args,
                **kwargs):
     '''
-    Connect to a django database through the ORM and retrieve model fields
+    Connect to a Django database through the ORM and retrieve model fields
 
     Parameters:
         * `pillar_name`: The name of the pillar to be returned
-        * `env`: The full path to the virtualenv for your django project
-        * `project_path`: The full path to your django project (the directory
+        * `env`: The full path to the virtualenv for your Django project
+        * `project_path`: The full path to your Django project (the directory
           manage.py is in.)
         * `settings_module`: The settings module for your project. This can be
           found in your manage.py file.
@@ -143,7 +143,7 @@ def ext_pillar(pillar,
             # only add a key if it is different or doesn't already exist
             if key not in base_env or base_env[key] != value:
                 os.environ[key] = value.rstrip('\n')
-                log.debug('Adding {} = {} to django environment'.format(
+                log.debug('Adding {} = {} to Django environment'.format(
                             key,
                             value.rstrip('\n')))
 
