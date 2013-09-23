@@ -235,6 +235,7 @@ def dir_list(load):
             ret.append(os.path.relpath(root, path))
     return ret
 
+
 def symlink_list(load):
     '''
     Return a dict of all symlinks based on a given path on the Master
