@@ -114,9 +114,63 @@ def boot(name, flavor_id=0, image_id=0, profile=None):
     return server_show(response.id)
 
 
+def suspend(instance_id, profile=None):
+    '''
+    Suspend an instance
+
+    <instance_id>        ID of the instance to be suspended
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.suspend 1138
+
+    '''
+    nt_ks = _auth(profile)
+    response = nt_ks.servers.suspend(instance_id)
+    return True
+
+
+def resume(instance_id, profile=None):
+    '''
+    Resume an instance
+
+    <instance_id>        ID of the instance to be resumed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.resume 1138
+
+    '''
+    nt_ks = _auth(profile)
+    response = nt_ks.servers.resume(instance_id)
+    return True
+
+
+def lock(instance_id, profile=None):
+    '''
+    Lock an instance
+
+    <instance_id>        ID of the instance to be locked
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.lock 1138
+
+    '''
+    nt_ks = _auth(profile)
+    response = nt_ks.servers.lock(instance_id)
+    return True
+
+
 def delete(instance_id, profile=None):
     '''
-    Boot (create) a new instance
+    Delete an instance
 
     <instance_id>        ID of the instance to be deleted
 
@@ -573,7 +627,6 @@ def _item_list(profile=None):
 #                    server.
 #image-delete        Delete an image.
 #live-migration      Migrates a running instance to a new machine.
-#lock                Lock a server.
 #meta                Set or Delete metadata on a server.
 #migrate             Migrate a server.
 #pause               Pause a server.
@@ -588,7 +641,6 @@ def _item_list(profile=None):
 #resize-confirm      Confirm a previous resize.
 #resize-revert       Revert a previous resize (and return to the previous
 #                    VM).
-#resume              Resume a server.
 #root-password       Change the root password for a server.
 #secgroup-add-group-rule
 #                    Add a source group rule to a security group.
@@ -600,7 +652,6 @@ def _item_list(profile=None):
 #secgroup-list-rules
 #                    List rules for a security group.
 #ssh                 SSH into a server.
-#suspend             Suspend a server.
 #unlock              Unlock a server.
 #unpause             Unpause a server.
 #unrescue            Unrescue a server.
