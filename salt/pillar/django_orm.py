@@ -7,7 +7,7 @@ Generate pillar data from Django models through the Django ORM
 
 
 Configuring the django_orm ext_pillar
-================================
+=====================================
 
 To use this module, your Django project must be on the saltmaster server with
 databse access. This assumes you are using virtualenv with all the project's
