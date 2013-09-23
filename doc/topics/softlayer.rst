@@ -261,3 +261,117 @@ instance.
 .. code-block:: bash
 
     $ salt-cloud -a show_instance myinstance
+
+
+Optional Products for SoftLayer HW
+==================================
+The softlayer-hw provider supports the ability to add optional products, which
+are supported by SoftLayer's API. These products each have an ID associated with
+them, that can be passed into Salt Cloud with the `optional_products` option:
+
+.. code-block:: yaml
+
+    softlayer_hw_test:
+      provider: techhat-softlayer-hw
+      # CentOS 6.0 - Minimal Install (64 bit)
+      image: 13963
+      # 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
+      size: 1921
+      # 250GB SATA II
+      hdd: 19
+      # San Jose 01
+      location: 168642
+      domain: example.com
+      optional_products:
+        # MySQL for Linux
+        - id: 28
+        # Business Continuance Insurance
+        - id: 104
+
+These values can be manually obtained by looking at the source of an order page
+on the SoftLayer web interface. For convenience, many of these values are listed
+here:
+
+* `Public Secondary IP Addresses`__
+.. __: 22: 4 Public IP Addresses    
+.. __: 23: 8 Public IP Addresses     
+
+* `Primary IPv6 Addresses`__
+.. __: 17129: 1 IPv6 Address    
+
+* `Public Static IPv6 Addresses`__
+.. __: 1481: /64 Block Static Public IPv6 Addresses    
+
+* `OS-Specific Addon`__
+.. __: 17139: XenServer Advanced for XenServer 6.x
+.. __: 17141: XenServer Enterprise for XenServer 6.x
+.. __: 2334: XenServer Advanced for XenServer 5.6
+.. __: 2335: XenServer Enterprise for XenServer 5.6
+.. __: 13915: Microsoft WebMatrix
+.. __: 21276: VMware vCenter 5.1 Standard
+
+* `Control Panel Software`__
+.. __: 121: cPanel/WHM with Fantastico and RVskin
+.. __: 20778: Parallels Plesk Panel 11 (Linux) 100 Domain w/ Power Pack
+.. __: 20786: Parallels Plesk Panel 11 (Windows) 100 Domain w/ Power Pack
+.. __: 20787: Parallels Plesk Panel 11 (Linux) Unlimited Domain w/ Power Pack
+.. __: 20792: Parallels Plesk Panel 11 (Windows) Unlimited Domain w/ Power Pack
+.. __: 2340: Parallels Plesk Panel 10 (Linux) 100 Domain w/ Power Pack
+.. __: 2339: Parallels Plesk Panel 10 (Linux) Unlimited Domain w/ Power Pack
+.. __: 13704: Parallels Plesk Panel 10 (Windows) Unlimited Domain w/ Power Pack
+
+* `Database Software`__
+.. __: 29: MySQL 5.0 for Windows
+.. __: 28: MySQL for Linux
+.. __: 21501: Riak 1.x
+.. __: 20893: MongoDB
+.. __: 30: Microsoft SQL Server 2005 Express
+.. __: 92: Microsoft SQL Server 2005 Workgroup
+.. __: 90: Microsoft SQL Server 2005 Standard
+.. __: 94: Microsoft SQL Server 2005 Enterprise
+.. __: 1330: Microsoft SQL Server 2008 Express
+.. __: 1340: Microsoft SQL Server 2008 Web
+.. __: 1337: Microsoft SQL Server 2008 Workgroup
+.. __: 1334: Microsoft SQL Server 2008 Standard
+.. __: 1331: Microsoft SQL Server 2008 Enterprise
+.. __: 2179: Microsoft SQL Server 2008 Express R2
+.. __: 2173: Microsoft SQL Server 2008 Web R2
+.. __: 2183: Microsoft SQL Server 2008 Workgroup R2
+.. __: 2180: Microsoft SQL Server 2008 Standard R2
+.. __: 2176: Microsoft SQL Server 2008 Enterprise R2
+
+* `Anti-Virus & Spyware Protection`__
+.. __: 594: McAfee VirusScan Anti-Virus - Windows
+.. __: 414: McAfee Total Protection - Windows
+
+* `Insurance`__
+.. __: 104: Business Continuance Insurance
+
+* `Monitoring`__
+.. __: 55: Host Ping
+.. __: 56: Host Ping and TCP Service Monitoring
+
+* `Notification`__
+.. __: 57: Email and Ticket
+
+* `Advanced Monitoring`__
+.. __: None: None
+.. __: 2302: Monitoring Package - Basic
+.. __: 2303: Monitoring Package - Advanced
+.. __: 2304: Monitoring Package - Premium Application
+
+* `Response`__
+.. __: 58: Automated Notification
+.. __: 59: Automated Reboot from Monitoring
+.. __: 60: 24x7x365 NOC Monitoring, Notification, and Response
+
+* `Intrusion Detection & Protection`__
+.. __: 413: McAfee Host Intrusion Protection w/Reporting
+
+* `Hardware & Software Firewalls`__
+.. __: 411: APF Software Firewall for Linux
+.. __: 894: Microsoft Windows Firewall
+.. __: 410: 10Mbps Hardware Firewall
+.. __: 409: 100Mbps Hardware Firewall
+.. __: 408: 1000Mbps Hardware Firewall
+
