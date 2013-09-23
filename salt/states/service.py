@@ -39,9 +39,10 @@ service, then set the reload value to True:
 
 def __virtual__():
     '''
-    Ensure that the service state returns the correct name
+    Only make these states available if a service provider has been detected or
+    assigned for this minion
     '''
-    return 'service'
+    return 'service' if 'service.start' in __salt__ else False
 
 
 def _enabled_used_error(ret):
