@@ -72,9 +72,9 @@ I'm trying to manage packages/services but I get an error saying that the state 
 ------------------------------------------------------------------------------------------------------
 
 Salt detects the Minion's operating system and assigns the correct package or
-serice management module based on what is is detected. However, for certain
-custom spins and OS derivatives this detection fails. In cases like this, an
-issue should be opened on our tracker_, with the following information:
+serice management module based on what is detected. However, for certain custom
+spins and OS derivatives this detection fails. In cases like this, an issue
+should be opened on our tracker_, with the following information:
 
 1. The output of the following command:
 
