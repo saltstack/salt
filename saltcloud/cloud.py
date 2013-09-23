@@ -3,6 +3,7 @@ The top level interface used to translate configuration data back to the
 correct cloud modules
 '''
 # Import python libs
+import copy
 import os
 import glob
 import time
@@ -1064,7 +1065,7 @@ class Map(Cloud):
             profile_data = self.opts['profiles'].get(profile_name)
             for nodename, overrides in nodes.iteritems():
                 # Get the VM name
-                nodedata = profile_data.copy()
+                nodedata = copy.deepcopy(profile_data)
                 # Update profile data with the map overrides
                 for setting in ('grains', 'master', 'minion', 'volumes',
                                 'requires'):

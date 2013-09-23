@@ -23,6 +23,12 @@ Set up the cloud config at ``/etc/salt/cloud``:
         minion:
           master: saltmaster.example.com
   
+        # Set up grains information, which will be common for all nodes
+        # using this provider
+        grains:
+          node_type: broker
+          release: 1.0.1
+
         # Specify whether to use public or private IP for deploy script.
         #
         # Valid options are:

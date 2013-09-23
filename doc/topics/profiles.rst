@@ -27,8 +27,8 @@ public cloud provider. A number of additional parameters can also be inserted:
         minion:
             master: salt.example.com
             append_domain: webs.example.com
-        grains:
-            role: webserver
+            grains:
+                role: webserver
 
 
 The image must be selected from available images. Similarly, sizes must be
