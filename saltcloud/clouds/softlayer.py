@@ -363,7 +363,8 @@ def list_nodes_full(mask='id'):
     response = conn.getVirtualGuests(mask=mask)
     for node_id in response:
         node_info = conn.getObject(id=node_id['id'])
-        ret[node_info['hostname']] = node_info
+        if 'hostname' in node_info:
+            ret[node_info['hostname']] = node_info
     return ret
 
 
