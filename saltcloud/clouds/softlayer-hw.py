@@ -421,6 +421,12 @@ def create(vm_):
         ],
     }
 
+    optional_products = config.get_config_value(
+        'optional_products', vm_, __opts__, default=True
+    )
+    for product in optional_products:
+        kwargs['prices'].append({'id': product})
+
     location = get_location(vm_)
     if location:
         kwargs['location'] = location
@@ -434,7 +440,8 @@ def create(vm_):
 
     try:
         response = conn.placeOrder(kwargs)
-
+        # Leaving the following line in, commented, for easy debugging
+        #response = conn.verifyOrder(kwargs)
     except Exception as exc:
         log.error(
             'Error creating {0} on SoftLayer\n\n'
