@@ -679,7 +679,36 @@ def build_whitepace_splited_regex(text):
     build_whitespace_split_regex(text)
 
 
-def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
+def format_call_defaults(function):
+    '''
+    Build the default function call signature. Arguments will be the argument
+    names, keyword arguments will have it's default values set.
+    '''
+    args = []
+    kwargs = {}
+
+    aspec = get_function_argspec(function)
+
+    try:
+        func_defaults = aspec.defaults[::-1]
+    except TypeError:
+        # There are no function defaults
+        func_defaults = []
+
+    for idx, arg in enumerate(aspec.args[::-1]):
+        try:
+            kwargs[arg] = func_defaults[idx]
+        except IndexError:
+            args.append(arg)
+
+    args.reverse()
+    return args, kwargs
+
+
+def format_call(fun,
+                data,
+                initial_ret=None,
+                expected_extra_kws=()):
     '''
     Build the required arguments and keyword arguments required for the passed
     function.
@@ -695,29 +724,25 @@ def format_call(fun, data, initial_ret=None, expected_extra_kws=()):
               arguments.
     '''
     ret = initial_ret is not None and initial_ret or {}
+
     ret['args'] = []
     ret['kwargs'] = {}
+
     aspec = get_function_argspec(fun)
+
+    args, kwargs = format_call_defaults(fun)
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
 
-    args = []
-    kwargs = {}
     missing_args = []
 
-    try:
-        func_defaults = aspec.defaults[::-1]
-    except TypeError:
-        # There are no function defaults
-        func_defaults = []
-    for idx, arg in enumerate(aspec.args[::-1]):
+    for key in kwargs.keys():
         try:
-            kwargs[arg] = func_defaults[idx]
-            if arg in data:
-                kwargs[arg] = data.pop(arg)
-        except IndexError:
-            args.append(arg)
+            kwargs[key] = data.pop(key)
+        except KeyError:
+            # Let's leave the default value in place
+            pass
 
     while args:
         # Get arguments in reverse order since we also reverted their order in
