@@ -24,9 +24,9 @@ class SaltMakoTemplateLookup(TemplateCollection):
         <%include   file="file:///etc/salt/lib/templates/sls-parts.mako"/>
         <%namespace file="file:///etc/salt/lib/templates/utils.mako" import="helper"/>
 
-    (2) Look up mako template files on Salt master via salt://... URL. 
+    (2) Look up mako template files on Salt master via salt://... URL.
         If URL is a relative  path (without an URL scheme) then assume it's relative
-        to the directory of the salt file that's doing the lookup. If URL is an absolute 
+        to the directory of the salt file that's doing the lookup. If URL is an absolute
         path then it's treated as if it has been prefixed with salt://.
 
        Examples::
@@ -36,7 +36,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
          <%namespace file="templates/utils.mako"/>
          <%namespace file="salt://lib/templates/utils.mako" import="helper"/>
-         <%namespace file="/lib/templates/utils.mako" import="helper"/>     ##-- treated as salt://      
+         <%namespace file="/lib/templates/utils.mako" import="helper"/>     ##-- treated as salt://
 
     """
 
@@ -49,13 +49,15 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     def adjust_uri(self, uri, filename):
         scheme = urlparse.urlparse(uri).scheme
-        if scheme in ('salt','file'):
+        if scheme in ('salt', 'file'):
             return uri
         elif scheme:
-            raise ValueError("Unsupported URL scheme(%s) in %s" %
-                             (scheme, uri))
-        else:
-            return self.lookup.adjust_uri(uri, filename)
+            raise ValueError(
+                'Unsupported URL scheme({0}) in {1}'.format(
+                    scheme, uri
+                )
+            )
+        return self.lookup.adjust_uri(uri, filename)
 
     def get_template(self, uri):
         if uri.startswith("file://"):
@@ -67,7 +69,9 @@ class SaltMakoTemplateLookup(TemplateCollection):
             if self.opts['file_client'] == 'local':
                 searchpath = self.opts['file_roots'][self.env]
             else:
-                searchpath = [os.path.join(self.opts['cachedir'], 'files', self.env)]
+                searchpath = [os.path.join(self.opts['cachedir'],
+                                           'files',
+                                           self.env)]
             salt_uri = uri if uri.startswith(prefix) else (prefix + uri)
             self.cache_file(salt_uri)
 
@@ -76,5 +80,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     def cache_file(self, fpath):
         if fpath not in self.cache:
-            self.cache[fpath] = \
-                    self.file_client.get_file(fpath, '', True, self.env)
+            self.cache[fpath] = self.file_client.get_file(fpath,
+                                                          '',
+                                                          True,
+                                                          self.env)
