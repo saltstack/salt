@@ -19,7 +19,7 @@ def __virtual__():
     '''
     Only work on Debian and when systemd isn't running
     '''
-    if __grains__['os'] == 'Debian' and not _sd_booted():
+    if __grains__['os'] in ('Debian', 'Raspbian') and not _sd_booted():
         return 'service'
     return False
 
