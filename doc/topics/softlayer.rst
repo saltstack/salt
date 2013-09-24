@@ -85,6 +85,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       max_net_speed: 1000
       private_vlan: 396
       private_network: True
+      private_ssh: True
 
 
 Most of the above items are required; optional items are specified below.
@@ -180,9 +181,16 @@ setting is optional.
 
 private_network
 ---------------
-If a server is to only be used internall, meaning it does not have a public
+If a server is to only be used internally, meaning it does not have a public
 VLAN associated with it, this value would be set to True. This setting is
 optional. The default is False.
+
+private_ssh
+-----------
+Whether to run the deploy script on the server using the public IP address
+or the private IP address. If set to True, Salt Cloud will attempt to SSH into
+the new server using the private IP address. The default is False. This
+settions is optional.
 
 
 The profile can be realized now with a salt command:

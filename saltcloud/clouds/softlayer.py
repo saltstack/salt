@@ -259,13 +259,20 @@ def create(vm_):
         )
         return False
 
+    ip_type = 'primaryIpAddress'
+    private_ssh = config.get_config_value(
+        'private_ssh', vm_, __opts__, default=False
+    )
+    if private_ssh:
+        ip_type = 'primaryBackendIpAddress'
+
     def wait_for_ip():
         '''
         Wait for the IP address to become available
         '''
         nodes = list_nodes_full()
-        if 'primaryIpAddress' in nodes[vm_['name']]:
-            return nodes[vm_['name']]['primaryIpAddress']
+        if ip_type in nodes[vm_['name']]:
+            return nodes[vm_['name']][ip_type]
         time.sleep(1)
         return False
 
