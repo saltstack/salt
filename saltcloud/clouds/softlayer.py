@@ -210,7 +210,7 @@ def create(vm_):
     if private_vlan:
         kwargs['primaryBackendNetworkComponent'] = {
             'networkVlan': {
-                'id': vlan_id,
+                'id': private_vlan,
             }
         }
 
