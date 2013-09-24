@@ -76,8 +76,10 @@ class LiterateCoding(Directive):
         config = self.state.document.settings.env.config
         lines = parse_sls_file(config, self.arguments[0])
 
-        node = nodes.section()
+        node = nodes.container()
+        node['classes'] = ['lit-container']
         node.document = self.state.document
+
         enum = nodes.enumerated_list()
         enum['classes'] = ['lit-docs']
         node.append(enum)
@@ -114,7 +116,12 @@ class LiterateCoding(Directive):
                 list_item = nodes.list_item()
                 list_item['classes'] = ['lit-item']
 
-        return node.children
+        # Non-semantic div for styling
+        bg = nodes.container()
+        bg['classes'] = ['lit-background']
+        node.append(bg)
+
+        return [node]
 
 def setup(app):
     '''
