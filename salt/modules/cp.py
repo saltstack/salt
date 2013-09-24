@@ -449,7 +449,7 @@ def push(path):
             'id': __opts__['id'],
             'path': path.lstrip(os.sep)}
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    with salt.utils.fopen(path) as fp_:
+    with salt.utils.fopen(path, 'rb') as fp_:
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
