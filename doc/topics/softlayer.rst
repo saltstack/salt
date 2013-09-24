@@ -82,7 +82,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       domain: example.com
       location: sjc01
       # Optional
-      vlan: 396
+      public_vlan: 396
       max_net_speed: 1000
 
 
@@ -154,8 +154,17 @@ Images to build an instance can be found using the `--list-locations` option:
 
     # salt-cloud --list-location my-softlayer
 
-vlan
-----
+public_vlan
+-----------
+If it is necessary for an instance to be created within a specific VLAN, the ID
+for that VLAN can be specified in either the provider or profile configuration.
+
+This ID can be queried using the `list_vlans` function, as described below. This
+setting is optional.
+
+
+private_vlan
+------------
 If it is necessary for an instance to be created within a specific VLAN, the ID
 for that VLAN can be specified in either the provider or profile configuration.
 
