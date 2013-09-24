@@ -901,6 +901,21 @@ class AESFuncs(object):
         '''
         if any(key not in load for key in ('id', 'tgt', 'fun')):
             return {}
+        if 'mine_get' in self.opts:
+            # If master side acl defined.
+            if not isinstance(self.opts['mine_get'],dict):
+                return {}
+            perms = set()
+            for match in self.opts['mine_get']:
+                if re.match(match, load['id']):
+                    if isinstance(self.opts['mine_get'][match], list):
+                            perms.update(self.opts['mine_get'][match])
+            good = False
+            for perm in perms:
+                if re.match(perm, load['fun']):
+                    good = True
+            if not good:
+                return {}
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret

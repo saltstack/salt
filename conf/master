@@ -434,6 +434,26 @@
 #  foo.example.com:
 #    - manage.up
 
+#####         Mine settings     #####
+##########################################
+# Restrict mine.get access from minions. By default any minion has a full access
+# to get all mine data from master cache. In acl definion below, only pcre matches
+# are allowed.
+#
+# mine_get:
+#   .*:
+#     - .*
+#
+# Example below enables minion foo.example.com to get  'network.interfaces' mine data only
+# , minions web* to get all network.* and disk.* mine data and all other minions won't get
+# any mine data.
+#
+# mine_get:
+#   foo.example.com:
+#     - network.inetrfaces
+#   web.*:
+#     - network.*
+#     - disk.*
 
 #####         Logging settings       #####
 ##########################################
