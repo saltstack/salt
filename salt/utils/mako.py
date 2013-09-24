@@ -52,10 +52,12 @@ class SaltMakoTemplateLookup(TemplateCollection):
         if scheme in ('salt', 'file'):
             return uri
         elif scheme:
-            raise ValueError("Unsupported URL scheme(%s) in %s" %
-                             (scheme, uri))
-        else:
-            return self.lookup.adjust_uri(uri, filename)
+            raise ValueError(
+                'Unsupported URL scheme({0}) in {1}'.format(
+                    scheme, uri
+                )
+            )
+        return self.lookup.adjust_uri(uri, filename)
 
     def get_template(self, uri):
         if uri.startswith("file://"):
@@ -67,7 +69,9 @@ class SaltMakoTemplateLookup(TemplateCollection):
             if self.opts['file_client'] == 'local':
                 searchpath = self.opts['file_roots'][self.env]
             else:
-                searchpath = [os.path.join(self.opts['cachedir'], 'files', self.env)]
+                searchpath = [os.path.join(self.opts['cachedir'],
+                                           'files',
+                                           self.env)]
             salt_uri = uri if uri.startswith(prefix) else (prefix + uri)
             self.cache_file(salt_uri)
 
@@ -76,5 +80,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     def cache_file(self, fpath):
         if fpath not in self.cache:
-            self.cache[fpath] = \
-                    self.file_client.get_file(fpath, '', True, self.env)
+            self.cache[fpath] = self.file_client.get_file(fpath,
+                                                          '',
+                                                          True,
+                                                          self.env)
