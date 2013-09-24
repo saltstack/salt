@@ -25,7 +25,6 @@ from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 from salt import __path__ as saltpath
 
-
 log = logging.getLogger(__name__)
 
 
