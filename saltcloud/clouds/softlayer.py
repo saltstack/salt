@@ -215,7 +215,7 @@ def create(vm_):
         }
 
     private_network = config.get_config_value(
-        'private_vlan', vm_, __opts__, default=False
+        'private_network', vm_, __opts__, default=False
     )
     if bool(private_network) is True:
         kwargs['privateNetworkOnlyFlag'] = 'True'
