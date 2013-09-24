@@ -24,9 +24,9 @@ class SaltMakoTemplateLookup(TemplateCollection):
         <%include   file="file:///etc/salt/lib/templates/sls-parts.mako"/>
         <%namespace file="file:///etc/salt/lib/templates/utils.mako" import="helper"/>
 
-    (2) Look up mako template files on Salt master via salt://... URL. 
+    (2) Look up mako template files on Salt master via salt://... URL.
         If URL is a relative  path (without an URL scheme) then assume it's relative
-        to the directory of the salt file that's doing the lookup. If URL is an absolute 
+        to the directory of the salt file that's doing the lookup. If URL is an absolute
         path then it's treated as if it has been prefixed with salt://.
 
        Examples::
@@ -36,7 +36,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
          <%namespace file="templates/utils.mako"/>
          <%namespace file="salt://lib/templates/utils.mako" import="helper"/>
-         <%namespace file="/lib/templates/utils.mako" import="helper"/>     ##-- treated as salt://      
+         <%namespace file="/lib/templates/utils.mako" import="helper"/>     ##-- treated as salt://
 
     """
 
@@ -49,7 +49,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     def adjust_uri(self, uri, filename):
         scheme = urlparse.urlparse(uri).scheme
-        if scheme in ('salt','file'):
+        if scheme in ('salt', 'file'):
             return uri
         elif scheme:
             raise ValueError("Unsupported URL scheme(%s) in %s" %
