@@ -81,10 +81,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       hourly_billing: True
       domain: example.com
       location: sjc01
+      # Optional
+      vlan: 396
 
 
-The above items are all required; optional items may be added in future versions
-of Salt Cloud.
+Most of the above items are required; optional items are specified below.
 
 image
 -----
@@ -152,6 +153,14 @@ Images to build an instance can be found using the `--list-locations` option:
 
     # salt-cloud --list-location my-softlayer
 
+vlan
+----
+If it is necessary for an instance to be created within a specific VLAN, the ID
+for that VLAN can be specified in either the provider or profile configuration.
+
+This ID can be queried using the `list_vlans` function, as described below.
+
+
 The profile can be realized now with a salt command:
 
 .. code-block:: bash
@@ -185,10 +194,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       # San Jose 01
       location: 168642
       domain: example.com
+      # Optional
+      vlan: 396
 
 
-The above items are all required; optional items may be added in future versions
-of Salt Cloud.
+Most of the above items are required; optional items are specified below.
 
 image
 -----
@@ -245,6 +255,13 @@ The domain name that will be used in the FQDN (Fully Qualified Domain Name) for
 this instance. The `domain` setting will be used in conjunction with the
 instance name to form the FQDN.
 
+vlan
+----
+If it is necessary for an instance to be created within a specific VLAN, the ID
+for that VLAN can be specified in either the provider or profile configuration.
+
+This ID can be queried using the `list_vlans` function, as described below.
+
 
 Actions
 =======
@@ -263,6 +280,25 @@ instance.
     $ salt-cloud -a show_instance myinstance
 
 
+Functions
+=========
+The following functions are currently supported by the SoftLayer Salt Cloud
+driver.
+
+list_vlans
+----------
+This function lists all VLANs associated with the account, and all known data
+from the SoftLayer API concerning those VLANs.
+
+.. code-block:: bash
+
+    $ salt-cloud -f list_vlans my-softlayer
+    $ salt-cloud -f list_vlans my-softlayer-hw
+
+The `id` returned in this list is necessary for the `vlan` option when creating
+an instance.
+
+
 Optional Products for SoftLayer HW
 ==================================
 The softlayer-hw provider supports the ability to add optional products, which
@@ -272,7 +308,7 @@ them, that can be passed into Salt Cloud with the `optional_products` option:
 .. code-block:: yaml
 
     softlayer_hw_test:
-      provider: techhat-softlayer-hw
+      provider: my-softlayer-hw
       # CentOS 6.0 - Minimal Install (64 bit)
       image: 13963
       # 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
