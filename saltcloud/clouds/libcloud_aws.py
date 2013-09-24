@@ -211,6 +211,15 @@ def securitygroup(vm_):
     )
 
 
+def iam_profile(vm_):
+    '''
+    Return the IAM role
+    '''
+    return config.get_config_value(
+        'iam_profile', vm_, __opts__, search_global=False
+    )
+
+
 def block_device_mappings(vm_):
     '''
     Return the block device mapping
@@ -333,6 +342,17 @@ def create(vm_):
     ex_blockdevicemappings = block_device_mappings(vm_)
     if ex_blockdevicemappings:
         kwargs['ex_blockdevicemappings'] = ex_blockdevicemappings
+
+    ex_iam_profile = iam_profile(vm_)
+    if ex_iam_profile:
+        # libcloud does not implement 'iam_profile' yet.
+        # A pull request has been suggested
+        # https://github.com/apache/libcloud/pull/150
+        raise SaltCloudConfigError(
+            'libcloud does not implement \'iam_profile\' yet. '
+            'Use EC2 driver instead.'
+        )
+
     tags = config.get_config_value('tag', vm_, __opts__, {}, search_global=False)
     if not isinstance(tags, dict):
         raise SaltCloudConfigError(

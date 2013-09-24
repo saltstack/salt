@@ -562,6 +562,30 @@ def securitygroup(vm_):
     )
 
 
+def iam_profile(vm_):
+    '''
+    Return the IAM profile.
+
+    The IAM instance profile to associate with the instances.
+    This is either the Amazon Resource Name (ARN) of the instance profile
+    or the name of the role.
+
+    Type: String
+
+    Default: None
+
+    Required: No
+
+    Example: arn:aws:iam::111111111111:instance-profile/s3access
+
+    Example: s3access
+
+    '''
+    return config.get_config_value(
+        'iam_profile', vm_, __opts__, search_global=False
+    )
+
+
 def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to a built-in list of users for trying.
@@ -800,8 +824,21 @@ def create(vm_=None, call=None):
         if not isinstance(ex_securitygroup, list):
             params[spot_prefix + 'SecurityGroup.1'] = ex_securitygroup
         else:
-            for (counter, sg_) in enumerate(ex_securitygroup):
+            for counter, sg_ in enumerate(ex_securitygroup):
                 params[spot_prefix + 'SecurityGroup.{0}'.format(counter)] = sg_
+
+    ex_iam_profile = iam_profile(vm_)
+    if ex_iam_profile:
+        try:
+            if ex_iam_profile.startswith('arn:aws:iam:'):
+                params['IamInstanceProfile.Arn'] = ex_iam_profile
+            else:
+                params['IamInstanceProfile.Name'] = ex_iam_profile
+        except AttributeError:
+            raise SaltCloudConfigError(
+                '\'iam_profile\' should be a string value.'
+            )
+        pass
 
     az_ = get_availability_zone(vm_)
     if az_ is not None:
