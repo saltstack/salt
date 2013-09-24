@@ -1537,6 +1537,14 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'database backend, scanner, or custom roster system is '
                   'used. Default is the flat file roster.'))
         self.add_option(
+            '--roster-file',
+            dest='roster_file',
+            default='',
+            help=('define an alternative location for the default roster '
+                  'file location. The default roster file is called roster '
+                  'and is found in the same directory as the master config '
+                  'file.'))
+        self.add_option(
             '--refresh', '--refresh-cache',
             dest='refresh_cache',
             default=False,
