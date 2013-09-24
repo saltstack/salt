@@ -614,9 +614,11 @@ def list_nodes():
             'id': nodes[node]['hostname'],
             'ram': nodes[node]['memoryCount'],
             'cpus': nodes[node]['processorPhysicalCoreAmount'],
-            'private_ips': nodes[node]['primaryBackendIpAddress'],
-            'public_ips': nodes[node]['primaryIpAddress'],
         }
+        if 'primaryIpAddress' in nodes[node]:
+            ret[node]['public_ips'] = nodes[node]['primaryIpAddress']
+        if 'primaryBackendIpAddress' in nodes[node]:
+            ret[node]['private_ips'] = nodes[node]['primaryBackendIpAddress']
     return ret
 
 
