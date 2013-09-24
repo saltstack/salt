@@ -105,7 +105,7 @@ An initial profile can be configured in ``/etc/salt/cloud.profiles`` or
 .. code-block:: yaml
 
     openstack_512:
-        provider: my-openstack-config
+        provider: my-rackspace-config
         size: 512MB Standard Instance
         image: Ubuntu 12.04 LTS (Precise Pangolin)
 
