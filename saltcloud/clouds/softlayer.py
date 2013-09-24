@@ -204,10 +204,26 @@ def create(vm_):
     if location:
         kwargs['datacenter'] = {'name': location}
 
-    vlan_id = config.get_config_value(
-        'vlan', vm_, __opts__, default=False
+    private_vlan = config.get_config_value(
+        'private_vlan', vm_, __opts__, default=False
     )
-    if vlan_id:
+    if private_vlan:
+        kwargs['primaryBackendNetworkComponent'] = {
+            'networkVlan': {
+                'id': vlan_id,
+            }
+        }
+
+    private_network = config.get_config_value(
+        'private_vlan', vm_, __opts__, default=False
+    )
+    if bool(private_network) is True:
+        kwargs['privateNetworkOnlyFlag'] = 'True'
+
+    public_vlan = config.get_config_value(
+        'public_vlan', vm_, __opts__, default=False
+    )
+    if public_vlan:
         kwargs['primaryNetworkComponent'] = {
             'networkVlan': {
                 'id': vlan_id,
