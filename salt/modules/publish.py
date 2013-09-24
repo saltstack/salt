@@ -109,11 +109,13 @@ def _normalize_arg(arg):
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     '''
-    Publish a command from the minion out to other minions, publications need
-    to be enabled on the Salt master and the minion needs to have permission
-    to publish the command. The Salt master will also prevent a recursive
-    publication loop, this means that a minion cannot command another minion
-    to command another minion as that would create an infinite command loop.
+    Publish a command from the minion out to other minions.
+
+    Publications need to be enabled on the Salt master and the minion
+    needs to have permission to publish the command. The Salt master
+    will also prevent a recursive publication loop, this means that a
+    minion cannot command another minion to command another minion as
+    that would create an infinite command loop.
 
     The expr_form argument is used to pass a target other than a glob into
     the execution, the available options are:
@@ -141,6 +143,7 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     .. code-block:: bash
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
+
     '''
     return _publish(tgt, fun, arg, expr_form, returner, timeout, 'clean')
 
