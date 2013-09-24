@@ -23,6 +23,7 @@ import salt.utils
 import salt.exceptions
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
+from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ log = logging.getLogger(__name__)
 class SaltTemplateRenderError(salt.exceptions.SaltException):
     pass
 
+
+TEMPLATE_DIRNAME = os.path.join(saltpath[0], 'templates')
 
 # FIXME: also in salt/template.py
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
