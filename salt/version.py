@@ -6,9 +6,36 @@ Set up the version of Salt
 # Import python libs
 import re
 import sys
+import os
+import traceback
+
+
+class Dummy(object):
+    """Dummy class for import failures"""
+
+    def __init__(self, d=None):
+        self.attrs = d
+
+    def __getattr__(self, attr):
+        return self.attrs[attr]
 
 # Import salt libs
-import salt._compat
+# cheap hack to avoid fails import at setup.py calls
+try:
+    import salt._compat
+except ImportError, e:
+    st = traceback.extract_stack()
+    # if executed throught buildout, it is not the 
+    # first on the stack !
+    if True in [a[0].endswith('setup.py') 
+                for a in st]:
+        globs = {}
+        cpt = os.path.join(os.getcwd(),'salt/_compat.py')
+        exec(compile(open(cpt).read(), cpt, 'exec'), globs)
+        salt = Dummy({'_compat': Dummy(globs)})
+    else:
+        raise
+
 
 # ----- ATTENTION ----------------------------------------------------------->
 #
