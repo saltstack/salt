@@ -198,8 +198,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       vlan: 396
 
 
-The above items are all required; optional items may be added in future versions
-of Salt Cloud.
+Most of the above items are required; optional items are specified below.
 
 image
 -----
