@@ -205,13 +205,21 @@ def create(vm_):
         kwargs['datacenter'] = {'name': location}
 
     vlan_id = config.get_config_value(
-        'vlan', vm_, __opts__, default=True
+        'vlan', vm_, __opts__, default=False
     )
     if vlan_id:
         kwargs['primaryNetworkComponent'] = {
             'networkVlan': {
                 'id': vlan_id,
             }
+        }
+
+    max_net_speed = config.get_config_value(
+        'max_net_speed', vm_, __opts__, default='10'
+    )
+    if max_net_speed:
+        kwargs['networkComponents'] = {
+            'maxSpeed': max_net_speed
         }
 
     saltcloud.utils.fire_event(

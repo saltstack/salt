@@ -428,7 +428,7 @@ def create(vm_):
         kwargs['prices'].append({'id': product})
 
     vlan_id = config.get_config_value(
-        'vlan', vm_, __opts__, default=True
+        'vlan', vm_, __opts__, default=False
     )
     if vlan_id:
         kwargs['primaryNetworkComponent'] = {
