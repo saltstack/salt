@@ -16,14 +16,16 @@ import jinja2.exceptions
 
 # Import salt libs
 import salt.utils
-from salt.modules import __path__ as saltmodpath
+import salt.utils.templates
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Set up template environment
 ENV = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(saltmodpath[0] + os.sep + 'rh_ip')
+    loader=jinja2.FileSystemLoader(
+        os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'rh_ip')
+    )
 )
 
 
