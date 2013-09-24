@@ -354,17 +354,15 @@ def create(vm_):
     return ret
 
 
-def list_nodes_full(mask='id'):
+def list_nodes_full(mask='mask[id]'):
     '''
     Return a list of the VMs that are on the provider
     '''
     ret = {}
     conn = get_conn(service='Account')
-    response = conn.getVirtualGuests(mask=mask)
+    response = conn.getVirtualGuests()
     for node_id in response:
-        node_info = conn.getObject(id=node_id['id'])
-        if 'hostname' in node_info:
-            ret[node_info['hostname']] = node_info
+        ret[node_id['hostname']] = node_id
     return ret
 
 
