@@ -903,13 +903,13 @@ class AESFuncs(object):
             return {}
         if 'mine_get' in self.opts:
             # If master side acl defined.
-            if not isinstance(self.opts['mine_get'],dict):
+            if not isinstance(self.opts['mine_get'], dict):
                 return {}
             perms = set()
             for match in self.opts['mine_get']:
                 if re.match(match, load['id']):
                     if isinstance(self.opts['mine_get'][match], list):
-                            perms.update(self.opts['mine_get'][match])
+                        perms.update(self.opts['mine_get'][match])
             good = False
             for perm in perms:
                 if re.match(perm, load['fun']):
