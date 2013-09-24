@@ -910,11 +910,7 @@ class AESFuncs(object):
                 if re.match(match, load['id']):
                     if isinstance(self.opts['mine_get'][match], list):
                         perms.update(self.opts['mine_get'][match])
-            good = False
-            for perm in perms:
-                if re.match(perm, load['fun']):
-                    good = True
-            if not good:
+            if not any(re.match(perm, load['fun']) for perm in perms):
                 return {}
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
