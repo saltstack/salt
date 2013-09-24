@@ -1533,7 +1533,9 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             '--roster',
             dest='roster',
             default='',
-            help=('Define which roster system to use'))
+            help=('Define which roster system to use, this defines if a '
+                  'database backend, scanner, or custom roster system is '
+                  'used. Default is the flat file roster.'))
         self.add_option(
             '--refresh', '--refresh-cache',
             dest='refresh_cache',
