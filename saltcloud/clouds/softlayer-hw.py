@@ -427,6 +427,16 @@ def create(vm_):
     for product in optional_products:
         kwargs['prices'].append({'id': product})
 
+    vlan_id = config.get_config_value(
+        'vlan', vm_, __opts__, default=True
+    )
+    if vlan_id:
+        kwargs['primaryNetworkComponent'] = {
+            'networkVlan': {
+                'id': vlan_id,
+            }
+        }
+
     location = get_location(vm_)
     if location:
         kwargs['location'] = location
@@ -696,3 +706,16 @@ def destroy(name, call=None):
     )
 
     return response
+
+
+def list_vlans(call=None):
+    '''
+    List all VLANs associated with the account
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_vlans function must be called with -f or --function.'
+        )
+
+    conn = get_conn(service='Account')
+    return conn.getNetworkVlans()
