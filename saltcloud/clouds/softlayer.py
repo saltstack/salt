@@ -213,6 +213,11 @@ def create(vm_):
                 'id': vlan_id,
             }
         }
+
+    private_network = config.get_config_value(
+        'private_vlan', vm_, __opts__, default=False
+    )
+    if bool(private_network) is True:
         kwargs['privateNetworkOnlyFlag'] = 'True'
 
     public_vlan = config.get_config_value(
