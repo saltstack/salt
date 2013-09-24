@@ -22,7 +22,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
         #
         minion:
           master: saltmaster.example.com
-  
+
         # Set up grains information, which will be common for all nodes
         # using this provider
         grains:
@@ -36,23 +36,23 @@ Set up the cloud config at ``/etc/salt/cloud``:
         #     public_ips - The salt-master is hosted outside of EC2
         #
         ssh_interface: public_ips
-  
+
         # Set the EC2 access credentials (see below)
         #
         id: HJGRYCILJLKJYG
         key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-  
+
         # Make sure this key is owned by root with permissions 0400.
         #
         private_key: /etc/salt/my_test_key.pem
         keyname: my_test_key
         securitygroup: default
-  
+
         # Optionally configure default region
         #
         location: ap-southeast-1
         availability_zone: ap-southeast-1b
-  
+
         # Configure which user to use to run the deploy script. This setting is
         # dependent upon the AMI that is used to deploy. It is usually safer to
         # configure this individually in a profile, than globally. Typical users
@@ -64,7 +64,10 @@ Set up the cloud config at ``/etc/salt/cloud``:
         # Ubuntu       -> ubuntu
         #
         ssh_username: ec2-user
-  
+
+        # Optionally add an IAM profile
+        iam_profile: 'arn:aws:iam::123456789012:instance-profile/ExampleInstanceProfile'
+
         provider: ec2
 
 
@@ -73,7 +76,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
         #
         minion:
           master: saltmaster.example.com
-  
+
         # Specify whether to use public or private IP for deploy script.
         #
         # Valid options are:
@@ -81,23 +84,23 @@ Set up the cloud config at ``/etc/salt/cloud``:
         #     public_ips - The salt-master is hosted outside of EC2
         #
         ssh_interface: private_ips
-  
+
         # Set the EC2 access credentials (see below)
         #
         id: HJGRYCILJLKJYG
         key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-  
+
         # Make sure this key is owned by root with permissions 0400.
         #
         private_key: /etc/salt/my_test_key.pem
         keyname: my_test_key
         securitygroup: default
-  
+
         # Optionally configure default region
         #
         location: ap-southeast-1
         availability_zone: ap-southeast-1b
-  
+
         # Configure which user to use to run the deploy script. This setting is
         # dependent upon the AMI that is used to deploy. It is usually safer to
         # configure this individually in a profile, than globally. Typical users
@@ -109,27 +112,30 @@ Set up the cloud config at ``/etc/salt/cloud``:
         # Ubuntu       -> ubuntu
         #
         ssh_username: ec2-user
-  
+
+        # Optionally add an IAM profile
+        iam_profile: 'my other profile name'
+
         provider: ec2
 
 
 Access Credentials
 ==================
-The ``id`` and ``key`` settings may be found in the Security Credentials area 
+The ``id`` and ``key`` settings may be found in the Security Credentials area
 of the AWS Account page:
 
 https://portal.aws.amazon.com/gp/aws/securityCredentials
 
-Both are located in the Access Credentials area of the page, under the Access 
-Keys tab. The ``id`` setting is labeled Access Key ID, and the ``key`` setting 
+Both are located in the Access Credentials area of the page, under the Access
+Keys tab. The ``id`` setting is labeled Access Key ID, and the ``key`` setting
 is labeled Secret Access Key.
 
 
 Key Pairs
 =========
-In order to create an instance with Salt installed and configured, a key pair 
-will need to be created. This can be done in the EC2 Management Console, in the 
-Key Pairs area. These key pairs are unique to a specific region. Keys in the 
+In order to create an instance with Salt installed and configured, a key pair
+will need to be created. This can be done in the EC2 Management Console, in the
+Key Pairs area. These key pairs are unique to a specific region. Keys in the
 us-east-1 region can be configured at:
 
 https://console.aws.amazon.com/ec2/home?region=us-east-1#s=KeyPairs
@@ -138,25 +144,51 @@ Keys in the us-west-1 region can be configured at
 
 https://console.aws.amazon.com/ec2/home?region=us-west-1#s=KeyPairs
 
-...and so on. When creating a key pair, the browser will prompt to download a 
-pem file. This file must be placed in a directory accessable by Salt Cloud, 
+...and so on. When creating a key pair, the browser will prompt to download a
+pem file. This file must be placed in a directory accessable by Salt Cloud,
 with permissions set to either 0400 or 0600.
 
 
 Security Groups
 ===============
-An instance on EC2 needs to belong to a security group. Like key pairs, these 
-are unique to a specific region. These are also configured in the EC2 
-Management Console. Security groups for the us-east-1 region can be configured 
+An instance on EC2 needs to belong to a security group. Like key pairs, these
+are unique to a specific region. These are also configured in the EC2
+Management Console. Security groups for the us-east-1 region can be configured
 at:
 
 https://console.aws.amazon.com/ec2/home?region=us-east-1#s=SecurityGroups
 
 ...and so on.
 
-A security group defines firewall rules which an instance will adhere to. If 
-the salt-master is configured outside of EC2, the security group must open the 
+A security group defines firewall rules which an instance will adhere to. If
+the salt-master is configured outside of EC2, the security group must open the
 SSH port (usually port 22) in order for Salt Cloud to install Salt.
+
+
+IAM Profile
+===========
+Amazon EC2 instances support the concept of an `instance profile`_, which
+is a logical container for the IAM role. At the time that you launch an EC2
+instance, you can associate the instance with an instance profile, which in
+turn corresponds to the IAM role. Any software that runs on the EC2 instance
+is able to access AWS using the permissions associated with the IAM role.
+
+Scaffolding the profile is a 2 steps configurations:
+
+ 1. Configure an IAM Role from the `IAM Management Console`_.
+ 2. Attach this role to a new profile. It can be done with the `AWS CLI`_:
+
+    .. code-block:: bash
+
+      > aws iam create-instance-profile --instance-profile-name PROFILE_NAME
+      > aws iam add-role-to-instance-profile --instance-profile-name PROFILE_NAME --role-name ROLE_NAME
+
+Once the profile is created, you can use the **PROFILE_NAME** to configure
+your cloud profiles.
+
+.. _`IAM Management Console`: https://console.aws.amazon.com/iam/home?#roles
+.. _`AWS CLI`: http://docs.aws.amazon.com/cli/latest/index.html
+.. _`instance profile`: http://docs.aws.amazon.com/IAM/latest/UserGuide/instance-profiles.html
 
 
 Cloud Profiles
@@ -197,12 +229,12 @@ The profile can be realized now with a salt command:
     # salt-cloud -p base_ec2_private ami.example.com
 
 
-This will create an instance named ``ami.example.com`` in EC2. The minion that 
-is installed on this instance will have an ``id`` of ``ami.example.com``. If 
-the command was executed on the salt-master, its Salt key will automatically be 
+This will create an instance named ``ami.example.com`` in EC2. The minion that
+is installed on this instance will have an ``id`` of ``ami.example.com``. If
+the command was executed on the salt-master, its Salt key will automatically be
 signed on the master.
 
-Once the instance has been created with salt-minion installed, connectivity to 
+Once the instance has been created with salt-minion installed, connectivity to
 it can be verified with Salt:
 
 .. code-block:: bash
@@ -229,7 +261,7 @@ The following settings are always required for EC2:
 Optional Settings
 =================
 
-EC2 allows a location to be set for servers to be deployed in. Availability 
+EC2 allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.
 
 .. code-block:: yaml
@@ -240,9 +272,9 @@ zones exist inside regions, and may be added to increase specificity.
       availability_zone: ap-southeast-1b
 
 
-EC2 instances can have a public or private IP, or both. When an instance is 
+EC2 instances can have a public or private IP, or both. When an instance is
 deployed, Salt Cloud needs to log into it via SSH to run the deploy script.
-By default, the public IP will be used for this. If the salt-cloud command is 
+By default, the public IP will be used for this. If the salt-cloud command is
 run from another EC2 instance, the private IP should be used.
 
 .. code-block:: yaml
@@ -254,9 +286,9 @@ run from another EC2 instance, the private IP should be used.
 
 
 Many EC2 instances do not allow remote access to the root user by default.
-Instead, another user must be used to run the deploy script using sudo. Some 
-common usernames include ec2-user (for Amazon Linux), ubuntu (for Ubuntu 
-instances), admin (official Debian) and bitnami (for images provided by 
+Instead, another user must be used to run the deploy script using sudo. Some
+common usernames include ec2-user (for Amazon Linux), ubuntu (for Ubuntu
+instances), admin (official Debian) and bitnami (for images provided by
 Bitnami).
 
 .. code-block:: yaml
@@ -266,8 +298,8 @@ Bitnami).
       ssh_username: ec2-user
 
 
-Multiple usernames can be provided, in which case Salt Cloud will attempt to 
-guess the correct username. This is mostly useful in the main configuration 
+Multiple usernames can be provided, in which case Salt Cloud will attempt to
+guess the correct username. This is mostly useful in the main configuration
 file:
 
 .. code-block:: yaml
@@ -316,8 +348,8 @@ Tags can be set once an instance has been launched.
 
 Modify EC2 Tags
 ===============
-One of the features of EC2 is the ability to tag resources. In fact, under the 
-hood, the names given to EC2 instances by salt-cloud are actually just stored 
+One of the features of EC2 is the ability to tag resources. In fact, under the
+hood, the names given to EC2 instances by salt-cloud are actually just stored
 as a tag called Name. Salt Cloud has the ability to manage these tags:
 
 .. code-block:: bash
@@ -329,8 +361,8 @@ as a tag called Name. Salt Cloud has the ability to manage these tags:
 
 Rename EC2 Instances
 ====================
-As mentioned above, EC2 instances are named via a tag. However, renaming an 
-instance by renaming its tag will cause the salt keys to mismatch. A rename 
+As mentioned above, EC2 instances are named via a tag. However, renaming an
+instance by renaming its tag will cause the salt keys to mismatch. A rename
 function exists which renames both the instance, and the salt keys.
 
 .. code-block:: bash
@@ -340,7 +372,7 @@ function exists which renames both the instance, and the salt keys.
 
 EC2 Termination Protection
 ==========================
-EC2 allows the user to enable and disable termination protection on a specific 
+EC2 allows the user to enable and disable termination protection on a specific
 instance. An instance with this protection enabled cannot be destroyed.
 
 .. code-block:: bash
@@ -351,12 +383,12 @@ instance. An instance with this protection enabled cannot be destroyed.
 
 Rename on Destroy
 =================
-When instances on EC2 are destroyed, there will be a lag between the time that 
-the action is sent, and the time that Amazon cleans up the instance. During 
-this time, the instance still retails a Name tag, which will cause a collision 
-if the creation of an instance with the same name is attempted before the 
-cleanup occurs. In order to avoid such collisions, Salt Cloud can be configured 
-to rename instances when they are destroyed. The new name will look something 
+When instances on EC2 are destroyed, there will be a lag between the time that
+the action is sent, and the time that Amazon cleans up the instance. During
+this time, the instance still retails a Name tag, which will cause a collision
+if the creation of an instance with the same name is attempted before the
+cleanup occurs. In order to avoid such collisions, Salt Cloud can be configured
+to rename instances when they are destroyed. The new name will look something
 like:
 
 .. code-block:: bash
@@ -364,7 +396,7 @@ like:
     myinstance-DEL20f5b8ad4eb64ed88f2c428df80a1a0c
 
 
-In order to enable this, add rename_on_destroy line to the main 
+In order to enable this, add rename_on_destroy line to the main
 configuration file:
 
 .. code-block:: yaml
@@ -375,10 +407,10 @@ configuration file:
 
 EC2 Images
 ==========
-The following are lists of available AMI images, generally sorted by OS. These 
-lists are on 3rd-party websites, are not managed by Salt Stack in any way. They 
-are provided here as a reference for those who are interested, and contain no 
-warranty (express or implied) from anyone affiliated with Salt Stack. Most of 
+The following are lists of available AMI images, generally sorted by OS. These
+lists are on 3rd-party websites, are not managed by Salt Stack in any way. They
+are provided here as a reference for those who are interested, and contain no
+warranty (express or implied) from anyone affiliated with Salt Stack. Most of
 them have never been used, much less tested, by the Salt Stack team.
 
 * `Arch Linux`__
@@ -411,7 +443,7 @@ them have never been used, much less tested, by the Salt Stack team.
 
 show_image
 ==========
-This is a function that describes an AMI on EC2. This will give insight as to 
+This is a function that describes an AMI on EC2. This will give insight as to
 the defaults that will be applied to an instance using a particular AMI.
 
 .. code-block:: bash
@@ -421,9 +453,9 @@ the defaults that will be applied to an instance using a particular AMI.
 
 show_instance
 =============
-This action is a thin wrapper around --full-query, which displays details on a 
-single instance only. In an environment with several machines, this will save a 
-user from having to sort through all instance data, just to examine a single 
+This action is a thin wrapper around --full-query, which displays details on a
+single instance only. In an environment with several machines, this will save a
+user from having to sort through all instance data, just to examine a single
 instance.
 
 .. code-block:: bash
@@ -433,10 +465,10 @@ instance.
 
 del_root_vol_on_destroy
 =======================
-This argument overrides the default DeleteOnTermination setting in the AMI for 
+This argument overrides the default DeleteOnTermination setting in the AMI for
 the EBS root volumes for an instance. Many AMIs contain 'false' as a default,
-resulting in orphaned volumes in the EC2 account, which may unknowingly be 
-charged to the account. This setting can be added to the profile or map file 
+resulting in orphaned volumes in the EC2 account, which may unknowingly be
+charged to the account. This setting can be added to the profile or map file
 for an instance.
 
 If set, this setting will apply to the root EBS volume
@@ -457,7 +489,7 @@ configuration:
 
 del_all_vols_on_destroy
 =======================
-This argument overrides the default DeleteOnTermination setting in the AMI for 
+This argument overrides the default DeleteOnTermination setting in the AMI for
 the not-root EBS volumes for an instance. Many AMIs contain 'false' as a
 default, resulting in orphaned volumes in the EC2 account, which may
 unknowingly be charged to the account. This setting can be added to the profile
@@ -509,8 +541,8 @@ using one of the following commands:
 EC2 Termination Protection
 ==========================
 
-EC2 allows the user to enable and disable termination protection on a specific 
-instance. An instance with this protection enabled cannot be destroyed. The EC2 
+EC2 allows the user to enable and disable termination protection on a specific
+instance. An instance with this protection enabled cannot be destroyed. The EC2
 driver adds a show_term_protect action to the regular EC2 functionality.
 
 .. code-block:: bash
@@ -522,7 +554,7 @@ driver adds a show_term_protect action to the regular EC2 functionality.
 
 Alternate Endpoint
 ==================
-Normally, EC2 endpoints are build using the region and the service_url. The 
+Normally, EC2 endpoints are build using the region and the service_url. The
 resulting endpoint would follow this pattern:
 
 .. code-block:: bash
@@ -537,8 +569,8 @@ This results in an endpoint that looks like:
     ec2.us-east-1.amazonaws.com
 
 
-There are other projects that support an EC2 compatibility layer, which this 
-scheme does not account for. This can be overridden by specifying the endpoint 
+There are other projects that support an EC2 compatibility layer, which this
+scheme does not account for. This can be overridden by specifying the endpoint
 directly in the main cloud configuration file:
 
 .. code-block:: yaml
@@ -555,8 +587,8 @@ The EC2 driver has several functions and actions for management of EBS volumes.
 Creating Volumes
 ----------------
 A volume may be created, independent of an instance. A zone must be specified.
-A size or a snapshot may be specified (in GiB). If neither is given, a default 
-size of 10 GiB will be used. If a snapshot is given, the size of the snapshot 
+A size or a snapshot may be specified (in GiB). If neither is given, a default
+size of 10 GiB will be used. If a snapshot is given, the size of the snapshot
 will be used.
 
 .. code-block:: bash
@@ -570,7 +602,7 @@ will be used.
 
 Attaching Volumes
 -----------------
-Unattached volumes may be attached to an instance. The following values are 
+Unattached volumes may be attached to an instance. The following values are
 required; name or instance_id, volume_id and device.
 
 .. code-block:: bash
@@ -613,9 +645,9 @@ The EC2 driver has the ability to manage key pairs.
 
 Creating a Key Pair
 -------------------
-A key pair is required in order to create an instance. When creating a key pair 
+A key pair is required in order to create an instance. When creating a key pair
 with this function, the return data will contain a copy of the private key.
-This private key is not stored by Amazon, and will not be obtainable past this 
+This private key is not stored by Amazon, and will not be obtainable past this
 point, and should be stored immediately.
 
 .. code-block:: bash
@@ -625,7 +657,7 @@ point, and should be stored immediately.
 
 Show a Key Pair
 ---------------
-This function will show the details related to a key pair, not including the 
+This function will show the details related to a key pair, not including the
 private key itself (which is not stored by Amazon).
 
 .. code-block:: bash
