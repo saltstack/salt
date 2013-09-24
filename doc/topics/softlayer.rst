@@ -159,12 +159,13 @@ vlan
 If it is necessary for an instance to be created within a specific VLAN, the ID
 for that VLAN can be specified in either the provider or profile configuration.
 
-This ID can be queried using the `list_vlans` function, as described below.
+This ID can be queried using the `list_vlans` function, as described below. This
+setting is optional.
 
 max_net_speed
 -------------
-Specifies the connection speed for the instance's network components. By
-default, this is set to 10.
+Specifies the connection speed for the instance's network components. This
+setting is optional. By default, this is set to 10.
 
 
 The profile can be realized now with a salt command:
@@ -202,6 +203,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       domain: example.com
       # Optional
       vlan: 396
+      port_speed: 273
+      banwidth: 248
 
 
 Most of the above items are required; optional items are specified below.
@@ -267,6 +270,34 @@ If it is necessary for an instance to be created within a specific VLAN, the ID
 for that VLAN can be specified in either the provider or profile configuration.
 
 This ID can be queried using the `list_vlans` function, as described below.
+
+port_speed
+----------
+Specifies the speed for the instance's network port. This setting refers to an
+ID within the SoftLayer API, which sets the port speed. This setting is
+optional. The default is 273, or, 100 Mbps Public & Private Networks. The
+following settings are available:
+
+* 273: 100 Mbps Public & Private Networks
+* 274: 1 Gbps Public & Private Networks
+* 21509: 10 Mbps Dual Public & Private Networks (up to 20 Mbps)
+* 21513: 100 Mbps Dual Public & Private Networks (up to 200 Mbps)
+* 2314: 1 Gbps Dual Public & Private Networks (up to 2 Gbps)
+* 272: 10 Mbps Public & Private Networks
+
+bandwidth
+---------
+Specifies the network bandwidth available for the instance. This setting refers
+to an ID within the SoftLayer API, which sets the bandwidth. This setting is
+optional. The default is 248, or, 5000 GB Bandwidth. The following settings are
+available:
+
+* 248: 5000 GB Bandwidth
+* 129: 6000 GB Bandwidth
+* 130: 8000 GB Bandwidth
+* 131: 10000 GB Bandwidth
+* 36: Unlimited Bandwidth (10 Mbps Uplink)
+* 125: Unlimited Bandwidth (100 Mbps Uplink)
 
 
 Actions

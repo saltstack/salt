@@ -397,12 +397,6 @@ def create(vm_):
             # Image Ex: 13963: CentOS 6.0 - Minimal Install (64 bit)
             {'id': vm_['image']},
 
-            # The following items should be made into an option
-            # 100 Mbps Public & Private Networks
-            {'id': '273'},
-            # 5000 GB Bandwidth
-            {'id': '248'},
-
             # The following items are currently required
             # Reboot / Remote Console
             {'id': '905'},
@@ -426,6 +420,18 @@ def create(vm_):
     )
     for product in optional_products:
         kwargs['prices'].append({'id': product})
+
+    # Default is 273 (100 Mbps Public & Private Networks)
+    port_speed = config.get_config_value(
+        'port_speed', vm_, __opts__, default=273
+    )
+    kwargs['prices'].append({'id': port_speed})
+
+    # Default is 248 (5000 GB Bandwidth)
+    bandwidth = config.get_config_value(
+        'bandwidth', vm_, __opts__, default=248
+    )
+    kwargs['prices'].append({'id': bandwidth})
 
     vlan_id = config.get_config_value(
         'vlan', vm_, __opts__, default=False
