@@ -1030,10 +1030,10 @@ class AESFuncs(object):
                 os.makedirs(cdir)
             except os.error:
                 pass
-        if os.path.isfile(cpath):
-            mode = 'w'
+        if os.path.isfile(cpath) and load['loc'] != 0:
+            mode = 'ab'
         else:
-            mode = 'w+'
+            mode = 'wb'
         with salt.utils.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
