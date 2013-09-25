@@ -112,7 +112,7 @@ def running(name,
     process_groups = []
     for proc in all_processes:
         if ':' in proc:
-            process_groups.append(proc[:proc.index(':')+1])
+            process_groups.append(proc[:proc.index(':') + 1])
     process_groups = list(set(process_groups))
 
     # determine if this process/group needs loading
@@ -299,7 +299,7 @@ def dead(name,
         process_groups = []
         for proc in all_processes:
             if ':' in proc:
-                process_groups.append(proc[:proc.index(':')+1])
+                process_groups.append(proc[:proc.index(':') + 1])
         process_groups = list(set(process_groups))
 
         is_stopped = None
