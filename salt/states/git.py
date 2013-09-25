@@ -36,6 +36,14 @@ def __virtual__():
     return 'git' if __salt__['cmd.has_exec']('git') else False
 
 
+def __ls_remote__(name, branch):
+    '''
+    Returns the upstream hash for any given URL and branch.
+    '''
+    cmd = "git ls-remote -h " + name + " " + branch + " | cut -f 1"
+    return __salt__['cmd.run_stdout'](cmd)
+
+
 def latest(name,
            rev=None,
            target=None,
@@ -162,13 +170,17 @@ def latest(name,
         try:
             current_rev = __salt__['git.revision'](target, user=user)
 
+            # handle the case where a branch was provided for rev
+            remote_rev = None
             branch = __salt__['git.current_branch'](target, user=runas)
-            if len(branch) > 0:
-                current_rev = branch
+            # We're only interested in the remote branch if a branch
+            # (instead of a hash, for example) was provided for rev.
+            if len(branch) > 0 and branch == rev:
+                remote_rev = __ls_remote__(name, branch)
 
-            #only do something, if the specified rev differs from the
-            #current_rev
-            if rev == current_rev:
+            # only do something, if the specified rev differs from the
+            # current_rev and remote_rev
+            if current_rev in [rev, remote_rev]:
                 new_rev = current_rev
             else:
 

@@ -39,10 +39,10 @@ More details can be found in the docmentation for the :mod:`cmd
 When I run *test.ping*, why don't the Minions that aren't responding return anything? Returning ``False`` would be helpful.
 ---------------------------------------------------------------------------------------------------------------------------
 
-When you run *test.ping* the Master tells Minions
-to run commands/functions, and listens for the return data, printing it to the
-screen when it is received. If it doesn't receive anything back, it doesn't
-have anything to display for that Minion.
+When you run *test.ping* the Master tells Minions to run commands/functions,
+and listens for the return data, printing it to the screen when it is received.
+If it doesn't receive anything back, it doesn't have anything to display for
+that Minion.
 
 There are a couple options for getting information on Minions that are not
 responding. One is to use the verbose (``-v``) option when you run salt
@@ -67,6 +67,24 @@ If the Minion id is not configured explicitly (using the :conf_minion:`id`
 parameter), Salt will determine the id based on the hostname. Exactly how this
 is determined varies a little between operating systems and is described in
 detail :ref:`here <minion-id-generation>`.
+
+I'm trying to manage packages/services but I get an error saying that the state is not available. Why?
+------------------------------------------------------------------------------------------------------
+
+Salt detects the Minion's operating system and assigns the correct package or
+service management module based on what is detected. However, for certain custom
+spins and OS derivatives this detection fails. In cases like this, an issue
+should be opened on our tracker_, with the following information:
+
+1. The output of the following command:
+
+   .. code-block:: bash
+
+    salt <minion_id> grains.items | grep os
+
+2. The contents of ``/etc/lsb-release``, if present on the Minion.
+
+.. _tracker: https://github.com/saltstack/salt/issues
 
 I'm using gitfs and my custom modules/states/etc are not syncing. Why?
 ----------------------------------------------------------------------

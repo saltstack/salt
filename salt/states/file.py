@@ -1727,7 +1727,7 @@ def replace(name,
     '''
     Maintain an edit in a file
 
-    .. versionadded:: 0.17.1
+    .. versionadded:: 0.17
 
     Params are identical to :py:func:`~salt.modules.file.replace`.
 
@@ -1768,7 +1768,7 @@ def sed(name,
         flags='g',
         negate_match=False):
     '''
-    .. deprecated:: 0.17.1
+    .. deprecated:: 0.17
        Use :py:func:`~salt.states.file.replace` instead.
 
     Maintain a simple edit to a file

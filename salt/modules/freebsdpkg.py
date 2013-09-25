@@ -1,6 +1,70 @@
 # -*- coding: utf-8 -*-
 '''
-Package support for FreeBSD
+Remote package support using ``pkg_add(1)``
+
+.. warning::
+
+    This module has been completely rewritten. Up to and including version
+    0.17.0, it supported ``pkg_add(1)``, but checked for the existence of a
+    pkgng local database and, if found,  would provide some of pkgng's
+    functionality. The rewrite of this module has removed all pkgng support,
+    and moved it to the :mod:`pkgng <salt.modules.pkgng>` execution module. For
+    verisions <= 0.17.0, the documentation here should not be considered
+    accurate. If your Minion is running one of these versions, then the
+    documentation for this module can be viewed using the :mod:`sys.doc
+    <salt.modules.sys.doc>` function:
+
+    .. code-block:: bash
+
+        salt bsdminion sys.doc pkg
+
+
+This module acts as the default package provider for FreeBSD 9 and newer. If
+you need to use pkgng on a FreeBSD 9 system, you will need to override the
+``pkg`` provider by setting the :conf_minion:`providers` parameter in your
+Minion config file, in order to use pkgng.
+
+.. code-block:: yaml
+
+    providers:
+      pkg: pkgng
+
+More information on pkgng support can be found in the documentation for the
+:mod:`pkgng <salt.modules.pkgng>` module.
+
+This module will respect the ``PACKAGEROOT`` and ``PACKAGESITE`` environment
+variables, if set, but these values can also be overridden in several ways:
+
+1. :strong:`Salt configuration parameters.` The configuration parameters
+   ``freebsdpkg.PACKAGEROOT`` and ``freebsdpkg.PACKAGESITE`` are recognized.
+   These config parameters are looked up using :mod:`config.get
+   <salt.modules.config.get>` and can thus be specified in the Master config
+   file, Grains, Pillar, or in the Minion config file. Example:
+
+   .. code-block:: yaml
+
+        freebsdpkg.PACKAGEROOT: ftp://ftp.freebsd.org/
+        freebsdpkg.PACKAGESITE: ftp://ftp.freebsd.org/pub/FreeBSD/ports/ia64/packages-9-stable/Latest/
+
+2. :strong:`CLI arguments.` Both the ``packageroot`` (used interchangeably with
+   ``fromrepo`` for API compatibility) and ``packagesite`` CLI arguments are
+   recognized, and override their config counterparts from section 1 above.
+
+   .. code-block:: bash
+
+        salt -G 'os:FreeBSD' pkg.install zsh fromrepo=ftp://ftp2.freebsd.org/
+        salt -G 'os:FreeBSD' pkg.install zsh packageroot=ftp://ftp2.freebsd.org/
+        salt -G 'os:FreeBSD' pkg.install zsh packagesite=ftp://ftp2.freebsd.org/pub/FreeBSD/ports/ia64/packages-9-stable/Latest/
+
+    .. note::
+
+        These arguments can also be passed through in states:
+
+        .. code-block:: yaml
+
+            zsh:
+              pkg.installed:
+                - fromrepo: ftp://ftp2.freebsd.org/
 '''
 
 # Import python libs
@@ -10,56 +74,95 @@ import os
 
 # Import salt libs
 import salt.utils
-import salt.utils.decorators as decorators
-
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Set the virtual pkg module if the os is FreeBSD
+    Load as 'pkg' on FreeBSD versions less than 10
     '''
-    return 'pkg' if __grains__['os'] == 'FreeBSD' else False
+    if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) < 10:
+        return 'pkg'
+    return False
 
 
-def _check_pkgng():
+def _get_repo_options(fromrepo=None, packagesite=None):
     '''
-    Looks to see if pkgng is being used by checking if database exists
+    Return a list of tuples to seed the "env" list, which is used to set
+    environment variables for any pkg_add commands that are spawned.
+
+    If ``fromrepo`` or ``packagesite`` are None, then their corresponding
+    config parameter will be looked up with config.get.
+
+    If both ``fromrepo`` and ``packagesite`` are None, and neither
+    freebsdpkg.PACKAGEROOT nor freebsdpkg.PACKAGESITE are specified, then an
+    empty list is returned, and it is assumed that the system defaults (or
+    environment variables) will be used.
     '''
-    return os.path.isfile('/var/db/pkg/local.sqlite')
+    root = fromrepo if fromrepo is not None \
+        else __salt__['config.get']('freebsdpkg.PACKAGEROOT', None)
+    site = packagesite if packagesite is not None \
+        else __salt__['config.get']('freebsdpkg.PACKAGESITE', None)
+    ret = {}
+    if root is not None:
+        ret['PACKAGEROOT'] = root
+    if site is not None:
+        ret['PACKAGESITE'] = site
+    return ret
 
 
-@decorators.memoize
-def _cmd(cmd):
-    return salt.utils.which(cmd)
-
-
-def search(pkg_name):
+def _match(names):
     '''
-    Use `pkg search` if pkg is being used.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.search 'mysql-server'
+    Since pkg_delete requires the full "pkgname-version" string, this function
+    will attempt to match the package name with its version. Returns a list of
+    partial matches and package names that match the "pkgname-version" string
+    required by pkg_delete, and a list of errors encountered.
     '''
-    if _check_pkgng():
-        res = __salt__['cmd.run_all']('{0} search {1}'.format(_cmd('pkg'),
-                                                              pkg_name))
-        res = [x for x in res.splitlines()]
-        return {'Results': res}
+    pkgs = list_pkgs(versions_as_list=True)
+    errors = []
+
+    # Look for full matches
+    full_pkg_strings = []
+    for line in __salt__['cmd.run_stdout']('pkg_info').splitlines():
+        try:
+            full_pkg_strings.append(line.split()[0])
+        except IndexError:
+            continue
+    full_matches = [x for x in names if x in full_pkg_strings]
+
+    # Look for pkgname-only matches
+    matches = []
+    ambiguous = []
+    for name in set(names) - set(full_matches):
+        cver = pkgs.get(name)
+        if cver is not None:
+            if len(cver) == 1:
+                matches.append('{0}-{1}'.format(name, cver[0]))
+            else:
+                ambiguous.append(name)
+                errors.append(
+                    'Ambiguous package {0!r}. Full name/version required. '
+                    'Possible matches: {1}'.format(
+                        name,
+                        ', '.join(['{0}-{1}'.format(name, x) for x in cver])
+                    )
+                )
+
+    # Find packages that did not match anything
+    not_matched = \
+        set(names) - set(matches) - set(full_matches) - set(ambiguous)
+    for name in not_matched:
+        errors.append('Package {0!r} not found'.format(name))
+
+    return matches + full_matches, errors
 
 
 def latest_version(*names, **kwargs):
     '''
-    Return the latest version of the named package available for upgrade or
-    installation. If more than one package name is specified, a dict of
-    name/version pairs is returned.
-
-    If the latest version of a given package is already installed, an empty
-    string will be returned for that package.
+    ``pkg_add(1)`` is not capable of querying for remote packages, so this
+    function will always return results as if there is no package available for
+    install or upgrade.
 
     CLI Example:
 
@@ -68,50 +171,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-
-    ret = {}
-
-    # Refresh before looking for the latest version available
-    if refresh:
-        refresh_db()
-
-    if _check_pkgng():
-        for line in __salt__['cmd.run_stdout']('{0} upgrade -nq'.format(
-            _cmd('pkg'))
-        ).splitlines():
-            if not line.startswith('\t'):
-                continue
-            line = line.strip()
-            _words = line.split()
-            if _words[0] in ('Installing', 'Upgrading', 'Downgrading'):
-                pkg = _words[1].rstrip(':')
-                ver = _words[2] if _words[0] == 'Installing' else _words[4]
-            elif _words[0] in ('Reinstalling'):
-                pkg, ver = _words[1].split('-')
-            else:
-                # unexpected string
-                continue
-            if pkg in names:
-                ret[pkg] = ver
-
-        # keep pkg.latest culm
-        for pkg in set(names) - set(ret) - set(list_pkgs()):
-            for line in __salt__['cmd.run']('{0} search -fe -Sname {1}'.format(
-                _cmd('pkg'), pkg)
-            ).splitlines():
-                if line.startswith('Version'):
-                    _, _, ver = line.split()[:3]
-                    ret[pkg] = ver
-                    break
-
-    ret.update(dict.fromkeys(set(names) - set(ret), ''))
-
-    if len(names) == 1:
-        return ret.values()[0]
-
-    return ret
+    return '' if len(names) == 1 else dict((x, '') for x in names)
 
 # available_version is being deprecated
 available_version = latest_version
@@ -135,8 +195,8 @@ def version(*names, **kwargs):
 
 def refresh_db():
     '''
-    Use pkg update to get latest repo.txz when using pkgng. Updating
-    with portsnap is not yet supported.
+    ``pkg_add(1)`` does not use a local database of available packages, so this
+    function simply returns ``True``. it exists merely for API compatibility.
 
     CLI Example:
 
@@ -144,9 +204,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    if _check_pkgng():
-        __salt__['cmd.run_all']('{0} update'.format(_cmd('pkg')))
-    return {}
+    return True
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -162,7 +220,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
+    # 'removed' not applicable
     if salt.utils.is_true(kwargs.get('removed')):
         return {}
 
@@ -174,15 +232,14 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    if _check_pkgng():
-        pkg_command = '{0} info'.format(_cmd('pkg'))
-    else:
-        pkg_command = '{0}'.format(_cmd('pkg_info'))
     ret = {}
-    for line in __salt__['cmd.run'](pkg_command).splitlines():
+    for line in __salt__['cmd.run_stdout']('pkg_info').splitlines():
         if not line:
             continue
-        pkg, ver = line.split(' ')[0].rsplit('-', 1)
+        try:
+            pkg, ver = line.split()[0].rsplit('-', 1)
+        except IndexError, ValueError:
+            continue
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
@@ -199,7 +256,7 @@ def install(name=None,
             sources=None,
             **kwargs):
     '''
-    Install the passed package
+    Install package(s) using ``pkg_add(1)``
 
     name
         The name of the package to be installed.
@@ -207,8 +264,13 @@ def install(name=None,
     refresh
         Whether or not to refresh the package database before installing.
 
-    fromrepo
-        Specify a package repository to install from.
+    fromrepo or packageroot
+        Specify a package repository from which to install. Overrides the
+        system default, as well as the PACKAGEROOT environment variable.
+
+    packagesite
+        Specify the exact directory from which to install the remote package.
+        Overrides the PACKAGESITE environment variable, if present.
 
 
     Multiple Package Installation Options:
@@ -221,7 +283,7 @@ def install(name=None,
 
         .. code-block:: bash
 
-            salt '*' pkg.install pkgs='["foo","bar"]'
+            salt '*' pkg.install pkgs='["foo", "bar"]'
 
     sources
         A list of packages to install. Must be passed as a list of dicts,
@@ -232,7 +294,7 @@ def install(name=None,
 
         .. code-block:: bash
 
-            salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
+            salt '*' pkg.install sources='[{"foo": "salt://foo.deb"}, {"bar": "salt://bar.deb"}]'
 
     Return a dict containing the new package names and versions::
 
@@ -250,43 +312,23 @@ def install(name=None,
                                                                   sources,
                                                                   **kwargs)
 
-    # Support old "repo" argument
-    repo = kwargs.get('repo', '')
-    if not fromrepo and repo:
-        fromrepo = repo
-
     if not pkg_params:
         return {}
 
-    env = []
-    args = []
-    if _check_pkgng():
-        cmd = _cmd('pkg')
-        if fromrepo:
-            log.info('Setting PACKAGESITE={0}'.format(fromrepo))
-            env.append(('PACKAGESITE', fromrepo))
-    else:
-        cmd = _cmd('pkg_add')
-        if fromrepo:
-            log.info('Setting PACKAGEROOT={0}'.format(fromrepo))
-            env.append(('PACKAGEROOT', fromrepo))
+    packageroot = kwargs.get('packageroot')
+    if not fromrepo and packageroot:
+        fromrepo = packageroot
 
-    if pkg_type == 'file':
-        if _check_pkgng():
-            env.append(('ASSUME_ALWAYS_YES', 'yes'))  # might be fixed later
-            args.append('add')
-    elif pkg_type == 'repository':
-        if _check_pkgng():
-            args.extend(('install', '-y'))  # Assume yes when asked
-            if not refresh:
-                args.append('-L')  # do not update repo db
-        else:
-            args.append('-r')  # use remote repo
+    env = _get_repo_options(fromrepo, kwargs.get('packagesite'))
+    args = []
+
+    if pkg_type == 'repository':
+        args.append('-r')  # use remote repo
 
     args.extend(pkg_params)
 
     old = list_pkgs()
-    __salt__['cmd.run_all']('{0} {1}'.format(cmd, ' '.join(args)), env=env)
+    __salt__['cmd.run_all']('pkg_add {0}'.format(' '.join(args)), env=env)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     rehash()
@@ -295,12 +337,8 @@ def install(name=None,
 
 def upgrade():
     '''
-    Run pkg upgrade, if pkgng used. Otherwise do nothing
-
-    Return a dict containing the new package names and versions::
-
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    Upgrades are not supported with ``pkg_add(1)``. This function is included
+    for API compatibility only and always returns an empty dict.
 
     CLI Example:
 
@@ -308,21 +346,12 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
-
-    if not _check_pkgng():
-        # There is not easy way to upgrade packages with old package system
-        return {}
-
-    old = list_pkgs()
-    __salt__['cmd.run_all']('{0} upgrade -y'.format(_cmd('pkg')))
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return {}
 
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove packages.
+    Remove packages using ``pkg_delete(1)``
 
     name
         The name of the package to be deleted.
@@ -350,51 +379,21 @@ def remove(name=None, pkgs=None, **kwargs):
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
 
     old = list_pkgs()
-    targets = [x for x in pkg_params if x in old]
+    targets, errors = _match([x for x in pkg_params])
+    for error in errors:
+        log.error(error)
     if not targets:
         return {}
-
-    for_remove = ' '.join(targets)
-    if _check_pkgng():
-        cmd = '{0} remove -y {1}'.format(_cmd('pkg'), for_remove)
-    else:
-        cmd = '{0} {1}'.format(_cmd('pkg_remove'), for_remove)
-
+    cmd = 'pkg_delete {0}'.format(' '.join(targets))
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
-
-def purge(name=None, pkgs=None, **kwargs):
-    '''
-    Package purges are not supported, this function is identical to
-    ``remove()``.
-
-    name
-        The name of the package to be deleted.
-
-
-    Multiple Package Options:
-
-    pkgs
-        A list of packages to delete. Must be passed as a python list. The
-        ``name`` parameter will be ignored if this option is passed.
-
-    .. versionadded:: 0.16.0
-
-
-    Returns a dict containing the changes.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.purge <package name>
-        salt '*' pkg.purge <package1>,<package2>,<package3>
-        salt '*' pkg.purge pkgs='["foo", "bar"]'
-    '''
-    return remove(name=name, pkgs=pkgs)
+# Support pkg.delete to remove packages to more closely match pkg_delete
+delete = remove
+# No equivalent to purge packages, use remove instead
+purge = remove
 
 
 def rehash():
@@ -453,43 +452,28 @@ def file_dict(*packages):
     errors = []
     files = {}
 
-    if _check_pkgng():
-        if packages:
-            match_pattern = '%n ~ {0}'
-            matches = [match_pattern.format(p) for p in packages]
+    if packages:
+        match_pattern = '\'{0}-[0-9]*\''
+        matches = [match_pattern.format(p) for p in packages]
 
-            cmd = '{0} query -e \'{1}\' \'%n %Fp\''.format(
-                _cmd('pkg'), ' || '.join(matches))
-        else:
-            cmd = '{0} query -a \'%n %Fp\''.format(_cmd('pkg'))
-
-        for line in __salt__['cmd.run_stdout'](cmd).splitlines():
-            pkg, fn = line.split(' ', 1)
-            if pkg not in files:
-                files[pkg] = []
-            files[pkg].append(fn)
+        cmd = 'pkg_info -QL {0}'.format(' '.join(matches))
     else:
-        if packages:
-            match_pattern = '\'{0}-[0-9]*\''
-            matches = [match_pattern.format(p) for p in packages]
+        cmd = 'pkg_info -QLa'
 
-            cmd = '{0} -QL {1}'.format(_cmd('pkg_info'), ' '.join(matches))
+    ret = __salt__['cmd.run_all'](cmd)
+
+    for line in ret['stderr'].splitlines():
+        errors.append(line)
+
+    pkg = None
+    for line in ret['stdout'].splitlines():
+        if pkg is not None and line.startswith('/'):
+            files[pkg].append(line)
+        elif ':/' in line:
+            pkg, fn = line.split(':', 1)
+            pkg, ver = pkg.rsplit('-', 1)
+            files[pkg] = [fn]
         else:
-            cmd = '{0} -QLa'.format(_cmd('pkg_info'))
+            continue  # unexpected string
 
-        ret = __salt__['cmd.run_all'](cmd)
-
-        for line in ret['stderr'].splitlines():
-            errors.append(line)
-
-        pkg = None
-        for line in ret['stdout'].splitlines():
-            if pkg is not None and line.startswith('/'):
-                files[pkg].append(line)
-            elif ':/' in line:
-                pkg, fn = line.split(':', 1)
-                pkg, ver = pkg.rsplit('-', 1)
-                files[pkg] = [fn]
-            else:
-                continue  # unexpected string
     return {'errors': errors, 'files': files}

@@ -901,6 +901,17 @@ class AESFuncs(object):
         '''
         if any(key not in load for key in ('id', 'tgt', 'fun')):
             return {}
+        if 'mine_get' in self.opts:
+            # If master side acl defined.
+            if not isinstance(self.opts['mine_get'], dict):
+                return {}
+            perms = set()
+            for match in self.opts['mine_get']:
+                if re.match(match, load['id']):
+                    if isinstance(self.opts['mine_get'][match], list):
+                        perms.update(self.opts['mine_get'][match])
+            if not any(re.match(perm, load['fun']) for perm in perms):
+                return {}
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
@@ -1019,10 +1030,10 @@ class AESFuncs(object):
                 os.makedirs(cdir)
             except os.error:
                 pass
-        if os.path.isfile(cpath):
-            mode = 'w'
+        if os.path.isfile(cpath) and load['loc'] != 0:
+            mode = 'ab'
         else:
-            mode = 'w+'
+            mode = 'wb'
         with salt.utils.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])

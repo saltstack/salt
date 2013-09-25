@@ -8,7 +8,13 @@ import re
 import sys
 
 # Import salt libs
-import salt._compat
+try:
+    from salt._compat import string_types
+except ImportError:
+    if sys.version_info[0] == 3:
+        string_types = str
+    else:
+        string_types = basestring
 
 # ----- ATTENTION ----------------------------------------------------------->
 #
@@ -41,25 +47,25 @@ class SaltStackVersion(object):
                  noc=0,
                  sha=None):
 
-        if isinstance(major, salt._compat.string_types):
+        if isinstance(major, string_types):
             major = int(major)
 
-        if isinstance(minor, salt._compat.string_types):
+        if isinstance(minor, string_types):
             minor = int(minor)
 
         if bugfix is None:
             bugfix = 0
-        elif isinstance(bugfix, salt._compat.string_types):
+        elif isinstance(bugfix, string_types):
             bugfix = int(bugfix)
 
         if rc is None:
             rc = 0
-        elif isinstance(rc, salt._compat.string_types):
+        elif isinstance(rc, string_types):
             rc = int(rc)
 
         if noc is None:
             noc = 0
-        elif isinstance(noc, salt._compat.string_types):
+        elif isinstance(noc, string_types):
             noc = int(noc)
 
         self.major = major
@@ -134,7 +140,7 @@ class SaltStackVersion(object):
 
     def __cmp__(self, other):
         if not isinstance(other, SaltStackVersion):
-            if isinstance(other, salt._compat.string_types):
+            if isinstance(other, string_types):
                 other = SaltStackVersion.parse(other)
             elif isinstance(other, (list, tuple)):
                 other = SaltStackVersion(*other)
