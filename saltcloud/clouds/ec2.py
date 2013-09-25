@@ -1224,7 +1224,7 @@ def create(vm_=None, call=None):
 
         # The following line is for future Python 3 compatibility
         deployed = False
-        if config.get_config_value('is_windows', vm_, __opts__) is True:
+        if win_installer:
             deployed = saltcloud.utils.deploy_windows(**deploy_kwargs)
         else:
             deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
