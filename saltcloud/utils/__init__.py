@@ -403,7 +403,9 @@ def deploy_windows(host, port=139, timeout=900, username='Administrator',
             )
         )
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        smb_cmd = 'smbclient {1} -U {0}'.format(username, password)
         # Shell out to smbclient to create C:\salttmp\
+        win_cmd('{0} -c "mkdir C:\\salttmp"'.format(smb_cmd))
         # Shell out to smbclient to copy over minion keys
         ## minion_pub, minion_pem, minion_conf
         # Shell out to smbclient to copy over win_installer
@@ -818,6 +820,37 @@ def scp_file(dest_path, contents, kwargs):
         log.error(
             'Failed to upload file {0!r}: {1}\n'.format(
                 dest_path, err
+            ),
+            exc_info=True
+        )
+    # Signal an error
+    return 1
+
+
+def win_cmd(command, **kwargs):
+    '''
+    Wrapper for commands to be run against Windows boxes
+    '''
+    try:
+        proc = NonBlockingPopen(
+            command,
+            shell=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stream_stds=kwargs.get('display_ssh_output', True),
+        )
+        log.debug(
+            'Executing command(PID {0}): {1!r}'.format(
+                proc.pid, command
+            )
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        return proc.returncode
+    except Exception as err:
+        log.error(
+            'Failed to execute command {0!r}: {1}\n'.format(
+                command, err
             ),
             exc_info=True
         )
