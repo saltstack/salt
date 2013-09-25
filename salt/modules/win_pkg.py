@@ -351,8 +351,8 @@ def _get_reg_software():
                     reg_hive,
                     prd_uninst_key,
                     'WindowsInstaller')
-                if windows_installer == 'Not Found' or not windows_installer:
-                    break
+                if windows_installer != 'Not Found' and windows_installer:
+                    continue
 
                 prd_name = _get_reg_value(
                     reg_hive,
