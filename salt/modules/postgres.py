@@ -848,28 +848,28 @@ def owner_to(dbname,
 
     queries = (
         # schemas
-        ('alter schema ${n} owner to ${owner};',
+        ('alter schema {n} owner to {owner};',
          'select quote_ident(schema_name) as n from '
          'information_schema.schemata;'),
         # tables and views
-        ('alter table ${n} owner to ${owner};',
+        ('alter table {n} owner to {owner};',
          'select quote_ident(table_schema)||\'.\'||quote_ident(table_name) as '
          'n from information_schema.tables where table_schema not in '
          '(\'pg_catalog\', \'information_schema\');'),
         # functions
-        ('alter function ${n} owner to ${owner};',
+        ('alter function {n} owner to {owner};',
          'select p.oid::regprocedure::text as n from pg_catalog.pg_proc p '
          'join pg_catalog.pg_namespace ns on p.pronamespace=ns.oid where '
          'ns.nspname not in (\'pg_catalog\', \'information_schema\') '
          ' and not p.proisagg;'),
         # aggregate functions
-        ('alter aggregate ${n} owner to ${owner};',
+        ('alter aggregate {n} owner to {owner};',
          'select p.oid::regprocedure::text as n from pg_catalog.pg_proc p '
          'join pg_catalog.pg_namespace ns on p.pronamespace=ns.oid where '
          'ns.nspname not in (\'pg_catalog\', \'information_schema\') '
          'and p.proisagg;'),
         # sequences
-        ('alter sequence ${n} owner to ${owner};',
+        ('alter sequence {n} owner to {owner};',
          'select quote_ident(sequence_schema)||\'.\'||'
          'quote_ident(sequence_name) as n from information_schema.sequences;')
     )
