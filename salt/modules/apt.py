@@ -106,6 +106,20 @@ def _get_repo(**kwargs):
     return ''
 
 
+def _get_virtual():
+    '''
+    Return a dict of virtual package information
+    '''
+    if 'pkg._get_virtual' not in __context__:
+        cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
+        out = __salt__['cmd.run_stdout'](cmd)
+        virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
+        __context__['pkg._get_virtual'] = {}
+        for realpkg, provides in virtpkg_re.findall(out):
+            __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
+    return __context__['pkg._get_virtual']
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -152,6 +166,11 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db()
 
+    virtpkgs = _get_virtual()
+    all_virt = set()
+    for provides in virtpkgs.values():
+        all_virt.update(provides)
+
     for name in names:
         cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
         out = __salt__['cmd.run_all'](cmd)
@@ -159,14 +178,19 @@ def latest_version(*names, **kwargs):
         if len(candidate) >= 2:
             candidate = candidate[-1]
             if candidate.lower() == '(none)':
-                candidate = ''
+                # Virtual package is a candidate for installation if and only
+                # if it is not currently installed.
+                if name in all_virt and name not in pkgs:
+                    candidate = '1'
+                else:
+                    candidate = ''
         else:
             candidate = ''
 
         installed = pkgs.get(name, [])
         if not installed:
             ret[name] = candidate
-        else:
+        elif candidate:
             # If there are no installed versions that are greater than or equal
             # to the install candidate, then the candidate is an upgrade, so
             # add it to the return dict
@@ -593,16 +617,13 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
 
     # Check for virtual packages. We need dctrl-tools for this.
     if not removed and __salt__['cmd.has_exec']('grep-available'):
-        cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-        out = __salt__['cmd.run_stdout'](cmd)
-
-        virtpkg_re = re.compile('Package: (\\S+)\nProvides: ([\\S, ]+)')
+        virtpkgs_all = _get_virtual()
         virtpkgs = set()
-        for realpkg, provides in virtpkg_re.findall(out):
+        for realpkg, provides in virtpkgs_all.iteritems():
             # grep-available returns info on all virtual packages. Ignore any
             # virtual packages that do not have the real package installed.
             if realpkg in ret['installed']:
-                virtpkgs.update(provides.split(', '))
+                virtpkgs.update(provides)
         for virtname in virtpkgs:
             # Set virtual package versions to '1'
             __salt__['pkg_resource.add_pkg'](ret['installed'], virtname, '1')
