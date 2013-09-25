@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 daemontools service module. This module will create daemontools type
 service watcher.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of Portage package configuration on Gentoo
 =====================================================
@@ -12,11 +13,13 @@ A state module to manage Portage configuration on Gentoo
                 - openssl
 '''
 
+
 def __virtual__():
     '''
     Only load if the portage_config module is available in __salt__
     '''
     return 'portage_config' if 'portage_config.get_missing_flags' in __salt__ else False
+
 
 def mod_init(low):
     '''
@@ -27,6 +30,7 @@ def mod_init(low):
     except Exception:
         return False
     return True
+
 
 def _flags_helper(conf, atom, new_flags, test=False):
     try:
@@ -41,6 +45,7 @@ def _flags_helper(conf, atom, new_flags, test=False):
         return {'result': True, 'changes': {'old': old_flags, 'new': new_flags}}
     return {'result': None}
 
+
 def _mask_helper(conf, atom, test=False):
     try:
         is_present = __salt__['portage_config.is_present'](conf, atom)
@@ -52,6 +57,7 @@ def _mask_helper(conf, atom, test=False):
             __salt__['portage_config.append_to_package_conf'](conf, string=atom)
         return {'result': True}
     return {'result': None}
+
 
 def flags(name,
           use=None,

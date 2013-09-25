@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Display clean output of an overstate stage
 '''

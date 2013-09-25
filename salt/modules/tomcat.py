@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Tomcat
 
@@ -55,7 +56,7 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
-# Private
+
 def __virtual__():
     '''
     Only load tomcat if it is installed or if grains/pillar config exists
@@ -166,7 +167,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
             ret['msg'] = urllib2.urlopen(url6, timeout=timeout).read().splitlines()
         except Exception:
             ret['msg'] = 'Failed to create HTTP request'
-    
+
     if not ret['msg'][0].startswith('OK'):
         ret['res'] = False
 
@@ -198,7 +199,9 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.leaks
     '''
@@ -216,7 +219,9 @@ def status(url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.status
         salt '*' tomcat.status http://localhost:8080/manager
@@ -234,7 +239,9 @@ def ls(url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.ls
         salt '*' tomcat.ls http://localhost:8080/manager
@@ -271,7 +278,9 @@ def stop(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.stop /jenkins
         salt '*' tomcat.stop /jenkins http://localhost:8080/manager
@@ -291,7 +300,9 @@ def start(app, url='http://localhost:8080/manager', timeout=180):
     timeout
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.start /jenkins
         salt '*' tomcat.start /jenkins http://localhost:8080/manager
@@ -311,7 +322,9 @@ def reload_(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.reload /jenkins
         salt '*' tomcat.reload /jenkins http://localhost:8080/manager
@@ -331,7 +344,9 @@ def sessions(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.sessions /jenkins
         salt '*' tomcat.sessions /jenkins http://localhost:8080/manager
@@ -351,7 +366,9 @@ def status_webapp(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.status_webapp /jenkins
         salt '*' tomcat.status_webapp /jenkins http://localhost:8080/manager
@@ -374,7 +391,9 @@ def serverinfo(url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.serverinfo
         salt '*' tomcat.serverinfo http://localhost:8080/manager
@@ -404,7 +423,9 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.undeploy /jenkins
         salt '*' tomcat.undeploy /jenkins http://localhost:8080/manager
@@ -437,19 +458,21 @@ def deploy_war(war,
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
 
-        cp module
+    cp module
+    .. code-block:: bash
+
         salt '*' tomcat.deploy_war salt://application.war /api
         salt '*' tomcat.deploy_war salt://application.war /api no
-        salt '*' tomcat.deploy_war salt://application.war /api yes \\
-                http://localhost:8080/manager
+        salt '*' tomcat.deploy_war salt://application.war /api yes http://localhost:8080/manager
 
-        minion local file system
+    minion local file system
+    .. code-block:: bash
+
         salt '*' tomcat.deploy_war /tmp/application.war /api
         salt '*' tomcat.deploy_war /tmp/application.war /api no
-        salt '*' tomcat.deploy_war /tmp/application.war /api yes \\
-                http://localhost:8080/manager
+        salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
     '''
 
     # Copy file name if needed
@@ -494,7 +517,9 @@ def passwd(passwd,
     convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml
     format
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.passwd secret
         salt '*' tomcat.passwd secret tomcat sha1
@@ -524,7 +549,9 @@ def version():
     '''
     Return server version from catalina.sh version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tomcat.version
     '''
@@ -542,7 +569,9 @@ def fullversion():
     '''
     Return all server information from catalina.sh version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tomcat.fullversion
     '''
@@ -562,7 +591,9 @@ def signal(signal=None):
     '''
     Signals catalina to start, stop, securestart, forcestop.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tomcat.signal start
     '''

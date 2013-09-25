@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The JSON output module converts the return data into JSON.
 '''

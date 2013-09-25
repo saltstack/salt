@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Subversion SCM
 '''
@@ -49,6 +50,8 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
     password
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     opts
         Any additional options to add to the command line
 
@@ -96,6 +99,8 @@ def info(cwd,
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     fmt : str
         How to fmt the output from info.
@@ -157,6 +162,8 @@ def checkout(cwd,
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     CLI Example:
 
     .. code-block:: bash
@@ -186,6 +193,8 @@ def update(cwd, targets=None, user=None, username=None, password=None, *opts):
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     username : None
         Connect to the Subversion server as another user
@@ -221,6 +230,8 @@ def diff(cwd, targets=None, user=None, username=None, password=None, *opts):
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     CLI Example:
 
@@ -263,6 +274,8 @@ def commit(cwd,
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     CLI Example:
 
     .. code-block:: bash
@@ -294,6 +307,8 @@ def add(cwd, targets, user=None, username=None, password=None, *opts):
 
     password : None
         Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
 
     CLI Example:
 
@@ -334,6 +349,8 @@ def remove(cwd,
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     CLI Example:
 
     .. code-block:: bash
@@ -368,6 +385,8 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     CLI Example:
 
     .. code-block:: bash
@@ -377,3 +396,46 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
     if targets:
         opts += tuple(shlex.split(targets))
     return _run_svn('status', cwd, user, username, password, opts)
+
+
+def export(cwd,
+             remote,
+             target=None,
+             user=None,
+             username=None,
+             password=None,
+             *opts):
+    '''
+    Create an unversioned copy of a tree.
+
+    cwd
+        The path to the Subversion repository
+
+    remote : None
+        URL and path to file or directory checkout
+
+    target : None
+        The name to give the file or directory working copy
+        Default: svn uses the remote basename
+
+    user : None
+        Run svn as a user other than what the minion runs as
+
+    username : None
+        Connect to the Subversion server as another user
+
+    password : None
+        Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' svn.export /path/to/repo svn://remote/repo
+    '''
+    opts += (remote,)
+    if target:
+        opts += (target,)
+    return _run_svn('export', cwd, user, username, password, opts)

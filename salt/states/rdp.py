@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 '''
 Manage RDP Service on Windows servers
 '''
+
 
 def __virtual__():
     '''

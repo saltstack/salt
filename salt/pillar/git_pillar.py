@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Clone a remote git repository and use the filesystem as a pillar directory.
 
@@ -12,7 +13,6 @@ ext_pillar:
 from copy import deepcopy
 import logging
 import os
-import time
 
 # Import third party libs
 HAS_GIT = False
@@ -23,7 +23,6 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
 from salt.pillar import Pillar
 
 # Set up logging
@@ -57,6 +56,7 @@ def _get_ref(repo, short):
             if short == refname:
                 return ref
     return False
+
 
 def init(branch, repo_location):
     '''
@@ -145,7 +145,7 @@ def ext_pillar(minion_id, pillar, repo_string):
 
     # Don't recurse forever-- the Pillar object will re-call the ext_pillar
     # function
-    if __opts__['pillar_roots'][branch_env] == [repo.working_dir]:
+    if __opts__['pillar_roots'].get(branch_env, []) == [repo.working_dir]:
         return {}
 
     opts = deepcopy(__opts__)

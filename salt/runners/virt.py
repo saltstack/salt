@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Control virtual machines via Salt
 '''

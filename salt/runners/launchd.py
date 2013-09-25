@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import python libs
 import os
 import sys
@@ -6,6 +7,12 @@ import sys
 def write_launchd_plist(program):
     '''
     Write a launchd plist for managing salt-master or salt-minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run launchd.write_launchd_plist salt-master
     '''
     plist_sample_text = """
 <?xml version="1.0" encoding="UTF-8"?>

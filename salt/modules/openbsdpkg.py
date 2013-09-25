@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Package support for OpenBSD
 '''
@@ -80,6 +81,8 @@ def latest_version(*names, **kwargs):
 
         salt '*' pkg.latest_version <package name>
     '''
+    kwargs.pop('refresh', True)
+
     pkgs = list_pkgs()
     ret = {}
     # Initialize the dict with empty strings

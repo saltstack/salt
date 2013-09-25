@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The 'sysbench' module is used to analyse the
 performance of the minions, right from the master!

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Return data to a postgresql server
 

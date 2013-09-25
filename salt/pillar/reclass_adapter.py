@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 .. |reclass| replace:: **reclass**
 
@@ -47,6 +48,7 @@ setting the configuration option, like in the example above.
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
+from salt.exceptions import SaltInvocationError
 from salt.utils.reclass import (
     prepend_reclass_source_path,
     filter_out_source_path_option,
@@ -74,8 +76,6 @@ def __virtual__(retry=False):
 
         return __virtual__(retry=True)
 
-
-from salt.exceptions import SaltInvocationError
 
 def ext_pillar(minion_id, pillar, **kwargs):
     '''
