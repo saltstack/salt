@@ -105,7 +105,7 @@ def _find_install_targets(name=None,
                 'result': False,
                 'comment': 'Only one of "pkgs" and "sources" is permitted.'}
 
-    cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True)
+    cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     if any((pkgs, sources)):
         if pkgs:
             desired = __salt__['pkg_resource.pack_pkgs'](pkgs)
@@ -117,7 +117,7 @@ def _find_install_targets(name=None,
             return {'name': name,
                     'changes': {},
                     'result': False,
-                    'comment': 'Invalidly formatted "{0}" parameter. See '
+                    'comment': 'Invalidly formatted {0!r} parameter. See '
                                'minion log.'.format('pkgs' if pkgs
                                                     else 'sources')}
 
@@ -140,7 +140,7 @@ def _find_install_targets(name=None,
             return {'name': name,
                     'changes': {},
                     'result': True,
-                    'comment': ('Version {0} of package "{1}" is already '
+                    'comment': ('Version {0} of package {1!r} is already '
                                 'installed').format(version, name)}
 
         # if cver is not an empty string, the package is already installed
@@ -198,8 +198,8 @@ def _find_install_targets(name=None,
             version_spec = True
             match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
             if not match:
-                msg = 'Invalid version specification "{0}" for package ' \
-                      '"{1}".'.format(pkgver, pkgname)
+                msg = 'Invalid version specification {0!r} for package ' \
+                      '{1!r}.'.format(pkgver, pkgname)
                 problems.append(msg)
             else:
                 gt_lt, eq, verstr = match.groups()
@@ -482,8 +482,11 @@ def installed(
         failed = [x for x in targets if x not in modified]
     else:
         ok, failed = \
-            _verify_install(desired,
-                            __salt__['pkg.list_pkgs'](versions_as_list=True))
+            _verify_install(
+                desired, __salt__['pkg.list_pkgs'](
+                    versions_as_list=True, **kwargs
+                )
+            )
         modified = [x for x in ok if x in targets]
         not_modified = [x for x in ok if x not in targets]
 
@@ -591,7 +594,7 @@ def latest(
     else:
         refresh = False
 
-    cur = __salt__['pkg.version'](*desired_pkgs)
+    cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
     avail = __salt__['pkg.latest_version'](*desired_pkgs,
                                            fromrepo=fromrepo,
                                            refresh=refresh,
@@ -612,7 +615,7 @@ def latest(
     for pkg in desired_pkgs:
         if not avail[pkg]:
             if not cur[pkg]:
-                msg = 'No information found for "{0}".'.format(pkg)
+                msg = 'No information found for {0!r}.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
         elif not cur[pkg] \
@@ -728,15 +731,16 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return {'name': name,
                 'changes': {},
                 'result': False,
-                'comment': 'Invalid action "{0}". '
+                'comment': 'Invalid action {0!r}. '
                            'This is probably a bug.'.format(action)}
 
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
-    old = __salt__['pkg.list_pkgs'](versions_as_list=True)
+    old = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     targets = [x for x in pkg_params if x in old]
     if action == 'purge':
         old_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
-                                                removed=True)
+                                                removed=True,
+                                                **kwargs)
         targets.extend([x for x in pkg_params if x in old_removed])
     targets.sort()
 
@@ -756,11 +760,12 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
                            '{1}.'.format(action, ', '.join(targets))}
 
     changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, **kwargs)
-    new = __salt__['pkg.list_pkgs'](versions_as_list=True)
+    new = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     failed = [x for x in pkg_params if x in new]
     if action == 'purge':
         new_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
-                                                removed=True)
+                                                removed=True,
+                                                **kwargs)
         failed.extend([x for x in pkg_params if x in new_removed])
     failed.sort()
 

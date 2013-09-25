@@ -83,6 +83,8 @@ Full list of builtin execution modules
     locate
     logrotate
     lxc
+    mac_group
+    mac_user
     makeconf
     match
     mdadm

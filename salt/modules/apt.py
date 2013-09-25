@@ -528,7 +528,7 @@ def _clean_pkglist(pkgs):
             pkgs[name] = stripped
 
 
-def list_pkgs(versions_as_list=False, removed=False):
+def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
