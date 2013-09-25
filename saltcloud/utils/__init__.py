@@ -387,8 +387,8 @@ def deploy_windows(host, port=139, timeout=900, username='Administrator',
                    conf_file=None, start_action=None, parallel=False,
                    minion_pub=None, minion_pem=None, minion_conf=None,
                    keep_tmp=False, script_args=None, script_env=None,
-                   port_timeout=15, preseed_minion_keys=None, installer=None,
-                   **kwargs):
+                   port_timeout=15, preseed_minion_keys=None,
+                   win_installer=None, **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
     '''
@@ -406,11 +406,11 @@ def deploy_windows(host, port=139, timeout=900, username='Administrator',
         # Shell out to smbclient to create C:\salttmp\
         # Shell out to smbclient to copy over minion keys
         ## minion_pub, minion_pem, minion_conf
-        # Shell out to smbclient to copy over installer
-        ## installer refers to a file such as:
+        # Shell out to smbclient to copy over win_installer
+        ## win_installer refers to a file such as:
         ## Salt-Minion-0.16.3-win32-Setup.exe
         ## ..which exists on the same machine as salt-cloud
-        # Shell out to winexe to execute installer
+        # Shell out to winexe to execute win_installer
         # Shell out to smbclient to deltree C:\salttmp\
         ## Unless keep_tmp is True
 
@@ -434,7 +434,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   keep_tmp=False, script_args=None, script_env=None,
                   ssh_timeout=15, make_syndic=False, make_minion=True,
                   display_ssh_output=True, preseed_minion_keys=None,
-                  parallel=False):
+                  parallel=False, **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
