@@ -1340,6 +1340,7 @@ def recurse(name,
             group=None,
             dir_mode=None,
             file_mode=None,
+            sym_mode=None,
             template=None,
             context=None,
             defaults=None,
@@ -1349,6 +1350,7 @@ def recurse(name,
             include_pat=None,
             exclude_pat=None,
             maxdepth=None,
+            keep_symlinks=False,
             **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirectory
@@ -1384,6 +1386,9 @@ def recurse(name,
 
     file_mode
         The permissions mode to set any files created
+
+    sym_mode
+        the permissions mode to set on any symlink created
 
     template
         If this setting is applied then the named templating engine will be
@@ -1434,6 +1439,10 @@ def recurse(name,
                                 directory
           - maxdepth: 1      :: Only include files located in the source
                                 or immediate subdirectories
+
+    keep_symlinks
+        Keep symlinks when copying from the source. Set this to True if
+        keeping symlinks intact is desired.
     '''
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -1581,8 +1590,18 @@ def recurse(name,
         #we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
+    # If we are instructed to keep symlinks, then grab the dict of links
+    if keep_symlinks:
+        symlinks = __salt__['cp.list_master_symlinks'](env, srcpath)
     for fn_ in __salt__['cp.list_master'](env, srcpath):
         if not fn_.strip():
+            continue
+
+        # Check for symlinked files if symlinks are on the table.
+        # Symlinks will be processed after the entire dir/file structure
+        # is created.
+        if keep_symlinks and symlinks.get(fn_):
+            log.debug('** skipping file ** {0}, it is destined for a symlink'.format(fn_))
             continue
 
         # fn_ here is the absolute (from file_roots) source path of
@@ -1613,6 +1632,15 @@ def recurse(name,
         keep.add(dest)
 
         if dirname not in vdir:
+            # Check for symlinked dirs if symlinks are on the table.
+            # Symlinks will be processed after the entire dir/file structure
+            # is created.
+            _dir = relname.split('/')
+            _dir.pop()
+            _dir = os.path.join(srcpath,'/'.join(_dir))
+            if keep_symlinks and symlinks.get(_dir):
+                log.debug('** skipping dir ** {0}, it is destined for a symlink'.format(_dir))
+                continue
             # verify the directory perms if they are set
             manage_directory(dirname)
             vdir.add(dirname)
@@ -1628,8 +1656,34 @@ def recurse(name,
                                           exclude_pat):
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
+            # Check for symlinks that happen to point to an empty dir.
+            # This will be processed along with the other symlinks.
+            if keep_symlinks and symlinks.get(mdir):
+                log.debug('** skipping empty dir ** {0}, it is destined for a symlink'.format(mdir))
+                continue
             manage_directory(mdest)
             keep.add(mdest)
+
+    if keep_symlinks:
+        for lname, ltarget in symlinks.items():
+           if not _check_include_exclude(os.path.relpath(lname, srcpath),
+                                          include_pat,
+                                          exclude_pat):
+               continue
+           srelpath = os.path.relpath(lname, srcpath)
+           # Force the symlink and makedirs.
+           # This addresses any symlink dependencies
+           # and funky symlink recursion that we may encounter.
+           _ret = symlink(os.path.join(name, srelpath),
+                          ltarget,
+                          force=True,
+                          makedirs=True,
+                          user=user,
+                          group=group,
+                          mode=sym_mode)
+           if not _ret:
+               continue
+           merge_ret(os.path.join(name,srelpath),_ret)
 
     keep = list(keep)
     if clean:
