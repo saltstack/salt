@@ -927,6 +927,12 @@ def create(vm_=None, call=None):
                 '\'tag\' should be a dict.'
         )
 
+    for value in tags.values():
+        if not isinstance(value, str):
+            raise SaltCloudConfigError(
+                '\'tag\' values must be strings. Try quoting the values. e.g. "2013-09-19T20:09:46Z".'
+            )
+
     tags['Name'] = vm_['name']
 
     saltcloud.utils.fire_event(
