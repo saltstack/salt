@@ -46,7 +46,8 @@ def latest(name,
            target=None,
            runas=None,
            user=None,
-           force=False):
+           force=False,
+           opts=False):
     '''
     Make sure the repository is cloned to the given directory and is up to date
 
@@ -71,6 +72,9 @@ def latest(name,
 
     force
         Force hg to clone into pre-existing directories (deletes contents)
+
+    opts
+        Include additional arguments and options to the hg command line
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -106,7 +110,7 @@ def latest(name,
             os.path.isdir('{0}/.hg'.format(target)))
 
     if is_repository:
-        ret = _update_repo(ret, target, user, rev)
+        ret = _update_repo(ret, target, user, rev, opts)
     else:
         if os.path.isdir(target):
             fail = _handle_existing(ret, target, force)
@@ -121,11 +125,11 @@ def latest(name,
                     ret,
                     'Repository {0} is about to be cloned to {1}'.format(
                         name, target))
-        _clone_repo(ret, target, name, user, rev)
+        _clone_repo(ret, target, name, user, rev, opts)
     return ret
 
 
-def _update_repo(ret, target, user, rev):
+def _update_repo(ret, target, user, rev, opts):
     log.debug(
             'target {0} is found, '
             '"hg pull && hg up is probably required"'.format(target)
@@ -145,7 +149,7 @@ def _update_repo(ret, target, user, rev):
                 ret,
                 test_result)
 
-    pull_out = __salt__['hg.pull'](target, user=user)
+    pull_out = __salt__['hg.pull'](target, user=user, opts=opts)
 
     if rev:
         __salt__['hg.update'](target, rev, user=user)
@@ -186,8 +190,8 @@ def _handle_existing(ret, target, force):
         return _fail(ret, 'Directory exists, and is not empty')
 
 
-def _clone_repo(ret, target, name, user, rev):
-    result = __salt__['hg.clone'](target, name, user=user)
+def _clone_repo(ret, target, name, user, rev, opts):
+    result = __salt__['hg.clone'](target, name, user=user, opts=opts)
 
     if not os.path.isdir(target):
         return _fail(ret, result)
