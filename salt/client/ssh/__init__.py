@@ -23,6 +23,8 @@ import salt.state
 import salt.loader
 import salt.minion
 
+RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
+
 HEREDOC = (' << "EOF"\n'
            'if [ `type -p python2` ]\n'
            'then\n'
@@ -34,26 +36,26 @@ HEREDOC = (' << "EOF"\n'
            'then\n'
            '    PYTHON=python27\n'
            'fi\n'
-           'if hash salt-call\n'
-           'then\n'
-           '    SALT=$(type -p salt-call)\n'
-           'elif [ -f /tmp/.salt/salt-call ] \n'
+           'if [ -f /tmp/.salt/salt-call ] \n'
            'then\n'
            '    if [[ $(cat /tmp/.salt/version) != {0} ]]\n'
            '    then\n'
            '        rm -rf /tmp/.salt\n'
            '        mkdir -p /tmp/.salt\n'
+           '        echo "{1}"\n'
            '        echo "deploy"\n'
            '        exit 1\n'
            '    fi\n'
            '    SALT=/tmp/.salt/salt-call\n'
            'else\n'
            '    mkdir -p /tmp/.salt\n'
+           '    echo "{1}"\n'
            '    echo "deploy"\n'
            '    exit 1\n'
            'fi\n'
+           'echo "{1}"\n'
            '$PYTHON $SALT --local --out json -l quiet {{0}}\n'
-           'EOF').format(salt.__version__)
+           'EOF').format(salt.__version__, RSTR)
 
 
 class SSH(object):
@@ -472,6 +474,8 @@ class Single(object):
         # 4. execute command
         cmd = HEREDOC.format(self.arg_str)
         stdout, stderr = self.shell.exec_cmd(cmd)
+        if RSTR in stdout:
+            stdout = stdout.split(RSTR)[1].strip()
         if stdout.startswith('deploy'):
             self.deploy()
             stdout, stderr = self.shell.exec_cmd(cmd)
