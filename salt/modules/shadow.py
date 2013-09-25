@@ -150,7 +150,12 @@ def set_password(name, password, use_usermod=False):
     '''
     if not salt.utils.is_true(use_usermod):
         # Edit the shadow file directly
-        s_file = '/etc/shadow'
+        # ALT Linux uses tcb to store password hashes. More information found
+        # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
+        if __grains__['os'] == 'ALT':
+            s_file = '/etc/tcb/{0}/shadow'.format(name)
+        else:
+            s_file = '/etc/shadow'
         ret = {}
         if not os.path.isfile(s_file):
             return ret
