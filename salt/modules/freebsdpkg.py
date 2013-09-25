@@ -238,7 +238,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             continue
         try:
             pkg, ver = line.split()[0].rsplit('-', 1)
-        except IndexError, ValueError:
+        except (IndexError, ValueError):
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
 
