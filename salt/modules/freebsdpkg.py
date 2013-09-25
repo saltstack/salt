@@ -70,7 +70,6 @@ variables, if set, but these values can also be overridden in several ways:
 # Import python libs
 import copy
 import logging
-import os
 
 # Import salt libs
 import salt.utils
