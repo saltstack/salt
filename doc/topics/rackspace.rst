@@ -74,7 +74,7 @@ Rackspace currently has five compute regions which may be used:
     ORD -> Chicago
     SYD -> Sydney
     LON -> London
-    IAD -> Washington
+    IAD -> Norther Virginia
 
 Note: Currently the LON region is only avaiable with a UK account, and UK accounts cannot access other regions
 
