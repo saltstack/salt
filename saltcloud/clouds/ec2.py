@@ -1429,7 +1429,7 @@ def set_tags(name, tags, call=None, location=None, instance_id=None):
                 # We were not setting this tag
                 continue
 
-            if tags.get(tag['key']) != tag['value']:
+            if str(tags.get(tag['key'])) != str(tag['value']):
                 # Not set to the proper value!?
                 failed_to_set_tags = True
                 break
