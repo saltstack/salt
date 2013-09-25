@@ -574,6 +574,8 @@ def create(vm_):
         win_installer = config.get_config_value('win_installer', vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
+            minion = saltcloud.utils.minion_config(__opts__, vm_)
+            deploy_kwargs['master'] = minion['master']
 
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs

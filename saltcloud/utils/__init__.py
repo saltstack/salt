@@ -388,7 +388,7 @@ def deploy_windows(host, port=139, timeout=900, username='Administrator',
                    minion_pub=None, minion_pem=None, minion_conf=None,
                    keep_tmp=False, script_args=None, script_env=None,
                    port_timeout=15, preseed_minion_keys=None,
-                   win_installer=None, **kwargs):
+                   win_installer=None, master=None, **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
     '''
@@ -403,9 +403,12 @@ def deploy_windows(host, port=139, timeout=900, username='Administrator',
             )
         )
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        smb_cmd = 'smbclient {1} -U {0}'.format(username, password)
+        smb_cmd = 'smbclient -U {0}%{1} //{2}'.format(
+            username, password, host)
         # Shell out to smbclient to create C:\salttmp\
-        win_cmd('{0} -c "mkdir C:\\salttmp"'.format(smb_cmd))
+        win_cmd('{0}/c$ -c "cd temp; prompt; mput {1}; exit;"'.format(
+            smb_cmd, win_installer
+        ))
         # Shell out to smbclient to copy over minion keys
         ## minion_pub, minion_pem, minion_conf
         # Shell out to smbclient to copy over win_installer
@@ -413,6 +416,11 @@ def deploy_windows(host, port=139, timeout=900, username='Administrator',
         ## Salt-Minion-0.16.3-win32-Setup.exe
         ## ..which exists on the same machine as salt-cloud
         # Shell out to winexe to execute win_installer
+        comps = win_installer.split('/')
+        installer = comps[-1]
+        win_cmd('{0} -c "c:\\temp\\{1} /S /master={2} /minion-name={3}'.format(
+            smb_cmd, installer, master, name
+        ))
         # Shell out to smbclient to deltree C:\salttmp\
         ## Unless keep_tmp is True
 
