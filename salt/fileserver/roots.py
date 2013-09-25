@@ -254,9 +254,9 @@ def symlink_list(load):
         # This causes os.walk to stop at the first symlink encounter.
         # It is the responsibility of the user to ensure that os.walk does not
         # encounter an infinite symlink recursion. Python docs warn about this in
-        # the os.walk documentation if followlinks=True. If infinite symlink
-        # is encountered, then the recursion will be passed to the Minion leading
-        # to undesired results.
+        # the os.walk documentation if followlinks=True. If infinite symlink recursion
+        # is encountered, then this recursion will be passed to the Minion leading
+        # possible undesired results.
         for root, dirs, files in os.walk(os.path.join(path, prefix),
                                          followlinks=__opts__['fileserver_followsymlinks']):
             for fname in files:
