@@ -382,6 +382,48 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             time.sleep(trysleep)
 
 
+def deploy_windows(host, port=139, timeout=900, username='Administrator',
+                   password=None, name=None, pub_key=None, sock_dir=None, 
+                   conf_file=None, start_action=None, parallel=False,
+                   minion_pub=None, minion_pem=None, minion_conf=None,
+                   keep_tmp=False, script_args=None, script_env=None,
+                   port_timeout=15, preseed_minion_keys=None, installer=None,
+                   **kwargs):
+    '''
+    Copy the install files to a remote Windows box, and execute them
+    '''
+    starttime = time.mktime(time.localtime())
+    log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
+    if wait_for_port(host=host, port=port, timeout=timeout):
+        log.debug('SMB port {0} on {1} is available'.format(port, host))
+        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        log.debug(
+            'Logging into {0}:{1} as {2}'.format(
+                host, port, username
+            )
+        )
+        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        # Shell out to smbclient to create C:\salttmp\
+        # Shell out to smbclient to copy over minion keys
+        ## minion_pub, minion_pem, minion_conf
+        # Shell out to smbclient to copy over installer
+        ## installer refers to a file such as:
+        ## Salt-Minion-0.16.3-win32-Setup.exe
+        ## ..which exists on the same machine as salt-cloud
+        # Shell out to winexe to execute installer
+        # Shell out to smbclient to deltree C:\salttmp\
+        ## Unless keep_tmp is True
+
+        # Fire deploy action
+        fire_event(name,
+                   '{0} has been deployed at {1}'.format(name, host),
+                   tag='salt.cloud.deploy_script')
+        return True
+    return False
+
+
+
+
 def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
                   deploy_command='/tmp/deploy.sh', sudo=False, tty=None,

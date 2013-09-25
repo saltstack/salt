@@ -1218,7 +1218,12 @@ def create(vm_=None, call=None):
             {'kwargs': deploy_kwargs},
         )
 
-        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
+        # The following line is for future Python 3 compatibility
+        deployed = False
+        if config.get_config_value('is_windows', vm_, __opts__) is True:
+            deployed = saltcloud.utils.deploy_windows(**deploy_kwargs)
+        else:
+            deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
         else:
