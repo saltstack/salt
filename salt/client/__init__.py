@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The client module is used to create a client connection to the publisher
 The data structure needs to be:
@@ -269,7 +270,7 @@ class LocalClient(object):
             cli=False,
             **kwargs):
         '''
-        Execute a command on a random subset of the targetted systems, pass
+        Execute a command on a random subset of the targeted systems, pass
         in the subset via the sub option to signify the number of systems to
         execute on.
         '''
@@ -342,6 +343,23 @@ class LocalClient(object):
             import salt.client
             client = salt.client.LocalClient()
             ret = client.cmd('*', 'cmd.run', ['whoami'])
+
+        With authentication:
+
+        .. code:: yaml
+
+            # Master config
+            ...
+            external_auth:
+              pam:
+                fred:
+                  - test.*
+            ...
+
+
+        .. code:: python
+
+            ret = client.cmd('*', 'test.ping', [], username='fred', password='pw', eauth='pam')
 
         Compound command usage:
 
@@ -973,6 +991,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             verbose=False,
+            show_timeout=False,
             **kwargs):
         '''
         Get the returns for the command line interface via the event system
@@ -1052,7 +1071,7 @@ class LocalClient(object):
                 if more_time:
                     timeout += inc_timeout
                     continue
-                if verbose:
+                if verbose or show_timeout:
                     if self.opts.get('minion_data_cache', False) \
                             or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found) < len(minions):
@@ -1232,7 +1251,6 @@ class SSHClient(object):
             self.opts = mopts
         else:
             self.opts = salt.config.client_config(c_path)
-        self.salt_user = self.__get_user()
 
     def _prep_ssh(
             self,
@@ -1252,6 +1270,8 @@ class SSHClient(object):
         arg = condition_kwarg(arg, kwarg)
         opts['arg_str'] = '{0} {1}'.format(fun, ' '.join(arg))
         opts['selected_target_option'] = expr_form
+        opts['tgt'] = tgt
+        opts['arg'] = arg
         return salt.client.ssh.SSH(opts)
 
     def cmd_iter(
@@ -1261,6 +1281,7 @@ class SSHClient(object):
             arg=(),
             timeout=None,
             expr_form='glob',
+            ret='',
             kwarg=None,
             **kwargs):
         '''

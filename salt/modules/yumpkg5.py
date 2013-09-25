@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for YUM
 '''
@@ -13,6 +14,10 @@ import salt.utils
 from salt.utils import namespaced_function as _namespaced_function
 from salt.modules.yumpkg import (mod_repo, _parse_repo_file, list_repos,
                                  get_repo, expand_repo_def, del_repo)
+
+# Import libs required by functions imported from yumpkg
+# DO NOT REMOVE THESE, ON PAIN OF DEATH
+import os
 
 log = logging.getLogger(__name__)
 
@@ -147,12 +152,19 @@ def latest_version(*names, **kwargs):
 
     A specific repo can be requested using the ``fromrepo`` keyword argument.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package name> fromrepo=epel-testing
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    # FIXME: do stricter argument checking that somehow takes _get_repo_options() into account
+    # if kwargs:
+    #     raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
+
     if len(names) == 0:
         return ''
     ret = {}
@@ -161,7 +173,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     # Get updates for specified package(s)
@@ -185,7 +197,9 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
@@ -198,7 +212,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -212,7 +228,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
@@ -248,7 +266,9 @@ def list_upgrades(refresh=True, **kwargs):
     '''
     Check whether or not an upgrade is available for all packages
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
@@ -309,7 +329,9 @@ def refresh_db():
     Since yum refreshes the database automatically, this runs a yum clean,
     so that the next yum operation will have a clean database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -340,7 +362,10 @@ def install(name=None,
         architecture designation (``.i686``, ``.i586``, etc.) to the end of the
         package name.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install <package name>
 
     refresh
@@ -377,7 +402,10 @@ def install(name=None,
         by using a single-element dict representing the package and its
         version.
 
-        CLI Examples::
+        CLI Examples:
+
+        .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
             salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4.el5"}]'
 
@@ -386,7 +414,10 @@ def install(name=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
 
@@ -475,7 +506,9 @@ def upgrade(refresh=True):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -508,7 +541,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -546,7 +581,9 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>

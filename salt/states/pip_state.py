@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Installation of Python Packages Using pip
 =========================================
@@ -327,7 +328,7 @@ def installed(name,
             ret['comment'] = ' '.join(comments)
         else:
             if not prefix:
-                pkg_list = []
+                pkg_list = {}
             else:
                 pkg_list = __salt__['pip.list'](
                     prefix, bin_env, user=user, cwd=cwd

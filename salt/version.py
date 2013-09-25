@@ -1,20 +1,183 @@
+# -*- coding: utf-8 -*-
 '''
 Set up the version of Salt
 '''
 
 # Import python libs
+import re
 import sys
 
+# Import salt libs
+try:
+    from salt._compat import string_types
+except ImportError:
+    if sys.version_info[0] == 3:
+        string_types = str
+    else:
+        string_types = basestring
 
-__version_info__ = (0, 16, 0)
-__version__ = '.'.join(map(str, __version_info__))
-
-GIT_DESCRIBE_REGEX = (
-    r'(?P<major>[\d]{1,2})\.(?P<minor>[\d]{1,2})(?:\.(?P<bugfix>[\d]{0,2}))?'
-    r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
-)
+# ----- ATTENTION ----------------------------------------------------------->
+#
+# For version bumps, please update `__saltstack_version__` below
+#
+# <---- ATTENTION ------------------------------------------------------------
 
 
+class SaltStackVersion(object):
+    '''
+    Handle SaltStack versions class.
+
+    Knows how to parse ``git describe`` output, knows about release candidates
+    and also supports version comparison.
+    '''
+
+    __slots__ = ('major', 'minor', 'bugfix', 'rc', 'noc', 'sha')
+
+    git_describe_regex = re.compile(
+        r'(?:[^\d]+)?(?P<major>[\d]{1,2})\.(?P<minor>[\d]{1,2})'
+        r'(?:\.(?P<bugfix>[\d]{0,2}))?(?:rc(?P<rc>[\d]{1}))?'
+        r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
+    )
+
+    def __init__(self,              # pylint: disable=C0103
+                 major,
+                 minor,
+                 bugfix=0,
+                 rc=0,              # pylint: disable=C0103
+                 noc=0,
+                 sha=None):
+
+        if isinstance(major, string_types):
+            major = int(major)
+
+        if isinstance(minor, string_types):
+            minor = int(minor)
+
+        if bugfix is None:
+            bugfix = 0
+        elif isinstance(bugfix, string_types):
+            bugfix = int(bugfix)
+
+        if rc is None:
+            rc = 0
+        elif isinstance(rc, string_types):
+            rc = int(rc)
+
+        if noc is None:
+            noc = 0
+        elif isinstance(noc, string_types):
+            noc = int(noc)
+
+        self.major = major
+        self.minor = minor
+        self.bugfix = bugfix
+        self.rc = rc  # pylint: disable=C0103
+        self.noc = noc
+        self.sha = sha
+
+    @classmethod
+    def parse(cls, version_string):
+        match = cls.git_describe_regex.match(version_string)
+        if not match:
+            raise ValueError(
+                'Unable to parse version string: {0!r}'.format(version_string)
+            )
+        return cls(*match.groups())
+
+    @property
+    def info(self):
+        return (
+            self.major,
+            self.minor,
+            self.bugfix
+        )
+
+    @property
+    def rc_info(self):
+        return (
+            self.major,
+            self.minor,
+            self.bugfix,
+            self.rc
+        )
+
+    @property
+    def noc_info(self):
+        return (
+            self.major,
+            self.minor,
+            self.bugfix,
+            self.rc,
+            self.noc
+        )
+
+    @property
+    def full_info(self):
+        return (
+            self.major,
+            self.minor,
+            self.bugfix,
+            self.rc,
+            self.noc,
+            self.sha
+        )
+
+    @property
+    def string(self):
+        version_string = '{0}.{1}.{2}'.format(
+            self.major,
+            self.minor,
+            self.bugfix
+        )
+        if self.rc:
+            version_string += 'rc{0}'.format(self.rc)
+        if self.noc and self.sha:
+            version_string += '-{0}-{1}'.format(self.noc, self.sha)
+        return version_string
+
+    def __str__(self):
+        return self.string
+
+    def __cmp__(self, other):
+        if not isinstance(other, SaltStackVersion):
+            if isinstance(other, string_types):
+                other = SaltStackVersion.parse(other)
+            elif isinstance(other, (list, tuple)):
+                other = SaltStackVersion(*other)
+            else:
+                raise ValueError(
+                    'Cannot instantiate Version from type {0!r}'.format(
+                        type(other)
+                    )
+                )
+
+        if (self.rc and other.rc) or (not self.rc and not other.rc):
+            # Both have rc information, regular compare is ok
+            return cmp(self.noc_info, other.noc_info)
+
+        # RC's are always lower versions than non RC's
+        if self.rc > 0 and other.rc <= 0:
+            noc_info = list(self.noc_info)
+            noc_info[3] = -1
+            return cmp(tuple(noc_info), other.noc_info)
+
+        if self.rc <= 0 and other.rc > 0:
+            other_noc_info = list(other.noc_info)
+            other_noc_info[3] = -1
+            return cmp(self.noc_info, tuple(other_noc_info))
+
+
+# ----- Hardcoded Salt Version Information ---------------------------------->
+#
+# Please bump version information for __saltstack_version__ on new releases
+# ----------------------------------------------------------------------------
+__saltstack_version__ = SaltStackVersion(0, 17, 0)
+__version_info__ = __saltstack_version__.info
+__version__ = __saltstack_version__.string
+# <---- Hardcoded Salt Version Information -----------------------------------
+
+
+# ----- Dynamic/Runtime Salt Version Information ---------------------------->
 def __get_version(version, version_info):
     '''
     If we can get a version provided at installation time or from Git, use
@@ -30,7 +193,6 @@ def __get_version(version, version_info):
     # This might be a 'python setup.py develop' installation type. Let's
     # discover the version information at runtime.
     import os
-    import re
     import warnings
     import subprocess
 
@@ -64,42 +226,20 @@ def __get_version(version, version_info):
         if not out or err:
             return version, version_info
 
-        match = re.search(GIT_DESCRIBE_REGEX, out)
-        if not match:
-            return version, version_info
+        parsed_version = SaltStackVersion.parse(out)
 
-        parsed_version = '{0}.{1}.{2}'.format(
-            match.group('major'),
-            match.group('minor'),
-            match.group('bugfix') or '0'
-        )
-
-        if match.group('noc') is not None and match.group('sha') is not None:
-            # This is not the exact point where a tag was created.
-            # We have the extra information. Let's add it.
-            parsed_version = '{0}-{1}-{2}'.format(
-                parsed_version,
-                match.group('noc'),
-                match.group('sha')
-            )
-
-        parsed_version_info = tuple([
-            int(g) for g in [h or '0' for h in match.groups()[:3]]
-                    if g.isdigit()
-        ])
-
-        if parsed_version_info > version_info:
+        if parsed_version.info > version_info:
             warnings.warn(
                 'The parsed version info, `{0}`, is bigger than the one '
                 'defined in the file, `{1}`. Missing version bump?'.format(
-                    parsed_version_info,
+                    parsed_version.info,
                     version_info
                 ),
                 UserWarning,
                 stacklevel=2
             )
             return version, version_info
-        elif parsed_version_info < version_info:
+        elif parsed_version.info < version_info:
             warnings.warn(
                 'The parsed version info, `{0}`, is lower than the one '
                 'defined in the file, `{1}`.'
@@ -108,14 +248,14 @@ def __get_version(version, version_info):
                 '\'git fetch --tags\' or \'git fetch --tags upstream\' if '
                 'you followed salt\'s contribute documentation. The version '
                 'string WILL NOT include the git hash.'.format(
-                    parsed_version_info,
+                    parsed_version.info,
                     version_info
                 ),
                 UserWarning,
                 stacklevel=2
             )
             return version, version_info
-        return parsed_version, parsed_version_info
+        return parsed_version.string, parsed_version.info
     except OSError as os_err:
         if os_err.errno != 2:
             # If the errno is not 2(The system cannot find the file
@@ -129,6 +269,7 @@ def __get_version(version, version_info):
 __version__, __version_info__ = __get_version(__version__, __version_info__)
 # This function has executed once, we're done with it. Delete it!
 del __get_version
+# <---- Dynamic/Runtime Salt Version Information -----------------------------
 
 
 def versions_information():

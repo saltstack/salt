@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Minion side functions for salt-cp
 '''
@@ -361,6 +362,20 @@ def list_master_dirs(env='base', prefix=''):
     return __context__['cp.fileclient'].dir_list(env, prefix)
 
 
+def list_master_symlinks(env='base', prefix=''):
+    '''
+    List all of the symlinks stored on the master
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.list_master_symlinks
+    '''
+    _mk_client()
+    return __context__['cp.fileclient'].symlink_list(env, prefix)
+
+
 def list_minion(env='base'):
     '''
     List all of the files cached on the minion
@@ -434,7 +449,7 @@ def push(path):
             'id': __opts__['id'],
             'path': path.lstrip(os.sep)}
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    with salt.utils.fopen(path) as fp_:
+    with salt.utils.fopen(path, 'rb') as fp_:
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])

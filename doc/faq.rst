@@ -1,6 +1,8 @@
 Frequently Asked Questions
 ==========================
 
+.. contents:: FAQ
+
 Is Salt open-core?
 ------------------
 
@@ -15,12 +17,12 @@ open and proprietary projects.
 What ports should I open on my firewall?
 ----------------------------------------
 
-Minions need to be able to connect to the master on TCP ports 4505 and 4506.
+Minions need to be able to connect to the Master on TCP ports 4505 and 4506.
 Minions do not need any inbound ports open. More detailed information on
 firewall settings can be found :doc:`here </topics/tutorials/firewall>`.
 
-My script runs every time I run a :mod:`state.highstate <salt.modules.state.highstate>`. Why?
----------------------------------------------------------------------------------------------
+My script runs every time I run a *state.highstate*. Why?
+---------------------------------------------------------
 
 You are probably using :mod:`cmd.run <salt.states.cmd.run>` rather than
 :mod:`cmd.wait <salt.states.cmd.wait>`. A :mod:`cmd.wait
@@ -34,13 +36,55 @@ arguments).
 More details can be found in the docmentation for the :mod:`cmd
 <salt.states.cmd>` states.
 
+When I run *test.ping*, why don't the Minions that aren't responding return anything? Returning ``False`` would be helpful.
+---------------------------------------------------------------------------------------------------------------------------
+
+When you run *test.ping* the Master tells Minions to run commands/functions,
+and listens for the return data, printing it to the screen when it is received.
+If it doesn't receive anything back, it doesn't have anything to display for
+that Minion.
+
+There are a couple options for getting information on Minions that are not
+responding. One is to use the verbose (``-v``) option when you run salt
+commands, as it will display "Minion did not return" for any Minions which time
+out.
+
+.. code-block:: bash
+
+    salt -v '*' pkg.install zsh
+
+Another option is to use the :mod:`manage.down <salt.runners.manage.down>`
+runner:
+
+.. code-block:: bash
+
+    salt-run manage.down
+
 How does Salt determine the Minion's id?
 ----------------------------------------
 
-If the minion id is not configured explicitly (using the :conf_minion:`id`
+If the Minion id is not configured explicitly (using the :conf_minion:`id`
 parameter), Salt will determine the id based on the hostname. Exactly how this
 is determined varies a little between operating systems and is described in
 detail :ref:`here <minion-id-generation>`.
+
+I'm trying to manage packages/services but I get an error saying that the state is not available. Why?
+------------------------------------------------------------------------------------------------------
+
+Salt detects the Minion's operating system and assigns the correct package or
+service management module based on what is detected. However, for certain custom
+spins and OS derivatives this detection fails. In cases like this, an issue
+should be opened on our tracker_, with the following information:
+
+1. The output of the following command:
+
+   .. code-block:: bash
+
+    salt <minion_id> grains.items | grep os
+
+2. The contents of ``/etc/lsb-release``, if present on the Minion.
+
+.. _tracker: https://github.com/saltstack/salt/issues
 
 I'm using gitfs and my custom modules/states/etc are not syncing. Why?
 ----------------------------------------------------------------------
@@ -49,14 +93,14 @@ In versions of Salt 0.16.3 or older, there is a bug in :doc:`gitfs
 </topics/tutorials/gitfs>` which can affect the syncing of custom types.
 Upgrading to 0.16.4 or newer will fix this.
 
-Why aren't my custom modules/states/etc. available on my minions?
+Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
-Custom modules are only synced to minions when :mod:`state.highstate
+Custom modules are only synced to Minions when :mod:`state.highstate
 <salt.modules.state.highstate>`, :mod:`saltutil.sync_modules
 <salt.modules.saltutil.sync_modules>`, or :mod:`saltutil.sync_all
 <salt.modules.saltutil.sync_all>` is run. Similarly, custom states are only
-synced to minions when :mod:`state.highstate <salt.modules.state.highstate>`,
+synced to Minions when :mod:`state.highstate <salt.modules.state.highstate>`,
 :mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
 
@@ -70,7 +114,7 @@ This is most likely a PATH issue. Did you custom-compile the software which the
 module requires? RHEL/CentOS/etc. in particular override the root user's path
 in ``/etc/init.d/functions``, setting it to ``/sbin:/usr/sbin:/bin:/usr/bin``,
 making software installed into ``/usr/local/bin`` unavailable to Salt when the
-minion is started using the initscript. In version 0.18.0, Salt will have a
+Minion is started using the initscript. In version 0.18.0, Salt will have a
 better solution for these sort of PATH-related issues, but recompiling the
 software to install it into a location within the PATH should resolve the
 issue in the meantime. Alternatively, you can create a symbolic link within the

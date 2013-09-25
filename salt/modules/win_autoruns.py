@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for listing programs that automatically run on startup
 (very alpha...not tested on anything but my Win 7x64)
@@ -30,7 +31,9 @@ def list_():
     '''
     Get a list of automatically running programs
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' autoruns.list
     '''

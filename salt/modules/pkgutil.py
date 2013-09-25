@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Pkgutil support for Solaris
 '''
@@ -185,6 +186,8 @@ def latest_version(*names, **kwargs):
         salt '*' pkgutil.latest_version CSWpython
         salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
     if not names:
         return ''
     ret = {}
@@ -193,7 +196,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     pkgs = list_pkgs()

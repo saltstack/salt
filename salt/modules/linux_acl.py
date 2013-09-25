@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Linux File Access Control Lists
 '''

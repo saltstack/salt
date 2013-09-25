@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     Logstash Logging Handler
     ========================
+
+    .. versionadded:: 0.17.0
 
     This module provides some `Logstash`_ logging handlers.
 
@@ -12,7 +19,7 @@
     In order to setup the datagram handler for `Logstash`_, please define on
     the salt configuration file:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         logstash_udp_handler:
           host: 127.0.0.1
@@ -40,7 +47,7 @@
     In order to setup the ZMQ handler for `Logstash`_, please define on the
     salt configuration file:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         logstash_zmq_handler:
           address: tcp://127.0.0.1:2021
@@ -105,9 +112,6 @@
     .. _`ZeroMQ input`: http://logstash.net/docs/latest/inputs/zeromq
     .. _`high water mark`: http://api.zeromq.org/3-2:zmq-setsockopt
 
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs

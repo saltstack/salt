@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2011-2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     salt.log.setup
     ~~~~~~~~~~~~~~
 
@@ -7,11 +12,7 @@
 
     This module should be imported as soon as possible, preferably the first
     module salt or any salt depending library imports so any new logging
-    logger instance uses our ``salt.log.SaltLoggingClass``.
-
-
-    :copyright: 2011-2012 :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: Apache 2.0, see LICENSE for more details.
+    logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 '''
 
 # Import python libs

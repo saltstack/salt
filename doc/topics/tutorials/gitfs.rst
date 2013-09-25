@@ -45,6 +45,13 @@ Now the gitfs system needs to be configured with a remote:
     gitfs_remotes:
       - git://github.com/saltstack/salt-states.git
 
+.. note::
+
+    The salt-states repo is not currently updated with the latest versions
+    of the available states. Please review
+    https://github.com/saltstack-formulas for the latest versions.
+
+
 These changes require a restart of the master, then the git repo will be cached
 on the master and new requests for the ``salt://`` protocol will send files
 found in the remote git repository via the master.
@@ -155,6 +162,28 @@ the ``fileserver_backend`` option contains multiple backends:
 Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
 be searched first for the requested file, then if it is not found on the master
 the git remotes will be searched.
+
+Branches, environments and top.sls files
+========================================
+
+As stated above, when using the ``gitfs`` backend, branches will be mapped
+to environments using the branch name as identifier.
+There is an exception to this rule thought: the ``master`` branch is implicitly
+mapped to the ``base`` environment.
+Therefore, for a typical ``base``, ``qa``, ``dev`` setup, you'll have to
+create the following branches:
+
+.. code-block:: yaml
+
+    master
+    qa
+    dev
+
+Also, ``top.sls`` files from different branches will be merged into one big
+file at runtime. Since this could lead to hardly manageable configurations,
+the recommended setup is to have the ``top.sls`` file only in your master branch,
+and use environment-specific branches for states definitions.
+
 
 GitFS Remotes over SSH
 ======================

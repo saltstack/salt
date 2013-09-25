@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.log.handlers
-    ~~~~~~~~~~~~~~~~~
-
-    Custom logging handlers to be used in salt.
-
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
+
+
+    salt.log.handlers
+    ~~~~~~~~~~~~~~~~~
+
+    .. versionadded:: 0.17.0
+
+    Custom logging handlers to be used in salt.
 '''
 
 # Import python libs
@@ -54,6 +57,8 @@ class TemporaryLoggingHandler(logging.NullHandler):
     initial log messages to the function
     :func:`TemporaryLoggingHandler.sync_with_handlers` and all stored log
     records will be dispatched to the provided handlers.
+
+    .. versionadded:: 0.17.0
     '''
 
     def __init__(self, level=logging.NOTSET, max_queue_size=10000):

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage events
 
@@ -92,9 +93,9 @@ TAGS = {
     'minion': 'minion',  # prefix for all salt/minion events (minion sourced events)
     'syndic': 'syndic',  # prefix for all salt/syndic events (syndic minion sourced events)
     'run': 'run',  # prefix for all salt/run events (salt runners)
-    'wheel': 'wheel', # prefix for all salt/wheel events
-    'cloud': 'cloud', # prefix for all salt/cloud events
-    'fileserver': 'fileserver', #prefix for all salt/fileserver events
+    'wheel': 'wheel',  # prefix for all salt/wheel events
+    'cloud': 'cloud',  # prefix for all salt/cloud events
+    'fileserver': 'fileserver',  # prefix for all salt/fileserver events
 }
 
 
@@ -264,7 +265,7 @@ class SaltEvent(object):
         if not self.cpush:
             self.connect_pull()
 
-        data['__stamp__'] = datetime.datetime.now().isoformat('_')
+        data['_stamp'] = datetime.datetime.now().isoformat('_')
 
         tagend = ''
         if len(tag) <= 20:  # old style compatible tag
@@ -318,6 +319,7 @@ class SaltEvent(object):
                             data['success'] = False
                             data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
                             data['fun'] = load['fun']
+                            data['user'] = load['user']
                             self.fire_event(
                                 data,
                                 tagify([load['jid'],

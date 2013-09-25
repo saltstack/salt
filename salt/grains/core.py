@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The static grains, these are the core, or built in grains.
 
@@ -686,6 +687,7 @@ _OS_NAME_MAP = {
     'arch': 'Arch',
     'debian': 'Debian',
     'debiangnu/': 'Debian',
+    'raspbiangn': 'Raspbian',
     'fedoraremi': 'Fedora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
@@ -732,7 +734,8 @@ _OS_FAMILY_MAP = {
     'GCEL': 'Debian',
     'Linaro': 'Debian',
     'elementary OS': 'Debian',
-    'ScientificLinux': 'RedHat'
+    'ScientificLinux': 'RedHat',
+    'Raspbian': 'Debian'
 }
 
 

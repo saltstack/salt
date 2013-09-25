@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Extract the pillar data for this minion
 '''
@@ -81,4 +82,3 @@ def raw(key=None):
 # Allow pillar.data to also be used to return pillar data
 items = raw
 data = items
-

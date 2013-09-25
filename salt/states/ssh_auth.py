@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Control of entries in SSH authorized_key files.
 ===============================================

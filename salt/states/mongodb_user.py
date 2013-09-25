@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 '''
 Management of Mongodb users
 ===========================
 '''
+
 
 def present(name,
             passwd,

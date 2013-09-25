@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for nzbget
 '''
@@ -8,6 +9,7 @@ import salt.utils
 __func_alias__ = {
     'list_': 'list'
 }
+
 
 def __virtual__():
     '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Operations on regular files, special files, directories, and symlinks.
 =======================================================================
@@ -64,13 +65,13 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
 
 .. warning::
 
-        When using a mode that includes a leading zero you must wrap the 
+        When using a mode that includes a leading zero you must wrap the
         value in single quotes. If the value is not wrapped in quotes it
         will be read by YAML as an integer and evaluated as an octal.
 
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
-creation of character devices, block devices, and fifo pipes. The function will 
+creation of character devices, block devices, and fifo pipes. The function will
 create the directory structure up to the special file if it is needed on the
 minion. The function will not overwrite or operate on (change major/minor
 numbers) existing special files with the exception of user, group, and
@@ -580,6 +581,86 @@ def _test_owner(kwargs, user=None):
     return user
 
 
+def _unify_sources_and_hashes(source=None, source_hash=None,
+                              sources=None, source_hashes=None):
+    '''
+    Silly little function to give us a standard tuple list for sources and
+    source_hashes
+    '''
+    if sources is None:
+        sources = []
+
+    if source_hashes is None:
+        source_hashes = []
+
+    if source and sources:
+        return (False,
+                "source and sources are mutually exclusive", [])
+
+    if source_hash and source_hashes:
+        return (False,
+                "source_hash and source_hashes are mutually exclusive", [])
+
+    if source:
+        return (True, '', [(source, source_hash)])
+
+    # Make a nice neat list of tuples exactly len(sources) long..
+    return (True, '', map(None, sources, source_hashes[:len(sources)]))
+
+
+def _get_template_texts(source_list=None,
+                        template='jinja',
+                        defaults=None,
+                        context=None,
+                        env='base',
+                        **kwargs):
+    '''
+    Iterate a list of sources and process them as templates.
+    Returns a list of 'chunks' containing the rendered templates.
+    '''
+
+    ret = {'name': '_get_template_texts',
+           'changes': {},
+           'result': True,
+           'comment': '',
+           'data': []}
+
+    if source_list is None:
+        return _error(ret,
+                      '_get_template_texts called with empty source_list')
+
+    txtl = []
+
+    for (source, source_hash) in source_list:
+
+        tmpctx = defaults if defaults else {}
+        if context:
+            tmpctx.update(context)
+        rndrd_templ_fn = __salt__['cp.get_template'](source, '',
+                                  template=template, env=env,
+                                  context=tmpctx, **kwargs)
+        msg = 'cp.get_template returned {0} (Called with: {1})'
+        log.debug(msg.format(rndrd_templ_fn, source))
+        if rndrd_templ_fn:
+            tmplines = None
+            with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
+                tmplines = fp_.readlines()
+            if not tmplines:
+                msg = 'Failed to read rendered template file {0} ({1})'
+                log.debug(msg.format(rndrd_templ_fn, source))
+                ret['name'] = source
+                return _error(ret, msg.format(rndrd_templ_fn, source))
+            txtl.append(''.join(tmplines))
+        else:
+            msg = 'Failed to load template file {0}'.format(source)
+            log.debug(msg)
+            ret['name'] = source
+            return _error(ret, msg)
+
+    ret['data'] = txtl
+    return ret
+
+
 def symlink(
         name,
         target,
@@ -919,6 +1000,8 @@ def managed(name,
         file of any kind.  Ignores hashes and does not use a templating engine.
 
     contents_pillar
+        .. versionadded:: 0.17
+
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
         <salt.modules.pillar.get>`. This is useful when the pillar value
@@ -1578,9 +1661,62 @@ def recurse(name,
     return ret
 
 
-def sed(name, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g'):
+def replace(name,
+        pattern,
+        repl,
+        count=0,
+        flags=0,
+        bufsize=1,
+        backup='.bak',
+        show_changes=True,
+        ):
     '''
+    Maintain an edit in a file
+
+    .. versionadded:: 0.17
+
+    Params are identical to :py:func:`~salt.modules.file.replace`.
+
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    check_res, check_msg = _check_file(name)
+    if not check_res:
+        return _error(ret, check_msg)
+
+    changes = __salt__['file.replace'](name,
+        pattern,
+        repl,
+        count=count,
+        flags=flags,
+        bufsize=bufsize,
+        backup=backup,
+        dry_run=__opts__['test'],
+        show_changes=show_changes,
+        )
+
+    if changes:
+        ret['changes'] = changes
+        ret['comment'] = 'Changes were made'
+    else:
+        ret['comment'] = 'No changes were made'
+
+    ret['result'] = True
+    return ret
+
+
+def sed(name,
+        before,
+        after,
+        limit='',
+        backup='.bak',
+        options='-r -e',
+        flags='g',
+        negate_match=False):
+    '''
+    .. deprecated:: 0.17
+       Use :py:func:`~salt.states.file.replace` instead.
+
     Maintain a simple edit to a file
 
     The file will be searched for the ``before`` pattern before making the
@@ -1604,6 +1740,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     flags : ``g``
         Any flags to append to the sed expression. ``g`` specifies the edit
         should be made globally (and not stop after the first replacement).
+    negate_match : False
+        Negate the search command (``!``)
+
+        .. versionadded:: 0.17
 
     Usage::
 
@@ -1655,13 +1795,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         slines = fp_.readlines()
 
     # should be ok now; perform the edit
-    retcode = __salt__['file.sed'](name,
-                                   before,
-                                   after,
-                                   limit,
-                                   backup,
-                                   options,
-                                   flags)['retcode']
+    retcode = __salt__['file.sed'](path=name,
+                                   before=before,
+                                   after=after,
+                                   limit=limit,
+                                   backup=backup,
+                                   options=options,
+                                   flags=flags,
+                                   negate_match=negate_match)['retcode']
 
     if retcode != 0:
         ret['result'] = False
@@ -1863,7 +2004,12 @@ def append(name,
            makedirs=False,
            source=None,
            source_hash=None,
-           __env__='base'):
+           __env__='base',
+           template='jinja',
+           sources=None,
+           source_hashes=None,
+           defaults=None,
+           context=None):
     '''
     Ensure that some text appears at the end of a file
 
@@ -1887,9 +2033,36 @@ def append(name,
               - Trust no one unless you have eaten much salt with him.
               - "Salt is born of the purest of parents: the sun and the sea."
 
+    Gather text from multiple template files::
+
+        /etc/motd:
+          file:
+              - append
+              - template: jinja
+              - sources:
+                  - salt://motd/devops-messages.tmpl
+                  - salt://motd/hr-messages.tmpl
+                  - salt://motd/general-messages.tmpl
+
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if sources is None:
+        sources = []
+
+    if source_hashes is None:
+        source_hashes = []
+
+    # Add sources and source_hashes with template support
+    # NOTE: FIX 'text' and any 'source' are mutually exclusive as 'text'
+    #       is re-assigned in the original code.
+    (ok, err, sl) = _unify_sources_and_hashes(source=source,
+                                              source_hash=source_hash,
+                                              sources=sources,
+                                              source_hashes=source_hashes)
+    if not ok:
+        return _error(ret, err)
 
     if makedirs is True:
         dirname = os.path.dirname(name)
@@ -1908,26 +2081,16 @@ def append(name,
     if not check_res:
         return _error(ret, check_msg)
 
-    if source:
-        # get cached file or copy it to cache
-        cached_source_path = __salt__['cp.cache_file'](source, __env__)
-        log.debug(
-            'state file.append cached source {0} -> {1}'.format(
-                source, cached_source_path
-            )
-        )
-        cached_source = managed(
-            cached_source_path,
-            source=source,
-            source_hash=source_hash,
-            env=__env__
-        )
-        if cached_source['result'] is True:
-            log.debug(
-                'state file.append is loading text contents from '
-                'cached source {0}({1})'.format(source, cached_source_path)
-            )
-            text = salt.utils.fopen(cached_source_path, 'r').read()
+    #Follow the original logic and re-assign 'text' if using source(s)...
+    if sl:
+        tmpret = _get_template_texts(source_list=sl,
+                                     template=template,
+                                     defaults=defaults,
+                                     context=context,
+                                     env=__env__)
+        if not tmpret['result']:
+            return tmpret
+        text = tmpret['data']
 
     if isinstance(text, string_types):
         text = (text,)
@@ -2463,17 +2626,18 @@ def serialize(name,
                                         show_diff=show_diff,
                                         contents=contents)
 
+
 def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     '''
     Create a special file similar to the 'nix mknod command. The supported device types are
     p (fifo pipe), c (character device), and b (block device). Provide the major and minor
     numbers when specifying a character device or block device. A fifo pipe does not require
-    this information. The command will create the necessary dirs if needed. If a file of the 
+    this information. The command will create the necessary dirs if needed. If a file of the
     same name not of the same type/major/minor exists, it will not be overwritten or unlinked
-    (deleted). This is logically in place as a safety measure because you can really shoot 
+    (deleted). This is logically in place as a safety measure because you can really shoot
     yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
     note that not just anyone can create special devices. Usually this is only done as root.
-    If the state is executed as none other than root on a minion, you may recieve a permision
+    If the state is executed as none other than root on a minion, you may receive a permission
     error.
 
     name
@@ -2509,7 +2673,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             - user: root
             - group: root
             - mode: 660
- 
+
         /dev/blk:
           file.mknod:
             - ntype: b
@@ -2518,7 +2682,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             - user: root
             - group: root
             - mode: 660
- 
+
        /dev/fifo:
          file.mknod:
            - ntype: p
@@ -2592,4 +2756,3 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         ret['comment'] = "Node type unavailable: '{0}. Available node types are character ('c'), block ('b'), and pipe ('p')".format(ntype)
 
     return ret
-

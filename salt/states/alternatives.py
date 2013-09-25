@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Configuration of the alternatives system
 ========================================
@@ -26,6 +27,12 @@ Control the alternatives system
         - path: {{ my_hadoop_conf }}
 
 '''
+
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'set_': 'set'
+}
+
 
 def install(name, link, path, priority):
     '''
@@ -125,6 +132,8 @@ def remove(name, path):
 
 def auto(name):
     '''
+    .. versionadded:: 0.17.0
+
     Instruct alternatives to use the highest priority
     path for <name>
 
@@ -144,13 +153,15 @@ def auto(name):
     if line.endswith(' auto mode'):
         ret['comment'] = '{0} already in auto mode'.format(name)
         return ret
-    
+
     ret['changes']['result'] = __salt__['alternatives.auto'](name)
     return ret
 
 
-def set(name, path):
+def set_(name, path):
     '''
+    .. versionadded:: 0.17.0
+
     Removes installed alternative for defined <name> and <path>
     or fallback to default alternative, if some defined before.
 
@@ -172,14 +183,14 @@ def set(name, path):
     if current == path:
         ret['comment'] = 'Alternative for {0} already set to {1}'.format(name, path)
         return ret
-    
+
     display = __salt__['alternatives.display'](name)
     isinstalled = False
     for line in display.splitlines():
         if line.startswith(path):
             isinstalled = True
             break
-    
+
     if isinstalled:
         __salt__['alternatives.set'](name, path)
         current = __salt__['alternatives.show_current'](name)
@@ -201,5 +212,3 @@ def set(name, path):
             ).format(path, name)
 
     return ret
-
-

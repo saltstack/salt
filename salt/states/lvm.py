@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of Linux logical volumes
 ===================================

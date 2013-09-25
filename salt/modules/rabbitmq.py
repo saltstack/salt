@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
@@ -378,7 +379,7 @@ def list_queues_vhost(vhost, *kwargs):
 
 def list_policies(runas=None):
     '''
-    Return a dictionary of policies nested by vhost and name 
+    Return a dictionary of policies nested by vhost and name
     based on the data returned from rabbitmqctl list_policies.
 
     Reference: http://www.rabbitmq.com/ha.html

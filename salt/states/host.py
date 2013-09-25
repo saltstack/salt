@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of addresses and names in hosts file.
 ================================================

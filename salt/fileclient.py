@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Classes that manage file clients
 '''
@@ -219,6 +220,12 @@ class Client(object):
         '''
         return []
 
+    def symlink_list(self, env='base', prefix=''):
+        '''
+        This function must be overwritten
+        '''
+        return {}
+
     def is_cached(self, path, env='base'):
         '''
         Returns the full path to a file if it is cached locally on the minion
@@ -414,6 +421,9 @@ class Client(object):
                 url_data.netloc,
                 url_data.path
             )
+            # If Salt generated the dest name, create any required dirs
+            makedirs = True
+
         destdir = os.path.dirname(dest)
         if not os.path.isdir(destdir):
             if makedirs:
@@ -730,6 +740,23 @@ class RemoteClient(Client):
         load = {'env': env,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
+        try:
+            return self.auth.crypticle.loads(
+                self.sreq.send('aes',
+                               self.auth.crypticle.dumps(load),
+                               3,
+                               60)
+            )
+        except SaltReqTimeoutError:
+            return ''
+
+    def symlink_list(self, env='base', prefix=''):
+        '''
+        List symlinked files and dirs on the master
+        '''
+        load = {'env': env,
+                'prefix': prefix,
+                'cmd': '_symlink_list'}
         try:
             return self.auth.crypticle.loads(
                 self.sreq.send('aes',

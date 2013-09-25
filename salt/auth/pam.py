@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # The pam components have been modified to be salty and have been taken from
 # the pam module under this licence:
 # (c) 2007 Chris AtLee <chris@atlee.ca>

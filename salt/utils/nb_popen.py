@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     salt.utils.nb_popen
     ~~~~~~~~~~~~~~~~~~~
 
@@ -9,10 +14,6 @@
     found on:
 
         http://code.activestate.com/recipes/440554/
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
@@ -82,7 +83,6 @@ class NonBlockingPopen(subprocess.Popen):
             self._stderr_logger = logging.getLogger(
                 self._stderr_logger_name_.format(pid=self.pid)
             )
-
 
         self._stderr_logger = logging.getLogger(
             self._stderr_logger_name_.format(pid=self.pid)

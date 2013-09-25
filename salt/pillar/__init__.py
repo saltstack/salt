@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Render the pillar data
 '''
@@ -308,7 +309,7 @@ class Pillar(object):
             msg = 'Rendering SLS {0!r} failed, render error:\n{1}'.format(
                 sls, exc
             )
-            log.error(msg)
+            log.critical(msg)
             errors.append(msg)
         mods.add(sls)
         nstate = None
@@ -384,7 +385,7 @@ class Pillar(object):
         Render the external pillar data
         '''
         if not 'ext_pillar' in self.opts:
-            return  {}
+            return {}
         if not isinstance(self.opts['ext_pillar'], list):
             log.critical('The "ext_pillar" option is malformed')
             return {}

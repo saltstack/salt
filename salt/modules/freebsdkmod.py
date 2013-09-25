@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module to manage FreeBSD kernel modules
 '''

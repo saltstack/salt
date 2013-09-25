@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/python
 #
 # Copyright 2007 Google Inc.
@@ -146,7 +147,7 @@ def v6_int_to_packed(address):
     Returns:
         The binary representation of this address.
     """
-    return Bytes(struct.pack('!QQ', address >> 64, address & (2**64 - 1)))
+    return Bytes(struct.pack('!QQ', address >> 64, address & (2 ** 64 - 1)))
 
 
 def _find_address_range(addresses):
@@ -167,6 +168,7 @@ def _find_address_range(addresses):
             break
     return (first, last)
 
+
 def _get_prefix_length(number1, number2, bits):
     """Get the number of leading bits that are same for two numbers.
 
@@ -184,6 +186,7 @@ def _get_prefix_length(number1, number2, bits):
             return bits - i
     return 0
 
+
 def _count_righthand_zero_bits(number, bits):
     """Count the number of zero bits on the right hand side.
 
@@ -200,6 +203,7 @@ def _count_righthand_zero_bits(number, bits):
     for i in range(bits):
         if (number >> i) % 2:
             return i
+
 
 def summarize_address_range(first, last):
     """Summarize a network range given the first and last IP addresses.
@@ -251,7 +255,7 @@ def summarize_address_range(first, last):
         nbits = _count_righthand_zero_bits(first_int, ip_bits)
         current = None
         while nbits >= 0:
-            addend = 2**nbits - 1
+            addend = 2 ** nbits - 1
             current = first_int + addend
             nbits -= 1
             if current <= last_int:
@@ -264,6 +268,7 @@ def summarize_address_range(first, last):
         first_int = current + 1
         first = IPAddress(first_int, version=first._version)
     return networks
+
 
 def _collapse_address_list_recursive(addresses):
     """Loops through the addresses, collapsing concurrent netblocks.
@@ -390,6 +395,7 @@ except (NameError, TypeError):
         def __repr__(self):
             return 'Bytes(%s)' % str.__repr__(self)
 
+
 def get_mixed_type_key(obj):
     """Return a key suitable for sorting between networks and addresses.
 
@@ -413,6 +419,7 @@ def get_mixed_type_key(obj):
     elif isinstance(obj, _BaseIP):
         return obj._get_address_key()
     return NotImplemented
+
 
 class _IPAddrBase(object):
 
@@ -510,7 +517,7 @@ class _BaseIP(_IPAddrBase):
         return '%s(%r)' % (self.__class__.__name__, str(self))
 
     def __str__(self):
-        return  '%s' % self._string_from_ip_int(self._ip)
+        return '%s' % self._string_from_ip_int(self._ip)
 
     def __hash__(self):
         return hash(hex(long(self._ip)))
@@ -626,8 +633,8 @@ class _BaseNet(_IPAddrBase):
         return not eq
 
     def __str__(self):
-        return  '%s/%s' % (str(self.ip),
-                           str(self._prefixlen))
+        return '%s/%s' % (str(self.ip),
+                          str(self._prefixlen))
 
     def __hash__(self):
         return hash(int(self.network) ^ int(self.netmask))
@@ -763,7 +770,7 @@ class _BaseNet(_IPAddrBase):
                 s1, s2 = s2.subnet()
             else:
                 # If we got here, there's a bug somewhere.
-                assert True == False, ('Error performing exclusion: '
+                assert True is False, ('Error performing exclusion: '
                                        's1: %s s2: %s other: %s' %
                                        (str(s1), str(s2), str(other)))
         if s1 == other:
@@ -772,7 +779,7 @@ class _BaseNet(_IPAddrBase):
             ret_addrs.append(s1)
         else:
             # If we got here, there's a bug somewhere.
-            assert True == False, ('Error performing exclusion: '
+            assert True is False, ('Error performing exclusion: '
                                    's1: %s s2: %s other: %s' %
                                    (str(s1), str(s2), str(other)))
 
@@ -988,7 +995,6 @@ class _BaseNet(_IPAddrBase):
                 raise ValueError('cannot set prefixlen_diff and new_prefix')
             prefixlen_diff = self._prefixlen - new_prefix
 
-
         if self.prefixlen - prefixlen_diff < 0:
             raise ValueError(
                 'current prefixlen is %d, cannot have a prefixlen_diff of %d' %
@@ -1015,7 +1021,7 @@ class _BaseV4(object):
     """
 
     # Equivalent to 255.255.255.255 or 32 bits of 1's.
-    _ALL_ONES = (2**IPV4LENGTH) - 1
+    _ALL_ONES = (2 ** IPV4LENGTH) - 1
     _DECIMAL_DIGITS = frozenset('0123456789')
 
     def __init__(self, address):
@@ -1387,7 +1393,7 @@ class _BaseV6(object):
 
     """
 
-    _ALL_ONES = (2**IPV6LENGTH) - 1
+    _ALL_ONES = (2 ** IPV6LENGTH) - 1
     _HEXTET_COUNT = 8
     _HEX_DIGITS = frozenset('0123456789ABCDEFabcdef')
 
@@ -1566,7 +1572,7 @@ class _BaseV6(object):
         hex_str = '%032x' % ip_int
         hextets = []
         for x in range(0, 32, 4):
-            hextets.append('%x' % int(hex_str[x:x+4], 16))
+            hextets.append('%x' % int(hex_str[x:x + 4], 16))
 
         hextets = self._compress_hextets(hextets)
         return ':'.join(hextets)
@@ -1805,7 +1811,6 @@ class IPv6Network(_BaseV6, _BaseNet):
         .prefixlen: 64
 
     """
-
 
     def __init__(self, address, strict=False):
         """Instantiate a new IPv6 Network object.

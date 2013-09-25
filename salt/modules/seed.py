@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Virtual machine image management tools
 '''
@@ -18,6 +19,11 @@ import salt.config
 
 # Set up logging
 log = logging.getLogger(__name__)
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'apply_': 'apply'
+}
 
 
 def _mount(path, ftype):
@@ -44,7 +50,7 @@ def _umount(mpt, ftype):
         __salt__['img.umount_image'](mpt)
 
 
-def apply(path, id_=None, config=None, approve_key=True, install=True):
+def apply_(path, id_=None, config=None, approve_key=True, install=True):
     '''
     Seed a location (disk image, directory, or block device) with the
     minion config, approve the minion's key, and/or install salt-minion.

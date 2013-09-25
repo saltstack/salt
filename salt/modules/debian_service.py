@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Service support for Debian systems - uses update-rc.d and service to modify the
-system
+Service support for Debian systems (uses update-rc.d and /sbin/service)
 '''
 
 # Import python libs
@@ -19,7 +19,7 @@ def __virtual__():
     '''
     Only work on Debian and when systemd isn't running
     '''
-    if __grains__['os'] == 'Debian' and not _sd_booted():
+    if __grains__['os'] in ('Debian', 'Raspbian') and not _sd_booted():
         return 'service'
     return False
 
@@ -28,7 +28,16 @@ def _get_runlevel():
     '''
     returns the current runlevel
     '''
-    return __salt__['cmd.run']('runlevel').split()[1]
+    out = __salt__['cmd.run']('runlevel')
+    # unknown can be returned while inside a container environment, since
+    # this is due to a lack of init, it should be safe to assume runlevel
+    # 2, which is Debian's default. If not, all service related states
+    # will throw an out of range exception here which will cause
+    # other functions to fail.
+    if 'unknown' in out:
+        return '2'
+    else:
+        return out.split()[1]
 
 
 def get_enabled():
@@ -110,7 +119,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 

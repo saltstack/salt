@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Package management operations specific to APT- and DEB-based systems
 ====================================================================
@@ -44,7 +45,7 @@ def held(name):
             ret.update(result=None,
                        comment='Package {0} is set to be held'.format(name))
     else:
-        ret.update(result= True,
+        ret.update(result=True,
                    comment='Package {0} is already held'.format(name))
 
     return ret

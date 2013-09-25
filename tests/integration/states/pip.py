@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-    tests.integration.states.pip
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
+
+
+    tests.integration.states.pip
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
@@ -356,7 +357,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # Le't make sure we have pip 1.3.1 installed
             self.assertEqual(
-                self.run_function('pip.list', ['pip']),
+                self.run_function('pip.list', ['pip'], bin_env=venv_dir),
                 {'pip': '1.3.1'}
             )
 

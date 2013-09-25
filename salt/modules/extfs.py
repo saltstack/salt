@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing ext2/3/4 file systems
 '''

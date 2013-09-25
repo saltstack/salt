@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for the Git SCM
 '''
@@ -22,6 +23,7 @@ def __virtual__():
     if not all((utils.which('git'), HAS_PIPES)):
         return False
     return 'git'
+
 
 def _git_ssh_helper(identity):
     '''
@@ -107,6 +109,22 @@ def _check_git():
     Check if git is available
     '''
     utils.check_or_die('git')
+
+
+def current_branch(cwd, user=None):
+    '''
+    Returns the current branch name, if on a branch.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' git.current_branch /path/to/repo
+    '''
+    cmd = r'git branch --list | grep "^*\ " | cut -d " " -f 2 | ' + \
+        'grep -v "(detached"'
+
+    return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
 
 
 def revision(cwd, rev='HEAD', short=False, user=None):
@@ -768,9 +786,10 @@ def stash(cwd, opts=None, user=None):
     return _git_run('git stash {0}'.format(opts), cwd=cwd, runas=user)
 
 
-def config_set(cwd, setting_name, setting_value, user=None):
+def config_set(cwd, setting_name, setting_value, user=None, is_global=False):
     '''
-    Set a key in the git configuration file (.git/config) of the repository.
+    Set a key in the git configuration file (.git/config) of the repository or
+    globally.
 
     cwd
         The path to the Git repository
@@ -784,15 +803,22 @@ def config_set(cwd, setting_name, setting_value, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
+    is_global : False
+        Set to True to use the '--global' flag with 'git config'
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' git.config_set /path/to/repo user.email me@example.com
     '''
+    scope = '--local'
+    if is_global:
+        scope = '--global'
+
     _check_git()
 
-    return _git_run('git config {0} {1}'.format(setting_name, setting_value), cwd=cwd, runas=user)
+    return _git_run('git config {0} {1} {2}'.format(scope, setting_name, setting_value), cwd=cwd, runas=user)
 
 
 def config_get(cwd, setting_name, user=None):

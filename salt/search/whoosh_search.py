@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Routines to manage interactions with the whoosh search system
 '''

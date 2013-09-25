@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The ssh client wrapper system contains the routines that are used to alter
 how executions are run in the salt-ssh system, this allows for state routines
@@ -38,6 +39,7 @@ class FunctionWrapper(object):
         '''
         if cmd in self.wfuncs:
             return self.wfuncs[cmd]
+
         def caller(*args, **kwargs):
             '''
             The remote execution function

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for APT (Advanced Packaging Tool)
 '''
@@ -124,6 +125,19 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> fromrepo=unstable
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
+    if 'repo' in kwargs:
+        # Remember to kill _get_repo() too when removing this warning.
+        salt.utils.warn_until(
+            (0, 18),
+            'The \'repo\' argument to apt.latest_version is deprecated, and will be '
+            'removed in 0.18.0. Please use \'fromrepo\' instead.'
+        )
+    fromrepo = _get_repo(**kwargs)
+    kwargs.pop('fromrepo', None)
+    kwargs.pop('repo', None)
+
     if len(names) == 0:
         return ''
     ret = {}
@@ -131,12 +145,11 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
     pkgs = list_pkgs(versions_as_list=True)
-    fromrepo = _get_repo(**kwargs)
     repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
         if fromrepo else ''
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     for name in names:
@@ -515,7 +528,7 @@ def _clean_pkglist(pkgs):
             pkgs[name] = stripped
 
 
-def list_pkgs(versions_as_list=False, removed=False):
+def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 

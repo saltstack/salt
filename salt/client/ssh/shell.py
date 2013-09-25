@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 '''
 Manage transport commands via ssh
 '''
 
 # Import python libs
 import os
-import json
 import time
 import subprocess
 
@@ -48,7 +48,7 @@ class Shell(object):
 
     def get_error(self, errstr):
         '''
-        Parse out an error and return a targetted error string
+        Parse out an error and return a targeted error string
         '''
         for line in errstr.split('\n'):
             if line.startswith('ssh:'):
@@ -102,6 +102,26 @@ class Shell(object):
         for option in options:
             ret += '-o {0} '.format(option)
         return ret
+
+    def _copy_id_str(self):
+        '''
+        Return the string to execute ssh-copy-id
+        '''
+        if self.passwd and salt.utils.which('sshpass'):
+            return 'sshpass -p {0} {1} {2} "-p {3} {4}@{5}"'.format(
+                    self.passwd,
+                    'ssh-copy-id',
+                    '-i {0}.pub'.format(self.priv),
+                    self.port,
+                    self.user,
+                    self.host)
+        return None
+
+    def copy_id(self):
+        '''
+        Execute ssh-copy-id to plant the id file on the target
+        '''
+        self._run_cmd(self._copy_id_str())
 
     def _cmd_str(self, cmd, ssh='ssh'):
         '''

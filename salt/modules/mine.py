@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-The function cache system allows for data to be stored on the master so it
-can be easily read by other minions
+The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
 
 # Import python libs
@@ -151,6 +151,47 @@ def get(tgt, fun, expr_form='glob'):
             'tgt': tgt,
             'fun': fun,
             'expr_form': expr_form,
+    }
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    ret = sreq.send('aes', auth.crypticle.dumps(load))
+    return auth.crypticle.loads(ret)
+
+
+def delete(fun):
+    '''
+    Remove specific function contents of minion. Returns True on success.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mine.delete 'network.interfaces'
+    '''
+    auth = _auth()
+    load = {
+            'cmd': '_mine_delete',
+            'id': __opts__['id'],
+            'fun': fun
+    }
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    ret = sreq.send('aes', auth.crypticle.dumps(load))
+    return auth.crypticle.loads(ret)
+
+
+def flush():
+    '''
+    Remove all mine contents of minion. Returns True on success.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mine.flush
+    '''
+    auth = _auth()
+    load = {
+            'cmd': '_mine_flush',
+            'id': __opts__['id'],
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     ret = sreq.send('aes', auth.crypticle.dumps(load))

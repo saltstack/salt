@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     salt.utils.parsers
     ~~~~~~~~~~~~~~~~~~
 
     This is were all the black magic happens on all of salt's CLI tools.
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
@@ -986,6 +987,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'queries')
         )
         self.add_option(
+           '--show-timeout',
+           default=False,
+           action='store_true',
+           help=('Display minions that timeout')
+       )
+        self.add_option(
             '-b', '--batch',
             '--batch-size',
             default='',
@@ -1526,7 +1533,17 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             '--roster',
             dest='roster',
             default='',
-            help=('Define which roster system to use'))
+            help=('Define which roster system to use, this defines if a '
+                  'database backend, scanner, or custom roster system is '
+                  'used. Default is the flat file roster.'))
+        self.add_option(
+            '--roster-file',
+            dest='roster_file',
+            default='',
+            help=('define an alternative location for the default roster '
+                  'file location. The default roster file is called roster '
+                  'and is found in the same directory as the master config '
+                  'file.'))
         self.add_option(
             '--refresh', '--refresh-cache',
             dest='refresh_cache',

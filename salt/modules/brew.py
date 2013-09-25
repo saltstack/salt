@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Homebrew for Mac OS X
 '''
@@ -120,6 +121,8 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
+    kwargs.pop('refresh', True)
+
     if len(names) <= 1:
         return ''
     else:

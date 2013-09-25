@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Portage
 
@@ -170,11 +171,13 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
     if len(names) == 0:
         return ''
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     ret = {}

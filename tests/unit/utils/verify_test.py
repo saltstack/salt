@@ -14,7 +14,11 @@ import socket
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salttesting.helpers import (
+    ensure_in_syspath,
+    requires_network,
+    TestsLoggingHandler
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -78,7 +82,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
-    @integration.requires_network(only_local_network=True)
+    @requires_network(only_local_network=True)
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
         if socket.has_ipv6:

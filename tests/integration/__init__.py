@@ -706,19 +706,19 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
 
-    def run_salt(self, arg_str):
+    def run_salt(self, arg_str, with_retcode=False):
         '''
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode)
 
-    def run_run(self, arg_str):
+    def run_run(self, arg_str, with_retcode=False):
         '''
         Execute salt-run
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-run', arg_str)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode)
 
     def run_run_plus(self, fun, options='', *arg):
         '''
@@ -738,23 +738,28 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
             ret['fun'] = runner.run()
         return ret
 
-    def run_key(self, arg_str, catch_stderr=False):
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
         '''
         Execute salt-key
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-key', arg_str, catch_stderr=catch_stderr)
+        return self.run_script(
+            'salt-key',
+            arg_str,
+            catch_stderr=catch_stderr,
+            with_retcode=with_retcode
+        )
 
-    def run_cp(self, arg_str):
+    def run_cp(self, arg_str, with_retcode=False):
         '''
         Execute salt-cp
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cp', arg_str)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode)
 
-    def run_call(self, arg_str):
+    def run_call(self, arg_str, with_retcode=False):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode)
 
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
@@ -765,7 +770,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         if getattr(self, '_call_binary_', None) is None:
             self.skipTest('\'_call_binary_\' not defined.')
         from salt.utils import which
-        from salt.version import __version_info__, GIT_DESCRIBE_REGEX
+        from salt.version import __version_info__, SaltStackVersion
         git = which('git')
         if not git:
             self.skipTest('The git binary is not available')
@@ -787,28 +792,16 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
                 )
             )
 
-        match = re.search(GIT_DESCRIBE_REGEX, out)
-        if not match:
-            return version, version_info
+        parsed_version = SaltStackVersion.parse(out)
 
-        parsed_version = '{0}.{1}.{2}'.format(
-            match.group('major'),
-            match.group('minor'),
-            match.group('bugfix') or '0'
-        )
-        parsed_version_info = tuple([
-            int(g) for g in [h or '0' for h in match.groups()[:3]]
-            if g.isdigit()
-        ])
-
-        if parsed_version_info and parsed_version_info < __version_info__:
+        if parsed_version.info < __version_info__:
             self.skipTest(
                 'We\'re likely about to release a new version. This test '
                 'would fail. Parsed({0!r}) < Expected({1!r})'.format(
-                    parsed_version_info, __version_info__
+                    parsed_version.info, __version_info__
                 )
             )
-        elif parsed_version_info != __version_info__:
+        elif parsed_version.info != __version_info__:
             self.skipTest(
                 'In order to get the proper salt version with the '
                 'git hash you need to update salt\'s local git '
@@ -818,7 +811,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
                 'string WILL NOT include the git hash.'
             )
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(parsed_version, out)
+        self.assertIn(parsed_version.string, out)
 
 
 class SaltReturnAssertsMixIn(object):
@@ -977,110 +970,3 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
-
-
-# ----- salt 0.16.x network tests wrapper ----------------------------------->
-# If you're removing this code because we're already in salt 0.17, please also
-# switch the `requires_network` import in `tests/unit/utils/verify_test.py`
-if salt.version.__version_info__ >= (0, 17):
-    raise RuntimeError(
-        'Detected salt >= 0.17.0. Please remove this `requires_network` '
-        'function which was only meant to be used in salt < 0.17'
-    )
-
-try:
-    from salttesting.helpers import requires_network
-except ImportError:
-    if salt.version.__version_info__ >= (0, 17):
-        # If you're removing this code because we're already in salt 0.17,
-        # please also switch the `requires_network` import line in
-        # `tests/unit/utils/verify_test.py`
-        raise RuntimeError(
-            'Detected salt >= 0.17.0. Please remove this `requires_network` '
-            'function which was only meant to be used in salt < 0.17'
-        )
-
-    import socket
-    from functools import wraps
-
-    def requires_network(only_local_network=False):
-        '''
-        Simple decorator which is supposed to skip a test case in case there's
-        no network connection to the internet.
-        '''
-        def decorator(func):
-            @wraps(func)
-            def wrap(cls):
-                has_local_network = False
-                # First lets try if we have a local network. Inspired in
-                # verify_socket
-                try:
-                    pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    pubsock.setsockopt(
-                        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                    )
-                    pubsock.bind(('', 18000))
-                    pubsock.close()
-                    retsock.setsockopt(
-                        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                    )
-                    retsock.bind(('', 18001))
-                    retsock.close()
-                    has_local_network = True
-                except socket.error:
-                    # I wonder if we just have IPV6 support?
-                    try:
-                        pubsock = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM
-                        )
-                        retsock = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM
-                        )
-                        pubsock.setsockopt(
-                            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                        )
-                        pubsock.bind(('', 18000))
-                        pubsock.close()
-                        retsock.setsockopt(
-                            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                        )
-                        retsock.bind(('', 18001))
-                        retsock.close()
-                        has_local_network = True
-                    except socket.error:
-                        # Let's continue
-                        pass
-
-                if only_local_network is True:
-                    if has_local_network is False:
-                        # Since we're only supposed to check local network, and
-                        # no local network was detected, skip the test
-                        cls.skipTest('No local network was detected')
-                    return func(cls)
-
-                # We are using the google.com DNS records as numerical IPs to
-                # avoid DNS lookups which could greatly slow down this check
-                for addr in ('173.194.41.198', '173.194.41.199',
-                             '173.194.41.200', '173.194.41.201',
-                             '173.194.41.206', '173.194.41.192',
-                             '173.194.41.193', '173.194.41.194',
-                             '173.194.41.195', '173.194.41.196',
-                             '173.194.41.197'):
-                    try:
-                        sock = socket.socket(socket.AF_INET,
-                                             socket.SOCK_STREAM)
-                        sock.settimeout(0.25)
-                        sock.connect((addr, 80))
-                        sock.close()
-                        # We connected? Stop the loop
-                        break
-                    except socket.error:
-                        # Let's check the next IP
-                        continue
-                else:
-                    cls.skipTest('No internet network connection was detected')
-                return func(cls)
-            return wrap
-        return decorator
-# <---- salt 0.16.x network tests wrapper ------------------------------------

@@ -90,7 +90,7 @@ More examples can be found here: https://github.com/saltstack/salt-winrepo
 
 The version number and ``full_name`` need to match the output from ``pkg.list_pkgs``
 so that the status can be verfied when running highstate.
-Note: It is still possible to succesfully install packages using ``pkg.install``
+Note: It is still possible to successfully install packages using ``pkg.install``
 even if they don't match which can make this hard to troubleshoot.
 
 .. code-block:: bash
@@ -300,5 +300,5 @@ Packages management under Windows 2003
 
 On windows server 2003, you need to install optional windows component 
 "wmi windows installer provider" to have full list of installed packages.
-If you don't have this, salt-minion can't report some installed softwares.
+If you don't have this, salt-minion can't report some installed software.
 

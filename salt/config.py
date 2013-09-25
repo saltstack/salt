@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 All salt configuration loading and defaults should be in this module
 '''
@@ -139,6 +140,8 @@ VALID_OPTS = {
     'file_ignore_regex': bool,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
+    'fileserver_followsymlinks': bool,
+    'fileserver_ignoresymlinks': bool,
     'max_open_files': int,
     'auto_accept': bool,
     'master_tops': bool,
@@ -289,6 +292,8 @@ DEFAULT_MASTER_OPTS = {
     'file_ignore_regex': None,
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
+    'fileserver_followsymlinks': True,
+    'fileserver_ignoresymlinks': False,
     'max_open_files': 100000,
     'hash_type': 'md5',
     'conf_file': os.path.join(syspaths.CONFIG_DIR, 'master'),

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The backend for a fileserver based on Amazon S3
 
@@ -36,6 +37,9 @@ Master config.
             - bucket2
             - bucket3
             - bucket4
+
+    Note that bucket names must be all lowercase both in the AWS console
+    and in Salt, otherwise you may encounter "SignatureDoesNotMatch" errors.
 
     A multiple environment bucket must adhere to the following root directory
     structure::

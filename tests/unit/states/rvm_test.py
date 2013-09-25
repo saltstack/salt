@@ -88,7 +88,7 @@ class TestRvmState(TestCase):
             with patch.object(rvm, '_check_and_install_ruby', new=mock):
                 rvm.installed('1.9.3', default=True)
         mock.assert_called_once_with(
-            {'result': True}, '1.9.3', True, runas=None)
+            {'result': True}, '1.9.3', True, user=None)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Generate roster data, this data is used by non-minion devices which need to be
 hit from the master rather than acting as an independent entity. This covers

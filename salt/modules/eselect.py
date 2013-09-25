@@ -1,7 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-.. _eselect: http://wiki.gentoo.org/wiki/Project:Eselect/User_guide
-
-Support for eselect_, Gentoo's configuration and management tool.
+Support for eselect, Gentoo's configuration and management tool.
 '''
 
 # Import salt libs

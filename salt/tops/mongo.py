@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Read tops data from a mongodb collection.
 

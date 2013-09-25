@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The backed for the mercurial based file server system.
 

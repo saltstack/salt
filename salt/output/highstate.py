@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The return data from the Highstate command is a standard data structure
 which is parsed by the highstate outputter to deliver a clean and readable

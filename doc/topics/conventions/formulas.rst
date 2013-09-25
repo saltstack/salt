@@ -15,7 +15,7 @@ tasks.
     your mileage may vary.
 
     All Formulas require the grains execution module that shipped with Salt
-    0.16.4. Earlier Salt versions may copy :blob:`salt/modules/formula_util.py`
+    0.16.4. Earlier Salt versions may copy :blob:`salt/modules/grains.py`
     into the :file:`/srv/salt/_modules` directory and it will be automatically
     distributed to all minions.
 
@@ -68,9 +68,8 @@ Usage
 
 Each Formula is intended to be immediately usable with sane defaults without
 any additional configuration. Many formulas are also configurable by including
-data in Pillar Many formulas are also configurable by including data in Pillar;
-see the :file:`pillar.example` file in each Formula repository for available
-options.
+data in Pillar; see the :file:`pillar.example` file in each Formula repository
+for available options.
 
 Including a Formula in an existing State tree
 ---------------------------------------------

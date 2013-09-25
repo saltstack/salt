@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Generate the salt thin tarball from the installed python files
 '''

@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-The Saltutil module is used to manage the state of the salt minion itself. It
-is used to manage minion modules as well as automate updates to the salt minion
+The Saltutil module is used to manage the state of the salt minion itself. It is used to manage minion modules as well as automate updates to the salt minion.
 
 :depends:   - esky Python module for update functionality
 '''
@@ -540,10 +540,10 @@ def cmd(tgt,
     '''
     if ssh:
         client = salt.client.SSHClient(
-                os.path.dirname(__opts__['conf_path']))
+                os.path.dirname(__opts__['conf_file']))
     else:
         client = salt.client.LocalClient(
-                os.path.dirname(__opts__['conf_path']))
+                os.path.dirname(__opts__['conf_file']))
     ret = {}
     for ret_comp in client.cmd_iter(
             tgt,
@@ -578,10 +578,10 @@ def cmd_iter(tgt,
     '''
     if ssh:
         client = salt.client.SSHClient(
-                os.path.dirname(__opts__['conf_path']))
+                os.path.dirname(__opts__['conf_file']))
     else:
         client = salt.client.LocalClient(
-                os.path.dirname(__opts__['conf_path']))
+                os.path.dirname(__opts__['conf_file']))
     for ret in client.cmd_iter(
             tgt,
             fun,

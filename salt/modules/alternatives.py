@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.modules.alternatives
-    ~~~~~~~~~~~~~~~~~~~~~~~~~
+Support for Alternatives system
 
-    Support for Alternatives system
-
-    :codeauthor: Radek Rada <radek.rada@gmail.com>
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
-
+:codeauthor: Radek Rada <radek.rada@gmail.com>
+:copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+:license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
@@ -22,6 +18,11 @@ __outputter__ = {
 }
 
 log = logging.getLogger(__name__)
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'set_': 'set'
+}
 
 
 def __virtual__():
@@ -151,7 +152,7 @@ def auto(name):
     return out['stdout']
 
 
-def set(name, path):
+def set_(name, path):
     '''
     Manually set the alternative <path> for <name>.
 
@@ -167,4 +168,3 @@ def set(name, path):
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
-

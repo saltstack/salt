@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Compendium of generic DNS utilities
 '''
@@ -89,8 +90,8 @@ def hosts_remove(hostsfile='/etc/hosts', entries=None):
 
     .. code-block:: bash
 
-        salt '*' dnsutil.hosts_delete /etc/hosts ad1.yuk.co
-        salt '*' dnsutil.hosts_delete /etc/hosts ad2.yuk.co,ad1.yuk.co
+        salt '*' dnsutil.hosts_remove /etc/hosts ad1.yuk.co
+        salt '*' dnsutil.hosts_remove /etc/hosts ad2.yuk.co,ad1.yuk.co
     '''
     with salt.utils.fopen(hostsfile, 'r') as fp_:
         hosts = fp_.read()

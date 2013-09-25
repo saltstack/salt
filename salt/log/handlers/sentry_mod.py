@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     Sentry Logging Handler
     ======================
+
+    .. versionadded:: 0.17.0
 
     Configuring the python `Sentry`_ client, `Raven`_, should be done under the
     ``sentry_handler`` configuration key.
     At the bare minimum, you need to define the `DSN`_. As an example:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         sentry_handler:
           dsn: https://pub-key:secret-key@app.getsentry.com/app-id
@@ -15,7 +22,8 @@
 
     More complex configurations can be achieved, for example:
 
-    .. code-block: yaml
+    .. code-block:: yaml
+
         sentry_handler:
           servers:
             - https://sentry.example.com
@@ -24,6 +32,7 @@
           public_key: deadbeefdeadbeefdeadbeefdeadbeef
           secret_key: beefdeadbeefdeadbeefdeadbeefdead
 
+
     All the client configuration keys are supported, please see the
     `Raven client documentation`_.
 
@@ -31,7 +40,7 @@
     to define a different one, define ``log_level`` under the
     ``sentry_handler`` configuration key:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
       sentry_handler:
         dsn: https://pub-key:secret-key@app.getsentry.com/app-id
@@ -43,25 +52,20 @@
     information.
 
 
-    Threaded Raven Transports
-    -------------------------
+    Threaded Transports
+    -------------------
 
     Raven's documents rightly suggest using its threaded transport for
-    critical applications. However, Salt handles this possible performance
-    issue for us by dispatching log records on a dedicated thread. It's up
-    to the user to use the threaded transports or not but it's not *required*
-    for salt.
+    critical applications. However, don't forget that if you start having
+    troubles with Salt after enabling the threaded transport, please try
+    switching to a non-threaded transport to see if that fixes your problem.
+
 
 
     .. _`DSN`: http://raven.readthedocs.org/en/latest/config/index.html#the-sentry-dsn
     .. _`Sentry`: http://getsentry.com
     .. _`Raven`: http://raven.readthedocs.org
     .. _`Raven client documentation`: http://raven.readthedocs.org/en/latest/config/index.html#client-arguments
-
-
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs

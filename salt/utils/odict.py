@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     salt.utils.odict
     ~~~~~~~~~~~~~~~~
 
@@ -9,10 +14,6 @@
     provides an ``OrderedDict`` implementation based on::
 
         http://code.activestate.com/recipes/576669/
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 try:

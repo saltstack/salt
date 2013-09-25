@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Interaction with the Supervisor daemon.
 =======================================
@@ -15,6 +16,9 @@ Interaction with the Supervisor daemon.
 
 # Import python libs
 import logging
+
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +42,7 @@ def _is_stopped_state(state):
 def running(name,
             restart=False,
             update=False,
+            user=None,
             runas=None,
             conf_file=None,
             bin_env=None):
@@ -46,22 +51,58 @@ def running(name,
 
     name
         Service name as defined in the supervisor configuration file
+
     restart
         Whether to force a restart
+
     update
         Whether to update the supervisor configuration.
+
     runas
         Name of the user to run the supervisorctl command
+
+        .. deprecated:: 0.17.0
+
+    user
+        Name of the user to run the supervisorctl command
+
+        .. versionadded:: 0.17.0
+
     conf_file
         path to supervisorctl config file
+
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
+
     all_processes = __salt__['supervisord.status'](
-        user=runas,
+        user=user,
         conf_file=conf_file,
         bin_env=bin_env
     )
@@ -81,13 +122,13 @@ def running(name,
     if needs_update:
         comment = 'Adding service: {0}'.format(name)
         __salt__['supervisord.reread'](
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
         result = __salt__['supervisord.add'](
             name,
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
@@ -99,7 +140,7 @@ def running(name,
     elif update:
         comment = 'Updating supervisor'
         result = __salt__['supervisord.update'](
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
@@ -116,7 +157,7 @@ def running(name,
             log.debug(comment)
             result = __salt__['supervisord.restart'](
                 name,
-                user=runas,
+                user=user,
                 conf_file=conf_file,
                 bin_env=bin_env
             )
@@ -149,6 +190,7 @@ def running(name,
 
 
 def dead(name,
+         user=None,
          runas=None,
          conf_file=None,
          bin_env=None):
@@ -157,15 +199,49 @@ def dead(name,
 
     name
         Service name as defined in the supervisor configuration file
+
     runas
         Name of the user to run the supervisorctl command
+
+        .. deprecated:: 0.17.0
+
+    user
+        Name of the user to run the supervisorctl command
+
+        .. versionadded:: 0.17.0
+
     conf_file
         path to supervisorctl config file
+
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor installed
 
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
 
     if __opts__['test']:
         ret['result'] = None
@@ -176,7 +252,7 @@ def dead(name,
         log.debug(comment)
         current_status = __salt__['supervisord.status'](
             name=name,
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
@@ -185,7 +261,7 @@ def dead(name,
         else:
             result = {name: __salt__['supervisord.stop'](
                 name,
-                user=runas,
+                user=user,
                 conf_file=conf_file,
                 bin_env=bin_env
             )}
@@ -195,10 +271,19 @@ def dead(name,
 
 
 def mod_watch(name,
-              restart=False,
+              restart=True,
               update=False,
+              user=None,
               runas=None,
               conf_file=None,
               bin_env=None):
     # Always restart on watch
-    return running(name, True, update, runas, conf_file, bin_env)
+    return running(
+        name,
+        restart=restart,
+        update=update,
+        user=user,
+        runas=runas,
+        conf_file=conf_file,
+        bin_env=bin_env
+    )

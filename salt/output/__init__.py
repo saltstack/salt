@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Used to manage the outputter system. This package is the modular system used
 for managing outputters.
