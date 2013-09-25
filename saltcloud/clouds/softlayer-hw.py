@@ -482,7 +482,7 @@ def create(vm_):
 
     ip_address = saltcloud.utils.wait_for_fun(wait_for_ip)
 
-    if not saltcloud.utils.wait_for_ssh(ip_address):
+    if not saltcloud.utils.wait_for_port(ip_address):
         raise SaltCloudSystemExit(
             'Failed to authenticate against remote ssh'
         )

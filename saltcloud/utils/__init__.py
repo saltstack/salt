@@ -285,13 +285,16 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             )
 
 
-def wait_for_ssh(host, port=22, timeout=900):
+def wait_for_port(host, port=22, timeout=900):
     '''
-    Wait until an ssh connection can be made on a specified host
+    Wait until a connection to the specified port can be made on a specified
+    host. This is usually port 22 (for SSH), but in the case of Windows
+    installations, it might be port 139 (for winexe). It may also be an
+    alternate port for SSH, depending on the base image.
     '''
     start = time.time()
     log.debug(
-        'Attempting SSH connection to host {0} on port {1}'.format(
+        'Attempting connection to host {0} on port {1}'.format(
             host, port
         )
     )
@@ -308,14 +311,14 @@ def wait_for_ssh(host, port=22, timeout=900):
             sock.close()
             return True
         except socket.error as exc:
-            log.debug('Caught exception in wait_for_ssh: {0}'.format(exc))
+            log.debug('Caught exception in wait_for_port: {0}'.format(exc))
             time.sleep(1)
             if time.time() - start > timeout:
-                log.error('SSH connection timed out: {0}'.format(timeout))
+                log.error('Port connection timed out: {0}'.format(timeout))
                 return False
 
             log.debug(
-                'Retrying SSH connection to host {0} on port {1} '
+                'Retrying connection to host {0} on port {1} '
                 '(try {2})'.format(
                     host, port, trycount
                 )
@@ -401,7 +404,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
         )
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
-    if wait_for_ssh(host=host, port=port, timeout=timeout):
+    if wait_for_port(host=host, port=port, timeout=timeout):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
