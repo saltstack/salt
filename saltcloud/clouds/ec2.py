@@ -1209,7 +1209,7 @@ def create(vm_=None, call=None):
             'make_minion', vm_, __opts__, default=True
         )
 
-        win_installer = config.get_config_value('make_master', vm_, __opts__)
+        win_installer = config.get_config_value('win_installer', vm_, __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
 
