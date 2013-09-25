@@ -414,7 +414,7 @@ def create(vm_):
         ip_address = data.public_ips[0]
 
     username = 'ec2-user'
-    if saltcloud.utils.wait_for_ssh(ip_address):
+    if saltcloud.utils.wait_for_port(ip_address):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(host=ip_address,
                                                username=user,
