@@ -412,7 +412,7 @@ def list_(profile=None):
     To maintain the feel of the nova command line, this function simply calls
     the server_list function.
     '''
-    return server_list(profile=None)
+    return server_list(profile=profile)
 
 
 def server_list(profile=None):
@@ -441,7 +441,7 @@ def show(server_id, profile=None):
     To maintain the feel of the nova command line, this function simply calls
     the server_show function.
     '''
-    return server_show(server_id)
+    return server_show(server_id, profile)
 
 
 def server_show(server_id, profile=None):
