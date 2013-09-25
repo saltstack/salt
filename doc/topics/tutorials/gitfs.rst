@@ -45,6 +45,13 @@ Now the gitfs system needs to be configured with a remote:
     gitfs_remotes:
       - git://github.com/saltstack/salt-states.git
 
+.. note::
+
+    The salt-states repo is not currently updated with the latest versions
+    of the available states. Please review
+    https://github.com/saltstack-formulas for the latest versions.
+
+
 These changes require a restart of the master, then the git repo will be cached
 on the master and new requests for the ``salt://`` protocol will send files
 found in the remote git repository via the master.
