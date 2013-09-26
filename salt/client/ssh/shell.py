@@ -48,7 +48,7 @@ class Shell(object):
 
     def get_error(self, errstr):
         '''
-        Parse out an error and return a targeted error string
+        Parse out an error and return a targetted error string
         '''
         for line in errstr.split('\n'):
             if line.startswith('ssh:'):
@@ -193,8 +193,6 @@ class Shell(object):
         '''
         r_out = ''
         r_err = ''
-        if self.sudo:
-            cmd = 'sudo {0}'.format(cmd)
         cmd = self._cmd_str(cmd)
         for out, err in self._run_nb_cmd(cmd):
             if out is not None:
@@ -208,8 +206,6 @@ class Shell(object):
         '''
         Execute a remote command
         '''
-        if self.sudo:
-            cmd = 'sudo {0}'.format(cmd)
         cmd = self._cmd_str(cmd)
         ret = self._run_cmd(cmd)
         return ret
@@ -219,7 +215,5 @@ class Shell(object):
         scp a file or files to a remote system
         '''
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
-        if self.sudo:
-            cmd = 'sudo {0}'.format(cmd)
         cmd = self._cmd_str(cmd, ssh='scp')
         return self._run_cmd(cmd)
