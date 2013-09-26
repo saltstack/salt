@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The thin runner is used to manage the salt thin systems.
 
