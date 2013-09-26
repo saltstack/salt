@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 # The pam components have been modified to be salty and have been taken from
 # the pam module under this licence:
 # (c) 2007 Chris AtLee <chris@atlee.ca>
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license.php
 '''
-PAM module for python
+Authenticate against PAM
 
 Provides an authenticate function that will allow the caller to authenticate
 a user against the Pluggable Authentication Modules (PAM) on the system.
@@ -26,7 +27,7 @@ CALLOC.argtypes = [c_uint, c_uint]
 
 STRDUP = LIBC.strdup
 STRDUP.argstypes = [c_char_p]
-STRDUP.restype = POINTER(c_char) # NOT c_char_p !!!!
+STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
 
 # Various constants
 PAM_PROMPT_ECHO_OFF = 1

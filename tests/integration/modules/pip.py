@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    tests.integration.modules.pip
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
+
+    tests.integration.modules.pip
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
@@ -31,7 +31,7 @@ class PipModuleTest(integration.ModuleCase):
         if not ret:
             self.skipTest('virtualenv not installed')
 
-        self.venv_test_dir = tempfile.mkdtemp()
+        self.venv_test_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         for key in os.environ.copy():
             if key.startswith('PIP_'):
@@ -63,7 +63,7 @@ class PipModuleTest(integration.ModuleCase):
             )
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_issue_4805_nested_requirements_runas_no_chown(self):
+    def test_issue_4805_nested_requirements_user_no_chown(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -75,8 +75,10 @@ class PipModuleTest(integration.ModuleCase):
             f.write('pep8')
 
         this_user = pwd.getpwuid(os.getuid())[0]
-        ret = self.run_function('pip.install', requirements=req1_filename,
-                                runas=this_user, no_chown=True)
+        ret = self.run_function(
+            'pip.install', requirements=req1_filename, user=this_user,
+            no_chown=True, bin_env=self.venv_dir
+        )
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])

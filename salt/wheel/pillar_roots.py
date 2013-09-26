@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The `pillar_roots` wheel module is used to manage files under the pillar roots
 directories on the master server.

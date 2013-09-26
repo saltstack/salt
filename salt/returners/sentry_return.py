@@ -1,8 +1,7 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 '''
-Salt returner that report error back to sentry
+Salt returner that report execution results back to sentry. The returner will
+inspect the payload to identify errors and flag them as such.
 
 Pillar need something like::
 
@@ -13,8 +12,16 @@ Pillar need something like::
       public_key: deadbeefdeadbeefdeadbeefdeadbeef
       secret_key: beefdeadbeefdeadbeefdeadbeefdead
       project: 1
+      tags:
+        - os
+        - master
+        - saltversion
+        - cpuarch
 
 and http://pypi.python.org/pypi/raven installed
+
+The tags list (optional) specifies grains items that will be used as sentry tags, allowing tagging of events
+in the sentry ui.
 '''
 
 import logging
@@ -36,16 +43,30 @@ def __virtual__():
 
 def returner(ret):
     '''
-    If an error occurs, log it to sentry
+    Log outcome to sentry. The returner tries to identify errors and report them as such. All other
+    messages will be reported at info level.
     '''
-    def connect_sentry(result):
+    def connect_sentry(message, result):
         pillar_data = __salt__['pillar.raw']()
+        grains = __salt__['grains.items']()
         sentry_data = {
             'result': result,
-            'returned': ret,
             'pillar': pillar_data,
-            'grains': __salt__['grains.items']()
+            'grains': grains
         }
+        data = {
+            'platform': 'python',
+            'culprit': ret['fun'],
+            'level': 'error'
+        }
+        tags = {}
+        if 'tags' in pillar_data['raven']:
+            for tag in pillar_data['raven']['tags']:
+                tags[tag] = grains[tag]
+
+        if ret['return']:
+            data['level'] = 'info'
+
         servers = []
         try:
             for server in pillar_data['raven']['servers']:
@@ -61,24 +82,12 @@ def returner(ret):
                          missing_key)
         else:
             try:
-                client.captureMessage(ret['comment'], extra=sentry_data)
+                client.capture('raven.events.Message', message=message, data=data, extra=sentry_data, tags=tags)
             except Exception as err:
                 logger.error("Can't send message to sentry: %s", err,
                              exc_info=True)
 
-    requisite_error = 'One or more requisite failed'
     try:
-        if 'success' not in ret:
-            logger.debug('no success data, report')
-            connect_sentry(ret['return'])
-        else:
-            if not ret['success']:
-                logger.debug('not a success, report')
-                connect_sentry(ret['return'])
-            else:
-                for state in ret['return']:
-                    if not ret['return'][state]['result'] and \
-                       ret['return'][state]['comment'] != requisite_error:
-                        connect_sentry(state)
+        connect_sentry(ret['fun'], ret)
     except Exception as err:
         logger.error("Can't run connect_sentry: %s", err, exc_info=True)

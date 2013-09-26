@@ -1,23 +1,23 @@
+# -*- coding: utf-8 -*-
 '''
 Virtual machine image management tools
 '''
 
 # Import python libs
-import os
-import urlparse
-import shutil
-import yaml
+import logging
 
-# Import salt libs
-import salt.crypt
-import salt.utils
+
+# Set up logging
+log = logging.getLogger(__name__)
 
 
 def mount_image(location):
     '''
     Mount the named image and return the mount point
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' img.mount_image /tmp/foo
     '''
@@ -25,8 +25,11 @@ def mount_image(location):
         return __salt__['guestfs.mount'](location)
     elif 'qemu_nbd.init' in __salt__:
         mnt = __salt__['qemu_nbd.init'](location)
-        __context__['img.mnt_{0}'.format(location)] = mnt
-        return mnt.keys()[0]
+        if not mnt:
+            return ''
+        first = mnt.keys()[0]
+        __context__['img.mnt_{0}'.format(first)] = mnt
+        return first
     return ''
 
 #compatibility for api change
@@ -37,7 +40,9 @@ def umount_image(mnt):
     '''
     Unmount an image mountpoint
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' img.umount_image /mnt/foo
     '''
@@ -46,59 +51,6 @@ def umount_image(mnt):
             __salt__['qemu_nbd.clear'](__context__['img.mnt_{0}'.format(mnt)])
             return
     __salt__['mount.umount'](mnt)
-
-
-def seed(location, id_='', config=None):
-    '''
-    Make sure that the image at the given location is mounted, salt is
-    installed, keys are seeded, and execute a state run
-
-    CLI Example::
-
-        salt '*' img.seed /tmp/image.qcow2
-    '''
-    if config is None:
-        config = {}
-    mpt = mount_image(location)
-    if not mpt:
-        return False
-    mpt_tmp = os.path.join(mpt, 'tmp')
-    __salt__['mount.mount'](
-            os.path.join(mpt, 'dev'),
-            'udev',
-            fstype='devtmpfs')
-    __salt__['mount.mount'](
-            os.path.join(mpt, 'proc'),
-            'proc',
-            fstype='proc')
-    # Verify that the boostrap script is downloaded
-    bs_ = __salt__['config.gather_bootstrap_script']()
-    # Apply the minion config
-    # Generate the minion's key
-    salt.crypt.gen_keys(mpt_tmp, 'minion', 2048)
-    # TODO Send the key to the master for approval
-    # Execute chroot routine
-    sh_ = '/bin/sh'
-    if os.path.isfile(os.path.join(mpt, 'bin/bash')):
-        sh_ = '/bin/bash'
-    # Copy script into tmp
-    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
-    if not 'master' in config:
-        config['master'] = __opts__['master']
-    if id_:
-        config['id'] = id_
-    with salt.utils.fopen(os.path.join(mpt_tmp, 'minion'), 'w+') as fp_:
-        fp_.write(yaml.dump(config, default_flow_style=False))
-    # Generate the chroot command
-    c_cmd = 'sh /tmp/bootstrap.sh -c /tmp'
-    cmd = 'chroot {0} {1} -c \'{2}\''.format(
-            mpt,
-            sh_,
-            c_cmd)
-    __salt__['cmd.run'](cmd)
-    __salt__['mount.umount'](os.path.join(mpt, 'proc'))
-    __salt__['mount.umount'](os.path.join(mpt, 'dev'))
-    umount_image(mpt)
 
 
 #def get_image(name):
@@ -128,7 +80,10 @@ def bootstrap(location, size, fmt):
     fmt:
         The image format, raw or qcow2
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
+
         salt '*' qemu_nbd.bootstrap /srv/salt-images/host.qcow 4096 qcow2
     '''
     location = __salt__['img.make_image'](location, size, fmt)

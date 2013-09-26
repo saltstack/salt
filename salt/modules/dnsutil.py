@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Compendium of generic DNS utilities
 '''
@@ -24,7 +25,9 @@ def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     '''
     Parse /etc/hosts file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' dnsutil.parse_hosts
     '''
@@ -53,7 +56,9 @@ def hosts_append(hostsfile='/etc/hosts', ip_addr=None, entries=None):
     '''
     Append a single line to the /etc/hosts file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' dnsutil.hosts_append /etc/hosts 127.0.0.1 ad1.yuk.co,ad2.yuk.co
     '''
@@ -74,16 +79,19 @@ def hosts_append(hostsfile='/etc/hosts', ip_addr=None, entries=None):
     return 'The following line was added to {0}:{1}'.format(hostsfile,
                                                             append_line)
 
+
 def hosts_remove(hostsfile='/etc/hosts', entries=None):
     '''
     Remove a host from the /etc/hosts file. If doing so will leave a line
     containing only an IP address, then the line will be deleted. This function
     will leave comments and blank lines intact.
 
-    CLI Examples::
+    CLI Examples:
 
-        salt '*' dnsutil.hosts_delete /etc/hosts ad1.yuk.co
-        salt '*' dnsutil.hosts_delete /etc/hosts ad2.yuk.co,ad1.yuk.co
+    .. code-block:: bash
+
+        salt '*' dnsutil.hosts_remove /etc/hosts ad1.yuk.co
+        salt '*' dnsutil.hosts_remove /etc/hosts ad2.yuk.co,ad1.yuk.co
     '''
     with salt.utils.fopen(hostsfile, 'r') as fp_:
         hosts = fp_.read()
@@ -109,7 +117,9 @@ def parse_zone(zonefile=None, zone=None):
     '''
     Parses a zone file. Can be passed raw zone data on the API level.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dnsutil.parse_zone /var/lib/named/example.com.zone
     '''
@@ -206,14 +216,16 @@ def _has_dig():
     because they are also DNS utilities, a compatibility layer exists. This
     function helps add that layer.
     '''
-    return salt.utils.which('dig') != None
+    return salt.utils.which('dig') is not None
 
 
 def check_ip(ip_addr):
     '''
     Check that string ip_addr is a valid IP
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.check_ip 127.0.0.1
     '''
@@ -229,7 +241,9 @@ def A(host, nameserver=None):
 
     Always returns a list.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.A www.google.com
     '''
@@ -248,11 +262,13 @@ def A(host, nameserver=None):
 
 def NS(domain, resolve=True, nameserver=None):
     '''
-    Return a list of IPs of the nameservers for 'domain'
+    Return a list of IPs of the nameservers for ``domain``
 
     If 'resolve' is False, don't resolve names.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.NS google.com
 
@@ -265,13 +281,15 @@ def NS(domain, resolve=True, nameserver=None):
 
 def SPF(domain, record='SPF', nameserver=None):
     '''
-    Return the allowed IPv4 ranges in the SPF record for 'domain'.
+    Return the allowed IPv4 ranges in the SPF record for ``domain``.
 
-    If record is 'SPF' and the SPF record is empty, the TXT record will be
+    If record is ``SPF`` and the SPF record is empty, the TXT record will be
     searched automatically. If you know the domain uses TXT and not SPF,
     specifying that will save a lookup.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.SPF google.com
     '''
@@ -283,10 +301,7 @@ def SPF(domain, record='SPF', nameserver=None):
 
 def MX(domain, resolve=False, nameserver=None):
     '''
-    Return a list of lists for the MX of 'domain'. Example:
-
-    >>> dig.MX('saltstack.org')
-    [ [10, 'mx01.1and1.com.'], [10, 'mx00.1and1.com.'] ]
+    Return a list of lists for the MX of ``domain``.
 
     If the 'resolve' argument is True, resolve IPs for the servers.
 
@@ -295,7 +310,9 @@ def MX(domain, resolve=False, nameserver=None):
     the data be similar to the non-resolved version. If you think an MX has
     multiple IPs, don't use the resolver here, resolve them in a separate step.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.MX google.com
     '''

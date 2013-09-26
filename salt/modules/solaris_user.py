@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage users with the useradd command
 '''
@@ -12,6 +13,7 @@ import logging
 from copy import deepcopy
 
 # Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -60,19 +62,27 @@ def add(name,
         home=None,
         shell=None,
         unique=True,
-        system=False,
         fullname='',
         roomnumber='',
         workphone='',
         homephone='',
-        createhome=True):
+        createhome=True,
+        **kwargs):
     '''
     Add a user to the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
+    if salt.utils.is_true(kwargs.pop('system', False)):
+        log.warning('solaris_user module does not support the \'system\' '
+                    'argument')
+    if kwargs:
+        log.warning('Invalid kwargs passed to user.add')
+
     if isinstance(groups, string_types):
         groups = groups.split(',')
     cmd = 'useradd '
@@ -124,10 +134,15 @@ def delete(name, remove=False, force=False):
     '''
     Remove a user from the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.delete name remove=True force=True
     '''
+    if salt.utils.is_true(force):
+        log.error('userdel does not support force-deleting user while '
+                  'user is logged in')
     cmd = 'userdel '
     if remove:
         cmd += '-r '
@@ -142,7 +157,9 @@ def getent():
     '''
     Return the list of all info for all users
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.getent
     '''
@@ -160,7 +177,9 @@ def chuid(name, uid):
     '''
     Change the uid for a named user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chuid foo 4376
     '''
@@ -179,7 +198,9 @@ def chgid(name, gid):
     '''
     Change the default group of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chgid foo 4376
     '''
@@ -198,7 +219,9 @@ def chshell(name, shell):
     '''
     Change the default shell of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chshell foo /bin/zsh
     '''
@@ -218,7 +241,9 @@ def chhome(name, home, persist=False):
     Change the home directory of the user, pass true for persist to copy files
     to the new home dir
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chhome foo /home/users/foo True
     '''
@@ -241,7 +266,9 @@ def chgroups(name, groups, append=False):
     Change the groups this user belongs to, add append to append the specified
     groups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chgroups foo wheel,root True
     '''
@@ -260,7 +287,9 @@ def chfullname(name, fullname):
     '''
     Change the user's Full Name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chfullname foo "Foo Bar"
     '''
@@ -284,7 +313,9 @@ def chroomnumber(name, roomnumber):
     '''
     Change the user's Room Number
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chroomnumber foo 123
     '''
@@ -308,7 +339,9 @@ def chworkphone(name, workphone):
     '''
     Change the user's Work Phone
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chworkphone foo "7735550123"
     '''
@@ -332,7 +365,9 @@ def chhomephone(name, homephone):
     '''
     Change the user's Home Phone
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chhomephone foo "7735551234"
     '''
@@ -356,7 +391,9 @@ def info(name):
     '''
     Return user information
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.info root
     '''
@@ -388,7 +425,9 @@ def list_groups(name):
     '''
     Return a list of groups the named user belongs to
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.list_groups foo
     '''

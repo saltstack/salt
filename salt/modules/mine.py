@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 '''
-The function cache system allows for data to be stored on the master so it
-can be easily read by other minions
+The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
 
 # Import python libs
+import copy
 import logging
 
 # Import salt libs
@@ -12,6 +13,7 @@ import salt.payload
 
 
 log = logging.getLogger(__name__)
+
 
 def _auth():
     '''
@@ -38,7 +40,9 @@ def update(clear=False):
     The function cache will be populated with information from executing these
     functions
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mine.update
     '''
@@ -46,11 +50,8 @@ def update(clear=False):
     data = {}
     for func in m_data:
         if func not in __salt__:
-            log.error(
-                    'Function {0} in mine_functions not available'.format(
-                        func
-                        )
-                    )
+            log.error('Function {0} in mine_functions not available'
+                      .format(func))
             continue
         try:
             if m_data[func] and isinstance(m_data[func], dict):
@@ -60,18 +61,15 @@ def update(clear=False):
             else:
                 data[func] = __salt__[func]()
         except Exception:
-            log.error(
-                    'Function {0} in mine_functions failed to execute'.format(
-                        func
-                        )
-                    )
+            log.error('Function {0} in mine_functions failed to execute'
+                      .format(func))
             continue
     load = {
             'cmd': '_mine',
             'data': data,
             'id': __opts__['id'],
             'clear': clear,
-            }
+    }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
     try:
@@ -85,7 +83,9 @@ def send(func, *args, **kwargs):
     '''
     Send a specific function to the mine.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mine.send network.interfaces eth0
     '''
@@ -93,14 +93,13 @@ def send(func, *args, **kwargs):
         return False
     data = {}
     arg_data = salt.utils.arg_lookup(__salt__[func])
-    func_data = {}
-    for ind in range(len(arg_data.get('args', []))):
+    func_data = copy.deepcopy(kwargs)
+    for ind, _ in enumerate(arg_data.get('args', [])):
         try:
-            func_data[arg_data[ind]] = args[ind]
+            func_data[arg_data['args'][ind]] = args[ind]
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    func_data.update(kwargs)
     f_call = salt.utils.format_call(__salt__[func], func_data)
     try:
         if 'kwargs' in f_call:
@@ -108,17 +107,14 @@ def send(func, *args, **kwargs):
         else:
             data[func] = __salt__[func](*f_call['args'])
     except Exception as exc:
-        log.error(
-                'Function {0} in mine.send failed to execute'.format(
-                    func
-                    )
-                )
+        log.error('Function {0} in mine.send failed to execute: {1}'
+                  .format(func, exc))
         return False
     load = {
             'cmd': '_mine',
             'data': data,
             'id': __opts__['id'],
-            }
+    }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
     try:
@@ -133,7 +129,7 @@ def get(tgt, fun, expr_form='glob'):
     Get data from the mine based on the target, function and expr_form
 
     Targets can be matched based on any standard matching system that can be
-    matched on the master via these keywords:
+    matched on the master via these keywords::
 
         glob
         pcre
@@ -141,7 +137,9 @@ def get(tgt, fun, expr_form='glob'):
         grain_pcre
         pillar
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
@@ -153,7 +151,48 @@ def get(tgt, fun, expr_form='glob'):
             'tgt': tgt,
             'fun': fun,
             'expr_form': expr_form,
-            }
+    }
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    ret = sreq.send('aes', auth.crypticle.dumps(load))
+    return auth.crypticle.loads(ret)
+
+
+def delete(fun):
+    '''
+    Remove specific function contents of minion. Returns True on success.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mine.delete 'network.interfaces'
+    '''
+    auth = _auth()
+    load = {
+            'cmd': '_mine_delete',
+            'id': __opts__['id'],
+            'fun': fun
+    }
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    ret = sreq.send('aes', auth.crypticle.dumps(load))
+    return auth.crypticle.loads(ret)
+
+
+def flush():
+    '''
+    Remove all mine contents of minion. Returns True on success.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mine.flush
+    '''
+    auth = _auth()
+    load = {
+            'cmd': '_mine_flush',
+            'id': __opts__['id'],
+    }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     ret = sreq.send('aes', auth.crypticle.dumps(load))
     return auth.crypticle.loads(ret)

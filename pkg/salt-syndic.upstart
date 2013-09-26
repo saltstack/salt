@@ -5,4 +5,9 @@ start on (net-device-up
           and runlevel [2345])
 stop on runlevel [!2345]
 
-exec salt-syndic
+script
+  # Read configuration variable file if it is present
+  [ -f /etc/default/$UPSTART_JOB ] && . /etc/default/$UPSTART_JOB
+
+  exec salt-syndic
+end script

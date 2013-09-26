@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Package support for OpenBSD
 '''
@@ -33,7 +34,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
@@ -72,10 +75,14 @@ def latest_version(*names, **kwargs):
     '''
     The available version of the package in the repository
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
     '''
+    kwargs.pop('refresh', True)
+
     pkgs = list_pkgs()
     ret = {}
     # Initialize the dict with empty strings
@@ -111,7 +118,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -128,15 +137,21 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example, Install one package::
+    CLI Example, Install one package:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package name>
 
-    CLI Example, Install more than one package::
+    CLI Example, Install more than one package:
+
+    .. code-block:: bash
 
         salt '*' pkg.install pkgs='["<package name>", "<package name>"]'
 
-    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, HTTP, FTP, local filesystem)::
+    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, HTTP, FTP, local filesystem):
+
+    .. code-block:: bash
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
     '''
@@ -175,7 +190,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -215,36 +232,12 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
     return remove(name=name, pkgs=pkgs)
-
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4' '0.2.4.1'
-        salt '*' pkg.perform_cmp pkg1='0.2.4' pkg2='0.2.4.1'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4' '<' '0.2.4.1'
-        salt '*' pkg.compare pkg1='0.2.4' oper='<' pkg2='0.2.4.1'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)

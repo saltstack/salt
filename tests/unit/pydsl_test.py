@@ -1,5 +1,6 @@
 # Import Python libs
 import os
+import sys
 import shutil
 import tempfile
 from cStringIO import StringIO
@@ -11,6 +12,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
 # Import Salt libs
+import integration
 import salt.loader
 import salt.config
 from salt.state import HighState
@@ -18,7 +20,7 @@ from salt.utils.pydsl import PyDslError
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.minion_config(None, check_dns=False)
+OPTS = salt.config.minion_config(None)
 OPTS['id'] = 'whatever'
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])
@@ -231,7 +233,13 @@ state('B').file.managed(source='/a/b/c')
         self.assertEqual(result['B']['file'][1]['require'][0]['cmd'], 'C')
 
     def test_pipe_through_stateconf(self):
-        dirpath = tempfile.mkdtemp()
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         output = os.path.join(dirpath, 'output')
         try:
             write_to(os.path.join(dirpath, 'xxx.sls'),
@@ -284,7 +292,13 @@ state('.C').cmd.run('echo C >> {2}', cwd='/')
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_rendering_includes(self):
-        dirpath = tempfile.mkdtemp()
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         output = os.path.join(dirpath, 'output')
         try:
             write_to(os.path.join(dirpath, 'aaa.sls'),
@@ -371,8 +385,15 @@ hello blue 3
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_compile_time_state_execution(self):
-        dirpath = tempfile.mkdtemp()
-        output = os.path.join(dirpath, 'output')
+        if not sys.stdin.isatty():
+            self.skipTest('Not attached to a TTY')
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         try:
             write_to(os.path.join(dirpath, 'aaa.sls'),
 '''#!pydsl
@@ -399,7 +420,13 @@ A()
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_nested_high_state_execution(self):
-        dirpath = tempfile.mkdtemp()
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
         output = os.path.join(dirpath, 'output')
         try:
             write_to(os.path.join(dirpath, 'aaa.sls'),

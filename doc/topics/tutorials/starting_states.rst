@@ -8,17 +8,16 @@ Many of the most powerful and useful engineering solutions are founded on
 simple principles. The Salt SLS system strives to do just that. K.I.S.S. 
 (Keep It Stupidly Simple)
 
-The core of the Salt State system is the SLS, or the SaLt State file. The SLS
-is a representation of the state in which a system should be in, and is set up
-to contain this data in a simple format. This is often called configuration 
-management.
+The core of the Salt State system is the SLS, or **S**\ a\ **L**\ t
+**S**\ tate file. The SLS is a representation of the state in which
+a system should be in, and is set up to contain this data in a simple format.
+This is often called configuration management.
 
 .. note::
 
     This is just the beginning of using states, make sure to read up on pillar
-    next:
+    :doc:`Pillar </topics/tutorials/pillar>` next.
 
-        :doc:`Pillar Walkthrough </topics/tutorials/pillar>`
 
 It is All Just Data
 ===================
@@ -28,19 +27,16 @@ file is just a data structure under the hood. While understanding that the SLS
 is just a data structure isn't critical for understanding and making use of 
 Salt States, it should help bolster knowledge of where the real power is.
 
-SLS files are therefore, in reality, just `dictionaries`_, `lists`_,
-`strings`_, and `numbers`_. By using this approach Salt can be much more
-flexible. As one writes more state files, it becomes clearer exactly what is
-being written. The result is a system that is easy to understand, yet grows
-with the needs of the admin or developer.
+SLS files are therefore, in reality, just :ref:`dictionaries
+<python2:typesmapping>`, :ref:`lists <python2:typesseq>`, :ref:`strings
+<python2:typesseq>`, and :ref:`numbers <python2:typesnumeric>`.
+By using this approach Salt can be much more flexible. As one writes more state
+files, it becomes clearer exactly what is being written. The result is a system
+that is easy to understand, yet grows with the needs of the admin or developer.
 
 In the section titled "State Data Structures" a reference exists, explaining
 in depth how the data is laid out.
 
-.. _`dictionaries`: http://docs.python.org/glossary.html#term-dictionary
-.. _`lists`: http://docs.python.org/glossary.html#term-list
-.. _`strings`: http://docs.python.org/library/stdtypes.html#typesseq
-.. _`numbers`: http://docs.python.org/library/stdtypes.html#numeric-types-int-float-long-complex
 
 Default Data - YAML
 ===================
@@ -64,7 +60,6 @@ A typical SLS file will often look like this in YAML:
     is later in the tutorial.
 
 .. code-block:: yaml
-   :linenos:
 
     apache:
       pkg:
@@ -96,6 +91,7 @@ a successful installation of the apache package.
 
 .. _`YAML`: http://yaml.org/spec/1.1/
 
+
 Adding Configs and Users
 ========================
 
@@ -104,7 +100,6 @@ need to be added. The Apache configuration file will most likely be managed,
 and a user and group may need to be set up.
 
 .. code-block:: yaml
-   :linenos:
 
     apache:
       pkg:
@@ -153,6 +148,7 @@ uid modified, then the service state's watcher will be run. The service
 state's watcher just restarts the service, so in this case, a change in the
 config file will also trigger a restart of the respective service.
 
+
 Moving Beyond a Single SLS
 ==========================
 
@@ -166,7 +162,7 @@ The SLS files are laid out in a directory structure on the Salt master; an
 SLS is just a file and files to download are just files.
 
 The Apache example would be laid out in the root of the Salt file server like
-this: ::
+this::
 
     apache/init.sls
     apache/httpd.conf
@@ -180,7 +176,6 @@ the toolkit. Consider this SSH example:
 ``ssh/init.sls:``
 
 .. code-block:: yaml
-   :linenos:
 
     openssh-client:
       pkg.installed
@@ -197,7 +192,6 @@ the toolkit. Consider this SSH example:
 ``ssh/server.sls:``
 
 .. code-block:: yaml
-   :linenos:
 
     include:
       - ssh
@@ -242,7 +236,7 @@ the toolkit. Consider this SSH example:
     produce an identical result; the first way -- using `file.managed` --
     is merely a shortcut.
 
-Now our State Tree looks like this: ::
+Now our State Tree looks like this::
 
     apache/init.sls
     apache/httpd.conf
@@ -264,6 +258,7 @@ Note that some of the SLS files are called init.sls, while others are not. More
 info on what this means can be found in the :ref:`States Tutorial
 <sls-file-namespace>`.
 
+
 Extending Included SLS Data
 ===========================
 
@@ -277,7 +272,6 @@ add more watchers to apache to include mod_python.
 ``ssh/custom-server.sls:``
 
 .. code-block:: yaml
-   :linenos:
 
     include:
       - ssh.server
@@ -290,7 +284,6 @@ add more watchers to apache to include mod_python.
 ``python/mod_python.sls:``
 
 .. code-block:: yaml
-   :linenos:
 
     include:
       - apache
@@ -312,6 +305,7 @@ In the new mod_python SLS the mod_python package is added, but more importantly
 the apache service was extended to also watch the mod_python package.
 
 .. include:: /_incl/extend_with_require_watch.rst
+
 
 Understanding the Render System
 ===============================
@@ -339,6 +333,16 @@ provides a flexible, domain-specific language for authoring SLS data in Python.
 .. _`Mako`: http://www.makotemplates.org/
 .. _`Wempy`: http://www.wempy.org/
 
+.. note::
+    The templating engines described above aren't just available in SLS files.
+    They can also be used in :mod:`file.managed <salt.states.file.managed>`
+    states, making file management much more dynamic and flexible. Some
+    examples for using templates in managed files can be found in the
+    documentation for the :doc:`file states
+    </ref/states/all/salt.states.file>`, as well as the :ref:`MooseFS
+    example<jinja-example-moosefs>` below.
+
+
 Getting to Know the Default - yaml_jinja
 ----------------------------------------
 
@@ -355,7 +359,6 @@ for the Grains to be accessed from within the template. A few examples:
 ``apache/init.sls:``
 
 .. code-block:: yaml
-   :linenos:
 
     apache:
       pkg.installed:
@@ -392,13 +395,14 @@ for the Grains to be accessed from within the template. A few examples:
 This example is simple. If the ``os`` grain states that the operating system is
 Red Hat, then the name of the Apache package and service needs to be httpd.
 
+.. _jinja-example-moosefs:
+
 A more aggressive way to use Jinja can be found here, in a module to set up
 a MooseFS distributed filesystem chunkserver:
 
 ``moosefs/chunk.sls:``
 
 .. code-block:: yaml
-   :linenos:
 
     include:
       - moosefs
@@ -417,7 +421,7 @@ a MooseFS distributed filesystem chunkserver:
           - group: mfs
     {% endfor %}
 
-    '/etc/mfshdd.cfg':
+    /etc/mfshdd.cfg:
       file.managed:
         - source: salt://moosefs/mfshdd.cfg
         - user: root
@@ -427,7 +431,7 @@ a MooseFS distributed filesystem chunkserver:
         - require:
           - pkg: mfs-chunkserver
 
-    '/etc/mfschunkserver.cfg':
+    /etc/mfschunkserver.cfg:
       file.managed:
         - source: salt://moosefs/mfschunkserver.cfg
         - user: root
@@ -457,6 +461,7 @@ Multiple for loops are used to dynamically detect available hard drives
 and set them up to be mounted, and the ``salt`` object is used multiple
 times to call shell commands to gather data.
 
+
 Introducing the Python and the PyDSL Renderers
 ----------------------------------------------
 
@@ -470,7 +475,6 @@ This example shows a very basic Python SLS file:
 ``python/django.sls:``
 
 .. code-block:: python
-   :linenos:
 
     #!py
 
@@ -493,7 +497,6 @@ renderer, the above example can be written more succinctly as:
 ``python/django.sls:``
 
 .. code-block:: python
-   :linenos:
 
     #!pydsl
 
@@ -504,7 +507,6 @@ renderer, the above example can be written more succinctly as:
 This Python examples would look like this if they were written in YAML:
 
 .. code-block:: yaml
-   :linenos:
 
     include:
       - python
@@ -522,7 +524,7 @@ Running and debugging salt states.
 Once the rules in an SLS are ready, they should be tested to ensure they
 work properly. To invoke these rules, simply execute 
 ``salt '*' state.highstate`` on the command line. If you get back only 
-hostnames with a `':'` after, but no return, chances are there is a problem with 
+hostnames with a ``:`` after, but no return, chances are there is a problem with 
 one or more of the sls files. On the minion, use the ``salt-call`` command: 
 ``salt-call state.highstate -l debug`` to examine the output for errors. 
 This should help troubleshoot the issue. The minions can also be started in 

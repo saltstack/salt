@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of PostgreSQL databases.
 =============================================
@@ -10,6 +11,9 @@ Databases can be set as either absent or present
     frank:
       postgres_database.present
 '''
+
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -26,7 +30,8 @@ def present(name,
             lc_ctype=None,
             owner=None,
             template=None,
-            runas=None):
+            runas=None,
+            user=None):
     '''
     Ensure that the named database is present with the specified properties.
     For more information about all of these options see man createdb(1)
@@ -54,13 +59,44 @@ def present(name,
 
     runas
         System user all operations should be performed on behalf of
+
+        .. deprecated:: 0.17.0
+
+    user
+        System user all operations should be performed on behalf of
+
+        .. versionadded:: 0.17.0
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(name)}
 
-    dbs = __salt__['postgres.db_list'](runas=runas)
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
+
+    dbs = __salt__['postgres.db_list'](runas=user)
     db_params = dbs.get(name, {})
 
     if name in dbs and all((
@@ -91,14 +127,14 @@ def present(name,
                              'need to be changed'.format(name)
         return ret
     if name not in dbs and __salt__['postgres.db_create'](
-       name,
-       tablespace=tablespace,
-       encoding=encoding,
-       lc_collate=lc_collate,
-       lc_ctype=lc_ctype,
-       owner=owner,
-       template=template,
-       runas=runas):
+                                                    name,
+                                                    tablespace=tablespace,
+                                                    encoding=encoding,
+                                                    lc_collate=lc_collate,
+                                                    lc_ctype=lc_ctype,
+                                                    owner=owner,
+                                                    template=template,
+                                                    runas=user):
         ret['comment'] = 'The database {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     elif name in dbs and __salt__['postgres.db_alter'](name,
@@ -118,7 +154,7 @@ def present(name,
     return ret
 
 
-def absent(name, runas=None):
+def absent(name, runas=None, user=None):
     '''
     Ensure that the named database is absent
 
@@ -127,19 +163,49 @@ def absent(name, runas=None):
 
     runas
         System user all operations should be performed on behalf of
+
+        .. deprecated:: 0.17.0
+
+    user
+        System user all operations should be performed on behalf of
+
+        .. versionadded:: 0.17.0
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
 
     #check if db exists and remove it
-    if __salt__['postgres.db_exists'](name, runas=runas):
+    if __salt__['postgres.db_exists'](name, runas=user):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Database {0} is set to be removed'.format(name)
             return ret
-        if __salt__['postgres.db_remove'](name, runas=runas):
+        if __salt__['postgres.db_remove'](name, runas=user):
             ret['comment'] = 'Database {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret

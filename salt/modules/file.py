@@ -1,26 +1,35 @@
+# -*- coding: utf-8 -*-
 '''
-Manage information about files on the minion, set/read user, group, and mode
-data
+Manage information about regular files, directories,
+and special files on the minion, set/read user,
+group, mode, and data
 '''
 
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
+from __future__ import print_function
+
 # Import python libs
 import contextlib  # For < 2.7 compat
-import os
-import re
-import time
-import shutil
-import stat
-import tempfile
-import sys
+import datetime
+import difflib
+import errno
+import fileinput
+import fnmatch
 import getpass
 import hashlib
-import difflib
-import fnmatch
-import errno
+import itertools
 import logging
+import operator
+import os
+import re
+import shutil
+import stat
+import sys
+import tempfile
+import time
+
 try:
     import grp
     import pwd
@@ -52,8 +61,12 @@ def __clean_tmp(sfn):
     Clean out a template temp file
     '''
     if sfn.startswith(tempfile.gettempdir()):
+        # Don't remove if it exists in file_roots (any env)
+        all_roots = itertools.chain.from_iterable(
+                __opts__['file_roots'].itervalues())
+        in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
-        if os.path.exists(sfn):
+        if os.path.exists(sfn) and not in_roots:
             os.remove(sfn)
 
 
@@ -85,11 +98,21 @@ def _binary_replace(old, new):
     return ''
 
 
+def _get_bkroot():
+    '''
+    Get the location of the backup dir in the minion cache
+    '''
+    # Get the cachedir from the minion config
+    return os.path.join(__salt__['config.get']('cachedir'), 'file_backup')
+
+
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.gid_to_group 0
     '''
@@ -113,7 +136,9 @@ def group_to_gid(group):
     '''
     Convert the group to the gid on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.group_to_gid root
     '''
@@ -125,28 +150,43 @@ def group_to_gid(group):
         return ''
 
 
-def get_gid(path):
+def get_gid(path, follow_symlinks=True):
     '''
     Return the id of the group that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_gid /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
     if not os.path.exists(path):
+        try:
+            # Broken symlinks will return false, but still have a uid and gid
+            return os.lstat(path).st_gid
+        except OSError:
+            pass
         return -1
-    return os.stat(path).st_gid
+    return os.stat(path).st_gid if follow_symlinks else os.lstat(path).st_gid
 
 
-def get_group(path):
+def get_group(path, follow_symlinks=True):
     '''
     Return the group that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_group /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
-    gid = get_gid(path)
+    gid = get_gid(path, follow_symlinks)
     if gid == -1:
         return False
     return gid_to_group(gid)
@@ -156,7 +196,9 @@ def uid_to_user(uid):
     '''
     Convert a uid to a user name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.uid_to_user 0
     '''
@@ -170,7 +212,9 @@ def user_to_uid(user):
     '''
     Convert user name to a uid
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.user_to_uid root
     '''
@@ -182,28 +226,43 @@ def user_to_uid(user):
         return ''
 
 
-def get_uid(path):
+def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_uid /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
     if not os.path.exists(path):
-        return False
-    return os.stat(path).st_uid
+        try:
+            # Broken symlinks will return false, but still have a uid and gid
+            return os.lstat(path).st_uid
+        except OSError:
+            pass
+        return -1
+    return os.stat(path).st_uid if follow_symlinks else os.lstat(path).st_uid
 
 
-def get_user(path):
+def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_user /etc/passwd
+
+    .. versionchanged:: 0.16.4
+        ``follow_symlinks`` option added
     '''
-    uid = get_uid(path)
+    uid = get_uid(path, follow_symlinks)
     if uid == -1:
         return False
     return uid_to_user(uid)
@@ -213,7 +272,9 @@ def get_mode(path):
     '''
     Return the mode of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_mode /etc/passwd
     '''
@@ -229,7 +290,9 @@ def set_mode(path, mode):
     '''
     Set the mode of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.set_mode /etc/passwd 0644
     '''
@@ -249,7 +312,9 @@ def chown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.chown /etc/passwd root root
     '''
@@ -267,6 +332,11 @@ def chown(path, user, group):
         else:
             gid = -1
     if not os.path.exists(path):
+        try:
+            # Broken symlinks will return false, but still need to be chowned
+            return os.lchown(path, uid, gid)
+        except OSError:
+            pass
         err += 'File not found'
     if err:
         return err
@@ -277,7 +347,9 @@ def chgrp(path, group):
     '''
     Change the group of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.chgrp /etc/passwd root
     '''
@@ -290,7 +362,9 @@ def get_sum(path, form='md5'):
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
     sha384, sha512 are supported
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_sum /etc/passwd sha512
     '''
@@ -319,7 +393,9 @@ def get_hash(path, form='md5', chunk_size=4096):
             ``get_sum`` cannot really be trusted since it is vulnerable to
             collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_hash /etc/shadow
     '''
@@ -339,7 +415,9 @@ def check_hash(path, hash):
         A string in the form <hash_type>=<hash_value>. For example:
         ``md5=e138491e9d5b97023cea823fe17bac22``
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.check_hash /etc/fstab md5=<md5sum>
     '''
@@ -352,7 +430,7 @@ def check_hash(path, hash):
 
 def find(path, **kwargs):
     '''
-    Approximate the Unix find(1) command and return a list of paths that
+    Approximate the Unix ``find(1)`` command and return a list of paths that
     meet the specified criteria.
 
     The options include match criteria::
@@ -435,7 +513,9 @@ def find(path, **kwargs):
         type:  file type
         user:  user name
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' file.find / type=f name=\\*.bak size=+10m
         salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
@@ -463,9 +543,19 @@ def _sed_esc(string, escape_all=False):
     return string
 
 
-def sed(path, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g', escape_all=False):
+def sed(path,
+        before,
+        after,
+        limit='',
+        backup='.bak',
+        options='-r -e',
+        flags='g',
+        escape_all=False,
+        negate_match=False):
     '''
+    .. deprecated:: 0.17
+       Use :py:func:`~salt.modules.file.replace` instead.
+
     Make a simple edit to a file
 
     Equivalent to::
@@ -489,15 +579,19 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     flags : ``g``
         Flags to modify the sed search; e.g., ``i`` for case-insensitve pattern
         matching
+    negate_match : False
+        Negate the search command (``!``)
+
+        .. versionadded:: 0.17
 
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
@@ -512,7 +606,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
         options = options.replace('-r', '-E')
 
     cmd = (
-        r'''sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}'''
+        r'''sed {backup}{options} '{limit}{negate_match}s/{before}/{after}/{flags}' {path}'''
         .format(
             backup='-i{0} '.format(backup) if backup else '-i ',
             options=options,
@@ -520,21 +614,30 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
             before=before,
             after=after,
             flags=flags,
-            path=path
+            path=path,
+            negate_match='!' if negate_match else '',
         )
     )
 
     return __salt__['cmd.run_all'](cmd)
 
 
-def sed_contains(path, text, limit='', flags='g'):
+def sed_contains(path,
+                 text,
+                 limit='',
+                 flags='g'):
     '''
+    .. deprecated:: 0.17
+       Use :func:`search` instead.
+
     Return True if the file at ``path`` contains ``text``. Utilizes sed to
     perform the search (line-wise search).
 
     Note: the ``p`` flag will be added to any flags you pass in.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
     '''
@@ -561,9 +664,18 @@ def sed_contains(path, text, limit='', flags='g'):
     return bool(result)
 
 
-def psed(path, before, after, limit='', backup='.bak', flags='gMS',
-         escape_all=False, multi=False):
+def psed(path,
+         before,
+         after,
+         limit='',
+         backup='.bak',
+         flags='gMS',
+         escape_all=False,
+         multi=False):
     '''
+    .. deprecated:: 0.17
+       Use :py:func:`~salt.modules.file.replace` instead.
+
     Make a simple edit to a file (pure Python version)
 
     Equivalent to::
@@ -583,25 +695,27 @@ def psed(path, before, after, limit='', backup='.bak', flags='gMS',
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
     flags : ``gMS``
-        Flags to modify the search. Valid values are :
-            ``g``: Replace all occurrences of the pattern, not just the first.
-            ``I``: Ignore case.
-            ``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S`` dependent on the locale.
-            ``M``: Treat multiple lines as a single line.
-            ``S``: Make `.` match all characters, including newlines.
-            ``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``, ``\\s`` and ``\\S`` dependent on Unicode.
-            ``X``: Verbose (whitespace is ignored).
+        Flags to modify the search. Valid values are:
+          - ``g``: Replace all occurrences of the pattern, not just the first.
+          - ``I``: Ignore case.
+          - ``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S``
+            dependent on the locale.
+          - ``M``: Treat multiple lines as a single line.
+          - ``S``: Make `.` match all characters, including newlines.
+          - ``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``,
+            ``\\s`` and ``\\S`` dependent on Unicode.
+          - ``X``: Verbose (whitespace is ignored).
     multi: ``False``
         If True, treat the entire file as a single line
 
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
@@ -637,7 +751,11 @@ RE_FLAG_TABLE = {'I': re.I,
                  'X': re.X}
 
 
-def _psed(text, before, after, limit, flags):
+def _psed(text,
+          before,
+          after,
+          limit,
+          flags):
     '''
     Does the actual work for file.psed, so that single lines can be passed in
     '''
@@ -662,8 +780,14 @@ def _psed(text, before, after, limit, flags):
     return text
 
 
-def uncomment(path, regex, char='#', backup='.bak'):
+def uncomment(path,
+              regex,
+              char='#',
+              backup='.bak'):
     '''
+    .. deprecated:: 0.17
+       Use :py:func:`~salt.modules.file.replace` instead.
+
     Uncomment specified commented lines in a file
 
     path
@@ -680,11 +804,11 @@ def uncomment(path, regex, char='#', backup='.bak'):
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.uncomment()
 
@@ -695,8 +819,14 @@ def uncomment(path, regex, char='#', backup='.bak'):
                backup=backup)
 
 
-def comment(path, regex, char='#', backup='.bak'):
+def comment(path,
+            regex,
+            char='#',
+            backup='.bak'):
     '''
+    .. deprecated:: 0.17
+       Use :py:func:`~salt.modules.file.replace` instead.
+
     Comment out specified lines in a file
 
     path
@@ -718,11 +848,11 @@ def comment(path, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.comment /etc/modules pcspkr
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.comment()
 
@@ -737,8 +867,163 @@ def comment(path, regex, char='#', backup='.bak'):
                backup=backup)
 
 
+def _get_flags(flags):
+    '''
+    Return an integer appropriate for use as a flag for the re module from a
+    list of human-readable strings
+
+    >>> _get_flags(['MULTILINE', 'IGNORECASE'])
+    10
+    '''
+    if isinstance(flags, list):
+        _flags_acc = []
+        for flag in flags:
+            _flag = getattr(re, flag.upper())
+
+            if not isinstance(_flag, int):
+                raise SaltInvocationError("Invalid re flag given: %s", flag)
+
+            _flags_acc.append(_flag)
+
+        return reduce(operator.__or__, _flags_acc)
+
+    return flags
+
+
+def replace(path,
+        pattern,
+        repl,
+        count=0,
+        flags=0,
+        bufsize=1,
+        backup='.bak',
+        dry_run=False,
+        search_only=False,
+        show_changes=True,
+        ):
+    '''
+    Replace occurances of a pattern in a file
+
+    .. versionadded:: 0.17
+
+    This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
+
+    :param path: Filesystem path to the file to be edited
+    :param pattern: The PCRE search
+    :param repl: The replacement text
+    :param count: Maximum number of pattern occurrences to be replaced
+    :param flags: A list of flags defined in :ref:`contents-of-module-re`. Each
+        list item should be a string that will correlate to the human-friendly
+        flag name. E.g., ``['IGNORECASE', 'MULTILINE']``. Note: multiline
+        searches must specify ``file`` as the ``bufsize`` argument below.
+    :type flags: list or int
+    :param bufsize: How much of the file to buffer into memory at once. The
+        default value ``1`` processes one line at a time. The special value
+        ``file`` may be specified which will read the entire file into memory
+        before processing. Note: multiline searches must specify ``file``
+        buffering.
+    :type bufsize: int or str
+    :param backup: The file extension to use for a backup of the file before
+        editing. Set to ``False`` to skip making a backup.
+    :param dry_run: Don't make any edits to the file
+    :param search_only: Just search for the pattern; ignore the replacement;
+        stop on the first match
+    :param show_changes: Output a unified diff of the old file and the new
+        file. If ``False`` return a boolean if any changes were made.
+        Note: using this option will store two copies of the file in-memory
+        (the original version and the edited version) in order to generate the
+        diff.
+
+    :rtype: bool or str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.replace /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
+        salt '*' file.replace /some/file 'before' 'after' flags='[MULTILINE, IGNORECASE]'
+    '''
+    if not os.path.exists(path):
+        raise SaltInvocationError("File not found: %s", path)
+
+    if not salt.utils.istextfile(path):
+        raise SaltInvocationError(
+            "Cannot perform string replacements on a binary file: %s", path)
+
+    flags_num = _get_flags(flags)
+    cpattern = re.compile(pattern, flags_num)
+    if bufsize == 'file':
+        bufsize = os.path.getsize(path)
+
+    # Search the file; track if any changes have been made for the return val
+    has_changes = False
+    orig_file = []  # used if show_changes
+    new_file = []  # used if show_changes
+    for line in fileinput.input(path,
+            inplace=not dry_run, backup=False if dry_run else backup,
+            bufsize=bufsize, mode='rb'):
+
+        if search_only:
+            # Just search; bail as early as a match is found
+            result = re.search(cpattern, line)
+
+            if result:
+                return True
+        else:
+            result = re.sub(cpattern, repl, line, count)
+
+            # Identity check each potential change until one change is made
+            if has_changes is False and not result is line:
+                has_changes = True
+
+            if show_changes:
+                orig_file.append(line)
+                new_file.append(result)
+
+            if not dry_run:
+                print(result, end='', file=sys.stdout)
+
+    if show_changes:
+        return ''.join(difflib.unified_diff(orig_file, new_file))
+
+    return has_changes
+
+
+def search(path,
+        pattern,
+        flags=0,
+        bufsize=1,
+        ):
+    '''
+    Search for occurances of a pattern in a file
+
+    .. versionadded:: 0.17
+
+    Params are identical to :py:func:`~salt.modules.file.replace`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.search /etc/crontab 'mymaintenance.sh'
+    '''
+    # This function wraps file.replace on purpose in order to enforce
+    # consistent usage, compatible regex's, expected behavior, *and* bugs. :)
+    # Any enhancements or fixes to one should affect the other.
+    return replace(path,
+            pattern,
+            '',
+            flags=flags,
+            bufsize=bufsize,
+            dry_run=True,
+            search_only=True,
+            show_changes=False)
+
+
 def patch(originalfile, patchfile, options='', dry_run=False):
     '''
+    .. versionadded:: 0.10.4
+
     Apply a patch to a file
 
     Equivalent to::
@@ -752,11 +1037,11 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     options
         Options to pass to patch.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
-
-    .. versionadded:: 0.10.4
     '''
     if dry_run:
         if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
@@ -772,18 +1057,21 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
 def contains(path, text):
     '''
-    Return True if the file at ``path`` contains ``text``
+    .. deprecated:: 0.17
+       Use :func:`search` instead.
 
-    CLI Example::
+    Return ``True`` if the file at ``path`` contains ``text``
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
-
-    .. versionadded:: 0.9.5
     '''
     if not os.path.exists(path):
         return False
 
-    stripped_text = text.strip()
+    stripped_text = str(text).strip()
     try:
         with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
@@ -796,13 +1084,18 @@ def contains(path, text):
 
 def contains_regex(path, regex, lchar=''):
     '''
+    .. deprecated:: 0.17
+       Use :func:`search` instead.
+
     Return True if the given regular expression matches on any line in the text
     of a given file.
 
     If the lchar argument (leading char) is specified, it
     will strip `lchar` from the left side of each line before trying to match
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains_regex /etc/crontab
     '''
@@ -823,13 +1116,18 @@ def contains_regex(path, regex, lchar=''):
 
 def contains_regex_multiline(path, regex):
     '''
+    .. deprecated:: 0.17
+       Use :func:`search` instead.
+
     Return True if the given regular expression matches anything in the text
     of a given file
 
     Traverses multiple lines at a time, via the salt BufferedReader (reads in
     chunks)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains_regex_multiline /etc/crontab '^maint'
     '''
@@ -848,9 +1146,14 @@ def contains_regex_multiline(path, regex):
 
 def contains_glob(path, glob):
     '''
+    .. deprecated:: 0.17
+       Use :func:`search` instead.
+
     Return True if the given glob matches a string in the named file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.contains_glob /etc/foobar '*cheese*'
     '''
@@ -869,15 +1172,17 @@ def contains_glob(path, glob):
 
 def append(path, *args):
     '''
+    .. versionadded:: 0.9.5
+
     Append text to the end of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.append /etc/motd \\
-                "With all thine offerings thou shalt offer salt."\\
+                "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
-
-    .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.append()
 
@@ -890,20 +1195,21 @@ def append(path, *args):
 
 def touch(name, atime=None, mtime=None):
     '''
-    Just like 'nix's "touch" command, create a file if it
-    doesn't exist or simply update the atime and mtime if
-    it already does.
+    .. versionadded:: 0.9.5
+
+    Just like the ``touch`` command, create a file if it doesn't exist or
+    simply update the atime and mtime if it already does.
 
     atime:
         Access time in Unix epoch time
     mtime:
         Last modification in Unix epoch time
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.touch /var/log/emptyfile
-
-    .. versionadded:: 0.9.5
     '''
     if atime and atime.isdigit():
         atime = int(atime)
@@ -935,7 +1241,9 @@ def symlink(src, link):
     '''
     Create a symbolic link to a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.symlink /path/to/file /path/to/link
     '''
@@ -954,7 +1262,9 @@ def rename(src, dst):
     '''
     Rename a file or directory
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.rename /path/to/src /path/to/dst
     '''
@@ -965,7 +1275,30 @@ def rename(src, dst):
         os.rename(src, dst)
         return True
     except OSError:
-        raise CommandExecutionError('Could not rename "{0}" to "{1}"'.format(src, dst))
+        raise CommandExecutionError('Could not rename "{0}" to "{1}"'
+                                    .format(src, dst))
+    return False
+
+
+def copy(src, dst):
+    '''
+    Copy a file or directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.copy /path/to/src /path/to/dst
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        shutil.copyfile(src, dst)
+        return True
+    except OSError:
+        raise CommandExecutionError('Could not copy "{0}" to "{1}"'
+                                    .format(src, dst))
     return False
 
 
@@ -973,7 +1306,9 @@ def stats(path, hash_type='md5', follow_symlink=False):
     '''
     Return a dict containing the stats for a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.stats /etc/passwd
     '''
@@ -1018,7 +1353,9 @@ def remove(path):
     '''
     Remove the named file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.remove /tmp/foo
     '''
@@ -1041,7 +1378,9 @@ def directory_exists(path):
     '''
     Tests to see if path is a valid directory.  Returns True/False.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.directory_exists /etc
 
@@ -1053,7 +1392,9 @@ def file_exists(path):
     '''
     Tests to see if path is a valid file.  Returns True/False.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.file_exists /etc/passwd
 
@@ -1065,7 +1406,9 @@ def restorecon(path, recursive=False):
     '''
     Reset the SELinux context on a given path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
          salt '*' file.restorecon /home/user/.ssh/authorized_keys
     '''
@@ -1080,7 +1423,9 @@ def get_selinux_context(path):
     '''
     Get an SELinux context from a given path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_selinux_context /etc/hosts
     '''
@@ -1088,11 +1433,17 @@ def get_selinux_context(path):
     return out.split(' ')[4]
 
 
-def set_selinux_context(path, user=None, role=None, type=None, range=None):
+def set_selinux_context(path,
+                        user=None,
+                        role=None,
+                        type=None,
+                        range=None):
     '''
     Set a specific SELinux label on a given path
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.set_selinux_context path <role> <type> <range>
     '''
@@ -1121,7 +1472,9 @@ def source_list(source, source_hash, env):
     '''
     Check the source list and return the source to use
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.source_list salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' base
     '''
@@ -1185,7 +1538,9 @@ def get_managed(
     '''
     Return the managed file data for file.managed
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base None None
     '''
@@ -1277,20 +1632,17 @@ def get_managed(
     return sfn, source_sum, ''
 
 
-def check_perms(name, ret, user, group, mode):
+def check_perms(name,
+                ret,
+                user,
+                group,
+                mode):
     '''
     Check the permissions on files and chown if needed
 
-    Note: 'mode' here is expected to be either a string or an integer,
-          in which case it will be converted into a base-10 string.
+    CLI Example:
 
-          What this means is that in your YAML salt file, you can specify
-          mode as an integer(eg, 644) or as a string(eg, '644'). But, to
-          specify mode 0777, for example, it must be specified as the string,
-          '0777' otherwise, 0777 will be parsed as an octal and you'd get 511
-          instead.
-
-    CLI Example::
+    .. code-block:: bash
 
         salt '*' file.check_perms /etc/sudoers '{}' root root 400
     '''
@@ -1390,7 +1742,9 @@ def check_managed(
     '''
     Check to see what changes need to be made for a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.check_managed /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
     '''
@@ -1423,7 +1777,8 @@ def check_managed(
     if changes:
         log.info(changes)
         comments = ['The following values are set to be changed:\n']
-        comments.extend('{0}: {1}\n'.format(key, val) for key, val in changes.iteritems())
+        comments.extend('{0}: {1}\n'.format(key, val)
+                        for key, val in changes.iteritems())
         return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
@@ -1442,7 +1797,9 @@ def check_file_meta(
     '''
     Check for the changes in the file metadata.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
     '''
@@ -1516,7 +1873,9 @@ def get_diff(
     '''
     Return unified diff of file compared to file on master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
     '''
@@ -1563,7 +1922,9 @@ def manage_file(name,
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
     '''
@@ -1775,34 +2136,38 @@ def manage_file(name,
         return ret
 
 
-def mkdir(dir_path, user=None, group=None, mode=None):
+def mkdir(dir_path,
+          user=None,
+          group=None,
+          mode=None):
     '''
     Ensure that a directory is available.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.mkdir /opt/jetty/context
     '''
     directory = os.path.normpath(dir_path)
 
     if not os.path.isdir(directory):
-        # turn on the executable bits for user, group and others.
-        # Note: the special bits are set to 0.
-        if mode:
-            mode = int(str(mode)[-3:], 8) | 0111
-
+        # If a caller such as managed() is invoked  with makedirs=True, make
+        # sure that any created dirs are created with the same user and group
+        # to follow the principal of least surprise method.
         makedirs_perms(directory, user, group, mode)
-        # If a caller such as managed() is invoked  with
-        # makedirs=True, make sure that any created dirs
-        # are created with the same user  and  group  to
-        # follow the principal of least surprise method.
 
 
-def makedirs(path, user=None, group=None, mode=None):
+def makedirs(path,
+             user=None,
+             group=None,
+             mode=None):
     '''
     Ensure that the directory containing this path is available.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.makedirs /opt/code
     '''
@@ -1834,12 +2199,17 @@ def makedirs(path, user=None, group=None, mode=None):
         mkdir(directory_to_create, user=user, group=group, mode=mode)
 
 
-def makedirs_perms(name, user=None, group=None, mode='0755'):
+def makedirs_perms(name,
+                   user=None,
+                   group=None,
+                   mode='0755'):
     '''
     Taken and modified from os.makedirs to set user, group and mode for each
     directory created.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.makedirs_perms /opt/code
     '''
@@ -1862,3 +2232,438 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
                 user,
                 group,
                 int('{0}'.format(mode)) if mode else None)
+
+
+def get_devmm(name):
+    '''
+    Get major/minor info from a device
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.get_devmm /dev/chr
+    '''
+    if is_chrdev(name) or is_blkdev(name):
+        stat_structure = os.stat(name)
+        return (
+                os.major(stat_structure.st_rdev),
+                os.minor(stat_structure.st_rdev))
+    else:
+        return (0, 0)
+
+
+def is_chrdev(name):
+    '''
+    Check if a file exists and is a character device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_chrdev /dev/chr
+    '''
+    stat_structure = None
+    try:
+        stat_structure = os.stat(name)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            #If the character device does not exist in the first place
+            return False
+        else:
+            raise
+    return stat.S_ISCHR(stat_structure.st_mode)
+
+
+def mknod_chrdev(name,
+                 major,
+                 minor,
+                 user=None,
+                 group=None,
+                 mode='0660'):
+    '''
+    Create a character device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.mknod_chrdev /dev/chr 180 31
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+    log.debug("Creating character device name:{0} major:{1} minor:{2} mode:{3}".format(name,
+                                                                                       major,
+                                                                                       minor,
+                                                                                       mode))
+    try:
+        if __opts__['test']:
+            ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
+            ret['result'] = None
+        else:
+            if os.mknod(name,
+                        int(str(mode).lstrip('0'), 8) | stat.S_IFCHR,
+                        os.makedev(major, minor)) is None:
+                ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
+                ret['result'] = True
+    except OSError as exc:
+        # be happy it is already there....however, if you are trying to change the
+        # major/minor, you will need to unlink it first as os.mknod will not overwrite
+        if exc.errno != errno.EEXIST:
+            raise
+        else:
+            ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
+    #quick pass at verifying the permissions of the newly created character device
+    check_perms(name,
+                None,
+                user,
+                group,
+                int('{0}'.format(mode)) if mode else None)
+    return ret
+
+
+def is_blkdev(name):
+    '''
+    Check if a file exists and is a block device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_blkdev /dev/blk
+    '''
+    stat_structure = None
+    try:
+        stat_structure = os.stat(name)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            #If the block device does not exist in the first place
+            return False
+        else:
+            raise
+    return stat.S_ISBLK(stat_structure.st_mode)
+
+
+def mknod_blkdev(name,
+                 major,
+                 minor,
+                 user=None,
+                 group=None,
+                 mode='0660'):
+    '''
+    Create a block device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.mknod_blkdev /dev/blk 8 999
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+    log.debug("Creating block device name:{0} major:{1} minor:{2} mode:{3}".format(name,
+                                                                                   major,
+                                                                                   minor,
+                                                                                   mode))
+    try:
+        if __opts__['test']:
+            ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
+            ret['result'] = None
+        else:
+            if os.mknod(name,
+                        int(str(mode).lstrip('0'), 8) | stat.S_IFBLK,
+                        os.makedev(major, minor)) is None:
+                ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
+                ret['result'] = True
+    except OSError as exc:
+        # be happy it is already there....however, if you are trying to change the
+        # major/minor, you will need to unlink it first as os.mknod will not overwrite
+        if exc.errno != errno.EEXIST:
+            raise
+        else:
+            ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
+    #quick pass at verifying the permissions of the newly created block device
+    check_perms(name,
+                None,
+                user,
+                group,
+                int('{0}'.format(mode)) if mode else None)
+    return ret
+
+
+def is_fifo(name):
+    '''
+    Check if a file exists and is a FIFO.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_fifo /dev/fifo
+    '''
+    stat_structure = None
+    try:
+        stat_structure = os.stat(name)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            #If the fifo does not exist in the first place
+            return False
+        else:
+            raise
+    return stat.S_ISFIFO(stat_structure.st_mode)
+
+
+def mknod_fifo(name,
+               user=None,
+               group=None,
+               mode='0660'):
+    '''
+    Create a FIFO pipe.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.mknod_fifo /dev/fifo
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+    log.debug("Creating FIFO name:{0}".format(name))
+    try:
+        if __opts__['test']:
+            ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
+            ret['result'] = None
+        else:
+            if os.mkfifo(name, int(str(mode).lstrip('0'), 8)) is None:
+                ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
+                ret['result'] = True
+    except OSError as exc:
+        #be happy it is already there
+        if exc.errno != errno.EEXIST:
+            raise
+        else:
+            ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
+    #quick pass at verifying the permissions of the newly created fifo
+    check_perms(name,
+                None,
+                user,
+                group,
+                int('{0}'.format(mode)) if mode else None)
+    return ret
+
+
+def mknod(name,
+          ntype,
+          major=0,
+          minor=0,
+          user=None,
+          group=None,
+          mode='0600'):
+    '''
+    Create a block device, character device, or fifo pipe.
+    Identical to the gnu mknod.
+
+    CLI Examples:
+
+   .. code-block:: bash
+
+      salt '*' file.mknod /dev/chr c 180 31
+      salt '*' file.mknod /dev/blk b 8 999
+      salt '*' file.nknod /dev/fifo p
+    '''
+    ret = False
+    makedirs(name,
+             user,
+             group)
+    if ntype == 'c':
+        ret = mknod_chrdev(name,
+                           major,
+                           minor,
+                           user,
+                           group,
+                           mode)
+    elif ntype == 'b':
+        ret = mknod_blkdev(name,
+                            major,
+                            minor,
+                            user,
+                            group,
+                            mode)
+    elif ntype == 'p':
+        ret = mknod_fifo(name,
+                          user,
+                          group,
+                          mode)
+    else:
+        raise Exception("Node type unavailable: '{0}'. Available node types are character ('c'), block ('b'), and pipe ('p').".format(ntype))
+    return ret
+
+
+def list_backups(path, limit=None):
+    '''
+    .. note::
+        This function will be available in version 0.17.0.
+
+    Lists the previous versions of a file backed up using Salt's :doc:`file
+    state backup </ref/states/backup_mode>` system.
+
+    path
+        The path on the minion to check for backups
+    limit
+        Limit the number of results to the most recent N backups
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.list_backups /foo/bar/baz.txt
+    '''
+    try:
+        limit = int(limit)
+    except TypeError:
+        pass
+    except ValueError:
+        log.error('file.list_backups: \'limit\' value must be numeric')
+        limit = None
+
+    bkroot = _get_bkroot()
+    parent_dir, basename = os.path.split(path)
+    # Figure out full path of location of backup file in minion cache
+    bkdir = os.path.join(bkroot, parent_dir[1:])
+
+    files = {}
+    for fn in [x for x in os.listdir(bkdir)
+               if os.path.isfile(os.path.join(bkdir, x))]:
+        strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
+        try:
+            timestamp = datetime.datetime.strptime(fn, strpfmt)
+        except ValueError:
+            # File didn't match the strp format string, so it's not a backup
+            # for this file. Move on to the next one.
+            continue
+        files.setdefault(timestamp, {})['Backup Time'] = \
+            timestamp.strftime('%a %b %d %Y %H:%M:%S.%f')
+        location = os.path.join(bkdir, fn)
+        files[timestamp]['Size'] = os.stat(location).st_size
+        files[timestamp]['Location'] = location
+
+    return dict(zip(
+        range(len(files)),
+        [files[x] for x in sorted(files, reverse=True)[:limit]]
+    ))
+
+list_backup = list_backups
+
+
+def restore_backup(path, backup_id):
+    '''
+    .. note::
+        This function will be available in version 0.17.0.
+
+    Restore a previous version of a file that was backed up using Salt's
+    :doc:`file state backup </ref/states/backup_mode>` system.
+
+    path
+        The path on the minion to check for backups
+    backup_id
+        The numeric id for the backup you wish to restore, as found using
+        :mod:`file.list_backups <salt.modules.file.list_backups>`
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.restore_backup /foo/bar/baz.txt 0
+    '''
+    # Note: This only supports minion backups, so this function will need to be
+    # modified if/when master backups are implemented.
+    ret = {'result': False,
+           'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
+    try:
+        if len(str(backup_id)) == len(str(int(backup_id))):
+            backup = list_backups(path)[int(backup_id)]
+        else:
+            return ret
+    except ValueError:
+        return ret
+    except KeyError:
+        ret['comment'] = 'backup_id \'{0}\' does not exist for ' \
+                         '{1}'.format(backup_id, path)
+        return ret
+
+    salt.utils.backup_minion(path, _get_bkroot())
+    try:
+        shutil.copyfile(backup['Location'], path)
+    except IOError as exc:
+        ret['comment'] = \
+            'Unable to restore {0} to {1}: ' \
+            '{2}'.format(backup['Location'], path, exc)
+        return ret
+    else:
+        ret['result'] = True
+        ret['comment'] = 'Successfully restored {0} to ' \
+                         '{1}'.format(backup['Location'], path)
+
+    # Try to set proper ownership
+    try:
+        fstat = os.stat(path)
+    except (OSError, IOError):
+        ret['comment'] += ', but was unable to set ownership'
+    else:
+        os.chown(path, fstat.st_uid, fstat.st_gid)
+
+    return ret
+
+
+def delete_backup(path, backup_id):
+    '''
+    .. note::
+        This function will be available in version 0.17.0.
+
+    Restore a previous version of a file that was backed up using Salt's
+    :doc:`file state backup </ref/states/backup_mode>` system.
+
+    path
+        The path on the minion to check for backups
+    backup_id
+        The numeric id for the backup you wish to delete, as found using
+        :mod:`file.list_backups <salt.modules.file.list_backups>`
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.restore_backup /foo/bar/baz.txt 0
+    '''
+    ret = {'result': False,
+           'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
+    try:
+        if len(str(backup_id)) == len(str(int(backup_id))):
+            backup = list_backups(path)[int(backup_id)]
+        else:
+            return ret
+    except ValueError:
+        return ret
+    except KeyError:
+        ret['comment'] = 'backup_id \'{0}\' does not exist for ' \
+                         '{1}'.format(backup_id, path)
+        return ret
+
+    try:
+        os.remove(backup['Location'])
+    except IOError as exc:
+        ret['comment'] = 'Unable to remove {0}: {1}'.format(backup['Location'],
+                                                            exc)
+    else:
+        ret['result'] = True
+        ret['comment'] = 'Successfully removed {0}'.format(backup['Location'])
+
+    return ret
+
+remove_backup = delete_backup

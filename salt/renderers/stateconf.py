@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A flexible renderer that takes a templating engine and a data format
 
@@ -385,7 +386,6 @@ def rename_state_ids(data, sls, is_extend=False):
                     args.insert(0, dict(name=sid[1:]))
             data[newsid] = data[sid]
             del data[sid]
-
 
 
 REQUIRE = set(['require', 'watch'])

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Work with virtual machines managed by libvirt
 
@@ -11,15 +12,15 @@ import os
 import re
 import shutil
 import subprocess
-from xml.dom import minidom
 
 # Import third party libs
+import yaml
 try:
     import libvirt
-    HAS_LIBVIRT = True
+    from xml.dom import minidom
+    HAS_ALL_IMPORTS = True
 except ImportError:
-    HAS_LIBVIRT = False
-import yaml
+    HAS_ALL_IMPORTS = False
 
 # Import salt libs
 import salt.utils
@@ -37,7 +38,7 @@ VIRT_STATE_NAME_MAP = {0: 'running',
 
 
 def __virtual__():
-    if not HAS_LIBVIRT:
+    if not HAS_ALL_IMPORTS:
         return False
     return 'virt'
 
@@ -49,13 +50,83 @@ def __get_conn():
     '''
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
+
+    def __esxi_uri():
+        '''
+        Connect to an ESXi host with a configuration like so:
+
+        .. code-block:: yaml
+
+            libvirt:
+              hypervisor: esxi
+              connection: esx01
+
+        The connection setting can either be an explicit libvirt URI,
+        or a libvirt URI alias as in this example. No, it cannot be
+        just a hostname.
+
+
+        Example libvirt `/etc/libvirt/libvirt.conf`:
+
+        .. code-block::
+
+            uri_aliases = [
+              "esx01=esx://10.1.1.101/?no_verify=1&auto_answer=1",
+              "esx02=esx://10.1.1.102/?no_verify=1&auto_answer=1",
+            ]
+
+        Reference:
+
+         - http://libvirt.org/drvesx.html#uriformat
+         - http://libvirt.org/uri.html#URI_config
+        '''
+        connection = __salt__['config.get']('libvirt:connection', 'esx')
+        if connection.startswith('esx://'):
+            return connection
+        return '%s' % connection
+
+    def __esxi_auth():
+        '''
+        We rely on that the credentials is provided to libvirt through
+        it's built in mechanisms.
+
+        Example libvirt `/etc/libvirt/auth.conf`:
+
+        .. code-block::
+
+            [credentials-myvirt]
+            username=user
+            password=secret
+
+            [auth-esx-10.1.1.101]
+            credentials=myvirt
+
+            [auth-esx-10.1.1.102]
+            credentials=myvirt
+
+        Reference:
+
+          - http://libvirt.org/auth.html#Auth_client_config
+        '''
+        return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
+
+    conn_func = {
+        'esxi': [libvirt.openAuth, [__esxi_uri(),
+                                    __esxi_auth(),
+                                    0]],
+        'qemu': [libvirt.open, ['qemu:///system']],
+        }
+
+    hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
+
     try:
-        conn = libvirt.open('qemu:///system')
+        conn = conn_func[hypervisor][0](*conn_func[hypervisor][1])
     except Exception:
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
-            'software'.format(
-                __grains__['fqdn']
+            'software at {1}'.format(
+                __grains__['fqdn'],
+                conn_func[hypervisor][1][0]
             )
         )
     return conn
@@ -106,23 +177,80 @@ def _get_target(target, ssh):
     proto = 'qemu'
     if ssh:
         proto += '+ssh'
-    return ' %s://%s/%s' % (proto, target, 'system')
+    return ' {0}://{1}/{2}'.format(proto, target, 'system')
 
 
-def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
+def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **kwargs_sink):
+    '''
+    Prepares the serial and console sections of the VM xml
+
+    serial_type: presently 'pty' or 'tcp'(telnet)
+
+    telnet_port: When selecting tcp, which port to listen on
+
+    console: Is this serial device the console or for some other purpose
+
+    Returns string representing the serial and console devices suitable for
+    insertion into the VM XML definition
+    '''
+
+    import jinja2
+
+    templates = {
+            'pty': '''
+                <serial type='pty'>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='pty'>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+            ''',
+
+            'tcp': '''
+                <serial type='tcp'>
+                    <source mode='bind' host='' service='{{ telnet_port }}'/>
+                    <protocol type='telnet'/>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='tcp'>
+                    <source mode='bind' host='' service='{{telnet_port}}'/>
+                    <protocol type='telnet'/>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+            '''
+    }
+
+    dict_loader = jinja2.DictLoader(templates)
+    env = jinja2.Environment(loader=dict_loader)
+    template = env.get_template(serial_type)
+    return template.render(serial_type=serial_type,
+                           telnet_port=telnet_port,
+                           console=console)
+
+
+def _gen_xml(name,
+             cpu,
+             mem,
+             vda,
+             nicp,
+             hypervisor,
+             **kwargs):
     '''
     Generate the XML string to define a libvirt vm
     '''
-    mem = mem * 1024
-    print 'emulator: {}'.format(emulator)
+    mem = mem * 1024  # MB
     data = '''
-<domain type='%%EMULATOR%%'>
+<domain type='%%HYPERVISOR%%'>
         <name>%%NAME%%</name>
         <vcpu>%%CPU%%</vcpu>
-        <memory>%%MEM%%</memory>
+        <memory unit='KiB'>%%MEM%%</memory>
         <os>
                 <type>hvm</type>
-                <boot dev='hd'/>
+                %%BOOT%%
         </os>
         <devices>
                 <disk type='file' device='disk'>
@@ -132,18 +260,36 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
                 </disk>
                 %%NICS%%
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
+                %%SERIAL%%
         </devices>
         <features>
                 <acpi/>
         </features>
 </domain>
 '''
-    data = data.replace('%%EMULATOR%%', emulator)
+    data = data.replace('%%HYPERVISOR%%', hypervisor)
     data = data.replace('%%NAME%%', name)
     data = data.replace('%%CPU%%', str(cpu))
     data = data.replace('%%MEM%%', str(mem))
     data = data.replace('%%VDA%%', vda)
     data = data.replace('%%DISKTYPE%%', _image_type(vda))
+
+    if 'serial_type' in kwargs:
+        serial_section = _prepare_serial_port_xml(**kwargs)
+    else:
+        serial_section = ''
+    data = data.replace('%%SERIAL%%', serial_section)
+
+    boot_str = ''
+    if 'boot_dev' in kwargs:
+        for dev in kwargs['boot_dev']:
+            boot_part = "<boot dev='%%DEV%%' />"
+            boot_part = boot_part.replace('%%DEV%%', dev)
+            boot_str += boot_part
+    else:
+        boot_str = '''<boot dev='hd'/>'''
+    data = data.replace('%%BOOT%%', boot_str)
+
     nic_str = ''
     for dev, args in nicp.items():
         nic_t = '''
@@ -151,8 +297,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
                     <source %%SOURCE%%/>
                     <mac address='%%MAC%%'/>
                     <model type='%%MODEL%%'/>
-                </interface>
-'''
+                </interface>\n'''
         if 'bridge' in args:
             nic_t = nic_t.replace('%%SOURCE%%', 'bridge=\'{0}\''.format(args['bridge']))
             nic_t = nic_t.replace('%%TYPE%%', 'bridge')
@@ -175,8 +320,8 @@ def _image_type(vda):
     '''
     Detect what driver needs to be used for the given image
     '''
-    out = __salt__['cmd.run']('qemu-img {0}'.format(vda))
-    if 'qcow2' in out:
+    out = __salt__['cmd.run']('qemu-img info {0}'.format(vda))
+    if 'file format: qcow2' in out:
         return 'qcow2'
     else:
         return 'raw'
@@ -185,18 +330,39 @@ def _image_type(vda):
 def _nic_profile(nic):
     '''
     Gather the nic profile from the config or apply the default
+
+    This is the ``default`` profile, which can be overridden in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+          nic:
+            default:
+              eth0:
+                bridge: br0
+                model: virtio
     '''
     default = {'eth0': {'bridge': 'br0', 'model': 'virtio'}}
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
 
 
-def init(name, cpu, mem, image, nic='default', emulator='kvm', **kwargs):
+def init(name,
+         cpu,
+         mem,
+         image,
+         nic='default',
+         hypervisor='kvm',
+         start=True,
+         **kwargs):
     '''
     Initialize a new vm
 
-    CLI Example::
+    CLI Example:
 
-        salt 'hypervisor' vm_name 4 512 salt://path/to/image.raw
+    .. code-block:: bash
+
+        salt 'hypervisor' virt.init vm_name 4 512 salt://path/to/image.raw
     '''
     img_dir = os.path.join(__salt__['config.option']('virt.images'), name)
     img_dest = os.path.join(
@@ -208,20 +374,25 @@ def init(name, cpu, mem, image, nic='default', emulator='kvm', **kwargs):
         os.makedirs(img_dir)
     nicp = _nic_profile(nic)
     salt.utils.copyfile(sfn, img_dest)
-    xml = _gen_xml(name, cpu, mem, img_dest, nicp, emulator, **kwargs)
+    xml = _gen_xml(name, cpu, mem, img_dest, nicp, hypervisor, **kwargs)
     define_xml_str(xml)
     if kwargs.get('seed'):
-        __salt__['img.seed'](img_dest, name, kwargs.get('config'))
+        install = kwargs.get('install', True)
+        __salt__['seed.apply'](img_dest, id_=name, config=kwargs.get('config'),
+                install=install)
     elif kwargs.get('seed_cmd'):
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
-    create(name)
+    if start:
+        create(name)
 
 
 def list_vms():
     '''
     Return a list of virtual machine names on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.list_vms
     '''
@@ -235,7 +406,9 @@ def list_active_vms():
     '''
     Return a list of names for active virtual machine on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.list_active_vms
     '''
@@ -250,7 +423,9 @@ def list_inactive_vms():
     '''
     Return a list of names for inactive virtual machine on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.list_inactive_vms
     '''
@@ -264,7 +439,9 @@ def list_inactive_vms():
 def vm_info(vm_=None):
     '''
     Return detailed information about the vms on this hyper in a
-    list of dicts::
+    list of dicts:
+
+    .. code-block:: python
 
         [
             'your-vm': {
@@ -280,7 +457,9 @@ def vm_info(vm_=None):
     If you pass a VM name in as an argument then it will return info
     for just the named VM, otherwise it will return all VMs.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.vm_info
     '''
@@ -311,7 +490,9 @@ def vm_state(vm_=None):
     If you pass a VM name in as an argument then it will return info
     for just the named VM, otherwise it will return all VMs.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.vm_state <vm name>
     '''
@@ -334,7 +515,9 @@ def node_info():
     '''
     Return a dict with information about this node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.node_info
     '''
@@ -355,7 +538,9 @@ def get_nics(vm_):
     '''
     Return info about the network interfaces of a named vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_nics <vm name>
     '''
@@ -397,7 +582,9 @@ def get_macs(vm_):
     '''
     Return a list off MAC addresses from the named vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_macs <vm name>
     '''
@@ -415,7 +602,9 @@ def get_graphics(vm_):
     '''
     Returns the information on vnc for a given vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_graphics <vm name>
     '''
@@ -439,7 +628,9 @@ def get_disks(vm_):
     '''
     Return the disks of a named vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_disks <vm name>
     '''
@@ -463,7 +654,7 @@ def get_disks(vm_):
             elif source.hasAttribute('dev'):
                 qemu_target = source.getAttribute('dev')
             elif source.hasAttribute('protocol') and \
-                    source.hasAttribute('name'): # For rbd network
+                    source.hasAttribute('name'):  # For rbd network
                 qemu_target = '%s:%s' % (
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
@@ -472,6 +663,10 @@ def get_disks(vm_):
                     'file': qemu_target}
     for dev in disks:
         try:
+            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
+            if hypervisor not in ['qemu', 'kvm']:
+                break
+
             output = []
             qemu_output = subprocess.Popen(['qemu-img', 'info',
                 disks[dev]['file']],
@@ -484,6 +679,17 @@ def get_disks(vm_):
                 if line.startswith('Snapshot list:'):
                     snapshots = True
                     continue
+
+                # If this is a copy-on-write image, then the backing file
+                # represents the base image
+                #
+                # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
+                elif line.startswith('backing file'):
+                    matches = re.match(r'.*\(actual path: (.*?)\)', line)
+                    if matches:
+                        output.append('backing file: {0}'.format(matches.group(1)))
+                    continue
+
                 elif snapshots:
                     if line.startswith('ID'):  # Do not parse table headers
                         line = line.replace('VM SIZE', 'VMSIZE')
@@ -519,7 +725,9 @@ def setmem(vm_, memory, config=False):
     memory is to be specified in MB
     If config is True then we ask libvirt to modify the config as well
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.setmem myvm 768
     '''
@@ -550,7 +758,9 @@ def setvcpus(vm_, vcpus, config=False):
     vcpus is an int representing the number to be assigned
     If config is True then we ask libvirt to modify the config as well
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.setvcpus myvm 2
     '''
@@ -575,7 +785,9 @@ def freemem():
     Return an int representing the amount of memory that has not been given
     to virtual machines on this node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.freemem
     '''
@@ -595,7 +807,9 @@ def freecpu():
     Return an int representing the number of unallocated cpus on this
     hypervisor
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.freecpu
     '''
@@ -612,7 +826,9 @@ def full_info():
     '''
     Return the node_info, vm_info and freemem
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.full_info
     '''
@@ -626,7 +842,9 @@ def get_xml(vm_):
     '''
     Returns the XML for a given vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_xml <vm name>
     '''
@@ -638,7 +856,9 @@ def shutdown(vm_):
     '''
     Send a soft shutdown signal to the named vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.shutdown <vm name>
     '''
@@ -650,7 +870,9 @@ def pause(vm_):
     '''
     Pause the named vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.pause <vm name>
     '''
@@ -662,7 +884,9 @@ def resume(vm_):
     '''
     Resume the named vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.resume <vm name>
     '''
@@ -674,7 +898,9 @@ def create(vm_):
     '''
     Start a defined domain
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.create <vm name>
     '''
@@ -686,18 +912,35 @@ def start(vm_):
     '''
     Alias for the obscurely named 'create' function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.start <vm name>
     '''
     return create(vm_)
 
 
+def stop(vm_):
+    '''
+    Alias for the obscurely named 'destroy' function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.stop <vm name>
+    '''
+    return destroy(vm_)
+
+
 def reboot(vm_):
     '''
     Reboot a domain via ACPI request
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.reboot <vm name>
     '''
@@ -712,7 +955,9 @@ def reset(vm_):
     '''
     Reset a VM by emulating the reset button on a physical machine
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.reset <vm name>
     '''
@@ -728,7 +973,9 @@ def ctrl_alt_del(vm_):
     '''
     Sends CTRL+ALT+DEL to a VM
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.ctrl_alt_del <vm name>
     '''
@@ -740,7 +987,9 @@ def create_xml_str(xml):
     '''
     Start a domain based on the XML passed to the function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.create_xml_str <XML in string format>
     '''
@@ -750,9 +999,11 @@ def create_xml_str(xml):
 
 def create_xml_path(path):
     '''
-    Start a defined domain
+    Start a domain based on the XML-file path passed to the function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.create_xml_path <path to XML file on the node>
     '''
@@ -765,18 +1016,71 @@ def define_xml_str(xml):
     '''
     Define a domain based on the XML passed to the function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.define_xml_str <XML in string format>
     '''
     conn = __get_conn()
     return conn.defineXML(xml) is not None
 
+
+def define_xml_path(path):
+    '''
+    Define a domain based on the XML-file path passed to the function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.define_xml_path <path to XML file on the node>
+
+    '''
+    if not os.path.isfile(path):
+        return False
+    return define_xml_str(salt.utils.fopen(path, 'r').read())
+
+
+def define_vol_xml_str(xml):
+    '''
+    Define a volume based on the XML passed to the function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.define_vol_xml_str <XML in string format>
+    '''
+    poolname = __salt__['config.get']('libvirt:storagepool', 'default')
+    conn = __get_conn()
+    pool = conn.storagePoolLookupByName(str(poolname))
+    return pool.createXML(xml, 0) is not None
+
+
+def define_vol_xml_path(path):
+    '''
+    Define a volume based on the XML-file path passed to the function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.define_vol_xml_path <path to XML file on the node>
+
+    '''
+    if not os.path.isfile(path):
+        return False
+    return define_vol_xml_str(salt.utils.fopen(path, 'r').read())
+
+
 def migrate_non_shared(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
     '''
@@ -792,7 +1096,9 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
     '''
@@ -808,7 +1114,9 @@ def migrate(vm_, target, ssh=False):
     '''
     Shared storage migration
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.migrate <vm name> <target hypervisor>
     '''
@@ -819,13 +1127,16 @@ def migrate(vm_, target, ssh=False):
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
 
+
 def seed_non_shared_migrate(disks, force=False):
     '''
     Non shared migration requires that the disks be present on the migration
     destination, pass the disks information via this function, to the
     migration destination before executing the migration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.seed_non_shared_migrate <disks>
     '''
@@ -858,7 +1169,9 @@ def set_autostart(vm_, state='on'):
     Set the autostart flag on a VM so that the VM will start with the host
     system on reboot.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt "*" virt.set_autostart <vm name> <on | off>
     '''
@@ -881,7 +1194,9 @@ def destroy(vm_):
     Hard power down the virtual machine, this is equivalent to pulling the
     power
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.destroy <vm name>
     '''
@@ -894,7 +1209,9 @@ def undefine(vm_):
     Remove a defined vm, this does not purge the virtual machine image, and
     this only works if the vm is powered down
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.undefine <vm name>
     '''
@@ -908,7 +1225,9 @@ def purge(vm_, dirs=False):
     also delete the directories containing the virtual machine disk images -
     USE WITH EXTREME CAUTION!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.purge <vm name>
     '''
@@ -934,7 +1253,9 @@ def virt_type():
     '''
     Returns the virtual machine type as a string
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.virt_type
     '''
@@ -945,7 +1266,9 @@ def is_kvm_hyper():
     '''
     Returns a bool whether or not this node is a KVM hypervisor
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.is_kvm_hyper
     '''
@@ -964,7 +1287,9 @@ def is_xen_hyper():
     '''
     Returns a bool whether or not this node is a XEN hypervisor
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.is_xen_hyper
     '''
@@ -987,16 +1312,21 @@ def is_hyper():
     '''
     Returns a bool whether or not this node is a hypervisor of any kind
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.is_hyper
     '''
     return is_xen_hyper() or is_kvm_hyper()
 
+
 def vm_cputime(vm_=None):
     '''
     Return cputime used by the vms on this hyper in a
-    list of dicts::
+    list of dicts:
+
+    .. code-block:: python
 
         [
             'your-vm': {
@@ -1009,11 +1339,14 @@ def vm_cputime(vm_=None):
     If you pass a VM name in as an argument then it will return info
     for just the named VM, otherwise it will return all VMs.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.vm_cputime
     '''
     host_cpus = __get_conn().getInfo()[2]
+
     def _info(vm_):
         dom = _get_dom(vm_)
         raw = dom.info()
@@ -1035,10 +1368,13 @@ def vm_cputime(vm_=None):
             info[vm_] = _info(vm_)
     return info
 
+
 def vm_netstats(vm_=None):
     '''
     Return combined network counters used by the vms on this hyper in a
-    list of dicts::
+    list of dicts:
+
+    .. code-block:: python
 
         [
             'your-vm': {
@@ -1057,7 +1393,9 @@ def vm_netstats(vm_=None):
     If you pass a VM name in as an argument then it will return info
     for just the named VM, otherwise it will return all VMs.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.vm_netstats
     '''
@@ -1065,14 +1403,14 @@ def vm_netstats(vm_=None):
         dom = _get_dom(vm_)
         nics = get_nics(vm_)
         ret = {
-                'rx_bytes'  : 0,
+                'rx_bytes': 0,
                 'rx_packets': 0,
-                'rx_errs'   : 0,
-                'rx_drop'   : 0,
-                'tx_bytes'  : 0,
+                'rx_errs': 0,
+                'rx_drop': 0,
+                'tx_bytes': 0,
                 'tx_packets': 0,
-                'tx_errs'   : 0,
-                'tx_drop'   : 0
+                'tx_errs': 0,
+                'tx_drop': 0
                }
         for attrs in nics.values():
             if 'target' in attrs:
@@ -1096,10 +1434,13 @@ def vm_netstats(vm_=None):
             info[vm_] = _info(vm_)
     return info
 
+
 def vm_diskstats(vm_=None):
     '''
     Return disk usage counters used by the vms on this hyper in a
-    list of dicts::
+    list of dicts:
+
+    .. code-block:: python
 
         [
             'your-vm': {
@@ -1115,7 +1456,9 @@ def vm_diskstats(vm_=None):
     If you pass a VM name in as an argument then it will return info
     for just the named VM, otherwise it will return all VMs.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.vm_blockstats
     '''
@@ -1134,19 +1477,19 @@ def vm_diskstats(vm_=None):
         # and unsuitable for any sort of real time statistics
         disks = get_disk_devs(vm_)
         ret = {
-                'rd_req'  : 0,
+                'rd_req': 0,
                 'rd_bytes': 0,
-                'wr_req'  : 0,
+                'wr_req': 0,
                 'wr_bytes': 0,
-                'errs'    : 0
+                'errs': 0
                }
         for disk in disks:
             stats = dom.blockStats(disk)
-            ret['rd_req']   += stats[0]
+            ret['rd_req'] += stats[0]
             ret['rd_bytes'] += stats[1]
-            ret['wr_req']   += stats[2]
+            ret['wr_req'] += stats[2]
             ret['wr_bytes'] += stats[3]
-            ret['errs']     += stats[4]
+            ret['errs'] += stats[4]
 
         return ret
     info = {}

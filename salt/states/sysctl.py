@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Configuration of the Linux kernel using sysctrl.
 ================================================
@@ -6,7 +7,7 @@ Control the kernel sysctl system
 
 .. code-block:: yaml
 
-  vm.swappines:
+  vm.swappiness:
     sysctl.present:
       - value: 20
 '''
@@ -14,7 +15,15 @@ Control the kernel sysctl system
 # Import python libs
 import re
 
-def present(name, value, config='/etc/sysctl.conf'):
+
+def __virtual__():
+    '''
+    This state is only available on Minions which support sysctl
+    '''
+    return 'sysctl' if 'sysctl.show' in __salt__ else False
+
+
+def present(name, value, config=None):
     '''
     Ensure that the named sysctl value is set in memory and persisted to the
     named configuration file. The default sysctl configuration file is
@@ -27,12 +36,21 @@ def present(name, value, config='/etc/sysctl.conf'):
         The sysctl value to apply
 
     config
-        The location of the sysctl configuration file
+        The location of the sysctl configuration file. If not specified, the
+        proper location will be detected based on platform.
     '''
     ret = {'name': name,
            'result': True,
            'changes': {},
            'comment': ''}
+
+    if config is None:
+        # Certain linux systems will ignore /etc/sysctl.conf, get the right
+        # default configuration file.
+        if 'sysctl.default_config' in __salt__:
+            config = __salt__['sysctl.default_config']()
+        else:
+            config = '/etc/sysctl.conf'
 
     current = __salt__['sysctl.show']()
     if __opts__['test']:

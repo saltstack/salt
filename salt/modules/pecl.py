@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage PHP pecl extensions.
 '''
@@ -36,7 +37,7 @@ def _pecl(command, defaults=False):
         return ''
 
 
-def install(pecls, defaults=False):
+def install(pecls, defaults=False, force=False):
     '''
     Installs one or several pecl extensions.
 
@@ -47,13 +48,23 @@ def install(pecls, defaults=False):
         Use default answers for extensions such as pecl_http which ask
         questions before installation. Without this option, the pecl.installed
         state will hang indefinitely when trying to install these extensions.
-        This option will be available in version 0.17.0.
 
-    CLI Example::
+    force
+        Whether to force the installed version or not
+
+    .. note::
+        The ``defaults`` option will be available in version 0.17.0.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.install fuse
     '''
-    return _pecl('install {0}'.format(pecls), defaults=defaults)
+    if force:
+        return _pecl('install -f {0}'.format(pecls), defaults=defaults)
+    else:
+        return _pecl('install {0}'.format(pecls), defaults=defaults)
 
 
 def uninstall(pecls):
@@ -63,7 +74,9 @@ def uninstall(pecls):
     pecls
         The pecl extensions to uninstall.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.uninstall fuse
     '''
@@ -77,7 +90,9 @@ def update(pecls):
     pecls
         The pecl extensions to update.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.update fuse
     '''
@@ -88,7 +103,9 @@ def list_():
     '''
     List installed pecl extensions.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pecl.list
     '''

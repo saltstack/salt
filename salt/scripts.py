@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module contains the function calls to execute command line scipts
 '''

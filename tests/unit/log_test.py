@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     tests.unit.log_test
     ~~~~~~~~~~~~~~~~~~~
 
     Test salt's "hacked" logging
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import Salt Testing libs
@@ -21,7 +22,7 @@ class TestLog(TestCase):
     '''Test several logging settings'''
 
     def test_issue_2853_regex_TypeError(self):
-        from salt import log as saltlog
+        from salt.log import setup as saltlog
         # Now, python's logging logger class is ours.
         # Let's make sure we have at least one instance
         log = saltlog.SaltLoggingClass(__name__)

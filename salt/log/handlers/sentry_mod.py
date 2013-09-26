@@ -1,0 +1,185 @@
+# -*- coding: utf-8 -*-
+'''
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
+    Sentry Logging Handler
+    ======================
+
+    .. versionadded:: 0.17.0
+
+    Configuring the python `Sentry`_ client, `Raven`_, should be done under the
+    ``sentry_handler`` configuration key.
+    At the bare minimum, you need to define the `DSN`_. As an example:
+
+    .. code-block:: yaml
+
+        sentry_handler:
+          dsn: https://pub-key:secret-key@app.getsentry.com/app-id
+
+
+    More complex configurations can be achieved, for example:
+
+    .. code-block:: yaml
+
+        sentry_handler:
+          servers:
+            - https://sentry.example.com
+            - http://192.168.1.1
+          project: app-id
+          public_key: deadbeefdeadbeefdeadbeefdeadbeef
+          secret_key: beefdeadbeefdeadbeefdeadbeefdead
+
+
+    All the client configuration keys are supported, please see the
+    `Raven client documentation`_.
+
+    The default logging level for the sentry handler is ``ERROR``. If you wish
+    to define a different one, define ``log_level`` under the
+    ``sentry_handler`` configuration key:
+
+    .. code-block:: yaml
+
+      sentry_handler:
+        dsn: https://pub-key:secret-key@app.getsentry.com/app-id
+        log_level: warning
+
+
+    The available log levels are those also available for the salt ``cli``
+    tools and configuration; ``salt --help`` should give you the required
+    information.
+
+
+    Threaded Transports
+    -------------------
+
+    Raven's documents rightly suggest using its threaded transport for
+    critical applications. However, don't forget that if you start having
+    troubles with Salt after enabling the threaded transport, please try
+    switching to a non-threaded transport to see if that fixes your problem.
+
+
+
+    .. _`DSN`: http://raven.readthedocs.org/en/latest/config/index.html#the-sentry-dsn
+    .. _`Sentry`: http://getsentry.com
+    .. _`Raven`: http://raven.readthedocs.org
+    .. _`Raven client documentation`: http://raven.readthedocs.org/en/latest/config/index.html#client-arguments
+'''
+
+# Import python libs
+import logging
+
+# Import salt libs
+from salt.log import LOG_LEVELS
+
+# Import 3rd party libs
+try:
+    import raven
+    from raven.handlers.logging import SentryHandler
+    HAS_RAVEN = True
+except ImportError:
+    HAS_RAVEN = False
+
+log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    if HAS_RAVEN is True:
+        return 'sentry'
+    return False
+
+
+def setup_handlers():
+    if 'sentry_handler' not in __opts__:
+        log.debug('No \'sentry_handler\' key was found in the configuration')
+        return False
+
+    options = {}
+    dsn = get_config_value('dsn')
+    if dsn is not None:
+        try:
+            dsn_config = raven.load(dsn)
+            options.update({
+                'project': dsn_config['SENTRY_PROJECT'],
+                'servers': dsn_config['SENTRY_SERVERS'],
+                'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
+                'private_key': dsn_config['SENTRY_SECRET_KEY']
+            })
+        except ValueError as exc:
+            log.info(
+                'Raven failed to parse the configuration provided '
+                'DSN: {0}'.format(exc)
+            )
+
+    # Allow options to be overridden if previously parsed, or define them
+    for key in ('project', 'servers', 'public_key', 'private_key'):
+        config_value = get_config_value(key)
+        if config_value is None and key not in options:
+            log.debug(
+                'The required \'sentry_handler\' configuration key, '
+                '{0!r}, is not properly configured. Not configuring '
+                'the sentry logging handler.'.format(key)
+            )
+            return
+        elif config_value is None:
+            continue
+        options[key] = config_value
+
+    # site: An optional, arbitrary string to identify this client installation.
+    options.update({
+        # site: An optional, arbitrary string to identify this client
+        # installation
+        'site': get_config_value('site'),
+
+        # name: This will override the server_name value for this installation.
+        # Defaults to socket.gethostname()
+        'name': get_config_value('name'),
+
+        # exclude_paths: Extending this allow you to ignore module prefixes
+        # when sentry attempts to discover which function an error comes from
+        'exclude_paths': get_config_value('exclude_paths', ()),
+
+        # include_paths: For example, in Django this defaults to your list of
+        # INSTALLED_APPS, and is used for drilling down where an exception is
+        # located
+        'include_paths': get_config_value('include_paths', ()),
+
+        # list_max_length: The maximum number of items a list-like container
+        # should store.
+        'list_max_length': get_config_value('list_max_length'),
+
+        # string_max_length: The maximum characters of a string that should be
+        # stored.
+        'string_max_length': get_config_value('string_max_length'),
+
+        # auto_log_stacks: Should Raven automatically log frame stacks
+        # (including locals) all calls as it would for exceptions.
+        'auto_log_stacks': get_config_value('auto_log_stacks'),
+
+        # timeout: If supported, the timeout value for sending messages to
+        # remote.
+        'timeout': get_config_value('timeout', 1),
+
+        # processors: A list of processors to apply to events before sending
+        # them to the Sentry server. Useful for sending additional global state
+        # data or sanitizing data that you want to keep off of the server.
+        'processors': get_config_value('processors')
+    })
+
+    client = raven.Client(**options)
+
+    try:
+        handler = SentryHandler(client)
+        handler.setLevel(LOG_LEVELS[get_config_value('log_level', 'error')])
+        return handler
+    except ValueError as exc:
+        log.debug(
+            'Failed to setup the sentry logging handler: {0}'.format(exc),
+            exc_info=exc
+        )
+
+
+def get_config_value(name, default=None):
+    return __opts__['sentry_handler'].get(name, default)

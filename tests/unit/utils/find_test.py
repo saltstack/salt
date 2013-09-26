@@ -11,6 +11,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import integration
 import salt.utils
 import salt.utils.find
 
@@ -210,7 +211,7 @@ class TestFind(TestCase):
             ValueError, salt.utils.find.GroupOption, 'group', 'notexist'
         )
 
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -219,7 +220,7 @@ class TestFind(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_group_option_match(self):
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -264,7 +265,7 @@ class TestGrepOption(TestCase):
 
     def setUp(self):
         super(TestGrepOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -310,7 +311,7 @@ class TestPrintOption(TestCase):
 
     def setUp(self):
         super(TestPrintOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -395,7 +396,7 @@ class TestPrintOption(TestCase):
     @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
     def test_print_group(self):
         option = salt.utils.find.PrintOption('print', 'group')
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -415,7 +416,7 @@ class TestFinder(TestCase):
 
     def setUp(self):
         super(TestFinder, self).setUp()
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -489,7 +490,7 @@ class TestFinder(TestCase):
             str(finder.criteria[0].__class__)[-13:-2], 'OwnerOption'
         )
 
-        if sys.platform == 'darwin':
+        if sys.platform.startswith(('darwin', 'freebsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'

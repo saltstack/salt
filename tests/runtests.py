@@ -37,6 +37,7 @@ REQUIRED_OPEN_FILES = 3072
 
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
+    support_destructive_tests_selection = True
 
     def setup_additional_options(self):
         self.add_option(
@@ -98,14 +99,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             help='Run unit tests'
         )
-        self.test_selection_group.add_option(
-            '--run-destructive',
-            action='store_true',
-            default=False,
-            help=('Run destructive tests. These tests can include adding or '
-                  'removing users from your system for example. Default: '
-                  '%default')
-        )
 
         self.output_options_group.add_option(
             '--no-colors',
@@ -142,7 +135,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.start_coverage(
             branch=True,
             source=[os.path.join(SALT_ROOT, 'salt')],
-            track_processes=True
         )
 
     def run_integration_suite(self, suite_folder, display_name):
@@ -156,12 +148,20 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         '''
         Execute the integration tests suite
         '''
-        if (self.options.unit or (self.options.name and all([
-                n.startswith('unit.') for n in self.options.name]))) and not \
+        named_tests = []
+        named_unit_test = []
+        for test in self.options.name:
+            if test.startswith('unit.'):
+                named_unit_test.append(test)
+                continue
+            named_tests.append(test)
+
+        if (self.options.unit or named_unit_test) and not \
                 (self.options.runner or
                  self.options.state or
                  self.options.module or
-                 self.options.client):
+                 self.options.client or
+                 named_tests):
             # We're either not running any of runner, state, module and client
             # tests, or, we're only running unittests by passing --unit or by
             # passing only `unit.<whatever>` to --name.
@@ -204,10 +204,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.runner, self.options.shell,
                     self.options.state, self.options.name]):
             return status
+
         with TestDaemon(self):
             if self.options.name:
                 for name in self.options.name:
-                    results = self.run_suite('', name)
+                    if name.startswith('unit.'):
+                        continue
+                    results = self.run_suite('', name, load_from_name=True)
                     status.append(results)
             if self.options.runner:
                 status.append(self.run_integration_suite('runners', 'Runner'))
@@ -225,23 +228,30 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         '''
         Execute the unit tests
         '''
-        if not self.options.unit and not (self.options.name and any([
-                n.startswith('unit.') for n in self.options.name])):
+        named_unit_test = []
+        for test in self.options.name:
+            if not test.startswith('unit.'):
+                continue
+            named_unit_test.append(test)
+
+        if not self.options.unit and not named_unit_test:
             # We are not explicitly running the unit tests and none of the
             # names passed to --name is a unit test.
             return [True]
 
         status = []
-        if self.options.name:
-            for name in self.options.name:
-                if not name.startswith('unit.'):
-                    # Let's not run non unit tests
-                    continue
-                results = self.run_suite(os.path.join(TEST_DIR, 'unit'), name)
-                status.append(results)
-        else:
+        if self.options.unit:
             results = self.run_suite(
                 os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py'
+            )
+            status.append(results)
+            # We executed ALL unittests, we can skip running unittests by name
+            # bellow
+            return status
+
+        for name in named_unit_test:
+            results = self.run_suite(
+                os.path.join(TEST_DIR, 'unit'), name, load_from_name=True
             )
             status.append(results)
         return status

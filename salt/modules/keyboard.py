@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing keyboards on POSIX-like systems.
 '''
@@ -24,7 +25,9 @@ def get_sys():
     '''
     Get current system keyboard setting
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keyboard.get_sys
     '''
@@ -46,7 +49,9 @@ def set_sys(layout):
     '''
     Set current system keyboard setting
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keyboard.set_sys dvorak
     '''
@@ -65,7 +70,9 @@ def get_x():
     '''
     Get current X keyboard setting
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keyboard.get_x
     '''
@@ -78,7 +85,9 @@ def set_x(layout):
     '''
     Set current X keyboard setting
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' keyboard.set_x dvorak
     '''

@@ -33,7 +33,7 @@ on those changes.
 
 .. code-block:: bash
 
-    # salt \* state.highstate test=True
+    salt '*' state.highstate test=True
 
 Now states that would have made changes report them back in yellow.
 
@@ -230,14 +230,14 @@ testing out the behavior of single states:
 
 .. code-block:: bash
 
-    # salt \* state.single user.present name=wade uid=2000
+    salt '*' state.single user.present name=wade uid=2000
 
 The test interface functions here as well, so changes can also be tested
 against as:
 
 .. code-block:: bash
 
-    # salt \* state.single user.present name=wade uid=2000 test=True
+    salt '*' state.single user.present name=wade uid=2000 test=True
 
 New Tests
 =========
@@ -267,7 +267,7 @@ than your hardware can handle!
 
 .. code-block:: bash
 
-    # python minionswarm.py -m 20 --master salt-master
+    python minionswarm.py -m 20 --master salt-master
 
 
 Shell Tests

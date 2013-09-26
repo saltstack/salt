@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Publish a command from a minion to a target
 '''
@@ -37,7 +38,9 @@ def _publish(
 
         salt system.example.com publish.publish '*' user.add 'foo,1020,1020'
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
@@ -75,8 +78,15 @@ def _publish(
             'id': __opts__['id'],
             'tok': tok,
             'jid': peer_data['jid']}
-    return auth.crypticle.loads(
+    ret = auth.crypticle.loads(
             sreq.send('aes', auth.crypticle.dumps(load), 5))
+    if form == 'clean':
+        cret = {}
+        for host in ret:
+            cret[host] = ret[host]['ret']
+        return cret
+    else:
+        return ret
 
 
 def _normalize_arg(arg):
@@ -99,33 +109,41 @@ def _normalize_arg(arg):
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     '''
-    Publish a command from the minion out to other minions, publications need
-    to be enabled on the Salt master and the minion needs to have permission
-    to publish the command. The Salt master will also prevent a recursive
-    publication loop, this means that a minion cannot command another minion
-    to command another minion as that would create an infinite command loop.
+    Publish a command from the minion out to other minions.
+
+    Publications need to be enabled on the Salt master and the minion
+    needs to have permission to publish the command. The Salt master
+    will also prevent a recursive publication loop, this means that a
+    minion cannot command another minion to command another minion as
+    that would create an infinite command loop.
 
     The expr_form argument is used to pass a target other than a glob into
     the execution, the available options are:
-    glob
-    pcre
-    grain
-    grain_pcre
-    pillar
-    ipcidr
-    range
-    compound
+
+    - glob
+    - pcre
+    - grain
+    - grain_pcre
+    - pillar
+    - ipcidr
+    - range
+    - compound
 
     The arguments sent to the minion publish function are separated with
     commas. This means that for a minion executing a command with multiple
-    args it will look like this::
+    args it will look like this:
+
+    .. code-block:: bash
 
         salt system.example.com publish.publish '*' user.add 'foo,1020,1020'
         salt system.example.com publish.publish 'os:Fedora' network.interfaces '' grain
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
+
     '''
     return _publish(tgt, fun, arg, expr_form, returner, timeout, 'clean')
 
@@ -135,7 +153,9 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     Return the full data about the publication, this is invoked in the same
     way as the publish function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt system.example.com publish.full_data '*' cmd.run 'ls -la /tmp'
     '''
@@ -147,7 +167,9 @@ def runner(fun, arg=None):
     Execute a runner on the master and return the data from the runner
     function
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt publish.runner manage.down
     '''

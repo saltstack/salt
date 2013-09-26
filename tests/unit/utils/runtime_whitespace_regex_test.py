@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-    tests.unit.utils.runtime_whitespace_regex_test
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
+
+
+    tests.unit.utils.runtime_whitespace_regex_test
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Monit service module. This module will create a monit type
 service watcher.
@@ -17,7 +18,9 @@ def __virtual__():
 def start(name):
     '''
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' monit.start <service name>
     '''
@@ -30,7 +33,9 @@ def stop(name):
     '''
     Stops service via monit
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' monit.stop <service name>
     '''
@@ -43,7 +48,9 @@ def restart(name):
     '''
     Restart service via monit
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' monit.restart <service name>
     '''
@@ -56,7 +63,9 @@ def unmonitor(name):
     '''
     Unmonitor service via monit
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' monit.unmonitor <service name>
     '''
@@ -69,7 +78,9 @@ def monitor(name):
     '''
     monitor service via monit
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' monit.monitor <service name>
     '''
@@ -82,7 +93,9 @@ def summary(svc_name=''):
     '''
     Display a summary from monit
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' monit.summary
         salt '*' monit.summary <service name>

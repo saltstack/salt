@@ -53,7 +53,7 @@ Multiple Package Management
 
 A long desired feature has been added to package management. By definition Salt
 States have always installed packages one at a time. On most platforms this is
-not the fastest way to install packages. Erik Johnson, aka archtaku, has
+not the fastest way to install packages. Erik Johnson, aka terminalmage, has
 modified the package modules for many providers and added new capabilities to
 install groups of packages. These package groups can be defined as a list of
 packages available in repository servers:
@@ -103,7 +103,7 @@ master and a minion on the same systems. 0.11.0 changes the defaults to be
 separate directories. Salt will also attempt to migrate all of the old key data
 into the correct new directories, but if it is not successful it may need to be
 done manually. If your keys exhibit issues after updating make sure that they
-have been moved from `/etc/salt/pki` to `/etc/salt/pki/{master,minion}`.
+have been moved from ``/etc/salt/pki`` to ``/etc/salt/pki/{master,minion}``.
 
 The old setup will look like this:
 
@@ -121,8 +121,8 @@ The old setup will look like this:
     |-- minions_pre
     `-- minions_rejected
 
-With the accepted minion keys in /etc/salt/pki/minions, the new setup places the
-accepted minion keys in /etc/salt/pki/master/minions
+With the accepted minion keys in ``/etc/salt/pki/minions``, the new setup
+places the accepted minion keys in ``/etc/salt/pki/master/minions``.
 
 .. code-block:: raw
 

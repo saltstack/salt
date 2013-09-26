@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Compendium of generic DNS utilities
 '''
@@ -25,7 +26,9 @@ def check_ip(x):
     '''
     Check that string x is a valid IP
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.check_ip 127.0.0.1
     '''
@@ -40,11 +43,13 @@ def check_ip(x):
 
 def A(host, nameserver=None):
     '''
-    Return the A record for 'host'.
+    Return the A record for ``host``.
 
     Always returns a list.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.A www.google.com
     '''
@@ -70,11 +75,13 @@ def A(host, nameserver=None):
 
 def NS(domain, resolve=True, nameserver=None):
     '''
-    Return a list of IPs of the nameservers for 'domain'
+    Return a list of IPs of the nameservers for ``domain``
 
-    If 'resolve' is False, don't resolve names.
+    If ``resolve`` is False, don't resolve names.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.NS google.com
     '''
@@ -106,13 +113,15 @@ def NS(domain, resolve=True, nameserver=None):
 
 def SPF(domain, record='SPF', nameserver=None):
     '''
-    Return the allowed IPv4 ranges in the SPF record for 'domain'.
+    Return the allowed IPv4 ranges in the SPF record for ``domain``.
 
-    If record is 'SPF' and the SPF record is empty, the TXT record will be
+    If record is ``SPF`` and the SPF record is empty, the TXT record will be
     searched automatically. If you know the domain uses TXT and not SPF,
     specifying that will save a lookup.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.SPF google.com
     '''
@@ -157,19 +166,18 @@ def SPF(domain, record='SPF', nameserver=None):
 
 def MX(domain, resolve=False, nameserver=None):
     '''
-    Return a list of lists for the MX of 'domain'. Example:
+    Return a list of lists for the MX of ``domain``.
 
-    >>> dig.MX('saltstack.org')
-    [ [10, 'mx01.1and1.com.'], [10, 'mx00.1and1.com.'] ]
-
-    If the 'resolve' argument is True, resolve IPs for the servers.
+    If the ``resolve`` argument is True, resolve IPs for the servers.
 
     It's limited to one IP, because although in practice it's very rarely a
     round robin, it is an acceptable configuration and pulling just one IP lets
     the data be similar to the non-resolved version. If you think an MX has
     multiple IPs, don't use the resolver here, resolve them in a separate step.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt ns1 dig.MX google.com
     '''

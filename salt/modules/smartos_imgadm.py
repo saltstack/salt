@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for running imgadm command on SmartOS
 '''
@@ -7,10 +8,12 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_imgadm():
     '''
     Looks to see if imgadm is present on the system
@@ -25,8 +28,7 @@ def _exit_status(retcode):
     ret = {0: 'Successful completion.',
            1: 'An error occurred.',
            2: 'Usage error.',
-           3: 'Image not installed.'
-          }[retcode]
+           3: 'Image not installed.'}[retcode]
     return ret
 
 
@@ -43,7 +45,9 @@ def version():
     '''
     Return imgadm version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' imgadm.version
     '''
@@ -59,7 +63,9 @@ def update_installed():
     '''
     Gather info on unknown images (locally installed)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' imgadm.update_installed()
     '''
@@ -74,7 +80,9 @@ def avail(search=None):
     '''
     Return a list of available images
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' imgadm.avail [percona]
     '''
@@ -99,7 +107,9 @@ def list_installed():
     '''
     Return a list of installed images
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' imgadm.list_installed
     '''
@@ -119,7 +129,9 @@ def show(uuid=None):
     '''
     Show manifest of a given image
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' imgadm.show e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
@@ -142,7 +154,9 @@ def get(uuid=None):
     '''
     Return info on an installed image
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' imgadm.get e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
@@ -165,7 +179,9 @@ def import_image(uuid=None):
     '''
     Import an image from the repository
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' imgadm.import_image e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
@@ -188,7 +204,9 @@ def delete(uuid=None):
     '''
     Remove an installed image
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' imgadm.delete e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''

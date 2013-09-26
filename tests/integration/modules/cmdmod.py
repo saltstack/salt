@@ -6,20 +6,14 @@ import tempfile
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 
-try:
-    from mock import Mock, patch
-    has_mock = True
-except ImportError:
-    has_mock = False
-    patch = lambda x: lambda y: None
 
-
-@skipIf(has_mock is False, 'mock python module is unavailable')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CMDModuleTest(integration.ModuleCase):
     '''
     Validate the cmd module
@@ -28,7 +22,11 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run
         '''
-        shell = os.environ['SHELL']
+        shell = os.environ.get('SHELL')
+        if shell is None:
+            # Failed to get the SHELL var, don't run
+            self.skipTest('Unable to get the SHELL environment variable')
+
         self.assertTrue(self.run_function('cmd.run', ['echo $SHELL']))
         self.assertEqual(
             self.run_function('cmd.run',
@@ -202,6 +200,22 @@ sys.stdout.write('cheese')
             'hello' == self.run_function(
                 'cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
 
+    def test_run_cwd_doesnt_exist_issue_7154(self):
+        '''
+        cmd.run should fail and raise
+        salt.exceptions.CommandExecutionError if the cwd dir does not
+        exist
+        '''
+        from salt.exceptions import CommandExecutionError
+        import salt.modules.cmdmod as cmdmod
+        cmd = 'echo OHAI'
+        cwd = '/path/to/nowhere'
+        try:
+            cmdmod.run_all(cmd, cwd=cwd)
+        except CommandExecutionError:
+            pass
+        else:
+            raise RuntimeError
 
 if __name__ == '__main__':
     from integration import run_tests

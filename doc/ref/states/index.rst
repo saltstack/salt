@@ -185,3 +185,138 @@ by adding a new renderer to the renderers directory, it is possible that any
 structured file could be used to represent the SLS files.
 
 In the future XML will be added, as well as many other formats.
+
+
+Reloading Modules
+-----------------
+
+Some salt states require specific packages to be installed in order for the 
+module to load, as an example the :mod:`pip <salt.states.pip_state>` state 
+module requires the `pip`_ package for proper name and version parsing.  On 
+most of the common cases, salt is clever enough to transparently reload the 
+modules, for example, if you install a package, salt reloads modules because 
+some other module or state might require just that package which was installed.  
+On some edge-cases salt might need to be told to reload the modules. Consider 
+the following state file which we'll call ``pep8.sls``:
+
+.. code-block:: yaml
+
+    python-pip:
+      cmd:
+        - run
+        - cwd: /
+        - name: easy_install --script-dir=/usr/bin -U pip
+
+    pep8:
+      pip.installed
+      requires:
+        - cmd: python-pip
+
+
+The above example installs `pip`_ using ``easy_install`` from `setuptools`_ and 
+installs `pep8`_ using :mod:`pip <salt.states.pip_state>`, which, as told 
+earlier, requires `pip`_ to be installed system-wide. Let's execute this state:
+
+.. code-block:: bash
+
+    salt-call state.sls pep8
+
+The execution output would be something like:
+
+.. code-block:: text
+
+    ----------
+        State: - pip
+        Name:      pep8
+        Function:  installed
+            Result:    False
+            Comment:   State pip.installed found in sls pep8 is unavailable
+
+            Changes:
+
+    Summary
+    ------------
+    Succeeded: 1
+    Failed:    1
+    ------------
+    Total:     2
+
+
+If we executed the state again the output would be:
+
+.. code-block:: text
+
+    ----------
+        State: - pip
+        Name:      pep8
+        Function:  installed
+            Result:    True
+            Comment:   Package was successfully installed
+            Changes:   pep8==1.4.6: Installed
+
+    Summary
+    ------------
+    Succeeded: 2
+    Failed:    0
+    ------------
+    Total:     2
+
+
+Since we installed `pip`_ using :mod:`cmd <salt.states.cmd>`, salt has no way 
+to know that a system-wide package was installed. On the second execution, 
+since the required `pip`_ package was installed, the state executed perfectly.
+
+To those thinking, couldn't salt reload modules on every state step since it 
+already does for some cases?  It could, but it should not since it would 
+greatly slow down state execution.
+
+So how do we solve this *edge-case*? ``reload_modules``!
+
+``reload_modules`` is a boolean option recognized by salt on **all** available 
+states which, does exactly what it tells use, forces salt to reload it's 
+modules once that specific state finishes. The fixed state file would now be:
+
+.. code-block:: yaml
+
+    python-pip:
+      cmd:
+        - run
+        - cwd: /
+        - name: easy_install --script-dir=/usr/bin -U pip
+        - reload_modules: true
+
+    pep8:
+      pip.installed
+      requires:
+        - cmd: python-pip
+
+
+Let's run it, once:
+
+.. code-block:: bash
+
+    salt-call state.sls pep8
+
+And it's output now is:
+
+.. code-block:: text
+
+    ----------
+        State: - pip
+        Name:      pep8
+        Function:  installed
+            Result:    True
+            Comment:   Package was successfully installed
+            Changes:   pep8==1.4.6: Installed
+
+    Summary
+    ------------
+    Succeeded: 2
+    Failed:    0
+    ------------
+    Total:     2
+
+
+.. _`pip`: http://pypi.python.org/pypi/pip
+.. _`pep8`: https://pypi.python.org/pypi/pep8
+.. _`setuptools`: https://pypi.python.org/pypi/setuptools

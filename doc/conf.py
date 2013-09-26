@@ -65,6 +65,8 @@ MOCK_MODULES = [
     'rpmUtils',
     'rpmUtils.arch',
     'yum',
+    'OpenSSL',
+    'zfs'
 ]
 
 for mod_name in MOCK_MODULES:
@@ -82,28 +84,43 @@ addtl_paths = (
 for path in addtl_paths:
     sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))
 
-from salt.version import __version__
+import salt.version
 
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
+# ----- Intersphinx Settings ------------------------------------------------>
+intersphinx_mapping = {
+        'python2': ('http://docs.python.org/2', None),
+        'python3': ('http://docs.python.org/3', None)
+}
+# <---- Intersphinx Settings -------------------------------------------------
+
 # -- General configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2013, Thomas S. Hatch'
+copyright = '2013 SaltStack, Inc.'
 
-version = __version__
-release = version
+version = salt.version.__version__
+#release = '.'.join(map(str, salt.version.__version_info__))
+release = '0.16.4'
+
+language = 'en'
+locale_dirs = [
+    '_locale',
+]
 
 master_doc = 'contents'
 templates_path = ['_templates']
-exclude_patterns = ['_build', '_incl/*']
+exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 
 extensions = [
     'saltdocs',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
+    'sphinx.ext.intersphinx',
+    'youtube',
 ]
 
 modindex_common_prefix = ['salt.']
@@ -114,13 +131,14 @@ autosummary_generate = True
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
 .. |latest| replace:: https://github.com/downloads/saltstack/salt/salt-%s.tar.gz
-""" % __version__
+""" % salt.version.__version__
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
     'download': ('https://github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
+    'formula': ('https://github.com/saltstack-formulas/%s', ''),
 }
 
 
@@ -176,7 +194,7 @@ html_show_copyright = True
 
 ### Latex options
 latex_documents = [
-  ('contents', 'Salt.tex', 'Salt Documentation', 'Thomas Hatch', 'manual'),
+  ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
 latex_logo = '_static/saltstack_logo.png'
@@ -190,8 +208,8 @@ authors = [
 ]
 
 man_pages = [
-    ('ref/cli/salt', 'salt', 'salt', authors, 1),
     ('contents', 'salt', 'Salt Documentation', authors, 7),
+    ('ref/cli/salt', 'salt', 'salt', authors, 1),
     ('ref/cli/salt-master', 'salt-master', 'salt-master Documentation', authors, 1),
     ('ref/cli/salt-minion', 'salt-minion', 'salt-minion Documentation', authors, 1),
     ('ref/cli/salt-key', 'salt-key', 'salt-key Documentation', authors, 1),
@@ -199,14 +217,15 @@ man_pages = [
     ('ref/cli/salt-call', 'salt-call', 'salt-call Documentation', authors, 1),
     ('ref/cli/salt-syndic', 'salt-syndic', 'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
+    ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
 ]
 
 
 ### epub options
 epub_title = 'Salt Documentation'
-epub_author = 'Thomas S. Hatch'
+epub_author = 'SaltStack, Inc.'
 epub_publisher = epub_author
-epub_copyright = '2013, Thomas S. Hatch'
+epub_copyright = copyright
 
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.org/'

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Clone a remote git repository and use the filesystem as a pillar directory.
 
@@ -12,7 +13,6 @@ ext_pillar:
 from copy import deepcopy
 import logging
 import os
-import time
 
 # Import third party libs
 HAS_GIT = False
@@ -23,7 +23,6 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
 from salt.pillar import Pillar
 
 # Set up logging
@@ -32,11 +31,14 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if git-python is available
+    Only load if gitpython is available
     '''
+    ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
+    if not any(['git' in x for x in ext_pillar_sources]):
+        return False
     if not HAS_GIT:
-        log.error('Git fileserver backend is enabled in configuration but '
-                  'could not be loaded, is git-python installed?')
+        log.error('Git-based ext_pillar is enabled in configuration but '
+                  'could not be loaded, is GitPython installed?')
         return False
     if not git.__version__ > '0.3.0':
         return False
@@ -53,48 +55,6 @@ def _get_ref(repo, short):
             refname = parted[2] if parted[2] else parted[0]
             if short == refname:
                 return ref
-    return False
-
-
-def _wait_lock(lk_fn, dest):
-    '''
-    If the write lock is there, check to see if the file is actually being
-    written. If there is no change in the file size after a short sleep,
-    remove the lock and move forward.
-    '''
-    if not os.path.isfile(lk_fn):
-        return False
-    if not os.path.isfile(dest):
-        # The dest is not here, sleep for a bit, if the dest is not here yet
-        # kill the lockfile and start the write
-        time.sleep(1)
-        if not os.path.isfile(dest):
-            try:
-                os.remove(lk_fn)
-            except (OSError, IOError):
-                pass
-            return False
-    # There is a lock file, the dest is there, stat the dest, sleep and check
-    # that the dest is being written, if it is not being written kill the lock
-    # file and continue. Also check if the lock file is gone.
-    s_count = 0
-    s_size = os.stat(dest).st_size
-    while True:
-        time.sleep(1)
-        if not os.path.isfile(lk_fn):
-            return False
-        size = os.stat(dest).st_size
-        if size == s_size:
-            s_count += 1
-            if s_count >= 3:
-                # The file is not being written to, kill the lock and proceed
-                try:
-                    os.remove(lk_fn)
-                except (OSError, IOError):
-                    pass
-                return False
-        else:
-            s_size = size
     return False
 
 
@@ -122,6 +82,7 @@ def init(branch, repo_location):
             repo.create_remote('origin', repo_location)
         except Exception:
             pass
+    repo.git.fetch()
     return repo
 
 
@@ -138,15 +99,9 @@ def update(branch, repo_location):
     except git.exc.GitCommandError as e:
         logging.error('Unable to checkout branch {0}: {1}'.format(branch, e))
         return False
-    lk_fn = os.path.join(repo.working_dir, 'update.lk')
-    with salt.utils.fopen(lk_fn, 'w+') as fp_:
-        fp_.write(str(pid))
     repo.git.pull()
-    try:
-        os.remove(lk_fn)
-    except (OSError, IOError):
-        pass
     return True
+
 
 def envs(branch, repo_location):
     '''
@@ -190,7 +145,7 @@ def ext_pillar(minion_id, pillar, repo_string):
 
     # Don't recurse forever-- the Pillar object will re-call the ext_pillar
     # function
-    if __opts__['pillar_roots'][branch_env] == [repo.working_dir]:
+    if __opts__['pillar_roots'].get(branch_env, []) == [repo.working_dir]:
         return {}
 
     opts = deepcopy(__opts__)

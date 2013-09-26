@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of addresses and names in hosts file.
 ================================================
@@ -22,7 +23,7 @@ Or using the "names:" directive, you can put several names for the same IP.
           - server1
           - florida
 
-NOTE: changing the IP or name(s) in the present() function does not cause an
+NOTE: changing the name(s) in the present() function does not cause an
 update to remove the old entry.
 '''
 
@@ -46,8 +47,11 @@ def present(name, ip):  # pylint: disable=C0103
         ret['comment'] = 'Host {0} already present'.format(name)
         return ret
     if __opts__['test']:
-        ret['comment'] = 'Host {0} needs to be added'.format(name)
+        ret['comment'] = 'Host {0} needs to be added/updated'.format(name)
         return ret
+    current_ip = __salt__['hosts.get_ip'](name)
+    if current_ip and current_ip != ip:
+        __salt__['hosts.rm_host'](current_ip, name)
     if __salt__['hosts.add_host'](ip, name):
         ret['changes'] = {'host': name}
         ret['result'] = True

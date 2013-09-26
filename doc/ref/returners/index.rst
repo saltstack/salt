@@ -4,11 +4,11 @@ Returners
 
 By default the return values of the commands sent to the Salt minions are
 returned to the salt-master. But since the commands executed on the Salt
-minions are detached from the call on the Salt master, there is no need for
-the minion to return the data to the Salt master.
+minions are detached from the call on the Salt master, anything at all can be
+done with the results data.
 
 This is where the returner interface comes in. Returners are modules called
-in place of returning the data to the Salt master.
+in addition to returning the data to the Salt master.
 
 The returner interface allows the return data to be sent to any system that
 can receive data. This means that return data can be sent to a Redis server,
@@ -74,13 +74,33 @@ serializes the data as json and sets it in redis.
 
 You can place your custom returners in a ``_returners`` directory within the
 :conf_master:`file_roots` specified by the master config file. These custom
-returners are distributed when `state.highstate`_ is run, or by executing the
-`saltutil.sync_returners`_ or `saltutil.sync_all`_ functions.
+returners are distributed when :mod:`state.highstate
+<salt.modules.state.highstate>` is run, or by executing the
+:mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>` or
+:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
 
-.. _`state.highstate`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.state.html#salt.modules.state.highstate
-.. _`saltutil.sync_returners`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_returners
-.. _`saltutil.sync_all`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_all
+Any custom returners which have been synced to a minion, that are named the
+same as one of Salt's default set of returners, will take the place of the
+default returner with the same name. Note that a returner's default name is its
+filename (i.e. ``foo.py`` becomes returner ``foo``), but that its name can be
+overridden by using a :ref:`__virtual__ function <virtual-modules>`. A good
+example of this can be found in the `redis`_ returner, which is named
+``redis_return.py`` but is loaded as simply ``redis``:
 
+.. code-block:: python
+
+    try:
+        import redis
+        HAS_REDIS = True
+    except ImportError:
+        HAS_REDIS = False
+
+    def __virtual__():
+        if not HAS_REDIS:
+            return False
+        return 'redis'
+
+.. _`redis`: https://github.com/saltstack/salt/blob/develop/salt/returners/redis_return.py
 
 Examples
 --------

@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
-    tests.unit.config_test
-    ~~~~~~~~~~~~~~~~~~~~~~
-
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
+
+
+    tests.unit.config_test
+    ~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
 import os
 import shutil
 import tempfile
+import warnings
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -20,8 +22,10 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
 # Import salt libs
+import salt.minion
 import salt.utils
-from salt import config as sconfig
+import integration
+from salt import config as sconfig, version as salt_version
 
 
 class ConfigTestCase(TestCase):
@@ -42,7 +46,7 @@ class ConfigTestCase(TestCase):
                 os.unlink(fpath)
 
     def test_common_prefix_stripping(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         try:
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
@@ -60,7 +64,7 @@ class ConfigTestCase(TestCase):
     def test_load_master_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -102,7 +106,7 @@ class ConfigTestCase(TestCase):
     def test_load_minion_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -143,7 +147,7 @@ class ConfigTestCase(TestCase):
     def test_load_client_config_from_environ_var(self):
         original_environ = os.environ.copy()
         try:
-            tempdir = tempfile.mkdtemp()
+            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
 
@@ -197,7 +201,7 @@ class ConfigTestCase(TestCase):
 
     def test_issue_5970_minion_confd_inclusion(self):
         try:
-            tempdir = tempfile.mkdtemp()
+            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
             minion_config = os.path.join(tempdir, 'minion')
             minion_confd = os.path.join(tempdir, 'minion.d')
             os.makedirs(minion_confd)
@@ -232,7 +236,7 @@ class ConfigTestCase(TestCase):
 
     def test_master_confd_inclusion(self):
         try:
-            tempdir = tempfile.mkdtemp()
+            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
             master_config = os.path.join(tempdir, 'master')
             master_confd = os.path.join(tempdir, 'master.d')
             os.makedirs(master_confd)
@@ -264,6 +268,88 @@ class ConfigTestCase(TestCase):
         finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
+
+    def test_syndic_config(self):
+        syndic_conf_path = os.path.join(
+            integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'
+        )
+        minion_config_path = os.path.join(
+            integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'
+        )
+        syndic_opts = sconfig.syndic_config(
+            syndic_conf_path, minion_config_path
+        )
+        syndic_opts.update(salt.minion.resolve_dns(syndic_opts))
+        # id & pki dir are shared & so configured on the minion side
+        self.assertEquals(syndic_opts['id'], 'minion')
+        self.assertEquals(syndic_opts['pki_dir'], '/tmp/salttest/pki')
+        # the rest is configured master side
+        self.assertEquals(syndic_opts['master_uri'], 'tcp://127.0.0.1:54506')
+        self.assertEquals(syndic_opts['master_port'], 54506)
+        self.assertEquals(syndic_opts['master_ip'], '127.0.0.1')
+        self.assertEquals(syndic_opts['master'], 'localhost')
+        self.assertEquals(syndic_opts['sock_dir'], '/tmp/salttest/minion_sock')
+        self.assertEquals(syndic_opts['cachedir'], '/tmp/salttest/cachedir')
+        self.assertEquals(syndic_opts['log_file'], '/tmp/salttest/osyndic.log')
+        self.assertEquals(syndic_opts['pidfile'], '/tmp/salttest/osyndic.pid')
+        # Show that the options of localclient that repub to local master
+        # are not merged with syndic ones
+        self.assertEquals(syndic_opts['_master_conf_file'], minion_config_path)
+        self.assertEquals(syndic_opts['_minion_conf_file'], syndic_conf_path)
+
+    def test_check_dns_deprecation_warning(self):
+        if salt_version.__version_info__ >= (0, 19):
+            raise AssertionError(
+                'Failing this test on purpose! Please delete this test case, '
+                'the \'check_dns\' keyword argument and the deprecation '
+                'warnings in `salt.config.minion_config` and '
+                'salt.config.apply_minion_config`'
+            )
+
+        # Let's force the warning to always be thrown
+        warnings.resetwarnings()
+        warnings.filterwarnings(
+            'always', '(.*)check_dns(.*)', DeprecationWarning, 'salt.config'
+        )
+        with warnings.catch_warnings(record=True) as w:
+            sconfig.minion_config(None, None, check_dns=True)
+            self.assertEqual(
+                'The functionality behind the \'check_dns\' keyword argument '
+                'is no longer required, as such, it became unnecessary and is '
+                'now deprecated. \'check_dns\' will be removed in salt > '
+                '0.18.0', str(w[-1].message)
+            )
+
+        with warnings.catch_warnings(record=True) as w:
+            sconfig.apply_minion_config(
+                overrides=None, defaults=None, check_dns=True
+            )
+            self.assertEqual(
+                'The functionality behind the \'check_dns\' keyword argument '
+                'is no longer required, as such, it became unnecessary and is '
+                'now deprecated. \'check_dns\' will be removed in salt > '
+                '0.18.0', str(w[-1].message)
+            )
+
+        with warnings.catch_warnings(record=True) as w:
+            sconfig.minion_config(None, None, check_dns=False)
+            self.assertEqual(
+                'The functionality behind the \'check_dns\' keyword argument '
+                'is no longer required, as such, it became unnecessary and is '
+                'now deprecated. \'check_dns\' will be removed in salt > '
+                '0.18.0', str(w[-1].message)
+            )
+
+        with warnings.catch_warnings(record=True) as w:
+            sconfig.apply_minion_config(
+                overrides=None, defaults=None, check_dns=False
+            )
+            self.assertEqual(
+                'The functionality behind the \'check_dns\' keyword argument '
+                'is no longer required, as such, it became unnecessary and is '
+                'now deprecated. \'check_dns\' will be removed in salt > '
+                '0.18.0', str(w[-1].message)
+            )
 
 
 if __name__ == '__main__':

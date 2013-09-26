@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for running ZFS zpool command
 '''
@@ -8,10 +9,12 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_zpool():
     '''
     Looks to see if zpool is present on the system
@@ -19,7 +22,7 @@ def _check_zpool():
     return salt.utils.which('zpool')
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _check_mkfile():
     '''
     Looks to see if mkfile is present on the system
@@ -40,7 +43,9 @@ def status(name=''):
     '''
     Return the status of the named zpool
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.status
     '''
@@ -54,7 +59,9 @@ def iostat(name=''):
     '''
     Display I/O statistics for the given pools
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.iostat
     '''
@@ -68,7 +75,9 @@ def zpool_list():
     '''
     Return a list of all pools in the system with health status and space usage
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.zpool_list
     '''
@@ -82,7 +91,9 @@ def exists(pool_name):
     '''
     Check if a ZFS storage pool is active
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.exists myzpool
     '''
@@ -97,7 +108,9 @@ def destroy(pool_name):
     '''
     Destroys a storage pool
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.destroy myzpool
     '''
@@ -117,7 +130,9 @@ def scrub(pool_name=None):
     '''
     Begin a scrub
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.scrub myzpool
     '''
@@ -139,7 +154,9 @@ def create(pool_name, *vdevs):
     '''
     Create a new storage pool
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.create myzpool /path/to/vdev1 [/path/to/vdev2] [...]
     '''
@@ -181,7 +198,9 @@ def add(pool_name, vdev):
     '''
     Add the specified vdev to the given pool
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.add myzpool /path/to/vdev
     '''
@@ -212,7 +231,9 @@ def replace(pool_name, old, new):
     '''
     Replaces old device with new device.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.replace myzpool /path/to/vdev1 /path/to/vdev2
     '''
@@ -251,7 +272,9 @@ def create_file_vdev(size, *vdevs):
 
     ``*vdevs`` is a list of full paths for mkfile to create
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' zpool.create_file_vdev 7g /path/to/vdev1 [/path/to/vdev2] [...]
 

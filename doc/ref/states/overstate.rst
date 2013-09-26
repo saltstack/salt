@@ -28,12 +28,12 @@ or to execute a state.highstate.
 .. code-block:: yaml
 
     mysql:
-      match: db*
+      match: 'db*'
       sls:
         - mysql.server
         - drbd
     webservers:
-      match: web*
+      match: 'web*'
       require:
         - mysql
     all:
@@ -76,7 +76,7 @@ Executing the Over State
 
 The over state can be executed from the salt-run command, calling the
 state.over runner function. The function will by default look in the base
-environment for the overstate.sls file:
+environment for the `overstate.sls` file:
 
 .. code-block:: bash
 

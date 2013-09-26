@@ -1,7 +1,11 @@
+# -*- coding: utf-8 -*-
+'''
+Configure ``portage(5)``
+'''
+
 # Import python libs
-from os.path import isdir, exists
-from os import mkdir, rename, remove, walk
-from shutil import copy, rmtree
+import os
+import shutil
 
 # Import salt libs
 import salt.utils
@@ -13,7 +17,7 @@ try:
 except ImportError:
     HAS_PORTAGE = False
     import sys
-    if isdir('/usr/lib/portage/pym'):
+    if os.path.isdir('/usr/lib/portage/pym'):
         try:
             # In a virtualenv, the portage python path needs to be manually
             # added
@@ -58,7 +62,9 @@ def enforce_nice_config():
     Enforce a nice tree structure for /etc/portage/package.* configuration
     files.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.enforce_nice_config
     '''
@@ -90,9 +96,9 @@ def _unify_keywords():
     /etc/portage/package.accept_keywords.
     '''
     old_path = BASE_PATH.format('keywords')
-    if exists(old_path):
-        if isdir(old_path):
-            for triplet in walk(old_path):
+    if os.path.exists(old_path):
+        if os.path.isdir(old_path):
+            for triplet in os.walk(old_path):
                 for file_name in triplet[2]:
                     file_path = '{0}/{1}'.format(triplet[0], file_name)
                     with salt.utils.fopen(file_path) as fh_:
@@ -100,13 +106,13 @@ def _unify_keywords():
                             if line.strip():
                                 append_to_package_conf(
                                     'accept_keywords', string=line)
-            rmtree(old_path)
+            shutil.rmtree(old_path)
         else:
             with salt.utils.fopen(old_path) as fh_:
                 for line in fh_:
                     if line.strip():
                         append_to_package_conf('accept_keywords', string=line)
-            remove(old_path)
+            os.remove(old_path)
 
 
 def _package_conf_file_to_dir(file_name):
@@ -115,19 +121,19 @@ def _package_conf_file_to_dir(file_name):
     '''
     if file_name in SUPPORTED_CONFS:
         path = BASE_PATH.format(file_name)
-        if exists(path):
-            if isdir(path):
+        if os.path.exists(path):
+            if os.path.isdir(path):
                 return False
             else:
-                rename(path, path + '.tmpbak')
-                mkdir(path, 0755)
+                os.rename(path, path + '.tmpbak')
+                os.mkdir(path, 0755)
                 with salt.utils.fopen(path + '.tmpbak') as fh_:
                     for line in fh_:
                         append_to_package_conf(file_name, string=line.strip())
-                remove(path + '.tmpbak')
+                os.remove(path + '.tmpbak')
                 return True
         else:
-            mkdir(path, 0755)
+            os.mkdir(path, 0755)
             return True
 
 
@@ -141,17 +147,17 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         backup_files = []
 
-        for triplet in walk(path):
+        for triplet in os.walk(path):
             for file_name in triplet[2]:
                 file_path = '{0}/{1}'.format(triplet[0], file_name)
                 cp = triplet[0][len(path) + 1:] + '/' + file_name
 
-                copy(file_path, file_path + '.bak')
+                shutil.copy(file_path, file_path + '.bak')
                 backup_files.append(file_path + '.bak')
 
                 if cp[0] == '/' or cp.split('/') > 2:
                     rearrange.extend(list(salt.utils.fopen(file_path)))
-                    remove(file_path)
+                    os.remove(file_path)
                 else:
                     new_contents = ''
                     with salt.utils.fopen(file_path, 'r+') as file_handler:
@@ -172,7 +178,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                             file_handler.write(new_contents)
 
                     if len(new_contents) == 0:
-                        remove(file_path)
+                        os.remove(file_path)
 
         for line in rearrange:
             append_to_package_conf(conf, string=line)
@@ -180,15 +186,15 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
         if not keep_backup:
             for bfile in backup_files:
                 try:
-                    remove(bfile)
+                    os.remove(bfile)
                 except OSError:
                     pass
 
         if clean:
-            for triplet in walk(path):
+            for triplet in os.walk(path):
                 if len(triplet[1]) == 0 and len(triplet[2]) == 0 and \
                         triplet[0] != path:
-                    rmtree(triplet[0])
+                    shutil.rmtree(triplet[0])
 
 
 def _merge_flags(*args):
@@ -221,7 +227,9 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
     Append a string or a list of flags for a given package or DEPEND atom to a
     given configuration file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.append_to_package_conf use string="app-admin/salt ldap -libvirt"
         salt '*' portage_config.append_to_package_conf use atom="> = app-admin/salt-0.14.1" flags="['ldap', '-libvirt']"
@@ -230,7 +238,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         flags = []
     if conf in SUPPORTED_CONFS:
         if not string:
-            if atom.find('/') == -1:
+            if '/' not in atom:
                 atom = _p_to_cp(atom)
                 if not atom:
                     return
@@ -239,7 +247,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         else:
             atom = string.strip().split()[0]
             new_flags = portage.dep.strip_empty(string.strip().split(' '))[1:]
-            if atom.find('/') == -1:
+            if '/' not in atom:
                 atom = _p_to_cp(atom)
                 string = '{0} {1}'.format(atom, ' '.join(new_flags))
                 if not atom:
@@ -268,13 +276,13 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         psplit = package_file.split('/')
         if len(psplit) == 2:
             pdir = BASE_PATH.format(conf) + '/' + psplit[0]
-            if not exists(pdir):
-                mkdir(pdir, 0755)
+            if not os.path.exists(pdir):
+                os.mkdir(pdir, 0755)
 
         complete_file_path = BASE_PATH.format(conf) + '/' + package_file
 
         try:
-            copy(complete_file_path, complete_file_path + '.bak')
+            shutil.copy(complete_file_path, complete_file_path + '.bak')
         except IOError:
             pass
 
@@ -324,7 +332,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         file_handler.write(new_contents)
         file_handler.close()
         try:
-            remove(complete_file_path + '.bak')
+            os.remove(complete_file_path + '.bak')
         except OSError:
             pass
 
@@ -333,7 +341,9 @@ def append_use_flags(atom, uses=None, overwrite=False):
     '''
     Append a list of use flags for a given package or DEPEND atom
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.append_use_flags "app-admin/salt[ldap, -libvirt]"
         salt '*' portage_config.append_use_flags ">=app-admin/salt-0.14.1" "['ldap', '-libvirt']"
@@ -352,13 +362,15 @@ def get_flags_from_package_conf(conf, atom):
     Warning: This only works if the configuration files tree is in the correct
     format (the one enforced by enforce_nice_config)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.get_flags_from_package_conf license salt
     '''
     if conf in SUPPORTED_CONFS:
         package_file = '{0}/{1}'.format(BASE_PATH.format(conf), _p_to_cp(atom))
-        if atom.find('/') == -1:
+        if '/' not in atom:
             atom = _p_to_cp(atom)
         match_list = set(_porttree().dbapi.xmatch("match-all", atom))
         flags = []
@@ -386,7 +398,9 @@ def has_flag(conf, atom, flag):
     Warning: This only works if the configuration files tree is in the correct
     format (the one enforced by enforce_nice_config)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.has_flag license salt Apache-2.0
     '''
@@ -398,7 +412,9 @@ def has_flag(conf, atom, flag):
 def get_missing_flags(conf, atom, flags):
     '''
     Find out which of the given flags are currently not set.
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.get_missing_flags use salt "['ldap', '-libvirt', 'openssl']"
     '''
@@ -415,7 +431,9 @@ def has_use(atom, use):
     Warning: This only works if the configuration files tree is in the correct
     format (the one enforced by enforce_nice_config)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.has_use salt libvirt
     '''
@@ -429,7 +447,9 @@ def is_present(conf, atom):
     Warning: This only works if the configuration files tree is in the correct
     format (the one enforced by enforce_nice_config)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' portage_config.is_present unmask salt
     '''

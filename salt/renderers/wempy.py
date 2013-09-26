@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import python libs
 from StringIO import StringIO
 
@@ -6,7 +7,12 @@ from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
 
-def render(template_file, env='', sls='', argline='', context=None, **kws):
+def render(template_file,
+           env='',
+           sls='',
+           argline='',
+           context=None,
+           **kws):
     '''
     Render the data passing the functions and grains into the rendering system
 

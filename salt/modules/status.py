@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
@@ -42,7 +43,9 @@ def procs():
     '''
     Return the process data
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.procs
     '''
@@ -89,7 +92,9 @@ def custom():
     By default, nothing is returned. Warning: Depending on what you
     include, there can be a LOT here!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.custom
     '''
@@ -109,7 +114,9 @@ def uptime():
     '''
     Return the uptime for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.uptime
     '''
@@ -120,25 +127,25 @@ def loadavg():
     '''
     Return the load averages for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.loadavg
     '''
-    procf = '/proc/loadavg'
-    if not os.path.isfile(procf):
-        return {}
-    comps = salt.utils.fopen(procf, 'r').read().strip()
-    load_avg = comps.split()
-    return {'1-min':  _number(load_avg[0]),
-            '5-min':  _number(load_avg[1]),
-            '15-min': _number(load_avg[2])}
+    load_avg = os.getloadavg()
+    return {'1-min': load_avg[0],
+            '5-min': load_avg[1],
+            '15-min': load_avg[2]}
 
 
 def cpustats():
     '''
     Return the CPU stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.cpustats
     '''
@@ -175,7 +182,9 @@ def meminfo():
     '''
     Return the CPU stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.meminfo
     '''
@@ -190,7 +199,7 @@ def meminfo():
         comps = line.split()
         comps[0] = comps[0].replace(':', '')
         ret[comps[0]] = {
-            'value':    comps[1],
+            'value': comps[1],
         }
         if len(comps) > 2:
             ret[comps[0]]['unit'] = comps[2]
@@ -201,7 +210,9 @@ def cpuinfo():
     '''
     Return the CPU info for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.cpuinfo
     '''
@@ -226,7 +237,9 @@ def diskstats():
     '''
     Return the disk stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.diskstats
     '''
@@ -264,7 +277,9 @@ def diskusage(*args):
 
         salt '*' status.diskusage [paths and/or filesystem types]
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.diskusage         # usage for all filesystems
         salt '*' status.diskusage / /tmp  # usage for / and /tmp
@@ -288,7 +303,7 @@ def diskusage(*args):
                 # select fstype
                 fstypes.add(arg)
 
-    if len(fstypes) > 0:
+    if fstypes:
         # determine which mount points host the specified fstypes
         regex = re.compile(
             '|'.join(
@@ -319,7 +334,9 @@ def vmstats():
     '''
     Return the virtual memory stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.vmstats
     '''
@@ -340,7 +357,9 @@ def netstats():
     '''
     Return the network stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.netstats
     '''
@@ -373,7 +392,9 @@ def netdev():
     '''
     Return the network device stats for this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.netdev
     '''
@@ -416,7 +437,9 @@ def w():  # pylint: disable=C0103
     '''
     Return a list of logged in users for this minion, using the w command
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.w
     '''
@@ -442,13 +465,16 @@ def all_status():
     Return a composite of all status data and info for this minion.
     Warning: There is a LOT here!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.all_status
     '''
     return {'cpuinfo': cpuinfo(),
             'cpustats': cpustats(),
             'diskstats': diskstats(),
+            'diskusage': diskusage(),
             'loadavg': loadavg(),
             'meminfo': meminfo(),
             'netdev': netdev(),
@@ -463,7 +489,9 @@ def pid(sig):
     Return the PID or an empty string if the process is running or not.
     Pass a signature to use to find the process via ps.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.pid <sig>
     '''

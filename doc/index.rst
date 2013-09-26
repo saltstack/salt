@@ -54,6 +54,7 @@ States - Configuration Management with Salt:
     - :doc:`Basic config management <topics/tutorials/states_pt1>`
     - :doc:`Less basic config management <topics/tutorials/states_pt2>`
     - :doc:`Advanced techniques <topics/tutorials/states_pt3>`
+    - :doc:`Salt Fileserver Path Inheritance <topics/tutorials/states_pt4>`
 
 Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
@@ -97,11 +98,11 @@ arbitrary commands on remote hosts.
         databases can be supported or custom interfaces can be easily
         communicated with.
 
-:doc:`Targeting </topics/targeting/index>`
-------------------------------------------
+Targeting
+---------
 
-Targeting is specifying which minions should execute commands or manage server
-configuration.
+:doc:`Targeting </topics/targeting/index>` is specifying which minions
+should execute commands or manage server configuration.
 
 :doc:`Globbing and regex </topics/targeting/globbing>`
     Match minions using globbing and regular expressions.
@@ -201,7 +202,7 @@ Salt is many splendid things.
 :doc:`Testing Salt <topics/tests/index>`
     A howto for writing unit tests and integration tests.
 
-:doc:`Python API interface <ref/python-api>`
+:ref:`Python API interface <python-api>`
     Use Salt programmatically from scripts and programs easily and
     simply via ``import salt``.
 
@@ -211,7 +212,7 @@ Salt is many splendid things.
     builds.
 
 :doc:`Windows Software Manager / Package Repository <ref/windows-package-manager>`
-    Looking for an easy way to manage software on Windows machines? 
+    Looking for an easy way to manage software on Windows machines?
     Search no more! Salt has an integrated software package manager for
     Windows machines! Install software hosted on the master, somewhere on the
     network, or any HTTP, HTTPS, or ftp server.
@@ -231,14 +232,19 @@ Reference
 :doc:`Full table of contents </contents>`
     Dense but complete.
 
+FAQ
+===
+
+See :doc:`here <faq>` for a list of Frequently Asked Questions.
+
 More information about the project
-----------------------------------
+==================================
 
 :doc:`Release notes </topics/releases/index>`
     Living history of Salt Stack.
 
 :doc:`Community </topics/community>`
-    How to can get involved.
+    How to get involved.
 
 :doc:`Salt Development </topics/development/index>`
     Information for Hacking on Salt

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the registry on Windows
 
@@ -34,10 +35,11 @@ class Registry(object):
     '''
     def __init__(self):
         self.hkeys = {
-            "HKEY_USERS":         _winreg.HKEY_USERS,
-            "HKEY_CURRENT_USER":  _winreg.HKEY_CURRENT_USER,
+            "HKEY_USERS": _winreg.HKEY_USERS,
+            "HKEY_CURRENT_USER": _winreg.HKEY_CURRENT_USER,
             "HKEY_LOCAL_MACHINE": _winreg.HKEY_LOCAL_MACHINE,
             }
+
     def __getattr__(self, k):
         try:
             return self.hkeys[k]
@@ -45,6 +47,7 @@ class Registry(object):
             msg = 'No hkey named \'{0}. Try one of {1}\''
             hkeys = ', '.join(self.hkeys)
             raise CommandExecutionError(msg.format(k, hkeys))
+
 
 def __virtual__():
     '''
@@ -58,11 +61,14 @@ def __virtual__():
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 
+
 def read_key(hkey, path, key):
     '''
     Read registry key value
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' reg.read_key HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version'
     '''
@@ -79,27 +85,35 @@ def read_key(hkey, path, key):
         return False
 
 
-def set_key(hkey, path, key, value):
+def set_key(hkey, path, key, value, vtype='REG_DWORD'):
     '''
     Set a registry key
+    vtype: http://docs.python.org/2/library/_winreg.html#value-types
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
+    .. code-block:: bash
+
+        salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97' REG_DWORD
     '''
     registry = Registry()
     hkey2 = getattr(registry, hkey)
     # fullpath = '\\\\'.join([path, key])
 
     try:
+        _type = getattr(_winreg, vtype)
+    except AttributeError:
+        return False
+
+    try:
         # handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_ALL_ACCESS)
         handle = _winreg.OpenKey(hkey2, path, 0, _winreg.KEY_ALL_ACCESS)
-        _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
+        _winreg.SetValueEx(handle, key, 0, _type, value)
         _winreg.CloseKey(handle)
         return True
     except Exception:
         handle = _winreg.CreateKey(hkey2, path)
-        _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
+        _winreg.SetValueEx(handle, key, 0, _type, value)
         _winreg.CloseKey(handle)
     return True
 
@@ -108,7 +122,9 @@ def create_key(hkey, path, key, value=None):
     '''
     Create a registry key
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' reg.create_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
@@ -134,7 +150,9 @@ def delete_key(hkey, path, key):
 
     Note: This cannot delete a key with subkeys
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''

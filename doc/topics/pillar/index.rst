@@ -1,3 +1,5 @@
+.. _pillar:
+
 ==============
 Pillar of Salt
 ==============
@@ -26,8 +28,8 @@ minions based on matchers in a top file which is laid out in the same way
 as the state top file. Salt pillars can use the same matcher types as the
 standard top file.
 
-The configuration for the ``pillar_roots`` in the master config is identical in
-behavior and function as the ``file_roots`` configuration:
+The configuration for the :conf_master:`pillar_roots` in the master config file
+is identical in behavior and function as :conf_master:`file_roots`:
 
 .. code-block:: yaml
 
@@ -48,8 +50,8 @@ file used for States, and has the same structure:
         - packages
 
 This further example shows how to use other standard top matching types (grain
-matching is used in this example) to deliver specific salt pillar data to minions
-with different 'os' grains:
+matching is used in this example) to deliver specific salt pillar data to
+minions with different ``os`` grains:
 
 .. code-block:: yaml
 
@@ -71,7 +73,7 @@ with different 'os' grains:
     {% endif %}
 
 Now this data can be used from within modules, renderers, State SLS files, and
-more via the shared pillar `dict`_:
+more via the shared pillar :ref:`dict <python2:typesmapping>`:
 
 .. code-block:: yaml
 
@@ -87,14 +89,48 @@ more via the shared pillar `dict`_:
         - installed
         - name: {{ pillar['git'] }}
 
-.. _`dict`: http://docs.python.org/library/stdtypes.html#mapping-types-dict
 
 
 Note that you cannot just list key/value-information in ``top.sls``.
 
+Pillar namespace flattened
+==========================
+
+The separate pillar files all share the same namespace. Given 
+a ``top.sls`` of:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+        - services
+
+a ``packages.sls`` file of:
+
+.. code-block:: yaml
+
+    bind: bind9
+
+and a ``services.sls`` file of:
+
+.. code-block:: yaml
+
+    bind: named
+
+Then a request for the ``bind`` pillar will only return 'named'; the 'bind9'
+value is not available. It is better to structure your pillar files with more
+hierarchy. For example your ``package.sls`` file could look like:
+
+.. code-block:: yaml
+
+    packages:
+      bind: bind9
 
 Including Other Pillars
 =======================
+
+.. versionadded:: 0.16.0
 
 Pillar SLS files may include other pillar files, similar to State files.
 Two syntaxes are available for this purpose. The simple form simply includes
@@ -127,14 +163,18 @@ Viewing Minion Pillar
 
 Once the pillar is set up the data can be viewed on the minion via the
 ``pillar`` module, the pillar module comes with two functions,
-:mod:`pillar.data <salt.modules.pillar.data>` and and :mod:`pillar.raw
-<salt.modules.pillar.raw>`.  :mod:`pillar.data <salt.modules.pillar.data>` will
-return a freshly reloaded pillar and :mod:`pillar.raw
+:mod:`pillar.items <salt.modules.pillar.items>` and and :mod:`pillar.raw
+<salt.modules.pillar.raw>`.  :mod:`pillar.items <salt.modules.pillar.items>`
+will return a freshly reloaded pillar and :mod:`pillar.raw
 <salt.modules.pillar.raw>` will return the current pillar without a refresh:
 
 .. code-block:: bash
 
-    # salt '*' pillar.data
+    salt '*' pillar.items
+
+.. note::
+    Prior to version 0.16.2, this function is named ``pillar.data``. This
+    function name is still supported for backwards compatibility.
 
 
 Pillar "get" Function
@@ -182,8 +222,8 @@ locally. This is done with the ``saltutil.refresh_pillar`` function.
 
     salt '*' saltutil.refresh_pillar
 
-This function triggers the minion to refresh the pillar and will always return
-``True``
+This function triggers the minion to asynchronously refresh the pillar and will
+always return ``None``.
 
 Targeting with Pillar
 =====================
@@ -199,9 +239,11 @@ Like with :doc:`Grains <../targeting/grains>`, it is possible to use globbing
 as well as match nested values in Pillar, by adding colons for each level that
 is being traversed. The below example would match minions with a pillar named
 ``foo``, which is a dict containing a key ``bar``, with a value beginning with
-``baz``::
+``baz``:
 
-    salt -I 'foo:bar:baz*'
+.. code-block:: bash
+
+    salt -I 'foo:bar:baz*' test.ping
 
 
 Master Config In Pillar

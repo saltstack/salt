@@ -4,7 +4,7 @@ Salt as a Cloud Controller
 
 In Salt 0.14.0 advanced cloud control systems were introduced, allowing for
 private cloud vms to be managed directly with Salt. This system is generally
-referred to as "Salt Virt".
+referred to as :strong:`Salt Virt`.
 
 The Salt Virt system already exists and is installed within Salt itself, this
 means that beyond setting up Salt no additional salt code needs to be deployed.
@@ -58,26 +58,26 @@ Network Setup
 
 Salt virt comes with a system to model the network interfaces used by the
 deployed virtual machines, by default a single interface is created for the
-deployed virtual machine and is bridged to `br0`. To get going with the default
-networking setup ensure that the bridge interface named `br0` exists on the
-hypervisor and is bridged to an active network device.
+deployed virtual machine and is bridged to ``br0``. To get going with the
+default networking setup ensure that the bridge interface named ``br0`` exists
+on the hypervisor and is bridged to an active network device.
 
 .. note::
 
     To use more advanced networking in Salt Virt read the `Salt Virt
     Networking` document:
 
-    :doc:`Salt Virt Networking <topics/virt/nic>`
+    :doc:`Salt Virt Networking </topics/virt/nic>`
 
 Libvirt State
 -------------
 
-One of the challanges of deploying a libvirt based cloud is the distribution
+One of the challenges of deploying a libvirt based cloud is the distribution
 of libvirt certificates. These certificates allow for virtual machine
 migration. Salt comes with a system used to auto deploy these certificates.
 Salt manages the signing authority key and generates keys for libvirt clients
 on the master, signs them with the certificate authority and uses pillar to
-distrbute them. This is managed via the ``libvirt`` state. Simply execute this
+distribute them. This is managed via the ``libvirt`` state. Simply execute this
 formula on the minion to ensure that the certificate is in place and up to
 date:
 

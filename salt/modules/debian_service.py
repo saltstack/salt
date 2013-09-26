@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Service support for Debian systems - uses update-rc.d and service to modify the
-system
+Service support for Debian systems (uses update-rc.d and /sbin/service)
 '''
 
 # Import python libs
@@ -14,11 +14,12 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+
 def __virtual__():
     '''
     Only work on Debian and when systemd isn't running
     '''
-    if __grains__['os'] == 'Debian' and not _sd_booted():
+    if __grains__['os'] in ('Debian', 'Raspbian') and not _sd_booted():
         return 'service'
     return False
 
@@ -27,14 +28,25 @@ def _get_runlevel():
     '''
     returns the current runlevel
     '''
-    return __salt__['cmd.run']('runlevel').split()[1]
+    out = __salt__['cmd.run']('runlevel')
+    # unknown can be returned while inside a container environment, since
+    # this is due to a lack of init, it should be safe to assume runlevel
+    # 2, which is Debian's default. If not, all service related states
+    # will throw an out of range exception here which will cause
+    # other functions to fail.
+    if 'unknown' in out:
+        return '2'
+    else:
+        return out.split()[1]
 
 
 def get_enabled():
     '''
     Return a list of service that are enabled on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_enabled
     '''
@@ -50,7 +62,9 @@ def get_disabled():
     '''
     Return a set of services that are installed but disabled
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_disabled
     '''
@@ -61,7 +75,9 @@ def get_all():
     '''
     Return all available boot services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -79,7 +95,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -91,7 +109,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -99,11 +119,13 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -115,7 +137,9 @@ def reload_(name):
     '''
     Reload the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.reload <service name>
     '''
@@ -127,7 +151,9 @@ def force_reload(name):
     '''
     Force-reload the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.force_reload <service name>
     '''
@@ -140,7 +166,9 @@ def status(name, sig=None):
     Return the status for a service, pass a signature to use to find
     the service via ps
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name>
     '''
@@ -154,7 +182,9 @@ def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
@@ -169,7 +199,9 @@ def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
@@ -181,7 +213,9 @@ def enabled(name):
     '''
     Return True if the named service is enabled, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enabled <service name>
     '''
@@ -192,7 +226,9 @@ def disabled(name):
     '''
     Return True if the named service is enabled, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disabled <service name>
     '''

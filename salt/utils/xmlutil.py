@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 '''
 Various XML utilities
 '''
+
 
 def to_dict(xmltree):
     '''

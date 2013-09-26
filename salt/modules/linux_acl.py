@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Linux File Access Control Lists
 '''
@@ -19,7 +20,9 @@ def version():
     '''
     Return facl version from getfacl --version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' acl.version
     '''
@@ -32,7 +35,10 @@ def version():
 def getfacl(*args):
     '''
     Return (extremely verbose) map of FACLs on specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.getfacl /tmp/house/kitchen
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
@@ -136,7 +142,10 @@ def _parse_acl(acl, user, group):
 def wipefacls(*args):
     '''
     Remove all FACLs from the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.wipefacls /tmp/house/kitchen
         salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom
@@ -151,7 +160,10 @@ def wipefacls(*args):
 def modfacl(acl_type, acl_name, perms, *args):
     '''
     Add or modify a FACL for the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.addfacl user myuser rwx /tmp/house/kitchen
         salt '*' acl.addfacl default:group mygroup rx /tmp/house/kitchen
@@ -180,7 +192,10 @@ def modfacl(acl_type, acl_name, perms, *args):
 def delfacl(acl_type, acl_name, *args):
     '''
     Remove specific FACL from the specified file(s)
-    CLI Examples::
+
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' acl.delfacl user myuser /tmp/house/kitchen
         salt '*' acl.delfacl default:group mygroup /tmp/house/kitchen

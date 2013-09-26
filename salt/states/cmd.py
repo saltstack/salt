@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
-Execution of arbitrary commands.
-================================
+Execution of arbitrary commands
+===============================
 
 The cmd state module manages the enforcement of executed commands, this
 state can tell a command to run under certain circumstances.
@@ -8,14 +9,13 @@ state can tell a command to run under certain circumstances.
 
 A simple example to execute a command:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        date > /tmp/salt-run:
-        cmd:
-            - run
+    date > /tmp/salt-run:
+      cmd.run
 
-Only run if another execution failed, in this case truncate
-syslog if there is no disk space:
+Only run if another execution failed, in this case truncate syslog if there is
+no disk space:
 
 .. code-block:: yaml
 
@@ -36,55 +36,55 @@ If ``stateful`` is specified to be true then it is assumed that the command
 or script will determine its own state and communicate it back by following
 a simple protocol described below:
 
-    If there's nothing in the stdout of the command, then assume no changes.
-    Otherwise, the stdout must be either in JSON or its `last` non-empty line
-    must be a string of key=value pairs delimited by spaces(no spaces on the
-    sides of ``=``).
+1. :strong:`If there's nothing in the stdout of the command, then assume no
+   changes.` Otherwise, the stdout must be either in JSON or its `last`
+   non-empty line must be a string of key=value pairs delimited by spaces (no
+   spaces on either side of ``=``).
 
-    If it's JSON then it must be a JSON object (e.g., {}).
-    If it's key=value pairs then quoting may be used to include spaces.
-    (Python's shlex module is used to parse the key=value string)
+2. :strong:`If it's JSON then it must be a JSON object (e.g., {}).` If it's
+   key=value pairs then quoting may be used to include spaces.  (Python's shlex
+   module is used to parse the key=value string)
 
-    Two special keys or attributes are recognized in the output::
+   Two special keys or attributes are recognized in the output::
 
-      changed: bool (i.e., 'yes', 'no', 'true', 'false', case-insensitive)
-      comment: str  (i.e., any string)
+    changed: bool (i.e., 'yes', 'no', 'true', 'false', case-insensitive)
+    comment: str  (i.e., any string)
 
-    So, only if 'changed' is true then assume the command execution has changed
-    the state, and any other key values or attributes in the output will be set
-    as part of the changes.
+   So, only if ``changed`` is ``True`` then assume the command execution has
+   changed the state, and any other key values or attributes in the output will
+   be set as part of the changes.
 
-    If there's a comment then it will be used as the comment of the state.
+3. :strong:`If there's a comment then it will be used as the comment of the
+   state.`
 
-    Here's an example of how one might write a shell script for use with a
-    stateful command::
+   Here's an example of how one might write a shell script for use with a
+   stateful command::
 
-      #!/bin/bash
-      #
-      echo "Working hard..."
+    #!/bin/bash
+    #
+    echo "Working hard..."
 
-      # writing the state line
-      echo  # an empty line here so the next line will be the last.
-      echo "changed=yes comment='something has changed' whatever=123"
+    # writing the state line
+    echo  # an empty line here so the next line will be the last.
+    echo "changed=yes comment='something has changed' whatever=123"
 
+   And an example SLS file using this module::
 
-    And an example salt file using this module::
+    Run myscript:
+      cmd.run:
+        - name: /path/to/myscript
+        - cwd: /
+        - stateful: True
 
-        Run myscript:
-          cmd.run:
-            - name: /path/to/myscript
-            - cwd: /
-            - stateful: true
+    Run only if myscript changed something:
+      cmd.wait:
+        - name: echo hello
+        - cwd: /
+        - watch:
+            - cmd: Run myscript
 
-        Run only if myscript changed something:
-          cmd.wait:
-            - name: echo hello
-            - cwd: /
-            - watch:
-              - cmd: Run myscript
-
-    Note that if the ``cmd.wait`` state also specifies ``stateful: true``
-    it can then be watched by some other states as well.
+   Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
+   then be watched by some other states as well.
 
 ``cmd.wait`` is not restricted to watching only cmd states. For example
 it can also watch a git state for changes
@@ -104,6 +104,33 @@ it can also watch a git state for changes
           - git: my-project
 
 
+Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states.cmd.wait>`?
+--------------------------------------------------------------------------------------------
+
+These two states are often confused. The important thing to remember about them
+is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS
+file that contains them is applied. If it is more desirable to have a command
+that only runs after some other state changes, then :mod:`cmd.wait
+<salt.states.cmd.wait>` does just that. :mod:`cmd.wait <salt.states.cmd.wait>`
+is designed to :doc:`watch </ref/states/requisites>` other states, and is
+executed when the state it is watching changes. Example:
+
+.. code-block:: yaml
+
+    /usr/local/bin/postinstall.sh:
+      cmd:
+        - wait
+        - watch:
+          - pkg: mycustompkg
+      file:
+        - managed
+        - source: salt://utils/scripts/postinstall.sh
+
+    mycustompkg:
+      pkg:
+        - installed
+        - require:
+          - file: /usr/local/bin/postinstall.sh
 '''
 
 # Import python libs
@@ -122,7 +149,9 @@ import logging
 import yaml
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -219,15 +248,25 @@ def _run_check(cmd_kwargs, onlyif, unless, group):
             return {'comment': 'The group {0} is not available'.format(group),
                     'result': False}
 
-    if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif execution failed',
-                    'result': True}
+    if onlyif is not None:
+        if not isinstance(onlyif, string_types):
+            if not onlyif:
+                return {'comment': 'onlyif execution failed',
+                        'result': True}
+        elif isinstance(onlyif, string_types):
+            if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+                return {'comment': 'onlyif execution failed',
+                        'result': True}
 
-    if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless execution succeeded',
-                    'result': True}
+    if unless is not None:
+        if not isinstance(unless, string_types):
+            if unless:
+                return {'comment': 'unless execution succeeded',
+                        'result': True}
+        elif isinstance(unless, string_types):
+            if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+                return {'comment': 'unless execution succeeded',
+                        'result': True}
 
     # No reason to stop, return True
     return True
@@ -522,6 +561,7 @@ def script(name,
            stateful=False,
            umask=None,
            timeout=None,
+           __env__='base',
            **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
@@ -564,8 +604,8 @@ def script(name,
         The shell to use for execution, defaults to the shell grain
 
     env
-        The root directory of the environment for the referencing script. The
-        environments are defined in the master config file.
+        Pass in a list or dict of environment variables to be applied to the
+        command upon execution
 
     umask
          The umask (in octal) to use when running the command.
@@ -582,6 +622,10 @@ def script(name,
         String of command line args to pass to the script.  Only used if no
         args are specified as part of the `name` argument.
 
+    __env__
+        The root directory of the environment for the referencing script. The
+        environments are defined in the master config file.
+
     '''
     ret = {'changes': {},
            'comment': '',
@@ -592,8 +636,17 @@ def script(name,
         ret['comment'] = 'Desired working directory is not available'
         return ret
 
-    if env is None:
-        env = kwargs.get('__env__', 'base')
+    if isinstance(env, string_types):
+        msg = (
+            'Passing a salt environment should be done using \'__env__\' not '
+            '\'env\'. This warning will go away in salt 0.19.0 and this will '
+            'be the default and expected behaviour. Please update your state '
+            'files.'
+        )
+        salt.utils.warn_until((0, 19), msg)
+        ret.setdefault('warnings', []).append(msg)
+        # Backwards compatibility
+        __env__ = env
 
     if HAS_GRP:
         pgid = os.getegid()
@@ -609,7 +662,8 @@ def script(name,
                        'cwd': cwd,
                        'template': template,
                        'umask': umask,
-                       'timeout': timeout})
+                       'timeout': timeout,
+                       '__env__': __env__})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,
@@ -642,7 +696,7 @@ def script(name,
         # Wow, we passed the test, run this sucker!
         try:
             cmd_all = __salt__['cmd.script'](source, **cmd_kwargs)
-        except CommandExecutionError as err:
+        except (CommandExecutionError, IOError) as err:
             ret['comment'] = str(err)
             return ret
 
@@ -651,7 +705,11 @@ def script(name,
             ret['result'] = not bool(cmd_all)
         else:
             ret['result'] = not bool(cmd_all['retcode'])
-        ret['comment'] = 'Command "{0}" run'.format(name)
+        if ret.get('changes', {}).get('cache_error'):
+            ret['comment'] = 'Unable to cache script {0} from env ' \
+                             '\'{1}\''.format(source, env)
+        else:
+            ret['comment'] = 'Command "{0}" run'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     finally:
@@ -659,7 +717,10 @@ def script(name,
             os.setegid(pgid)
 
 
-def call(name, func, args=(), kws=None,
+def call(name,
+         func,
+         args=(),
+         kws=None,
          onlyif=None,
          unless=None,
          **kwargs):
@@ -759,7 +820,14 @@ def mod_watch(name, **kwargs):
         return script(name, **kwargs)
 
     elif kwargs['sfun'] == 'wait_call' or kwargs['sfun'] == 'call':
-        return call(name, **kwargs)
+        if kwargs.get('func'):
+            func = kwargs.pop('func')
+            return call(name, func, **kwargs)
+        else:
+            return {'name': name,
+                    'changes': {},
+                    'comment': 'cmd.{0[sfun]} needs a named parameter func'.format(kwargs),
+                    'result': False}
 
     return {'name': name,
             'changes': {},

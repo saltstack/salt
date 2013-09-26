@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Managing Ruby installations and gemsets with Ruby Version Manager (RVM).
 ========================================================================
@@ -72,7 +73,7 @@ configuration could look like:
     ruby-1.9.2:
       rvm.installed:
         - default: True
-        - runas: rvm
+        - user: rvm
         - require:
           - pkg: rvm-deps
           - pkg: mri-deps
@@ -80,7 +81,7 @@ configuration could look like:
 
     jruby:
       rvm.installed:
-        - runas: rvm
+        - user: rvm
         - require:
           - pkg: rvm-deps
           - pkg: jruby-deps
@@ -89,14 +90,14 @@ configuration could look like:
     jgemset:
       rvm.gemset_present:
         - ruby: jruby
-        - runas: rvm
+        - user: rvm
         - require:
           - rvm: jruby
 
     mygemset:
       rvm.gemset_present:
         - ruby: ruby-1.9.2
-        - runas: rvm
+        - user: rvm
         - require:
           - rvm: ruby-1.9.2
 '''
@@ -104,24 +105,27 @@ configuration could look like:
 # Import python libs
 import re
 
+# Import salt libs
+import salt.utils
 
-def _check_rvm(ret, runas=None):
+
+def _check_rvm(ret, user=None):
     '''
     Check to see if rvm is installed.
     '''
-    if not __salt__['rvm.is_installed'](runas):
+    if not __salt__['rvm.is_installed'](user):
         ret['result'] = False
         ret['comment'] = 'RVM is not installed.'
     return ret
 
 
-def _check_and_install_ruby(ret, ruby, default=False, runas=None):
+def _check_and_install_ruby(ret, ruby, default=False, user=None):
     '''
     Verify that ruby is installed, install if unavailable
     '''
-    ret = _check_ruby(ret, ruby, runas=runas)
+    ret = _check_ruby(ret, ruby, user=user)
     if not ret['result']:
-        if __salt__['rvm.install_ruby'](ruby, runas=runas):
+        if __salt__['rvm.install_ruby'](ruby, runas=user):
             ret['result'] = True
             ret['changes'][ruby] = 'Installed'
             ret['comment'] = 'Successfully installed ruby.'
@@ -132,12 +136,12 @@ def _check_and_install_ruby(ret, ruby, default=False, runas=None):
             return ret
 
     if default:
-        __salt__['rvm.set_default'](ruby, runas=runas)
+        __salt__['rvm.set_default'](ruby, runas=user)
 
     return ret
 
 
-def _check_ruby(ret, ruby, runas=None):
+def _check_ruby(ret, ruby, user=None):
     '''
     Check that ruby is installed
     '''
@@ -150,7 +154,7 @@ def _check_ruby(ret, ruby, runas=None):
         match_version = False
     ruby = re.sub('^ruby-', '', ruby)
 
-    for impl, version, default in __salt__['rvm.list'](runas=runas):
+    for impl, version, default in __salt__['rvm.list'](runas=user):
         if impl != 'ruby':
             version = '{impl}-{version}'.format(impl=impl, version=version)
         if not match_micro_version:
@@ -165,49 +169,115 @@ def _check_ruby(ret, ruby, runas=None):
     return ret
 
 
-def installed(name, default=False, runas=None):
+def installed(name, default=False, runas=None, user=None):
     '''
     Verify that the specified ruby is installed with RVM. RVM is
     installed when necessary.
 
     name
         The version of ruby to install
+
     default : False
         Whether to make this ruby the default.
-    runas : None
+
+    runas: None
         The user to run rvm as.
+
+        .. deprecated:: 0.17.0
+
+    user: None
+        The user to run rvm as.
+
+        ..versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
 
     if __opts__['test']:
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
         return ret
 
-    ret = _check_rvm(ret, runas)
-    if ret['result'] == False:
-        if not __salt__['rvm.install'](runas=runas):
+    ret = _check_rvm(ret, user)
+    if ret['result'] is False:
+        if not __salt__['rvm.install'](runas=user):
             ret['comment'] = 'RVM failed to install.'
             return ret
         else:
-            return _check_and_install_ruby(ret, name, default, runas=runas)
+            return _check_and_install_ruby(ret, name, default, user=user)
     else:
-        return _check_and_install_ruby(ret, name, default, runas=runas)
+        return _check_and_install_ruby(ret, name, default, user=user)
 
 
-def gemset_present(name, ruby='default', runas=None):
+def gemset_present(name, ruby='default', runas=None, user=None):
     '''
     Verify that the gemset is present.
 
     name
         The name of the gemset.
-    ruby : default
+
+    ruby: default
         The ruby version this gemset belongs to.
-    runas : None
+
+    runas: None
         The user to run rvm as.
+
+        .. deprecated:: 0.17.0
+
+    user: None
+        The user to run rvm as.
+
+        .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    ret = _check_rvm(ret, runas)
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
+
+    ret = _check_rvm(ret, user)
     if ret['result'] is False:
         return ret
 
@@ -219,7 +289,7 @@ def gemset_present(name, ruby='default', runas=None):
             ret['comment'] = 'Requested ruby implementation was not found.'
             return ret
 
-    if name in __salt__['rvm.gemset_list'](ruby, runas=runas):
+    if name in __salt__['rvm.gemset_list'](ruby, runas=user):
         ret['result'] = True
         ret['comment'] = 'Gemset already exists.'
     else:
@@ -227,7 +297,7 @@ def gemset_present(name, ruby='default', runas=None):
             ret['result'] = None
             ret['comment'] = 'Set to install gemset {0}'.format(name)
             return ret
-        if __salt__['rvm.gemset_create'](ruby, name, runas=runas):
+        if __salt__['rvm.gemset_create'](ruby, name, runas=user):
             ret['result'] = True
             ret['comment'] = 'Gemset successfully created.'
             ret['changes'][name] = 'created'

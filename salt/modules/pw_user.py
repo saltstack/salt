@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage users with the useradd command
 '''
@@ -10,9 +11,10 @@ except ImportError:
     pass
 import os
 import logging
-from copy import deepcopy
+import copy
 
-# From salt libs
+# Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the user module if the kernel is FreeBSD
     '''
     return 'user' if __grains__['kernel'] == 'FreeBSD' else False
 
@@ -57,38 +59,47 @@ def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=True,
+        home=None,
         shell=None,
         unique=True,
-        system=False,
         fullname='',
         roomnumber='',
         workphone='',
         homephone='',
+        createhome=True,
         **kwargs):
     '''
     Add a user to the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    if salt.utils.is_true(kwargs.pop('system', False)):
+        log.warning('pw_user module does not support the \'system\' argument')
+    if kwargs:
+        log.warning('Invalid kwargs passed to user.add')
+
     if isinstance(groups, string_types):
         groups = groups.split(',')
     cmd = 'pw useradd '
-    if shell:
-        cmd += '-s {0} '.format(shell)
     if uid:
         cmd += '-u {0} '.format(uid)
     if gid:
         cmd += '-g {0} '.format(gid)
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
-    if home:
-        if home is True:
-            cmd += '-m '
-        else:
-            cmd += '-m -b {0} '.format(os.path.dirname(home))
+    if home is not None:
+        cmd += '-b {0} '.format(os.path.dirname(home))
+    if createhome is True:
+        cmd += '-m '
+    if shell:
+        cmd += '-s {0} '.format(shell)
+    if not salt.utils.is_true(unique):
+        cmd += '-o '
     gecos_field = '{0},{1},{2},{3}'.format(fullname,
                                            roomnumber,
                                            workphone,
@@ -104,14 +115,19 @@ def delete(name, remove=False, force=False):
     '''
     Remove a user from the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.delete name remove=True force=True
     '''
+    if salt.utils.is_true(force):
+        log.error('pw userdel does not support force-deleting user while '
+                  'user is logged in')
     cmd = 'pw userdel '
     if remove:
         cmd += '-r '
-    cmd += name
+    cmd += '-n ' + name
 
     ret = __salt__['cmd.run_all'](cmd)
 
@@ -122,7 +138,9 @@ def getent():
     '''
     Return the list of all info for all users
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.getent
     '''
@@ -140,7 +158,9 @@ def chuid(name, uid):
     '''
     Change the uid for a named user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chuid foo 4376
     '''
@@ -159,7 +179,9 @@ def chgid(name, gid):
     '''
     Change the default group of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chgid foo 4376
     '''
@@ -178,7 +200,9 @@ def chshell(name, shell):
     '''
     Change the default shell of the user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chshell foo /bin/zsh
     '''
@@ -198,7 +222,9 @@ def chhome(name, home, persist=False):
     Change the home directory of the user, pass true for persist to copy files
     to the new home dir
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chhome foo /home/users/foo True
     '''
@@ -221,7 +247,9 @@ def chgroups(name, groups, append=False):
     Change the groups this user belongs to, add append to append the specified
     groups
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chgroups foo wheel,root True
     '''
@@ -240,7 +268,9 @@ def chfullname(name, fullname):
     '''
     Change the user's Full Name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chfullname foo "Foo Bar"
     '''
@@ -250,7 +280,7 @@ def chfullname(name, fullname):
         return False
     if fullname == pre_info['fullname']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['fullname'] = fullname
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
     __salt__['cmd.run'](cmd)
@@ -264,7 +294,9 @@ def chroomnumber(name, roomnumber):
     '''
     Change the user's Room Number
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chroomnumber foo 123
     '''
@@ -274,7 +306,7 @@ def chroomnumber(name, roomnumber):
         return False
     if roomnumber == pre_info['roomnumber']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
     __salt__['cmd.run'](cmd)
@@ -288,7 +320,9 @@ def chworkphone(name, workphone):
     '''
     Change the user's Work Phone
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chworkphone foo "7735550123"
     '''
@@ -298,7 +332,7 @@ def chworkphone(name, workphone):
         return False
     if workphone == pre_info['workphone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['workphone'] = workphone
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
     __salt__['cmd.run'](cmd)
@@ -312,7 +346,9 @@ def chhomephone(name, homephone):
     '''
     Change the user's Home Phone
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.chhomephone foo "7735551234"
     '''
@@ -322,7 +358,7 @@ def chhomephone(name, homephone):
         return False
     if homephone == pre_info['homephone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['homephone'] = homephone
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
     __salt__['cmd.run'](cmd)
@@ -336,7 +372,9 @@ def info(name):
     '''
     Return user information
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.info root
     '''
@@ -368,7 +406,9 @@ def list_groups(name):
     '''
     Return a list of groups the named user belongs to
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' user.list_groups foo
     '''

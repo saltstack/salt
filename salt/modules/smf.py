@@ -1,7 +1,12 @@
+# -*- coding: utf-8 -*-
 '''
 Service support for Solaris 10 and 11, should work with other systems
 that use SMF also. (e.g. SmartOS)
 '''
+
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
 
 def __virtual__():
@@ -10,8 +15,8 @@ def __virtual__():
     '''
     # Don't let this work on Solaris 9 since SMF doesn't exist on it.
     enable = set((
-               'Solaris',
-              ))
+        'Solaris',
+    ))
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == "5.9":
             return False
@@ -23,7 +28,9 @@ def get_enabled():
     '''
     Return the enabled services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_enabled
     '''
@@ -43,7 +50,9 @@ def get_disabled():
     '''
     Return the disabled services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_disabled
     '''
@@ -63,7 +72,9 @@ def get_all():
     '''
     Return all installed services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -82,7 +93,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -94,7 +107,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -106,11 +121,27 @@ def restart(name):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
     cmd = '/usr/sbin/svcadm restart {0}'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def reload_(name):
+    '''
+    Reload the named service
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.reload <service name>
+    '''
+    cmd = '/usr/sbin/svcadm refresh {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -119,7 +150,9 @@ def status(name, sig=None):
     Return the status for a service, returns a bool whether the service is
     running.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name>
     '''
@@ -135,7 +168,9 @@ def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
@@ -147,7 +182,9 @@ def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
@@ -159,7 +196,9 @@ def enabled(name):
     '''
     Check to see if the named service is enabled to start on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enabled <service name>
     '''
@@ -170,7 +209,9 @@ def disabled(name):
     '''
     Check to see if the named service is disabled to start on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disabled <service name>
     '''

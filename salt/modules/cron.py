@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Work with cron
 '''
@@ -32,7 +33,7 @@ def _render_tab(lst):
     ret = []
     for pre in lst['pre']:
         ret.append('{0}\n'.format(pre))
-    if len(ret):
+    if ret:
         if ret[-1] != TAG:
             ret.append(TAG)
     else:
@@ -71,7 +72,9 @@ def write_cron_file(user, path):
     '''
     Writes the contents of a file to a user's crontab
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.write_cron_file root /tmp/new_cron
     '''
@@ -82,7 +85,9 @@ def write_cron_file_verbose(user, path):
     '''
     Writes the contents of a file to a user's crontab and return error message on error
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.write_cron_file_verbose root /tmp/new_cron
     '''
@@ -117,7 +122,9 @@ def raw_cron(user):
     '''
     Return the contents of the user's crontab
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.raw_cron root
     '''
@@ -132,7 +139,9 @@ def list_tab(user):
     '''
     Return the contents of the specified user's crontab
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.list_tab root
     '''
@@ -187,7 +196,9 @@ def set_special(user, special, cmd):
     '''
     Set up a special command in the crontab.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.set_special @hourly 'echo foobar'
     '''
@@ -247,7 +258,9 @@ def set_job(user, minute, hour, daymonth, month, dayweek, cmd):
     '''
     Sets a cron job up for a specified user.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.set_job root '*' '*' '*' '*' 1 /usr/local/weekly
     '''
@@ -309,7 +322,9 @@ def rm_job(user,
     Remove a cron job for a specified user. If any of the day/time params are
     specified, the job will only be removed if the specified params match.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.rm_job root /usr/local/weekly
         salt '*' cron.rm_job root /usr/bin/foo dayweek=1
@@ -349,7 +364,9 @@ def set_env(user, name, value=None):
     '''
     Set up an environment variable in the crontab.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.set_env root MAILTO user@example.com
     '''
@@ -378,7 +395,9 @@ def rm_env(user, name):
     '''
     Remove cron environment variable for a specified user.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cron.rm_env root MAILTO
     '''

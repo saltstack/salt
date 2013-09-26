@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage Django sites
 '''
@@ -32,7 +33,9 @@ def command(settings_module,
     '''
     Run arbitrary django management command
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.command <settings_module> <command>
     '''
@@ -65,7 +68,9 @@ def syncdb(settings_module,
     minion the ``migrate`` option can be passed as ``True`` calling the
     migrations to run after the syncdb completes
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.syncdb <settings_module>
     '''
@@ -98,7 +103,9 @@ def createsuperuser(settings_module,
     This function defaults to use the ``--noinput`` flag which prevents the
     creation of a password for the superuser.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.createsuperuser <settings_module> user user@example.com
     '''
@@ -129,12 +136,13 @@ def loaddata(settings_module,
     Fixtures:
         comma separated list of fixtures to load
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.loaddata <settings_module> <comma delimited list of fixtures>
 
     '''
-
 
     kwargs = {}
     if database:
@@ -147,6 +155,7 @@ def loaddata(settings_module,
                    env,
                    *fixtures.split(','),
                    **kwargs)
+
 
 def collectstatic(settings_module,
                   bin_env=None,
@@ -162,7 +171,9 @@ def collectstatic(settings_module,
     Collect static files from each of your applications into a single location
     that can easily be served in production.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' django.collectstatic <settings_module>
     '''

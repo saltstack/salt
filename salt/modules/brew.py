@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Homebrew for Mac OS X
 '''
@@ -54,7 +55,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
@@ -93,7 +96,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3>
@@ -109,11 +114,15 @@ def latest_version(*names, **kwargs):
     Note that this currently not fully implemented but needs to return
     something to avoid a traceback when calling pkg.latest.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
+    kwargs.pop('refresh', True)
+
     if len(names) <= 1:
         return ''
     else:
@@ -145,7 +154,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -173,14 +184,18 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         The name of the formula to be installed. Note that this parameter is
         ignored if "pkgs" is passed.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install <package name>
 
     taps
         Unofficial Github repos to use when updating and installing formulas.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install <package name> tap='<tap>'
             salt '*' pkg.install zlib taps='homebrew/dupes'
@@ -193,7 +208,9 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         to all packages. Unreconized options for a package will be silently
         ignored by brew.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install <package name> tap='<tap>'
             salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]' options='["--with-fpm"]'
@@ -203,7 +220,9 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     pkgs
         A list of formulas to install. Must be passed as a python list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install pkgs='["foo","bar"]'
 
@@ -213,7 +232,9 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install 'package package package'
     '''
@@ -260,7 +281,9 @@ def list_upgrades():
     '''
     Check whether or not an upgrade is available for all packages
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
@@ -273,34 +296,10 @@ def upgrade_available(pkg):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
     return pkg in list_upgrades()
-
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)

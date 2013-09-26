@@ -103,8 +103,8 @@ This on the other hand is `DISCOURAGED`:
     from os.path import join
 
     def minion_path():
-    path = join(self.opts['cachedir'], 'minions')
-    return path
+        path = join(self.opts['cachedir'], 'minions')
+        return path
 
 The time when this is changed is for importing exceptions, generally directly
 importing exceptions is preferred:
@@ -114,6 +114,21 @@ This is a good way to import exceptions:
 .. code-block:: python
 
     from salt.exceptions import CommandExecutionError
+
+
+Absolute Imports
+----------------
+
+Although `absolute imports`_ seems like an awesome idea, please do not use it.  
+Extra care would be necessary all over salt's code in order for absolute 
+imports to work as supposed. Believe it, it has been tried before and, as a 
+tried example, by renaming ``salt.modules.sysmod`` to ``salt.modules.sys``, all 
+other salt modules which needed to import :mod:`sys<python2:sys>` would have to 
+also import :mod:`absolute_import<python2:__future__>`, which should be 
+avoided.
+
+.. _`absolute imports`: http://www.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
+
 
 Vertical is Better
 ==================
@@ -153,6 +168,12 @@ instance:
             env=None,
             backup='',
             **kwargs):
+
+.. note::
+
+    Making function and class definitions vertical is only required if the
+    arguments are longer then 80 characters. Otherwise, the formatting is
+    optional and both are acceptable.
 
 Indenting
 =========

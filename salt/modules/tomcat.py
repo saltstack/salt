@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Tomcat
 
@@ -42,6 +43,7 @@ Notes:
 
 # Import python libs
 import glob
+import hashlib
 import urllib
 import urllib2
 import tempfile
@@ -54,7 +56,7 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
-# Private
+
 def __virtual__():
     '''
     Only load tomcat if it is installed or if grains/pillar config exists
@@ -79,7 +81,8 @@ def __catalina_home():
 def _auth(uri):
     '''
     returns a authentication handler.
-    Get user & password from grains, if are not set default to modules.config.option
+    Get user & password from grains, if are not set default to
+    modules.config.option
 
     If user & pass are missing return False
     '''
@@ -88,8 +91,10 @@ def _auth(uri):
         password = __grains__['tomcat-manager.passwd']
     except KeyError:
         try:
-            user = salt.utils.option('tomcat-manager.user', '', __opts__, __pillar__)
-            password = salt.utils.option('tomcat-manager.passwd', '', __opts__, __pillar__)
+            user = salt.utils.option('tomcat-manager.user', '', __opts__,
+                    __pillar__)
+            password = salt.utils.option('tomcat-manager.passwd', '', __opts__,
+                    __pillar__)
         except Exception:
             return False
 
@@ -97,15 +102,18 @@ def _auth(uri):
         return False
 
     basic = urllib2.HTTPBasicAuthHandler()
-    basic.add_password(realm='Tomcat Manager Application', uri=uri, user=user, passwd=password)
+    basic.add_password(realm='Tomcat Manager Application', uri=uri,
+            user=user, passwd=password)
     digest = urllib2.HTTPDigestAuthHandler()
-    digest.add_password(realm='Tomcat Manager Application', uri=uri, user=user, passwd=password)
+    digest.add_password(realm='Tomcat Manager Application', uri=uri,
+            user=user, passwd=password)
     return urllib2.build_opener(basic, digest)
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     '''
-    A private function used to issue the command to tomcat via the manager webapp
+    A private function used to issue the command to tomcat via the manager
+    webapp
 
     cmd
         the command to execute
@@ -132,7 +140,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
 
     # prepare authentication
     auth = _auth(url)
-    if auth == False:
+    if auth is False:
         ret['res'] = False
         ret['msg'] = 'missing username and password settings (grain/pillar)'
         return ret
@@ -140,20 +148,28 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     # prepare URL
     if url[-1] != '/':
         url += '/'
+    url6 = url
     url += 'text/{0}'.format(cmd)
+    url6 += '{0}'.format(cmd)
     if opts:
         url += '?{0}'.format(urllib.urlencode(opts))
+        url6 += '?{0}'.format(urllib.urlencode(opts))
 
     # Make the HTTP request
     urllib2.install_opener(auth)
 
     try:
+        # Trying tomcat >= 7 url
         ret['msg'] = urllib2.urlopen(url, timeout=timeout).read().splitlines()
-        if not ret['msg'][0].startswith('OK'):
-            ret['res'] = False
     except Exception:
+        try:
+            # Trying tomcat6 url
+            ret['msg'] = urllib2.urlopen(url6, timeout=timeout).read().splitlines()
+        except Exception:
+            ret['msg'] = 'Failed to create HTTP request'
+
+    if not ret['msg'][0].startswith('OK'):
         ret['res'] = False
-        ret['msg'] = 'Failed to create HTTP request'
 
     return ret
 
@@ -183,12 +199,15 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.leaks
     '''
 
-    return '\n'.join(_wget('findleaks', {'statusLine': 'true'}, url, timeout=timeout)['msg'])
+    return '\n'.join(_wget('findleaks', {'statusLine': 'true'},
+        url, timeout=timeout)['msg'])
 
 
 def status(url='http://localhost:8080/manager', timeout=180):
@@ -200,7 +219,9 @@ def status(url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.status
         salt '*' tomcat.status http://localhost:8080/manager
@@ -218,7 +239,9 @@ def ls(url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.ls
         salt '*' tomcat.ls http://localhost:8080/manager
@@ -226,7 +249,7 @@ def ls(url='http://localhost:8080/manager', timeout=180):
 
     ret = {}
     data = _wget('list', '', url, timeout=timeout)
-    if data['res'] == False:
+    if data['res'] is False:
         return {}
     data['msg'].pop(0)
     for line in data['msg']:
@@ -255,7 +278,9 @@ def stop(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.stop /jenkins
         salt '*' tomcat.stop /jenkins http://localhost:8080/manager
@@ -275,7 +300,9 @@ def start(app, url='http://localhost:8080/manager', timeout=180):
     timeout
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.start /jenkins
         salt '*' tomcat.start /jenkins http://localhost:8080/manager
@@ -295,7 +322,9 @@ def reload_(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.reload /jenkins
         salt '*' tomcat.reload /jenkins http://localhost:8080/manager
@@ -315,7 +344,9 @@ def sessions(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.sessions /jenkins
         salt '*' tomcat.sessions /jenkins http://localhost:8080/manager
@@ -335,7 +366,9 @@ def status_webapp(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.status_webapp /jenkins
         salt '*' tomcat.status_webapp /jenkins http://localhost:8080/manager
@@ -358,14 +391,16 @@ def serverinfo(url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.serverinfo
         salt '*' tomcat.serverinfo http://localhost:8080/manager
     '''
 
     data = _wget('serverinfo', {}, url, timeout=timeout)
-    if data['res'] == False:
+    if data['res'] is False:
         return {'error': data['msg'][0]}
 
     ret = {}
@@ -388,7 +423,9 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' tomcat.undeploy /jenkins
         salt '*' tomcat.undeploy /jenkins http://localhost:8080/manager
@@ -397,7 +434,12 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
     return _simple_cmd('undeploy', app, url, timeout=timeout)
 
 
-def deploy_war(war, context, force='no', url='http://localhost:8080/manager', env='base', timeout=180):
+def deploy_war(war,
+               context,
+               force='no',
+               url='http://localhost:8080/manager',
+               env='base',
+               timeout=180):
     '''
     Deploy a WAR file
 
@@ -416,14 +458,18 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     timeout : 180
         timeout for HTTP request
 
-    CLI Examples::
+    CLI Examples:
 
-        cp module
+    cp module
+    .. code-block:: bash
+
         salt '*' tomcat.deploy_war salt://application.war /api
         salt '*' tomcat.deploy_war salt://application.war /api no
         salt '*' tomcat.deploy_war salt://application.war /api yes http://localhost:8080/manager
 
-        minion local file system
+    minion local file system
+    .. code-block:: bash
+
         salt '*' tomcat.deploy_war /tmp/application.war /api
         salt '*' tomcat.deploy_war /tmp/application.war /api no
         salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
@@ -432,11 +478,15 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     # Copy file name if needed
     tfile = war
     if war[0] != '/':
-        tfile = os.path.join(tempfile.gettempdir(), 'salt.' + os.path.basename(war))
+        tfile = os.path.join(tempfile.gettempdir(), 'salt.' +
+                os.path.basename(war))
         cached = __salt__['cp.get_file'](war, tfile, env)
         if not cached:
             return 'FAIL - could not cache the WAR file'
-        __salt__['file.set_mode'](cached, '0644')
+        try:
+            __salt__['file.set_mode'](cached, '0644')
+        except KeyError:
+            pass
 
     # Prepare options
     opts = {
@@ -458,12 +508,50 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     return res
 
 
+def passwd(passwd,
+           user='',
+           alg='md5',
+           realm=None):
+    '''
+    This function replaces the $CATALINS_HOME/bin/digest.sh script
+    convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml
+    format
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' tomcat.passwd secret
+        salt '*' tomcat.passwd secret tomcat sha1
+        salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
+    '''
+    if alg == 'md5':
+        m = hashlib.md5()
+    elif alg == 'sha1':
+        m = hashlib.sha1()
+    else:
+        return False
+
+    if realm:
+        m.update('{0}:{1}:{2}'.format(
+            user,
+            realm,
+            passwd,
+            ))
+    else:
+        m.update(passwd)
+
+    return m.hexdigest()
+
+
 # Non-Manager functions
 def version():
     '''
     Return server version from catalina.sh version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tomcat.version
     '''
@@ -481,7 +569,9 @@ def fullversion():
     '''
     Return all server information from catalina.sh version
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tomcat.fullversion
     '''
@@ -501,7 +591,9 @@ def signal(signal=None):
     '''
     Signals catalina to start, stop, securestart, forcestop.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tomcat.signal start
     '''

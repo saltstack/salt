@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Runner to manage Windows software repo
 '''
@@ -22,6 +23,12 @@ log = logging.getLogger(__name__)
 def genrepo():
     '''
     Generate win_repo_cachefile based on sls files in the win_repo
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run winrepo.genrepo
     '''
     ret = {}
     repo = __opts__['win_repo']
@@ -60,6 +67,12 @@ def genrepo():
 def update_git_repos():
     '''
     Checkout git repos containing Windows Software Package Definitions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run winrepo.update_git_repos
     '''
     ret = {}
     mminion = salt.minion.MasterMinion(__opts__)

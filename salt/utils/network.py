@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Define some generic socket functions for network modules
 '''
@@ -162,7 +163,7 @@ def _interfaces_ip(out):
         for line in group.splitlines():
             if not ' ' in line:
                 continue
-            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
+            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?([\w.]+)?:\s+<(.+)>', line)
             if match:
                 iface, parent, attrs = match.groups()
                 if 'UP' in attrs.split(','):
@@ -290,11 +291,13 @@ def linux_interfaces():
         cmd1 = subprocess.Popen(
             'ip link show',
             shell=True,
+            close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         cmd2 = subprocess.Popen(
             'ip addr show',
             shell=True,
+            close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         ifaces = _interfaces_ip(cmd1 + '\n' + cmd2)
@@ -377,11 +380,11 @@ def win_interfaces():
                         item = {'address': ip,
                                 'label': iface.Description}
                         if iface.DefaultIPGateway:
-                            broadcast = next(( i for i in iface.DefaultIPGateway if '.' in i ), '')
+                            broadcast = next((i for i in iface.DefaultIPGateway if '.' in i), '')
                             if broadcast:
                                 item['broadcast'] = broadcast
                         if iface.IPSubnet:
-                            netmask = next(( i for i in iface.IPSubnet if '.' in i ), '')
+                            netmask = next((i for i in iface.IPSubnet if '.' in i), '')
                             if netmask:
                                 item['netmask'] = netmask
                         ifaces[iface.Description]['inet'].append(item)
@@ -390,11 +393,11 @@ def win_interfaces():
                             ifaces[iface.Description]['inet6'] = []
                         item = {'address': ip}
                         if iface.DefaultIPGateway:
-                            broadcast = next(( i for i in iface.DefaultIPGateway if ':' in i ), '')
+                            broadcast = next((i for i in iface.DefaultIPGateway if ':' in i), '')
                             if broadcast:
                                 item['broadcast'] = broadcast
                         if iface.IPSubnet:
-                            netmask = next(( i for i in iface.IPSubnet if ':' in i ), '')
+                            netmask = next((i for i in iface.IPSubnet if ':' in i), '')
                             if netmask:
                                 item['netmask'] = netmask
                         ifaces[iface.Description]['inet6'].append(item)
@@ -441,7 +444,7 @@ def _ipv4_to_bits(ipaddr):
     return ''.join([bin(int(x))[2:].rjust(8, '0') for x in ipaddr.split('.')])
 
 
-def hwaddr(iface):
+def hw_addr(iface):
     '''
     Return the hardware address (a.k.a. MAC address) for a given interface
     '''
@@ -504,7 +507,7 @@ def ip_addrs(interface=None, include_loopback=False):
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     '''
-    ret = []
+    ret = set()
     ifaces = interfaces()
     if interface is None:
         target_ifaces = ifaces
@@ -518,8 +521,15 @@ def ip_addrs(interface=None, include_loopback=False):
             if include_loopback \
                     or (not include_loopback
                         and ipv4['address'] != '127.0.0.1'):
-                ret.append(ipv4['address'])
-    return ret
+                ret.add(ipv4['address'])
+        for secondary in ipv4_info.get('secondary', []):
+            addr = secondary.get('address')
+            if addr and secondary.get('type') == 'inet':
+                if include_loopback \
+                        or (not include_loopback
+                            and addr != '127.0.0.1'):
+                    ret.add(addr)
+    return sorted(list(ret))
 
 
 def ip_addrs6(interface=None, include_loopback=False):
@@ -528,7 +538,7 @@ def ip_addrs6(interface=None, include_loopback=False):
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
     '''
-    ret = []
+    ret = set()
     ifaces = interfaces()
     if interface is None:
         target_ifaces = ifaces
@@ -541,8 +551,14 @@ def ip_addrs6(interface=None, include_loopback=False):
         for ipv6 in ipv6_info.get('inet6', []):
             if include_loopback \
                     or (not include_loopback and ipv6['address'] != '::1'):
-                ret.append(ipv6['address'])
-    return ret
+                ret.add(ipv6['address'])
+        for secondary in ipv6_info.get('secondary', []):
+            addr = secondary.get('address')
+            if addr and secondary.get('type') == 'inet6':
+                if include_loopback \
+                        or (not include_loopback and addr != '::1'):
+                    ret.add(addr)
+    return sorted(list(ret))
 
 
 def hex2ip(hex_ip):

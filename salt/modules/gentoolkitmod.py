@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Gentoolkit
 
@@ -14,6 +15,7 @@ try:
 except ImportError:
     pass
 
+
 def __virtual__():
     '''
     Only work on Gentoo systems with gentoolkit installed
@@ -21,6 +23,7 @@ def __virtual__():
     if __grains__['os'] == 'Gentoo' and HAS_GENTOOLKIT:
         return 'gentoolkit'
     return False
+
 
 def revdep_rebuild(lib=None):
     '''
@@ -31,7 +34,9 @@ def revdep_rebuild(lib=None):
         than every library on the system. It can be a full path to a
         library or basic regular expression.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gentoolkit.revdep_rebuild
     '''
@@ -39,6 +44,7 @@ def revdep_rebuild(lib=None):
     if lib is not None:
         cmd += ' --library={0}'.format(lib)
     return __salt__['cmd.retcode'](cmd) == 0
+
 
 def _pretty_size(size):
     '''
@@ -50,17 +56,19 @@ def _pretty_size(size):
         units.pop()
     return '{0}{1}'.format(round(size, 1), units[-1])
 
+
 def _parse_exclude(exclude_file):
     '''
     Parse an exclude file.
 
-    Return a dict as defined in gentoolkit.eclean.exclude.parseExcludeFile
+    Returns a dict as defined in gentoolkit.eclean.exclude.parseExcludeFile
     '''
     if os.path.isfile(exclude_file):
         exclude = excludemod.parseExcludeFile(exclude_file, lambda x: None)
     else:
         exclude = dict()
     return exclude
+
 
 def eclean_dist(destructive=False, package_names=False, size_limit=0,
                 time_limit=0, fetch_restricted=False,
@@ -95,14 +103,19 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
         This is the same default eclean-dist uses. Use None if this file
         exists and you want to ignore.
 
-    Return a dict containing the cleaned, saved, and deprecated dists::
+    Returns a dict containing the cleaned, saved, and deprecated dists:
+
+    .. code-block:: python
 
         {'cleaned': {<dist file>: <size>},
          'deprecated': {<package>: <dist file>},
          'saved': {<package>: <dist file>},
          'total_cleaned': <size>}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
+
         salt '*' gentoolkit.eclean_dist destructive=True
     '''
     if exclude_file is None:
@@ -127,6 +140,7 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
         fetch_restricted=fetch_restricted, exclude=exclude)
 
     cleaned = dict()
+
     def _eclean_progress_controller(size, key, *args):
         cleaned[key] = _pretty_size(size)
         return True
@@ -138,6 +152,7 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated,
            'total_cleaned': _pretty_size(clean_size)}
     return ret
+
 
 def eclean_pkg(destructive=False, package_names=False, time_limit=0,
                exclude_file='/etc/eclean/packages.exclude'):
@@ -162,12 +177,17 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
         This is the same default eclean-pkg uses. Use None if this file
         exists and you want to ignore.
 
-    Return a dict containing the cleaned binary packages::
+    Returns a dict containing the cleaned binary packages:
+
+    .. code-block:: python
 
         {'cleaned': {<dist file>: <size>},
          'total_cleaned': <size>}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
+
         salt '*' gentoolkit.eclean_pkg destructive=True
     '''
     if exclude_file is None:
@@ -191,6 +211,7 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
                                    pkgdir=search.pkgdir)
 
     cleaned = dict()
+
     def _eclean_progress_controller(size, key, *args):
         cleaned[key] = _pretty_size(size)
         return True
@@ -202,6 +223,7 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
     ret = {'cleaned': cleaned,
            'total_cleaned': _pretty_size(clean_size)}
     return ret
+
 
 def _glsa_list_process_output(output):
     '''
@@ -230,6 +252,7 @@ def _glsa_list_process_output(output):
             pass
     return ret
 
+
 def glsa_check_list(glsa_list):
     '''
     List the status of Gentoo Linux Security Advisories
@@ -238,13 +261,17 @@ def glsa_check_list(glsa_list):
          can contain an arbitrary number of GLSA ids, filenames
          containing GLSAs or the special identifiers 'all' and 'affected'
 
-    Returns a dict containing glsa ids with a description, status, and CVEs::
+    Returns a dict containing glsa ids with a description, status, and CVEs:
 
-        {<glsa id>: {'description': <glsa description>,
-            'status': <glsa status>,
-            'CVEs': [<list of CVEs>]}}
+    .. code-block:: python
 
-    CLI Example::
+        {<glsa_id>: {'description': <glsa_description>,
+         'status': <glsa status>,
+         'CVEs': [<list of CVEs>]}}
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' gentoolkit.glsa_check_list 'affected'
     '''

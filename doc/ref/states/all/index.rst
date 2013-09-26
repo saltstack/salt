@@ -12,6 +12,8 @@ Full list of builtin state modules
 
     alias
     alternatives
+    apt
+    augeas
     cmd
     cron
     debconfmod
@@ -24,6 +26,7 @@ Full list of builtin state modules
     group
     hg
     host
+    iptables
     keyboard
     kmod
     layman
@@ -32,6 +35,7 @@ Full list of builtin state modules
     lvm
     makeconf
     mdadm
+    modjk_worker
     module
     mongodb_database
     mongodb_user
@@ -42,9 +46,9 @@ Full list of builtin state modules
     network
     npm
     pecl
-    pip
-    pkgng
+    pip_state
     pkg
+    pkgng
     pkgrepo
     portage_config
     postgres_database
@@ -66,4 +70,4 @@ Full list of builtin state modules
     timezone
     tomcat
     user
-    virtualenv
+    virtualenv_mod

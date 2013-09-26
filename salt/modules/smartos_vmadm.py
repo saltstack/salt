@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing VMs on SmartOS
 '''
@@ -8,8 +9,10 @@ import json
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.utils
+import salt.utils.decorators as decorators
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_vmadm():
     '''
     Looks to see if vmadm is present on the system
@@ -39,8 +42,7 @@ def _exit_status(retcode):
     '''
     ret = {0: 'Successful completion.',
            1: 'An error occurred.',
-           2: 'Usage error.'
-          }[retcode]
+           2: 'Usage error.'}[retcode]
     return ret
 
 
@@ -94,7 +96,9 @@ def init(**kwargs):
     '''
     Initialize a new VM
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.init image_uuid='...' alias='...' [...]
     '''
@@ -133,7 +137,9 @@ def list_vms():
     '''
     Return a list of virtual machine names on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.list_vms
     '''
@@ -154,7 +160,9 @@ def list_active_vms():
     '''
     Return a list of uuids for active virtual machine on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.list_active_vms
     '''
@@ -175,7 +183,9 @@ def list_inactive_vms():
     '''
     Return a list of uuids for inactive virtual machine on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.list_inactive_vms
     '''
@@ -196,7 +206,9 @@ def vm_info(uuid=None):
     '''
     Return a dict with information about the specified VM on this CN
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.vm_info <uuid>
     '''
@@ -217,7 +229,9 @@ def start(uuid=None):
     '''
     Start a defined domain
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.start <uuid>
     '''
@@ -241,7 +255,9 @@ def shutdown(uuid=None):
     '''
     Send a soft shutdown signal to the named vm
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.shutdown <uuid>
     '''
@@ -265,7 +281,9 @@ def reboot(uuid=None):
     '''
     Reboot a domain via ACPI request
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.reboot <uuid>
     '''
@@ -289,7 +307,9 @@ def destroy(uuid=None):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the power
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.destroy <uuid>
     '''
@@ -308,7 +328,9 @@ def vm_virt_type(uuid=None):
     '''
     Return VM virtualization type : OS or KVM
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.vm_virt_type <uuid>
     '''
@@ -333,7 +355,9 @@ def setmem(uuid, memory):
 
     Note for KVM : this would require a restart of the VM.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.setmem <uuid> 512
     '''
@@ -360,7 +384,9 @@ def get_macs(uuid=None):
     '''
     Return a list off MAC addresses from the named VM
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_macs <uuid>
     '''

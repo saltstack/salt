@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for using the locate utilities
 '''
@@ -24,7 +25,9 @@ def version():
     '''
     Returns the version of locate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locate.version
     '''
@@ -37,7 +40,9 @@ def stats():
     '''
     Returns statistics about the locate database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locate.stats
     '''
@@ -57,7 +62,9 @@ def updatedb():
     '''
     Updates the locate database
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locate.updatedb
     '''
@@ -81,9 +88,11 @@ def locate(pattern, database='', limit=0, **kwargs):
         database=<locate's default database>
         limit=<integer, not set by default>
 
-    See the manpage for locate for further explanation of these options.
+    See the manpage for ``locate(1)`` for further explanation of these options.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locate.locate
     '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The networking module for RHEL/Fedora based distros
 '''
@@ -15,20 +16,22 @@ import jinja2.exceptions
 
 # Import salt libs
 import salt.utils
-from salt.modules import __path__ as saltmodpath
+import salt.utils.templates
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Set up template environment
 ENV = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(saltmodpath[0] + os.sep + 'rh_ip')
+    loader=jinja2.FileSystemLoader(
+        os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'rh_ip')
+    )
 )
 
 
 def __virtual__():
     '''
-    Confine this module to RHEL/Fedora based distros$
+    Confine this module to RHEL/Fedora based distros
     '''
     if __grains__['os_family'] == 'RedHat':
         return 'ip'
@@ -189,7 +192,7 @@ def _parse_settings_bond(opts, iface):
         'tx_queues': '16',
         # Link monitoring in milliseconds. Most NICs support this
         'miimon': '100',
-        # arp interval in milliseconds
+        # ARP interval in milliseconds
         'arp_interval': '250',
         # Delay before considering link down in milliseconds (miimon * 2)
         'downdelay': '200',
@@ -206,7 +209,7 @@ def _parse_settings_bond(opts, iface):
         # On: driver sends mii
         # Off: ethtool sends mii
         'use_carrier': 'on',
-        # Defualt. Don't change unless you know what you are doing.
+        # Default. Don't change unless you know what you are doing.
         'xmit_hash_policy': 'layer2',
     }
 
@@ -270,7 +273,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     '''
     bond = {'mode': '0'}
 
-    # arp targets in n.n.n.n form
+    # ARP targets in n.n.n.n form
     valid = ['list of ips (up to 16)']
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
@@ -595,11 +598,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                     _raise_error_iface(iface, opts[opt], valid)
         if bypassfirewall:
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '0')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables',  '0')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '0')
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '0')
         else:
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '1')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables',  '1')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '1')
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '1')
     else:
         if 'bridge' in opts:
@@ -792,7 +795,9 @@ def build_bond(iface, **settings):
     Create a bond script in /etc/modprobe.d with the passed settings
     and load the bonding kernel module.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.build_bond bond0 mode=balance-alb
     '''
@@ -827,7 +832,9 @@ def build_interface(iface, iface_type, enabled, **settings):
     '''
     Build an interface script for a network interface.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
@@ -879,9 +886,11 @@ def build_interface(iface, iface_type, enabled, **settings):
 
 def build_routes(iface, **settings):
     '''
-    Build an route script for a network interface.
+    Build a route script for a network interface.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.build_routes eth0 <settings>
     '''
@@ -910,7 +919,9 @@ def down(iface, iface_type):
     '''
     Shutdown a network interface
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.down eth0
     '''
@@ -924,7 +935,9 @@ def get_bond(iface):
     '''
     Return the content of a bond script
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.get_bond bond0
     '''
@@ -936,7 +949,9 @@ def get_interface(iface):
     '''
     Return the contents of an interface script
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.get_interface eth0
     '''
@@ -948,7 +963,9 @@ def up(iface, iface_type):  # pylint: disable=C0103
     '''
     Start up a network interface
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.up eth0
     '''
@@ -962,7 +979,9 @@ def get_routes(iface):
     '''
     Return the contents of the interface routes script.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.get_routes eth0
     '''
@@ -974,7 +993,9 @@ def get_network_settings():
     '''
     Return the contents of the global network script.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.get_network_settings
     '''
@@ -985,7 +1006,9 @@ def apply_network_settings(**settings):
     '''
     Apply global network configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.apply_network_settings
     '''
@@ -1006,7 +1029,9 @@ def build_network_settings(**settings):
     '''
     Build the global network script.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.build_network_settings <settings>
     '''
@@ -1025,8 +1050,7 @@ def build_network_settings(**settings):
     if settings['test']:
         return _read_temp(network)
 
-    # Wirte settings
+    # Write settings
     _write_file_network(network, _RH_NETWORK_FILE)
 
     return _read_file(_RH_NETWORK_FILE)
-

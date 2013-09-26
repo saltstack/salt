@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the password database on BSD systems
 '''
@@ -13,11 +14,26 @@ def __virtual__():
     return 'shadow' if 'BSD' in __grains__.get('os', '') else False
 
 
+def default_hash():
+    '''
+    Returns the default hash used for unset passwords
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.default_hash
+    '''
+    return '*' if __grains__['os'].lower() == 'freebsd' else '*************'
+
+
 def info(name):
     '''
     Return information for the specified user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.info someuser
     '''
@@ -25,7 +41,7 @@ def info(name):
         data = pwd.getpwnam(name)
         ret = {
             'name': data.pw_name,
-            'passwd': data.pw_passwd if data.pw_passwd.strip('*') else ''}
+            'passwd': data.pw_passwd}
     except KeyError:
         return {
             'name': '',
@@ -53,6 +69,9 @@ def set_password(name, password):
 
     ``python -c "import crypt; print crypt.crypt('password', ciphersalt)"``
 
+    :strong:`NOTE:` When constructing the ``ciphersalt`` string, you must
+    escape any dollar signs, to avoid them being interpolated by the shell.
+
     ``'password'`` is, of course, the password for which you want to generate
     a hash.
 
@@ -64,7 +83,9 @@ def set_password(name, password):
 
     It is important to make sure that a supported cipher is used.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_password someuser '$1$UYCIxa628.9qXjpQCjM4a..'
     '''

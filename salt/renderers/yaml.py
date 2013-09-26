@@ -1,7 +1,7 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 # Import python libs
-import getopt
 import logging
 import warnings
 
@@ -13,22 +13,12 @@ log = logging.getLogger(__name__)
 
 
 def get_yaml_loader(argline):
-    try:
-        opts, args = getopt.getopt(argline.split(), 'o')
-    except getopt.GetoptError:
-        log.error(
-'''Example usage: #!yaml [-o]
-Options:
-  -o   Use OrderedDict for YAML map and omap.
-       This option is only useful when combined with another renderer that
-       takes advantage of the ordering.
-''')
-        raise
-    if ('-o', '') in opts:
-        def Loader(*args):  # pylint: disable=C0103
-            return CustomLoader(*args, dictclass=OrderedDict)
-        return Loader
-    return CustomLoader
+    '''
+    Return the ordered dict yaml loader
+    '''
+    def yaml_loader(*args):
+        return CustomLoader(*args, dictclass=OrderedDict)
+    return yaml_loader
 
 
 def render(yaml_data, env='', sls='', argline='', **kws):

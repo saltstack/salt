@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Qemu Command Wrapper
 ====================
@@ -11,6 +12,7 @@ import os
 import glob
 import tempfile
 import time
+import logging
 
 # Import third party tools
 import yaml
@@ -18,6 +20,11 @@ import yaml
 # Import salt libs
 import salt.utils
 import salt.crypt
+
+
+# Set up logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -32,11 +39,15 @@ def connect(image):
     '''
     Activate nbd for an image file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' qemu_nbd.connect /tmp/image.raw
     '''
     if not os.path.isfile(image):
+        log.warning('Could not connect image: '
+                    '{0} does not exist'.format(image))
         return ''
 
     if salt.utils.which('cfdisk'):
@@ -54,6 +65,8 @@ def connect(image):
                 if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
                     break
             return nbd
+    log.warning('Could not connect image: '
+                '{0}'.format(image))
     return ''
 
 
@@ -62,7 +75,9 @@ def mount(nbd):
     Pass in the nbd connection device location, mount all partitions and return
     a dict of mount points
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' qemu_nbd.mount /dev/nbd0
     '''
@@ -88,7 +103,9 @@ def init(image):
     '''
     Mount the named image via qemu-nbd and return the mounted roots
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' qemu_nbd.init /srv/image.qcow2
     '''
@@ -105,9 +122,11 @@ def clear(mnt):
     empty dict, otherwise return a dict containing the still mounted
     partitions
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' qemu_nbd.clear '{/mnt/foo: /dev/nbd0p1}'
+    .. code-block:: bash
+
+        salt '*' qemu_nbd.clear '{"/mnt/foo": "/dev/nbd0p1"}'
     '''
     if isinstance(mnt, str):
         mnt = yaml.load(mnt)

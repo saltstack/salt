@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 All salt configuration loading and defaults should be in this module
 '''
@@ -24,6 +25,7 @@ import salt.loader
 import salt.utils
 import salt.utils.network
 import salt.pillar
+import salt.syspaths as syspaths
 
 log = logging.getLogger(__name__)
 
@@ -91,6 +93,7 @@ VALID_OPTS = {
     'state_verbose': bool,
     'state_output': str,
     'acceptance_wait_time': float,
+    'acceptance_wait_time_max': float,
     'loop_interval': float,
     'dns_check': bool,
     'verify_env': bool,
@@ -101,6 +104,8 @@ VALID_OPTS = {
     'update_restart_services': list,
     'retry_dns': float,
     'recon_max': float,
+    'recon_default': float,
+    'recon_randomize': float,
     'win_repo_cachefile': str,
     'pidfile': str,
     'range_server': str,
@@ -116,6 +121,11 @@ VALID_OPTS = {
     'keep_jobs': int,
     'master_roots': dict,
     'gitfs_remotes': list,
+    'gitfs_root': str,
+    'gitfs_base': str,
+    'hgfs_remotes': list,
+    'hgfs_root': str,
+    'hgfs_branch_method': str,
     'ext_pillar': list,
     'pillar_version': int,
     'pillar_opts': bool,
@@ -126,9 +136,12 @@ VALID_OPTS = {
     'client_acl_blacklist': dict,
     'external_auth': dict,
     'token_expire': int,
+    'file_recv': bool,
     'file_ignore_regex': bool,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
+    'fileserver_followsymlinks': bool,
+    'fileserver_ignoresymlinks': bool,
     'max_open_files': int,
     'auto_accept': bool,
     'master_tops': bool,
@@ -155,13 +168,13 @@ DEFAULT_MINION_OPTS = {
     'master_port': '4506',
     'master_finger': '',
     'user': 'root',
-    'root_dir': '/',
-    'pki_dir': '/etc/salt/pki/minion',
+    'root_dir': syspaths.ROOT_DIR,
+    'pki_dir': os.path.join(syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': None,
-    'cachedir': '/var/cache/salt/minion',
+    'cachedir': os.path.join(syspaths.CACHE_DIR, 'minion'),
     'cache_jobs': False,
-    'conf_file': '/etc/salt/minion',
-    'sock_dir': '/var/run/salt/minion',
+    'conf_file': os.path.join(syspaths.CONFIG_DIR, 'minion'),
+    'sock_dir': os.path.join(syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
     'renderer': 'yaml_jinja',
     'failhard': False,
@@ -173,10 +186,10 @@ DEFAULT_MINION_OPTS = {
     'top_file': '',
     'file_client': 'remote',
     'file_roots': {
-        'base': ['/srv/salt'],
+        'base': [syspaths.BASE_FILE_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': ['/srv/pillar'],
+        'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'hash_type': 'md5',
     'external_nodes': '',
@@ -198,7 +211,7 @@ DEFAULT_MINION_OPTS = {
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
-    'log_file': '/var/log/salt/minion',
+    'log_file': os.path.join(syspaths.LOGS_DIR, 'minion'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -210,7 +223,9 @@ DEFAULT_MINION_OPTS = {
     'cython_enable': False,
     'state_verbose': True,
     'state_output': 'full',
+    'state_auto_order': True,
     'acceptance_wait_time': 10,
+    'acceptance_wait_time_max': 0,
     'loop_interval': 1,
     'dns_check': True,
     'verify_env': True,
@@ -221,8 +236,10 @@ DEFAULT_MINION_OPTS = {
     'update_restart_services': [],
     'retry_dns': 30,
     'recon_max': 5000,
+    'recon_default': 100,
+    'recon_randomize': False,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
-    'pidfile': '/var/run/salt-minion.pid',
+    'pidfile': os.path.join(syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
     'tcp_keepalive_idle': 300,
@@ -233,26 +250,32 @@ DEFAULT_MINION_OPTS = {
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
     'publish_port': '4505',
+    'pub_hwm': 1,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
-    'sock_dir': '/var/run/salt/master',
+    'sock_dir': os.path.join(syspaths.SOCK_DIR, 'master'),
     'ret_port': '4506',
     'timeout': 5,
     'keep_jobs': 24,
-    'root_dir': '/',
-    'pki_dir': '/etc/salt/pki/master',
-    'cachedir': '/var/cache/salt/master',
+    'root_dir': syspaths.ROOT_DIR,
+    'pki_dir': os.path.join(syspaths.CONFIG_DIR, 'pki', 'master'),
+    'cachedir': os.path.join(syspaths.CACHE_DIR, 'master'),
     'file_roots': {
-        'base': ['/srv/salt'],
+        'base': [syspaths.BASE_FILE_ROOTS_DIR],
     },
     'master_roots': {
-        'base': ['/srv/salt-master'],
+        'base': [syspaths.BASE_MASTER_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': ['/srv/pillar'],
+        'base': [syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'gitfs_remotes': [],
+    'gitfs_root': '',
+    'gitfs_base': 'master',
+    'hgfs_remotes': [],
+    'hgfs_root': '',
+    'hgfs_branch_method': 'branches',
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': True,
@@ -264,13 +287,16 @@ DEFAULT_MASTER_OPTS = {
     'client_acl_blacklist': {},
     'external_auth': {},
     'token_expire': 43200,
+    'file_recv': False,
     'file_buffer_size': 1048576,
     'file_ignore_regex': None,
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
+    'fileserver_followsymlinks': True,
+    'fileserver_ignoresymlinks': False,
     'max_open_files': 100000,
     'hash_type': 'md5',
-    'conf_file': '/etc/salt/master',
+    'conf_file': os.path.join(syspaths.CONFIG_DIR, 'master'),
     'open_mode': False,
     'auto_accept': False,
     'renderer': 'yaml_jinja',
@@ -285,7 +311,7 @@ DEFAULT_MASTER_OPTS = {
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipv6': False,
-    'log_file': '/var/log/salt/master',
+    'log_file': os.path.join(syspaths.LOGS_DIR, 'master'),
     'log_level': None,
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -293,7 +319,7 @@ DEFAULT_MASTER_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
-    'pidfile': '/var/run/salt-master.pid',
+    'pidfile': os.path.join(syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
     'cluster_masters': [],
     'cluster_mode': 'paranoid',
@@ -302,17 +328,20 @@ DEFAULT_MASTER_OPTS = {
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
+    'state_auto_order': True,
     'search': '',
     'search_index_interval': 3600,
     'loop_interval': 60,
     'nodegroups': {},
     'cython_enable': False,
-    'key_logfile': '/var/log/salt/key',
+    # XXX: Remove 'key_logfile' support in 0.18.0
+    'key_logfile': os.path.join(syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
-    'win_repo': '/srv/salt/win/repo',
-    'win_repo_mastercachefile': '/srv/salt/win/repo/winrepo.p',
+    'win_repo': os.path.join(syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'win_repo_mastercachefile': os.path.join(syspaths.BASE_FILE_ROOTS_DIR,
+                                             'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
 }
 
@@ -325,7 +354,7 @@ def _validate_file_roots(opts):
     if not isinstance(opts['file_roots'], dict):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
-        return {'base': ['/srv/salt']}
+        return {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
     for env, dirs in list(opts['file_roots'].items()):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             opts['file_roots'][env] = []
@@ -359,6 +388,11 @@ def _validate_opts(opts):
                     errors.append(
                         err.format(key, val, type(val), VALID_OPTS[key])
                     )
+                except TypeError:
+                    errors.append(
+                        err.format(key, val, type(val), VALID_OPTS[key])
+                    )
+
     for error in errors:
         log.warning(error)
     if errors:
@@ -490,12 +524,12 @@ def include_config(include, orig_path, verbose):
             if verbose:
                 log.warn(
                     'Warning parsing configuration file: "include" path/glob '
-                    '"{0}" matches no files'.format(path)
+                    '{0!r} matches no files'.format(path)
                 )
 
         for fn_ in sorted(glob.glob(path)):
             try:
-                log.debug('Including configuration from {0}'.format(fn_))
+                log.debug('Including configuration from {0!r}'.format(fn_))
                 configuration.update(_read_conf_file(fn_))
             except Exception as err:
                 log.warn(
@@ -525,10 +559,23 @@ def prepend_root_dir(opts, path_options):
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
-                  **kwargs):
+                  check_dns=None):
     '''
     Reads in the minion configuration file and sets up special options
     '''
+    if check_dns is not None:
+        # All use of the `check_dns` arg was removed in `598d715`. The keyword
+        # argument was then removed in `9d893e4` and `**kwargs` was then added
+        # in `5d60f77` in order not to break backwards compatibility.
+        #
+        # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
+        # api calls to be updated in order to stop it's use.
+        salt.utils.warn_until(
+            (0, 19),
+            'The functionality behind the \'check_dns\' keyword argument is '
+            'no longer required, as such, it became unnecessary and is now '
+            'deprecated. \'check_dns\' will be removed in salt > 0.18.0'
+        )
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
 
@@ -545,65 +592,185 @@ def minion_config(path,
     return opts
 
 
+def syndic_config(master_config_path,
+                  minion_config_path,
+                  master_env_var='SALT_MASTER_CONFIG',
+                  minion_env_var='SALT_MINION_CONFIG',
+                  minion_defaults=None,
+                  master_defaults=None):
+
+    if minion_defaults is None:
+        minion_defaults = DEFAULT_MINION_OPTS
+
+    if master_defaults is None:
+        master_defaults = DEFAULT_MASTER_OPTS
+
+    opts = {}
+    master_opts = master_config(
+        master_config_path, master_env_var, master_defaults
+    )
+    minion_opts = minion_config(
+        minion_config_path, minion_env_var, minion_defaults
+    )
+    opts['_minion_conf_file'] = master_opts['conf_file']
+    opts['_master_conf_file'] = minion_opts['conf_file']
+    opts.update(master_opts)
+    opts.update(minion_opts)
+    syndic_opts = {
+        'root_dir': opts.get('root_dir', syspaths.ROOT_DIR),
+        'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
+        'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
+        'id': minion_opts['id'],
+        'pki_dir': minion_opts['pki_dir'],
+        'master': opts['syndic_master'],
+        'master_port': int(
+            opts.get(
+                # The user has explicitly defined the syndic master port
+                'syndic_master_port',
+                opts.get(
+                    # No syndic_master_port, grab master_port from opts
+                    'master_port',
+                    # No master_opts, grab from the provided minion defaults
+                    minion_defaults.get(
+                        'master_port',
+                        # Not on the provided minion defaults, load from the
+                        # static minion defaults
+                        DEFAULT_MINION_OPTS['master_port']
+                    )
+                )
+            )
+        ),
+        'user': opts.get('syndic_user', opts['user']),
+        'sock_dir': os.path.join(
+            opts['cachedir'], opts.get('syndic_sock_dir', opts['sock_dir'])
+        ),
+    }
+    opts.update(syndic_opts)
+    # Prepend root_dir to other paths
+    prepend_root_dirs = [
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir',
+        'extension_modules', 'autosign_file', 'token_dir'
+    ]
+    for config_key in ('log_file', 'key_logfile'):
+        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+            prepend_root_dirs.append(config_key)
+    prepend_root_dir(opts, prepend_root_dirs)
+    return opts
+
+
 def get_id():
     '''
     Guess the id of the minion.
 
+    - Check /etc/hostname for a value other than localhost
     - If socket.getfqdn() returns us something other than localhost, use it
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
     - A private IP is better than a loopback IP
     - localhost may be better than killing the minion
+
+    Returns two values: the detected ID, and a boolean value noting whether or
+    not an IP address is being used for the ID.
     '''
 
-    log.debug('Guessing ID. The id can be explicitly in set {0}'
-              .format('/etc/salt/minion'))
+    log.debug(
+        'Guessing ID. The id can be explicitly in set {0}'.format(
+            os.path.join(syspaths.CONFIG_DIR, 'minion')
+        )
+    )
+
+    # Check /etc/hostname
+    try:
+        with salt.utils.fopen('/etc/hostname') as hfl:
+            name = hfl.read().strip()
+        if re.search(r'\s', name):
+            log.warning('Whitespace character detected in /etc/hostname. '
+                        'This file should not contain any whitespace.')
+        else:
+            if name != 'localhost':
+                return name, False
+    except Exception:
+        pass
+
+    # Nothing in /etc/hostname or /etc/hostname not found
     fqdn = socket.getfqdn()
-    if 'localhost' != fqdn:
+    if fqdn != 'localhost':
         log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
         return fqdn, False
 
     # Can /etc/hosts help us?
     try:
-        # TODO Add Windows host file support
-        with salt.utils.fopen('/etc/hosts') as f:
-            line = f.readline()
-            while line:
+        with salt.utils.fopen('/etc/hosts') as hfl:
+            for line in hfl:
                 names = line.split()
-                ip = names.pop(0)
-                if ip.startswith('127.'):
+                ip_ = names.pop(0)
+                if ip_.startswith('127.'):
                     for name in names:
                         if name != 'localhost':
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
                             return name, False
-                line = f.readline()
+    except Exception:
+        pass
+
+    # Can Windows 'hosts' file help?
+    try:
+        windir = os.getenv("WINDIR")
+        with salt.utils.fopen(windir + '\\system32\\drivers\\etc\\hosts') as hfl:
+            for line in hfl:
+                # skip commented or blank lines
+                if line[0] == '#' or len(line) <= 1:
+                    continue
+                # process lines looking for '127.' in first column
+                try:
+                    entry = line.split()
+                    if entry[0].startswith('127.'):
+                        for name in entry[1:]:  # try each name in the row
+                            if name != 'localhost':
+                                log.info('Found minion id in hosts file: {0}'.format(name))
+                                return name, False
+                except IndexError:
+                    pass  # could not split line (malformed entry?)
     except Exception:
         pass
 
     # What IP addresses do we have?
-    ip_addresses = [salt.utils.network.IPv4Address(a) for a
+    ip_addresses = [salt.utils.network.IPv4Address(addr) for addr
                     in salt.utils.network.ip_addrs(include_loopback=True)
-                    if not a.startswith('127.')]
+                    if not addr.startswith('127.')]
 
-    for a in ip_addresses:
-        if not a.is_private:
-            log.info('Using public ip address for id: {0}'.format(a))
-            return str(a), True
+    for addr in ip_addresses:
+        if not addr.is_private:
+            log.info('Using public ip address for id: {0}'.format(addr))
+            return str(addr), True
 
     if ip_addresses:
-        a = ip_addresses.pop(0)
-        log.info('Using private ip address for id: {0}'.format(a))
-        return str(a), True
+        addr = ip_addresses.pop(0)
+        log.info('Using private ip address for id: {0}'.format(addr))
+        return str(addr), True
 
     log.error('No id found, falling back to localhost')
     return 'localhost', False
 
 
-def apply_minion_config(overrides=None, defaults=None, **kwargs):
+def apply_minion_config(overrides=None, defaults=None, check_dns=None):
     '''
     Returns minion configurations dict.
     '''
+    if check_dns is not None:
+        # All use of the `check_dns` arg was removed in `598d715`. The keyword
+        # argument was then removed in `9d893e4` and `**kwargs` was then added
+        # in `5d60f77` in order not to break backwards compatibility.
+        #
+        # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
+        # api calls to be updated in order to stop it's use.
+        salt.utils.warn_until(
+            (0, 19),
+            'The functionality behind the \'check_dns\' keyword argument is '
+            'no longer required, as such, it became unnecessary and is now '
+            'deprecated. \'check_dns\' will be removed in salt > 0.18.0'
+        )
+
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Provide the service module for systemd
 '''
@@ -113,7 +114,9 @@ def systemctl_reload():
     '''
     Reloads systemctl, an action needed whenever unit files are updated.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.systemctl_reload
     '''
@@ -127,7 +130,9 @@ def get_enabled():
     '''
     Return a list of all enabled services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_enabled
     '''
@@ -142,7 +147,9 @@ def get_disabled():
     '''
     Return a list of all disabled services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_disabled
     '''
@@ -157,7 +164,9 @@ def get_all():
     '''
     Return a list of all available services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -169,7 +178,9 @@ def available(name):
     Check that the given service is available taking into account
     template units.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.available sshd
     '''
@@ -180,7 +191,9 @@ def start(name):
     '''
     Start the specified service with systemd
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -193,7 +206,9 @@ def stop(name):
     '''
     Stop the specified service with systemd
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -206,7 +221,9 @@ def restart(name):
     '''
     Restart the specified service with systemd
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -219,7 +236,9 @@ def reload_(name):
     '''
     Reload the specified service with systemd
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.reload <service name>
     '''
@@ -232,7 +251,9 @@ def force_reload(name):
     '''
     Force-reload the specified service with systemd
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.force_reload <service name>
     '''
@@ -248,7 +269,9 @@ def status(name, sig=None):
     Return the status for a service via systemd, returns a bool
     whether the service is running.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name>
     '''
@@ -262,7 +285,9 @@ def enable(name, **kwargs):
     '''
     Enable the named service to start when the system boots
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
@@ -275,7 +300,9 @@ def disable(name, **kwargs):
     '''
     Disable the named service to not start when the system boots
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
@@ -309,7 +336,9 @@ def enabled(name):
     '''
     Return if the named service is enabled to start on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enabled <service name>
     '''
@@ -320,7 +349,9 @@ def disabled(name):
     '''
     Return if the named service is disabled to start on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disabled <service name>
     '''

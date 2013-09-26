@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage client ssh components
 '''
@@ -185,7 +186,9 @@ def host_keys(keydir=None):
     '''
     Return the minion's host keys
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.host_keys
     '''
@@ -217,7 +220,9 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     '''
     Return the authorized keys for the specified user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.auth_keys root
     '''
@@ -229,39 +234,51 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     return _validate_keys(full)
 
 
-def check_key_file(user, keysource, config='.ssh/authorized_keys', env='base'):
+def check_key_file(user, source, config='.ssh/authorized_keys', env='base'):
     '''
     Check a keyfile from a source destination against the local keys and
     return the keys to change
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' root salt://ssh/keyfile
     '''
-    ret = {}
-    keyfile = __salt__['cp.cache_file'](keysource, env)
+    keyfile = __salt__['cp.cache_file'](source, env)
     if not keyfile:
-        return ret
+        return {}
     s_keys = _validate_keys(keyfile)
-    for key in s_keys:
-        ret[key] = check_key(
-            user,
-            key,
-            s_keys[key]['enc'],
-            s_keys[key]['comment'],
-            s_keys[key]['options'],
-            config)
-    return ret
+    if not s_keys:
+        err = 'No keys detected in {0}. Is file properly ' \
+              'formatted?'.format(source)
+        log.error(err)
+        __context__['ssh_auth.error'] = err
+        return {}
+    else:
+        ret = {}
+        for key in s_keys:
+            ret[key] = check_key(
+                user,
+                key,
+                s_keys[key]['enc'],
+                s_keys[key]['comment'],
+                s_keys[key]['options'],
+                config)
+        return ret
 
 
 def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
     '''
     Check to see if a key needs updating, returns "update", "add" or "exists"
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.check_key <user> <key> <enc> <comment> <options>
     '''
+    enc = _refine_enc(enc)
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
     if key in current:
@@ -280,7 +297,9 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     '''
     Remove an authorized key from the specified user's authorized key file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.rm_auth_key <user> <key>
     '''
@@ -350,7 +369,9 @@ def set_auth_key_from_file(
     '''
     Add a key to the authorized_keys file, using a file as the source.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.set_auth_key_from_file <user>\
                 salt://ssh_keys/<user>.id_rsa.pub
@@ -361,29 +382,36 @@ def set_auth_key_from_file(
         msg = 'Failed to pull key file from salt file server'
         raise CommandExecutionError(msg)
 
-    rval = ''
-    newkey = _validate_keys(lfile)
-    for k in newkey:
-        rval += set_auth_key(
-            user,
-            k,
-            newkey[k]['enc'],
-            newkey[k]['comment'],
-            newkey[k]['options'],
-            config
-        )
-    # Due to the ability for a single file to have multiple keys, it's
-    # possible for a single call to this function to have both "replace" and
-    # "new" as possible valid returns. I ordered the following as I thought
-    # best.
-    if 'fail' in rval:
+    s_keys = _validate_keys(lfile)
+    if not s_keys:
+        err = 'No keys detected in {0}. Is file properly ' \
+              'formatted?'.format(source)
+        log.error(err)
+        __context__['ssh_auth.error'] = err
         return 'fail'
-    elif 'replace' in rval:
-        return 'replace'
-    elif 'new' in rval:
-        return 'new'
     else:
-        return 'no change'
+        rval = ''
+        for key in s_keys:
+            rval += set_auth_key(
+                user,
+                key,
+                s_keys[key]['enc'],
+                s_keys[key]['comment'],
+                s_keys[key]['options'],
+                config
+            )
+        # Due to the ability for a single file to have multiple keys, it's
+        # possible for a single call to this function to have both "replace"
+        # and "new" as possible valid returns. I ordered the following as I
+        # thought best.
+        if 'fail' in rval:
+            return 'fail'
+        elif 'replace' in rval:
+            return 'replace'
+        elif 'new' in rval:
+            return 'new'
+        else:
+            return 'no change'
 
 
 def set_auth_key(
@@ -399,7 +427,9 @@ def set_auth_key(
     or ends with user@host, remove those from the key before passing it to this
     function.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.set_auth_key <user> '<key>' enc='dsa'
     '''
@@ -471,7 +501,9 @@ def get_known_host(user, hostname, config='.ssh/known_hosts'):
     Return information about known host from the configfile, if any.
     If there is no such key, return None.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.get_known_host <user> <hostname>
     '''
@@ -489,15 +521,23 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
     '''
     Retrieve information about host public key from remote server
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
     '''
-    chunks = ['ssh-keyscan', ]
+    # The following list of OSes have an old version of openssh-clients
+    # and thus require the '-t' option for ssh-keyscan
+    need_dash_t = ['CentOS-5']
+
+    chunks = ['ssh-keyscan']
     if port:
         chunks += ['-p', str(port)]
     if enc:
         chunks += ['-t', str(enc)]
+    if not enc and __grains__.get('osfinger') in need_dash_t:
+        chunks += ['-t', 'rsa']
     if hash_hostname:
         chunks.append('-H')
     chunks.append(str(hostname))
@@ -521,7 +561,9 @@ def check_known_host(user, hostname, key=None, fingerprint=None,
     If neither key, nor fingerprint is defined, then additional validation is
     not performed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.check_known_host <user> <hostname> key='AAAA...FAaQ=='
     '''
@@ -541,7 +583,9 @@ def rm_known_host(user, hostname, config='.ssh/known_hosts'):
     '''
     Remove all keys belonging to hostname from a known_hosts file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.rm_known_host <user> <hostname>
     '''
@@ -575,7 +619,9 @@ def set_known_host(user, hostname,
     If such a record does already exists in there, do nothing.
 
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' \
                  enc='ssh-rsa' config='.ssh/known_hosts'

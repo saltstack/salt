@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 '''
 virt.query outputter
 '''
+
 
 def output(data):
     '''

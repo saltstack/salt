@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Return config information
 '''
@@ -5,10 +6,11 @@ Return config information
 # Import python libs
 import re
 import os
-import urllib
+import urllib2
 
 # Import salt libs
 import salt.utils
+import salt.syspaths as syspaths
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
@@ -43,7 +45,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.bindpw': '',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
-            'virt.images': '/srv/salt-images',
+            'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
             'virt.tunnel': False,
             }
 
@@ -52,7 +54,9 @@ def backup_mode(backup=''):
     '''
     Return the backup mode
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.backup_mode
     '''
@@ -65,7 +69,9 @@ def manage_mode(mode):
     '''
     Return a mode value, normalized to a string
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.manage_mode
     '''
@@ -79,7 +85,9 @@ def valid_fileproto(uri):
     Returns a boolean value based on whether or not the URI passed has a valid
     remote file protocol designation
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.valid_fileproto salt://path/to/file
     '''
@@ -98,7 +106,9 @@ def option(
     '''
     Pass in a generic option and receive the value that will be assigned
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.option redis.host
     '''
@@ -116,6 +126,60 @@ def option(
     return default
 
 
+def merge(value,
+          default='',
+          omit_opts=False,
+          omit_master=False,
+          omit_pillar=False):
+    '''
+    Retrieves an option based on key, merging all matches.
+
+    Same as ``option()`` except that it merges all matches, rather than taking
+    the first match.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' config.merge schedule
+    '''
+    ret = None
+    if not omit_opts:
+        if value in __opts__:
+            ret = __opts__[value]
+            if isinstance(ret, str):
+                return ret
+    if not omit_master:
+        if value in __pillar__.get('master', {}):
+            tmp = __pillar__['master'][value]
+            if ret is None:
+                ret = tmp
+                if isinstance(ret, str):
+                    return ret
+            elif isinstance(ret, dict) and isinstance(tmp, dict):
+                tmp.update(ret)
+                ret = tmp
+            elif isinstance(ret, (list, tuple)) and isinstance(tmp,
+                                                               (list, tuple)):
+                ret = list(ret) + list(tmp)
+    if not omit_pillar:
+        if value in __pillar__:
+            tmp = __pillar__[value]
+            if ret is None:
+                ret = tmp
+                if isinstance(ret, str):
+                    return ret
+            elif isinstance(ret, dict) and isinstance(tmp, dict):
+                tmp.update(ret)
+                ret = tmp
+            elif isinstance(ret, (list, tuple)) and isinstance(tmp,
+                                                               (list, tuple)):
+                ret = list(ret) + list(tmp)
+    if ret is None and value in DEFAULTS:
+        return DEFAULTS[value]
+    return ret or default
+
+
 def get(key, default=''):
     '''
     .. versionadded: 0.14
@@ -125,23 +189,25 @@ def get(key, default=''):
     The default return is an empty string.
 
     The value can also represent a value in a nested dict using a ":" delimiter
-    for the dict. This means that if a dict looks like this:
+    for the dict. This means that if a dict looks like this::
 
-    {'pkg': {'apache': 'httpd'}}
+        {'pkg': {'apache': 'httpd'}}
 
     To retrieve the value associated with the apache key in the pkg dict this
-    key can be passed:
+    key can be passed::
 
-    pkg:apache
+        pkg:apache
 
     This routine traverses these data stores in this order:
 
-        Local minion config (opts)
-        Minion's grains
-        Minion's pillar
-        Master config
+    - Local minion config (opts)
+    - Minion's grains
+    - Minion's pillar
+    - Master config
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.get pkg:apache
     '''
@@ -165,7 +231,9 @@ def dot_vals(value):
     Pass in a configuration value that should be preceded by the module name
     and a dot, this will return a list of all read key/value pairs
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' config.dot_vals host
     '''
@@ -184,13 +252,15 @@ def gather_bootstrap_script(replace=False):
     Download the salt-bootstrap script, set replace to True to refresh the
     script if it has already been downloaded
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' qemu.gather_bootstrap_script True
+    .. code-block:: bash
+
+        salt '*' config.gather_bootstrap_script True
     '''
     fn_ = os.path.join(__opts__['cachedir'], 'bootstrap.sh')
     if not replace and os.path.isfile(fn_):
         return fn_
     with salt.utils.fopen(fn_, 'w+') as fp_:
-        fp_.write(urllib.urlopen('http://bootstrap.saltstack.org').read())
+        fp_.write(urllib2.urlopen('http://bootstrap.saltstack.org').read())
     return fn_

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The module used to execute states in salt. A state is unlike a module
 execution in that instead of just executing a command it ensure that a
@@ -15,7 +16,7 @@ The data sent to the state calls is as follows:
 import os
 import sys
 import copy
-import inspect
+import site
 import fnmatch
 import logging
 import collections
@@ -28,11 +29,24 @@ import salt.minion
 import salt.pillar
 import salt.fileclient
 import salt.utils.event
-from salt._compat import string_types, callable
+import salt.syspaths as syspaths
+from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltReqTimeoutError, SaltException
 
 log = logging.getLogger(__name__)
+
+
+def split_low_tag(tag):
+    '''
+    Take a low tag and split it back into the low dict that it came from
+    '''
+    state, id_, name, fun = tag.split('_|-')
+
+    return {'state': state,
+            '__id__': id_,
+            'name': name,
+            'fun': fun}
 
 
 def _gen_tag(low):
@@ -40,24 +54,6 @@ def _gen_tag(low):
     Generate the running dict tag string from the low data structure
     '''
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
-
-
-def _getargs(func):
-    '''
-    A small wrapper around getargspec that also supports callable classes
-    '''
-    if not callable(func):
-        raise TypeError('{0} is not a callable'.format(func))
-
-    if inspect.isfunction(func):
-        aspec = inspect.getargspec(func)
-    elif isinstance(func, object):
-        aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0]  # self
-    else:
-        raise TypeError('Cannot inspect argument list for "{0}"'.format(func))
-
-    return aspec
 
 
 def trim_req(req):
@@ -123,7 +119,10 @@ def format_log(ret):
             # Yep, looks like a valid state return
             chg = ret['changes']
             if not chg:
-                msg = 'No changes made for {0[name]}'.format(ret)
+                if ret['comment']:
+                    msg = ret['comment']
+                else:
+                    msg = 'No changes made for {0[name]}'.format(ret)
             elif isinstance(chg, dict):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
@@ -545,12 +544,13 @@ class State(object):
         '''
         Refresh all the modules
         '''
+        log.debug('Refreshing modules...')
+        # In case a package has been installed into the current python
+        # process 'site-packages', the 'site' module needs to be reloaded in
+        # order for the newly installed package to be importable.
+        reload(site)
         self.load_modules()
-        module_refresh_path = os.path.join(
-            self.opts['cachedir'],
-            'module_refresh')
-        with salt.utils.fopen(module_refresh_path, 'w+') as ofile:
-            ofile.write('')
+        self.functions['saltutil.refresh_modules']()
 
     def check_refresh(self, data, ret):
         '''
@@ -560,8 +560,14 @@ class State(object):
         possible module type, e.g. a python, pyx, or .so. Always refresh if the
         function is recurse, since that can lay down anything.
         '''
+        if data.get('reload_modules', False) is True:
+            # User explicitly requests a reload
+            self.module_refresh()
+            return
+
         if not ret['changes']:
             return
+
         if data['state'] == 'file':
             if data['fun'] == 'managed':
                 if data['name'].endswith(
@@ -569,6 +575,9 @@ class State(object):
                     self.module_refresh()
             elif data['fun'] == 'recurse':
                 self.module_refresh()
+            elif data['fun'] == 'symlink':
+                if 'bin' in data['name']:
+                    self.module_refresh()
         elif data['state'] == 'pkg':
             self.module_refresh()
 
@@ -625,17 +634,21 @@ class State(object):
                         )
         else:
             # First verify that the parameters are met
-            aspec = _getargs(self.states[full])
+            aspec = salt.utils.get_function_argspec(self.states[full])
             arglen = 0
             deflen = 0
-            if isinstance(aspec[0], list):
-                arglen = len(aspec[0])
-            if isinstance(aspec[3], tuple):
-                deflen = len(aspec[3])
+            if isinstance(aspec.args, list):
+                arglen = len(aspec.args)
+            if isinstance(aspec.defaults, tuple):
+                deflen = len(aspec.defaults)
             for ind in range(arglen - deflen):
-                if aspec[0][ind] not in data:
-                    errors.append('Missing parameter ' + aspec[0][ind]
-                                + ' for state ' + full)
+                if aspec.args[ind] not in data:
+                    errors.append(
+                        'Missing parameter {0} for state {1}'.format(
+                            aspec.args[ind],
+                            full
+                        )
+                    )
         # If this chunk has a recursive require, then it will cause a
         # recursive loop when executing, check for it
         reqdec = ''
@@ -846,30 +859,30 @@ class State(object):
         ret = {}
         ret['full'] = '{0[state]}.{0[fun]}'.format(data)
         ret['args'] = []
-        aspec = _getargs(self.states[ret['full']])
+        aspec = salt.utils.get_function_argspec(self.states[ret['full']])
         arglen = 0
         deflen = 0
-        if isinstance(aspec[0], list):
-            arglen = len(aspec[0])
-        if isinstance(aspec[3], tuple):
-            deflen = len(aspec[3])
-        if aspec[2]:
-            # This state accepts kwargs
+        if isinstance(aspec.args, list):
+            arglen = len(aspec.args)
+        if isinstance(aspec.defaults, tuple):
+            deflen = len(aspec.defaults)
+        if aspec.keywords:
+            # This state accepts **kwargs
             ret['kwargs'] = {}
             for key in data:
                 # Passing kwargs the conflict with args == stack trace
-                if key in aspec[0]:
+                if key in aspec.args:
                     continue
                 ret['kwargs'][key] = data[key]
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
             minus = arglen - ind
             if deflen - minus > -1:
-                kwargs[aspec[0][ind]] = aspec[3][-minus]
+                kwargs[aspec.args[ind]] = aspec.defaults[-minus]
         for arg in kwargs:
             if arg in data:
                 kwargs[arg] = data[arg]
-        for arg in aspec[0]:
+        for arg in aspec.args:
             if arg in kwargs:
                 ret['args'].append(kwargs[arg])
             else:
@@ -1021,8 +1034,12 @@ class State(object):
             for name, body in high.items():
                 if name.startswith('__'):
                     continue
-                if body.get('__sls__', '') in ex_sls:
-                    ex_id.add(name)
+                sls = body.get('__sls__', '')
+                if not sls:
+                    continue
+                for ex_ in ex_sls:
+                    if fnmatch.fnmatch(sls, ex_):
+                        ex_id.add(name)
         for id_ in ex_id:
             if id_ in high:
                 high.pop(id_)
@@ -1226,6 +1243,7 @@ class State(object):
                         data
                         )
                     )
+
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
@@ -1323,6 +1341,8 @@ class State(object):
                     for chunk in chunks:
                         req_key = next(iter(req))
                         req_val = req[req_key]
+                        if req_val is None:
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
@@ -1399,11 +1419,15 @@ class State(object):
                     for chunk in chunks:
                         req_key = next(iter(req))
                         req_val = req[req_key]
+                        if req_val is None:
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
                                 if requisite == 'prereq':
                                     chunk['__prereq__'] = True
+                                elif requisite == 'prerequired':
+                                    chunk['__prerequired__'] = True
                                 reqs.append(chunk)
                                 found = True
                         elif req_key == 'sls':
@@ -1418,10 +1442,15 @@ class State(object):
             if lost['require'] or lost['watch'] or lost['prereq'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
+                    if not lreqs:
+                        continue
+                    comment += \
+                        '{0}{1}:\n'.format(' ' * 19, requisite)
                     for lreq in lreqs:
-                        comment += '{0}{1}: {2}\n'.format(' ' * 19,
-                                requisite,
-                                lreq)
+                        req_key = next(iter(lreq))
+                        req_val = lreq[req_key]
+                        comment += \
+                            '{0}{1}: {2}\n'.format(' ' * 23, req_key, req_val)
                 running[tag] = {'changes': {},
                                 'result': False,
                                 'comment': comment,
@@ -1434,8 +1463,14 @@ class State(object):
                 ctag = _gen_tag(chunk)
                 if ctag not in running:
                     if ctag in self.active:
-                        log.error('Recursive requisite found')
-                        if ctag not in running:
+                        if chunk.get('__prerequired__'):
+                            # Prereq recusive, run this chunk with prereq on
+                            if tag not in self.pre:
+                                low['__prereq__'] = True
+                                self.pre[ctag] = self.call(low)
+                                return running
+                        elif ctag not in running:
+                            log.error('Recursive requisite found')
                             running[tag] = {
                                     'changes': {},
                                     'result': False,
@@ -1447,7 +1482,14 @@ class State(object):
                     if self.check_failhard(chunk, running):
                         running['__FAILHARD__'] = True
                         return running
-            running = self.call_chunk(low, running, chunks)
+            if low.get('__prereq__'):
+                status = self.check_requisite(low, running, chunks)
+                self.pre[tag] = self.call(low)
+                if not self.pre[tag]['changes'] and status == 'change':
+                    self.pre[tag]['changes'] = {'watch': 'watch'}
+                    self.pre[tag]['result'] = None
+            else:
+                running = self.call_chunk(low, running, chunks)
             if self.check_failhard(chunk, running):
                 running['__FAILHARD__'] = True
                 return running
@@ -1615,6 +1657,7 @@ class BaseHighState(object):
     '''
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
+        self.iorder = 10000
         self.avail = self.__gather_avail()
         self.serial = salt.payload.Serial(self.opts)
 
@@ -1646,7 +1689,7 @@ class BaseHighState(object):
             opts['failhard'] = False
             opts['state_top'] = 'salt://top.sls'
             opts['nodegroups'] = {}
-            opts['file_roots'] = {'base': ['/srv/salt']}
+            opts['file_roots'] = {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
         else:
             opts['renderer'] = mopts['renderer']
             opts['failhard'] = mopts.get('failhard', False)
@@ -1657,6 +1700,9 @@ class BaseHighState(object):
             else:
                 opts['state_top'] = os.path.join('salt://', mopts['state_top'])
             opts['nodegroups'] = mopts.get('nodegroups', {})
+            opts['state_auto_order'] = mopts.get(
+                    'state_auto_order',
+                    opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
         return opts
 
@@ -1787,6 +1833,10 @@ class BaseHighState(object):
                        'laid out as a dict').format(env)
                 errors.append(err)
             for slsmods in matches.values():
+                if not isinstance(slsmods, list):
+                    errors.append('Malformed topfile (state declarations not '
+                                  'formed as a list)')
+                    continue
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
@@ -1857,7 +1907,7 @@ class BaseHighState(object):
         if not self.opts['autoload_dynamic_modules']:
             return
         syncd = self.state.functions['saltutil.sync_all'](list(matches))
-        if syncd[2]:
+        if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
         self.state.module_refresh()
 
@@ -1882,7 +1932,7 @@ class BaseHighState(object):
             msg = 'Rendering SLS {0} failed, render error: {1}'.format(
                 sls, exc
             )
-            log.error(
+            log.critical(
                 msg,
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
@@ -1969,14 +2019,49 @@ class BaseHighState(object):
                                    ).format(env_key,
                                             inc_sls,
                                             ', '.join(resolved_envs))
-                        log.error(msg)
+                        log.critical(msg)
                         if self.opts['failhard']:
                             errors.append(msg)
+                self._handle_iorder(state)
         else:
             state = {}
         return state, errors
 
+    def _handle_iorder(self, state):
+        '''
+        Take a state and apply the iorder system
+        '''
+        if self.opts['state_auto_order']:
+            for name in state:
+                for s_dec in state[name]:
+                    if not isinstance(s_dec, string_types):
+                        # PyDSL OrderedDict?
+                        continue
+
+                    if not isinstance(state[name], dict):
+                        # Include's or excludes as lists?
+                        continue
+
+                    found = False
+                    if s_dec.startswith('_'):
+                        continue
+
+                    for arg in state[name][s_dec]:
+                        if isinstance(arg, dict):
+                            if len(arg) > 0:
+                                if arg.keys()[0] == 'order':
+                                    found = True
+                    if not found:
+                        state[name][s_dec].append(
+                                {'order': self.iorder}
+                                )
+                        self.iorder += 1
+        return state
+
     def _handle_state_decls(self, state, sls, env, errors):
+        '''
+        Add sls and env components to the state
+        '''
         for name in state:
             if not isinstance(state[name], dict):
                 if name == '__extend__':
@@ -1997,7 +2082,7 @@ class BaseHighState(object):
                     .format(name, sls)))
                 continue
             skeys = set()
-            for key in sorted(state[name]):
+            for key in state[name]:
                 if key.startswith('_'):
                     continue
                 if not isinstance(state[name][key], list):
@@ -2031,6 +2116,10 @@ class BaseHighState(object):
                 state[name]['__env__'] = env
 
     def _handle_extend(self, state, sls, env, errors):
+        '''
+        Take the extend dec out of state and apply to the highstate global
+        dec
+        '''
         if 'extend' in state:
             ext = state.pop('extend')
             if not isinstance(ext, dict):
@@ -2059,6 +2148,10 @@ class BaseHighState(object):
             state.setdefault('__extend__', []).append(ext)
 
     def _handle_exclude(self, state, sls, env, errors):
+        '''
+        Take the exclude dec out of the state and apply it to the highstate
+        global dec
+        '''
         if 'exclude' in state:
             exc = state.pop('exclude')
             if not isinstance(exc, list):
@@ -2240,7 +2333,8 @@ class HighState(BaseHighState):
     compound state derived from a group of template files stored on the
     salt master or in the local cache.
     '''
-    stack = [] # a stack of active HighState objects during a state.highstate run.
+    # a stack of active HighState objects during a state.highstate run
+    stack = []
 
     def __init__(self, opts, pillar=None):
         self.client = salt.fileclient.get_file_client(opts)
@@ -2294,7 +2388,7 @@ class MasterState(State):
         self.rend = salt.loader.render(self.opts, self.functions)
 
 
-class MasterHighState(BaseHighState):
+class MasterHighState(HighState):
     '''
     Execute highstate compilation from the master
     '''
@@ -2307,11 +2401,7 @@ class MasterHighState(BaseHighState):
         opts['state_top'] = master_opts['state_top']
         opts['id'] = id_
         opts['grains'] = grains
-        self.client = salt.fileclient.get_file_client(opts)
-        BaseHighState.__init__(self, opts)
-        # Use the master state object
-        self.state = MasterState(self.opts, grains)
-        self.matcher = salt.minion.Matcher(self.opts)
+        HighState.__init__(self, opts)
 
 
 class RemoteHighState(object):

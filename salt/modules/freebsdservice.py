@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The service module for FreeBSD
 '''
@@ -8,6 +9,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.exceptions import CommandNotFoundError
 
 __func_alias__ = {
@@ -27,7 +29,7 @@ def __virtual__():
     return False
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _cmd():
     '''
     Return full path to service command
@@ -72,7 +74,9 @@ def get_enabled():
     '''
     Return what services are set to run on boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_enabled
     '''
@@ -97,7 +101,9 @@ def get_disabled():
     '''
     Return what services are available but not enabled to start at boot
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_disabled
     '''
@@ -173,7 +179,9 @@ def enable(name, **kwargs):
 
         Also service.config variable can be used to change default.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enable <service name>
     '''
@@ -186,7 +194,9 @@ def disable(name, **kwargs):
 
     Arguments the same as for enable()
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disable <service name>
     '''
@@ -200,7 +210,9 @@ def enabled(name):
     name
         Service name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.enabled <service name>
     '''
@@ -224,7 +236,9 @@ def disabled(name):
     '''
     Return True if the named service is enabled, false otherwise
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.disabled <service name>
     '''
@@ -235,7 +249,9 @@ def get_all():
     '''
     Return a list of all available services
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.get_all
     '''
@@ -251,7 +267,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.start <service name>
     '''
@@ -263,7 +281,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.stop <service name>
     '''
@@ -271,11 +291,13 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.restart <service name>
     '''
@@ -287,7 +309,9 @@ def reload_(name):
     '''
     Restart the named service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.reload <service name>
     '''
@@ -300,9 +324,11 @@ def status(name, sig=None):
     Return the status for a service (True or False).
 
     name
-        Name of service.
+        Name of service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.status <service name>
     '''
@@ -312,11 +338,13 @@ def status(name, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def available(name, **kwargs):
+def available(name):
     '''
     Check that the given service is available.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.available sshd
     '''

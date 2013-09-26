@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Apache Solr Salt Module
 =======================
@@ -439,7 +440,9 @@ def lucene_version(core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.lucene_version
     '''
@@ -480,7 +483,9 @@ def version(core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.version
     '''
@@ -530,7 +535,9 @@ def optimize(host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.optimize music
     '''
@@ -572,7 +579,9 @@ def ping(host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.ping music
     '''
@@ -608,7 +617,9 @@ def is_replication_enabled(host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.is_replication_enabled music
     '''
@@ -684,7 +695,9 @@ def match_index_versions(host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.match_index_versions music
     '''
@@ -769,7 +782,9 @@ def replication_details(host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.replication_details music
     '''
@@ -811,7 +826,9 @@ def backup(host=None, core_name=None, append_core_to_path=False):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.backup music
     '''
@@ -867,7 +884,9 @@ def set_is_polling(polling, host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.set_is_polling False
     '''
@@ -914,7 +933,9 @@ def set_replication_enabled(status, host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.set_replication_enabled false, None, music
     '''
@@ -935,9 +956,9 @@ def set_replication_enabled(status, host=None, core_name=None):
         return ret
     else:
         if status:
-            return  _replication_request(cmd, host=host, core_name=core_name)
+            return _replication_request(cmd, host=host, core_name=core_name)
         else:
-            return  _replication_request(cmd, host=host, core_name=core_name)
+            return _replication_request(cmd, host=host, core_name=core_name)
 
 
 def signal(signal=None):
@@ -950,7 +971,9 @@ def signal(signal=None):
         The command to pass to the apache solr init valid values are 'start',
         'stop', and 'restart'
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.signal restart
     '''
@@ -984,9 +1007,13 @@ def reload_core(host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.reload_core None music
+
+    Return data is in the following format::
 
         {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
     '''
@@ -1024,7 +1051,9 @@ def core_status(host=None, core_name=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.core_status None music
     '''
@@ -1069,7 +1098,9 @@ def reload_import_config(handler, host=None, core_name=None, verbose=False):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.reload_import_config dataimport None music {'clean':True}
     '''
@@ -1111,7 +1142,9 @@ def abort_import(handler, host=None, core_name=None, verbose=False):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.abort_import dataimport None music {'clean':True}
     '''
@@ -1154,7 +1187,9 @@ def full_import(handler, host=None, core_name=None, options=None, extra=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.full_import dataimport None music {'clean':True}
     '''
@@ -1209,7 +1244,9 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.delta_import dataimport None music {'clean':True}
     '''
@@ -1256,7 +1293,9 @@ def import_status(handler, host=None, core_name=None, verbose=False):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' solr.import_status dataimport None music False
     '''
