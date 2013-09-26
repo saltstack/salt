@@ -1704,6 +1704,7 @@ def replace(name,
     ret['result'] = True
     return ret
 
+
 def sed(name,
         before,
         after,
