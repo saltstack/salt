@@ -290,12 +290,18 @@ class SaltEvent(object):
         # If sockets are not unregistered from a poller, nothing which touches
         # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
-        for socket in self.poller.sockets.keys():
-            if socket.closed is False:
-                # Should already be closed from above, but....
-                socket.setsockopt(zmq.LINGER, 1)
-                socket.close()
-            self.poller.unregister(socket)
+        if isinstance(self.poller.sockets, dict):
+            for socket in self.poller.sockets.keys():
+                if socket.closed is False:
+                    socket.setsockopt(zmq.LINGER, 1)
+                    socket.close()
+                self.poller.unregister(socket)
+        else:
+            for socket in self.poller.sockets:
+                if socket[0].closed is False:
+                    socket[0].setsockopt(zmq.LINGER, 1)
+                    socket[0].close()
+                self.poller.unregister(socket[0])
         if self.context.closed is False:
             self.context.term()
 
