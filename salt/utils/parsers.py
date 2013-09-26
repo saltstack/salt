@@ -1568,12 +1568,6 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default='',
             help='Set the default password to attempt to use when '
                  'authenticating')
-        self.add_option(
-            '--always-deply-key',
-            dest='ssh_deploy_key',
-            default=False,
-            help='Always deploy the ssh keys when authentecating via password'
-            )
 
     def _mixin_after_parsed(self):
         if self.options.list:
