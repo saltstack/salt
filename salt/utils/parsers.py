@@ -1554,7 +1554,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'been changed and the auto refresh timeframe has not been '
                   'reached.'))
         self.add_option(
-            '--ssh-max-procs',
+            '--max-procs',
             dest='ssh_max_procs',
             default=5,
             type=int,
