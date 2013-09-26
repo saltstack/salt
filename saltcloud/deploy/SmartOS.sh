@@ -15,7 +15,9 @@ easy_install-2.7 salt
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
 echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
-echo '{{ minion }}' > /etc/salt/minion
+cat > /etc/salt/minion <<EOF
+{{minion}}
+EOF
 
 ###
 # TODO: * create /opt/local/share/smf/salt-minion/manifest.xml in salt.git

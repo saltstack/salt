@@ -5,6 +5,9 @@ yum -y install salt-minion --enablerepo epel-testing
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
 echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
-echo '{{ minion }}' > /etc/salt/minion
+cat > /etc/salt/minion <<EOF
+{{minion}}
+EOF
+
 /sbin/chkconfig salt-minion on
 service salt-minion start

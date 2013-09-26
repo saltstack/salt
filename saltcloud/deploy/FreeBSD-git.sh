@@ -17,5 +17,8 @@ cd
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /usr/local/etc/salt/pki/minion.pem
 echo '{{ vm['pub_key'] }}' > /usr/local/etc/salt/pki/minion.pub
-echo '{{ minion }}' > /usr/local/etc/salt/minion
+cat > /etc/salt/minion <<EOF
+{{minion}}
+EOF
+
 salt-minion -d
