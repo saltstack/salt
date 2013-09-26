@@ -2146,7 +2146,8 @@ def patch(name,
           hash=None,
           options='',
           dry_run_first=True,
-          env='base'):
+          env=None,
+          **kwargs):
     '''
     Apply a patch to a file. Note: a suitable ``patch`` executable must be
     available on the minion when using this state function.
@@ -2172,6 +2173,11 @@ def patch(name,
     dry_run_first : ``True``
         Run patch with ``--dry-run`` first to check if it will apply cleanly.
 
+    env
+        Specify the environment from which to retrieve the patch file indicated
+        by the ``source`` parameter. If not provided, this defaults to the
+        environment from which the state is being executed.
+
     Usage::
 
         # Equivalent to ``patch --forward /opt/file.txt file.patch``
@@ -2194,6 +2200,8 @@ def patch(name,
         return ret
 
     # get cached file or copy it to cache
+    if env is None:
+        env = kwargs.get('__env__', 'base')
     cached_source_path = __salt__['cp.cache_file'](source, env)
     log.debug(
         'State patch.applied cached source {0} -> {1}'.format(
