@@ -119,10 +119,10 @@
 # to reconnect immediately, if the socket is disconnected (for example if
 # the master processes are restarted). In large setups this will have all
 # minions reconnect immediately which might flood the master (the ZeroMQ-default
-# is usually a 100ms delay). To prevent this, these three recon_* settings 
+# is usually a 100ms delay). To prevent this, these three recon_* settings
 # can be used.
 #
-# recon_default: the interval in milliseconds that the socket should wait before 
+# recon_default: the interval in milliseconds that the socket should wait before
 #                trying to reconnect to the master (100ms = 1 second)
 #
 # recon_max: the maximum time a socket should wait. each interval the time to wait
@@ -136,14 +136,14 @@
 #            reconnect 5: value from previous interval * 2
 #            reconnect x: if value >= recon_max, it starts again with recon_default
 #
-# recon_randomize: generate a random wait time on minion start. The wait time will 
-#                  be a random value between recon_default and recon_default + 
-#                  recon_max. Having all minions reconnect with the same recon_default 
-#                  and recon_max value kind of defeats the purpose of being able to 
-#                  change these settings. If all minions have the same values and your 
-#                  setup is quite large (several thousand minions), they will still 
+# recon_randomize: generate a random wait time on minion start. The wait time will
+#                  be a random value between recon_default and recon_default +
+#                  recon_max. Having all minions reconnect with the same recon_default
+#                  and recon_max value kind of defeats the purpose of being able to
+#                  change these settings. If all minions have the same values and your
+#                  setup is quite large (several thousand minions), they will still
 #                  flood the master. The desired behaviour is to have timeframe within
-#                  all minions try to reconnect. 
+#                  all minions try to reconnect.
 
 # Example on how to use these settings:
 # The goal: have all minions reconnect within a 60 second timeframe on a disconnect
@@ -155,9 +155,9 @@
 #
 # Each minion will have a randomized reconnect value between 'recon_default'
 # and 'recon_default + recon_max', which in this example means between 1000ms
-# 60000ms (or between 1 and 60 seconds). The generated random-value will be 
-# doubled after each attempt to reconnect. Lets say the generated random 
-# value is 11 seconds (or 11000ms). 
+# 60000ms (or between 1 and 60 seconds). The generated random-value will be
+# doubled after each attempt to reconnect. Lets say the generated random
+# value is 11 seconds (or 11000ms).
 #
 # reconnect 1: wait 11 seconds
 # reconnect 2: wait 22 seconds
@@ -238,6 +238,13 @@
 # Enable Cython modules searching and loading. (Default: False)
 #cython_enable: False
 #
+#
+#
+# Specify a max size (in bytes) for modules on import
+# this feature is currently only supported on *nix OSs and requires psutil
+# modules_max_memory: -1
+
+
 
 #####    State Management Settings    #####
 ###########################################

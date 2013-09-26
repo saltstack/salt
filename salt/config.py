@@ -156,6 +156,7 @@ VALID_OPTS = {
     'win_repo': str,
     'win_repo_mastercachefile': str,
     'win_gitrepos': list,
+    'modules_max_memory': int,
 }
 
 # default configurations
@@ -241,6 +242,7 @@ DEFAULT_MINION_OPTS = {
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,
     'tcp_keepalive_intvl': -1,
+    'modules_max_memory': -1,
 }
 
 DEFAULT_MASTER_OPTS = {
