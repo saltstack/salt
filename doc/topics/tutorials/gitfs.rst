@@ -45,6 +45,13 @@ Now the gitfs system needs to be configured with a remote:
     gitfs_remotes:
       - git://github.com/saltstack/salt-states.git
 
+.. note::
+
+    The salt-states repo is not currently updated with the latest versions
+    of the available states. Please review
+    https://github.com/saltstack-formulas for the latest versions.
+
+
 These changes require a restart of the master, then the git repo will be cached
 on the master and new requests for the ``salt://`` protocol will send files
 found in the remote git repository via the master.
@@ -156,6 +163,28 @@ Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
 be searched first for the requested file, then if it is not found on the master
 the git remotes will be searched.
 
+Branches, environments and top.sls files
+========================================
+
+As stated above, when using the ``gitfs`` backend, branches will be mapped
+to environments using the branch name as identifier.
+There is an exception to this rule thought: the ``master`` branch is implicitly
+mapped to the ``base`` environment.
+Therefore, for a typical ``base``, ``qa``, ``dev`` setup, you'll have to
+create the following branches:
+
+.. code-block:: yaml
+
+    master
+    qa
+    dev
+
+Also, ``top.sls`` files from different branches will be merged into one big
+file at runtime. Since this could lead to hardly manageable configurations,
+the recommended setup is to have the ``top.sls`` file only in your master branch,
+and use environment-specific branches for states definitions.
+
+
 GitFS Remotes over SSH
 ======================
 
@@ -173,3 +202,18 @@ for the user running the salt-master.
 .. note::
 
     GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
+
+.. _faq-gitfs-bug:
+
+Why aren't my custom modules/states/etc. syncing to my Minions?
+===============================================================
+
+In versions 0.16.3 and older, when using the :doc:`git fileserver backend
+</topics/tutorials/gitfs>`, certain versions of GitPython may generate errors
+when fetching, which Salt fails to catch. While not fatal to the fetch process,
+these interrupt the fileserver update that takes place before custom types are
+synced, and thus interrupt the sync itself. Try disabling the git fileserver
+backend in the master config, restarting the master, and attempting the sync
+again.
+
+This issue will be worked around in Salt 0.16.4 and newer.

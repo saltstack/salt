@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+'''
+Configure ``portage(5)``
+'''
+
 # Import python libs
 import os
 import shutil

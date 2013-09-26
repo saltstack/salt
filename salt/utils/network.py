@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Define some generic socket functions for network modules
 '''
@@ -162,7 +163,7 @@ def _interfaces_ip(out):
         for line in group.splitlines():
             if not ' ' in line:
                 continue
-            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
+            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?([\w.]+)?:\s+<(.+)>', line)
             if match:
                 iface, parent, attrs = match.groups()
                 if 'UP' in attrs.split(','):

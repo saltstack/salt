@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Module for gathering and managing bridging informations
+Module for gathering and managing bridging information
 '''
 
 import sys

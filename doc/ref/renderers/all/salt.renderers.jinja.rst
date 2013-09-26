@@ -102,7 +102,7 @@ the context into the included file is required:
 Variable and block Serializers
 ==============================
 
-Salt allows to serialize any variable into **json** or **yaml**. For example
+Salt allows one to serialize any variable into **json** or **yaml**. For example
 this variable::
 
     data:
@@ -128,7 +128,7 @@ will be rendered has::
 
 
 Strings and variables can be deserialized with **load_yaml** and **load_json**
-tags and filters. It allows to manipulate data directly in templates, easily:
+tags and filters. It allows one to manipulate data directly in templates, easily:
 
 .. code-block:: yaml
 

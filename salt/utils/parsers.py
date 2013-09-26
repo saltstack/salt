@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     salt.utils.parsers
     ~~~~~~~~~~~~~~~~~~
 
     This is were all the black magic happens on all of salt's CLI tools.
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
@@ -19,12 +20,12 @@ import traceback
 from functools import partial
 
 # Import salt libs
-import salt.log as log
 import salt.config as config
 import salt.loader as loader
 import salt.utils as utils
 import salt.version as version
 import salt.syspaths as syspaths
+import salt.log.setup as log
 
 
 def _sorted(mixins_or_funcs):
@@ -356,6 +357,9 @@ class LogLevelMixIn(object):
                 )
             else:
                 self.options.log_level = self._default_logging_level_
+
+        # Setup extended logging right before the last step
+        self._mixin_after_parsed_funcs.append(self.__setup_extended_logging)
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
@@ -512,6 +516,9 @@ class LogLevelMixIn(object):
         )
         for name, level in self.config['log_granular_levels'].items():
             log.set_logger_level(name, level)
+
+    def __setup_extended_logging(self, *args):
+        log.setup_extended_logging(self.config)
 
     def __setup_console_logger(self, *args):
         # If daemon is set force console logger to quiet
@@ -980,6 +987,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'queries')
         )
         self.add_option(
+           '--show-timeout',
+           default=False,
+           action='store_true',
+           help=('Display minions that timeout')
+       )
+        self.add_option(
             '-b', '--batch',
             '--batch-size',
             default='',
@@ -1416,6 +1429,13 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Exit with the salt call retcode and not the salt binary '
                   'retcode')
         )
+        self.add_option(
+            '--id',
+            default='',
+            dest='id',
+            help=('Specify the minion id to use. If this option is omitted, '
+                  'the id option from the minion config will be used.')
+        )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run \
@@ -1502,13 +1522,46 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
         self.add_option(
-            '-d', '--doc', '--documentation',
-            dest='doc',
+            '-r', '--raw', '--raw-shell',
+            dest='raw_shell',
             default=False,
             action='store_true',
-            help=('Display documentation for runners, pass a module or a '
-                  'runner to see documentation on only that module/runner.')
+            help=('Don\'t execute a salt routine on the targets, execute a '
+                  'raw shell command')
         )
+        self.add_option(
+            '--roster',
+            dest='roster',
+            default='',
+            help=('Define which roster system to use, this defines if a '
+                  'database backend, scanner, or custom roster system is '
+                  'used. Default is the flat file roster.'))
+        self.add_option(
+            '--roster-file',
+            dest='roster_file',
+            default='',
+            help=('define an alternative location for the default roster '
+                  'file location. The default roster file is called roster '
+                  'and is found in the same directory as the master config '
+                  'file.'))
+        self.add_option(
+            '--refresh', '--refresh-cache',
+            dest='refresh_cache',
+            default=False,
+            action='store_true',
+            help=('Force a refresh of the master side data cache of the '
+                  'target\'s data. This is needed if a target\'s grains have '
+                  'been changed and the auto refresh timeframe has not been '
+                  'reached.'))
+        self.add_option(
+            '--max-procs',
+            dest='ssh_max_procs',
+            default=5,
+            type=int,
+            help='Set the number of concurrent minions to communicate with. '
+                 'This value defines how many processes are opened up at a '
+                 'time to manage connections, the more running processes the '
+                 'faster communication should be, default is 5')
 
     def _mixin_after_parsed(self):
         if self.options.list:

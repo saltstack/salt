@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The default file server backend
 
@@ -11,6 +12,7 @@ import os
 # Import salt libs
 import salt.fileserver
 import salt.utils
+from salt.utils.event import tagify
 
 
 def find_file(path, env='base', **kwargs):
@@ -85,9 +87,41 @@ def update():
             os.path.join(__opts__['cachedir'], 'roots/hash'),
             find_file
         )
-    except os.error:
+    except (IOError, OSError):
         # Hash file won't exist if no files have yet been served up
         pass
+
+    mtime_map_path = os.path.join(__opts__['cachedir'], 'roots/mtime_map')
+    # data to send on event
+    data = {'changed': False,
+            'backend': 'roots'}
+
+    old_mtime_map = {}
+    # if you have an old map, load that
+    if os.path.exists(mtime_map_path):
+        with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
+            for line in fp_:
+                file_path, mtime = line.split(':', 1)
+                old_mtime_map[file_path] = mtime
+
+    # generate the new map
+    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
+
+    # compare the maps, set changed to the return value
+    data['changed'] = salt.fileserver.diff_mtime_map(old_mtime_map, new_mtime_map)
+
+    # write out the new map
+    mtime_map_path_dir = os.path.dirname(mtime_map_path)
+    if not os.path.exists(mtime_map_path_dir):
+        os.makedirs(mtime_map_path_dir)
+    with salt.utils.fopen(mtime_map_path, 'w') as fp_:
+        for file_path, mtime in new_mtime_map.iteritems():
+            fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
+                                                     mtime=mtime))
+
+    # if there is a change, fire an event
+    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+    event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):
@@ -149,8 +183,11 @@ def file_list(load):
             prefix = load['prefix'].strip('/')
         except KeyError:
             prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
+        for root, dirs, files in os.walk(os.path.join(path, prefix),
+                                         followlinks=__opts__['fileserver_followsymlinks']):
             for fname in files:
+                if __opts__['fileserver_ignoresymlinks'] and os.path.islink(os.path.join(root, fname)):
+                    continue
                 rel_fn = os.path.relpath(
                             os.path.join(root, fname),
                             path
@@ -172,7 +209,8 @@ def file_list_emptydirs(load):
             prefix = load['prefix'].strip('/')
         except KeyError:
             prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
+        for root, dirs, files in os.walk(os.path.join(path, prefix),
+                                         followlinks=__opts__['fileserver_followsymlinks']):
             if len(dirs) == 0 and len(files) == 0:
                 rel_fn = os.path.relpath(root, path)
                 if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
@@ -192,6 +230,38 @@ def dir_list(load):
             prefix = load['prefix'].strip('/')
         except KeyError:
             prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=True):
+        for root, dirs, files in os.walk(os.path.join(path, prefix),
+                                         followlinks=__opts__['fileserver_followsymlinks']):
             ret.append(os.path.relpath(root, path))
+    return ret
+
+
+def symlink_list(load):
+    '''
+    Return a dict of all symlinks based on a given path on the Master
+    '''
+    ret = {}
+    if load['env'] not in __opts__['file_roots']:
+        return ret
+
+    for path in __opts__['file_roots'][load['env']]:
+        try:
+            prefix = load['prefix'].strip('/')
+        except KeyError:
+            prefix = ''
+        # No need to follow symlinks here, this is a symlink hunt :-)
+        for root, dirs, files in os.walk(os.path.join(path, prefix),
+                                         followlinks=False):
+            for fname in files:
+                if not os.path.islink(os.path.join(root, fname)):
+                    continue
+                rel_fn = os.path.relpath(
+                            os.path.join(root, fname),
+                            path
+                        )
+                if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
+                    ret[rel_fn] = os.readlink(os.path.join(root, fname))
+            for dname in dirs:
+                if os.path.islink(os.path.join(root, dname)):
+                    ret[dname] = os.readlink(os.path.join(root, dname))
     return ret

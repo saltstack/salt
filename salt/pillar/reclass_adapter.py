@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
+.. |reclass| replace:: **reclass**
+
 This ``ext_pillar`` plugin provides access to the |reclass| database, such
 that Pillar data for a specific minion are fetched using |reclass|.
 
@@ -39,14 +42,13 @@ note of the differing data types for ``ext_pillar`` and ``master_tops``):
 If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
-
-.. |reclass| replace:: **reclass**
 '''
 
 # This file cannot be called reclass.py, because then the module import would
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
+from salt.exceptions import SaltInvocationError
 from salt.utils.reclass import (
     prepend_reclass_source_path,
     filter_out_source_path_option,
@@ -74,8 +76,6 @@ def __virtual__(retry=False):
 
         return __virtual__(retry=True)
 
-
-from salt.exceptions import SaltInvocationError
 
 def ext_pillar(minion_id, pillar, **kwargs):
     '''

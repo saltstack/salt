@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Control the state system on the minion
 '''
@@ -7,6 +8,7 @@ import os
 import json
 import copy
 import shutil
+import time
 import logging
 import tarfile
 import tempfile
@@ -60,43 +62,74 @@ def _check_pillar(kwargs):
     return True
 
 
+def _wait(jid):
+    """ Wait for all previously started state jobs to finish running """
+    states = _prior_running_states(jid)
+    while states:
+        time.sleep(1)
+        states = _prior_running_states(jid)
+
+
 def running():
     '''
     Return a dict of state return data if a state function is already running.
     This function is used to prevent multiple state calls from being run at
     the same time.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.running
     '''
     ret = []
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
-        err = ('The function "{0}" is running as PID {1} and was started at '
-               '{2} with jid {3}').format(
-                data['fun'],
-                data['pid'],
-                salt.utils.jid_to_time(data['jid']),
-                data['jid'],
-                )
+        err = (
+            'The function "{0}" is running as PID {1} and was started at '
+            '{2} with jid {3}'
+        ).format(
+            data['fun'],
+            data['pid'],
+            salt.utils.jid_to_time(data['jid']),
+            data['jid'],
+        )
         ret.append(err)
     return ret
 
 
-def low(data):
+def _prior_running_states(jid):
+    """
+    Return a list of dicts of prior calls to state functions.  This function is
+    used to queue state calls so only one is run at a time.
+    """
+
+    ret = []
+    active = __salt__['saltutil.is_running']('state.*')
+    for data in active:
+        if int(data['jid']) < int(jid):
+            ret.append(data)
+    return ret
+
+
+def low(data, queue=False, **kwargs):
     '''
     Execute a single low data call
     This function is mostly intended for testing the state system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
@@ -110,76 +143,96 @@ def low(data):
     return ret
 
 
-def high(data):
+def high(data, queue=False, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
     This function is mostly intended for testing the state system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     st_ = salt.state.State(__opts__)
     ret = st_.call_high(data)
     _set_retcode(ret)
     return ret
 
 
-def template(tem):
+def template(tem, queue=False, **kwargs):
     '''
     Execute the information stored in a template file on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.template '<Path to template on the minion>'
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     st_ = salt.state.State(__opts__)
     ret = st_.call_template(tem)
     _set_retcode(ret)
     return ret
 
 
-def template_str(tem):
+def template_str(tem, queue=False, **kwargs):
     '''
     Execute the information stored in a string from an sls template
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.template_str '<Template String>'
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     st_ = salt.state.State(__opts__)
     ret = st_.call_template_str(tem)
     _set_retcode(ret)
     return ret
 
 
-def highstate(test=None, **kwargs):
+def highstate(test=None, queue=False, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.highstate
 
         salt '*' state.highstate exclude=sls_to_exclude
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     if not _check_pillar(kwargs):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
@@ -228,22 +281,26 @@ def highstate(test=None, **kwargs):
     return ret
 
 
-def sls(mods, env='base', test=None, exclude=None, **kwargs):
+def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
     '''
     Execute a set list of state modules from an environment, default
     environment is base
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.sls core,edit.vim dev
-
         salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
 
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     if not _check_pillar(kwargs):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
@@ -314,21 +371,25 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     return ret
 
 
-def top(topfn, test=None, **kwargs):
+def top(topfn, test=None, queue=False, **kwargs):
     '''
     Execute a specific top file instead of the default
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.top reverse_top.sls
-
         salt '*' state.top reverse_top.sls exclude=sls_to_exclude
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     if not _check_pillar(kwargs):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
@@ -353,18 +414,23 @@ def top(topfn, test=None, **kwargs):
     return ret
 
 
-def show_highstate():
+def show_highstate(queue=False, **kwargs):
     '''
     Retrieve the highstate data from the salt master and display it
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_highstate
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     try:
@@ -376,18 +442,23 @@ def show_highstate():
     return ret
 
 
-def show_lowstate():
+def show_lowstate(queue=False, **kwargs):
     '''
     List out the low data that will be applied to this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_lowstate
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     try:
@@ -397,19 +468,24 @@ def show_lowstate():
     return ret
 
 
-def show_sls(mods, env='base', test=None, **kwargs):
+def show_sls(mods, env='base', test=None, queue=False, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
     master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_sls core,edit.vim dev
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     opts = copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -430,40 +506,41 @@ def show_sls(mods, env='base', test=None, **kwargs):
     return high_
 
 
-def show_top():
+def show_top(queue=False, **kwargs):
     '''
     Return the top data that the minion will use for a highstate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.show_top
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     st_ = salt.state.HighState(__opts__)
-    ret = {}
-    static = st_.get_top()
-    ext = st_.client.ext_nodes()
-    for top_ in [static, ext]:
-        for env in top_:
-            if env not in ret:
-                ret[env] = top_[env]
-            else:
-                for match in top_[env]:
-                    if match not in ret[env]:
-                        ret[env][match] = top_[env][match]
-                    else:
-                        ret[env][match].extend(top_[env][match])
-    return ret
+    errors = []
+    top_ = st_.get_top()
+    errors += st_.verify_tops(top_)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    matches = st_.top_matches(top_)
+    return matches
 
 # Just commenting out, someday I will get this working
 #def show_masterstate():
 #    '''
 #    Display the data gathered from the master compiled state
 #
-#    CLI Example::
+#    CLI Example:
+#
+#    .. code-block:: bash
 #
 #        salt '*' state.show_masterstate
 #    '''
@@ -471,7 +548,7 @@ def show_top():
 #    return st_.compile_master()
 
 
-def single(fun, name, test=None, **kwargs):
+def single(fun, name, test=None, queue=False, **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
@@ -481,15 +558,20 @@ def single(fun, name, test=None, **kwargs):
     would in a YAML salt file. Alternatively, JSON format of keyword values
     is also supported.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.single pkg.installed name=vim
 
     '''
-    conflict = running()
-    if conflict:
-        __context__['retcode'] = 1
-        return conflict
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
     comps = fun.split('.')
     if len(comps) < 2:
         __context__['retcode'] = 1
@@ -523,7 +605,9 @@ def clear_cache():
     Remember that the state cache is completely disabled by default, this
     execution only applies if cache=True is used in states
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.clear_cache
     '''
@@ -544,7 +628,9 @@ def pkg(pkg_path, test=False, **kwargs):
     tarball available locally. This packaged state
     can be generated using salt-ssh.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' state.pkg /tmp/state_pkg.tgz
     '''
@@ -552,16 +638,17 @@ def pkg(pkg_path, test=False, **kwargs):
     if not os.path.isfile(pkg_path):
         return {}
     root = tempfile.mkdtemp()
-    with tarfile.open(pkg_path, 'r:gz') as s_pkg:
+    s_pkg = tarfile.open(pkg_path, 'r:gz')
         # Verify that the tarball does not extract outside of the intended
         # root
-        members = s_pkg.getmembers()
-        for member in members:
-            if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
-                return {}
-            elif '..{0}'.format(os.sep) in member.path:
-                return {}
-        s_pkg.extractall(root)
+    members = s_pkg.getmembers()
+    for member in members:
+        if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
+            return {}
+        elif '..{0}'.format(os.sep) in member.path:
+            return {}
+    s_pkg.extractall(root)
+    s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)

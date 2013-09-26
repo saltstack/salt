@@ -24,7 +24,6 @@ L      List of minions      ``L@minion1.example.com,minion3.domain.com or bl*.do
 I      Pillar glob          ``I@pdata:foobar``
 S      Subnet/IP address    ``S@192.168.1.0/24`` or ``S@192.168.1.100``
 R      Range cluster        ``R@%foo.bar``
-D      Minion Data          ``D@key:value``
 ====== ==================== ===============================================================
 
 | Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.

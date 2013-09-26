@@ -112,7 +112,7 @@
 #random_reauth_delay: 60
 
 
-# If you dont have any problems with syn-floods, dont bother with the
+# If you don't have any problems with syn-floods, dont bother with the
 # three recon_* settings described below, just leave the defaults!
 #
 # The ZeroMQ pull-socket that binds to the masters publishing interface tries
@@ -149,9 +149,9 @@
 # The goal: have all minions reconnect within a 60 second timeframe on a disconnect
 #
 # The settings:
-# recon_default: 1000
-# recon_max: 59000
-# recon_randomize: True
+#recon_default: 1000
+#recon_max: 59000
+#recon_randomize: True
 #
 # Each minion will have a randomized reconnect value between 'recon_default'
 # and 'recon_default + recon_max', which in this example means between 1000ms
@@ -207,7 +207,7 @@
 # include: /etc/salt/extra_config
 #
 # Include config from several files and directories:
-# include:
+#include:
 #  - /etc/salt/extra_config
 #  - /etc/roles/webserver
 
@@ -232,8 +232,8 @@
 # overwritten by the specified module. In this example the pkg module will
 # be provided by the yumpkg5 module instead of the system default.
 #
-# providers:
-#   pkg: yumpkg5
+#providers:
+#  pkg: yumpkg5
 #
 # Enable Cython modules searching and loading. (Default: False)
 #cython_enable: False
@@ -321,7 +321,6 @@
 #     - /srv/salt/prod/services
 #     - /srv/salt/prod/states
 #
-# Default:
 #file_roots:
 #  base:
 #    - /srv/salt
@@ -482,4 +481,4 @@
 ######      Windows Software settings ######
 ############################################
 # Location of the repository cache file on the master
-# win_repo_cachefile: 'salt://win/repo/winrepo.p'
+#win_repo_cachefile: 'salt://win/repo/winrepo.p'

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Wheel system wrapper for key system
 '''
@@ -8,6 +9,7 @@ import salt.key
 __func_alias__ = {
     'list_': 'list'
 }
+
 
 def list_(match):
     '''

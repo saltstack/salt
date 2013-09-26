@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Execute puppet routines
 '''
@@ -124,6 +125,7 @@ def run(*args, **kwargs):
 
         salt '*' puppet.run
         salt '*' puppet.run tags=basefiles::edit,apache::server
+        salt '*' puppet.run agent onetime no-daemonize no-usecacheonfailure no-splay ignorecache
         salt '*' puppet.run debug
         salt '*' puppet.run apply /a/b/manifest.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
     '''

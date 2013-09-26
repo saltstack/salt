@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Subversion SCM
 '''
@@ -49,6 +50,8 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
     password
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     opts
         Any additional options to add to the command line
 
@@ -97,11 +100,15 @@ def info(cwd,
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     fmt : str
         How to fmt the output from info.
         (str, xml, list, dict)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.info /path/to/svn/repo
     '''
@@ -155,7 +162,11 @@ def checkout(cwd,
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+        .. versionadded:: 0.17
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.checkout /path/to/repo svn://remote/repo
     '''
@@ -183,10 +194,14 @@ def update(cwd, targets=None, user=None, username=None, password=None, *opts):
     password : None
         Connect to the Subversion server with this password
 
+        .. versionadded:: 0.17
+
     username : None
         Connect to the Subversion server as another user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.update /path/to/repo
     '''
@@ -216,7 +231,11 @@ def diff(cwd, targets=None, user=None, username=None, password=None, *opts):
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+        .. versionadded:: 0.17
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.diff /path/to/repo
     '''
@@ -255,7 +274,11 @@ def commit(cwd,
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+        .. versionadded:: 0.17
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.commit /path/to/repo
     '''
@@ -285,7 +308,11 @@ def add(cwd, targets, user=None, username=None, password=None, *opts):
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+        .. versionadded:: 0.17
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.add /path/to/repo /path/to/new/file
     '''
@@ -322,7 +349,11 @@ def remove(cwd,
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+        .. versionadded:: 0.17
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.remove /path/to/repo /path/to/repo/remove
     '''
@@ -354,10 +385,57 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+        .. versionadded:: 0.17
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.status /path/to/repo
     '''
     if targets:
         opts += tuple(shlex.split(targets))
     return _run_svn('status', cwd, user, username, password, opts)
+
+
+def export(cwd,
+             remote,
+             target=None,
+             user=None,
+             username=None,
+             password=None,
+             *opts):
+    '''
+    Create an unversioned copy of a tree.
+
+    cwd
+        The path to the Subversion repository
+
+    remote : None
+        URL and path to file or directory checkout
+
+    target : None
+        The name to give the file or directory working copy
+        Default: svn uses the remote basename
+
+    user : None
+        Run svn as a user other than what the minion runs as
+
+    username : None
+        Connect to the Subversion server as another user
+
+    password : None
+        Connect to the Subversion server with this password
+
+        .. versionadded:: 0.17
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' svn.export /path/to/repo svn://remote/repo
+    '''
+    opts += (remote,)
+    if target:
+        opts += (target,)
+    return _run_svn('export', cwd, user, username, password, opts)

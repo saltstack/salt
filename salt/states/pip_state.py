@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Installation of Python Packages Using pip
 =========================================
@@ -18,16 +19,22 @@ requisite to a pkg.installed state for the package which provides pip
           - pkg: python-pip
 '''
 
+# Import python libs
+import logging
+
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
 try:
+    import pip
     import pip.req
     HAS_PIP = True
 except ImportError:
     HAS_PIP = False
+
+logger = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -148,31 +155,55 @@ def installed(name,
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
-    try:
-        install_req = pip.req.InstallRequirement.from_line(name)
-    except ValueError as exc:
-        ret['result'] = False
-        if '=' in name and '==' not in name:
+    if name:
+        try:
+            try:
+                # With pip < 1.2, the __version__ attribute does not exist and
+                # vcs+URL urls are not properly parsed.
+                # The next line is meant to trigger an AttributeError and
+                # handle lower pip versions
+                logger.debug(
+                    'Installed pip version: {0}'.format(pip.__version__)
+                )
+                install_req = pip.req.InstallRequirement.from_line(name)
+            except AttributeError:
+                logger.debug('Installed pip version is lower than 1.2')
+                supported_vcs = ('git', 'svn', 'hg', 'bzr')
+                if name.startswith(supported_vcs):
+                    for vcs in supported_vcs:
+                        if name.startswith(vcs):
+                            install_req = pip.req.InstallRequirement.from_line(
+                                name.split('{0}+'.format(vcs))[-1]
+                            )
+                            break
+                else:
+                    install_req = pip.req.InstallRequirement.from_line(name)
+        except ValueError as exc:
+            ret['result'] = False
+            if '=' in name and '==' not in name:
+                ret['comment'] = (
+                    'Invalid version specification in package {0}. \'=\' is '
+                    'not supported, use \'==\' instead.'.format(name)
+                )
+                return ret
             ret['comment'] = (
-                'Invalid version specification in package {0}. \'=\' is not '
-                'supported, use \'==\' instead.'.format(name)
+                'pip raised an exception while parsing {0!r}: {1}'.format(
+                    name, exc
+                )
             )
             return ret
-        ret['comment'] = (
-            'pip raised an exception while parsing {0!r}: {1}'.format(
-                name, exc
-            )
-        )
-        return ret
 
-    if install_req.req is None:
-        # This is most likely an url and there's no way to know what will be
-        # installed before actually installing it.
+        if install_req.req is None:
+            # This is most likely an url and there's no way to know what will
+            # be installed before actually installing it.
+            prefix = ''
+            version_spec = []
+        else:
+            prefix = install_req.req.project_name
+            version_spec = install_req.req.specs
+    else:
         prefix = ''
         version_spec = []
-    else:
-        prefix = install_req.req.project_name
-        version_spec = install_req.req.specs
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
@@ -297,7 +328,7 @@ def installed(name,
             ret['comment'] = ' '.join(comments)
         else:
             if not prefix:
-                pkg_list = []
+                pkg_list = {}
             else:
                 pkg_list = __salt__['pip.list'](
                     prefix, bin_env, user=user, cwd=cwd

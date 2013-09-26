@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for gathering disk information on Windows
 
@@ -16,6 +17,7 @@ try:
 except ImportError:
     pass
 
+
 def __virtual__():
     '''
     Only works on Windows systems
@@ -29,7 +31,9 @@ def usage():
     '''
     Return usage information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.usage
     '''

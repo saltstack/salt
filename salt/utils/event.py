@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage events
 
@@ -47,13 +48,13 @@ Namspaced tag
 '''
 
 # Import python libs
-import time
 import os
 import fnmatch
 import glob
 import hashlib
 import errno
 import logging
+import datetime
 import multiprocessing
 from multiprocessing import Process
 from collections import MutableMapping
@@ -82,16 +83,19 @@ SUB_EVENT = set([
             ])
 
 TAGEND = '\n\n'  # long tag delimeter
-TAGPARTER = '.'  # name spaced tag delimeter
-SALT = 'salt'  # base prefix for all salt. events
+TAGPARTER = '/'  # name spaced tag delimeter
+SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
-    'auth': 'auth',  # prefix for all .auth events
-    'job': 'job',  # prefix for all .job events (minion jobs)
-    'key': 'key',  # prefix for all .key events
-    'minion': 'minion',  # prefix for all .minion events (minion sourced events)
-    'syndic': 'syndic',  # prefix for all .syndic events (syndic minion sourced events)
-    'run': 'run',  # prefix for all .run events (salt runners)
+    'auth': 'auth',  # prefix for all salt/auth events
+    'job': 'job',  # prefix for all salt/job events (minion jobs)
+    'key': 'key',  # prefix for all salt/key events
+    'minion': 'minion',  # prefix for all salt/minion events (minion sourced events)
+    'syndic': 'syndic',  # prefix for all salt/syndic events (syndic minion sourced events)
+    'run': 'run',  # prefix for all salt/run events (salt runners)
+    'wheel': 'wheel',  # prefix for all salt/wheel events
+    'cloud': 'cloud',  # prefix for all salt/cloud events
+    'fileserver': 'fileserver',  # prefix for all salt/fileserver events
 }
 
 
@@ -261,7 +265,9 @@ class SaltEvent(object):
         if not self.cpush:
             self.connect_pull()
 
-        tagend = ""
+        data['_stamp'] = datetime.datetime.now().isoformat('_')
+
+        tagend = ''
         if len(tag) <= 20:  # old style compatible tag
             tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
         else:  # new style longer than 20 chars
@@ -284,12 +290,18 @@ class SaltEvent(object):
         # If sockets are not unregistered from a poller, nothing which touches
         # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
-        for socket in self.poller.sockets.keys():
-            if socket.closed is False:
-                # Should already be closed from above, but....
-                socket.setsockopt(zmq.LINGER, 1)
-                socket.close()
-            self.poller.unregister(socket)
+        if isinstance(self.poller.sockets, dict):
+            for socket in self.poller.sockets.keys():
+                if socket.closed is False:
+                    socket.setsockopt(zmq.LINGER, 1)
+                    socket.close()
+                self.poller.unregister(socket)
+        else:
+            for socket in self.poller.sockets:
+                if socket[0].closed is False:
+                    socket[0].setsockopt(zmq.LINGER, 1)
+                    socket[0].close()
+                self.poller.unregister(socket[0])
         if self.context.closed is False:
             self.context.term()
 
@@ -313,6 +325,7 @@ class SaltEvent(object):
                             data['success'] = False
                             data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
                             data['fun'] = load['fun']
+                            data['user'] = load['user']
                             self.fire_event(
                                 data,
                                 tagify([load['jid'],

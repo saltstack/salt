@@ -10,20 +10,22 @@ This script is intended to be shell-centric!!
 import os
 import re
 import sys
-import subprocess
-import hashlib
+import time
 import random
+import shutil
+import hashlib
 import optparse
+import subprocess
 
 try:
     from salt.utils.nb_popen import NonBlockingPopen
 except ImportError:
     # Salt not installed, or nb_popen was not yet shipped with it
-    salt_lib = os.path.abspath(
+    SALT_LIB = os.path.abspath(
         os.path.dirname(os.path.dirname(__file__))
     )
-    if salt_lib not in sys.path:
-        sys.path.insert(0, salt_lib)
+    if SALT_LIB not in sys.path:
+        sys.path.insert(0, SALT_LIB)
     try:
         # Let's try using the current checked out code
         from salt.utils.nb_popen import NonBlockingPopen
@@ -31,16 +33,29 @@ except ImportError:
         # Still an ImportError??? Let's use some "brute-force"
         sys.path.insert(
             0,
-            os.path.join(salt_lib, 'salt', 'utils')
+            os.path.join(SALT_LIB, 'salt', 'utils')
         )
         from nb_popen import NonBlockingPopen
 
 
-def cleanup(clean, vm_name):
-    if not clean:
-        return
+def generate_vm_name(platform):
+    '''
+    Generate a random enough vm name
+    '''
+    if 'BUILD_NUMBER' in os.environ:
+        random_part = 'BUILD{0:0>6}'.format(os.environ.get('BUILD_NUMBER'))
+    else:
+        random_part = hashlib.md5(
+            str(random.randint(1, 100000000))).hexdigest()[:6]
 
-    cmd = 'salt-cloud -d {0} -y'.format(vm_name)
+    return 'ZJENKINS-{0}-{1}'.format(platform, random_part)
+
+
+def delete_vm(options):
+    '''
+    Stop a VM
+    '''
+    cmd = 'salt-cloud -d {0} -y'.format(options.delete_vm)
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -55,14 +70,118 @@ def cleanup(clean, vm_name):
     proc.communicate()
 
 
-def run(platform, provider, commit, clean):
+def echo_parseable_environment(options):
+    '''
+    Echo NAME=VAL parseable output
+    '''
+    name = generate_vm_name(options.platform)
+    output = (
+        'JENKINS_SALTCLOUD_VM_PROVIDER={provider}\n'
+        'JENKINS_SALTCLOUD_VM_PLATFORM={platform}\n'
+        'JENKINS_SALTCLOUD_VM_NAME={name}\n').format(name=name,
+                                                     provider=options.provider,
+                                                     platform=options.platform)
+    sys.stdout.write(output)
+    sys.stdout.flush()
+
+
+def download_unittest_reports(options):
+    print('Downloading remote unittest reports...')
+    sys.stdout.flush()
+
+    if os.path.isdir('xml-test-reports'):
+        shutil.rmtree('xml-test-reports')
+
+    os.makedirs('xml-test-reports')
+
+    cmds = (
+        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
+        'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
+        'mv -f /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz {1}',
+        'tar zxvf {1}/xml-test-reports.tar.gz -C {1}/xml-test-reports',
+        'rm -f {1}/xml-test-reports.tar.gz'
+    )
+
+    vm_name = options.download_unittest_reports
+    workspace = options.workspace
+    for cmd in cmds:
+        cmd = cmd.format(vm_name, workspace)
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = NonBlockingPopen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
+            print(
+                '\nFailed to execute command. Exit code: {0}'.format(
+                    proc.returncode
+                )
+            )
+
+
+def download_coverage_report(options):
+    print('Downloading remote coverage report...')
+    sys.stdout.flush()
+
+    workspace = options.workspace
+    vm_name = options.download_coverage_report
+
+    if os.path.isfile(os.path.join(workspace, 'coverage.xml')):
+        os.unlink(os.path.join(workspace, 'coverage.xml'))
+
+    cmds = (
+        'salt {0} archive.gzip /tmp/coverage.xml',
+        'salt {0} cp.push /tmp/coverage.xml.gz',
+        'gunzip /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml.gz',
+        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml {1}'
+    )
+
+    for cmd in cmds:
+        cmd = cmd.format(vm_name, workspace)
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = NonBlockingPopen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
+            print(
+                '\nFailed to execute command. Exit code: {0}'.format(
+                    proc.returncode
+                )
+            )
+
+
+def run(opts):
     '''
     RUN!
     '''
-    htag = hashlib.md5(str(random.randint(1, 100000000))).hexdigest()[:6]
-    vm_name = 'ZZZ{0}{1}'.format(platform, htag)
-    cmd = 'salt-cloud -l debug --script-args "-D -n git {0}" -p {1}_{2} {3}'.format(
-            commit, provider, platform, vm_name)
+    vm_name = os.environ.get(
+        'JENKINS_SALTCLOUD_VM_NAME',
+        generate_vm_name(opts.platform)
+    )
+
+    if opts.download_remote_reports:
+        opts.download_coverage_report = vm_name
+        opts.download_unittest_reports = vm_name
+
+    cmd = (
+        'salt-cloud -l debug --script-args "-D -n git {commit}" -p '
+        '{provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
+    )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -76,19 +195,31 @@ def run(platform, provider, commit, clean):
     proc.poll_and_read_until_finish()
     proc.communicate()
 
-    if proc.returncode > 0:
-        print('Failed to bootstrap VM. Exit code: {0}'.format(proc.returncode))
+    retcode = proc.returncode
+    if retcode != 0:
+        print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        cleanup(clean, vm_name)
-        sys.exit(proc.returncode)
+        if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+            delete_vm(vm_name)
+        sys.exit(retcode)
 
-    print('VM Bootstrapped. Exit code: {0}'.format(proc.returncode))
+    print('VM Bootstrapped. Exit code: {0}'.format(retcode))
     sys.stdout.flush()
 
+    print('Sleeping for 5 seconds to allow the minion to breathe a little')
+    sys.stdout.flush()
+    time.sleep(5)
+
     # Run tests here
-    cmd = 'salt -t 1800 {0} state.sls testrun pillar="{{git_commit: {1}}}" --no-color'.format(
-                vm_name,
-                commit)
+    cmd = (
+        'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" '
+        '--no-color'.format(
+            sls=opts.sls,
+            pillar=opts.pillar.format(commit=opts.commit),
+            vm_name=vm_name,
+            commit=opts.commit
+        )
+    )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -123,7 +254,14 @@ def run(platform, provider, commit, clean):
             # Anything else, raise the exception
             raise
 
-    cleanup(clean, vm_name)
+    if opts.download_remote_reports:
+        # Download unittest reports
+        download_unittest_reports(opts)
+        # Download coverage report
+        download_coverage_report(opts)
+
+    if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+        delete_vm(vm_name)
     return retcode
 
 
@@ -132,31 +270,99 @@ def parse():
     Parse the CLI options
     '''
     parser = optparse.OptionParser()
-    parser.add_option('--platform',
-            dest='platform',
-            help='The target platform, choose from:\ncent6\ncent5\nubuntu12.04')
-    parser.add_option('--provider',
-            dest='provider',
-            help='The vm provider')
-    parser.add_option('--commit',
-            dest='commit',
-            help='The git commit to track')
-    parser.add_option('--no-clean',
-            dest='clean',
-            default=True,
-            action='store_false',
-            help='Clean up the built vm')
+    parser.add_option(
+        '-w', '--workspace',
+        default=os.path.abspath(
+            os.environ.get(
+                'WORKSPACE',
+                os.path.dirname(os.path.dirname(__file__))
+            )
+        ),
+        help='Path the execution workspace'
+    )
+    parser.add_option(
+        '--platform',
+        default=os.environ.get('JENKINS_SALTCLOUD_VM_PLATFORM', None),
+        help='The target platform, choose from:\ncent6\ncent5\nubuntu12.04')
+    parser.add_option(
+        '--provider',
+        default=os.environ.get('JENKINS_SALTCLOUD_VM_PROVIDER', None),
+        help='The vm provider')
+    parser.add_option(
+        '--commit',
+        help='The git commit to track')
+    parser.add_option(
+        '--sls',
+        default='testrun',
+        help='The sls file to execute')
+    parser.add_option(
+        '--pillar',
+        default='{{git_commit: {commit}}}',
+        help='Pillar values to pass to the sls file')
+    parser.add_option(
+        '--no-clean',
+        dest='clean',
+        default=True,
+        action='store_false',
+        help='Clean up the built vm')
+    parser.add_option(
+        '--echo-parseable-environment',
+        default=False,
+        action='store_true',
+        help='Print a parseable KEY=VAL output'
+    )
+    parser.add_option(
+        '--delete-vm',
+        default=None,
+        help='Delete a running VM'
+    )
+    parser.add_option(
+        '--download-remote-reports',
+        default=False,
+        action='store_true',
+        help='Download remote reports when running remote \'testrun\' state'
+    )
+    parser.add_option(
+        '--download-unittest-reports',
+        default=None,
+        help='Download the XML unittest results'
+    )
+    parser.add_option(
+        '--download-coverage-report',
+        default=None,
+        help='Download the XML coverage reports'
+    )
+
     options, args = parser.parse_args()
+
+    if options.delete_vm is not None and not options.commit:
+        delete_vm(options)
+        parser.exit(0)
+
+    if options.download_unittest_reports is not None and not options.commit:
+        download_unittest_reports(options)
+        parser.exit(0)
+
+    if options.download_coverage_report is not None and not options.commit:
+        download_coverage_report(options)
+        parser.exit(0)
+
     if not options.platform:
         parser.exit('--platform is required')
+
     if not options.provider:
         parser.exit('--provider is required')
+
+    if options.echo_parseable_environment:
+        echo_parseable_environment(options)
+        parser.exit(0)
+
     if not options.commit:
         parser.exit('--commit is required')
-    return options.__dict__
+
+    return options
 
 if __name__ == '__main__':
-    opts = parse()
-    exit_code = run(**opts)
+    exit_code = run(parse())
     print('Exit Code: {0}'.format(exit_code))
     sys.exit(exit_code)

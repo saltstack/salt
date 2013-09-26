@@ -1,5 +1,14 @@
+# -*- coding: utf-8 -*-
 '''
 Execute calls on selinux
+
+.. note::
+    This module requires the ``semanage`` and ``setsebool`` commands to be
+    available on the minion. On RHEL-based distros, this means that the
+    ``policycoreutils`` and ``policycoreutils-python`` packages must be
+    installed. If not on a RHEL-based distribution, consult the selinux
+    documentation for your distro to ensure that the proper packages are
+    installed.
 '''
 
 # Import python libs
@@ -36,7 +45,9 @@ def selinux_fs_path():
     '''
     Return the location of the SELinux VFS directory
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.selinux_fs_path
     '''
@@ -53,7 +64,9 @@ def getenforce():
     '''
     Return the mode selinux is running in
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.getenforce
     '''
@@ -73,7 +86,9 @@ def setenforce(mode):
     '''
     Set the SELinux enforcing mode
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.setenforce enforcing
     '''
@@ -101,7 +116,9 @@ def getsebool(boolean):
     '''
     Return the information on a specific selinux boolean
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.getsebool virt_use_usb
     '''
@@ -112,7 +129,9 @@ def setsebool(boolean, value, persist=False):
     '''
     Set the value for a boolean
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.setsebool virt_use_usb off
     '''
@@ -127,7 +146,9 @@ def setsebools(pairs, persist=False):
     '''
     Set the value of multiple booleans
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.setsebools '{virt_use_usb: on, squid_use_tproxy: off}'
     '''
@@ -147,7 +168,9 @@ def list_sebool():
     Return a structure listing all of the selinux booleans on the system and
     what state they are in
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' selinux.list_sebool
     '''

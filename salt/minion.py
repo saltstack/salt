@@ -12,6 +12,7 @@ import copy
 import os
 import hashlib
 import re
+import types
 import threading
 import time
 import traceback
@@ -151,6 +152,8 @@ def yamlify_arg(arg):
     '''
     yaml.safe_load the arg unless it has a newline in it.
     '''
+    if not isinstance(arg, string_types):
+        return arg
     try:
         original_arg = str(arg)
         if isinstance(arg, string_types):
@@ -159,7 +162,7 @@ def yamlify_arg(arg):
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
             if (isinstance(original_arg, string_types) and
-                    not original_arg.startswith("{")):
+                    not original_arg.startswith('{')):
                 return original_arg
             else:
                 return arg
@@ -248,7 +251,8 @@ class MasterMinion(object):
             rend=True,
             matcher=True,
             whitelist=None):
-        self.opts = opts
+        self.opts = salt.config.minion_config(opts['conf_file'])
+        self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
         self.opts['pillar'] = {}
@@ -641,7 +645,23 @@ class Minion(object):
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
-                ret['return'] = func(*args, **kwargs)
+                return_data = func(*args, **kwargs)
+                if isinstance(return_data, types.GeneratorType):
+                    ind = 0
+                    iret = {}
+                    for single in return_data:
+                        if isinstance(single, dict) and isinstance(iret, list):
+                            iret.update(single)
+                        else:
+                            if not iret:
+                                iret = []
+                            iret.append(single)
+                        tag = tagify([data['jid'], 'ret', opts['id'], ind])
+                        minion_instance._fire_master({'return': single}, tag)
+                        ind += 1
+                    ret['return'] = iret
+                else:
+                    ret['return'] = return_data
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
                     'retcode',
                     0
@@ -1165,15 +1185,28 @@ class Minion(object):
         Tear down the minion
         '''
         if hasattr(self, 'poller'):
-            for socket in self.poller.sockets.keys():
-                if socket.closed is False:
-                    socket.close()
-                self.poller.unregister(socket)
+            if isinstance(self.poller.sockets, dict):
+                for socket in self.poller.sockets.keys():
+                    if socket.closed is False:
+                        socket.close()
+                    self.poller.unregister(socket)
+            else:
+                for socket in self.poller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].close()
+                    self.poller.unregister(socket[0])
+
         if hasattr(self, 'epoller'):
-            for socket in self.epoller.sockets.keys():
-                if socket.closed is False:
-                    socket.close()
-                self.epoller.unregister(socket)
+            if isinstance(self.epoller.sockets, dict):
+                for socket in self.epoller.sockets.keys():
+                    if socket.closed is False:
+                        socket.close()
+                    self.epoller.unregister(socket)
+            else:
+                for socket in self.epoller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].close()
+                    self.epoller.unregister(socket[0])
         if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
             self.epub_sock.close()
         if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
@@ -1542,12 +1575,10 @@ class Matcher(object):
             return False
         ref = {'G': 'grain',
                'P': 'grain_pcre',
-               'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
-               'E': 'pcre',
-               'D': 'data'}
+               'E': 'pcre'}
         if HAS_RANGE:
             ref['R'] = 'range'
         results = []

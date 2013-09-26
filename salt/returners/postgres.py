@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Return data to a postgresql server
 
@@ -51,6 +52,7 @@ correctly::
     CREATE INDEX ON salt_returns (id);
     CREATE INDEX ON salt_returns (jid);
     CREATE INDEX ON salt_returns (fun);
+    EOF
 
 Required python modules: psycopg2
 '''

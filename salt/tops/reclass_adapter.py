@@ -1,6 +1,10 @@
+# -*- coding: utf-8 -*-
 '''
-This ``master_tops`` plugin provides access to the |reclass| database, such
-that state information (top data) are retrieved from |reclass|.
+.. |reclass| replace:: **reclass**
+
+This :doc:`master_tops </topics/master_tops/index>` plugin provides access to
+the |reclass| database, such that state information (top data) are retrieved
+from |reclass|.
 
 You can find more information about |reclass| at
 http://reclass.pantsfullofunix.net.
@@ -12,9 +16,9 @@ inventory:
 .. code-block:: yaml
 
     master_tops:
-        reclass:
-          storage_type: yaml_fs
-          base_inventory_uri: /srv/salt
+      reclass:
+        storage_type: yaml_fs
+        base_inventory_uri: /srv/salt
 
 This would cause |reclass| to read the inventory from YAML files in
 ``/srv/salt/nodes`` and ``/srv/salt/classes``.
@@ -26,21 +30,19 @@ note of the differing data types for ``ext_pillar`` and ``master_tops``):
 .. code-block:: yaml
 
     reclass: &reclass
-        storage_type: yaml_fs
-        base_inventory_uri: /srv/salt
-        reclass_source_path: ~/code/reclass
+      storage_type: yaml_fs
+      base_inventory_uri: /srv/salt
+      reclass_source_path: ~/code/reclass
 
     ext_pillar:
-        - reclass: *reclass
+      - reclass: *reclass
 
     master_tops:
-        reclass: *reclass
+      reclass: *reclass
 
 If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
-
-.. |reclass| replace:: **reclass**
 '''
 
 # This file cannot be called reclass.py, because then the module import would
@@ -54,6 +56,9 @@ from salt.utils.reclass import (
     set_inventory_base_uri_default
 )
 
+from salt.exceptions import SaltInvocationError
+
+
 def __virtual__(retry=False):
     try:
         import reclass
@@ -66,7 +71,6 @@ def __virtual__(retry=False):
         prepend_reclass_source_path(opts)
         return __virtual__(retry=True)
 
-from salt.exceptions import SaltInvocationError
 
 def top(**kwargs):
     '''
@@ -93,11 +97,16 @@ def top(**kwargs):
         # file_roots of class 'base' (if that exists):
         set_inventory_base_uri_default(__opts__, kwargs)
 
+        # Salt expects the top data to be filtered by minion_id, so we better
+        # let it know which minion it is dealing with. Unfortunately, we must
+        # extract these data (see #6930):
+        minion_id = kwargs['opts']['id']
+
         # I purposely do not pass any of __opts__ or __salt__ or __grains__
         # to reclass, as I consider those to be Salt-internal and reclass
         # should not make any assumptions about it. Reclass only needs to know
         # how it's configured, so:
-        return reclass_top(**reclass_opts)
+        return reclass_top(minion_id, **reclass_opts)
 
     except ImportError as e:
         if 'reclass' in e.message:

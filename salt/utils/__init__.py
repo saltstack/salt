@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Some of the utils used by salt
 '''
@@ -12,11 +13,11 @@ import imp
 import inspect
 import logging
 import os
-import platform
 import random
 import re
 import shlex
 import shutil
+import string
 import socket
 import stat
 import subprocess
@@ -336,19 +337,26 @@ def jid_to_time(jid):
     return ret
 
 
-def gen_mac(prefix='52:54:'):
+def gen_mac(prefix='AC:DE:48'):
     '''
-    Generates a mac addr with the defined prefix
+    Generates a MAC address with the defined OUI prefix.
+
+    Common prefixes:
+
+     - ``00:16:3E`` -- Xen
+     - ``00:18:51`` -- OpenVZ
+     - ``00:50:56`` -- VMware (manually generated)
+     - ``52:54:00`` -- QEMU/KVM
+     - ``AC:DE:48`` -- PRIVATE
+
+    References:
+
+     - http://standards.ieee.org/develop/regauth/oui/oui.txt
+     - https://www.wireshark.org/tools/oui-lookup.html
+     - https://en.wikipedia.org/wiki/MAC_address
     '''
-    src = ['1', '2', '3', '4', '5', '6', '7', '8',
-           '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
-    mac = prefix
-    while len(mac) < 18:
-        if len(mac) < 3:
-            mac = random.choice(src) + random.choice(src) + ':'
-        if mac.endswith(':'):
-            mac += random.choice(src) + random.choice(src) + ':'
-    return mac[:-1]
+    r = random.randint
+    return '%s:%02X:%02X:%02X' % (prefix, r(0, 0xff), r(0, 0xff), r(0, 0xff))
 
 
 def ip_bracket(addr):
@@ -429,11 +437,18 @@ def required_modules_error(name, docstring):
     return msg.format(filename, ', '.join(modules))
 
 
+def gen_jid():
+    '''
+    Generate a jid
+    '''
+    return '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+
+
 def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
-    jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+    jid = gen_jid()
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
@@ -672,25 +687,20 @@ def format_call(fun, data):
     ret = {}
     ret['args'] = []
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
     if aspec.keywords:
         # This state accepts kwargs
         ret['kwargs'] = {}
         for key in data:
-            # Passing kwargs the conflict with args == stack trace
+            # Passing kwargs the conflict with args == traceback
             if key in aspec.args:
                 continue
             ret['kwargs'][key] = data[key]
-    kwargs = {}
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            kwargs[aspec.args[ind]] = aspec.defaults[-minus]
+
+    try:
+        kwargs = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    except TypeError:
+        # aspec.defaults is None
+        kwargs = {}
     for arg in kwargs:
         if arg in data:
             kwargs[arg] = data[arg]
@@ -711,24 +721,11 @@ def arg_lookup(fun):
     Return a dict containing the arguments and default arguments to the
     function.
     '''
-    ret = {'args': [],
-           'kwargs': {}}
+    ret = {'kwargs': {}}
     aspec = get_function_argspec(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            ret['kwargs'][aspec.args[ind]] = aspec.defaults[-minus]
-    for arg in aspec.args:
-        if arg in ret:
-            continue
-        else:
-            ret['args'].append(arg)
+    if aspec.defaults:
+        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    ret['args'] = aspec.args
     return ret
 
 
@@ -808,6 +805,13 @@ def mysql_to_dict(data, key):
     return ret
 
 
+def contains_whitespace(text):
+    '''
+    Returns True if there are any whitespace characters in the string
+    '''
+    return any(x.isspace() for x in text)
+
+
 def str_to_num(text):
     '''
     Convert a string to a number.
@@ -860,7 +864,7 @@ def subdict_match(data, expr, delim=':', regex_match=False):
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
-                log.error('Invalid regex \'{0}\' in match'.format(pattern))
+                log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
@@ -869,8 +873,8 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         splits = expr.split(delim)
         key = delim.join(splits[:idx])
         matchstr = delim.join(splits[idx:])
-        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
-                  '\'{2}\''.format(matchstr, key, delim))
+        log.debug('Attempting to match {0!r} in {1!r} using delimiter '
+                  '{2!r}'.format(matchstr, key, delim))
         match = traverse_dict(data, key, {}, delim=delim)
         if match == {}:
             continue
@@ -1216,7 +1220,6 @@ def get_hash(path, form='md5', chunk_size=4096):
         return hash_obj.hexdigest()
 
 
-
 def namespaced_function(function, global_dict, defaults=None):
     '''
     Redefine(clone) a function under a different globals() namespace scope
@@ -1234,7 +1237,7 @@ def namespaced_function(function, global_dict, defaults=None):
     return new_namespaced_function
 
 
-def parse_kwarg(string):
+def parse_kwarg(string_):
     '''
     Parses the string and looks for the kwarg format:
     "{argument name}={argument value}"
@@ -1247,7 +1250,7 @@ def parse_kwarg(string):
     Or else it returns:
     (None, None)
     '''
-    match = KWARG_REGEX.match(string)
+    match = KWARG_REGEX.match(string_)
     if match:
         return match.groups()
     else:
@@ -1347,7 +1350,7 @@ def warn_until(version_info,
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
     :param stacklevel: There should be no need to set the value of
-                       ``stacklevel`` salt should be able to do the right thing
+                       ``stacklevel``. Salt should be able to do the right thing.
     :param _version_info_: In order to reuse this function for other SaltStack
                            projects, they need to be able to provide the
                            version info to compare to.
@@ -1384,6 +1387,65 @@ def warn_until(version_info,
 
     if _dont_call_warnings is False:
         warnings.warn(message, category, stacklevel=stacklevel)
+
+
+def kwargs_warn_until(kwargs,
+               version_info,
+               category=DeprecationWarning,
+               stacklevel=None,
+               _version_info_=None,
+               _dont_call_warnings=False):
+    '''
+    Helper function to raise a warning (by default, a ``DeprecationWarning``)
+    when unhandled keyword arguments are passed to function, until the
+    provided ``version_info``, after which, a ``RuntimeError`` will be raised
+    to remind the developers to remove the ``**kwargs`` because the target
+    version has been reached.
+    This function is used to help deprecate unused legacy ``**kwargs`` that
+    were added to function parameters lists to preserve backwards compatibility
+    when removing a parameter. See
+    :doc:`the deprecation development docs </topics/development/deprecations>`
+    for the modern strategy for deprecating a function parameter.
+
+    :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
+    :param version_info: The version info after which the warning becomes a
+                         ``RuntimeError``. For example ``(0, 17)``.
+    :param category: The warning class to be thrown, by default
+                     ``DeprecationWarning``
+    :param stacklevel: There should be no need to set the value of
+                       ``stacklevel``. Salt should be able to do the right thing.
+    :param _version_info_: In order to reuse this function for other SaltStack
+                           projects, they need to be able to provide the
+                           version info to compare to.
+    :param _dont_call_warnings: This parameter is used just to get the
+                                functionality until the actual error is to be
+                                issued. When we're only after the salt version
+                                checks to raise a ``RuntimeError``.
+    '''
+    if not isinstance(version_info, tuple):
+        raise RuntimeError(
+            'The \'version_info\' argument should be passed as a tuple.'
+        )
+
+    if stacklevel is None:
+        # Attribute the warning to the calling function,
+        # not to kwargs_warn_until() or warn_until()
+        stacklevel = 3
+
+    if _version_info_ is None:
+        _version_info_ = salt.version.__version_info__
+
+    if kwargs or _version_info_ >= version_info:
+        removal_version = '.'.join(str(component) for component in version_info)
+        arg_names = ', '.join('\'{0}\''.format(key) for key in kwargs)
+        warn_until(version_info,
+           message='The following parameter(s) have been deprecated and '
+           'will be removed in {0}: {1}.'.format(removal_version, arg_names),
+           category=category,
+           stacklevel=stacklevel,
+           _version_info_=_version_info_,
+           _dont_call_warnings=_dont_call_warnings
+        )
 
 
 def version_cmp(pkg1, pkg2):
@@ -1516,3 +1578,39 @@ def decode_dict(data):
             value = decode_dict(value)
         rv[key] = value
     return rv
+
+
+def is_bin_file(path):
+    '''
+    Detects if the file is a binary, returns bool. Returns True if the file is
+    a bin, False if the file is not and None if the file is not available.
+    '''
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, 'r') as fp_:
+            return(is_bin_str(fp_.read(2048)))
+    except os.error:
+        return None
+
+
+def is_bin_str(data):
+    '''
+    Detects if the passed string of data is bin or text
+    '''
+    text_characters = ''.join(map(chr, range(32, 127)) + list('\n\r\t\b'))
+    _null_trans = string.maketrans('', '')
+    if '\0' in data:
+        return True
+    if not data:
+        return False
+
+    # Get the non-text characters (maps a character to itself then
+    # use the 'remove' option to get rid of the text characters.)
+    text = data.translate(_null_trans, text_characters)
+
+    # If more than 30% non-text characters, then
+    # this is considered a binary file
+    if len(text) / len(data) > 0.30:
+        return True
+    return False

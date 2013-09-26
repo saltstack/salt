@@ -236,6 +236,11 @@ You can execute the above command remotely from a Linux host using winexe:
 
 For more info check `http://csa-net.dk/salt`_
 
+Packages management under Windows 2003
+======================================
+
+On windows server 2003, you need to install optional component "wmi windows installer provider" to have full list of installed packages. If you don't have this, salt-minion can't report some installed softwares.
+
 
 .. _http://csa-net.dk/salt: http://csa-net.dk/salt
 .. _msysgit: http://code.google.com/p/msysgit/downloads/list?can=3

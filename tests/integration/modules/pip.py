@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    tests.integration.modules.pip
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
+
+    tests.integration.modules.pip
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the shadow file
 '''
@@ -21,7 +22,9 @@ def default_hash():
     '''
     Returns the default hash used for unset passwords
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.default_hash
     '''
@@ -32,7 +35,9 @@ def info(name):
     '''
     Return information for the specified user
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.info root
     '''
@@ -65,7 +70,9 @@ def set_inactdays(name, inactdays):
     Set the number of days of inactivity after a password has expired before
     the account is locked. See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_inactdays username 7
     '''
@@ -84,7 +91,9 @@ def set_maxdays(name, maxdays):
     Set the maximum number of days during which a password is valid.
     See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_maxdays username 90
     '''
@@ -102,7 +111,9 @@ def set_mindays(name, mindays):
     '''
     Set the minimum number of days between password changes. See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_mindays username 7
     '''
@@ -131,13 +142,20 @@ def set_password(name, password, use_usermod=False):
     Keep in mind that the $6 represents a sha512 hash, if your OS is using a
     different hashing algorithm this needs to be changed accordingly
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_password root '$1$UYCIxa628.9qXjpQCjM4a..'
     '''
     if not salt.utils.is_true(use_usermod):
         # Edit the shadow file directly
-        s_file = '/etc/shadow'
+        # ALT Linux uses tcb to store password hashes. More information found
+        # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
+        if __grains__['os'] == 'ALT':
+            s_file = '/etc/tcb/{0}/shadow'.format(name)
+        else:
+            s_file = '/etc/shadow'
         ret = {}
         if not os.path.isfile(s_file):
             return ret
@@ -168,7 +186,9 @@ def set_warndays(name, warndays):
     Set the number of days of warning before a password change is required.
     See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_warndays username 7
     '''
@@ -188,7 +208,9 @@ def set_date(name, date):
     sets the value for the date the password was last changed to the epoch
     (January 1, 1970). See man chage.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_date username 0
     '''

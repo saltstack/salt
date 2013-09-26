@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Set up the correct search system
 '''

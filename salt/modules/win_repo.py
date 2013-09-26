@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 r'''
 Module to manage Windows software repo on a Standalone Minion
 
@@ -38,7 +39,9 @@ def genrepo():
     r'''
     Generate win_repo_cachefile based on sls files in the win_repo
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-call winrepo.genrepo -c c:\salt\conf
     '''

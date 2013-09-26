@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The module used to execute states in salt. A state is unlike a module
 execution in that instead of just executing a command it ensure that a
@@ -118,7 +119,10 @@ def format_log(ret):
             # Yep, looks like a valid state return
             chg = ret['changes']
             if not chg:
-                msg = 'No changes made for {0[name]}'.format(ret)
+                if ret['comment']:
+                    msg = ret['comment']
+                else:
+                    msg = 'No changes made for {0[name]}'.format(ret)
             elif isinstance(chg, dict):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
@@ -1928,7 +1932,7 @@ class BaseHighState(object):
             msg = 'Rendering SLS {0} failed, render error: {1}'.format(
                 sls, exc
             )
-            log.error(
+            log.critical(
                 msg,
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
@@ -2015,7 +2019,7 @@ class BaseHighState(object):
                                    ).format(env_key,
                                             inc_sls,
                                             ', '.join(resolved_envs))
-                        log.error(msg)
+                        log.critical(msg)
                         if self.opts['failhard']:
                             errors.append(msg)
                 self._handle_iorder(state)

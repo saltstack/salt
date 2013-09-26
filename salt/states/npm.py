@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Installation of NPM Packages
 ============================
@@ -19,6 +20,7 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
 '''
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -32,6 +34,7 @@ def __virtual__():
 def installed(name,
               dir=None,
               runas=None,
+              user=None,
               force_reinstall=False,
               **kwargs):
     '''
@@ -45,10 +48,41 @@ def installed(name,
     runas
         The user to run NPM with
 
+        .. deprecated:: 0.17.0
+
+    user
+        The user to run NPM with
+
+        .. versionadded:: 0.17.0
+
     force_reinstall
         Install the package even if it is already installed
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
 
     prefix = name.split('@')[0].strip()
 
@@ -77,7 +111,7 @@ def installed(name,
         call = __salt__['npm.install'](
             pkg=name,
             dir=dir,
-            runas=runas
+            runas=user
         )
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
@@ -100,6 +134,7 @@ def installed(name,
 def removed(name,
             dir=None,
             runas=None,
+            user=None,
             **kwargs):
     '''
     Verify that the given package is not installed.
@@ -110,8 +145,39 @@ def removed(name,
 
     runas
         The user to run NPM with
+
+        .. deprecated:: 0.17.0
+
+    user
+        The user to run NPM with
+
+        .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
 
     try:
         installed_pkgs = __salt__['npm.list'](dir=dir)
@@ -130,9 +196,7 @@ def removed(name,
         ret['comment'] = 'Package {0} is set to be removed'.format(name)
         return ret
 
-    if __salt__['npm.uninstall'](pkg=name,
-                                 dir=dir,
-                                 runas=runas):
+    if __salt__['npm.uninstall'](pkg=name, dir=dir, runas=user):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Package was successfully removed.'
@@ -143,9 +207,9 @@ def removed(name,
     return ret
 
 
-def bootstrap(
-            name,
-            runas=None):
+def bootstrap(name,
+              runas=None,
+              user=None):
     '''
     Bootstraps a node.js application.
 
@@ -155,17 +219,42 @@ def bootstrap(
     runas
         The user to run NPM with
 
+        .. deprecated:: 0.17.0
+
+    user
+        The user to run NPM with
+
+        .. versionadded:: 0.17.0
+
 
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    salt.utils.warn_until(
+        (0, 18),
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 0.17.0',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
 
     try:
-        call = __salt__['npm.install'](
-            dir=name,
-            runas=runas,
-            pkg=None
-        )
-
+        call = __salt__['npm.install'](dir=name, runas=user, pkg=None)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)

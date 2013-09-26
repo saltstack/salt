@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
@@ -727,7 +728,9 @@ def list_(prefix=None,
     '''
     packages = {}
 
-    cmd = [_get_pip_bin(bin_env), 'freeze']
+    pip_bin = _get_pip_bin(bin_env)
+    pip_version_cmd = [pip_bin, '--version']
+    cmd = [pip_bin, 'freeze']
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
@@ -751,6 +754,14 @@ def list_(prefix=None,
     cmd_kwargs = dict(runas=user, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+
+    if not prefix or prefix in ('p', 'pi', 'pip'):
+        pip_version_result = __salt__['cmd.run_all'](' '.join(pip_version_cmd),
+                                                     **cmd_kwargs)
+        if pip_version_result['retcode'] > 0:
+            raise CommandExecutionError(pip_version_result['stderr'])
+        packages['pip'] = pip_version_result['stdout'].split()[1]
+
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
@@ -761,19 +772,19 @@ def list_(prefix=None,
             continue
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
-            version, name = line.split('#egg=')
+            version_, name = line.split('#egg=')
         elif len(line.split('==')) >= 2:
             name = line.split('==')[0]
-            version = line.split('==')[1]
+            version_ = line.split('==')[1]
         else:
             logger.error("Can't parse line '%s'", line)
             continue
 
         if prefix:
             if name.lower().startswith(prefix.lower()):
-                packages[name] = version
+                packages[name] = version_
         else:
-            packages[name] = version
+            packages[name] = version_
     return packages
 
 

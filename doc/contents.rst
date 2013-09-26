@@ -6,6 +6,8 @@ Full Table of Contents
     :maxdepth: 3
     :glob:
 
+    faq
+
     topics/index
     topics/installation/index
     topics/configuration
@@ -24,12 +26,15 @@ Full Table of Contents
     topics/event/index
     topics/mine/*
     topics/virt/*
+    topics/ssh/*
     topics/tests/*
     topics/reactor/*
     topics/conventions/*
     topics/git/*
     topics/development/index
 
+    ref/configuration/logging/*
+    ref/configuration/logging/handlers/*
     ref/index
     ref/modules/*
     ref/modules/all/index

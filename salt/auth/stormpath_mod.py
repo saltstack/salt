@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Salt Stormpath Authentication
 
@@ -31,6 +32,7 @@ def __virtual__():
         return 'stormpath'
     else:
         return False
+
 
 def auth(username, password):
     '''

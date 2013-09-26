@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage RDP Service on Windows servers
 '''
@@ -7,6 +8,7 @@ import re
 
 # Import salt libs
 import salt.utils
+
 
 def __virtual__():
     '''

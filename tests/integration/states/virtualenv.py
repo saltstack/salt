@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-    tests.integration.states.virtualenv
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
+
+
+    tests.integration.states.virtualenv
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
@@ -77,7 +78,10 @@ class VirtualenvTest(integration.ModuleCase,
             '  virtualenv.managed:',
             '    - system_site_packages: False',
             '    - clear: false',
-            '    - mirrors: http://testpypi.python.org/pypi',
+            '    - mirrors:',
+            '      - http://g.pypi.python.org',
+            '      - http://c.pypi.python.org',
+            '      - http://pypi.crate.io',
             '    - requirements: salt://issue-2594-requirements.txt',
         ]
 

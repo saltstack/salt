@@ -14,12 +14,16 @@ import socket
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salttesting.helpers import (
+    ensure_in_syspath,
+    requires_network,
+    TestsLoggingHandler
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
-from integration import requires_network
+import integration
 from salt.utils.verify import (
     check_user,
     verify_env,

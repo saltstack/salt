@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A module written originally by Armin Ronacher to manage file transfers in an
 atomic way

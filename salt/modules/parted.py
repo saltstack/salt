@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing partitions on POSIX-like systems.
 

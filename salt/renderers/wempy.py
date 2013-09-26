@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import python libs
 from StringIO import StringIO
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Work with cron
 '''
@@ -32,7 +33,7 @@ def _render_tab(lst):
     ret = []
     for pre in lst['pre']:
         ret.append('{0}\n'.format(pre))
-    if len(ret):
+    if ret:
         if ret[-1] != TAG:
             ret.append(TAG)
     else:

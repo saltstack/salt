@@ -82,6 +82,9 @@ Full list of builtin execution modules
     localemod
     locate
     logrotate
+    lxc
+    mac_group
+    mac_user
     makeconf
     match
     mdadm
@@ -135,6 +138,7 @@ Full list of builtin execution modules
     rvm
     s3
     saltutil
+    seed
     selinux
     service
     shadow

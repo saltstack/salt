@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Execute salt convenience routines
 '''
@@ -29,7 +30,7 @@ class RunnerClient(object):
         self.opts = opts
         self.functions = salt.loader.runner(opts)
 
-    def _proc_runner(self, tag, fun, low):
+    def _proc_runner(self, tag, fun, low, user):
         '''
         Run this method in a multiprocess target to execute the runner in a
         multiprocess and fire the return data on the event bus
@@ -38,6 +39,7 @@ class RunnerClient(object):
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         data = {'fun': "runner.{0}".format(fun),
                 'jid': low['jid'],
+                'user': user,
                 }
         event.fire_event(data, tagify('new', base=tag))
 
@@ -49,7 +51,7 @@ class RunnerClient(object):
                             fun,
                             exc,
                             )
-
+        data['user'] = user
         event.fire_event(data, tagify('ret', base=tag))
 
     def _verify_fun(self, fun):
@@ -92,7 +94,7 @@ class RunnerClient(object):
         ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
 
-    def async(self, fun, low):
+    def async(self, fun, low, user='UNKNOWN'):
         '''
         Execute the runner in a multiprocess and return the event tag to use
         to watch for the return
@@ -104,13 +106,13 @@ class RunnerClient(object):
 
         proc = multiprocessing.Process(
                 target=self._proc_runner,
-                args=(tag, fun, low))
+                args=(tag, fun, low, user))
         proc.start()
         return tag
 
     def master_call(self, **kwargs):
         '''
-        Send a function call to a wheel module through the master network
+        Send a function call to a runner module through the master network
         interface.
         Expects that one of the kwargs is key 'fun' whose value is the
         namestring of the function to call.

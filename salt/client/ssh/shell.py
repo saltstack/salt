@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 '''
 Manage transport commands via ssh
 '''
 
 # Import python libs
 import os
-import json
 import time
 import subprocess
 
@@ -103,6 +103,27 @@ class Shell(object):
             ret += '-o {0} '.format(option)
         return ret
 
+    def _copy_id_str(self):
+        '''
+        Return the string to execute ssh-copy-id
+        '''
+        if self.passwd and salt.utils.which('sshpass'):
+            return 'sshpass -p {0} {1} {2} "{3} -p {4} {5}@{6}"'.format(
+                    self.passwd,
+                    'ssh-copy-id',
+                    '-i {0}.pub'.format(self.priv),
+                    self._passwd_opts(),
+                    self.port,
+                    self.user,
+                    self.host)
+        return None
+
+    def copy_id(self):
+        '''
+        Execute ssh-copy-id to plant the id file on the target
+        '''
+        self._run_cmd(self._copy_id_str())
+
     def _cmd_str(self, cmd, ssh='ssh'):
         '''
         Return the cmd string to execute
@@ -139,14 +160,10 @@ class Shell(object):
             )
 
             data = proc.communicate()
-            if data[0]:
-                return data[0]
-            if data[1]:
-                ret = {'local': self.get_error(data[1])}
-                return json.dumps(ret)
+            return data
         except Exception:
-            return '{"local": "Unknown Error"}'
-        return '{"local": "Unknown Error"}'
+            return ('local', 'Unknown Error')
+        return ('local', 'Unknown Error')
 
     def _run_nb_cmd(self, cmd):
         '''
@@ -177,8 +194,6 @@ class Shell(object):
         '''
         r_out = ''
         r_err = ''
-        if self.sudo:
-            cmd = 'sudo {0}'.format(cmd)
         cmd = self._cmd_str(cmd)
         for out, err in self._run_nb_cmd(cmd):
             if out is not None:
@@ -192,17 +207,14 @@ class Shell(object):
         '''
         Execute a remote command
         '''
-        if self.sudo:
-            cmd = 'sudo {0}'.format(cmd)
         cmd = self._cmd_str(cmd)
-        return self._run_cmd(cmd)
+        ret = self._run_cmd(cmd)
+        return ret
 
     def send(self, local, remote):
         '''
         scp a file or files to a remote system
         '''
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
-        if self.sudo:
-            cmd = 'sudo {0}'.format(cmd)
         cmd = self._cmd_str(cmd, ssh='scp')
         return self._run_cmd(cmd)

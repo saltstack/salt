@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
-Operations on files, directories and symlinks.
-==============================================
+Operations on regular files, special files, directories, and symlinks.
+=======================================================================
 
 Salt States can aggressively manipulate files on a system. There are a number
 of ways in which files can be managed.
@@ -60,7 +61,58 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
           - salt://foo.conf?env=dev
         - user: foo
         - group: users
-        - mode: 644
+        - mode: '0644'
+
+.. warning::
+
+        When using a mode that includes a leading zero you must wrap the
+        value in single quotes. If the value is not wrapped in quotes it
+        will be read by YAML as an integer and evaluated as an octal.
+
+Special files can be managed via the ``mknod`` function. This function will
+create and enforce the permissions on a special file. The function supports the
+creation of character devices, block devices, and fifo pipes. The function will
+create the directory structure up to the special file if it is needed on the
+minion. The function will not overwrite or operate on (change major/minor
+numbers) existing special files with the exception of user, group, and
+permissions. In most cases the creation of some special files require root
+permisisons on the minion. This would require that the minion to be run as the
+root user. Here is an example of a character device:
+
+.. code-block:: yaml
+
+    /var/named/chroot/dev/random:
+      file.mknod:
+        - ntype: c
+        - major: 1
+        - minor: 8
+        - user: named
+        - group: named
+        - mode: 660
+
+Here is an example of a block device:
+
+.. code-block:: yaml
+
+    /var/named/chroot/dev/loop0:
+      file.mknod:
+        - ntype: b
+        - major: 7
+        - minor: 0
+        - user: named
+        - group: named
+        - mode: 660
+
+Here is an example of a fifo pipe:
+
+.. code-block:: yaml
+
+    /var/named/chroot/var/log/logfifo:
+      file.mknod:
+        - ntype: p
+        - user: named
+        - group: named
+        - mode: 660
 
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
@@ -399,7 +451,38 @@ def _check_touch(name, atime, mtime):
     return True, 'File {0} exists and has the correct times'.format(name)
 
 
-def _symlink_check(name, target, force):
+def _get_symlink_ownership(path):
+    return (
+        __salt__['file.get_user'](path, follow_symlinks=False),
+        __salt__['file.get_group'](path, follow_symlinks=False)
+    )
+
+
+def _check_symlink_ownership(path, user, group):
+    '''
+    Check if the symlink ownership matches the specified user and group
+    '''
+    cur_user, cur_group = _get_symlink_ownership(path)
+    return ((cur_user == user) and (cur_group == group))
+
+
+def _set_symlink_ownership(path, uid, gid):
+    '''
+    Set the ownership of a symlink and return a boolean indicating
+    success/failure
+    '''
+    try:
+        os.lchown(path, uid, gid)
+    except OSError:
+        pass
+    return _check_symlink_ownership(
+        path,
+        __salt__['file.uid_to_user'](uid),
+        __salt__['file.gid_to_group'](gid)
+   )
+
+
+def _symlink_check(name, target, force, user, group):
     '''
     Check the symlink function
     '''
@@ -413,7 +496,15 @@ def _symlink_check(name, target, force):
                 name, target
             )
         else:
-            return True, 'The symlink {0} is present'.format(name)
+            result = True
+            msg = 'The symlink {0} is present'.format(name)
+            if not _check_symlink_ownership(name, user, group):
+                result = None
+                msg += (
+                    ', but the ownership of the symlink would be changed '
+                    'from {2}:{3} to {0}:{1}'
+                ).format(user, group, *_get_symlink_ownership(name))
+            return result, msg
     else:
         if force:
             return None, ('The file or directory {0} is set for removal to '
@@ -490,6 +581,86 @@ def _test_owner(kwargs, user=None):
     return user
 
 
+def _unify_sources_and_hashes(source=None, source_hash=None,
+                              sources=None, source_hashes=None):
+    '''
+    Silly little function to give us a standard tuple list for sources and
+    source_hashes
+    '''
+    if sources is None:
+        sources = []
+
+    if source_hashes is None:
+        source_hashes = []
+
+    if source and sources:
+        return (False,
+                "source and sources are mutually exclusive", [])
+
+    if source_hash and source_hashes:
+        return (False,
+                "source_hash and source_hashes are mutually exclusive", [])
+
+    if source:
+        return (True, '', [(source, source_hash)])
+
+    # Make a nice neat list of tuples exactly len(sources) long..
+    return (True, '', map(None, sources, source_hashes[:len(sources)]))
+
+
+def _get_template_texts(source_list=None,
+                        template='jinja',
+                        defaults=None,
+                        context=None,
+                        env='base',
+                        **kwargs):
+    '''
+    Iterate a list of sources and process them as templates.
+    Returns a list of 'chunks' containing the rendered templates.
+    '''
+
+    ret = {'name': '_get_template_texts',
+           'changes': {},
+           'result': True,
+           'comment': '',
+           'data': []}
+
+    if source_list is None:
+        return _error(ret,
+                      '_get_template_texts called with empty source_list')
+
+    txtl = []
+
+    for (source, source_hash) in source_list:
+
+        tmpctx = defaults if defaults else {}
+        if context:
+            tmpctx.update(context)
+        rndrd_templ_fn = __salt__['cp.get_template'](source, '',
+                                  template=template, env=env,
+                                  context=tmpctx, **kwargs)
+        msg = 'cp.get_template returned {0} (Called with: {1})'
+        log.debug(msg.format(rndrd_templ_fn, source))
+        if rndrd_templ_fn:
+            tmplines = None
+            with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
+                tmplines = fp_.readlines()
+            if not tmplines:
+                msg = 'Failed to read rendered template file {0} ({1})'
+                log.debug(msg.format(rndrd_templ_fn, source))
+                ret['name'] = source
+                return _error(ret, msg.format(rndrd_templ_fn, source))
+            txtl.append(''.join(tmplines))
+        else:
+            msg = 'Failed to load template file {0}'.format(source)
+            log.debug(msg)
+            ret['name'] = source
+            return _error(ret, msg)
+
+    ret['data'] = txtl
+    return ret
+
+
 def symlink(
         name,
         target,
@@ -532,12 +703,39 @@ def symlink(
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if user is None:
+        user = __opts__['user']
+
+    if group is None:
+        group = __salt__['file.gid_to_group'](
+            __salt__['user.info'](user).get('gid', 0)
+        )
+
+    preflight_errors = []
+    uid = __salt__['file.user_to_uid'](user)
+    gid = __salt__['file.group_to_gid'](group)
+
+    if uid == '':
+        preflight_errors.append('User {0} does not exist'.format(user))
+
+    if gid == '':
+        preflight_errors.append('Group {0} does not exist'.format(group))
+
     if not os.path.isabs(name):
-        return _error(
-            ret, 'Specified file {0} is not an absolute path'.format(name))
+        preflight_errors.append(
+            'Specified file {0} is not an absolute path'.format(name)
+        )
+
+    if preflight_errors:
+        msg = '. '.join(preflight_errors)
+        if len(preflight_errors) > 1:
+            msg += '.'
+        return _error(ret, msg)
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = _symlink_check(name, target, force)
+        ret['result'], ret['comment'] = _symlink_check(name, target, force,
+                                                       user, group)
         return ret
 
     if not os.path.isdir(os.path.dirname(name)):
@@ -560,9 +758,23 @@ def symlink(
             # The target is wrong, delete the link
             os.remove(name)
         else:
-            # The link looks good!
-            ret['comment'] = 'The symlink {0} is present'.format(name)
+            if _check_symlink_ownership(name, user, group):
+                # The link looks good!
+                ret['comment'] = ('Symlink {0} is present and owned by '
+                                  '{1}:{2}'.format(name, user, group))
+            else:
+                if _set_symlink_ownership(name, uid, gid):
+                    ret['comment'] = ('Set ownership of symlink {0} to '
+                                      '{1}:{2}'.format(name, user, group))
+                    ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
+                else:
+                    ret['result'] = False
+                    ret['comment'] += (
+                        'Failed to set ownership of symlink {0} to '
+                        '{1}:{2}'.format(name, user, group)
+                    )
             return ret
+
     elif os.path.isfile(name):
         # Since it is not a link, and is a file, error out
         if force:
@@ -579,10 +791,24 @@ def symlink(
                                'should be'.format(name))
     if not os.path.exists(name):
         # The link is not present, make it
-        os.symlink(target, name)
-        ret['comment'] = 'Created new symlink {0} -> {1}'.format(name, target)
-        ret['changes']['new'] = name
-        return ret
+        try:
+            os.symlink(target, name)
+        except OSError as exc:
+            ret['result'] = False
+            ret['comment'] = ('Unable to create new symlink {0} -> '
+                              '{1}: {2}'.format(name, target, exc))
+            return ret
+        else:
+            ret['comment'] = ('Created new symlink {0} -> '
+                              '{1}'.format(name, target))
+            ret['changes']['new'] = name
+
+        if not _check_symlink_ownership(name, user, group):
+            if not _set_symlink_ownership(name, uid, gid):
+                ret['result'] = False
+                ret['comment'] += (', but was unable to set ownership to '
+                                   '{0}:{1}'.format(user, group))
+    return ret
 
 
 def absent(name):
@@ -774,6 +1000,8 @@ def managed(name,
         file of any kind.  Ignores hashes and does not use a templating engine.
 
     contents_pillar
+        .. versionadded:: 0.17
+
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
         <salt.modules.pillar.get>`. This is useful when the pillar value
@@ -1362,6 +1590,8 @@ def recurse(name,
         # empty dir(if include_empty==true).
 
         relname = os.path.relpath(fn_, srcpath)
+        if relname.startswith('..'):
+            continue
 
         # Check for maxdepth of the relative path
         if maxdepth is not None:
@@ -1431,9 +1661,62 @@ def recurse(name,
     return ret
 
 
-def sed(name, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g'):
+def replace(name,
+        pattern,
+        repl,
+        count=0,
+        flags=0,
+        bufsize=1,
+        backup='.bak',
+        show_changes=True,
+        ):
     '''
+    Maintain an edit in a file
+
+    .. versionadded:: 0.17
+
+    Params are identical to :py:func:`~salt.modules.file.replace`.
+
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    check_res, check_msg = _check_file(name)
+    if not check_res:
+        return _error(ret, check_msg)
+
+    changes = __salt__['file.replace'](name,
+        pattern,
+        repl,
+        count=count,
+        flags=flags,
+        bufsize=bufsize,
+        backup=backup,
+        dry_run=__opts__['test'],
+        show_changes=show_changes,
+        )
+
+    if changes:
+        ret['changes'] = changes
+        ret['comment'] = 'Changes were made'
+    else:
+        ret['comment'] = 'No changes were made'
+
+    ret['result'] = True
+    return ret
+
+
+def sed(name,
+        before,
+        after,
+        limit='',
+        backup='.bak',
+        options='-r -e',
+        flags='g',
+        negate_match=False):
+    '''
+    .. deprecated:: 0.17
+       Use :py:func:`~salt.states.file.replace` instead.
+
     Maintain a simple edit to a file
 
     The file will be searched for the ``before`` pattern before making the
@@ -1457,6 +1740,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     flags : ``g``
         Any flags to append to the sed expression. ``g`` specifies the edit
         should be made globally (and not stop after the first replacement).
+    negate_match : False
+        Negate the search command (``!``)
+
+        .. versionadded:: 0.17
 
     Usage::
 
@@ -1508,13 +1795,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         slines = fp_.readlines()
 
     # should be ok now; perform the edit
-    retcode = __salt__['file.sed'](name,
-                                   before,
-                                   after,
-                                   limit,
-                                   backup,
-                                   options,
-                                   flags)['retcode']
+    retcode = __salt__['file.sed'](path=name,
+                                   before=before,
+                                   after=after,
+                                   limit=limit,
+                                   backup=backup,
+                                   options=options,
+                                   flags=flags,
+                                   negate_match=negate_match)['retcode']
 
     if retcode != 0:
         ret['result'] = False
@@ -1716,7 +2004,12 @@ def append(name,
            makedirs=False,
            source=None,
            source_hash=None,
-           __env__='base'):
+           __env__='base',
+           template='jinja',
+           sources=None,
+           source_hashes=None,
+           defaults=None,
+           context=None):
     '''
     Ensure that some text appears at the end of a file
 
@@ -1740,9 +2033,36 @@ def append(name,
               - Trust no one unless you have eaten much salt with him.
               - "Salt is born of the purest of parents: the sun and the sea."
 
+    Gather text from multiple template files::
+
+        /etc/motd:
+          file:
+              - append
+              - template: jinja
+              - sources:
+                  - salt://motd/devops-messages.tmpl
+                  - salt://motd/hr-messages.tmpl
+                  - salt://motd/general-messages.tmpl
+
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if sources is None:
+        sources = []
+
+    if source_hashes is None:
+        source_hashes = []
+
+    # Add sources and source_hashes with template support
+    # NOTE: FIX 'text' and any 'source' are mutually exclusive as 'text'
+    #       is re-assigned in the original code.
+    (ok, err, sl) = _unify_sources_and_hashes(source=source,
+                                              source_hash=source_hash,
+                                              sources=sources,
+                                              source_hashes=source_hashes)
+    if not ok:
+        return _error(ret, err)
 
     if makedirs is True:
         dirname = os.path.dirname(name)
@@ -1761,26 +2081,16 @@ def append(name,
     if not check_res:
         return _error(ret, check_msg)
 
-    if source:
-        # get cached file or copy it to cache
-        cached_source_path = __salt__['cp.cache_file'](source, __env__)
-        log.debug(
-            'state file.append cached source {0} -> {1}'.format(
-                source, cached_source_path
-            )
-        )
-        cached_source = managed(
-            cached_source_path,
-            source=source,
-            source_hash=source_hash,
-            env=__env__
-        )
-        if cached_source['result'] is True:
-            log.debug(
-                'state file.append is loading text contents from '
-                'cached source {0}({1})'.format(source, cached_source_path)
-            )
-            text = salt.utils.fopen(cached_source_path, 'r').read()
+    #Follow the original logic and re-assign 'text' if using source(s)...
+    if sl:
+        tmpret = _get_template_texts(source_list=sl,
+                                     template=template,
+                                     defaults=defaults,
+                                     context=context,
+                                     env=__env__)
+        if not tmpret['result']:
+            return tmpret
+        text = tmpret['data']
 
     if isinstance(text, string_types):
         text = (text,)
@@ -2315,3 +2625,134 @@ def serialize(name,
                                         template=None,
                                         show_diff=show_diff,
                                         contents=contents)
+
+
+def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
+    '''
+    Create a special file similar to the 'nix mknod command. The supported device types are
+    p (fifo pipe), c (character device), and b (block device). Provide the major and minor
+    numbers when specifying a character device or block device. A fifo pipe does not require
+    this information. The command will create the necessary dirs if needed. If a file of the
+    same name not of the same type/major/minor exists, it will not be overwritten or unlinked
+    (deleted). This is logically in place as a safety measure because you can really shoot
+    yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
+    note that not just anyone can create special devices. Usually this is only done as root.
+    If the state is executed as none other than root on a minion, you may receive a permission
+    error.
+
+    name
+        name of the file
+
+    ntype
+        node type 'p' (fifo pipe), 'c' (character device), or 'b' (block device)
+
+    major
+        major number of the device
+        does not apply to a fifo pipe
+
+    minor
+        minor number of the device
+        does not apply to a fifo pipe
+
+    user
+        owning user of the device/pipe
+
+    group
+        owning group of the device/pipe
+
+    mode
+        permissions on the device/pipe
+
+    Usage::
+
+        /dev/chr:
+          file.mknod:
+            - ntype: c
+            - major: 180
+            - minor: 31
+            - user: root
+            - group: root
+            - mode: 660
+
+        /dev/blk:
+          file.mknod:
+            - ntype: b
+            - major: 8
+            - minor: 999
+            - user: root
+            - group: root
+            - mode: 660
+
+       /dev/fifo:
+         file.mknod:
+           - ntype: p
+           - user: root
+           - group: root
+           - mode: 660
+
+    .. versionadded:: 0.17.0
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+
+    if ntype == 'c':
+        #check for file existence
+        if __salt__['file.file_exists'](name):
+            ret['comment'] = "File exists and is not a character device {0}. Cowardly refusing to continue".format(name)
+
+        #if it is a character device
+        elif not __salt__['file.is_chrdev'](name):
+            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+
+        #check the major/minor
+        else:
+            devmaj, devmin = __salt__['file.get_devmm'](name)
+            if (major, minor) != (devmaj, devmin):
+                ret['comment'] = "Character device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
+            #check the perms
+            else:
+                ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+                if not ret['changes']:
+                    ret['comment'] = "Character device {0} is in the correct state".format(name)
+
+    elif ntype == 'b':
+        #check for file existence
+        if __salt__['file.file_exists'](name):
+            ret['comment'] = "File exists and is not a block device {0}. Cowardly refusing to continue".format(name)
+
+        #if it is a block device
+        elif not __salt__['file.is_blkdev'](name):
+            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+
+        #check the major/minor
+        else:
+            devmaj, devmin = __salt__['file.get_devmm'](name)
+            if (major, minor) != (devmaj, devmin):
+                ret['comment'] = "Block device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
+            #check the perms
+            else:
+                ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+                if not ret['changes']:
+                    ret['comment'] = "Block device {0} is in the correct state".format(name)
+
+    elif ntype == 'p':
+        #check for file existence, if it is a fifo, user, group, and mode
+        if __salt__['file.file_exists'](name):
+            ret['comment'] = "File exists and is not a fifo pipe {0}. Cowardly refusing to continue".format(name)
+
+        #if it is a fifo
+        elif not __salt__['file.is_fifo'](name):
+            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+
+        #check the perms
+        else:
+            ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+            if not ret['changes']:
+                ret['comment'] = "Fifo pipe {0} is in the correct state".format(name)
+
+    else:
+        ret['comment'] = "Node type unavailable: '{0}. Available node types are character ('c'), block ('b'), and pipe ('p')".format(ntype)
+
+    return ret

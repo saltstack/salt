@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The client module is used to create a client connection to the publisher
 The data structure needs to be:
@@ -32,6 +33,7 @@ The data structure needs to be:
 import os
 import glob
 import time
+import copy
 import getpass
 
 # Import salt libs
@@ -268,7 +270,7 @@ class LocalClient(object):
             cli=False,
             **kwargs):
         '''
-        Execute a command on a random subset of the targetted systems, pass
+        Execute a command on a random subset of the targeted systems, pass
         in the subset via the sub option to signify the number of systems to
         execute on.
         '''
@@ -341,6 +343,23 @@ class LocalClient(object):
             import salt.client
             client = salt.client.LocalClient()
             ret = client.cmd('*', 'cmd.run', ['whoami'])
+
+        With authentication:
+
+        .. code:: yaml
+
+            # Master config
+            ...
+            external_auth:
+              pam:
+                fred:
+                  - test.*
+            ...
+
+
+        .. code:: python
+
+            ret = client.cmd('*', 'test.ping', [], username='fred', password='pw', eauth='pam')
 
         Compound command usage:
 
@@ -673,7 +692,8 @@ class LocalClient(object):
                     timeout += inc_timeout
                     continue
                 if verbose:
-                    if tgt_type in ('glob', 'pcre', 'list'):
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found.intersection(minions)) >= len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
@@ -950,7 +970,8 @@ class LocalClient(object):
                 continue
             if int(time.time()) > start + timeout:
                 if verbose:
-                    if tgt_type in ('glob', 'pcre', 'list'):
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
@@ -970,6 +991,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             verbose=False,
+            show_timeout=False,
             **kwargs):
         '''
         Get the returns for the command line interface via the event system
@@ -1049,8 +1071,9 @@ class LocalClient(object):
                 if more_time:
                     timeout += inc_timeout
                     continue
-                if verbose:
-                    if tgt_type in ('glob', 'pcre', 'list'):
+                if verbose or show_timeout:
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
@@ -1215,6 +1238,92 @@ class LocalClient(object):
         if hasattr(self, 'event'):
             # The call bellow will take care of calling 'self.event.destroy()'
             del self.event
+
+
+class SSHClient(object):
+    '''
+    Create a client object for executing routines via the salt-ssh backend
+    '''
+    def __init__(self,
+                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
+                 mopts=None):
+        if mopts:
+            self.opts = mopts
+        else:
+            self.opts = salt.config.client_config(c_path)
+
+    def _prep_ssh(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            kwarg=None,
+            **kwargs):
+        '''
+        Prepare the arguments
+        '''
+        opts = copy.deepcopy(self.opts)
+        opts.update(kwargs)
+        opts['timeout'] = timeout
+        arg = condition_kwarg(arg, kwarg)
+        opts['arg_str'] = '{0} {1}'.format(fun, ' '.join(arg))
+        opts['selected_target_option'] = expr_form
+        opts['tgt'] = tgt
+        opts['arg'] = arg
+        return salt.client.ssh.SSH(opts)
+
+    def cmd_iter(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            ret='',
+            kwarg=None,
+            **kwargs):
+        '''
+        Execute a single command via the salt-ssh subsystem and return a
+        generator
+        '''
+        ssh = self._prep_ssh(
+                tgt,
+                fun,
+                arg,
+                timeout,
+                expr_form,
+                kwarg,
+                **kwargs)
+        for ret in ssh.run_iter():
+            yield ret
+
+    def cmd(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            kwarg=None,
+            **kwargs):
+        '''
+        Execute a single command via the salt-ssh subsystem and return all
+        routines at once
+        '''
+        ssh = self._prep_ssh(
+                tgt,
+                fun,
+                arg,
+                timeout,
+                expr_form,
+                kwarg,
+                **kwargs)
+        final = {}
+        for ret in ssh.run_iter():
+            final.update(ret)
+        return final
 
 
 class FunctionWrapper(dict):

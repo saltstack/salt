@@ -11,6 +11,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import integration
 import salt.utils
 import salt.utils.find
 

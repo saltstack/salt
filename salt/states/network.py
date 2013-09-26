@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Configuration of network interfaces.
 ====================================

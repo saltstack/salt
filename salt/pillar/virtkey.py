@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Accept a key from a hypervisor if the virt runner has
 already submitted an authorization request

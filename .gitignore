@@ -9,6 +9,7 @@ MANIFEST
 *#
 *.wpr
 *.wpu
+*.DS_Store
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on

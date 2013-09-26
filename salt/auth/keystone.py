@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Provide authentication using OpenStack Keystone
 
