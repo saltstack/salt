@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Package support for pkgin based systems, inspired from freebsdpkg.py
+Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
@@ -9,12 +10,13 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system, return full path
@@ -31,7 +33,7 @@ def _check_pkgin():
     return ppath
 
 
-@salt.utils.memoize
+@decorators.memoize
 def _supports_regex():
     '''
     Get the pkgin version
@@ -70,7 +72,9 @@ def search(pkg_name):
     '''
     Searches for an exact match using pkgin ^package$
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.search 'mysql-server'
     '''
@@ -101,11 +105,15 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> ...
     '''
+
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
 
     pkglist = {}
     pkgin = _check_pkgin()
@@ -113,7 +121,7 @@ def latest_version(*names, **kwargs):
         return pkglist
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     for name in names:
@@ -149,7 +157,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -161,7 +171,9 @@ def refresh_db():
     '''
     Use pkg update to get latest pkg_summary
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -180,7 +192,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
@@ -230,7 +244,9 @@ def install(name=None, refresh=False, fromrepo=None,
         A list of packages to install from a software repository. Must be
         passed as a python list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install pkgs='["foo","bar"]'
 
@@ -239,7 +255,9 @@ def install(name=None, refresh=False, fromrepo=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
 
@@ -248,7 +266,9 @@ def install(name=None, refresh=False, fromrepo=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package name>
     '''
@@ -306,7 +326,9 @@ def upgrade():
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -339,7 +361,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a list containing the removed packages.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -399,7 +423,9 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
@@ -414,7 +440,9 @@ def rehash():
     Use whenever a new command is created during the current
     session.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.rehash
     '''
@@ -423,37 +451,13 @@ def rehash():
         __salt__['cmd.run']('rehash')
 
 
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
-
-
 def file_list(package):
     '''
     List the files that belong to a package.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list nginx
     '''
@@ -469,7 +473,9 @@ def file_dict(package):
     '''
     List the files that belong to a package.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list nginx
     '''

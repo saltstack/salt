@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing NFS version 3.
 '''
@@ -24,7 +25,9 @@ def list_exports(exports='/etc/exports'):
     '''
     List configured exports
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nfs.list_exports
     '''
@@ -56,7 +59,9 @@ def del_export(exports='/etc/exports', path=None):
     '''
     Remove an export
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nfs.del_export /media/storage
     '''

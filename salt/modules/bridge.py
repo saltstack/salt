@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Module for gathering and managing bridging informations
+Module for gathering and managing bridging information
 '''
 
 import sys
@@ -10,6 +11,7 @@ import salt.utils
 __func_alias__ = {
     'list_': 'list'
 }
+
 
 def __virtual__():
     '''
@@ -74,7 +76,10 @@ def _linux_brshow(br=None):
             brs[brname]['interfaces'].append(vals[0])
 
     if br:
-        return brs[br]
+        try:
+            return brs[br]
+        except KeyError:
+            return None
     return brs
 
 
@@ -135,7 +140,7 @@ def _netbsd_brshow(br=None):
     for line in __salt__['cmd.run'](cmd).splitlines():
         if line.startswith('bridge'):
             start_int = False
-            brname = line.split(':')[0] # on NetBSD, always ^bridge[0-9]:
+            brname = line.split(':')[0]  # on NetBSD, always ^bridge[0-9]:
             brs[brname] = {
                 'interfaces': [],
                 'stp': 'no'
@@ -151,7 +156,10 @@ def _netbsd_brshow(br=None):
                     brs[brname]['stp'] = 'yes'
 
     if br:
-        return brs[br]
+        try:
+            return brs[br]
+        except KeyError:
+            return None
     return brs
 
 
@@ -227,7 +235,9 @@ def show(br=None):
     no interface is given, all bridges are shown, else only the specified
     bridge values are returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.show
         salt '*' bridge.show br0
@@ -239,7 +249,9 @@ def list_():
     '''
     Returns the machine's bridges list
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.list
     '''
@@ -257,7 +269,9 @@ def interfaces(br=None):
     '''
     Returns interfaces attached to a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.interfaces br0
     '''
@@ -273,7 +287,9 @@ def find_interfaces(*args):
     '''
     Returns the bridge to which the interfaces are bond to
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.find_interfaces eth0 [eth1...]
     '''
@@ -285,7 +301,7 @@ def find_interfaces(*args):
 
     for iface in args:
         for br in brs:
-            try: # a bridge may not contain interfaces
+            try:  # a bridge may not contain interfaces
                 if iface in brs[br]['interfaces']:
                     iflist[iface] = br
             except Exception:
@@ -298,7 +314,9 @@ def add(br=None):
     '''
     Creates a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.add br0
     '''
@@ -309,7 +327,9 @@ def delete(br=None):
     '''
     Deletes a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.delete br0
     '''
@@ -320,7 +340,9 @@ def addif(br=None, iface=None):
     '''
     Adds an interface to a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.addif br0 eth0
     '''
@@ -331,7 +353,9 @@ def delif(br=None, iface=None):
     '''
     Removes an interface from a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.delif br0 eth0
     '''
@@ -342,7 +366,9 @@ def stp(br=None, state='disable', iface=None):
     '''
     Sets Spanning Tree Protocol state for a bridge
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.stp br0 enable
         salt '*' bridge.stp br0 disable
@@ -350,7 +376,9 @@ def stp(br=None, state='disable', iface=None):
     For the NetBSD operating system, it is required to add the interface on
     which to enable the STP.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' bridge.stp bridge0 enable fxp0
         salt '*' bridge.stp bridge0 disable fxp0

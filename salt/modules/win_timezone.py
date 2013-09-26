@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing timezone on Windows systems.
 '''
@@ -319,6 +320,7 @@ LINTOWIN = {
     'Australia/Melbourne': 'AUS Eastern Standard Time',
     'CST6CDT': 'Central Standard Time',
     'EST5EDT': 'Eastern Standard Time',
+    'Etc/UTC': 'UTC',
     'Etc/GMT': 'UTC',
     'Etc/GMT+1': 'Cape Verde Standard Time',
     'Etc/GMT+10': 'Hawaiian Standard Time',
@@ -451,7 +453,6 @@ def __virtual__():
     '''
     Only load on windows
     '''
-    
     if salt.utils.is_windows():
         return 'timezone'
     return False
@@ -461,16 +462,17 @@ def get_zone():
     '''
     Get current timezone (i.e. America/Denver)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_zone
     '''
-    
     winzone = __salt__['cmd.run']('tzutil /g')
     for key in LINTOWIN:
         if LINTOWIN[key] == winzone:
             return key
-    
+
     return False
 
 
@@ -478,11 +480,12 @@ def get_offset():
     '''
     Get current numeric timezone offset from UCT (i.e. -0700)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_offset
     '''
-    
     string = False
     zone = __salt__['cmd.run']('tzutil /g')
     prev = ''
@@ -492,16 +495,16 @@ def get_offset():
             break
         else:
             prev = line
-    
+
     if not string:
         return False
-    
+
     reg = re.search(r"\(UTC(.\d\d:\d\d)\) .*", string, re.M)
     if not reg:
         ret = '0000'
     else:
-        ret = reg.group(1).replace(':','')
-    
+        ret = reg.group(1).replace(':', '')
+
     return ret
 
 
@@ -509,11 +512,12 @@ def get_zonecode():
     '''
     Get current timezone (i.e. PST, MDT, etc)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_zonecode
     '''
-    
     # Still not implemented on windows
     return False
 
@@ -526,13 +530,13 @@ def set_zone(timezone):
     be restarted (for instance, whatever you system uses as its cron and
     syslog daemons). This will not be magically done for you!
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
-    
-    
-    return __salt__['cmd.retcode']( 'tzutil /s "{0}"'.format(LINTOWIN[timezone]) ) == 0
+    return __salt__['cmd.retcode']('tzutil /s "{0}"'.format(LINTOWIN[timezone])) == 0
 
 
 def zone_compare(timezone):
@@ -541,11 +545,12 @@ def zone_compare(timezone):
     /etc/localtime. Returns True if they match, and False if not. Mostly useful
     for running state checks.
 
-    Example::
+    Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.zone_compare 'America/Denver'
     '''
-    
     return __salt__['cmd.run']('tzutil /g') == LINTOWIN[timezone]
 
 
@@ -553,11 +558,12 @@ def get_hwclock():
     '''
     Get current hardware clock setting (UTC or localtime)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.get_hwclock
     '''
-    
     # Need to search for a way to figure it out ...
     return 'localtime'
 
@@ -566,12 +572,11 @@ def set_hwclock(clock):
     '''
     Sets the hardware clock to be either UTC or localtime
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' timezone.set_hwclock UTC
     '''
-    
     # Need to search for a way to figure it out ...
     return False
-
-

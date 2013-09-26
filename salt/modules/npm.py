@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage and query NPM packages.
 '''
@@ -5,7 +6,7 @@ Manage and query NPM packages.
 # Import python libs
 import json
 import logging
-import distutils.version
+import distutils.version  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
@@ -60,7 +61,9 @@ def install(pkg=None,
     runas
         The user to run NPM with
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' npm.install coffee-script
 
@@ -121,7 +124,9 @@ def uninstall(pkg,
     runas
         The user to run NPM with
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' npm.uninstall coffee-script
 
@@ -145,8 +150,7 @@ def uninstall(pkg,
     return True
 
 
-def list_(pkg=None,
-         dir=None):
+def list_(pkg=None, dir=None):
     '''
     List installed NPM packages.
 
@@ -160,7 +164,9 @@ def list_(pkg=None,
         The directory whose packages will be listed, or None for global
         installation
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' npm.list
 

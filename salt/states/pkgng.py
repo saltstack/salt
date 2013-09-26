@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 '''
-Manage package remote repo using FreeBSD pkgng.
-==========================================================================
+Manage package remote repo using FreeBSD pkgng
+==============================================
 
 Salt can manage the URL pkgng pulls packages from.
 ATM the state and module are small so use cases are
@@ -13,6 +14,7 @@ typically rather simple:
         - update_packaging_site
         - name: "http://192.168.0.2"
 '''
+
 
 def update_packaging_site(name):
     ret = {

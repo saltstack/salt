@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
@@ -40,7 +41,9 @@ def procs():
     '''
     Return the process data
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' status.procs
     '''

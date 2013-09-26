@@ -1,9 +1,8 @@
+# -*- coding: utf-8 -*-
 '''
-Module to provide authentication using simple LDAP binds.
+Provide authentication using simple LDAP binds
 
-REQUIREMENT 1:
-
-Required python modules: ldap
+:depends:   - ldap Python module
 '''
 
 # Import python libs
@@ -20,8 +19,9 @@ from jinja2 import Environment
 try:
     import ldap
     import ldap.modlist
+    HAS_LDAP = True
 except ImportError:
-    pass
+    HAS_LDAP = False
 
 # Defaults, override in master config
 __defopts__ = {'auth.ldap.server': 'localhost',
@@ -58,7 +58,7 @@ def _render_template(filter_, username):
     return template.render(variables)
 
 
-class _LDAPConnection:
+class _LDAPConnection(object):
     '''
     Setup an LDAP connection.
     '''
@@ -74,6 +74,9 @@ class _LDAPConnection:
         self.binddn = binddn
         self.bindpw = bindpw
         schema = 'ldap'
+        if not HAS_LDAP:
+            raise CommandExecutionError('Failed to connect to LDAP, module '
+                                        'not loaded')
         try:
             if no_verify:
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT,

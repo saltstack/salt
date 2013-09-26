@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Pkgutil support for Solaris
 '''
@@ -22,7 +23,9 @@ def refresh_db():
     '''
     Updates the pkgutil repo database (pkgutil -U)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.refresh_db
     '''
@@ -33,7 +36,9 @@ def upgrade_available(name):
     '''
     Check if there is an upgrade available for a certain package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.upgrade_available CSWpython
     '''
@@ -55,7 +60,9 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.list_upgrades
     '''
@@ -83,7 +90,9 @@ def upgrade(refresh=True, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.upgrade
     '''
@@ -107,7 +116,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
@@ -132,11 +143,11 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # lines, the package name is in the first column. On odd-offset lines, the
     # package version is in the second column.
     lines = __salt__['cmd.run'](cmd).splitlines()
-    for index in range(0, len(lines)):
+    for index, line in enumerate(lines):
         if index % 2 == 0:
-            name = lines[index].split()[0].strip()
+            name = line.split()[0].strip()
         if index % 2 == 1:
-            version_num = lines[index].split()[1].strip()
+            version_num = line.split()[1].strip()
             __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
@@ -150,7 +161,9 @@ def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.version CSWpython
     '''
@@ -166,12 +179,16 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgutil.latest_version CSWpython
         salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
+    if not names:
         return ''
     ret = {}
     # Initialize the dict with empty strings
@@ -179,7 +196,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
 
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if refresh:
         refresh_db()
 
     pkgs = list_pkgs()
@@ -194,7 +211,9 @@ def latest_version(*names, **kwargs):
         if name in names:
             cver = pkgs.get(name, '')
             nver = version_rev.split(',')[0]
-            if not cver or compare(pkg1=cver, oper='<', pkg2=nver):
+            if not cver or salt.utils.compare_versions(ver1=cver,
+                                                       oper='<',
+                                                       ver2=nver):
                 # Remove revision for version comparison
                 ret[name] = version_rev
 
@@ -211,7 +230,9 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     '''
     Install packages using the pkgutil tool.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package_name>
         salt '*' pkg.install SMClgcc346
@@ -223,7 +244,10 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
         A list of packages to install from OpenCSW. Must be passed as a python
         list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
             salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3"}]'
 
@@ -281,7 +305,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -319,36 +345,12 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
     return remove(name=name, pkgs=pkgs)
-
-
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
