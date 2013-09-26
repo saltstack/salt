@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Connection module for Amazon S3
 
@@ -72,19 +73,27 @@ def get(bucket=None, path=None, return_bin=False, action=None,
     return_bin to True in order to retrieve an object wholesale. Otherwise,
     Salt will attempt to parse an XML response.
 
-    CLI Example to list buckets::
+    CLI Example to list buckets:
+
+    .. code-block:: bash
 
         salt myminion s3.get
 
-    CLI Example to list the contents of a bucket::
+    CLI Example to list the contents of a bucket:
+
+    .. code-block:: bash
 
         salt myminion s3.get mybucket
 
-    CLI Example to return the binary contents of an object::
+    CLI Example to return the binary contents of an object:
+
+    .. code-block:: bash
 
         salt myminion s3.get mybucket myfile.png return_bin=True
 
-    CLI Example to save the binary contents of an object to a local file::
+    CLI Example to save the binary contents of an object to a local file:
+
+    .. code-block:: bash
 
         salt myminion s3.get mybucket myfile.png local_file=/tmp/myfile.png
 
@@ -104,7 +113,9 @@ def get(bucket=None, path=None, return_bin=False, action=None,
         versioning
         website
 
-    To perform an action on a bucket::
+    To perform an action on a bucket:
+
+    .. code-block:: bash
 
         salt myminion s3.get mybucket myfile.png action=acl
     '''
@@ -125,7 +136,9 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None):
     '''
     Return the metadata for a bucket, or an object in a bucket.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt myminion s3.head mybucket
         salt myminion s3.head mybucket myfile.png
@@ -145,11 +158,15 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
     '''
     Create a new bucket, or upload an object to a bucket.
 
-    CLI Example to create a bucket::
+    CLI Example to create a bucket:
+
+    .. code-block:: bash
 
         salt myminion s3.put mybucket
 
-    CLI Example to upload an object to a bucket::
+    CLI Example to upload an object to a bucket:
+
+    .. code-block:: bash
 
         salt myminion s3.put mybucket remotepath local_path=/path/to/file
     '''

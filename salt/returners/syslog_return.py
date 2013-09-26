@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Return data to the host operating system's syslog facility
 

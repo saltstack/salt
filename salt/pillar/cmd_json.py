@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Execute a command and read the output as JSON. The JSON data is then directly
 overlaid onto the minion's pillar data

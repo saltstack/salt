@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Output data in YAML, this outputter defaults to printing in YAML block mode
 for better readability.

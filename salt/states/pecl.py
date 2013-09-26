@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Installation of PHP Extensions Using pecl
 =========================================

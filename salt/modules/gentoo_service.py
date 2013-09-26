@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Top level package command wrapper, used to translate the os detected by the
-grains to the correct service manager
+Top level package command wrapper, used to translate the os detected by grains to the correct service manager
 '''
 
 
@@ -98,7 +98,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name, **kwargs):
+def restart(name):
     '''
     Restart the named service
 

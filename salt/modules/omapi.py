@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module interacts with an ISC DHCP Server via OMAPI.
 server_ip and server_port params may be set in the minion

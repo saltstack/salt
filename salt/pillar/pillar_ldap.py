@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This pillar module parses a config file (specified in the salt master config),
 and executes a series of LDAP searches based on that config.  Data returned by

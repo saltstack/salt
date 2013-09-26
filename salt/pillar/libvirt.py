@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Load up the libvirt keys into pillar for a given minion if said keys have
 been generated using the libvirt key runner.

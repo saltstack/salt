@@ -3,7 +3,7 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-
+import re
 import os
 import sys
 import time
@@ -48,6 +48,9 @@ import salt.version
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
+# Import 3rd-party libs
+import yaml
+
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
@@ -56,6 +59,7 @@ PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
+TMP_CONF_DIR = os.path.join(TMP, 'config')
 
 log = logging.getLogger(__name__)
 
@@ -110,23 +114,29 @@ class TestDaemon(object):
         '''
         Start a master and minion
         '''
+        running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         self.master_opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
+        self.master_opts['user'] = running_tests_user
         minion_config_path = os.path.join(
             INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'
         )
         self.minion_opts = salt.config.minion_config(minion_config_path)
+        self.minion_opts['user'] = running_tests_user
         self.syndic_opts = salt.config.syndic_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'),
             minion_config_path
         )
+        self.syndic_opts['user'] = running_tests_user
 
         #if sys.version_info < (2, 7):
         #    self.minion_opts['multiprocessing'] = False
         self.sub_minion_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
         )
+        self.sub_minion_opts['root_dir'] = os.path.join(TMP, 'subsalt')
+        self.sub_minion_opts['user'] = running_tests_user
         #if sys.version_info < (2, 7):
         #    self.sub_minion_opts['multiprocessing'] = False
         self.smaster_opts = salt.config.master_config(
@@ -134,6 +144,7 @@ class TestDaemon(object):
                 INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'
             )
         )
+        self.smaster_opts['user'] = running_tests_user
 
         # Set up config options that require internal data
         self.master_opts['pillar_roots'] = {
@@ -187,7 +198,7 @@ class TestDaemon(object):
                     TMP_STATE_TREE,
                     TMP
                     ],
-                   pwd.getpwuid(os.getuid()).pw_name)
+                   running_tests_user)
 
         # Set up PATH to mockbin
         self._enter_mockbin()
@@ -217,16 +228,13 @@ class TestDaemon(object):
         if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
             from copy import deepcopy
             try:
-                import yaml
                 os.makedirs('/tmp/salttest/conf')
             except OSError:
                 pass
             master_opts = deepcopy(self.master_opts)
             minion_opts = deepcopy(self.minion_opts)
             master_opts.pop('conf_file', None)
-            master_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
 
-            minion_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
             minion_opts.pop('conf_file', None)
             minion_opts.pop('grains', None)
             minion_opts.pop('pillar', None)
@@ -542,7 +550,47 @@ class TestDaemon(object):
         return True
 
 
-class SaltClientTestCaseMixIn(object):
+class AdaptedConfigurationTestCaseMixIn(object):
+
+    __slots__ = ()
+
+    def get_config_dir(self):
+        integration_config_dir = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'conf'
+        )
+        if os.getuid() == 0:
+            # Running as root, the running user does not need to be updated
+            return integration_config_dir
+
+        for fname in os.listdir(integration_config_dir):
+            self.get_config_file_path(fname)
+        return TMP_CONF_DIR
+
+    def get_config_file_path(self, filename):
+        integration_config_file = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'conf', filename
+        )
+        if os.getuid() == 0:
+            # Running as root, the running user does not need to be updated
+            return integration_config_file
+
+        if not os.path.isdir(TMP_CONF_DIR):
+            os.makedirs(TMP_CONF_DIR)
+
+        updated_config_path = os.path.join(TMP_CONF_DIR, filename)
+        if not os.path.isfile(updated_config_path):
+            self.__update_config(integration_config_file, updated_config_path)
+        return updated_config_path
+
+    def __update_config(self, source, dest):
+        if not os.path.isfile(dest):
+            running_tests_user = pwd.getpwuid(os.getuid()).pw_name
+            configuration = yaml.load(open(source).read())
+            configuration['user'] = running_tests_user
+            open(dest, 'w').write(yaml.dump(configuration))
+
+
+class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
     __slots__ = ('client', '_salt_client_config_file_name_')
@@ -550,10 +598,7 @@ class SaltClientTestCaseMixIn(object):
     @property
     def client(self):
         return salt.client.LocalClient(
-            os.path.join(
-                INTEGRATION_TEST_DIR, 'files', 'conf',
-                self._salt_client_config_file_name_
-            )
+            self.get_config_file_path(self._salt_client_config_file_name_)
         )
 
 
@@ -575,7 +620,9 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        know_to_return_none = ('file.chown', 'file.chgrp')
+        know_to_return_none = (
+            'file.chown', 'file.chgrp', 'ssh.recv_known_host'
+        )
         orig = self.client.cmd(
             minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )
@@ -608,7 +655,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+            self.get_config_file_path('minion')
         )
 
     @property
@@ -617,7 +664,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
+            self.get_config_file_path('sub_minion')
         )
 
     @property
@@ -626,7 +673,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         Return the options used for the minion
         '''
         return salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+            self.get_config_file_path('master')
         )
 
 
@@ -650,7 +697,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         return orig['minion']
 
 
-class ShellCase(ShellTestCase):
+class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     '''
     Execute a test for a shell command
     '''
@@ -659,21 +706,19 @@ class ShellCase(ShellTestCase):
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
 
-    def run_salt(self, arg_str):
+    def run_salt(self, arg_str, with_retcode=False):
         '''
         Execute salt
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt', arg_str)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode)
 
-    def run_run(self, arg_str):
+    def run_run(self, arg_str, with_retcode=False):
         '''
         Execute salt-run
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-run', arg_str)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode)
 
     def run_run_plus(self, fun, options='', *arg):
         '''
@@ -685,7 +730,7 @@ class ShellCase(ShellTestCase):
             '{0} {1} {2}'.format(options, fun, ' '.join(arg))
         )
         opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+            self.get_config_file_path('master')
         )
         opts.update({'doc': False, 'fun': fun, 'arg': arg})
         with RedirectStdStreams():
@@ -693,26 +738,28 @@ class ShellCase(ShellTestCase):
             ret['fun'] = runner.run()
         return ret
 
-    def run_key(self, arg_str, catch_stderr=False):
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
         '''
         Execute salt-key
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-key', arg_str, catch_stderr=catch_stderr)
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script(
+            'salt-key',
+            arg_str,
+            catch_stderr=catch_stderr,
+            with_retcode=with_retcode
+        )
 
-    def run_cp(self, arg_str):
+    def run_cp(self, arg_str, with_retcode=False):
         '''
         Execute salt-cp
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-cp', arg_str)
+        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode)
 
-    def run_call(self, arg_str):
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
-        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-call', arg_str)
+    def run_call(self, arg_str, with_retcode=False):
+        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode)
 
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
@@ -723,14 +770,14 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         if getattr(self, '_call_binary_', None) is None:
             self.skipTest('\'_call_binary_\' not defined.')
         from salt.utils import which
-        from salt.version import __version_info__
+        from salt.version import __version_info__, SaltStackVersion
         git = which('git')
         if not git:
             self.skipTest('The git binary is not available')
 
         # Let's get the output of git describe
         process = subprocess.Popen(
-            [git, 'describe'],
+            [git, 'describe', '--tags', '--match', 'v[0-9]*'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -745,18 +792,16 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
                 )
             )
 
-        parsed_version = '{0}'.format(out.strip().lstrip('v'))
-        parsed_version_info = tuple([
-            int(i) for i in parsed_version.split('-', 1)[0].split('.')
-        ])
-        if parsed_version_info and parsed_version_info < __version_info__:
+        parsed_version = SaltStackVersion.parse(out)
+
+        if parsed_version.info < __version_info__:
             self.skipTest(
-                'We\'re likely about to release a new version. '
-                'This test would fail. Parsed({0!r}) < Expected({1!r})'.format(
-                    parsed_version_info, __version_info__
+                'We\'re likely about to release a new version. This test '
+                'would fail. Parsed({0!r}) < Expected({1!r})'.format(
+                    parsed_version.info, __version_info__
                 )
             )
-        elif parsed_version_info != __version_info__:
+        elif parsed_version.info != __version_info__:
             self.skipTest(
                 'In order to get the proper salt version with the '
                 'git hash you need to update salt\'s local git '
@@ -766,7 +811,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
                 'string WILL NOT include the git hash.'
             )
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(parsed_version, out)
+        self.assertIn(parsed_version.string, out)
 
 
 class SaltReturnAssertsMixIn(object):
@@ -925,110 +970,3 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
-
-
-# ----- salt 0.16.x network tests wrapper ----------------------------------->
-# If you're removing this code because we're already in salt 0.17, please also
-# switch the `requires_network` import in `tests/unit/utils/verify_test.py`
-if salt.version.__version_info__ >= (0, 17):
-    raise RuntimeError(
-        'Detected salt >= 0.17.0. Please remove this `requires_network` '
-        'function which was only meant to be used in salt < 0.17'
-    )
-
-try:
-    from salttesting.helpers import requires_network
-except ImportError:
-    if salt.version.__version_info__ >= (0, 17):
-        # If you're removing this code because we're already in salt 0.17,
-        # please also switch the `requires_network` import line in
-        # `tests/unit/utils/verify_test.py`
-        raise RuntimeError(
-            'Detected salt >= 0.17.0. Please remove this `requires_network` '
-            'function which was only meant to be used in salt < 0.17'
-        )
-
-    import socket
-    from functools import wraps
-
-    def requires_network(only_local_network=False):
-        '''
-        Simple decorator which is supposed to skip a test case in case there's
-        no network connection to the internet.
-        '''
-        def decorator(func):
-            @wraps(func)
-            def wrap(cls):
-                has_local_network = False
-                # First lets try if we have a local network. Inspired in
-                # verify_socket
-                try:
-                    pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    pubsock.setsockopt(
-                        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                    )
-                    pubsock.bind(('', 18000))
-                    pubsock.close()
-                    retsock.setsockopt(
-                        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                    )
-                    retsock.bind(('', 18001))
-                    retsock.close()
-                    has_local_network = True
-                except socket.error:
-                    # I wonder if we just have IPV6 support?
-                    try:
-                        pubsock = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM
-                        )
-                        retsock = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM
-                        )
-                        pubsock.setsockopt(
-                            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                        )
-                        pubsock.bind(('', 18000))
-                        pubsock.close()
-                        retsock.setsockopt(
-                            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-                        )
-                        retsock.bind(('', 18001))
-                        retsock.close()
-                        has_local_network = True
-                    except socket.error:
-                        # Let's continue
-                        pass
-
-                if only_local_network is True:
-                    if has_local_network is False:
-                        # Since we're only supposed to check local network, and
-                        # no local network was detected, skip the test
-                        cls.skipTest('No local network was detected')
-                    return func(cls)
-
-                # We are using the google.com DNS records as numerical IPs to
-                # avoid DNS lookups which could greatly slow down this check
-                for addr in ('173.194.41.198', '173.194.41.199',
-                             '173.194.41.200', '173.194.41.201',
-                             '173.194.41.206', '173.194.41.192',
-                             '173.194.41.193', '173.194.41.194',
-                             '173.194.41.195', '173.194.41.196',
-                             '173.194.41.197'):
-                    try:
-                        sock = socket.socket(socket.AF_INET,
-                                             socket.SOCK_STREAM)
-                        sock.settimeout(0.25)
-                        sock.connect((addr, 80))
-                        sock.close()
-                        # We connected? Stop the loop
-                        break
-                    except socket.error:
-                        # Let's check the next IP
-                        continue
-                else:
-                    cls.skipTest('No internet network connection was detected')
-                return func(cls)
-            return wrap
-        return decorator
-# <---- salt 0.16.x network tests wrapper ------------------------------------

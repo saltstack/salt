@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Execution of Salt modules from within states.
 =============================================
@@ -141,6 +142,7 @@ def run(name, **kwargs):
     except Exception:
         ret['comment'] = 'Module function {0} threw an exception'.format(name)
         ret['result'] = False
+        return ret
     else:
         if mret:
             ret['changes']['ret'] = mret
