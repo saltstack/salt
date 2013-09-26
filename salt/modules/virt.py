@@ -481,9 +481,9 @@ def _disk_profile(profile, hypervisor):
           disk:
             default:
               - system:
-                size: 8192
-                format: qcow2
-                model: virtio
+                  size: 8192
+                  format: qcow2
+                  model: virtio
 
     The ``format`` and ``model`` parameters are optional, and will
     default to whatever is best suitable for the active hypervisor.
