@@ -170,3 +170,4 @@ Fixes from RC to release
 - Fix Raspbian identification for service/pkg support (:issue:`7371`)
 - Fix :mod:`cp.push <salt.modules.cp.push>` file corruption (:issue:`6495`)
 - Fix ALT Linux password hash specification (:issue:`3474`)
+- Multiple salt-ssh-related fixes and improvements
