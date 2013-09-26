@@ -997,9 +997,15 @@ def search(path,
     '''
     Search for occurances of a pattern in a file
 
-    .. versionadded:: 0.17.1
+    .. versionadded:: 0.17
 
-    Params are identical to :py:func:`~salt.modules.replace`.
+    Params are identical to :py:func:`~salt.modules.file.replace`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.search /etc/crontab 'mymaintenance.sh'
     '''
     # This function wraps file.replace on purpose in order to enforce
     # consistent usage, compatible regex's, expected behavior, *and* bugs. :)
