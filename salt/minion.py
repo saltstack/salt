@@ -1185,15 +1185,28 @@ class Minion(object):
         Tear down the minion
         '''
         if hasattr(self, 'poller'):
-            for socket in self.poller.sockets.keys():
-                if socket.closed is False:
-                    socket.close()
-                self.poller.unregister(socket)
+            if isinstance(self.poller.sockets, dict):
+                for socket in self.poller.sockets.keys():
+                    if socket.closed is False:
+                        socket.close()
+                    self.poller.unregister(socket)
+            else:
+                for socket in self.poller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].close()
+                    self.poller.unregister(socket[0])
+
         if hasattr(self, 'epoller'):
-            for socket in self.epoller.sockets.keys():
-                if socket.closed is False:
-                    socket.close()
-                self.epoller.unregister(socket)
+            if isinstance(self.epoller.sockets, dict):
+                for socket in self.epoller.sockets.keys():
+                    if socket.closed is False:
+                        socket.close()
+                    self.epoller.unregister(socket)
+            else:
+                for socket in self.epoller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].close()
+                    self.epoller.unregister(socket[0])
         if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
             self.epub_sock.close()
         if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
