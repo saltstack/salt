@@ -23,9 +23,10 @@ from random import randint
 # Import third party libs
 try:
     import zmq
+    HAS_ZMQ = True
 except ImportError:
     # Running in local, zmq not needed
-    pass
+    HAS_ZMQ = False
 import yaml
 
 HAS_RANGE = False
@@ -456,6 +457,12 @@ class Minion(object):
         '''
         Pass in the options dict
         '''
+        # Warn if ZMQ < 3
+        if HAS_ZMQ and int(zmq.zmq_version()[0]) < 3:
+            log.warning('You have a version of ZMQ less than ZMQ 3! There are '
+                        'known connection keep-alive issues with ZMQ < 3 '
+                        'which may result in loss of contact with minions. '
+                        'Please upgrade your ZMQ!')
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
