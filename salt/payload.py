@@ -204,11 +204,18 @@ class SREQ(object):
         return self.send(enc, load, tries, timeout)
 
     def destroy(self):
-        for socket in self.poller.sockets.keys():
-            if socket.closed is False:
-                socket.setsockopt(zmq.LINGER, 1)
-                socket.close()
-            self.poller.unregister(socket)
+        if isinstance(self.poller.sockets, dict):
+            for socket in self.poller.sockets.keys():
+                if socket.closed is False:
+                    socket.setsockopt(zmq.LINGER, 1)
+                    socket.close()
+                self.poller.unregister(socket)
+        else:
+            for socket in self.poller.sockets:
+                if socket[0].closed is False:
+                    socket[0].setsockopt(zmq.LINGER, 1)
+                    socket[0].close()
+                self.poller.unregister(socket[0])
         if self.socket.closed is False:
             self.socket.setsockopt(zmq.LINGER, 1)
             self.socket.close()

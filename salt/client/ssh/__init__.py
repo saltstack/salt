@@ -42,15 +42,15 @@ HEREDOC = (' << "EOF"\n'
            '    if [[ $(cat /tmp/.salt/version) != {0} ]]\n'
            '    then\n'
            '        rm -rf /tmp/.salt\n'
-           '        mkdir -p /tmp/.salt\n'
+           '        install -m 1777 -d /tmp/.salt\n'
            '        echo "{1}"\n'
            '        echo "deploy"\n'
            '        exit 1\n'
            '    fi\n'
            '    SALT=/tmp/.salt/salt-call\n'
            'else\n'
-           '    mkdir -p /tmp/.salt\n'
            '    echo "{1}"\n'
+           '    install -m 777 -d /tmp/.salt\n'
            '    echo "deploy"\n'
            '    exit 1\n'
            'fi\n'
@@ -247,6 +247,7 @@ class SSH(object):
         que = multiprocessing.Queue()
         running = {}
         target_iter = self.targets.__iter__()
+        returned = set()
         rets = set()
         init = False
         while True:
@@ -272,12 +273,15 @@ class SSH(object):
             ret = {}
             try:
                 ret = que.get(False)
+                if 'id' in ret:
+                    returned.add(ret['id'])
             except Exception:
                 pass
             for host in running:
-                if not running[host]['thread'].is_alive():
-                    running[host]['thread'].join()
-                    rets.add(host)
+                if host in returned:
+                    if not running[host]['thread'].is_alive():
+                        running[host]['thread'].join()
+                        rets.add(host)
             for host in rets:
                 if host in running:
                     running.pop(host)
@@ -375,7 +379,7 @@ class Single(object):
                 thin,
                 '/tmp/.salt/salt-thin.tgz')
         self.shell.exec_cmd(
-                'tar xvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt && rm /tmp/.salt/salt-thin.tgz'
+                'tar xvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt'
                 )
         return True
 
@@ -482,6 +486,8 @@ class Single(object):
         if stdout.startswith('deploy'):
             self.deploy()
             stdout, stderr = self.shell.exec_cmd(cmd)
+            if RSTR in stdout:
+                stdout = stdout.split(RSTR)[1].strip()
         return stdout, stderr
 
     def sls_seed(self, mods, env='base', test=None, exclude=None, **kwargs):
