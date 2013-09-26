@@ -7,5 +7,8 @@ pacman -Syu --noconfirm salt
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
 echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
-echo '{{ minion }}' > /etc/salt/minion
+cat > /etc/salt/minion <<EOF
+{{minion}}
+EOF
+
 /etc/rc.d/salt-minion start

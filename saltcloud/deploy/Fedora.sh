@@ -8,7 +8,10 @@ mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
 echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
 # Copy the minion configuration file into place before starting the minion
-echo '{{ minion }}' > /etc/salt/minion
+cat > /etc/salt/minion <<EOF
+{{minion}}
+EOF
+
 # Set the minion to start on reboot
 systemctl enable salt-minion.service
 # Start the minion!

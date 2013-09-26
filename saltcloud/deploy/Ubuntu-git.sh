@@ -3,7 +3,9 @@
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
 echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
-echo "{{ minion }}" > /etc/salt/minion
+cat > /etc/salt/minion <<EOF
+{{minion}}
+EOF
 
 # add-apt-repository requires an additional dep and is in different packages
 # on different systems. Although seemingly ubiquitous it is not a standard,
