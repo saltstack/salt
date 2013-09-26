@@ -1569,9 +1569,10 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Set the default password to attempt to use when '
                  'authenticating')
         self.add_option(
-            '--key_deploy',
+            '--key-deploy',
             dest='ssh_key_deploy',
             default=False,
+            action='store_true',
             help='Set this flag to atempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
                  'initial deployment of keys very fast and easy')
