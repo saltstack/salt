@@ -20,7 +20,7 @@ def _srvmgr(func):
     '''
     Execute a function from the ServerManager PS module and return the STDOUT
     '''
-    return __salt__['cmd.run']('powershell -InputFormat None -Command "& {{ Import-Module ServerManager ; {0} }}"'.format(func))
+    return __salt__['cmd.run']('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell -InputFormat None -Command "& {{ Import-Module ServerManager ; {0} }}"'.format(func))
 
 
 def _parse_powershell_list(lst):
