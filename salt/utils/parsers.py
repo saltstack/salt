@@ -1568,6 +1568,13 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default='',
             help='Set the default password to attempt to use when '
                  'authenticating')
+        self.add_option(
+            '--key_deploy',
+            dest='ssh_key_deploy',
+            default=False,
+            help='Set this flag to atempt to deploy the authorized ssh key '
+                 'with all minions. This combined with --passwd can make '
+                 'initial deployment of keys very fast and easy')
 
     def _mixin_after_parsed(self):
         if self.options.list:
