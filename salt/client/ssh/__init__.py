@@ -152,6 +152,8 @@ class SSH(object):
                 else:
                     return {host: data}
             except Exception:
+                if stderr:
+                    return {host: stderr}
                 return {host: 'Bad Return'}
         return ret
 
