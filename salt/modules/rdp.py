@@ -23,7 +23,6 @@ def _parse_return_code_powershell(string):
     '''
     return from the input string the return code of the powershell command
     '''
-    
     regex = re.search(r'ReturnValue\s*: (\d*)', string)
     if not regex:
         return False
@@ -41,7 +40,6 @@ def enable():
 
         salt '*' rdp.enable
     '''
-    
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(1,1) }"'
     return _parse_return_code_powershell(__salt__['cmd.run'](cmd)) == 0
 
@@ -56,7 +54,6 @@ def disable():
 
         salt '*' rdp.disable
     '''
-    
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(0,1) }"'
     return _parse_return_code_powershell(__salt__['cmd.run'](cmd)) == 0
 
@@ -71,9 +68,6 @@ def status():
 
         salt '*' rdp.status
     '''
-    
     cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; echo $RDP.AllowTSConnections }"'
     out = int(__salt__['cmd.run'](cmd).strip())
     return out != 0
-
-
