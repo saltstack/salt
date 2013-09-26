@@ -308,11 +308,9 @@
 #  - roots
 #
 # Uncomment the line below if you do not want the file_server to follow
-# symlinks when walking the filesystem tree. This is set to True 
+# symlinks when walking the filesystem tree. This is set to True
 # by default. Currently this only applies to the default roots 
-# fileserver_backend. Leave this option commented if you are using the 
-# state module file.recurse with symlinks set to True unless your symlinks
-# are only 1 deep.
+# fileserver_backend.
 #
 #fileserver_followsymlinks: False
 #
