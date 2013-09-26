@@ -14,6 +14,9 @@ ensure_in_syspath('../../')
 from salt.modules import virt
 from salt._compat import StringIO as _StringIO, ElementTree as _ElementTree
 
+# Import third party libs
+import yaml
+
 virt.__salt__ = {}
 
 
@@ -65,17 +68,27 @@ class VirtTestCase(TestCase):
     @skipIf(sys.hexversion < 0x02070000, 'ElementTree version 1.3 required')
     @patch('salt.modules.virt._nic_profile')
     @patch('salt.modules.virt._disk_profile')
-    def test_gen_xml_for_esxi(self, disk_profile, nic_profile):
-        disk_profile.return_value = [{'first': {'size': '8192',
-                                                'format': 'vmdk',
-                                                'model': 'scsi'}},
-                                     {'second': {'size': '4096',
-                                                 'format': 'vmdk',
-                                                 'model': 'scsi'}}]
-        nic_profile.return_value = {'eth1': {'bridge': 'ONENET',
-                                             'model': 'e1000'},
-                                    'eth2': {'bridge': 'TWONET',
-                                             'model': 'e1000'}}
+    def test_gen_xml_for_esxi_custom_profile(self, disk_profile, nic_profile):
+        diskp_yaml = '''
+- first:
+    size: 8192
+    format: vmdk
+    model: scsi
+- second:
+    size: 4096
+    format: vmdk
+    model: scsi
+'''
+        nicp_yaml = '''
+eth1:
+  bridge: ONENET
+  model: e1000
+eth2:
+  bridge: TWONET
+  model: e1000
+'''
+        disk_profile.return_value = yaml.load(diskp_yaml)
+        nic_profile.return_value = yaml.load(nicp_yaml)
         diskp = virt._disk_profile('noeffect', 'esxi')
         nicp = virt._nic_profile('noeffect', 'esxi')
         xml_data = virt._gen_xml(
