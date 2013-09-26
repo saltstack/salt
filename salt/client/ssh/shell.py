@@ -108,10 +108,11 @@ class Shell(object):
         Return the string to execute ssh-copy-id
         '''
         if self.passwd and salt.utils.which('sshpass'):
-            return 'sshpass -p {0} {1} {2} "-p {3} {4}@{5}"'.format(
+            return 'sshpass -p {0} {1} {2} "{3} -p {4} {5}@{6}"'.format(
                     self.passwd,
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
+                    self._passwd_opts(),
                     self.port,
                     self.user,
                     self.host)
