@@ -114,7 +114,7 @@ class Clean(clean):
         clean.run(self)
         # Let's clean compiled *.py[c,o]
         remove_extensions = ('.pyc', '.pyo')
-        for subdir in ('salt', 'tests'):
+        for subdir in ('salt', 'tests', 'doc'):
             root = os.path.join(os.path.dirname(__file__), subdir)
             for dirname, dirnames, filenames in os.walk(root):
                 for filename in filenames:
