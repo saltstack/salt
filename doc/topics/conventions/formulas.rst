@@ -176,9 +176,11 @@ A basic Formula repository should have the following layout::
     |   |-- map.jinja
     |   |-- init.sls
     |   `-- bar.sls
+    |-- CHANGELOG.rst
     |-- LICENSE
     |-- pillar.example
-    `-- README.rst
+    |-- README.rst
+    `-- VERSION
 
 ``README.rst``
 --------------
@@ -208,6 +210,25 @@ A sample skeleton for the ``README.rst`` file:
         Install the ``foo`` package and enable the service.
     ``foo.bar``
         Install the ``bar`` package.
+
+``CHANGELOG.rst``
+-----------------
+
+The ``CHANGELOG.rst`` file should detail the individual versions, their
+release date and a set of bullet points for each version highlighting the
+overall changes in a given version of the formula.
+
+A sample skeleton for the ``CHANGELOG.rst` file:
+
+:file:`CHANGELOG.rst`:
+
+    foo formula
+
+    0.0.2 (2013-01-01)
+
+    - Re-organized formula file layout
+    - Fixed filename used for upstart logger template
+    - Allow for pillar message to have default if none specified
 
 ``map.jinja``
 -------------
@@ -385,7 +406,20 @@ Salt modules or adding new modules. An example of this is the
 Versioning
 ----------
 
-Formula versions are tracked using Git tags.
+Formula are versioned according to Semantic Versioning, http://semver.org/.
+
+    Given a version number MAJOR.MINOR.PATCH, increment the:
+
+    #. MAJOR version when you make incompatible API changes,
+    #. MINOR version when you add functionality in a backwards-compatible manner, and
+    #. PATCH version when you make backwards-compatible bug fixes.
+
+    Additional labels for pre-release and build metadata are available as extensions
+    to the MAJOR.MINOR.PATCH format.
+
+Formula versions are tracked using Git tags as well as the ``VERSION`` file
+in the formula repository. The ``VERSION`` file should contain the currently
+released version of the particular formula.
 
 Testing Formulas
 ----------------
