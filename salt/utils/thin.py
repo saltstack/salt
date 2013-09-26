@@ -38,7 +38,7 @@ def gen_thin(cachedir):
     tops = [
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
-            os.path.dirname(yaml.__file__),
+            os.path.dirname(yaml.yaml.__file__),
             ]
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
