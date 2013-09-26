@@ -248,17 +248,8 @@ def symlink_list(load):
             prefix = load['prefix'].strip('/')
         except KeyError:
             prefix = ''
-        # If a user has symlinked dirs that contain other symlinks, then setting
-        # the __opts__['fileserver_followsymlinks'] to False will not be desired
-        # unless the user has only 1 deep symlink recursion in the roots.
-        # This causes os.walk to stop at the first symlink encounter.
-        # It is the responsibility of the user to ensure that os.walk does not
-        # encounter an infinite symlink recursion. Python docs warn about this in
-        # the os.walk documentation if followlinks=True. If infinite symlink recursion
-        # is encountered, then this recursion will be passed to the Minion leading
-        # possible undesired results.
-        for root, dirs, files in os.walk(os.path.join(path, prefix),
-                                         followlinks=__opts__['fileserver_followsymlinks']):
+        # Adopting rsync functionality here and stopping at any encounter of a symlink
+        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=False):
             for fname in files:
                 if not os.path.islink(os.path.join(root, fname)):
                     continue

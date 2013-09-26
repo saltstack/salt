@@ -1580,6 +1580,41 @@ def recurse(name,
             require=None)
         merge_ret(path, _ret)
 
+    # Process symlinks and return the updated filenames list to be processed
+    def process_symlinks(filenames, symlinks):
+        for lname, ltarget in symlinks.items():
+           if not _check_include_exclude(os.path.relpath(lname, srcpath),
+                                          include_pat,
+                                          exclude_pat):
+               continue
+           srelpath = os.path.relpath(lname, srcpath)
+           # Check for max depth
+           if maxdepth is not None:
+               srelpieces = srelname.split('/')
+               if not srelpieces[-1]:
+                   srelpieces = srelpieces[:-1]
+               if len(srelpieces) > maxdepth + 1:
+                   continue
+           # Check for all paths that begin with the symlink
+           # and axe it leaving only the dirs/files below it.
+           _filenames = filenames
+           for filename in _filenames:
+               if filename.startswith(lname):
+                   log.debug('** skipping file ** {0}, it intersects a symlink'.format(filename))
+                   filenames.remove(filename)
+           # Create the symlink along with the necessary dirs.
+           # The dir perms/ownership will be adjusted later
+           # if needed.
+           _ret = symlink(os.path.join(name, srelpath),
+                          ltarget,
+                          makedirs=True,
+                          user=user,
+                          group=group,
+                          mode=sym_mode)
+           if not _ret:
+               continue
+           merge_ret(os.path.join(name,srelpath),_ret)
+        return filenames
     # If source is a list, find which in the list actually exists
     source, source_hash = __salt__['file.source_list'](source, '', env)
 
@@ -1590,18 +1625,14 @@ def recurse(name,
         #we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
-    # If we are instructed to keep symlinks, then grab the dict of links
+    fns_ = __salt__['cp.list_master'](env, srcpath)
+    # If we are instructed to keep symlinks, then process them
     if keep_symlinks:
+        # Make this global so that emptydirs can use it if needed
         symlinks = __salt__['cp.list_master_symlinks'](env, srcpath)
-    for fn_ in __salt__['cp.list_master'](env, srcpath):
+        fns_ = process_symlinks(fns_, symlinks)
+    for fn_ in fns_:
         if not fn_.strip():
-            continue
-
-        # Check for symlinked files if symlinks are on the table.
-        # Symlinks will be processed after the entire dir/file structure
-        # is created.
-        if keep_symlinks and symlinks.get(fn_):
-            log.debug('** skipping file ** {0}, it is destined for a symlink'.format(fn_))
             continue
 
         # fn_ here is the absolute (from file_roots) source path of
@@ -1632,15 +1663,6 @@ def recurse(name,
         keep.add(dest)
 
         if dirname not in vdir:
-            # Check for symlinked dirs if symlinks are on the table.
-            # Symlinks will be processed after the entire dir/file structure
-            # is created.
-            _dir = relname.split('/')
-            _dir.pop()
-            _dir = os.path.join(srcpath,'/'.join(_dir))
-            if keep_symlinks and symlinks.get(_dir):
-                log.debug('** skipping dir ** {0}, it is destined for a symlink'.format(_dir))
-                continue
             # verify the directory perms if they are set
             manage_directory(dirname)
             vdir.add(dirname)
@@ -1657,33 +1679,13 @@ def recurse(name,
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             # Check for symlinks that happen to point to an empty dir.
-            # This will be processed along with the other symlinks.
-            if keep_symlinks and symlinks.get(mdir):
-                log.debug('** skipping empty dir ** {0}, it is destined for a symlink'.format(mdir))
-                continue
+            if keep_symlinks:
+                for link in symlinks:
+                    if mdir.startswith(link, 0):
+                        log.debug('** skipping empty dir ** {0}, it intersects a symlink'.format(mdir))
+                    continue
             manage_directory(mdest)
             keep.add(mdest)
-
-    if keep_symlinks:
-        for lname, ltarget in symlinks.items():
-           if not _check_include_exclude(os.path.relpath(lname, srcpath),
-                                          include_pat,
-                                          exclude_pat):
-               continue
-           srelpath = os.path.relpath(lname, srcpath)
-           # Force the symlink and makedirs.
-           # This addresses any symlink dependencies
-           # and funky symlink recursion that we may encounter.
-           _ret = symlink(os.path.join(name, srelpath),
-                          ltarget,
-                          force=True,
-                          makedirs=True,
-                          user=user,
-                          group=group,
-                          mode=sym_mode)
-           if not _ret:
-               continue
-           merge_ret(os.path.join(name,srelpath),_ret)
 
     keep = list(keep)
     if clean:
