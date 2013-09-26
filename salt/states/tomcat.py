@@ -64,7 +64,7 @@ def war_deployed(name, war, url='http://localhost:8080/manager',
         the context path to deploy
     war
         absolute path to WAR file (should be accessible by the user running
-        tomcat) or a path supported by the salt.modules.cp.get_file function
+        tomcat) or a path supported by the salt.modules.cp.get_url function
     url : http://localhost:8080/manager
         the URL of the server manager webapp
     timeout : 180
