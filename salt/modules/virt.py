@@ -602,8 +602,6 @@ def init(name,
                     xml = _gen_vol_xml(name, disk_name, args['size'], hypervisor)
                     define_vol_xml_str(xml)
 
-    assert diskp != None, "diskp should be defined here"
-
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
     define_xml_str(xml)
 
@@ -1094,22 +1092,22 @@ def get_profiles(hypervisor=None):
 
     CLI Example::
 
-        salt '*' virt.get_profile
-        salt '*' virt.get_profile hypervisor=esxi
+        salt '*' virt.get_profiles
+        salt '*' virt.get_profiles hypervisor=esxi
     '''
     ret = {}
     if hypervisor:
         hypervisor = hypervisor
     else:
         hypervisor = __salt__['config.get']('libvirt:hypervisor', VIRT_DEFAULT_HYPER)
-    virt_ = __salt__['config.get']('virt', {})
-    for type_ in ['disk', 'nic']:
-        _func = getattr(sys.modules[__name__], '_{0}_profile'.format(type_))
-        ret[type_] = {'default': _func('default', hypervisor)}
-        if type_ in virt_:
-            ret.setdefault(type_, {})
-            for prf in virt_[type_]:
-                ret[type_][prf] = _func(prf, hypervisor)
+    virtconf = __salt__['config.get']('virt', {})
+    for typ in ['disk', 'nic']:
+        _func = getattr(sys.modules[__name__], '_{0}_profile'.format(typ))
+        ret[typ] = {'default': _func('default', hypervisor)}
+        if typ in virtconf:
+            ret.setdefault(typ, {})
+            for prf in virtconf[typ]:
+                ret[typ][prf] = _func(prf, hypervisor)
     return ret
 
 
