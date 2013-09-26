@@ -26,6 +26,7 @@ import salt.minion
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
 HEREDOC = (' << "EOF"\n'
+           '{{0}}\n'
            'if [ `type -p python2` ]\n'
            'then\n'
            '    PYTHON=python2\n'
@@ -54,7 +55,7 @@ HEREDOC = (' << "EOF"\n'
            '    exit 1\n'
            'fi\n'
            'echo "{1}"\n'
-           '$PYTHON $SALT --local --out json -l quiet {{0}}\n'
+           '$PYTHON $SALT --local --out json -l quiet {{1}}\n'
            'EOF').format(salt.__version__, RSTR)
 
 
@@ -457,7 +458,8 @@ class Single(object):
             args, kwargs = salt.minion.parse_args_and_kwargs(
                     self.sls_seed, self.arg)
             self.sls_seed(*args, **kwargs)
-        cmd = HEREDOC.format(self.arg_str)
+        sudo = 'sudo -i\n' if self.target['sudo'] else ''
+        cmd = HEREDOC.format(sudo, self.arg_str)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             if stdout is None and stderr is None:
                 yield None, None
@@ -472,7 +474,8 @@ class Single(object):
         # 2. check is salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        cmd = HEREDOC.format(self.arg_str)
+        sudo = 'sudo -i\n' if self.target['sudo'] else ''
+        cmd = HEREDOC.format(sudo, self.arg_str)
         stdout, stderr = self.shell.exec_cmd(cmd)
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
