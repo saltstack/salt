@@ -1556,7 +1556,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
-            default=5,
+            default=25,
             type=int,
             help='Set the number of concurrent minions to communicate with. '
                  'This value defines how many processes are opened up at a '

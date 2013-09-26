@@ -176,7 +176,7 @@ class SSH(object):
         target_iter = self.targets.__iter__()
         done = set()
         while True:
-            if len(running) < self.opts.get('ssh_max_procs', 5):
+            if len(running) < self.opts.get('ssh_max_procs', 25):
                 try:
                     host = next(target_iter)
                 except StopIteration:
@@ -264,7 +264,7 @@ class SSH(object):
         rets = set()
         init = False
         while True:
-            if len(running) < self.opts.get('ssh_max_procs', 5) and not init:
+            if len(running) < self.opts.get('ssh_max_procs', 25) and not init:
                 try:
                     host = next(target_iter)
                 except StopIteration:
