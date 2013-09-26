@@ -156,6 +156,11 @@ Mac OS X User/Group Support
 Salt is now able to manage users and groups on Minions running Mac OS X.
 However, at this time user passwords cannot be managed.
 
+Django ORM External Pillar
+--------------------------
+
+Pillar data can now be derived from Django managed databases.
+
 Fixes from RC to release
 ------------------------
 
