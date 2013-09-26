@@ -111,7 +111,7 @@ class SSH(object):
         '''
         if not isinstance(ret[host], basestring):
             return ret
-        if ret[host].startswith('Permission denied'):
+        if ret[host].startswith('Permission denied') or self.opts.get('ssh_key_deploy'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to '
