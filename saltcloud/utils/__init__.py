@@ -289,7 +289,7 @@ def wait_for_port(host, port=22, timeout=900):
     '''
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
-    installations, it might be port 139 (for winexe). It may also be an
+    installations, it might be port 445 (for winexe). It may also be an
     alternate port for SSH, depending on the base image.
     '''
     start = time.time()
@@ -382,7 +382,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             time.sleep(trysleep)
 
 
-def deploy_windows(host, port=139, timeout=900, username='Administrator',
+def deploy_windows(host, port=445, timeout=900, username='Administrator',
                    password=None, name=None, pub_key=None, sock_dir=None, 
                    conf_file=None, start_action=None, parallel=False,
                    minion_pub=None, minion_pem=None, minion_conf=None,
