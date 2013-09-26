@@ -3,7 +3,6 @@
 # Import python libs
 import sys
 from xml.etree import ElementTree as ElementTree
-from StringIO import StringIO
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -13,6 +12,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import virt
+from salt._compat import StringIO as _StringIO
 
 virt.__salt__ = {}
 
@@ -87,7 +87,7 @@ class VirtTestCase(TestCase):
             'esxi',
             eth1_mac='00:00:00:00:00:00',
             )
-        tree = ElementTree.parse(StringIO(xml_data))
+        tree = ElementTree.parse(_StringIO(xml_data))
         self.assertTrue(tree.getroot().attrib['type'] == 'vmware')
         self.assertTrue(tree.find('vcpu').text == '1')
         self.assertTrue(tree.find('memory').text == '524288')
