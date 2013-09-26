@@ -1450,9 +1450,7 @@ def recurse(name,
         Force symlink creation. This option will force the symlink creation.
         If a file or directory is obstructing symlink creation it will be
         recursively removed so that symlink creation can proceed. This
-        option is usually not needed except in special circumstances. It
-        is a very powerful option, and can cripple a system if used
-        inappropriately.
+        option is usually not needed except in special circumstances.
     '''
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
