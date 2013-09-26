@@ -70,7 +70,6 @@ variables, if set, but these values can also be overridden in several ways:
 # Import python libs
 import copy
 import logging
-import os
 
 # Import salt libs
 import salt.utils
@@ -238,7 +237,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             continue
         try:
             pkg, ver = line.split()[0].rsplit('-', 1)
-        except IndexError, ValueError:
+        except (IndexError, ValueError):
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
 

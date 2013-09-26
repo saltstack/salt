@@ -345,10 +345,15 @@ def _get_reg_software():
                 pass
                 #Unsinstall key may not exist for all users
             for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
-                if name[0] == '{':
-                    break
                 prd_uninst_key = "\\".join([reg_key, name])
                 #These reg values aren't guaranteed to exist
+                windows_installer = _get_reg_value(
+                    reg_hive,
+                    prd_uninst_key,
+                    'WindowsInstaller')
+                if windows_installer != 'Not Found' and windows_installer:
+                    continue
+
                 prd_name = _get_reg_value(
                     reg_hive,
                     prd_uninst_key,
