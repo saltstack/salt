@@ -87,6 +87,18 @@ new system uses the state system for organizing executions.
 This allows for states to be defined that are executed on the master to call
 states on minions via ``salt-run state.sls``.
 
+Salt Thin
+---------
+
+Salt Thin is an exciting new component of Salt, this is the ability to execute
+Salt routines without any transport mechanisms installed, it is a pure python
+subset of Salt.
+
+Salt Thin does not have any networking capability, but can be dropped into any
+system with Python installed and then ``salt-call`` can be called directly. The
+Salt Thin system, is used by the ``salt-ssh`` command, but can still be used to
+just drop salt somewhere for easy use.
+
 Event Namespacing
 -----------------
 
