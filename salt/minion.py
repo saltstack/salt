@@ -515,6 +515,11 @@ class Minion(object):
             rss, vms = psutil.Process(os.getpid()).get_memory_info()
             mem_limit = rss + vms + self.opts['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+        elif self.opts.get('modules_max_memory', -1) > 0:
+            if not HAS_PSUTIL:
+                log.error('Unable to enforce modules_max_memory because psutil is missing')
+            if not HAS_RESOURCE:
+                log.error('Unable to enforce modules_max_memory because resource is missing')
 
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
