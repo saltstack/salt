@@ -491,7 +491,7 @@ def find(path, **kwargs):
 
     interval::
 
-        [<num>w] [<num>[d]] [<num>h] [<num>m] [<num>s]
+        [<num>w] [<num>d] [<num>h] [<num>m] [<num>s]
 
         where:
             w: week
