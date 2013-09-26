@@ -247,6 +247,7 @@ class SSH(object):
         que = multiprocessing.Queue()
         running = {}
         target_iter = self.targets.__iter__()
+        returned = set()
         rets = set()
         init = False
         while True:
@@ -272,12 +273,15 @@ class SSH(object):
             ret = {}
             try:
                 ret = que.get(False)
+                if 'id' in ret:
+                    returned.add(ret['id'])
             except Exception:
                 pass
             for host in running:
-                if not running[host]['thread'].is_alive():
-                    running[host]['thread'].join()
-                    rets.add(host)
+                if host in returned:
+                    if not running[host]['thread'].is_alive():
+                        running[host]['thread'].join()
+                        rets.add(host)
             for host in rets:
                 if host in running:
                     running.pop(host)
