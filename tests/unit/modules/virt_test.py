@@ -12,7 +12,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import virt
-from salt._compat import StringIO as _StringIO
+from salt._compat import StringIO as _StringIO, ElementTree as _ElementTree
 
 virt.__salt__ = {}
 
@@ -87,7 +87,7 @@ class VirtTestCase(TestCase):
             'esxi',
             eth1_mac='00:00:00:00:00:00',
             )
-        tree = ElementTree.parse(_StringIO(xml_data))
+        tree = _ElementTree.parse(_StringIO(xml_data))
         self.assertTrue(tree.getroot().attrib['type'] == 'vmware')
         self.assertTrue(tree.find('vcpu').text == '1')
         self.assertTrue(tree.find('memory').text == '524288')
