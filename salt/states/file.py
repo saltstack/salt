@@ -572,7 +572,7 @@ def _test_owner(kwargs, user=None):
     if user:
         return user
     if 'owner' in kwargs:
-        log.warnings(
+        log.warning(
             'Use of argument owner found, "owner" is invalid, please '
             'use "user"'
         )
