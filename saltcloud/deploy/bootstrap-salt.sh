@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #===============================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="1.5.7"
+__ScriptVersion="1.5.8"
 __ScriptName="bootstrap-salt.sh"
 
 #===============================================================================
@@ -1251,7 +1251,7 @@ __enable_universe_repository() {
 
 install_ubuntu_deps() {
     apt-get update
-    if [ $DISTRO_MAJOR_VERSION -eq 12 ] || [ $DISTRO_MAJOR_VERSION -gt 12 ]; then
+    if [ $DISTRO_MAJOR_VERSION -gt 12 ] || [ $DISTRO_MAJOR_VERSION -eq 12 && $DISTRO_MINOR_VERSION -eq 10 ]; then
         # Above Ubuntu 11.10 add-apt-repository is in a different package
         __apt_get_install_noinput software-properties-common || return 1
     else
