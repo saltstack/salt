@@ -240,7 +240,7 @@ def unmounted(name,
     .. note::
         This state will be available in verion 0.17.0.
 
-    Verify that a device is mounted
+    Verify that a device is not mounted
 
     name
         The path to the location where the device is to be unmounted from
