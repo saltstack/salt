@@ -179,7 +179,7 @@ class SSHAuthStateTests(integration.ModuleCase,
         self.assertEqual(
             open(authorized_keys_file, 'r').read(),
             'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}'.format(username)
+            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
         )
 
 
