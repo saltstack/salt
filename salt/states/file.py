@@ -1589,42 +1589,43 @@ def recurse(name,
 
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
-        log.debug("keep in ps {0}".format(keep))
+        log.debug('keep in ps {0}'.format(keep))
         for lname, ltarget in symlinks.items():
-           if not _check_include_exclude(os.path.relpath(lname, srcpath),
+            if not _check_include_exclude(os.path.relpath(lname, srcpath),
                                           include_pat,
                                           exclude_pat):
-               continue
-           srelpath = os.path.relpath(lname, srcpath)
-           # Check for max depth
-           if maxdepth is not None:
-               srelpieces = srelname.split('/')
-               if not srelpieces[-1]:
-                   srelpieces = srelpieces[:-1]
-               if len(srelpieces) > maxdepth + 1:
-                   continue
-           # Check for all paths that begin with the symlink
-           # and axe it leaving only the dirs/files below it.
-           _filenames = filenames
-           for filename in _filenames:
-               if filename.startswith(lname):
-                   log.debug('** skipping file ** {0}, it intersects a symlink'.format(filename))
-                   filenames.remove(filename)
-           # Create the symlink along with the necessary dirs.
-           # The dir perms/ownership will be adjusted later
-           # if needed.
-           _ret = symlink(os.path.join(name, srelpath),
-                          ltarget,
-                          makedirs=True,
-                          force=force_symlinks,
-                          user=user,
-                          group=group,
-                          mode=sym_mode)
-           if not _ret:
-               continue
-           merge_ret(os.path.join(name,srelpath),_ret)
-           # Add the path to the keep set in case clean is set to True
-           keep.add(os.path.join(name, srelpath))
+                continue
+            srelpath = os.path.relpath(lname, srcpath)
+            # Check for max depth
+            if maxdepth is not None:
+                srelpieces = srelpath.split('/')
+                if not srelpieces[-1]:
+                    srelpieces = srelpieces[:-1]
+                if len(srelpieces) > maxdepth + 1:
+                    continue
+            # Check for all paths that begin with the symlink
+            # and axe it leaving only the dirs/files below it.
+            _filenames = filenames
+            for filename in _filenames:
+                if filename.startswith(lname):
+                    log.debug('** skipping file ** {0}, it intersects a '
+                              'symlink'.format(filename))
+                    filenames.remove(filename)
+            # Create the symlink along with the necessary dirs.
+            # The dir perms/ownership will be adjusted later
+            # if needed
+            _ret = symlink(os.path.join(name, srelpath),
+                           ltarget,
+                           makedirs=True,
+                           force=force_symlinks,
+                           user=user,
+                           group=group,
+                           mode=sym_mode)
+            if not _ret:
+                continue
+            merge_ret(os.path.join(name, srelpath), _ret)
+            # Add the path to the keep set in case clean is set to True
+            keep.add(os.path.join(name, srelpath))
         return filenames
     # If source is a list, find which in the list actually exists
     source, source_hash = __salt__['file.source_list'](source, '', env)
@@ -1729,14 +1730,13 @@ def recurse(name,
 
 
 def replace(name,
-        pattern,
-        repl,
-        count=0,
-        flags=0,
-        bufsize=1,
-        backup='.bak',
-        show_changes=True,
-        ):
+            pattern,
+            repl,
+            count=0,
+            flags=0,
+            bufsize=1,
+            backup='.bak',
+            show_changes=True):
     '''
     Maintain an edit in a file
 
@@ -1752,15 +1752,14 @@ def replace(name,
         return _error(ret, check_msg)
 
     changes = __salt__['file.replace'](name,
-        pattern,
-        repl,
-        count=count,
-        flags=flags,
-        bufsize=bufsize,
-        backup=backup,
-        dry_run=__opts__['test'],
-        show_changes=show_changes,
-        )
+                                       pattern,
+                                       repl,
+                                       count=count,
+                                       flags=flags,
+                                       bufsize=bufsize,
+                                       backup=backup,
+                                       dry_run=__opts__['test'],
+                                       show_changes=show_changes)
 
     if changes:
         ret['changes'] = changes
@@ -2124,11 +2123,11 @@ def append(name,
     # Add sources and source_hashes with template support
     # NOTE: FIX 'text' and any 'source' are mutually exclusive as 'text'
     #       is re-assigned in the original code.
-    (ok, err, sl) = _unify_sources_and_hashes(source=source,
-                                              source_hash=source_hash,
-                                              sources=sources,
-                                              source_hashes=source_hashes)
-    if not ok:
+    (ok_, err, sl_) = _unify_sources_and_hashes(source=source,
+                                                source_hash=source_hash,
+                                                sources=sources,
+                                                source_hashes=source_hashes)
+    if not ok_:
         return _error(ret, err)
 
     if makedirs is True:
@@ -2149,8 +2148,8 @@ def append(name,
         return _error(ret, check_msg)
 
     #Follow the original logic and re-assign 'text' if using source(s)...
-    if sl:
-        tmpret = _get_template_texts(source_list=sl,
+    if sl_:
+        tmpret = _get_template_texts(source_list=sl_,
                                      template=template,
                                      defaults=defaults,
                                      context=context,
@@ -2688,7 +2687,7 @@ def serialize(name,
                     formatter.capitalized()),
                 'name': name,
                 'result': False
-               }
+                }
 
     return __salt__['file.manage_file'](name=name,
                                         sfn='',
