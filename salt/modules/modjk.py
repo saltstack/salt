@@ -313,11 +313,11 @@ def bulk_stop(workers, lbn, profile='default'):
 
     .. code-block:: bash
 
-        salt '*' modjk.bulk_stop node1,node2,node3
-        salt '*' modjk.bulk_stop node1,node2,node3 other-profile
+        salt '*' modjk.bulk_stop node1,node2,node3 loadbalancer1
+        salt '*' modjk.bulk_stop node1,node2,node3 loadbalancer1 other-profile
 
-        salt '*' modjk.bulk_stop ["node1","node2","node3"]
-        salt '*' modjk.bulk_stop ["node1","node2","node3"] other-profile
+        salt '*' modjk.bulk_stop ["node1","node2","node3"] loadbalancer1
+        salt '*' modjk.bulk_stop ["node1","node2","node3"] loadbalancer1 other-profile
     '''
 
     ret = {}
@@ -342,11 +342,11 @@ def bulk_activate(workers, lbn, profile='default'):
 
     .. code-block:: bash
 
-        salt '*' modjk.bulk_activate node1,node2,node3
-        salt '*' modjk.bulk_activate node1,node2,node3 other-profile
+        salt '*' modjk.bulk_activate node1,node2,node3 loadbalancer1
+        salt '*' modjk.bulk_activate node1,node2,node3 loadbalancer1 other-profile
 
-        salt '*' modjk.bulk_activate ["node1","node2","node3"]
-        salt '*' modjk.bulk_activate ["node1","node2","node3"] other-profile
+        salt '*' modjk.bulk_activate ["node1","node2","node3"] loadbalancer1
+        salt '*' modjk.bulk_activate ["node1","node2","node3"] loadbalancer1 other-profile
     '''
 
     ret = {}
@@ -371,11 +371,11 @@ def bulk_disable(workers, lbn, profile='default'):
 
     .. code-block:: bash
 
-        salt '*' modjk.bulk_disable node1,node2,node3
-        salt '*' modjk.bulk_disable node1,node2,node3 other-profile
+        salt '*' modjk.bulk_disable node1,node2,node3 loadbalancer1
+        salt '*' modjk.bulk_disable node1,node2,node3 loadbalancer1 other-profile
 
-        salt '*' modjk.bulk_disable ["node1","node2","node3"]
-        salt '*' modjk.bulk_disable ["node1","node2","node3"] other-profile
+        salt '*' modjk.bulk_disable ["node1","node2","node3"] loadbalancer1
+        salt '*' modjk.bulk_disable ["node1","node2","node3"] loadbalancer1 other-profile
     '''
 
     ret = {}
@@ -400,11 +400,11 @@ def bulk_recover(workers, lbn, profile='default'):
 
     .. code-block:: bash
 
-        salt '*' modjk.bulk_recover node1,node2,node3
-        salt '*' modjk.bulk_recover node1,node2,node3 other-profile
+        salt '*' modjk.bulk_recover node1,node2,node3 loadbalancer1
+        salt '*' modjk.bulk_recover node1,node2,node3 loadbalancer1 other-profile
 
-        salt '*' modjk.bulk_recover ["node1","node2","node3"]
-        salt '*' modjk.bulk_recover ["node1","node2","node3"] other-profile
+        salt '*' modjk.bulk_recover ["node1","node2","node3"] loadbalancer1
+        salt '*' modjk.bulk_recover ["node1","node2","node3"] loadbalancer1 other-profile
     '''
 
     ret = {}
