@@ -468,7 +468,7 @@ def set_auth_key(
                 if new_file is False:
                     # Let's make sure we have a new line at the end of the file
                     _fh.seek(1024, 2)
-                    if not _fh.read(1024).endswith('\n'):
+                    if not _fh.read(1024).rstrip(' ').endswith('\n'):
                         _fh.seek(0, 2)
                         _fh.write('\n')
                 _fh.write('{0}'.format(auth_line))
