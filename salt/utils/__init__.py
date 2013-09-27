@@ -845,7 +845,7 @@ def arg_lookup(fun):
     aspec = get_function_argspec(fun)
     if aspec.defaults:
         ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
-    ret['args'] = aspec.args
+    ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
     return ret
 
 
