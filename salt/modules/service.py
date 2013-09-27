@@ -138,6 +138,20 @@ def reload_(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
+def available(name):
+    '''
+    Returns ``True`` if the specified service is available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.available sshd
+    '''
+    return name in get_all()
+
+
 def get_all():
     '''
     Return a list of all available services
@@ -151,16 +165,3 @@ def get_all():
     if not os.path.isdir(_GRAINMAP.get(__grains__.get('os'), '/etc/init.d')):
         return []
     return sorted(os.listdir(_GRAINMAP.get(__grains__.get('os'), '/etc/init.d')))
-
-
-def available(name):
-    '''
-    Return if the specified service is available
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' service.available
-    '''
-    return name in get_all()

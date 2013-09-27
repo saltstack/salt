@@ -64,8 +64,7 @@ def _enable(name, started, result=True, **kwargs):
            'comment': ''}
 
     # is service available?
-    ret = _available(name, ret)
-    if not ret.pop('available', True):
+    if not _available(name, ret):
         return ret
 
     # Check to see if this minion supports enable
@@ -153,8 +152,7 @@ def _disable(name, started, result=True, **kwargs):
            'comment': ''}
 
     # is service available?
-    ret = _available(name, ret)
-    if not ret.pop('available', True):
+    if not _available(name, ret):
         ret['result'] = True
         return ret
 
@@ -237,14 +235,15 @@ def _disable(name, started, result=True, **kwargs):
 
 def _available(name, ret):
     # Check if the service is available
+    avail = False
     if 'service.available' in __salt__:
-        ret['available'] = __salt__['service.available'](name)
+        avail = __salt__['service.available'](name)
     elif 'service.get_all' in __salt__:
-        ret['available'] = name in __salt__['service.get_all']()
-    if not ret.get('available', True):
+        avail = name in __salt__['service.get_all']()
+    if not avail:
         ret['result'] = False
         ret['comment'] = 'The named service {0} is not available'.format(name)
-    return ret
+    return avail
 
 
 def running(name, enable=None, sig=None, **kwargs):
@@ -272,8 +271,7 @@ def running(name, enable=None, sig=None, **kwargs):
         return _enabled_used_error(ret)
 
     # Check if the service is available
-    ret = _available(name, ret)
-    if not ret.pop('available', True):
+    if not _available(name, ret):
         return ret
 
     # See if the service is already running
@@ -322,9 +320,9 @@ def dead(name, enable=None, sig=None, **kwargs):
         The name of the init or rc script used to manage the service
 
     enable
-        Set the service to be enabled at boot time, True sets the service to
-        be enabled, False sets the named service to be disabled. The default
-        is None, which does not enable or disable anything.
+        Set the service to be enabled at boot time, ``True`` sets the service
+        to be enabled, ``False`` sets the named service to be disabled. The
+        default is ``None``, which does not enable or disable anything.
 
     sig
         The string to search for when looking for the service process with ps
@@ -339,8 +337,7 @@ def dead(name, enable=None, sig=None, **kwargs):
         return _enabled_used_error(ret)
 
     # Check if the service is available
-    ret = _available(name, ret)
-    if not ret.pop('available', True):
+    if not _available(name, ret):
         ret['result'] = True
         return ret
 
@@ -358,9 +355,9 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
 
-    changes = {name: __salt__['service.stop'](name)}
+    ret['changes'] = {name: __salt__['service.stop'](name)}
 
-    if not changes[name]:
+    if not ret['changes'][name]:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable is True:
@@ -371,13 +368,14 @@ def dead(name, enable=None, sig=None, **kwargs):
             ret['result'] = False
             ret['comment'] = 'Service {0} failed to die'.format(name)
             return ret
-
-    if enable is True:
-        return _enable(name, False)
-    elif enable is False:
-        return _disable(name, False)
     else:
-        return ret
+        if enable is True:
+            return _enable(name, False)
+        elif enable is False:
+            return _disable(name, False)
+        else:
+            ret['comment'] = 'Service {0} was killed'.format(name)
+            return ret
 
 
 def enabled(name, **kwargs):
