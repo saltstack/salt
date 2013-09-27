@@ -42,7 +42,7 @@ def gen_thin(cachedir):
             ]
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
-    tfp = tarfile.open(thintar, 'w:gz')
+    tfp = tarfile.open(thintar, 'w:gz', dereference=True)
     start_dir = os.getcwd()
     for top in tops:
         base = os.path.basename(top)
