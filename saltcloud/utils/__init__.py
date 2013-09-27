@@ -289,7 +289,7 @@ def wait_for_port(host, port=22, timeout=900):
     '''
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
-    installations, it might be port 139 (for winexe). It may also be an
+    installations, it might be port 445 (for winexe). It may also be an
     alternate port for SSH, depending on the base image.
     '''
     start = time.time()
@@ -382,6 +382,58 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             time.sleep(trysleep)
 
 
+def deploy_windows(host, port=445, timeout=900, username='Administrator',
+                   password=None, name=None, pub_key=None, sock_dir=None, 
+                   conf_file=None, start_action=None, parallel=False,
+                   minion_pub=None, minion_pem=None, minion_conf=None,
+                   keep_tmp=False, script_args=None, script_env=None,
+                   port_timeout=15, preseed_minion_keys=None,
+                   win_installer=None, master=None, **kwargs):
+    '''
+    Copy the install files to a remote Windows box, and execute them
+    '''
+    starttime = time.mktime(time.localtime())
+    log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
+    if wait_for_port(host=host, port=port, timeout=timeout):
+        log.debug('SMB port {0} on {1} is available'.format(port, host))
+        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        log.debug(
+            'Logging into {0}:{1} as {2}'.format(
+                host, port, username
+            )
+        )
+        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        creds = '-U {0}%{1} //{2}'.format(
+            username, password, host)
+        # Shell out to smbclient to create C:\salttmp\
+        win_cmd('smbclient {0}/c$ -c "cd temp; prompt; mput {1}; exit;"'.format(
+            creds, win_installer
+        ))
+        # Shell out to smbclient to copy over minion keys
+        ## minion_pub, minion_pem, minion_conf
+        # Shell out to smbclient to copy over win_installer
+        ## win_installer refers to a file such as:
+        ## Salt-Minion-0.16.3-win32-Setup.exe
+        ## ..which exists on the same machine as salt-cloud
+        # Shell out to winexe to execute win_installer
+        comps = win_installer.split('/')
+        installer = comps[-1]
+        win_cmd('winexe {0} -c "c:\\temp\\{1} /S /master={2} /minion-name={3}'.format(
+            creds, installer, master, name
+        ))
+        # Shell out to smbclient to deltree C:\salttmp\
+        ## Unless keep_tmp is True
+
+        # Fire deploy action
+        fire_event(name,
+                   '{0} has been deployed at {1}'.format(name, host),
+                   tag='salt.cloud.deploy_script')
+        return True
+    return False
+
+
+
+
 def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
                   deploy_command='/tmp/deploy.sh', sudo=False, tty=None,
@@ -392,7 +444,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   keep_tmp=False, script_args=None, script_env=None,
                   ssh_timeout=15, make_syndic=False, make_minion=True,
                   display_ssh_output=True, preseed_minion_keys=None,
-                  parallel=False):
+                  parallel=False, **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -776,6 +828,37 @@ def scp_file(dest_path, contents, kwargs):
         log.error(
             'Failed to upload file {0!r}: {1}\n'.format(
                 dest_path, err
+            ),
+            exc_info=True
+        )
+    # Signal an error
+    return 1
+
+
+def win_cmd(command, **kwargs):
+    '''
+    Wrapper for commands to be run against Windows boxes
+    '''
+    try:
+        proc = NonBlockingPopen(
+            command,
+            shell=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stream_stds=kwargs.get('display_ssh_output', True),
+        )
+        log.debug(
+            'Executing command(PID {0}): {1!r}'.format(
+                proc.pid, command
+            )
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        return proc.returncode
+    except Exception as err:
+        log.error(
+            'Failed to execute command {0!r}: {1}\n'.format(
+                command, err
             ),
             exc_info=True
         )

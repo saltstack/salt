@@ -352,6 +352,12 @@ def create(vm_):
             'make_minion', vm_, __opts__, default=True
         )
 
+        win_installer = config.get_config_value('win_installer', vm_, __opts__)
+        if win_installer:
+            deploy_kwargs['win_installer'] = win_installer
+            minion = saltcloud.utils.minion_config(__opts__, vm_)
+            deploy_kwargs['master'] = minion['master']
+
         # Store what was used to the deploy the VM
         ret['deploy_kwargs'] = deploy_kwargs
 
@@ -362,7 +368,12 @@ def create(vm_):
             {'kwargs': deploy_kwargs},
         )
 
-        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
+        # The following line is for future Python 3 compatibility
+        deployed = False
+        if win_installer:
+            deployed = saltcloud.utils.deploy_windows(**deploy_kwargs)
+        else:
+            deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
         else:
