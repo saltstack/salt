@@ -745,10 +745,7 @@ def format_call(fun,
             pass
 
     while args:
-        # Get arguments in reverse order since we also reverted their order in
-        # the enumeration above
-        arg = args.pop()
-
+        arg = args.pop(0)
         try:
             ret['args'].append(data.pop(arg))
         except KeyError:
