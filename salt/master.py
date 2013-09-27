@@ -167,10 +167,8 @@ class Master(SMaster):
         '''
         Create a salt master server instance
         '''
-        # Warn if ZMQ < 3
-        if (int(zmq.zmq_version()[0]) < 3 or
-                (int(zmq.zmq_version()[0]) == 3 and
-                 int(zmq.zmq_version()[2]) < 2)):
+        # Warn if ZMQ < 3.2
+        if zmq.zmq_version_info() < (3, 2):
             log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
                         'are known connection keep-alive issues with ZMQ < '
                         '3.2 which may result in loss of contact with '
