@@ -21,7 +21,7 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
     'BOOTSTRAP_SCRIPT_VERSION',
     # If no bootstrap-script version was provided from the environment, let's
     # provide the one we define.
-    'v1.5.7'
+    'v1.5.8'
 )
 
 if 'USE_SETUPTOOLS' in os.environ:
