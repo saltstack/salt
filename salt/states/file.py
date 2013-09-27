@@ -1340,6 +1340,7 @@ def recurse(name,
             group=None,
             dir_mode=None,
             file_mode=None,
+            sym_mode=None,
             template=None,
             context=None,
             defaults=None,
@@ -1349,6 +1350,8 @@ def recurse(name,
             include_pat=None,
             exclude_pat=None,
             maxdepth=None,
+            keep_symlinks=False,
+            force_symlinks=False,
             **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirectory
@@ -1384,6 +1387,9 @@ def recurse(name,
 
     file_mode
         The permissions mode to set any files created
+
+    sym_mode
+        The permissions mode to set on any symlink created
 
     template
         If this setting is applied then the named templating engine will be
@@ -1434,6 +1440,17 @@ def recurse(name,
                                 directory
           - maxdepth: 1      :: Only include files located in the source
                                 or immediate subdirectories
+
+    keep_symlinks
+        Keep symlinks when copying from the source. This option will cause
+        the copy operation to terminate at the symlink. If you are after
+        rsync-ish behavior, then set this to True.
+
+    force_symlinks
+        Force symlink creation. This option will force the symlink creation.
+        If a file or directory is obstructing symlink creation it will be
+        recursively removed so that symlink creation can proceed. This
+        option is usually not needed except in special circumstances.
     '''
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -1571,6 +1588,45 @@ def recurse(name,
             require=None)
         merge_ret(path, _ret)
 
+    # Process symlinks and return the updated filenames list
+    def process_symlinks(filenames, symlinks):
+        log.debug("keep in ps {0}".format(keep))
+        for lname, ltarget in symlinks.items():
+           if not _check_include_exclude(os.path.relpath(lname, srcpath),
+                                          include_pat,
+                                          exclude_pat):
+               continue
+           srelpath = os.path.relpath(lname, srcpath)
+           # Check for max depth
+           if maxdepth is not None:
+               srelpieces = srelname.split('/')
+               if not srelpieces[-1]:
+                   srelpieces = srelpieces[:-1]
+               if len(srelpieces) > maxdepth + 1:
+                   continue
+           # Check for all paths that begin with the symlink
+           # and axe it leaving only the dirs/files below it.
+           _filenames = filenames
+           for filename in _filenames:
+               if filename.startswith(lname):
+                   log.debug('** skipping file ** {0}, it intersects a symlink'.format(filename))
+                   filenames.remove(filename)
+           # Create the symlink along with the necessary dirs.
+           # The dir perms/ownership will be adjusted later
+           # if needed.
+           _ret = symlink(os.path.join(name, srelpath),
+                          ltarget,
+                          makedirs=True,
+                          force=force_symlinks,
+                          user=user,
+                          group=group,
+                          mode=sym_mode)
+           if not _ret:
+               continue
+           merge_ret(os.path.join(name,srelpath),_ret)
+           # Add the path to the keep set in case clean is set to True
+           keep.add(os.path.join(name, srelpath))
+        return filenames
     # If source is a list, find which in the list actually exists
     source, source_hash = __salt__['file.source_list'](source, '', env)
 
@@ -1581,7 +1637,13 @@ def recurse(name,
         #we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
-    for fn_ in __salt__['cp.list_master'](env, srcpath):
+    fns_ = __salt__['cp.list_master'](env, srcpath)
+    # If we are instructed to keep symlinks, then process them.
+    if keep_symlinks:
+        # Make this global so that emptydirs can use it if needed.
+        symlinks = __salt__['cp.list_master_symlinks'](env, srcpath)
+        fns_ = process_symlinks(fns_, symlinks)
+    for fn_ in fns_:
         if not fn_.strip():
             continue
 
@@ -1628,6 +1690,12 @@ def recurse(name,
                                           exclude_pat):
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
+            # Check for symlinks that happen to point to an empty dir.
+            if keep_symlinks:
+                for link in symlinks:
+                    if mdir.startswith(link, 0):
+                        log.debug('** skipping empty dir ** {0}, it intersects a symlink'.format(mdir))
+                    continue
             manage_directory(mdest)
             keep.add(mdest)
 
