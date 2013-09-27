@@ -34,7 +34,6 @@ import salt.utils
 from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-
 VIRT_STATE_NAME_MAP = {0: 'running',
                        1: 'running',
                        2: 'running',
@@ -431,7 +430,7 @@ def _qemu_image_info(path):
     for info, search in match_map.items():
         m = re.search(search, out)
         if m:
-           ret[info] = m.group(1)
+            ret[info] = m.group(1)
     return ret
 
 
@@ -563,7 +562,7 @@ def init(name,
     diskp = None
     disk_info = _get_image_info(hypervisor, name, **kwargs)
     seedable = False
-    if image: # with disk template image
+    if image:  # with disk template image
         # if image was used, assume only one disk, i.e. the
         # 'default' disk profile
         # TODO: make it possible to use disk profiles and use the
@@ -571,9 +570,9 @@ def init(name,
         diskp = _disk_profile('default', hypervisor)
         if hypervisor in ['esxi', 'vmware']:
             # TODO: we should be copying the image file onto the ESX host
-            raise SaltInvocationError('virt.init does not support image template '
-                                      'template in conjunction with esxi '
-                                      'hypervisor')
+            raise SaltInvocationError('virt.init does not support image '
+                                      'template template in conjunction '
+                                      'with esxi hypervisor')
         elif hypervisor in ['qemu', 'kvm']:
             img_dest = os.path.join(
                 img_dir,
@@ -592,14 +591,19 @@ def init(name,
     else: # no disk template image specified, create disks based on disk profile
         diskp = _disk_profile(disk, hypervisor)
         if hypervisor in ['qemu', 'kvm']:
-            # TODO: we should be creating disks in the local filesystem with qemu-img
-            raise SaltInvocationError('virt.init does not support disk profiles '
-                                      'in conjunction with qemu/kvm at this time, '
-                                      'use image template instead')
+            # TODO: we should be creating disks in the local filesystem with
+            # qemu-img
+            raise SaltInvocationError('virt.init does not support disk '
+                                      'profiles in conjunction with '
+                                      'qemu/kvm at this time, use image '
+                                      'template instead')
         else: # assume libvirt manages disks for us
             for disk in diskp:
                 for disk_name, args in disk.items():
-                    xml = _gen_vol_xml(name, disk_name, args['size'], hypervisor)
+                    xml = _gen_vol_xml(name,
+                                       disk_name,
+                                       args['size'],
+                                       hypervisor)
                     define_vol_xml_str(xml)
 
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
@@ -607,8 +611,10 @@ def init(name,
 
     if kwargs.get('seed') and seedable:
         install = kwargs.get('install', True)
-        __salt__['seed.apply'](img_dest, id_=name, config=kwargs.get('config'),
-                install=install)
+        __salt__['seed.apply'](img_dest,
+                               id_=name,
+                               config=kwargs.get('config'),
+                               install=install)
     elif kwargs.get('seed_cmd') and seedable:
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
     if start:
@@ -1735,12 +1741,11 @@ def vm_diskstats(vm_=None):
         # Do not use get_disks, since it uses qemu-img and is very slow
         # and unsuitable for any sort of real time statistics
         disks = get_disk_devs(vm_)
-        ret = {
-                'rd_req': 0,
-                'rd_bytes': 0,
-                'wr_req': 0,
-                'wr_bytes': 0,
-                'errs': 0
+        ret = {'rd_req': 0,
+               'rd_bytes': 0,
+               'wr_req': 0,
+               'wr_bytes': 0,
+               'errs': 0
                }
         for disk in disks:
             stats = dom.blockStats(disk)
