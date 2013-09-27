@@ -137,7 +137,7 @@ def list_nodes():
             'image_id': node['image_id'],
             'public_ips': str(node['ip_address']),
             'size_id': node['size_id'],
-            'status': str(node['status']),
+            'state': str(node['status']),
         }
     return ret
 
