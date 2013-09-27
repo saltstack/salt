@@ -2,10 +2,16 @@
 '''
 daemontools service module. This module will create daemontools type
 service watcher.
-This module is states.service compatible so it can be used to maintain
-service state via provider interface:
 
-  - provider: daemontools
+This module is compatible with the :mod:`service <salt.states.service>` states,
+so it can be used to maintain services using the ``provider`` argument:
+
+.. code-block:: yaml
+
+    myservice:
+      service:
+        - running
+        - provider: daemontools
 '''
 
 # Import python libs
@@ -144,13 +150,26 @@ def status(name, sig=None):
         salt '*' daemontools.status <service name>
     '''
     cmd = 'svstat {0}'.format(_service_path(name))
-    ret = __salt__['cmd.run_stdout'](cmd)
-    match = re.search(r'\(pid (\d+)\)', ret)
+    out = __salt__['cmd.run_stdout'](cmd)
     try:
-        pid = match.group(1)
-    except Exception:
+        pid = re.search(r'\(pid (\d+)\)', out).group(1)
+    except AttributeError:
         pid = ''
     return pid
+
+
+def available(name):
+    '''
+    Returns ``True`` if the specified service is available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' daemontools.available foo
+    '''
+    return name in get_all()
 
 
 def get_all():
