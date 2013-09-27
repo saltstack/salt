@@ -87,15 +87,16 @@ TAGPARTER = '/'  # name spaced tag delimeter
 SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
-    'auth': 'auth',  # prefix for all salt/auth events
-    'job': 'job',  # prefix for all salt/job events (minion jobs)
-    'key': 'key',  # prefix for all salt/key events
-    'minion': 'minion',  # prefix for all salt/minion events (minion sourced events)
-    'syndic': 'syndic',  # prefix for all salt/syndic events (syndic minion sourced events)
-    'run': 'run',  # prefix for all salt/run events (salt runners)
-    'wheel': 'wheel',  # prefix for all salt/wheel events
-    'cloud': 'cloud',  # prefix for all salt/cloud events
-    'fileserver': 'fileserver',  # prefix for all salt/fileserver events
+    # prefixes for all
+    'auth': 'auth',  # salt/auth events
+    'job': 'job',  # salt/job events (minion jobs)
+    'key': 'key',  # salt/key events
+    'minion': 'minion',  # salt/minion events (minion sourced events)
+    'syndic': 'syndic',  # salt/syndic events (syndic minion sourced events)
+    'run': 'run',  # salt/run events (salt runners)
+    'wheel': 'wheel',  # salt/wheel events
+    'cloud': 'cloud',  # salt/cloud events
+    'fileserver': 'fileserver',  # salt/fileserver events
 }
 
 
@@ -269,7 +270,8 @@ class SaltEvent(object):
 
         tagend = ''
         if len(tag) <= 20:  # old style compatible tag
-            tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
+            # pad with pipes '|' to 20 character length
+            tag = '{0:|<20}'.format(tag)
         else:  # new style longer than 20 chars
             tagend = TAGEND
 
@@ -278,13 +280,13 @@ class SaltEvent(object):
         return True
 
     def destroy(self):
-        if self.cpub is True and self.sub.closed is False:
+        if self.cpub and not self.sub.closed:
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() bellow will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
             self.sub.setsockopt(zmq.LINGER, 1)
             self.sub.close()
-        if self.cpush is True and self.push.closed is False:
+        if self.cpush and not self.push.closed:
             self.push.setsockopt(zmq.LINGER, 1)
             self.push.close()
         # If sockets are not unregistered from a poller, nothing which touches
@@ -292,18 +294,38 @@ class SaltEvent(object):
         # registered sockets and the Context
         if isinstance(self.poller.sockets, dict):
             for socket in self.poller.sockets.keys():
-                if socket.closed is False:
+                if not socket.closed:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()
                 self.poller.unregister(socket)
         else:
             for socket in self.poller.sockets:
-                if socket[0].closed is False:
+                if not socket[0].closed:
                     socket[0].setsockopt(zmq.LINGER, 1)
                     socket[0].close()
                 self.poller.unregister(socket[0])
-        if self.context.closed is False:
+        if not self.context.closed:
             self.context.term()
+
+    def _fire_events(self, tags, data, load):
+        '''
+        Helper function for fire_ret_load method
+        '''
+        self.fire_event(
+                data,
+                '{0}.{1}'.format(tags[0], tags[-1]))  # old dup event
+        data['jid'] = load['jid']
+        data['id'] = load['id']
+        data['success'] = False
+        data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
+        data['fun'] = load['fun']
+        data['user'] = load['user']
+        self.fire_event(data, tagify([load['jid'],
+                                      'sub',
+                                      load['id'],
+                                      'error',
+                                      load['fun']],
+                                      'job'))
 
     def fire_ret_load(self, load):
         '''
@@ -316,24 +338,8 @@ class SaltEvent(object):
                     for tag, data in load.get('return', {}).items():
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
-                        if data.get('result') is False:
-                            self.fire_event(
-                                    data,
-                                    '{0}.{1}'.format(tags[0], tags[-1]))  # old dup event
-                            data['jid'] = load['jid']
-                            data['id'] = load['id']
-                            data['success'] = False
-                            data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
-                            data['fun'] = load['fun']
-                            data['user'] = load['user']
-                            self.fire_event(
-                                data,
-                                tagify([load['jid'],
-                                        'sub',
-                                        load['id'],
-                                        'error',
-                                        load['fun']],
-                                       'job'))
+                        if not data.get('result'):
+                            self._fire_events(tags, data, load)
                 except Exception:
                     pass
 
@@ -420,13 +426,13 @@ class EventPublisher(Process):
                         continue
                     raise exc
         except KeyboardInterrupt:
-            if self.epub_sock.closed is False:
+            if not self.epub_sock.closed:
                 self.epub_sock.setsockopt(zmq.LINGER, 1)
                 self.epub_sock.close()
-            if self.epull_sock.closed is False:
+            if not self.epull_sock.closed:
                 self.epull_sock.setsockopt(zmq.LINGER, 1)
                 self.epull_sock.close()
-            if self.context.closed is False:
+            if not self.context.closed:
                 self.context.term()
 
 
@@ -552,7 +558,7 @@ class ReactWrap(object):
                     'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
                     exc_info=True
                     )
-            return ret
+            return False
         return ret
 
     def cmd(self, *args, **kwargs):
