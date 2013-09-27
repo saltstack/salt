@@ -83,6 +83,7 @@ Full list of builtin execution modules
     locate
     logrotate
     lxc
+    lxc_docker
     mac_group
     mac_user
     makeconf
