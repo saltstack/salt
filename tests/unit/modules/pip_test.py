@@ -979,7 +979,6 @@ class PipTestCase(TestCase):
             )
 
 
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PipTestCase, needs_daemon=False)
