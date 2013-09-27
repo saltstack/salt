@@ -78,10 +78,6 @@ class VirtualenvTest(integration.ModuleCase,
             '  virtualenv.managed:',
             '    - system_site_packages: False',
             '    - clear: false',
-            '    - mirrors:',
-            '      - http://g.pypi.python.org',
-            '      - http://c.pypi.python.org',
-            '      - http://pypi.crate.io',
             '    - requirements: salt://issue-2594-requirements.txt',
         ]
 

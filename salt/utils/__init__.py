@@ -5,6 +5,7 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
@@ -17,9 +18,9 @@ import random
 import re
 import shlex
 import shutil
-import string
 import socket
 import stat
+import string
 import subprocess
 import sys
 import tempfile
@@ -69,7 +70,7 @@ import salt.payload
 import salt.version
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
-    SaltClientError, CommandNotFoundError, SaltSystemExit
+    SaltClientError, CommandNotFoundError, SaltSystemExit, SaltInvocationError
 )
 
 
@@ -95,8 +96,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-#KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$", re.UNICODE) # python 3
-KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$")
+#KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$', re.UNICODE) # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -672,47 +673,169 @@ def build_whitespace_split_regex(text):
 
 
 def build_whitepace_splited_regex(text):
-    warnings.warn("The build_whitepace_splited_regex function is deprecated,"
-                  " please use build_whitespace_split_regex instead.",
+    warnings.warn('The build_whitepace_splited_regex function is deprecated,'
+                  ' please use build_whitespace_split_regex instead.',
                   DeprecationWarning)
     build_whitespace_split_regex(text)
 
 
-def format_call(fun, data):
+def format_call_defaults(function):
     '''
-    Pass in a function and a dict containing arguments to the function.
+    Build the default function call signature. Arguments will be the argument
+    names, keyword arguments will have it's default values set.
+    '''
+    args = []
+    kwargs = {}
 
-    A dict with the keys args and kwargs is returned
-    '''
-    ret = {}
-    ret['args'] = []
-    aspec = get_function_argspec(fun)
-    if aspec.keywords:
-        # This state accepts kwargs
-        ret['kwargs'] = {}
-        for key in data:
-            # Passing kwargs the conflict with args == traceback
-            if key in aspec.args:
-                continue
-            ret['kwargs'][key] = data[key]
+    aspec = get_function_argspec(function)
 
     try:
-        kwargs = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+        func_defaults = aspec.defaults[::-1]
     except TypeError:
-        # aspec.defaults is None
-        kwargs = {}
-    for arg in kwargs:
-        if arg in data:
-            kwargs[arg] = data[arg]
-    for arg in aspec.args:
-        if arg in kwargs:
-            ret['args'].append(kwargs[arg])
+        # There are no function defaults
+        func_defaults = []
+
+    for idx, arg in enumerate(aspec.args[::-1]):
+        try:
+            kwargs[arg] = func_defaults[idx]
+        except IndexError:
+            args.append(arg)
+
+    args.reverse()
+    return args, kwargs
+
+
+def format_call(fun,
+                data,
+                initial_ret=None,
+                expected_extra_kws=()):
+    '''
+    Build the required arguments and keyword arguments required for the passed
+    function.
+
+    :param fun: The function to get the argspec from
+    :param data: A dictionary containing the required data to build the
+                 arguments and keyword arguments.
+    :param initial_ret: The initial return data pre-populated as dictionary or
+                        None
+    :param expected_extra_kws: Any expected extra keyword argument names which
+                               should not trigger a :ref:`SaltInvocationError`
+    :returns: A dictionary with the function required arguments and keyword
+              arguments.
+    '''
+    ret = initial_ret is not None and initial_ret or {}
+
+    ret['args'] = []
+    ret['kwargs'] = {}
+
+    aspec = get_function_argspec(fun)
+
+    args, kwargs = format_call_defaults(fun)
+
+    # Since we WILL be changing the data dictionary, let's change a copy of it
+    data = data.copy()
+
+    missing_args = []
+
+    for key in kwargs.keys():
+        try:
+            kwargs[key] = data.pop(key)
+        except KeyError:
+            # Let's leave the default value in place
+            pass
+
+    while args:
+        # Get arguments in reverse order since we also reverted their order in
+        # the enumeration above
+        arg = args.pop()
+
+        try:
+            ret['args'].append(data.pop(arg))
+        except KeyError:
+            missing_args.append(arg)
+
+    if missing_args:
+        used_args_count = len(ret['args']) + len(args)
+        args_count = used_args_count + len(missing_args)
+        raise SaltInvocationError(
+            '{0} takes at least {1} argument{2} ({3} given)'.format(
+                fun.__name__,
+                args_count,
+                args_count > 1 and 's' or '',
+                used_args_count
+            )
+        )
+
+    ret['kwargs'].update(kwargs)
+
+    if aspec.keywords:
+        # The function accepts **kwargs, any non expected extra keyword
+        # arguments will made available.
+        for key, value in data.iteritems():
+            if key in expected_extra_kws:
+                continue
+            ret['kwargs'][key] = value
+
+        # No need to check for extra keyword arguments since they are all
+        # **kwargs now. Return
+        return ret
+
+    # Did not return yet? Lets gather any remaining and unexpected keyword
+    # arguments
+    extra = {}
+    for key, value in data.iteritems():
+        if key in expected_extra_kws:
+            continue
+        extra[key] = copy.deepcopy(value)
+
+    # We'll be showing errors to the users until salt 0.20 comes out, after
+    # which, errors will be raised instead.
+    warn_until(
+        (0, 20),
+        'It\'s time to start raising `SaltInvocationError` instead of '
+        'returning warnings',
+        # Let's not show the deprecation warning on the console, there's no
+        # need.
+        _dont_call_warnings=True
+    )
+
+    if extra:
+        # Found unexpected keyword arguments, raise an error to the user
+        if len(extra) == 1:
+            msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
+                extra.keys(),
+                ret.get(
+                    # In case this is being called for a state module
+                    'full',
+                    # Not a state module, build the name
+                    '{0}.{1}'.format(fun.__module__, fun.__name__)
+                )
+            )
         else:
-            try:
-                ret['args'].append(data[arg])
-            except KeyError:
-                # Bad arg match, can safely proceed
-                pass
+            '{0} and {1!r} are invalid keyword arguments for {2}'.format(
+                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
+                extra.keys()[-1],
+                ret.get(
+                    # In case this is being called for a state module
+                    'full',
+                    # Not a state module, build the name
+                    '{0}.{1}'.format(fun.__module__, fun.__name__)
+                )
+            )
+
+        # Return a warning to the user explaining what's going on
+        ret.setdefault('warnings', []).append(
+            '{0}. If you were trying to pass additional data to be used '
+            'in a template context, please populate \'context\' with '
+            '\'key: value\' pairs. Your approach will work until salt>=0.20.0 '
+            'is out.{1}'.format(
+                msg,
+                '' if 'full' not in ret else ' Please update your state files.'
+            )
+        )
+
+        # Lets pack the current extra kwargs as template context
+        ret.setdefault('context', {}).update(extra)
     return ret
 
 

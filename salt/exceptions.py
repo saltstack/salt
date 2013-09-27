@@ -59,7 +59,7 @@ class MinionError(SaltException):
     '''
 
 
-class SaltInvocationError(SaltException):
+class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
     arguments are specified on the command line

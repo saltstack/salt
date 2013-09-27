@@ -64,7 +64,7 @@ class StdTest(integration.ModuleCase):
         self.assertIn('minion', ret)
         self.assertEqual(
             ret['minion'],
-            {'ret': '"test.pong" is not available.', 'success': False}
+            {'ret': '\'test.pong\' is not available.', 'success': False}
         )
 
 
