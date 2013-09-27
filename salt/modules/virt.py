@@ -386,7 +386,7 @@ def _gen_vol_xml(vmname,
     '''
     Generate the XML string to define a libvirt storage volume
     '''
-    size = int(size) * 1024 # MB
+    size = int(size) * 1024  # MB
     disk_info = _get_image_info(hypervisor, vmname, **kwargs)
     data = '''
 <volume>
@@ -588,7 +588,8 @@ def init(name,
         else:
             log.error('unsupported hypervisor when handling disk image')
 
-    else: # no disk template image specified, create disks based on disk profile
+    else:
+        # no disk template image specified, create disks based on disk profile
         diskp = _disk_profile(disk, hypervisor)
         if hypervisor in ['qemu', 'kvm']:
             # TODO: we should be creating disks in the local filesystem with
@@ -597,7 +598,8 @@ def init(name,
                                       'profiles in conjunction with '
                                       'qemu/kvm at this time, use image '
                                       'template instead')
-        else: # assume libvirt manages disks for us
+        else:
+            # assume libvirt manages disks for us
             for disk in diskp:
                 for disk_name, args in disk.items():
                     xml = _gen_vol_xml(name,
