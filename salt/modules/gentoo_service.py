@@ -57,6 +57,20 @@ def get_disabled():
     return sorted(ret)
 
 
+def available(name):
+    '''
+    Returns ``True`` if the specified service is available, otherwise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.available sshd
+    '''
+    return name in get_all()
+
+
 def get_all():
     '''
     Return all available boot services
