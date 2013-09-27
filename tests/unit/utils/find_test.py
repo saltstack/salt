@@ -272,10 +272,10 @@ class TestFind(TestCase):
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
     def test_mtime_option_match(self):
-        option = salt.utils.find.MtimeOption('mtime', '1w')
+        option = salt.utils.find.MtimeOption('mtime', '-1w')
         self.assertEqual(option.match('', '', [1] * 9), False)
 
-        option = salt.utils.find.MtimeOption('mtime', '1s')
+        option = salt.utils.find.MtimeOption('mtime', '-1s')
         self.assertEqual(option.match('', '', [10 ** 10] * 9), True)
 
 
