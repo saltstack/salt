@@ -37,6 +37,8 @@ salt python package, or all files distributed from the ``salt/`` directory in
 the source distribution packages. The documentation contained under the
 ``doc/`` directory can be a part of this package but splitting out a doc
 package is preferred.
+Since salt-call is the entry point to utilize the libs and is useful for all
+salt packages it is included in the salt-common package.
 
 Name
 ~~~~
@@ -48,7 +50,9 @@ Files
 
 - `salt/*`
 - `man/salt.7`
+- `scripts/salt-call`
 - `tests/*`
+- `man/salt-call.1`
 
 Depends
 ~~~~~~~
