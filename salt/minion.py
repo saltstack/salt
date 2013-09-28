@@ -457,8 +457,11 @@ class Minion(object):
         '''
         Pass in the options dict
         '''
+
         # Warn if ZMQ < 3.2
-        if HAS_ZMQ and zmq.zmq_version_info() < (3, 2):
+        if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
+                        zmq.zmq_version_info() < (3, 2)):
+            # PyZMQ 2.1.9 does not have zmq_version_info
             log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
                         'are known connection keep-alive issues with ZMQ < '
                         '3.2 which may result in loss of contact with '
