@@ -61,6 +61,9 @@ configuration at ``/etc/salt/cloud.providers`` or
       user: myuser
       # The OpenStack keypair name
       ssh_key_name
+      # The OpenStack network UUIDs
+      networks:
+          - 4402cd51-37ee-435e-a966-8245956dc0e6
 
       provider: openstack
 
@@ -104,6 +107,7 @@ import pprint
 
 # Import libcloud
 from libcloud.compute.base import NodeState
+from libcloud.compute.drivers.openstack import OpenStackNetwork
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
@@ -373,6 +377,15 @@ def create(vm_):
 
         kwargs['ex_security_groups'] = [
             g for g in avail_groups if g.name in group_list
+        ]
+
+
+    networks = config.get_config_value(
+        'networks', vm_, __opts__, search_global=False
+    )
+    if networks is not None:
+        kwargs['networks'] = [
+            OpenStackNetwork(n, None, None, None) for n in networks
         ]
 
     saltcloud.utils.fire_event(
