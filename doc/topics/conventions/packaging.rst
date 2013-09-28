@@ -171,7 +171,7 @@ Name
 Files
 ~~~~~
 
-- `scripts/salt-minion`
+- `scripts/salt-ssh`
 - `man/salt-ssh.1`
 
 Depends
