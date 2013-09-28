@@ -1589,7 +1589,6 @@ def recurse(name,
 
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
-        log.debug('keep in ps {0}'.format(keep))
         for lname, ltarget in symlinks.items():
             if not _check_include_exclude(os.path.relpath(lname, srcpath),
                                           include_pat,
