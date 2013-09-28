@@ -2,7 +2,7 @@
 SaltStack Packaging Guide
 =========================
 
-Since Salt privides a powerful toolkit for system maangement and automation,
+Since Salt provides a powerful toolkit for system management and automation,
 the package can be spit into a number of sub-tools. While packaging Salt as
 a single package containing all components is perfectly acceptable, the split
 packages should follow this convention.
@@ -14,7 +14,7 @@ Release packages should always be built from the source tarball distributed via
 pypi. Release packages should *NEVER* use a git checkout as the source for
 distribution.
 
-Singe Package
+Single Package
 =============
 
 Shipping Salt as a single package, where the minion, master and all tools are
@@ -24,7 +24,7 @@ FreeBSD.
 Split Package
 =============
 
-Salt Should always be split in a standard way, with standard deps, this lowers
+Salt Should always be split in a standard way, with standard dependencies, this lowers
 cross distribution confusion about what components are going to be shipped with
 specific packages. These packages can be defined from the Salt Source as of
 Salt 0.17.0:
@@ -35,8 +35,8 @@ Salt Common
 The `salt-common` or `salt` package should contain the files provided by the
 salt python package, or all files distributed from the ``salt/`` directory in
 the source distribution packages. The documentation contained under the
-``doc/`` directory can be a part of this package but spliting out a doc
-package is prefered.
+``doc/`` directory can be a part of this package but splitting out a doc
+package is preferred.
 
 Name
 ~~~~
@@ -60,7 +60,7 @@ Depends
 Salt Master
 -----------
 
-The `salt-master` package contains the aplicable scripts, related man
+The `salt-master` package contains the applicable scripts, related man
 pages and init information for the given platform.
 
 Name
@@ -98,11 +98,11 @@ Salt Syndic
 -----------
 
 The Salt Syndic package can be rolled completely into the Salt Master package.
-Platforms which start servies as part of the package deployment need to
-maintain a seperate `salt-syndic` package(primarily Debian based platforms).
+Platforms which start services as part of the package deployment need to
+maintain a separate `salt-syndic` package (primarily Debian based platforms).
 
-The Syndic may optionally not dep the anything more than the Salt Master since
-the master will bring in all needed deps, but fall back to the platform
+The Syndic may optionally not depend on the anything more than the Salt Master since
+the master will bring in all needed dependencies, but fall back to the platform
 specific packaging guidelines.
 
 Name
@@ -131,7 +131,7 @@ Depends
 Salt Minion
 -----------
 
-The Minion Is a standalone package and should not be split beyond the
+The Minion is a standalone package and should not be split beyond the
 `salt-minion` and `salt-common` packages.
 
 Name
@@ -160,7 +160,7 @@ Depends
 Salt SSH
 --------
 
-Since Salt SSH does not require the same deps as the minion and master, it
+Since Salt SSH does not require the same dependencies as the minion and master, it
 should be split out.
 
 Name
@@ -183,7 +183,7 @@ Depends
 Salt Doc
 --------
 
-The documentation package is very distribution optional. A completly split
+The documentation package is very distribution optional. A completely split
 package will split out the documentation, but some platform conventions do not
 prefer this.
 If the documentation is not split out, it should be included with the
