@@ -6,6 +6,17 @@ Work with docker containers
 :maturity:      new
 :depends:       lxc-docker package
 :platform:      ubuntu
+
+:configuration: By default, Docker runs at on a unix socket at
+    ``unix:///var/run/docker.sock``. If you are running Docker on a TCP socket,
+    you can configure your minion to connect to the correct address in
+    ``/etc/salt/minion``.
+
+    .. code-block:: yaml
+
+        docker:
+          socket: tcp://10.10.10.10:4321
+
 '''
 
 # Import python libs
@@ -17,6 +28,8 @@ import salt.utils
 # Set up logging
 log = logging.getLogger(__name__)
 
+SOCKET = 'unix://var/run/docker.sock'
+
 
 def __virtual__():
     if not salt.utils.which('docker'):
@@ -27,6 +40,7 @@ def __virtual__():
         log.error('Unable to load docker module. ' +
                   'Please install the docker python library')
         return False
+    SOCKET = __salt__['config.option']('docker.socket', SOCKET)
     return 'docker'
 
 
@@ -35,7 +49,8 @@ def _docker_cli():
     Return a docker client
     '''
     import docker
-    cli = docker.Client(base_url='unix://var/run/docker.sock')
+
+    cli = docker.Client(base_url=SOCKET)
     return cli
 
 
@@ -57,7 +72,7 @@ def info():
         return version
     except APIError, e:
         log.error(e)
-        return [{'error': e.explanation}]
+        return {'error': e.explanation}
 
 
 def version():
@@ -76,6 +91,43 @@ def version():
     try:
         version = _docker_cli().version()
         return version
+    except APIError, e:
+        log.error(e)
+        return [{'error': e.explanation}]
+
+
+def images(name=None, ids_only=False, all=False):
+    '''
+    List docker images
+
+    :type name: string
+    :param name: A repository name to filter on
+
+    :type ids_only: boolean
+    :param ids_only: Only show image ids, returns a list of strings
+
+    :type all: boolean
+    :param all: Show all images
+
+    :rtype: list of dicts
+    :returns: Meta data about each image with created time,
+        Ex:
+        [{'Created': 1364102658,
+          'Id': u'b750fe792....'
+          'Repository': 'ubuntu',
+          'Size': 24653,
+          'Tag': '12.10',
+          'VirtualSize': 180116135}]
+
+    .. code-block::bash
+
+        salt '*' docker.images [name='name'] [ids_only] [all=(True|False)
+
+    '''
+    from docker import APIError
+    try:
+        images = _docker_cli().images(name=name, quiet=ids_only, all=all)
+        return images
     except APIError, e:
         log.error(e)
         return [{'error': e.explanation}]
@@ -105,7 +157,7 @@ def containers(all=False, limit=-1):
         return containers
     except APIError, e:
         log.error(e)
-        return {'error': e.explanation}
+        return [{'error': e.explanation}]
 
 
 def history(image):
@@ -148,19 +200,19 @@ def logs(container):
         salt '*' docker.logs <container>
 
     '''
-    cmd = 'docker logs {}'.format(container)
+    cmd = 'docker -H {} logs {}'.format(SOCKET, container)
 
     logs_result = __salt__['cmd.run']([cmd])
 
     return logs_result
 
 
-def stop(containers, timeout=10):
+def stop(container, timeout=10):
     '''
     Stop a running container
 
-    :type containers: string or list of strings
-    :param containers: The running container(s) to stop
+    :type container: string
+    :param container: The running container to stop
 
     :type timeout: int
     :param timeout: Time to wait in seconds before killing the container.
@@ -174,27 +226,24 @@ def stop(containers, timeout=10):
             [timeout=10]
 
     '''
-    cmd = 'docker stop'
+    cmd = 'docker -H {} stop '.format(SOCKET)
 
     if timeout > 0 and timeout != 10:
-        cmd += '-t {}'.format(timeout)
+        cmd += '-t {} '.format(timeout)
 
-    if type(containers) is list:
-        cmd += ' '.join(containers)
-    elif type(containers) is str:
-        cmd += containers
+    cmd += container
 
     stop_result = __salt__['cmd.run']([cmd])
 
     return stop_result
 
 
-def restart(containers, timeout=10):
+def restart(container, timeout=10):
     '''
     Restart a running container, but doesn't support attach options.
 
-    :type image: string or list of strings
-    :param image: The running container(s) to restart
+    :type container: string
+    :param container: The running container to restart
 
     :type timeout: int
     :param timeout: Time to wait in seconds before killing the container. Once
@@ -205,19 +254,15 @@ def restart(containers, timeout=10):
 
     .. code-block:: bash
 
-        salt '*' docker.restart <container> [container, container, ...] \\
-            [timeout=10]
+        salt '*' docker.restart <container> [timeout=10]
 
     '''
-    cmd = 'docker restart '
+    cmd = 'docker -H {} restart '.format(SOCKET)
 
     if timeout > 0 and timeout != 10:
-        cmd += '-t {}'.format(timeout)
+        cmd += '-t {} '.format(timeout)
 
-    if type(containers) is list:
-        cmd += ' '.join(containers)
-    elif type(containers) is str:
-        cmd += containers
+    cmd += container
 
     restart_result = __salt__['cmd.run']([cmd])
 
@@ -228,10 +273,10 @@ def start(container):
     '''
     Restart a stopped container, but doesn't support attach options.
 
-    :type image: string
-    :param image: The container to restart
+    :type container: string
+    :param container: The container to restart
 
-    :rtype: Boolean
+    :rtype: boolean
     :returns: True if the container started correctly
         False if there was an API error
 
@@ -249,28 +294,23 @@ def start(container):
         return False
 
 
-def kill(containers):
+def kill(container):
     '''
-    Kill a running container (or containers)
+    Kill a running container
 
-    :type containers: string or list of strings
-    :param containers: The container(s) to kill
+    :type container: string
+    :param container: The container to kill
 
     :rtype: string
     :returns: The stdout of the kill command
 
     .. code-block:: bash
 
-        salt '*' docker.kill <container> [container, container, ...]
+        salt '*' docker.kill <container>
 
     '''
 
-    cmd = 'docker kill '
-
-    if type(containers) is list:
-        cmd += ' '.join(containers)
-    elif type(containers) is str:
-        cmd += containers
+    cmd = 'docker -H {} kill {}'.format(SOCKET, container)
 
     kill_result = __salt__['cmd.run']([cmd])
 
@@ -447,7 +487,7 @@ def run(image,
                 [volumes_from=['/container/vol']] [cwd='/cwd/']
 
     '''
-    cmd = 'docker run -d '
+    cmd = 'docker -H {} run -d '.format(SOCKET)
 
     if cpus is not None and int(cpus) <= __grains__['num_cpus']:
         cmd += '-c {} '.format(cpus)
