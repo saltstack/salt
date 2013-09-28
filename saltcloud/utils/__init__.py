@@ -383,7 +383,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
 
 
 def deploy_windows(host, port=445, timeout=900, username='Administrator',
-                   password=None, name=None, pub_key=None, sock_dir=None, 
+                   password=None, name=None, pub_key=None, sock_dir=None,
                    conf_file=None, start_action=None, parallel=False,
                    minion_pub=None, minion_pem=None, minion_conf=None,
                    keep_tmp=False, script_args=None, script_env=None,
@@ -620,20 +620,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         deploy_command += ' -M'
                     if make_minion is False:
                         deploy_command += ' -N'
+                    if keep_tmp is True:
+                        deploy_command += ' -K'
                     if preseed_minion_keys is not None:
                         deploy_command += ' -k {0}'.format(
                             preseed_minion_keys_tempdir
                         )
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
-
-                if keep_tmp:
-                    # Pass the proper environment variable to the bootstrap
-                    # script to keep temporary files around
-                    if not script_env:
-                        script_env = {'BS_KEEP_TEMP_FILES': '1'}
-                    else:
-                        script_env['BS_KEEP_TEMP_FILES'] = '1'
 
                 if script_env:
                     if not isinstance(script_env, dict):
