@@ -783,7 +783,7 @@ def format_call(fun,
                 )
             )
         else:
-            '{0} and {1!r} are invalid keyword arguments for {2}'.format(
+            msg = '{0} and {1!r} are invalid keyword arguments for {2}'.format(
                 ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
                 extra.keys()[-1],
                 ret.get(
