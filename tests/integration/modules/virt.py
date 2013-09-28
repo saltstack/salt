@@ -4,17 +4,18 @@ Validate the virt module
 '''
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, requires_salt_modules
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 
-
+@requires_salt_modules('virt.get_profiles')
 class VirtTest(integration.ModuleCase):
     '''
     Test virt routines
     '''
+
     def test_default_kvm_profile(self):
         '''
         Test virt.get_profiles with the KVM profile

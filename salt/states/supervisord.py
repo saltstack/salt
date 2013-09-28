@@ -163,6 +163,7 @@ def running(name,
 
     is_stopped = None
 
+    process_type = None
     if name in process_groups:
         process_type = 'group'
 
@@ -184,7 +185,10 @@ def running(name,
 
     if is_stopped is False:
         if restart and not just_updated:
-            comment = 'Restarting {0}: {1}'.format(process_type, name)
+            comment = 'Restarting{0}: {1}'.format(
+                process_type is not None and ' {0}'.format(process_type) or '',
+                name
+            )
             log.debug(comment)
             result = __salt__['supervisord.restart'](
                 name,
@@ -195,20 +199,25 @@ def running(name,
             ret.update(_check_error(result, comment))
             changes.append(comment)
         elif just_updated:
-            comment = 'Not starting updated {0}: {1}'.format(
-                process_type, name
+            comment = 'Not starting updated{0}: {1}'.format(
+                process_type is not None and ' {0}'.format(process_type) or '',
+                name
             )
             result = comment
             ret.update({'comment': comment})
         else:
-            comment = 'Not starting already running {0}: {1}'.format(
-                process_type, name
+            comment = 'Not starting already running{0}: {1}'.format(
+                process_type is not None and ' {0}'.format(process_type) or '',
+                name
             )
             result = comment
             ret.update({'comment': comment})
 
     elif not just_updated:
-        comment = 'Starting {0}: {1}'.format(process_type, name)
+        comment = 'Starting{0}: {1}'.format(
+            process_type is not None and ' {0}'.format(process_type) or '',
+            name
+        )
         changes.append(comment)
         log.debug(comment)
         result = __salt__['supervisord.start'](
