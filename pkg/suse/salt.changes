@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Sat Sep 28 19:11:10 UTC 2013 - aboe76@gmail.com
+
+- Updated package following salt package guidelins:
+  https://github.com/saltstack/salt/blob/develop/doc/topics/conventions/packaging.rst
+- activated salt-testing for unit testing salt before releasing rpm
+- updated docs
+
+-------------------------------------------------------------------
 Thu Sep 19 17:18:06 UTC 2013 - aboe76@gmail.com
 
 - Updated 0.17.0 Feauture Release

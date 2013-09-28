@@ -46,22 +46,13 @@ BuildRequires:  python-pyzmq >= 2.1.9
 BuildRequires:  unzip
 Requires:       logrotate
 Requires:       python-Jinja2
-Requires:       python-M2Crypto
 Requires:       python-PyYAML
-Requires:       python-msgpack-python
-Requires:       python-pycrypto
-Requires:		python-GitPython
-Requires:		git
+Requires:       python-Sphinx
 Requires(pre): %fillup_prereq
 Requires(pre): %insserv_prereq
 %if 0%{?suse_version} >= 1210
 BuildRequires:  systemd
 %{?systemd_requires}
-%endif
-%ifarch %{ix86} x86_64
-%if 0%{?suse_version} && 0%{?sles_version} == 0
-Requires:       dmidecode
-%endif
 %endif
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version} && 0%{?suse_version} <= 1110
@@ -71,13 +62,14 @@ BuildArch:      noarch
 %endif
 
 ## Disabled for now python-mock issues
-#%%if 0%{?suse_version} != 1220 && 0%{?suse_version} != 1230
-##BuildRequires: python-unittest2
-##BuildRequires: python-salt-testing
-##BuildRequires: python-xml
-##BuildRequires: python-mock
-##BuildRequires: git
-#%%endif
+%if 0%{?suse_version} != 1220 && 0%{?suse_version} != 1230
+BuildRequires: python-unittest2
+BuildRequires: python-salt-testing
+BuildRequires: python-xml
+BuildRequires: python-mock
+BuildRequires: python-pip
+BuildRequires: git
+%endif
 
 %description
 Salt is a distributed remote execution system used to execute commands and
@@ -91,7 +83,18 @@ servers, handle them quickly and through a simple and manageable interface.
 Summary:        Management component for salt, a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
-Requires:       python-pyzmq >= 2.1.9
+Requires:		zeromq >= 3.2
+Requires:       python-pyzmq >= 2.10
+Requires:       python-M2Crypto
+Requires:       python-msgpack-python
+Requires:       python-pycrypto
+Requires:		python-GitPython
+Requires:		git
+%ifarch %{ix86} x86_64
+%if 0%{?suse_version} && 0%{?sles_version} == 0
+Requires:       dmidecode
+%endif
+%endif
 Recommends:		python-halite
 Requires(pre):  %fillup_prereq
 Requires(pre):  %insserv_prereq
@@ -105,7 +108,11 @@ than serially.
 Summary:        Client component for salt, a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
-Requires:       python-pyzmq >= 2.1.9
+Requires:		zeromq >= 3.2
+Requires:       python-pyzmq >= 2.10
+Requires:       python-M2Crypto
+Requires:       python-msgpack-python
+Requires:       python-pycrypto
 Requires(pre):  %fillup_prereq
 Requires(pre):  %insserv_prereq
 
@@ -156,6 +163,7 @@ mkdir -p %{buildroot}/%{_sysconfdir}/logrotate.d/
 mkdir -p %{buildroot}/%{_sbindir}
 mkdir -p %{buildroot}/var/log/salt
 mkdir -p %{buildroot}/srv/salt
+mkdir -p %{buildroot}/srv/pillar
 #
 ##init scripts
 install -Dpm 0755 %{SOURCE1} %{buildroot}%{_initddir}/salt-master
@@ -181,12 +189,11 @@ install -Dpm 0644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 ##SuSEfirewall2 file
 install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 
-## Disabled for now python-mock issues
-#%%if 0%{?suse_version} != 1220 && 0%{?suse_version} != 1230
-#%%check
-##export only_local_network=False
-#%%{__python} setup.py test --runtests-opts=-u
-#%%endif
+%if 0%{?suse_version} != 1220 && 0%{?suse_version} != 1230
+%check
+#export only_local_network=False
+%{__python} setup.py test --runtests-opts=-u
+%endif
 
 %preun -n salt-syndic
 %stop_on_removal salt-syndic
@@ -248,12 +255,12 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %files -n salt-ssh
 %defattr(-,root,root)
 %{_bindir}/salt-ssh
-%{_mandir}/man1/salt-ssh.1.*
+%{_mandir}/man1/salt-ssh.1.gz
 
 %files -n salt-syndic
 %defattr(-,root,root)
 %{_bindir}/salt-syndic
-%{_mandir}/man1/salt-syndic.1.*
+%{_mandir}/man1/salt-syndic.1.gz
 %{_sbindir}/rcsalt-syndic
 %{_sysconfdir}/init.d/salt-syndic
 %if 0%{?_unitdir:1}
@@ -263,9 +270,7 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %files -n salt-minion
 %defattr(-,root,root)
 %{_bindir}/salt-minion
-%{_bindir}/salt-call
-%{_mandir}/man1/salt-call.1.*
-%{_mandir}/man1/salt-minion.1.*
+%{_mandir}/man1/salt-minion.1.gz
 %{_sbindir}/rcsalt-minion
 %config(noreplace) %{_sysconfdir}/init.d/salt-minion
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/minion
@@ -281,27 +286,30 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
 %{_bindir}/salt-run
-%{_mandir}/man1/salt-master.1.*
-%{_mandir}/man1/salt.1.*
-%{_mandir}/man1/salt-cp.1.*
-%{_mandir}/man1/salt-key.1.*
-%{_mandir}/man1/salt-run.1.*
+%{_mandir}/man1/salt-master.1.gz
+%{_mandir}/man1/salt.1.gz
+%{_mandir}/man1/salt-cp.1.gz
+%{_mandir}/man1/salt-key.1.gz
+%{_mandir}/man1/salt-run.1.gz
 %{_sbindir}/rcsalt-master
 %config(noreplace) %{_sysconfdir}/init.d/salt-master
 %config(noreplace) %{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/master
 %{_sysconfdir}/salt/master.d
 %dir /srv/salt
+%dir /srv/pillar
 %if 0%{?_unitdir:1}
 %_unitdir/salt-master.service
 %endif
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE
+%doc LICENSE AUTHORS README.rst HACKING.rst
 %dir %{_sysconfdir}/salt
 %dir /var/log/salt
-%{_mandir}/man7/salt.7.*
+%{_bindir}/salt-call
+%{_mandir}/man1/salt-call.1.gz
+%{_mandir}/man7/salt.7.gz
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
 %{python_sitelib}/*
 
