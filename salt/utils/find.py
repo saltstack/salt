@@ -125,7 +125,7 @@ _FILE_TYPES = {'b': stat.S_IFBLK,
 
 _INTERVAL_REGEX = re.compile(r'''
                              ^\s*
-                             ([+-]?)
+                             (?P<modifier>[+-]?)
                              (?: (?P<week>   \d+ (?:\.\d*)? ) \s* [wW]  )? \s*
                              (?: (?P<day>    \d+ (?:\.\d*)? ) \s* [dD]  )? \s*
                              (?: (?P<hour>   \d+ (?:\.\d*)? ) \s* [hH]  )? \s*
@@ -138,8 +138,9 @@ _INTERVAL_REGEX = re.compile(r'''
 
 def _parse_interval(value):
     '''
-    Convert an interval string like 1w3d6h into the number of seconds and the
-    time resolution (1 unit of the smallest specified time unit).
+    Convert an interval string like 1w3d6h into the number of seconds, time
+    resolution (1 unit of the smallest specified time unit) and the modifier(
+    '+', '-', or '').
         w = week
         d = day
         h = hour
@@ -148,7 +149,7 @@ def _parse_interval(value):
     '''
     match = _INTERVAL_REGEX.match(str(value))
     if match is None:
-        raise ValueError('invalid time interval: "{0}"'.format(value))
+        raise ValueError('invalid time interval: {0!r}'.format(value))
 
     result = 0
     resolution = None
@@ -162,7 +163,7 @@ def _parse_interval(value):
             if resolution is None:
                 resolution = multiplier
 
-    return result, resolution, match.group(1)
+    return result, resolution, match.group('modifier')
 
 
 def _parse_size(value):
@@ -248,7 +249,8 @@ class InameOption(Option):
 
 
 class RegexOption(Option):
-    '''Match files with a case-sensitive regular expression.
+    '''
+    Match files with a case-sensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'regex', e.g. {'regex' : '.*\\.txt'}.
     '''
@@ -263,7 +265,8 @@ class RegexOption(Option):
 
 
 class IregexOption(Option):
-    '''Match files with a case-insensitive regular expression.
+    '''
+    Match files with a case-insensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'iregex', e.g. {'iregex' : '.*\\.txt'}.
     '''
