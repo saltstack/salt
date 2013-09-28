@@ -4,22 +4,13 @@ Validate the virt module
 '''
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, requires_salt_modules
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 
-# Import 3rd-party libs to check if the tests are to be skipped
-try:
-    import libvirt
-    HAS_LIBVIRT = True
-except ImportError:
-    HAS_LIBVIRT = False
-
-
-@skipIf(HAS_LIBVIRT is False, 'The libvirt module was not found')
+@requires_salt_modules('virt.get_profiles')
 class VirtTest(integration.ModuleCase):
     '''
     Test virt routines
