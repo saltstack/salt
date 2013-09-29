@@ -15,7 +15,7 @@ pypi. Release packages should *NEVER* use a git checkout as the source for
 distribution.
 
 Single Package
-=============
+==============
 
 Shipping Salt as a single package, where the minion, master and all tools are
 together is perfectly acceptable and practiced by distributions such as
