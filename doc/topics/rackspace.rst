@@ -66,7 +66,7 @@ that Salt Cloud has been built to support.
 Compute Region
 ==============
 
-Rackspace currently has four compute regions which may be used:
+Rackspace currently has five compute regions which may be used:
 
 .. code-block:: bash
 
@@ -74,6 +74,7 @@ Rackspace currently has four compute regions which may be used:
     ORD -> Chicago
     SYD -> Sydney
     LON -> London
+    IAD -> Northern Virginia
 
 Note: Currently the LON region is only avaiable with a UK account, and UK accounts cannot access other regions
 
@@ -86,7 +87,7 @@ Control Panel. The ``apikey`` will be labeled as API Key (and may need to be
 generated), and ``tenant`` will be labeled as Cloud Account Number.
 
 An initial profile can be configured in ``/etc/salt/cloud.profiles`` or 
-``/etc/salt/cloud.profiles.d/openstack.conf``:
+``/etc/salt/cloud.profiles.d/rackspace.conf``:
 
 
 * Using the old cloud configuration format:
@@ -105,7 +106,7 @@ An initial profile can be configured in ``/etc/salt/cloud.profiles`` or
 .. code-block:: yaml
 
     openstack_512:
-        provider: my-openstack-config
+        provider: my-rackspace-config
         size: 512MB Standard Instance
         image: Ubuntu 12.04 LTS (Precise Pangolin)
 
@@ -156,7 +157,7 @@ configuration please add:
 .. code-block:: yaml
 
     FreeBSD-9.0-512:
-      provider: my-openstack-config
+      provider: my-rackspace-config
       size: 512MB Standard Instance
       image: FreeBSD 9.0
       force_first_gen: True
