@@ -1,9 +1,11 @@
 # Import salt libs
 import integration
 
+# Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
+from salt.modules import lxc_docker as docker
 
 BASE_IMAGE = 'ubuntu'
 TEST_IMAGE = 'micahhausler/salt_int_test_container'
@@ -17,25 +19,30 @@ class DockerModuleTest(integration.ModuleCase):
     '''
 
     def __pull_test_image__(self):
-        self.run_function('docker.pull', repository=TEST_IMAGE)
+        kwargs = {'repository': TEST_IMAGE}
+        self.run_function('docker.pull', **kwargs)
 
     def __pull_test_image_list__(self):
         for image in MULTIPLE_IMAGES:
-            self.run_function('docker.pull', repository=image)
+            kwargs = {'repository': image}
+            self.run_function('docker.pull', **kwargs)
 
     def __remove_test_image_list__(self):
         for image in MULTIPLE_IMAGES:
-            self.run_function('docker.remove_image', image=image)
+            kwargs = {'image': image}
+            self.run_function('docker.remove_image', **kwargs)
 
     def __remove_test_image__(self):
-        self.run_function('docker.remove_image', image=TEST_IMAGE)
+        kwargs = {'image': TEST_IMAGE}
+        self.run_function('docker.remove_image', **kwargs)
 
     def setUp(self):
         super(DockerModuleTest, self).setUp()
         ret = self.run_function('cmd.has_exec', ['docker'])
         if not ret:
             self.skipTest('docker not installed')
-        self.run_function('docker.pull', repository=BASE_IMAGE)
+        kwargs = {'repository': BASE_IMAGE}
+        docker.pull(**kwargs)
 
     def tearDown(self):
         self.__remove_test_image__()
@@ -44,10 +51,11 @@ class DockerModuleTest(integration.ModuleCase):
         '''
         Tests that pulling an image works
         '''
-        result = self.run_function('docker.pull', repository=TEST_IMAGE)
+        kwargs = {'repository': TEST_IMAGE}
+        result = self.run_function('docker.pull', **kwargs)
 
-        if type(result) is not dict:
-            print result
+        #if type(result) is not dict:
+        #    print result
         self.assertTrue(type(result) is dict)
         self.assertTrue('progress' in result.keys())
         self.assertEqual(result['progress'], 'complete')
@@ -57,9 +65,9 @@ class DockerModuleTest(integration.ModuleCase):
         '''
         Assert that APIError is handled properly
         '''
-        bad_container = 'micahhausler/does_not_exist'
 
-        result = self.run_funciton('docker.pull', repository=bad_container)
+        kwargs = {'repository': 'micahhausler/does_not_exist'}
+        result = self.run_function('docker.pull', **kwargs)
 
         self.assertTrue(type(result) is dict)
         self.assertTrue('error' in result.keys())
@@ -80,7 +88,8 @@ class DockerModuleTest(integration.ModuleCase):
         Test that image ids are only returned
         '''
         self.__pull_test_image__()
-        result = self.run_function('docker.images', ids_only=True)
+        kwargs = {'ids_only': True}
+        result = self.run_function('docker.images', **kwargs)
         self.assertTrue(type(result) is list)
         self.assertTrue(len(result) > 0)
         self.assertTrue(type(result[0]) is str)
@@ -90,26 +99,34 @@ class DockerModuleTest(integration.ModuleCase):
         '''
         Test that run, list, and stop, start, restart, & kill work
         '''
-        self.__pull_test_image_list__
-        result = self.run_function('docker.run', image=MULTIPLE_IMAGES[0])
+        self.__pull_test_image_list__()
+        kwargs = {'image': MULTIPLE_IMAGES[0]}
+        result = self.run_function('docker.run', **kwargs)
 
         self.assertTrue(type(result) is str)
 
-        cont_ids = [cont['Id'] for cont in self.run_function('cli.containers')]
+        cont_ids = [cont['Id'] for
+                    cont in
+                    self.run_function('docker.containers')]
         rs = [True for id in cont_ids if id.startswith(result)]
         self.assertTrue(len(rs) > 0)
 
         result_stop = self.run_function('docker.stop', result)
         self.assertEqual(result, result_stop.strip())
 
-        result_start = self.run_function('docker.start', container=result)
+        kwargs = {'container': result}
+        result_start = self.run_function('docker.start', **kwargs)
         self.assertEqual(result, result_start.strip())
 
-        result_restart = self.run_function('docker.restart', container=result)
+        result_restart = self.run_function('docker.restart', **kwargs)
         self.assertEqual(result, result_restart.strip())
 
-        result_kill = self.run_function('docker.kill', container=result)
+        result_kill = self.run_function('docker.kill', **kwargs)
         self.assertEqual(result, result_kill.strip())
 
         # Tear down
         self.__remove_test_image_list__()
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(DockerModuleTest)
