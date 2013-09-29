@@ -218,11 +218,14 @@ The ``CHANGELOG.rst`` file should detail the individual versions, their
 release date and a set of bullet points for each version highlighting the
 overall changes in a given version of the formula.
 
-A sample skeleton for the ``CHANGELOG.rst` file:
+A sample skeleton for the `CHANGELOG.rst` file:
 
 :file:`CHANGELOG.rst`:
 
+.. code:: rest
+
     foo formula
+    ===========
 
     0.0.2 (2013-01-01)
 
