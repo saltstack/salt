@@ -66,6 +66,7 @@ configuration at ``/etc/salt/cloud.providers`` or
           - 4402cd51-37ee-435e-a966-8245956dc0e6
 
       provider: openstack
+      userdata_file: /tmp/userdata.txt
 
 Either a password or an API key must also be specified:
 
@@ -387,6 +388,14 @@ def create(vm_):
         kwargs['networks'] = [
             OpenStackNetwork(n, None, None, None) for n in networks
         ]
+
+    userdata_file = config.get_config_value(
+        'userdata_file', vm_, __opts__, search_global=False
+    )
+
+    if userdata_file is not None:
+        with salt.utils.fopen(userdata_file, 'r') as fp:
+            kwargs['ex_userdata'] = fp.read()
 
     saltcloud.utils.fire_event(
         'event',
