@@ -30,9 +30,8 @@ log = logging.getLogger(__name__)
 
 # We make a tuple, Docker's CLI likes 3 slashes, python API likes 2 slashes
 DEFAULT_SOCKET = ('unix:///var/run/docker.sock', 'unix://var/run/docker.sock')
-CLI_SOCKET = 'docker -H {}'.format(
-        __salt__['config.option']('docker.socket', DEFAULT_SOCKET[0]))
-API_SOCKET = __salt__['config.option']('docker.socket', DEFAULT_SOCKET[1])
+CLI_SOCKET = DEFAULT_SOCKET[0]
+API_SOCKET = DEFAULT_SOCKET[1]
 
 
 def __virtual__():
@@ -44,6 +43,9 @@ def __virtual__():
         log.error('Unable to load docker module. ' +
                   'Please install the docker python library')
         return False
+    CLI_SOCKET = 'docker -H {}'.format(
+            __salt__['config.option']('docker.socket', DEFAULT_SOCKET[0]))
+    API_SOCKET = __salt__['config.option']('docker.socket', DEFAULT_SOCKET[1])
     return 'docker'
 
 
@@ -319,7 +321,7 @@ def kill(container):
     return kill_result
 
 
-def pull(repository, tag=None, registry=None):
+def pull(repository, tag=None):
     '''
     Pull an image or a repository from the docker registry server
 
@@ -329,16 +331,13 @@ def pull(repository, tag=None, registry=None):
     :type tag: string
     :param tag: The specific tag of the image in the repository
 
-    :type registry: string
-    :param registry: The registry to connect to
-
     :rtype: dict
     :returns: a dict of the last status message
         ex: ``{"status":"Download","progress":"complete","id":"abcdef012345"}``
 
     .. code-block:: bash
 
-        salt '*' docker.pull <repository> [tag=tag] [registry=registry]
+        salt '*' docker.pull <repository> [tag=tag]
 
     '''
 
@@ -346,7 +345,7 @@ def pull(repository, tag=None, registry=None):
     import json
     try:
         cli = _docker_cli()
-        progress = cli.pull(repository=repository, tag=tag, registry=registry)
+        progress = cli.pull(repository=repository, tag=tag)
         last_item = progress[progress.rfind('{'):len(progress)]
         status = json.loads(last_item)
         return status
