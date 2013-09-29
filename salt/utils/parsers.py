@@ -1561,7 +1561,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Set the number of concurrent minions to communicate with. '
                  'This value defines how many processes are opened up at a '
                  'time to manage connections, the more running processes the '
-                 'faster communication should be, default is 5')
+                 'faster communication should be, default is 25')
         self.add_option(
             '--passwd',
             dest='ssh_passwd',
