@@ -14,7 +14,8 @@ identify which systems need to be targeted for execution.
 
 Since the roster system is pluggable, it can be easily augmented to attach to
 any existing systems to gather information about what servers are presently
-available and should be attached to by ``salt-ssh``.
+available and should be attached to by ``salt-ssh``. By default the roster
+file is located at /etc/salt/roster.
 
 How Rosters Work
 ================
