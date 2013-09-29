@@ -164,7 +164,6 @@ from stomping over the bootstrapping you can add the below to your profiles.
         image: Ubuntu 12.04 LTS (Precise Pangolin)
         managedcloud: True
 
-
 First and Next Generation Images
 --------------------------------
 
