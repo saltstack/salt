@@ -15,7 +15,7 @@ Work with docker containers
     .. code-block:: yaml
 
         docker:
-          socket: tcp://10.10.10.10:4321
+          socket: tcp://127.0.0.1:4321
 
 '''
 
@@ -28,7 +28,11 @@ import salt.utils
 # Set up logging
 log = logging.getLogger(__name__)
 
-SOCKET = 'unix://var/run/docker.sock'
+# We make a tuple, Docker's CLI likes 3 slashes, python API likes 2 slashes
+DEFAULT_SOCKET = ('unix:///var/run/docker.sock', 'unix://var/run/docker.sock')
+CLI_SOCKET = 'docker -H {}'.format(
+        __salt__['config.option']('docker.socket', DEFAULT_SOCKET[0]))
+API_SOCKET = __salt__['config.option']('docker.socket', DEFAULT_SOCKET[1])
 
 
 def __virtual__():
@@ -40,17 +44,15 @@ def __virtual__():
         log.error('Unable to load docker module. ' +
                   'Please install the docker python library')
         return False
-    SOCKET = __salt__['config.option']('docker.socket', SOCKET)
     return 'docker'
 
 
 def _docker_cli():
     '''
-    Return a docker client
+    Return a docker connnection client
     '''
     import docker
-
-    cli = docker.Client(base_url=SOCKET)
+    cli = docker.Client(base_url=API_SOCKET)
     return cli
 
 
@@ -200,7 +202,7 @@ def logs(container):
         salt '*' docker.logs <container>
 
     '''
-    cmd = 'docker -H {} logs {}'.format(SOCKET, container)
+    cmd = '{} logs {}'.format(CLI_SOCKET, container)
 
     logs_result = __salt__['cmd.run']([cmd])
 
@@ -226,7 +228,7 @@ def stop(container, timeout=10):
             [timeout=10]
 
     '''
-    cmd = 'docker -H {} stop '.format(SOCKET)
+    cmd = '{} stop '.format(CLI_SOCKET)
 
     if timeout > 0 and timeout != 10:
         cmd += '-t {} '.format(timeout)
@@ -257,7 +259,7 @@ def restart(container, timeout=10):
         salt '*' docker.restart <container> [timeout=10]
 
     '''
-    cmd = 'docker -H {} restart '.format(SOCKET)
+    cmd = '{} restart '.format(CLI_SOCKET)
 
     if timeout > 0 and timeout != 10:
         cmd += '-t {} '.format(timeout)
@@ -310,7 +312,7 @@ def kill(container):
 
     '''
 
-    cmd = 'docker -H {} kill {}'.format(SOCKET, container)
+    cmd = '{} kill {}'.format(CLI_SOCKET, container)
 
     kill_result = __salt__['cmd.run']([cmd])
 
@@ -487,7 +489,7 @@ def run(image,
                 [volumes_from=['/container/vol']] [cwd='/cwd/']
 
     '''
-    cmd = 'docker -H {} run -d '.format(SOCKET)
+    cmd = '{} run -d '.format(CLI_SOCKET)
 
     if cpus is not None and int(cpus) <= __grains__['num_cpus']:
         cmd += '-c {} '.format(cpus)
