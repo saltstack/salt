@@ -574,6 +574,7 @@ def init(name,
                                       'template template in conjunction '
                                       'with esxi hypervisor')
         elif hypervisor in ['qemu', 'kvm']:
+            img_dir = __salt__['config.option']('virt.images')
             img_dest = os.path.join(
                 img_dir,
                 name,
