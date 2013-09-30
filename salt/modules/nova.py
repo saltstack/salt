@@ -75,14 +75,23 @@ def _auth(profile=None):
         password = credentials['keystone.password']
         tenant = credentials['keystone.tenant']
         auth_url = credentials['keystone.auth_url']
+        region_name = credentials.get('keystone.region_name', None)
     else:
         user = __salt__['config.option']('keystone.user')
         password = __salt__['config.option']('keystone.password')
         tenant = __salt__['config.option']('keystone.tenant')
         auth_url = __salt__['config.option']('keystone.auth_url')
-    return client.Client(
-        user, password, tenant, auth_url, service_type="compute"
-    )
+        region_name = __salt__['config.option']('keystone.region_name')
+    kwargs = {
+        'username': user,
+        'api_key': password,
+        'project_id': tenant,
+        'auth_url': auth_url,
+        'service_type': 'compute',
+    }
+    if region_name:
+        kwargs['region_name'] = region_name
+    return client.Client(**kwargs)
 
 
 def boot(name, flavor_id=0, image_id=0, profile=None):
