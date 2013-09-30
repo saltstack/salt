@@ -250,7 +250,7 @@ def merge_auth_bits():
     return config
 
 
-def get_containers(all=True, trunc=False):
+def get_containers(all=True, trunc=False, since=None, before=None, limit=-1):
     '''
     Get a list of mappings representing all containers
 
@@ -265,7 +265,11 @@ def get_containers(all=True, trunc=False):
     '''
     client = get_client()
     status = base_status.copy()
-    ret = client.containers(all=all, trunc=trunc)
+    et = client.containers(all=all,
+                           trunc=trunc,
+                           since=since,
+                           before=before,
+                           limit=limit)
     if ret:
         valid(status, comment='All containers in out', out=ret)
     else:
@@ -441,7 +445,8 @@ def create_container(image,
     volumes
         list of volumes mapping::
 
-            ({'/mountpoint/contained/foo:/host/foo'})
+            (['/mountpoint/in/container:/guest/foo',
+              '/same/path/mounted/point'])
 
     tty
         attach ttys
@@ -449,10 +454,30 @@ def create_container(image,
         let stdin open
     volumes_from
         container to get volumes definition from
+
+    EG:
+
+        salt-call lxcdocker.create_container o/ubuntu volumes="['/s','/m:/f']"
+
+
     '''
     status = base_status.copy()
     client = get_client()
     try:
+        mountpoints = {}
+        binds = {}
+        # create empty mountpoints for them to be
+        # editable
+        # either we have a list of guest or host:guest
+        if isinstance(volumes, list):
+            for mountpoint in volumes:
+                mounted = mountpoint
+                if ':' in mountpoint:
+                    parts = mountpoint.split(':')
+                    mountpoint = parts[1]
+                    mounted = parts[0]
+                mountpoints[mountpoint] = {}
+                binds[mounted] = mountpoint
         info = client.create_container(
             image=image,
             command=command,
@@ -465,10 +490,12 @@ def create_container(image,
             ports=ports,
             environment=environment,
             dns=dns,
-            volumes=volumes,
+            volumes=mountpoints,
             volumes_from=volumes_from,
         )
         container = info['Id']
+        kill(container)
+        start(container, binds=binds)
         valid(status,
               id=container,
               comment='Container created',
