@@ -243,7 +243,7 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
 Watch In
 --------
 
-Watch in functions the same was as require in, but applies a watch statement
+Watch in functions the same as require in, but applies a watch statement
 rather than a require statement to the external state declaration.
 
 Prereq In
