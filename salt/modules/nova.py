@@ -11,6 +11,8 @@ Module for handling openstack nova calls.
         keystone.password: verybadpass
         keystone.tenant: admin
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        # Optional
+        keystone.region_name: 'regionOne'
 
     If configuration for multiple openstack accounts is required, they can be
     set up as different configuration profiles:
