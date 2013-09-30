@@ -495,12 +495,20 @@ class Cloud(object):
                 print('Did not delete {0!r}'.format(filename))
                 break
 
-        if names:
+        if names and not processed:
             # These machines were asked to be destroyed but could not be found
-            ret['Not Found'] = names
+            raise SaltCloudSystemExit(
+                'The following VM\'s were not found: {0}'.format(
+                    ', '.join(names)
+                )
+            )
 
-        if not processed:
+        elif names and processed:
+            processed['Not Found'] = names
+
+        elif not processed:
             raise SaltCloudSystemExit('No machines were destroyed!')
+
         return processed
 
     def reboot(self, names):
