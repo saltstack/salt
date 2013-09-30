@@ -2,10 +2,9 @@
 '''
 Work with docker containers
 
-:maintainer:    Micah Hausler <micah.hausler@gmail.com>
 :maturity:      new
 :depends:       lxc-docker package
-:platform:      ubuntu
+:platform:      Linux kernel 3.8 or above
 
 :configuration: By default, Docker runs at on a unix socket at
     ``unix:///var/run/docker.sock``. If you are running Docker on a TCP socket,
@@ -352,6 +351,9 @@ def pull(repository, tag=None):
     except APIError, e:
         log.error(e)
         return {'error': e.explanation}
+    except ValueError, e:
+        log.error(e)
+        return {'error': 'JSON could not load'}
 
 
 def remove_container(container, remove_vols=False):
