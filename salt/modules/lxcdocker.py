@@ -100,10 +100,7 @@ You have those methods:
     - logs
     - diff
     - commit
-
-    TODO:
     - create_container
-    - create_container_from_config
     - export
 
 Runtime execution within a specific container
@@ -409,6 +406,40 @@ def diff(container):
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
+
+
+def export(container, path):
+    '''
+    Export a container to a file
+    container
+        container id
+    path
+        path to the export
+    '''
+
+    try:
+        ppath = os.path.abspath(path)
+        fic = open(ppath, 'w')
+        status = base_status.copy()
+        client = get_client()
+        response = client.export(get_container_infos(container)['id'])
+        try:
+            byte = response.read(4096)
+            fic.write(byte)
+            while byte != "":
+                # Do stuff with byte.
+                byte = response.read(4096)
+                fic.write(byte)
+        finally:
+            fic.flush()
+            fic.close()
+        valid(status,
+              id=container, out=ppath,
+              comment='Exported to {0}'.format(ppath))
+    except Exception:
+        invalid(status, id=container, out=traceback.format_exc())
+    return status
+
 
 
 def create_container(image,
@@ -897,12 +928,6 @@ def top(container):
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
-
-
-def export(container):
-    client = get_client()
-    dcontainer = get_container_infos(container)['id']
-    return client.export(dcontainer)
 
 
 def inspect_container(container):
