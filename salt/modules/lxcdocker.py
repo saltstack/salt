@@ -129,14 +129,23 @@ import json
 import os
 import traceback
 
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
-import docker
+try:
+    import docker
+    HAS_DOCKER = True
+except ImportError:
+    HAS_DOCKER = False
+
+import logging
 
 try:
     from collections import OrderedDict
 except:
     from ordereddict import OrderedDict
+
+salt_log = logging.getLogger(__name__)
 
 INVALID_RESPONSE = 'We did not get any expectable answer from docker'
 VALID_RESPONSE = ''
@@ -147,6 +156,11 @@ base_status = {
     'comment': '',
     'out': None
 }
+
+
+def __virtual__():
+    if HAS_DOCKER:
+        return 'docker'
 
 
 def sizeof_fmt(num):
@@ -470,6 +484,10 @@ def create_container(image,
 def version():
     '''
     Get docker version
+
+    .. code-block:: bash
+
+        salt '*' docker.version
     '''
     status = base_status.copy()
     client = get_client()
@@ -483,7 +501,15 @@ def version():
 
 def info():
     '''
-    Get docker info
+    Get the version information about docker
+
+    :rtype: dict
+    :returns: A status message with the command output
+
+    .. code-block:: bash
+
+        salt '*' docker.info
+
     '''
     status = base_status.copy()
     client = get_client()
@@ -521,15 +547,20 @@ def port(container, private_port):
 
 def stop(container, timeout=10):
     '''
-    Stop the specified container
-    container
-        Container id
-    timeout
-        Honour a timeout to let container exit gracefully
+    Stop a running container
+
+    :type container: string
+    :param container: The container id to stop
+
+    :type timout: int
+    :param timeout: Wait for a timeout to let the container exit gracefully
         before killing it
-    Returns the status mapping as usual:
-        {'id': id of the container,
-         'status': True if stopped }
+
+    :rtype: dict
+    :returns: A status message with the command output
+          ex:
+            {'id': 'abcdef123456789',
+           'status': True}
 
     '''
     client = get_client()
@@ -562,12 +593,17 @@ def stop(container, timeout=10):
 
 def kill(container):
     '''
-    Kill the specified container
-    container
-        Container id
-    Returns the status mapping as usual
-         {'id': id of the container,
-          'status': True if stopped }
+    Kill a running container
+
+    :type container: string
+    :param container: The container id to kill
+
+    :rtype: dict
+    :returns: A status message with the command output
+          ex:
+            {'id': 'abcdef123456789',
+           'status': True}
+
     '''
     client = get_client()
     status = base_status.copy()
@@ -603,15 +639,21 @@ def kill(container):
 
 def restart(container, timeout=10):
     '''
-    restart the specified container
-    container
-        Container id
-    timeout
-        Honour a timeout to let container exit gracefully
+    Restart a running container
+
+    :type container: string
+    :param container: The container id to restart
+
+    :type timout: int
+    :param timeout: Wait for a timeout to let the container exit gracefully
         before killing it
-    Returns the status mapping as usual
-          {'id': id of the container,
-           'status': True if stopped }
+
+    :rtype: dict
+    :returns: A status message with the command output
+          ex:
+            {'id': 'abcdef123456789',
+           'status': True}
+
     '''
     client = get_client()
     status = base_status.copy()
@@ -709,10 +751,17 @@ def wait(container):
 
 def exists(container):
     '''
-    Does the container exists
-    container
-        Container id
-    Return boolean
+    Check if a given container exists
+
+    :type container: string
+    :param container: Container id
+
+    :rtype: boolean:
+
+    .. code-block:: bash
+
+        salt '*' docker.exists <container>
+
     '''
     try:
         get_container_infos(container)
@@ -831,13 +880,18 @@ def export(container):
 
 def inspect_container(container):
     '''
-    Get container informations
-    This is something like the docker inspect command
+    Get container information. This is similar to the docker inspect command.
 
-    container
-        Container id
+    :type container: string
+    :param container: The id of the container to inspect
 
-    Returns mapping
+    :rtype: dict
+    :returns: A status message with the command output
+
+    .. code-block:: bash
+
+        salt '*' docker.inspect_container <container>
+
     '''
     status = base_status.copy()
     status['id'] = container
@@ -864,8 +918,13 @@ def search(term):
     '''
     Search for an image on the registry
 
-    term
-        search keyword
+    :type term: string
+    :param term: The search keyword to query
+
+    .. code-block:: bash
+
+        salt '*' docker.search <term>
+
     '''
     client = get_client()
     status = base_status.copy()
@@ -926,12 +985,19 @@ def import_image(src, repo, tag=None):
     '''
     Import content from a local tarball or an url to a docker image
 
-    src
-        content to import (URL, absolute path to a tarball)
-    repo
-        repository to import to
-    tag
-        optional tag to set
+    :type src: string
+    :param src: The content to import (URL, absolute path to a tarball)
+
+    :type repo: string
+    :param repo: The repository to import to
+
+    :type tag: string
+    :param tag: An optional tag to set
+
+    .. code-block:: bash
+
+        salt '*' docker.import_image <src> <repo> [tag]
+
     '''
     client = get_client()
     status = base_status.copy()
@@ -954,6 +1020,26 @@ def import_image(src, repo, tag=None):
 
 
 def tag(image, repository, tag=None, force=False):
+    '''
+    Tag an image into a repository
+
+    :type image: string
+    :param image: The image to tag
+
+    :type repository: string
+    :param repository: The repository to tag the image
+
+    :type tag: string
+    :param tag: The tag to apply
+
+    :type force: boolean
+    :param force: Forces application of the tag
+
+    .. code-block:: bash
+    
+        salt '*' docker.tag <image> <repository> [tag] [force=(True|False)]
+
+    '''
     client = get_client()
     status = base_status.copy()
     try:
@@ -978,6 +1064,26 @@ def tag(image, repository, tag=None, force=False):
 
 
 def get_images(name=None, quiet=False, all=True):
+    '''
+    List docker images
+
+    :type name: string
+    :param name: A repository name to filter on
+
+    :type quiet: boolean
+    :param quiet: Only show image ids
+
+    :type all: boolean
+    :param all: Show all images
+
+    :rtype: dict
+    :returns: A status message with the command output
+
+    .. code-block:: bash
+    
+        salt '*' docker.get_images [name] [quiet=(True|False)] [all=(True|False)
+
+    '''
     client = get_client()
     status = base_status.copy()
     try:
@@ -1033,6 +1139,20 @@ def build(path=None,
 
 
 def remove_image(image):
+    '''
+    Remove an image from a system.
+    
+    :type image: string
+    :param image: The image to remove
+
+    :rtype: string
+    :returns: A status message.
+
+    .. code-block:: bash
+
+        salt '*' docker.remove_image <image>
+
+    '''
     client = get_client()
     status = base_status.copy()
     # will raise an error if no deletion
@@ -1152,11 +1272,11 @@ def pull_assemble_error_status(status, ret, logs):
 
 def pull(repo, tag=None):
     '''
-    Pulls an image from any registry
-    See this top level documentation to know
-    how to configure authenticated access
+    Pulls an image from any registry. See above documentation for
+    how to configure authenticated access.
 
-    repo
+    :type repo: string
+    :param repo: The repository to pull. \
         [registryurl://]REPOSITORY_NAME_image
         eg::
 
@@ -1164,39 +1284,52 @@ def pull(repo, tag=None):
             superaddress.cdn:MyRepo/image
             MyRepo/image
 
-    Return something like that::
-        ----------
-        comment:
-            Image NAME was pulled (ID
-        id:
-            None
-        out:
+    :type tag: string
+    :param tag: The specific tag  to pull
+
+    :rtype: dict
+    :returns: A status message with the command output
+        Example:
+
+        .. code-block:: yaml
+
             ----------
-            - id:
-                2c80228370c9
-            - progress:
-                complete
-            - status:
-                Download
-            ----------
-            - id:
-                2c80228370c9
-            - progress:
-                image (latest) from NAME, endpoint: URL
-            - status:
-                Pulling
-            ----------
-            - id:
-                2c80228370c9
-            - progress:
-                image (latest) from foo/ubuntubox
-            - status:
-                Pulling
-            ----------
-            - status:
-                Pulling repository foo/ubuntubox
-        status:
-            True
+            comment:
+                Image NAME was pulled (ID
+            id:
+                None
+            out:
+                ----------
+                - id:
+                    2c80228370c9
+                - progress:
+                    complete
+                - status:
+                    Download
+                ----------
+                - id:
+                    2c80228370c9
+                - progress:
+                    image (latest) from NAME, endpoint: URL
+                - status:
+                    Pulling
+                ----------
+                - id:
+                    2c80228370c9
+                - progress:
+                    image (latest) from foo/ubuntubox
+                - status:
+                    Pulling
+                ----------
+                - status:
+                    Pulling repository foo/ubuntubox
+            status:
+                True
+
+    .. code-block:: bash
+        
+        salt '*' docker.pull <repository> [tag]
+
     '''
     client = get_client()
     status = base_status.copy()
