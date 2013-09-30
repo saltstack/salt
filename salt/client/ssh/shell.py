@@ -130,7 +130,7 @@ class Shell(object):
         '''
         if self.passwd and salt.utils.which('sshpass'):
             opts = self._passwd_opts()
-            return 'sshpass -p {0} {1} {2} {3} {4} {5}'.format(
+            return 'sshpass -p "{0}" {1} {2} {3} {4} {5}'.format(
                     self.passwd,
                     ssh,
                     '' if ssh == 'scp' else self.host,
