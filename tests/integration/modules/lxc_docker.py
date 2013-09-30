@@ -9,9 +9,8 @@ from salt.modules import lxc_docker as docker
 
 BASE_IMAGE = 'ubuntu'
 TEST_IMAGE = 'micahhausler/salt_int_test_container'
-MULTIPLE_IMAGES = ['micahhausler/salt_int_test_2:p8080',
-                   'micahhausler/salt_int_test_2:p9090']
-
+MULTIPLE_IMAGES = ['micahhausler/salt_int_test_2',
+                   'micahhausler/salt_int_test_container']
 
 class DockerModuleTest(integration.ModuleCase):
     '''
