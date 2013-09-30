@@ -1530,7 +1530,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'raw shell command')
         )
         self.add_option(
-            '--ssh-priv',
+            '--priv',
             dest='ssh_priv',
             help=('Ssh private key file'))
         self.add_option(
