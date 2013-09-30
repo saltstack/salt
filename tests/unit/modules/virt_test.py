@@ -72,7 +72,8 @@ class VirtTestCase(TestCase):
             self.assertEqual(eth0['bridge'], 'br0')
             self.assertEqual(eth0['model'], 'virtio')
 
-    @skipIf(sys.hexversion < 0x02070000, 'ElementTree version 1.3 required')
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
     def test_gen_xml_for_kvm_default_profile(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -92,7 +93,8 @@ class VirtTestCase(TestCase):
         self.assertTrue(len(tree.findall('.//disk')) == 1)
         self.assertTrue(len(tree.findall('.//interface')) == 1)
 
-    @skipIf(sys.hexversion < 0x02070000, 'ElementTree version 1.3 required')
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
     def test_gen_xml_for_esxi_default_profile(self):
         diskp = virt._disk_profile('default', 'esxi')
         nicp = virt._nic_profile('default', 'esxi')
@@ -112,7 +114,8 @@ class VirtTestCase(TestCase):
         self.assertTrue(len(tree.findall('.//disk')) == 1)
         self.assertTrue(len(tree.findall('.//interface')) == 1)
 
-    @skipIf(sys.hexversion < 0x02070000, 'ElementTree version 1.3 required')
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
     @patch('salt.modules.virt._nic_profile')
     @patch('salt.modules.virt._disk_profile')
     def test_gen_xml_for_esxi_custom_profile(self, disk_profile, nic_profile):
@@ -155,7 +158,8 @@ eth2:
         self.assertTrue(len(tree.findall('.//disk')) == 2)
         self.assertTrue(len(tree.findall('.//interface')) == 2)
 
-    @skipIf(sys.hexversion < 0x02070000, 'ElementTree version 1.3 required')
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
     @patch('salt.modules.virt._nic_profile')
     @patch('salt.modules.virt._disk_profile')
     def test_gen_xml_for_kvm_custom_profile(self, disk_profile, nic_profile):
