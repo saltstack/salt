@@ -126,7 +126,6 @@ import json
 import os
 import traceback
 
-import salt.utils
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -262,11 +261,11 @@ def get_containers(all=True, trunc=False, since=None, before=None, limit=-1):
     '''
     client = get_client()
     status = base_status.copy()
-    et = client.containers(all=all,
-                           trunc=trunc,
-                           since=since,
-                           before=before,
-                           limit=limit)
+    ret = client.containers(all=all,
+                            trunc=trunc,
+                            since=since,
+                            before=before,
+                            limit=limit)
     if ret:
         valid(status, comment='All containers in out', out=ret)
     else:
@@ -439,7 +438,6 @@ def export(container, path):
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
-
 
 
 def create_container(image,
@@ -1088,7 +1086,7 @@ def tag(image, repository, tag=None, force=False):
     :param force: Forces application of the tag
 
     .. code-block:: bash
-    
+
         salt '*' docker.tag <image> <repository> [tag] [force=(True|False)]
 
     '''
@@ -1132,8 +1130,8 @@ def get_images(name=None, quiet=False, all=True):
     :returns: A status message with the command output
 
     .. code-block:: bash
-    
-        salt '*' docker.get_images [name] [quiet=(True|False)] [all=(True|False)
+
+        salt '*' docker.get_images [name] [quiet=True|False] [all=True|False]
 
     '''
     client = get_client()
@@ -1193,7 +1191,7 @@ def build(path=None,
 def remove_image(image):
     '''
     Remove an image from a system.
-    
+
     :type image: string
     :param image: The image to remove
 
@@ -1379,7 +1377,7 @@ def pull(repo, tag=None):
                 True
 
     .. code-block:: bash
-        
+
         salt '*' docker.pull <repository> [tag]
 
     '''
