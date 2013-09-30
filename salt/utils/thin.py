@@ -20,6 +20,12 @@ except ImportError:
 # Import salt libs
 import salt
 
+SALTCALL = '''
+from salt.scripts import salt_call
+if __name__ == '__main__':
+    salt_call()
+'''
+
 
 def gen_thin(cachedir):
     '''
@@ -30,6 +36,9 @@ def gen_thin(cachedir):
         os.makedirs(thindir)
     thintar = os.path.join(thindir, 'thin.tgz')
     thinver = os.path.join(thindir, 'version')
+    salt_call = os.path.join(thindir, 'salt-call')
+    with open(salt_call, 'w+') as fp_:
+        fp_.write(SALTCALL)
     if os.path.isfile(thintar):
         if not os.path.isfile(thinver):
             os.remove(thintar)
@@ -51,7 +60,7 @@ def gen_thin(cachedir):
             for name in files:
                 if not name.endswith(('.pyc', '.pyo')):
                     tfp.add(os.path.join(root, name))
-    os.chdir(os.path.dirname(salt.utils.which('salt-call')))
+    os.chdir(thindir)
     tfp.add('salt-call')
     with open(thinver, 'w+') as fp_:
         fp_.write(salt.__version__)
