@@ -22,6 +22,7 @@ import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
+import salt.exceptions
 
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
@@ -64,6 +65,7 @@ class SSH(object):
     Create an SSH execution system
     '''
     def __init__(self, opts):
+        self.verify_env()
         self.opts = opts
         tgt_type = self.opts.get('selected_target_option', 'glob')
         self.roster = salt.roster.Roster(opts)
@@ -88,6 +90,14 @@ class SSH(object):
                 'timeout': self.opts.get('ssh_timeout', 60),
                 'sudo': self.opts.get('ssh_sudo', False),
                 }
+
+    def verify_env(self):
+        '''
+        Verify that salt-ssh is ready to run
+        '''
+        if not salt.utils.which('sshpass'):
+            print('Error:  sshpass is not available, aborting.')
+            raise salt.exceptions.SaltClientError('sshpass not available')
 
     def get_pubkey(self):
         '''
