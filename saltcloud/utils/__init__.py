@@ -423,6 +423,10 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
         ))
         # Shell out to smbclient to deltree C:\salttmp\
         ## Unless keep_tmp is True
+        if not keep_tmp:
+            win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
+                creds,
+            ))
 
         # Fire deploy action
         fire_event(name,
