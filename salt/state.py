@@ -1700,6 +1700,7 @@ class BaseHighState(object):
                     'state_auto_order',
                     opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
+            opts['state_events'] = mopts.get('state_events')
         return opts
 
     def _get_envs(self):

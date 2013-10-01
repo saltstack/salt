@@ -901,6 +901,7 @@ class AESFuncs(object):
         mopts['state_top'] = self.opts['state_top']
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
+        mopts['state_events'] = self.opts['state_events']
         return mopts
 
     def _mine_get(self, load):
