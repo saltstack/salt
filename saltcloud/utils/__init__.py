@@ -406,7 +406,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
         creds = '-U {0}%{1} //{2}'.format(
             username, password, host)
         # Shell out to smbclient to create C:\salttmp\
-        win_cmd('smbclient {0}/c$ -c "cd temp; prompt; mput {1}; exit;"'.format(
+        win_cmd('smbclient {0}/c$ -c "mkdir salttemp; cd salttemp; prompt; mput {1}; exit;"'.format(
             creds, win_installer
         ))
         # Shell out to smbclient to copy over minion keys
@@ -418,7 +418,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
         # Shell out to winexe to execute win_installer
         comps = win_installer.split('/')
         installer = comps[-1]
-        win_cmd('winexe {0} -c "c:\\temp\\{1} /S /master={2} /minion-name={3}'.format(
+        win_cmd('winexe {0} -c "c:\\salttemp\\{1} /S /master={2} /minion-name={3}'.format(
             creds, installer, master, name
         ))
         # Shell out to smbclient to deltree C:\salttmp\
