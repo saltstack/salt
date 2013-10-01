@@ -217,15 +217,15 @@ def create(vm_):
         'startCpus': vm_['cpu_number'],
         'maxMemory': vm_['ram'],
         'localDiskFlag': vm_['local_disk'],
-        'blockDevices': [{
-            'device': '0',
-            'diskImage': {'capacity': vm_['disk_size']},
-        }],
         'hourlyBillingFlag': vm_['hourly_billing'],
     }
 
     if 'image' in vm_:
         kwargs['operatingSystemReferenceCode'] = vm_['image']
+        kwargs['blockDevices'] = [{
+            'device': '0',
+            'diskImage': {'capacity': vm_['disk_size']},
+        }]
     elif 'global_identifier' in vm_:
         kwargs['blockDeviceTemplateGroup'] = {
             'globalIdentifier': vm_['global_identifier']
