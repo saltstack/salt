@@ -27,16 +27,22 @@ RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
 HEREDOC = (' << "EOF"\n'
            '{{0}}\n'
-           'if [ `type -p python2` ]\n'
-           'then\n'
-           '    PYTHON=python2\n'
-           'elif [ `type -p python26` ]\n'
-            'then\n'
-           '    PYTHON=python26\n'
-           'elif [ `type -p python27` ]\n'
-           'then\n'
-           '    PYTHON=python27\n'
-           'fi\n'
+           'set -x\n'
+           ' for py_candidate in  \\\n'
+           '        python27      \\\n'
+           '        python2.7     \\\n'
+           '        python26      \\\n'
+           '        python2.6     \\\n'
+           '        python2       \\\n'
+           '        python        ;\n'
+           ' do \n'
+
+           '     if [ `type -p $py_candidate` ] \n'
+           '     then \n'
+           '         PYTHON=$py_candidate \n'
+           '         break \n'
+           '     fi \n'
+           ' done \n'
            'if [ -f /tmp/.salt/salt-call ] \n'
            'then\n'
            '    if [[ $(cat /tmp/.salt/version) != {0} ]]\n'
@@ -57,7 +63,6 @@ HEREDOC = (' << "EOF"\n'
            'echo "{1}"\n'
            '$PYTHON $SALT --local --out json -l quiet {{1}}\n'
            'EOF').format(salt.__version__, RSTR)
-
 
 class SSH(object):
     '''
@@ -383,7 +388,7 @@ class Single(object):
                 thin,
                 '/tmp/.salt/salt-thin.tgz')
         self.shell.exec_cmd(
-                'tar xvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt'
+                'tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt'
                 )
         return True
 
@@ -470,6 +475,8 @@ class Single(object):
         sudo = 'sudo -i\n' if self.target['sudo'] else ''
         cmd = HEREDOC.format(sudo, self.arg_str)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
+            print stdout
+            print stderr
             yield stdout, stderr
 
     def cmd_block(self):
@@ -483,6 +490,10 @@ class Single(object):
         sudo = 'sudo -i\n' if self.target['sudo'] else ''
         cmd = HEREDOC.format(sudo, self.arg_str)
         stdout, stderr = self.shell.exec_cmd(cmd)
+        print "THIS IS STDOUT"
+        print stdout
+        print "THIS IS STDERR"
+        print stderr
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
         if stdout.startswith('deploy'):
