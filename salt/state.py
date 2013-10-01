@@ -1987,7 +1987,7 @@ class BaseHighState(object):
                         # target so that the next recursion of render_state
                         # will recognize the error.
                         sls_targets = fnmatch.filter(
-                            self.client.list_states(env),
+                            self.avail[env],
                             inc_sls
                         ) or [inc_sls]
 
