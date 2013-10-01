@@ -96,8 +96,8 @@ class SSH(object):
         Verify that salt-ssh is ready to run
         '''
         if not salt.utils.which('sshpass'):
-            print('Error:  sshpass is not available, aborting.')
-            raise salt.exceptions.SaltClientError('sshpass not available')
+            print('Warning:  sshpass is not present, so password-based '
+                  'authentication is not available.')
 
     def get_pubkey(self):
         '''
