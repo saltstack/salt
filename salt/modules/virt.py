@@ -302,8 +302,8 @@ def _gen_xml(name,
                         %%DRIVER%%
                 </disk>
 '''
-    source = 'file=\'%%POOL%%%%NAME%%/%%FILENAME%%\''
-    disk_info = _get_image_info(hypervisor, name, **kwargs)
+    source = 'file=\'%%SOURCE_FILE%%\''
+
     if hypervisor in ['qemu', 'kvm']:
         target = 'dev=\'vd%%CHARINDEX%%\' bus=\'%%DISKBUS%%\''
         address = ''
@@ -312,6 +312,7 @@ def _gen_xml(name,
         target = 'dev=\'sd%%CHARINDEX%%\' bus=\'%%DISKBUS%%\''
         address = '<address type=\'drive\' controller=\'0\' bus=\'0\' target=\'0\' unit=\'%%DISKINDEX%%\'/>'
         driver = ''
+
     disk_t = disk_t.replace('%%SOURCE%%', source)
     disk_t = disk_t.replace('%%TARGET%%', target)
     disk_t = disk_t.replace('%%ADDRESS%%', address)
@@ -320,14 +321,17 @@ def _gen_xml(name,
     for i, disk in enumerate(diskp):
         for disk_name, args in disk.items():
             disk_i = disk_t
+            file_name = '{0}.{1}'.format(disk_name, args['format'])
+            source_file = os.path.join(args['pool'],
+                                       name,
+                                       file_name)
+            disk_i = disk_i.replace('%%SOURCE_FILE%%', source_file)
+
             disk_i = disk_i.replace('%%CHARINDEX%%', string.ascii_lowercase[i])
             disk_i = disk_i.replace('%%DISKBUS%%', args['model'])
-            disk_i = disk_i.replace('%%POOL%%', disk_info['pool'])
-            disk_i = disk_i.replace('%%NAME%%', name)
-            disk_i = disk_i.replace('%%FILENAME%%',
-                                    '{0}.{1}'.format(disk_name, disk_info['disktype']))
+
             if '%%DISKTYPE%%' in driver:
-                disk_i = disk_i.replace('%%DISKTYPE%%', disk_info['disktype'])
+                disk_i = disk_i.replace('%%DISKTYPE%%', args['format'])
             if '%%DISKINDEX%%' in address:
                 disk_i = disk_i.replace('%%DISKINDEX%%', str(i))
             disk_str += disk_i
@@ -448,7 +452,7 @@ def _get_image_info(hypervisor, name, **kwargs):
     return ret
 
 
-def _disk_profile(profile, hypervisor):
+def _disk_profile(profile, hypervisor, **kwargs):
     '''
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -469,13 +473,24 @@ def _disk_profile(profile, hypervisor):
     The ``format`` and ``model`` parameters are optional, and will
     default to whatever is best suitable for the active hypervisor.
     '''
-    default = [{'system': {'size': '8192'}}]
+    default = [
+          {'system':
+             {'size': '8192'}
+          }
+    ]
     if hypervisor in ['esxi', 'vmware']:
-        overlay = {'format': 'vmdk', 'model': 'scsi'}
+        overlay = {'format': 'vmdk',
+                   'model': 'scsi',
+                   'pool': '[{0}] '.format(kwargs.get('pool', '0'))
+                  }
     elif hypervisor in ['qemu', 'kvm']:
-        overlay = {'format': 'qcow2', 'model': 'virtio'}
+        overlay = {'format': 'qcow2',
+                   'model': 'virtio',
+                   'pool': __salt__['config.option']('virt.images')
+                  }
     else:
         overlay = {}
+
     disklist = __salt__['config.get']('virt:disk', {}).get(profile, default)
     for key, val in overlay.items():
         for i, disks in enumerate(disklist):
@@ -542,14 +557,20 @@ def init(name,
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     nicp = _nic_profile(nic, hypervisor)
     diskp = None
-    disk_info = _get_image_info(hypervisor, name, **kwargs)
     seedable = False
     if image:  # with disk template image
         # if image was used, assume only one disk, i.e. the
         # 'default' disk profile
         # TODO: make it possible to use disk profiles and use the
         # template image as the system disk
-        diskp = _disk_profile('default', hypervisor)
+        diskp = _disk_profile('default', hypervisor, **kwargs)
+         
+        # When using a disk profile extract the sole dict key of the first
+        # array element as the filename for disk
+        disk_name = diskp[0].keys()[0]
+        disk_type = diskp[0][disk_name]['format']
+        disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
+
         if hypervisor in ['esxi', 'vmware']:
             # TODO: we should be copying the image file onto the ESX host
             raise SaltInvocationError('virt.init does not support image '
@@ -560,7 +581,7 @@ def init(name,
             img_dest = os.path.join(
                 img_dir,
                 name,
-                disk_info['filename']
+                disk_file_name
             )
             img_dir = os.path.dirname(img_dest)
             sfn = __salt__['cp.cache_file'](image)
@@ -573,7 +594,7 @@ def init(name,
 
     else:
         # no disk template image specified, create disks based on disk profile
-        diskp = _disk_profile(disk, hypervisor)
+        diskp = _disk_profile(disk, hypervisor, **kwargs)
         if hypervisor in ['qemu', 'kvm']:
             # TODO: we should be creating disks in the local filesystem with
             # qemu-img
@@ -604,6 +625,8 @@ def init(name,
         __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
     if start:
         create(name)
+
+    return vm_info(name)
 
 
 def list_vms():
