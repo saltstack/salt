@@ -132,7 +132,8 @@ Execution Module        Used for
 groupadd                Linux, NetBSD, and OpenBSD systems using
                         ``groupadd(8)``, ``groupdel(8)``, and ``groupmod(8)``
 pw_group                FreeBSD-based OSes using ``pw(8)``
-solaris_user            Solaris-based OSes using ``groupadd(1M)``
+solaris_group           Solaris-based OSes using ``groupadd(1M)``,
+                        ``groupdel(1M)``, and ``groupmod(1M)``
 win_groupadd            Windows
 ======================= =======================================================
 
