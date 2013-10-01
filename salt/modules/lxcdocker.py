@@ -6,14 +6,14 @@ Managment of dockers: overview of this module
 
 
 General notes
-------------------
+-------------
 - As we use states, we dont want to pop contineously dockers, we will map each
 container id  (or image) with a grain whenever it is relevant.
 - As a corollary, we will resolve for a container id eitheir directly this
 container id or try to find a container id matching something stocked in grain
 
 installation prerequsuites
-------------------------------
+--------------------------
 - You will need the 'docker-py' python package in your python installation
   running salt.
 - For now, you need docker-py from sources: https://github.com/dotcloud/docker-py
@@ -121,12 +121,13 @@ running container.
 
 You have those methods:
 
-    TODO:
     - retcode
     - run
     - run_all
     - run_stderr
     - run_stdout
+    - script
+    - script_retcode
 
 '''
 __docformat__ = 'restructuredtext en'
