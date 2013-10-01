@@ -626,7 +626,7 @@ def init(name,
     if start:
         create(name)
 
-    return vm_info(name)
+    return True
 
 
 def list_vms():
