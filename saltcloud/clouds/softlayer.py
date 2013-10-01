@@ -150,6 +150,31 @@ def avail_images():
     return ret
 
 
+def list_custom_images(call=None):
+    '''
+    Return a dict of all custom VM images on the cloud provider.
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_vlans function must be called with -f or --function.'
+        )
+
+    ret = {}
+    conn = get_conn('SoftLayer_Account')
+    response = conn.getBlockDeviceTemplateGroups()
+    for image in response:
+        if not 'globalIdentifier' in image:
+            continue
+        ret[image['name']] = {
+            'id': image['id'],
+            'name': image['name'],
+            'globalIdentifier': image['globalIdentifier'],
+        }
+        if 'note' in image:
+            ret[image['name']]['note'] = image['note']
+    return ret
+
+
 def get_location(vm_=None):
     '''
     Return the location to use, in this order:
@@ -189,7 +214,6 @@ def create(vm_):
     kwargs = {
         'hostname': vm_['name'],
         'domain': vm_['domain'],
-        'operatingSystemReferenceCode': vm_['image'],
         'startCpus': vm_['cpu_number'],
         'maxMemory': vm_['ram'],
         'localDiskFlag': vm_['local_disk'],
@@ -199,6 +223,13 @@ def create(vm_):
         }],
         'hourlyBillingFlag': vm_['hourly_billing'],
     }
+
+    if 'image' in vm_:
+        kwargs['operatingSystemReferenceCode'] = vm_['image']
+    elif 'global_identifier' in vm_
+        kwargs['blockDeviceTemplateGroup'] = {
+            'globalIdentifier': vm_['global_identifier']
+        }
 
     location = get_location(vm_)
     if location:

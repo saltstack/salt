@@ -86,6 +86,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       private_vlan: 396
       private_network: True
       private_ssh: True
+      # May be used _instead_of_ image
+      global_identifier: 320d8be5-46c0-dead-cafe-13e3c51
 
 
 Most of the above items are required; optional items are specified below.
@@ -190,7 +192,14 @@ private_ssh
 Whether to run the deploy script on the server using the public IP address
 or the private IP address. If set to True, Salt Cloud will attempt to SSH into
 the new server using the private IP address. The default is False. This
-settions is optional.
+settiong is optional.
+
+global_identifier
+-----------------
+When creating an instance using a custom template, this option is set to the
+corresponding value obtained using the `list_custom_images` function. This
+option will not be used if an `image` is set, and if an `image` is not set, it
+is required.
 
 
 The profile can be realized now with a salt command:
@@ -359,6 +368,18 @@ from the SoftLayer API concerning those VLANs.
 
 The `id` returned in this list is necessary for the `vlan` option when creating
 an instance.
+
+list_custom_images
+------------------
+This function lists any custom templates associated with the account, that can
+be used to create a new instance.
+
+.. code-block:: bash
+
+    $ salt-cloud -f list_custom_images my-softlayer
+
+The `globalIdentifier` returned in this list is necessary for the
+`global_identifier` option when creating an image using a custom template.
 
 
 Optional Products for SoftLayer HW
