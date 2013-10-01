@@ -1452,6 +1452,7 @@ class State(object):
                                 'comment': comment,
                                 '__run_num__': self.__run_num}
                 self.__run_num += 1
+                self.event(running[tag])
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -1473,6 +1474,7 @@ class State(object):
                                     'comment': 'Recursive requisite found',
                                     '__run_num__': self.__run_num}
                         self.__run_num += 1
+                        self.event(running[tag])
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
@@ -1519,6 +1521,7 @@ class State(object):
                 self.pre[tag] = self.call(low)
             else:
                 running[tag] = self.call(low)
+        self.event(running[tag])
         return running
 
     def call_high(self, high):
