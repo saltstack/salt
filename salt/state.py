@@ -1981,18 +1981,29 @@ class BaseHighState(object):
                     # An include must be resolved to a single environment, or
                     # the include must exist in the current environment
                     if len(resolved_envs) == 1 or env in resolved_envs:
-                        if inc_sls not in mods:
-                            nstate, err = self.render_state(
-                                inc_sls,
-                                resolved_envs[0] if len(resolved_envs) == 1 else env,
-                                mods,
-                                matches
-                            )
-                            if nstate:
-                                self.merge_included_states(state, nstate, errors)
-                                state.update(nstate)
-                            if err:
-                                errors.extend(err)
+                        # Match inc_sls against the available states in the
+                        # resolved env, matching wildcards in the process. If
+                        # there were no matches, then leave inc_sls as the
+                        # target so that the next recursion of render_state
+                        # will recognize the error.
+                        sls_targets = fnmatch.filter(
+                            self.client.list_states(env),
+                            inc_sls
+                        ) or [inc_sls]
+
+                        for sls_target in sls_targets:
+                            if sls_target not in mods:
+                                nstate, err = self.render_state(
+                                    sls_target,
+                                    resolved_envs[0] if len(resolved_envs) == 1 else env,
+                                    mods,
+                                    matches
+                                )
+                                if nstate:
+                                    self.merge_included_states(state, nstate, errors)
+                                    state.update(nstate)
+                                if err:
+                                    errors.extend(err)
                     else:
                         msg = ''
                         if not resolved_envs:
