@@ -9,9 +9,13 @@
 
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
+%{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(sys.path))")}
+
+%define _salttesting SaltTesting
+%define _salttesting_ver 0.5.1
 
 Name: salt
-Version: 0.16.4
+Version: 0.17.0
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -19,13 +23,14 @@ Group:   System Environment/Daemons
 License: ASL 2.0
 URL:     http://saltstack.org/
 Source0: http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
-Source1: %{name}-master
-Source2: %{name}-syndic
-Source3: %{name}-minion
-Source4: %{name}-master.service
-Source5: %{name}-syndic.service
-Source6: %{name}-minion.service
-Source7: README.fedora
+Source1: https://pypi.python.org/packages/source/S/%{_salttesting}/%{_salttesting}-%{_salttesting_ver}.tar.gz
+Source2: %{name}-master
+Source3: %{name}-syndic
+Source4: %{name}-minion
+Source5: %{name}-master.service
+Source6: %{name}-syndic.service
+Source7: %{name}-minion.service
+Source8: README.fedora
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -37,22 +42,23 @@ Requires: dmidecode
 
 Requires: pciutils
 Requires: yum-utils
+Requires: sshpass
 
 %if 0%{?with_python26}
-BuildRequires: python26-zmq
 BuildRequires: python26-crypto
 BuildRequires: python26-devel
-BuildRequires: python26-PyYAML
+BuildRequires: python26-jinja2
 BuildRequires: python26-m2crypto
 BuildRequires: python26-msgpack
-BuildRequires: python26-jinja2
+BuildRequires: python26-zmq
+BuildRequires: python26-PyYAML
 
 Requires: python26-crypto
-Requires: python26-zmq
 Requires: python26-jinja2
-Requires: python26-PyYAML
 Requires: python26-m2crypto
 Requires: python26-msgpack
+Requires: python26-PyYAML
+Requires: python26-zmq
 
 %else
 
@@ -65,15 +71,14 @@ BuildRequires: python-mock
 BuildRequires: git
 %endif
 
-BuildRequires: python-zmq
+BuildRequires: m2crypto
 BuildRequires: python-crypto
 BuildRequires: python-devel
-BuildRequires: PyYAML
-BuildRequires: m2crypto
-BuildRequires: python-msgpack
-
-
 BuildRequires: python-jinja2
+BuildRequires: python-msgpack
+BuildRequires: python-pip
+BuildRequires: python-zmq
+BuildRequires: PyYAML
 
 Requires: python-crypto
 Requires: python-zmq
@@ -130,28 +135,30 @@ Requires: salt = %{version}-%{release}
 Salt minion is queried and controlled from the master.
 
 %prep
-%setup -q
+%setup -c
+%setup -T -D -a 1
 
 %build
 
 
 %install
 rm -rf $RPM_BUILD_ROOT
+cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
 %{__python} setup.py install -O1 --root $RPM_BUILD_ROOT
 
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 mkdir -p $RPM_BUILD_ROOT%{_initrddir}
-install -p %{SOURCE1} $RPM_BUILD_ROOT%{_initrddir}/
 install -p %{SOURCE2} $RPM_BUILD_ROOT%{_initrddir}/
 install -p %{SOURCE3} $RPM_BUILD_ROOT%{_initrddir}/
+install -p %{SOURCE4} $RPM_BUILD_ROOT%{_initrddir}/
 %else
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-install -p -m 0644 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
 install -p -m 0644 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
 install -p -m 0644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
+install -p -m 0644 %{SOURCE7} $RPM_BUILD_ROOT%{_unitdir}/
 %endif
 
-install -p %{SOURCE7} .
+install -p %{SOURCE8} .
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
@@ -159,7 +166,8 @@ install -p -m 0640 conf/master $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
 
 %if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
 %check
-%{__python} setup.py test --runtests-opts=-u
+cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
+PYTHONPATH=%{pythonpath}:$RPM_BUILD_DIR/%{name}-%{version}/%{_salttesting}-%{_salttesting_ver} %{__python} setup.py test --runtests-opts=-u
 %endif
 
 %clean
@@ -167,11 +175,11 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE
+%doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/LICENSE
 %{python_sitelib}/%{name}/*
 %{python_sitelib}/%{name}-%{version}-py?.?.egg-info
 %doc %{_mandir}/man7/salt.7.*
-%doc README.fedora
+%doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/README.fedora
 
 %files -n salt-minion
 %defattr(-,root,root)
@@ -190,18 +198,20 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -n salt-master
 %defattr(-,root,root)
-%doc %{_mandir}/man1/salt-master.1.*
 %doc %{_mandir}/man1/salt.1.*
 %doc %{_mandir}/man1/salt-cp.1.*
 %doc %{_mandir}/man1/salt-key.1.*
+%doc %{_mandir}/man1/salt-master.1.*
 %doc %{_mandir}/man1/salt-run.1.*
+%doc %{_mandir}/man1/salt-ssh.1.*
 %doc %{_mandir}/man1/salt-syndic.1.*
 %{_bindir}/salt
-%{_bindir}/salt-master
-%{_bindir}/salt-syndic
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
+%{_bindir}/salt-master
 %{_bindir}/salt-run
+%{_bindir}/salt-ssh
+%{_bindir}/salt-syndic
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 %attr(0755, root, root) %{_initrddir}/salt-master
 %attr(0755, root, root) %{_initrddir}/salt-syndic
@@ -308,6 +318,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Mon Sep 30 2013 Erik Johnson <erik@saltstack.com> - 0.17.0-1
+- Update to feature release 0.17.0
+
 * Wed Sep 11 2013 David Anderson <dave@dubkat.com>
 - Change sourcing order of init functions and salt default file
 
