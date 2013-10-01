@@ -226,7 +226,7 @@ def create(vm_):
 
     if 'image' in vm_:
         kwargs['operatingSystemReferenceCode'] = vm_['image']
-    elif 'global_identifier' in vm_
+    elif 'global_identifier' in vm_:
         kwargs['blockDeviceTemplateGroup'] = {
             'globalIdentifier': vm_['global_identifier']
         }
