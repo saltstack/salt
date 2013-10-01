@@ -65,7 +65,7 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        tgt_type = self.opts['selected_target_option'] if self.opts['selected_target_option'] else 'glob'
+        tgt_type = self.opts.get('selected_target_option', 'glob')
         self.roster = salt.roster.Roster(opts)
         self.targets = self.roster.targets(
                 self.opts['tgt'],
@@ -159,10 +159,7 @@ class SSH(object):
             stdout, stderr = single.cmd_block()
             try:
                 data = json.loads(stdout)
-                if 'local' in data:
-                    return {host: data['local']}
-                else:
-                    return {host: data}
+                return {host: data.get('local', data)}
             except Exception:
                 if stderr:
                     return {host: stderr}
@@ -202,17 +199,18 @@ class SSH(object):
                     running[host]['iter'] = single.cmd()
                 else:
                     # This job is done, yield
+                    id_ = running[host]['single'].id
                     try:
                         if not stdout and stderr:
-                            yield {running[host]['single'].id: stderr}
+                            yield {id_: stderr}
                         else:
                             data = json.loads(stdout)
                             if len(data) < 2 and 'local' in data:
-                                yield {running[host]['single'].id: data['local']}
+                                yield {id_: data['local']}
                             else:
-                                yield {running[host]['single'].id: data}
+                                yield {id_: data}
                     except Exception:
-                        yield {running[host]['single'].id: 'Bad Return'}
+                        yield {id_: 'Bad Return'}
                     done.add(host)
             for host in done:
                 if host in running:
@@ -279,7 +277,9 @@ class SSH(object):
                         host,
                         self.targets[host],
                         )
-                routine = multiprocessing.Process(target=self.handle_routine, args=args)
+                routine = multiprocessing.Process(
+                                target=self.handle_routine,
+                                args=args)
                 routine.start()
                 running[host] = {'thread': routine}
                 continue
@@ -350,23 +350,17 @@ class Single(object):
         self.arg_str = arg_str
         self.fun, self.arg = self.__arg_comps()
         self.id = id_
-        self.extra = kwargs
-        self.shell = salt.client.ssh.shell.Shell(
-                host,
-                user,
-                port,
-                passwd,
-                priv,
-                timeout,
-                sudo)
-        self.target = self.extra
-        self.target['host'] = host
-        self.target['user'] = user
-        self.target['port'] = port
-        self.target['passwd'] = passwd
-        self.target['priv'] = priv
-        self.target['timeout'] = timeout
-        self.target['sudo'] = sudo
+
+        args = {'host': host,
+                'user': user,
+                'port': port,
+                'passwd': passwd,
+                'priv': priv,
+                'timeout': timeout,
+                'sudo': sudo}
+        self.shell = salt.client.ssh.shell.Shell(**args)
+
+        self.target = kwargs.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts)
 
@@ -374,13 +368,9 @@ class Single(object):
         '''
         Return the function name and the arg list
         '''
-        fun = ''
-        arg = []
         comps = self.arg_str.split()
-        if len(comps) > 0:
-            fun = comps[0]
-        if len(comps) > 1:
-            arg = comps[1:]
+        fun = comps[0] if comps else ''
+        arg = comps[1:]
         return fun, arg
 
     def deploy(self):
@@ -416,7 +406,8 @@ class Single(object):
             if not os.path.isfile(datap):
                 refresh = True
             else:
-                if ((time.time() - os.stat(datap).st_mtime) / 60 > self.opts.get('cache_life', 60)):
+                passed_time = (time.time() - os.stat(datap).st_mtime) / 60
+                if (passed_time > self.opts.get('cache_life', 60)):
                     refresh = True
             if self.opts.get('refresh_cache'):
                 refresh = True
@@ -478,10 +469,7 @@ class Single(object):
         sudo = 'sudo -i\n' if self.target['sudo'] else ''
         cmd = HEREDOC.format(sudo, self.arg_str)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
-            if stdout is None and stderr is None:
-                yield None, None
-            else:
-                yield stdout, stderr
+            yield stdout, stderr
 
     def cmd_block(self):
         '''
