@@ -65,7 +65,7 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        tgt_type = self.opts.get('selected_target_option', 'glob')
+        tgt_type = self.opts['selected_target_option'] if self.opts['selected_target_option'] else 'glob'
         self.roster = salt.roster.Roster(opts)
         self.targets = self.roster.targets(
                 self.opts['tgt'],
@@ -360,7 +360,8 @@ class Single(object):
                 'sudo': sudo}
         self.shell = salt.client.ssh.shell.Shell(**args)
 
-        self.target = kwargs.update(args)
+        self.target = kwargs
+        self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts)
 
