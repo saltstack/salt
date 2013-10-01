@@ -133,7 +133,7 @@ Internal
 
     - get_image_infos
     - get_container_infos
-    - sizeof_fmt
+    - _sizeof_fmt
 
 '''
 __docformat__ = 'restructuredtext en'
@@ -181,14 +181,14 @@ def __virtual__():
         return 'docker'
 
 
-def sizeof_fmt(num):
+def _sizeof_fmt(num):
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
 
 
-def set_status(m, id=NOTSET, comment=INVALID_RESPONSE, status=False, out=None):
+def _set_status(m, id=NOTSET, comment=INVALID_RESPONSE, status=False, out=None):
     m['comment'] = comment
     m['status'] = status
     m['out'] = out
@@ -198,14 +198,14 @@ def set_status(m, id=NOTSET, comment=INVALID_RESPONSE, status=False, out=None):
 
 
 def invalid(m, id=NOTSET, comment=INVALID_RESPONSE, out=None):
-    return set_status(m, status=False, id=id, comment=comment, out=out)
+    return _set_status(m, status=False, id=id, comment=comment, out=out)
 
 
 def valid(m, id=NOTSET, comment=VALID_RESPONSE, out=None):
-    return set_status(m, status=True, id=id, comment=comment, out=out)
+    return _set_status(m, status=True, id=id, comment=comment, out=out)
 
 
-def get_client(version=None):
+def _get_client(version=None):
     '''
     Get a connection to a docker API (socket or URL)
     based on config.get mechanism (pillar -> grains)
@@ -239,11 +239,11 @@ def get_client(version=None):
             'Configs': {},
             'rootPath': '/dev/null'
         }
-    client._cfg.update(merge_auth_bits())
+    client._cfg.update(_merge_auth_bits())
     return client
 
 
-def merge_auth_bits():
+def _merge_auth_bits():
     '''
     Merge the local docker authentication file
     with the pillar configuration
@@ -281,7 +281,7 @@ def get_containers(all=True, trunc=False, since=None, before=None, limit=-1):
     Returns a mapping of something which look's like
     container
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     ret = client.containers(all=all,
                             trunc=trunc,
@@ -308,7 +308,7 @@ def get_image_infos(image):
     Returns the image id
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         infos = client.inspect_image(image)
         if infos:
@@ -339,7 +339,7 @@ def get_container_infos(container):
         Image Id / grain name
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         info = client.inspect_container(container)
         if info:
@@ -369,7 +369,7 @@ def logs(container):
         container id
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         info = client.logs(get_container_infos(container)['id'])
         valid(status, id=container, out=info)
@@ -397,7 +397,7 @@ def commit(container, repository=None, tag=None, message=None,
 
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         container = get_container_infos(container)['id']
         info = client.commit(
@@ -429,7 +429,7 @@ def diff(container):
         container id
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         info = client.diff(get_container_infos(container)['id'])
         valid(status, id=container, out=info)
@@ -451,7 +451,7 @@ def export(container, path):
         ppath = os.path.abspath(path)
         fic = open(ppath, 'w')
         status = base_status.copy()
-        client = get_client()
+        client = _get_client()
         response = client.export(get_container_infos(container)['id'])
         try:
             byte = response.read(4096)
@@ -522,7 +522,7 @@ def create_container(image,
 
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         mountpoints = {}
         binds = {}
@@ -577,7 +577,7 @@ def version():
         salt '*' docker.version
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         info = client.version()
         valid(status, out=info)
@@ -599,7 +599,7 @@ def info():
 
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         info = client.info()
         valid(status, out=info)
@@ -621,7 +621,7 @@ def port(container, private_port):
 
     '''
     status = base_status.copy()
-    client = get_client()
+    client = _get_client()
     try:
         info = client.port(
             get_container_infos(container)['id'],
@@ -650,7 +650,7 @@ def stop(container, timeout=10):
            'status': True}
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         dcontainer = get_container_infos(container)['id']
@@ -692,7 +692,7 @@ def kill(container):
            'status': True}
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         dcontainer = get_container_infos(container)['id']
@@ -742,7 +742,7 @@ def restart(container, timeout=10):
            'status': True}
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         dcontainer = get_container_infos(container)['id']
@@ -774,7 +774,7 @@ def start(container, binds=None, ports=None):
         binds = {}
     if not ports:
         ports = {}
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         dcontainer = get_container_infos(container)['id']
@@ -811,7 +811,7 @@ def wait(container):
          {'id': id of the container,
           'status': True if stopped }
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         dcontainer = get_container_infos(container)['id']
@@ -885,7 +885,7 @@ def remove_container(container=None, force=False, v=False):
     Return True or False in the status mapping and also
     any information about docker in status['out']
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     status['id'] = container
     dcontainer = None
@@ -931,7 +931,7 @@ def top(container):
        }
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         dcontainer = get_container_infos(container)['id']
@@ -991,7 +991,7 @@ def login(url=None, username=None, password=None, email=None):
     '''
     Wrapper to the docker.py login method, does not do much yet
     '''
-    client = get_client()
+    client = _get_client()
     return client.login(url, username=username, password=password, email=email)
 
 
@@ -1007,7 +1007,7 @@ def search(term):
         salt '*' docker.search <term>
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     ret = client.search(term)
     if ret:
@@ -1017,7 +1017,7 @@ def search(term):
     return status
 
 
-def create_image_assemble_error_status(status, ret, logs):
+def _create_image_assemble_error_status(status, ret, logs):
     '''
     Given input in this form::
 
@@ -1080,13 +1080,13 @@ def import_image(src, repo, tag=None):
         salt '*' docker.import_image <src> <repo> [tag]
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
             logs, info = parse_image_multilogs_string(ret)
-            create_image_assemble_error_status(status, ret, logs)
+            _create_image_assemble_error_status(status, ret, logs)
             if status['status'] is not False:
                 infos = get_image_infos(logs[0]['status'])
                 valid(status,
@@ -1121,7 +1121,7 @@ def tag(image, repository, tag=None, force=False):
         salt '*' docker.tag <image> <repository> [tag] [force=(True|False)]
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         dimage = get_image_infos(image)['id']
@@ -1165,14 +1165,14 @@ def get_images(name=None, quiet=False, all=True):
         salt '*' docker.get_images [name] [quiet=True|False] [all=True|False]
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         infos = client.images(name=name, quiet=quiet, all=all)
         for i in range(len(infos)):
             inf = infos[i]
             try:
-                inf['Human_Size'] = sizeof_fmt(int(inf['Size']))
+                inf['Human_Size'] = _sizeof_fmt(int(inf['Size']))
             except ValueError:
                 pass
             try:
@@ -1185,7 +1185,7 @@ def get_images(name=None, quiet=False, all=True):
                 pass
             try:
                 inf['Human_VirtualSize'] = (
-                    sizeof_fmt(int(inf['VirtualSize'])))
+                    _sizeof_fmt(int(inf['VirtualSize'])))
             except ValueError:
                 pass
         valid(status, out=infos)
@@ -1199,7 +1199,7 @@ def build(path=None,
           quiet=False,
           fileobj=None,
           nocache=False):
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     if path or fileobj:
         try:
@@ -1234,7 +1234,7 @@ def remove_image(image):
         salt '*' docker.remove_image <image>
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     # will raise an error if no deletion
     try:
@@ -1272,7 +1272,7 @@ def inspect_image(image):
             for k in ['Size']:
                 infos[
                     'Human_{0}'.format(k)
-                ] = sizeof_fmt(int(infos[k]))
+                ] = _sizeof_fmt(int(infos[k]))
         except Exception:
             pass
         valid(status, id=image, out=infos)
@@ -1282,7 +1282,7 @@ def inspect_image(image):
     return status
 
 
-def parse_image_multilogs_string(ret):
+def _parse_image_multilogs_string(ret):
     logs, infos = [], None
     if ret and ret.startswith('{') and ret.endswith('}'):
         pushd = 0
@@ -1313,7 +1313,7 @@ def parse_image_multilogs_string(ret):
     return logs, infos
 
 
-def pull_assemble_error_status(status, ret, logs):
+def _pull_assemble_error_status(status, ret, logs):
     '''
     Given input in this form::
 
@@ -1412,7 +1412,7 @@ def pull(repo, tag=None):
         salt '*' docker.pull <repository> [tag]
 
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     try:
         ret = client.pull(repo, tag=tag)
@@ -1428,7 +1428,7 @@ def pull(repo, tag=None):
                           repotag, infos['id']))
 
             else:
-                pull_assemble_error_status(status, ret, logs)
+                _pull_assemble_error_status(status, ret, logs)
         else:
             invalid(status)
     except Exception:
@@ -1436,7 +1436,7 @@ def pull(repo, tag=None):
     return status
 
 
-def push_assemble_error_status(status, ret, logs):
+def _push_assemble_error_status(status, ret, logs):
     '''
     Given input in this form::
 
@@ -1492,7 +1492,7 @@ def push(repo):
             superaddress.cdn:MyRepo/image
             MyRepo/image
     '''
-    client = get_client()
+    client = _get_client()
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     ret = client.push(repo)
@@ -1512,9 +1512,9 @@ def push(repo):
             else:
                 status['out'] = ret
         else:
-            push_assemble_error_status(status, ret, logs)
+            _push_assemble_error_status(status, ret, logs)
     else:
-        push_assemble_error_status(status, ret, logs)
+        _push_assemble_error_status(status, ret, logs)
     return status
 
 
