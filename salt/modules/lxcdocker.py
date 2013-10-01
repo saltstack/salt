@@ -110,14 +110,23 @@ You have those methods:
     - commit
     - create_container
     - export
+    - get_container_root
 
-Runtime execution within a specific container
-----------------------------------------------
+Runtime execution within a specific already existing and running container
+--------------------------------------------------------------------------
+- Idea is to use lxc-attach to execute inside the container context.
+- We do not use a "docker run command" but want to execute something inside a
+running container.
+
+
 You have those methods:
 
     TODO:
     - retcode
     - run
+    - run_all
+    - run_stderr
+    - run_stdout
 
 Internal
 --------
@@ -132,10 +141,14 @@ __docformat__ = 'restructuredtext en'
 import datetime
 import json
 import os
+import re
 import traceback
+import shutil
 
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
+from salt._compat import string_types
+import salt.utils
 
 try:
     import docker
@@ -1646,6 +1659,182 @@ def retcode(container, cmd, *args, **kwargs):
     status = base_status.copy()
     return _run_wrapper(
         status, container, 'cmd.retcode', cmd, *args, **kwargs)
+
+
+def get_container_root(container):
+    '''
+    Get the container rootfs path
+    container
+        container id or grain
+    '''
+    default_path = os.path.join(
+        '/var/lib/docker',
+        'containers',
+        get_container_infos(container)['id'],
+    )
+    default_rootfs = os.path.join(default_path, 'roofs')
+    rootfs_re = re.compile('^lxc.rootfs\s*=\s*(.*)\s*$', re.U)
+    try:
+        lxcconfig = os.path.join(
+            default_path, 'config.lxc')
+        f = open(lxcconfig)
+        try:
+            lines = f.readlines()
+            rlines = lines[:]
+            rlines.reverse()
+            for rl in rlines:
+                robj = rootfs_re.search(rl)
+                if robj:
+                    rootfs = robj.groups()[0]
+                    break
+        finally:
+            f.close()
+    except Exception:
+        rootfs = default_rootfs
+    return rootfs
+
+
+def _script(status,
+            container,
+            source,
+            args=None,
+            cwd=None,
+            stdin=None,
+            runas=None,
+            shell=cmdmod.DEFAULT_SHELL,
+            env=(),
+            template='jinja',
+            umask=None,
+            timeout=None,
+            reset_system_locale=True,
+            __env__='base',
+            run_func_=None,
+            no_clean=False,
+            **kwargs):
+    try:
+        if not run_func_:
+            run_func_ = run_all
+        rpath = get_container_root(container)
+        tpath = os.path.join(rpath, 'tmp')
+        if isinstance(env, string_types):
+            salt.utils.warn_until(
+                (0, 19),
+                'Passing a salt environment should be '
+                'done using \'__env__\' not '
+                '\'env\'.'
+            )
+            # Backwards compatibility
+            __env__ = env
+        path = salt.utils.mkstemp(dir=tpath)
+        if template:
+            __salt__['cp.get_template'](source, path, template, __env__, **kwargs)
+        else:
+            fn_ = __salt__['cp.cache_file'](source, __env__)
+            if not fn_:
+                return {'pid': 0,
+                        'retcode': 1,
+                        'stdout': '',
+                        'stderr': '',
+                        'cache_error': True}
+            shutil.copyfile(fn_, path)
+        in_path = os.path.join('/', os.path.relpath(path, rpath))
+        os.chmod(path, 0755)
+        command = in_path + ' ' + str(args) if args else in_path
+        status = run_func_(container,
+                           command,
+                           cwd=cwd,
+                           stdin=stdin,
+                           quiet=kwargs.get('quiet', False),
+                           runas=runas,
+                           shell=shell,
+                           umask=umask,
+                           timeout=timeout,
+                           reset_system_locale=reset_system_locale)
+        if not no_clean:
+            os.remove(path)
+    except Exception:
+        invalid(status, id=container, out=traceback.format_exc())
+    return status
+
+
+def script(container,
+           source,
+           args=None,
+           cwd=None,
+           stdin=None,
+           runas=None,
+           shell=cmdmod.DEFAULT_SHELL,
+           env=(),
+           template='jinja',
+           umask=None,
+           timeout=None,
+           reset_system_locale=True,
+           __env__='base',
+           no_clean=False,
+           **kwargs):
+    '''
+    Same usage as cmd.script but running inside a container context
+
+    container
+        container id or grain
+    others params and documentation
+        See cmd.retcode
+    '''
+    status = base_status.copy()
+    return _script(status,
+                   container,
+                   source,
+                   args=args,
+                   cwd=cwd,
+                   stdin=stdin,
+                   runas=runas,
+                   shell=shell,
+                   env=env,
+                   template=template,
+                   umask=umask,
+                   timeout=timeout,
+                   reset_system_locale=reset_system_locale,
+                   __env__=__env__,
+                   no_clean=no_clean,
+                   **kwargs)
+
+
+def script_retcode(container,
+                   source,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=cmdmod.DEFAULT_SHELL,
+                   env=(),
+                   template='jinja',
+                   umask=None,
+                   timeout=None,
+                   reset_system_locale=True,
+                   __env__='base',
+                   no_clean=False,
+                   **kwargs):
+    '''
+    Same usage as cmd.script_retcode but running inside a container context
+
+    container
+        container id or grain
+    others params and documentation
+        See cmd.retcode
+    '''
+    return script(container,
+                  source=source,
+                  cwd=cwd,
+                  stdin=stdin,
+                  runas=runas,
+                  shell=shell,
+                  env=env,
+                  template=template,
+                  umask=umask,
+                  timeout=timeout,
+                  reset_system_locale=reset_system_locale,
+                  run_func_=retcode,
+                  no_clean=no_clean,
+                  **kwargs)
 
 
 ## vim:set et sts=4 ts=4 tw=80:
