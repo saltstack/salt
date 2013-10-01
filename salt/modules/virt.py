@@ -22,6 +22,8 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 import yaml
+import jinja2
+import jinja2.exceptions
 try:
     import libvirt
     from xml.dom import minidom
@@ -31,8 +33,16 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.templates
 from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+
+# Set up template environment
+JINJA = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(
+        os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'virt')
+    )
+)
 
 VIRT_STATE_NAME_MAP = {0: 'running',
                        1: 'running',
@@ -202,39 +212,11 @@ def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **
     insertion into the VM XML definition
     '''
 
-    import jinja2
+    if serial_type not in ['pty', 'tcp']:
+        log.debug('Unsupported serial type {0}'.format(serial_type))
+        return ''
 
-    templates = {
-            'pty': '''
-                <serial type='pty'>
-                    <target port='0'/>
-                </serial>
-                {% if console %}
-                <console type='pty'>
-                    <target type='serial' port='0'/>
-                </console>
-                {% endif %}
-            ''',
-
-            'tcp': '''
-                <serial type='tcp'>
-                    <source mode='bind' host='' service='{{ telnet_port }}'/>
-                    <protocol type='telnet'/>
-                    <target port='0'/>
-                </serial>
-                {% if console %}
-                <console type='tcp'>
-                    <source mode='bind' host='' service='{{telnet_port}}'/>
-                    <protocol type='telnet'/>
-                    <target type='serial' port='0'/>
-                </console>
-                {% endif %}
-            '''
-    }
-
-    dict_loader = jinja2.DictLoader(templates)
-    env = jinja2.Environment(loader=dict_loader)
-    template = env.get_template(serial_type)
+    template = JINJA.get_template('serial_port_{0}.jinja'.format(serial_type))
     return template.render(serial_type=serial_type,
                            telnet_port=telnet_port,
                            console=console)
