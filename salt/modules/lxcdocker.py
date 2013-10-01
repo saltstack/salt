@@ -4,6 +4,14 @@
 Managment of dockers: overview of this module
 =============================================
 
+
+General notes
+------------------
+- As we use states, we dont want to pop contineously dockers, we will map each
+container id  (or image) with a grain whenever it is relevant.
+- As a corollary, we will resolve for a container id eitheir directly this
+container id or try to find a container id matching something stocked in grain
+
 installation prerequsuites
 ------------------------------
 - You will need the 'docker-py' python package in your python installation
@@ -276,9 +284,12 @@ def get_containers(all=True, trunc=False, since=None, before=None, limit=-1):
 def get_image_infos(image):
     '''
     Verify that the image exists
+    We will try to resolve either by:
+        - the mapping grain->docker id or directly
+        - dockerid
 
     image
-        Image Id
+        Image Id / grain name
 
     Returns the image id
     '''
@@ -305,7 +316,13 @@ def get_image_infos(image):
 
 def get_container_infos(container):
     '''
-    Either get a container by container id or hostname
+    Get container infos
+    We will try to resolve either by:
+        - the mapping grain->docker id or directly
+        - dockerid
+
+    container
+        Image Id / grain name
     '''
     status = base_status.copy()
     client = get_client()
@@ -665,9 +682,9 @@ def kill(container):
     status = base_status.copy()
     try:
         dcontainer = get_container_infos(container)['id']
-        if is_running(container):
+        if is_running(dcontainer):
             client.kill(dcontainer)
-            if not is_running(container):
+            if not is_running(dcontainer):
                 valid(
                     status,
                     comment='Container {0} was killed'.format(
@@ -716,7 +733,7 @@ def restart(container, timeout=10):
     try:
         dcontainer = get_container_infos(container)['id']
         client.restart(dcontainer, timeout=timeout)
-        if is_running(container):
+        if is_running(dcontainer):
             valid(status,
                   comment='Container {0} was restarted'.format(container),
                   id=container)
@@ -749,7 +766,7 @@ def start(container, binds=None, ports=None):
         dcontainer = get_container_infos(container)['id']
         if not is_running(container):
             client.start(dcontainer, binds=binds)
-            if is_running(container):
+            if is_running(dcontainer):
                 valid(status,
                       comment='Container {0} was started'.format(container),
                       id=container)
@@ -784,7 +801,7 @@ def wait(container):
     status = base_status.copy()
     try:
         dcontainer = get_container_infos(container)['id']
-        if is_running(container):
+        if is_running(dcontainer):
             client.wait(dcontainer)
             if not is_running(container):
                 valid(status,
@@ -1093,8 +1110,8 @@ def tag(image, repository, tag=None, force=False):
     client = get_client()
     status = base_status.copy()
     try:
-        image = get_image_infos(image)['id']
-        ret = client.tag(image, repository, tag=tag, force=force)
+        dimage = get_image_infos(image)['id']
+        ret = client.tag(dimage, repository, tag=tag, force=force)
     except Exception:
         invalid(status,
                 out=traceback.format_exc(),
