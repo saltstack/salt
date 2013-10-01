@@ -134,6 +134,7 @@ import json
 import os
 import traceback
 
+from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -1504,11 +1505,147 @@ def push(repo):
     return status
 
 
-def retcode():
-    '''.'''
+def _run_wrapper(status, container, func, cmd,  *args, **kwargs):
+    '''Wrapper to a cmdmod function
+
+    Idea is to prefix the call to cmdrun with the relevant lxc-attach to
+    execute inside a container contexrt
+
+    status
+        status object
+    container
+        container id or grain to execute in
+    func
+        cmd function to execute
+    cmd
+        command to execute in container
+
+    '''
+    try:
+        cid = get_container_infos(container)['id']
+        dcmd = 'lxc-attach -n {0} -- {1}'.format(cid, cmd)
+        comment = 'Executed {0}'.format(dcmd)
+        try:
+            f = __salt__[func]
+            ret = f(dcmd, *args, **kwargs)
+            if (
+                (
+                    isinstance(ret, dict)
+                    and (
+                        ('retcode' in ret)
+                        and (ret['retcode'] != 0)
+                    )
+                )
+                or (func == 'cmd.retcode' and ret != 0)
+            ):
+                return invalid(status, id=container, out=ret, comment=comment)
+            valid(status, id=container, out=ret, comment=comment,)
+        except:
+            invalid(status, id=container,
+                    comment=comment, out=traceback.format_exc())
+    except Exception:
+        invalid(status, id=container, out=traceback.format_exc())
+    return status
 
 
-def run():
-    '''.'''
+def run(container, cmd, *args, **kwargs):
+    '''
+    Wrapper for cmdmod.run inside a container context
+
+    container
+        container id (or grain)
+
+    Other params:
+        See cmdmod docuemntation
+
+    The return is a bit different as we use the docker struct,
+    The output of the command is in 'out'
+    The result is always True
+
+    '''
+    status = base_status.copy()
+    return _run_wrapper(
+        status, container, 'cmd.run', cmd, *args, **kwargs)
+
+
+def run_all(container, cmd, *args, **kwargs):
+    '''
+    Wrapper for cmdmod.run_all inside a container context
+
+    container
+        container id (or grain)
+
+    Other params:
+        See cmdmod docuemntation
+
+    The return is a bit different as we use the docker struct,
+    The output of the command is in 'out'
+    The result if false if command failed
+
+    '''
+    status = base_status.copy()
+    return _run_wrapper(
+        status, container, 'cmd.run_all', cmd, *args, **kwargs)
+
+
+def run_stderr(container, cmd, *args, **kwargs):
+    '''
+    Wrapper for cmdmod.run_stderr inside a container context
+
+    container
+        container id (or grain)
+
+    Other params:
+        See cmdmod docuemntation
+
+    The return is a bit different as we use the docker struct,
+    The output of the command is in 'out'
+    The result is always True
+
+    '''
+    status = base_status.copy()
+    return _run_wrapper(
+        status, container, 'cmd.run_stderr', cmd, *args, **kwargs)
+
+
+def run_stdout(container, cmd, *args, **kwargs):
+    '''
+    Wrapper for cmdmod.run_stdout inside a container context
+
+    container
+        container id (or grain)
+
+    Other params:
+        See cmdmod docuemntation
+
+    The return is a bit different as we use the docker struct,
+    The output of the command is in 'out'
+    The result is always True
+
+    '''
+    status = base_status.copy()
+    return _run_wrapper(
+        status, container, 'cmd.run_stdout', cmd, *args, **kwargs)
+
+
+def retcode(container, cmd, *args, **kwargs):
+    '''
+    Wrapper for cmdmod.retcode inside a container context
+
+    container
+        container id (or grain)
+
+    Other params:
+        See cmdmod docuemntation
+
+    The return is a bit different as we use the docker struct,
+    The output of the command is in 'out'
+    The result is false if command failed
+
+    '''
+    status = base_status.copy()
+    return _run_wrapper(
+        status, container, 'cmd.retcode', cmd, *args, **kwargs)
+
 
 ## vim:set et sts=4 ts=4 tw=80:
