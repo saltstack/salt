@@ -323,8 +323,8 @@ def install(name=None,
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
                     log.debug(targets)
                 else:
-                    msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(version_num, name)
+                    msg = ('Invalid version string {0!r} for package '
+                           '{1!r}'.format(version_num, name))
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -334,25 +334,33 @@ def install(name=None,
         targets = pkg_params
 
     old = list_pkgs()
-    # Quotes needed around package targets because of the possibility of output
-    # redirection characters "<" or ">" in zypper command.
+    downgrades = []
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        # Quotes needed around package targets because of the possibility of output
-        # redirection characters "<" or ">" in zypper command.
-        cmd = 'zypper --non-interactive install --name --auto-agree-with-licenses "{0}"'.format('" "'.join(targets[:500]))
+        # Quotes needed around package targets because of the possibility of
+        # output redirection characters "<" or ">" in zypper command.
+        cmd = (
+            'zypper --non-interactive install --name '
+            '--auto-agree-with-licenses "{0}"'
+            .format('" "'.join(targets[:500]))
+        )
         targets = targets[500:]
         stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
-        downgrades = []
         for line in stdout.splitlines():
-            match = re.match("^The selected package '([^']+)'.+has lower version",
-                             line)
+            match = re.match(
+                "^The selected package '([^']+)'.+has lower version",
+                line
+            )
             if match:
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = 'zypper --non-interactive install --name --auto-agree-with-licenses --force {0}'.format(' '.join(downgrades[:500]))
+        cmd = (
+            'zypper --non-interactive install --name '
+            '--auto-agree-with-licenses --force {0}'
+            .format(' '.join(downgrades[:500]))
+        )
         __salt__['cmd.run_all'](cmd)
         downgrades = downgrades[500:]
     __context__.pop('pkg.list_pkgs', None)
@@ -378,7 +386,7 @@ def upgrade(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
     old = list_pkgs()
-    cmd = 'zypper --non-interactive up  --auto-agree-with-licenses'
+    cmd = 'zypper --non-interactive update --auto-agree-with-licenses'
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -397,7 +405,10 @@ def _uninstall(action='remove', name=None, pkgs=None):
     if not targets:
         return {}
     while targets:
-        cmd = 'zypper --non-interactive remove {0} {1}'.format(purge_arg, ' '.join(targets[:500]))
+        cmd = (
+            'zypper --non-interactive remove {0} {1}'
+            .format(purge_arg, ' '.join(targets[:500]))
+        )
         __salt__['cmd.run_all'](cmd)
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
