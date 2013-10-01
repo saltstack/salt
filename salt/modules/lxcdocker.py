@@ -16,7 +16,7 @@ installation prerequsuites
 ------------------------------
 - You will need the 'docker-py' python package in your python installation
   running salt.
-- For now, you need this fork: https://github.com/kiorky/docker-py
+- For now, you need docker-py from sources: https://github.com/dotcloud/docker-py
 
 Prerequisite pillar configuration for authentication
 ----------------------------------------------------
