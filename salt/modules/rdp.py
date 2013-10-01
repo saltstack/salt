@@ -9,6 +9,7 @@ import re
 # Import salt libs
 import salt.utils
 
+POWERSHELL='C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
 
 def __virtual__():
     '''
@@ -40,7 +41,9 @@ def enable():
 
         salt '*' rdp.enable
     '''
-    cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(1,1) }"'
+    
+    cmd = '-InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(1,1) }"'
+    cmd = '{0} {1}'.format(POWERSHELL, cmd)
     return _parse_return_code_powershell(__salt__['cmd.run'](cmd)) == 0
 
 
@@ -54,7 +57,9 @@ def disable():
 
         salt '*' rdp.disable
     '''
-    cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(0,1) }"'
+    
+    cmd = '-InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(0,1) }"'
+    cmd = '{0} {1}'.format(POWERSHELL, cmd)
     return _parse_return_code_powershell(__salt__['cmd.run'](cmd)) == 0
 
 
@@ -68,6 +73,8 @@ def status():
 
         salt '*' rdp.status
     '''
-    cmd = 'powershell -InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; echo $RDP.AllowTSConnections }"'
+    
+    cmd = '-InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; echo $RDP.AllowTSConnections }"'
+    cmd = '{0} {1}'.format(POWERSHELL, cmd)
     out = int(__salt__['cmd.run'](cmd).strip())
     return out != 0
