@@ -88,7 +88,6 @@ class Shell(object):
         Return options to pass to sshpass
         '''
         options = ['ControlMaster=auto',
-                   'ControlPersist=60s',
                    'StrictHostKeyChecking=no',
                    'GSSAPIAuthentication=no',
                    ]
