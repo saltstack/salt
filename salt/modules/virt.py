@@ -211,12 +211,12 @@ def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **
     Returns string representing the serial and console devices suitable for
     insertion into the VM XML definition
     '''
-
-    if serial_type not in ['pty', 'tcp']:
-        log.debug('Unsupported serial type {0}'.format(serial_type))
+    fn_ = 'serial_port_{0}.jinja'.format(serial_type)
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template {0}'.format(fn_))
         return ''
-
-    template = JINJA.get_template('serial_port_{0}.jinja'.format(serial_type))
     return template.render(serial_type=serial_type,
                            telnet_port=telnet_port,
                            console=console)
