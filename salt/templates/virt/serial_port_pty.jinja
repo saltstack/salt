@@ -1,0 +1,8 @@
+                <serial type='pty'>
+                    <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='pty'>
+                    <target type='serial' port='0'/>
+                </console>
+                {% endif %}

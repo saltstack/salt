@@ -987,11 +987,11 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'queries')
         )
         self.add_option(
-           '--show-timeout',
-           default=False,
-           action='store_true',
-           help=('Display minions that timeout')
-       )
+            '--show-timeout',
+            default=False,
+            action='store_true',
+            help=('Display minions that timeout')
+        )
         self.add_option(
             '-b', '--batch',
             '--batch-size',
@@ -1199,7 +1199,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-a', '--accept',
             default='',
-            help='Accept the following key'
+            help='Accept the specified public key (use --include-all to '
+                 'match rejected keys in addition to pending keys)'
         )
 
         actions_group.add_option(
@@ -1212,7 +1213,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-r', '--reject',
             default='',
-            help='Reject the specified public key'
+            help='Reject the specified public key (use --include-all to '
+                 'match accepted keys in addition to pending keys)'
         )
 
         actions_group.add_option(
@@ -1220,6 +1222,13 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help='Reject all pending keys'
+        )
+
+        actions_group.add_option(
+            '--include-all',
+            default=False,
+            action='store_true',
+            help='Include non-pending keys when accepting/rejecting'
         )
 
         actions_group.add_option(

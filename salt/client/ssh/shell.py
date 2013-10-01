@@ -78,17 +78,16 @@ class Shell(object):
         if self.user:
             options.append('User={0}'.format(self.user))
 
-        ret = ''
+        ret = []
         for option in options:
-            ret += '-o {0} '.format(option)
-        return ret
+            ret.append('-o {0} '.format(option))
+        return ''.join(ret)
 
     def _passwd_opts(self):
         '''
         Return options to pass to sshpass
         '''
         options = ['ControlMaster=auto',
-                   'ControlPersist=60s',
                    'StrictHostKeyChecking=no',
                    'GSSAPIAuthentication=no',
                    ]
@@ -98,10 +97,10 @@ class Shell(object):
         if self.user:
             options.append('User={0}'.format(self.user))
 
-        ret = ''
+        ret = []
         for option in options:
-            ret += '-o {0} '.format(option)
-        return ret
+            ret.append('-o {0} '.format(option))
+        return ''.join(ret)
 
     def _copy_id_str(self):
         '''
@@ -163,7 +162,6 @@ class Shell(object):
             return data
         except Exception:
             return ('local', 'Unknown Error')
-        return ('local', 'Unknown Error')
 
     def _run_nb_cmd(self, cmd):
         '''
@@ -192,16 +190,16 @@ class Shell(object):
         '''
         Yield None until cmd finished
         '''
-        r_out = ''
-        r_err = ''
+        r_out = []
+        r_err = []
         cmd = self._cmd_str(cmd)
         for out, err in self._run_nb_cmd(cmd):
             if out is not None:
-                r_out += out
+                r_out.append(out)
             if err is not None:
-                r_err += err
+                r_err.append(err)
             yield None, None
-        yield r_out, r_err
+        yield ''.join(r_out), ''.join(r_err)
 
     def exec_cmd(self, cmd):
         '''
