@@ -1821,7 +1821,7 @@ def script_retcode(container,
     others params and documentation
         See cmd.retcode
     '''
-    return script(container,
+    return _script(container,
                   source=source,
                   cwd=cwd,
                   stdin=stdin,
