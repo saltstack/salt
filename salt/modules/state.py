@@ -250,7 +250,7 @@ def highstate(test=None, queue=False, **kwargs):
 
     pillar = kwargs.get('pillar')
 
-    st_ = salt.state.HighState(opts, pillar)
+    st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
     st_.push_active()
     try:
         ret = st_.call_highstate(
@@ -321,7 +321,7 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
 
-    st_ = salt.state.HighState(opts, pillar)
+    st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
 
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
