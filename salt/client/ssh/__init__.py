@@ -23,46 +23,55 @@ import salt.state
 import salt.loader
 import salt.minion
 
+# This is just a delimiter to distinguish the beginning of salt STDOUT.  There
+# is no special meaning
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
-HEREDOC = (' << "EOF"\n'
-           '{{0}}\n'
-           'set -x\n'
-           ' for py_candidate in  \\\n'
-           '        python27      \\\n'
-           '        python2.7     \\\n'
-           '        python26      \\\n'
-           '        python2.6     \\\n'
-           '        python2       \\\n'
-           '        python        ;\n'
-           ' do \n'
 
-           '     if [ `type -p $py_candidate` ] \n'
-           '     then \n'
-           '         PYTHON=$py_candidate \n'
-           '         break \n'
-           '     fi \n'
-           ' done \n'
-           'if [ -f /tmp/.salt/salt-call ] \n'
-           'then\n'
-           '    if [[ $(cat /tmp/.salt/version) != {0} ]]\n'
-           '    then\n'
-           '        rm -rf /tmp/.salt\n'
-           '        install -m 1777 -d /tmp/.salt\n'
-           '        echo "{1}"\n'
-           '        echo "deploy"\n'
-           '        exit 1\n'
-           '    fi\n'
-           '    SALT=/tmp/.salt/salt-call\n'
-           'else\n'
-           '    echo "{1}"\n'
-           '    install -m 1777 -d /tmp/.salt\n'
-           '    echo "deploy"\n'
-           '    exit 1\n'
-           'fi\n'
-           'echo "{1}"\n'
-           '$PYTHON $SALT --local --out json -l quiet {{1}}\n'
-           'EOF').format(salt.__version__, RSTR)
+# This shim facilitaites remote salt-call operations
+# 1. Identify a suitable python
+# 2. Test for remote salt-call and version if present
+# 3. Signal to (re)deploy if missing or out of date
+# 4. Perform salt-call
+
+# Note there are two levels of formatting.
+# - First format pass inserts salt version and delimiter
+# - Second pass at run-time and inserts optional "sudo" and command
+SSH_SHIM = ''' << 'EOF'
+      for py_candidate in \\
+            python27      \\
+            python2.7     \\
+            python26      \\
+            python2.6     \\
+            python2       \\
+            python        ;
+      do
+         if [ `type -p $py_candidate` ]
+         then
+               PYTHON=$(type -p $py_candidate)
+               break
+         fi
+      done
+      if [ -f /tmp/.salt/salt-call ]
+      then
+         if [[ $(cat /tmp/.salt/version) != {0} ]]
+         then
+            {{0}} rm -rf /tmp/.salt
+            {{0}} install -m 1777 -d /tmp/.salt
+            echo "{1}"
+            echo "deploy"
+            exit 1
+         fi
+         SALT=/tmp/.salt/salt-call
+      else
+         echo "{1}"
+         {{0}} install -m 1777 -d /tmp/.salt
+         echo "deploy"
+         exit 1
+      fi
+      echo "{1}"
+      {{0}} $PYTHON $SALT --local --out json -l quiet {{1}}
+EOF\n'''.format(salt.__version__, RSTR)
 
 class SSH(object):
     '''
@@ -70,7 +79,8 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        tgt_type = self.opts['selected_target_option'] if self.opts['selected_target_option'] else 'glob'
+        tgt_type = self.opts['selected_target_option'] \
+                if self.opts['selected_target_option'] else 'glob'
         self.roster = salt.roster.Roster(opts)
         self.targets = self.roster.targets(
                 self.opts['tgt'],
@@ -350,6 +360,7 @@ class Single(object):
             priv=None,
             timeout=None,
             sudo=False,
+            tty=False,
             **kwargs):
         self.opts = opts
         self.arg_str = arg_str
@@ -362,7 +373,8 @@ class Single(object):
                 'passwd': passwd,
                 'priv': priv,
                 'timeout': timeout,
-                'sudo': sudo}
+                'sudo': sudo,
+                'tty': tty}
         self.shell = salt.client.ssh.shell.Shell(**args)
 
         self.target = kwargs
@@ -472,11 +484,9 @@ class Single(object):
             args, kwargs = salt.minion.parse_args_and_kwargs(
                     self.sls_seed, self.arg)
             self.sls_seed(*args, **kwargs)
-        sudo = 'sudo -i\n' if self.target['sudo'] else ''
-        cmd = HEREDOC.format(sudo, self.arg_str)
+        sudo = 'sudo' if self.target['sudo'] else ''
+        cmd = SSH_SHIM.format(sudo, self.arg_str)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
-            print stdout
-            print stderr
             yield stdout, stderr
 
     def cmd_block(self):
@@ -487,13 +497,9 @@ class Single(object):
         # 2. check is salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        sudo = 'sudo -i\n' if self.target['sudo'] else ''
-        cmd = HEREDOC.format(sudo, self.arg_str)
+        sudo = 'sudo' if self.target['sudo'] else ''
+        cmd = SSH_SHIM.format(sudo, self.arg_str)
         stdout, stderr = self.shell.exec_cmd(cmd)
-        print "THIS IS STDOUT"
-        print stdout
-        print "THIS IS STDERR"
-        print stderr
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
         if stdout.startswith('deploy'):
