@@ -2,7 +2,6 @@
 
 # Import python libs
 import sys
-from xml.etree import ElementTree as ElementTree
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
