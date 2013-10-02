@@ -104,3 +104,35 @@ def shutdown_hard():
     cmd = 'shutdown /p /f'
     ret = __salt__['cmd.run'](cmd)
     return ret
+
+
+def set_computer_name(name):
+    '''
+    Set the Windows computer name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' ip.set_computer_name 'DavesComputer'
+    '''
+    cmd = ('wmic computersystem where name="%COMPUTERNAME%"'
+           ' call rename name="{0}"'
+           )
+    __salt__['cmd.run'](cmd.format(name))
+    return {'Computer name': name }
+
+
+def set_computer_desc(desc):
+    '''
+    Set the Windows computer description
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' ip.set_computer_desc 'This computer belongs to Dave!'
+    '''
+    cmd = 'net config server /srvcomment:"{0}"'.format(desc)
+    __salt__['cmd.run'](cmd)
+    return {'Computer Description': desc }
