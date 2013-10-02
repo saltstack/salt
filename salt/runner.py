@@ -30,7 +30,7 @@ class RunnerClient(object):
         self.opts = opts
         self.functions = salt.loader.runner(opts)
 
-    def _proc_runner(self, tag, fun, low, user):
+    def _proc_runner(self, fun, low, user, tag, jid):
         '''
         Run this method in a multiprocess target to execute the runner in a
         multiprocess and fire the return data on the event bus
@@ -38,7 +38,7 @@ class RunnerClient(object):
         salt.utils.daemonize()
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         data = {'fun': "runner.{0}".format(fun),
-                'jid': low['jid'],
+                'jid': jid,
                 'user': user,
                 }
         event.fire_event(data, tagify('new', base=tag))
@@ -101,12 +101,12 @@ class RunnerClient(object):
         '''
         jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
         tag = tagify(jid, prefix='run')
-        low['tag'] = tag
-        low['jid'] = jid
+        #low['tag'] = tag
+        #low['jid'] = jid
 
         proc = multiprocessing.Process(
                 target=self._proc_runner,
-                args=(tag, fun, low, user))
+                args=(fun, low, user, tag, jid))
         proc.start()
         return tag
 

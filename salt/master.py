@@ -2360,6 +2360,11 @@ class ClearFuncs(object):
                 clear_load,
                 salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
                 )
+        # save the minions to a cache so we can see in the UI
+        self.serial.dump(
+                minions,
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
+                )        
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
