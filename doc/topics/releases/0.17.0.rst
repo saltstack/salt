@@ -17,19 +17,6 @@ So if the release happens in November of 2013 the number will be 13.11.0, the
 first bugfix release will be 13.11.1 and so forth.
 
 
-Possible Minion ID Change
-=========================
-
-Due to changes in the Minion ID detection (see :issue:`6645`), if your Minion
-has an ``/etc/hostname``, and the contents of that file differ from the
-Minion's ID, then that Minion will begin to be identified by the hostname
-specified in ``/etc/hostname``. You will need to accept the key under the new
-Minion ID, and remove the old key. Alternatively, if you have several hosts for
-which this needs to be done, you can rename the applicable public key files
-within ``/etc/salt/pki/master/minions`` on the master, and delete the pending
-keys within ``/etc/salt/pki/master/minions_pre``.
-
-
 Major Features
 ==============
 
