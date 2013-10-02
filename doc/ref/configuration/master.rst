@@ -973,7 +973,7 @@ option then the master will log a warning message.
 
     # Include files from a master.d directory in the same
     # directory as the master config file
-    include: master.d/*
+    include: master.d/*.conf
 
     # Include a single extra file into the configuration
     include: /etc/roles/webserver
