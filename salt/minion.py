@@ -726,8 +726,8 @@ class Minion(object):
         ret['fun'] = data['fun']
         minion_instance._return_pub(ret)
         if data['ret']:
+            ret['id'] = opts['id']
             for returner in set(data['ret'].split(',')):
-                ret['id'] = opts['id']
                 try:
                     minion_instance.returners['{0}.returner'.format(
                         returner
