@@ -17,9 +17,6 @@ a finite order, which guarantees that states are always executed in the same
 order, and the states runtime is declarative, making Salt fully aware of
 dependencies via the requisite system.
 
-Also, in Salt 0.17.0, the ``state_auto_order`` option was added to Salt.
-It makes states get evaluated in the order in which they are defined.
-
 State Auto Ordering
 ===================
 
