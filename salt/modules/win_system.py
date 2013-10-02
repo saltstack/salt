@@ -126,8 +126,10 @@ def set_computer_name(name):
            ' call rename name="{0}"'
            )
     log.debug('Attempting to change computer name. Cmd is: '.format(cmd))
-    __salt__['cmd.run'](cmd.format(name))
-    return {'Computer name': name }
+    ret = __salt__['cmd.run'](cmd.format(name))
+    if 'ReturnValue = 0;' in ret:
+        return {'Computer name': name }
+    return False
 
 
 def set_computer_desc(desc):
