@@ -3,8 +3,14 @@
 Support for reboot, shutdown, etc
 '''
 
+# Import python libs
+import logging
+
+# Import salt libs
 import salt.utils
 
+# Set up logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -119,6 +125,7 @@ def set_computer_name(name):
     cmd = ('wmic computersystem where name="%COMPUTERNAME%"'
            ' call rename name="{0}"'
            )
+    log.debug('Attempting to change computer name. Cmd is: '.format(cmd))
     __salt__['cmd.run'](cmd.format(name))
     return {'Computer name': name }
 
