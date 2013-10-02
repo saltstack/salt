@@ -16,10 +16,6 @@ import subprocess
 import string
 import logging
 
-
-log = logging.getLogger(__name__)
-
-
 # Import third party libs
 import yaml
 import jinja2
@@ -36,6 +32,8 @@ import salt.utils
 import salt.utils.templates
 from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+
+log = logging.getLogger(__name__)
 
 # Set up template environment
 JINJA = jinja2.Environment(
@@ -564,7 +562,7 @@ def init(name,
         # TODO: make it possible to use disk profiles and use the
         # template image as the system disk
         diskp = _disk_profile('default', hypervisor, **kwargs)
-         
+
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
         disk_name = diskp[0].keys()[0]
