@@ -176,3 +176,5 @@ Fixes from RC to release
 - Fix :mod:`cp.push <salt.modules.cp.push>` file corruption (:issue:`6495`)
 - Fix ALT Linux password hash specification (:issue:`3474`)
 - Multiple salt-ssh-related fixes and improvements
+- Fix hostname detection by checking ``/etc/hostname`` (if present)
+  (:issue:`6645`)
