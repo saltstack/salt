@@ -6,7 +6,6 @@ The networking module for Windows based systems
 # Import python libs
 import logging
 import socket
-import time
 
 # Import salt libs
 import salt.utils
@@ -38,7 +37,7 @@ def _interface_configs():
     for line in lines:
         if dns_flag:
             try:
-                addr = socket.inet_aton(line.strip())
+                socket.inet_aton(line.strip())
                 ret[iface][dns_flag].append(line.strip())
                 dns_flag = None
                 continue
@@ -46,7 +45,7 @@ def _interface_configs():
                 dns_flag = None
         if wins_flag:
             try:
-                addr = socket.inet_aton(line.strip())
+                socket.inet_aton(line.strip())
                 ret[iface][wins_flag].append(line.strip())
                 wins_flag = None
                 continue
@@ -90,7 +89,15 @@ def _interface_configs():
 
 
 def raw_interface_configs():
-    ''' just return raw interface configs '''
+    '''
+    Return raw configs for all interfaces
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.raw_interface_configs
+    '''
     cmd = 'netsh interface ip show config'
     return __salt__['cmd.run'](cmd)
 
