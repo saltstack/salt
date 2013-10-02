@@ -124,4 +124,4 @@ class FileModuleTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(FileModuleTestCase, needs_daemon=False)
+    run_tests(FileModuleTestCase, FileReplaceTestCase, needs_daemon=False)
