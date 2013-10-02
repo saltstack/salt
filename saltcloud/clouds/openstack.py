@@ -67,6 +67,16 @@ configuration at ``/etc/salt/cloud.providers`` or
 
       provider: openstack
 
+For in-house Openstack Essex installation, libcloud needs the service_type :
+
+.. code-block:: yaml
+
+  my-openstack-config:
+    identity_url: 'http://control.openstack.example.org:5000/v2.0/'
+    compute_name : Compute Service
+    service_type : compute
+
+
 Either a password or an API key must also be specified:
 
 .. code-block:: yaml
@@ -199,13 +209,18 @@ def get_conn():
         ),
         'ex_tenant_name': config.get_config_value(
             'tenant', vm_, __opts__, search_global=False
+        ),
+   }
+
+    service_type = config.get_config_value(
+            'service_type', vm_, __opts__, search_global=False
         )
-    }
+    if service_type:
+	    authinfo['ex_force_service_type'] = service_type
 
     insecure = config.get_config_value(
         'insecure', vm_, __opts__, search_global=False
     )
-
     if insecure:
         import libcloud.security
         libcloud.security.VERIFY_SSL_CERT = False
