@@ -87,11 +87,24 @@ class Shell(object):
         '''
         Return options to pass to sshpass
         '''
+        # TODO ControlMaster does not work without ControlPath
+        # user could take advange of it if they set ControlPath in thier
+        # ssh config.  Also, ControlPersist not widely available.
         options = ['ControlMaster=auto',
                    'StrictHostKeyChecking=no',
                    'GSSAPIAuthentication=no',
                    ]
         options.append('ConnectTimeout={0}'.format(self.timeout))
+
+        if self.passwd:
+            options.extend(['PasswordAuthentication=yes',
+                            'PubkeyAuthentication=no'])
+        else:
+            options.extend(['PasswordAuthentication=no',
+                            'PubkeyAuthentication=yes',
+                            'KbdInteractiveAuthentication=no',
+                            'ChallengeResponseAuthentication=no',
+                            'BatchMode=yes'])
         if self.port:
             options.append('Port={0}'.format(self.port))
         if self.user:
@@ -127,6 +140,10 @@ class Shell(object):
         '''
         Return the cmd string to execute
         '''
+
+        # TODO: if tty, then our SSH_SHIM cannot be supplied from STDIN Will
+        # need to deliver the SHIM to the remote host and execute it there
+
         if self.passwd and salt.utils.which('sshpass'):
             opts = self._passwd_opts()
             return 'sshpass -p "{0}" {1} {2} {3} {4} {5}'.format(
