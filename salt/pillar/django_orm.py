@@ -82,7 +82,6 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     if not HAS_VIRTUALENV:
-        log.warn('virtualenv not installed, please install first')
         return False
     return 'django_orm'
 
