@@ -11,6 +11,7 @@ import salt.utils
 
 POWERSHELL = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
 
+
 def __virtual__():
     '''
     Only works on Windows systems
