@@ -1050,7 +1050,7 @@ def user_grants(user,
     for grant in results:
         tmp = grant[0].split(' IDENTIFIED BY')[0]
         if 'WITH GRANT OPTION' in grant[0]:
-            tmp = '{} WITH GRANT OPTION'.format(tmp)
+            tmp = '{0} WITH GRANT OPTION'.format(tmp)
         ret.append(tmp)
     log.debug(ret)
     return ret
