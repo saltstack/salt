@@ -1161,7 +1161,7 @@ def grant_revoke(grant,
         return False
     cur = dbc.cursor()
 
-    if salt.util.is_true(grant_option):
+    if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'
     qry = 'REVOKE {0} ON {1} FROM {2!r}@{3!r};'.format(
         grant, database, user, host
