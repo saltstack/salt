@@ -494,7 +494,7 @@ class State(object):
     '''
     Class used to execute salt states
     '''
-    def __init__(self, opts, pillar=None):
+    def __init__(self, opts, pillar=None, jid=None):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
@@ -507,6 +507,7 @@ class State(object):
         self.mod_init = set()
         self.pre = {}
         self.__run_num = 0
+        self.jid = jid
 
     def __gather_pillar(self):
         '''
@@ -1379,6 +1380,16 @@ class State(object):
             return 'change'
         return 'met'
 
+    def event(self, chunk_ret):
+        '''
+        Fire an event on the master bus
+        '''
+        if not self.opts.get('local') and self.opts.get('state_events', True):
+            tag = salt.utils.event.tagify(
+                    [self.jid, str(chunk_ret['__run_num__'])]
+                    )
+            self.functions['event.fire_master'](chunk_ret, tag)
+
     def call_chunk(self, low, running, chunks):
         '''
         Check if a chunk has any requires, execute the requires and then
@@ -1444,6 +1455,7 @@ class State(object):
                                 'comment': comment,
                                 '__run_num__': self.__run_num}
                 self.__run_num += 1
+                self.event(running[tag])
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -1465,6 +1477,7 @@ class State(object):
                                     'comment': 'Recursive requisite found',
                                     '__run_num__': self.__run_num}
                         self.__run_num += 1
+                        self.event(running[tag])
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
@@ -1511,6 +1524,7 @@ class State(object):
                 self.pre[tag] = self.call(low)
             else:
                 running[tag] = self.call(low)
+        self.event(running[tag])
         return running
 
     def call_high(self, high):
@@ -1692,6 +1706,7 @@ class BaseHighState(object):
                     'state_auto_order',
                     opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
+            opts['state_events'] = mopts.get('state_events')
         return opts
 
     def _get_envs(self):
@@ -2335,10 +2350,10 @@ class HighState(BaseHighState):
     # a stack of active HighState objects during a state.highstate run
     stack = []
 
-    def __init__(self, opts, pillar=None):
+    def __init__(self, opts, pillar=None, jid=None):
         self.client = salt.fileclient.get_file_client(opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(self.opts, pillar)
+        self.state = State(self.opts, pillar, jid)
         self.matcher = salt.minion.Matcher(self.opts)
 
         # tracks all pydsl state declarations globally across sls files

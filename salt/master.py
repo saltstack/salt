@@ -901,6 +901,7 @@ class AESFuncs(object):
         mopts['state_top'] = self.opts['state_top']
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
+        mopts['state_events'] = self.opts['state_events']
         return mopts
 
     def _mine_get(self, load):
@@ -2359,6 +2360,11 @@ class ClearFuncs(object):
                 clear_load,
                 salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
                 )
+        # save the minions to a cache so we can see in the UI
+        self.serial.dump(
+                minions,
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
+                )        
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])

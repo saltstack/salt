@@ -16,6 +16,7 @@ be date based following this format:
 So if the release happens in November of 2013 the number will be 13.11.0, the
 first bugfix release will be 13.11.1 and so forth.
 
+
 Major Features
 ==============
 
