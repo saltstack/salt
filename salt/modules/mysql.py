@@ -998,16 +998,6 @@ def __grant_generate(grant,
     if grant == 'ALL':
         grant = 'ALL PRIVILEGES'
 
-    # If False gets passed in by the user it is interpreted as a string.
-    # That means that str 'False' will evaluate to bool True.
-    # This prevents that.
-    if grant_option == 'False':
-        grant_option = False
-    elif grant_option == 'True':
-        grant_option = True
-    else:
-        grant_option = False
-
     db_part = database.rpartition('.')
     dbc = db_part[0]
     table = db_part[2]
@@ -1020,7 +1010,7 @@ def __grant_generate(grant,
     qry = 'GRANT {0} ON {1}.{2} TO {3!r}@{4!r}'.format(
         grant, dbc, table, user, host
     )
-    if grant_option:
+    if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
     log.debug('Query generated: {0}'.format(qry))
     return qry
