@@ -8,7 +8,7 @@ This backend exposes directories in S3 buckets as Salt environments.  This
 feature is managed by the :conf_master:`fileserver_backend` option in the Salt
 Master config.
 
-:configuration: S3 credentials can be either set in the master file using:
+:configuration: 
 
     S3 credentials can be set in the master config file with::
 
@@ -17,6 +17,19 @@ Master config.
 
     Alternatively, if on EC2 these credentials can be automatically loaded from
     instance metadata.
+
+    You will need to specify the service_url with:
+
+        service_url: s3.amazonaws.com
+
+    You can find a listing of the S3 enpoints at:
+
+        http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+
+    Lastly, include s3fs in your fileserver_backend:
+
+        fileserver_backend:
+          - s3fs
 
     This fileserver supports two modes of operation for the buckets:
 
