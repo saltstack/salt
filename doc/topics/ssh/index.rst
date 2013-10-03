@@ -80,7 +80,7 @@ States Via Salt SSH
 The Salt State system can also be used with ``salt-ssh``. The state system
 abstracts the same interface to the user in ``salt-ssh`` as it does when using
 standard ``salt``. The intent is that Salt Formulas defined for standard
-``salt`` will work seamlessly with ``salt-ssh`` as vis-versa.
+``salt`` will work seamlessly with ``salt-ssh`` and vice-versa.
 
 The standard Salt States walkthroughs function by simply replacing ``salt``
 commands with ``salt-ssh``.
