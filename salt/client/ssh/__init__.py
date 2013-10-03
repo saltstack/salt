@@ -74,6 +74,7 @@ SSH_SHIM = ''' << 'EOF'
       {{0}} $PYTHON $SALT --local --out json -l quiet {{1}}
 EOF\n'''.format(salt.__version__, RSTR)
 
+
 class SSH(object):
     '''
     Create an SSH execution system
