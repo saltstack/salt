@@ -170,3 +170,59 @@ def join_domain(domain, username, passwd, ou, acct_exists=False,):
     if 'ReturnValue = 0;' in ret:
         return {'Domain': domain}
     return False
+
+
+def get_system_time():
+    '''
+    Get the Windows system time
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_system_time
+    '''
+    cmd = 'time /T'
+    return __salt__['cmd.run'](cmd)
+
+
+def set_system_time(newtime):
+    '''
+    Set the Windows system time
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_system_time '11:31:15 AM'
+    '''
+    cmd = 'time {0}'.format(newtime)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def get_system_date():
+    '''
+    Get the Windows system date
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_system_date
+    '''
+    cmd = 'date /T'
+    return __salt__['cmd.run'](cmd)
+
+
+def set_system_date(newdate):
+    '''
+    Set the Windows system date. Use <mm-dd-yy> format for the date.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_system_date '03-28-13'
+    '''
+    cmd = 'date {0}'.format(newdate)
+    return not __salt__['cmd.retcode'](cmd)
