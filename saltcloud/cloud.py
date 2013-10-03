@@ -557,21 +557,26 @@ class Cloud(object):
         deploy = config.get_config_value('deploy', vm_, self.opts)
         make_master = config.get_config_value('make_master', vm_, self.opts)
 
-        if deploy is True and make_master is False and \
-                'master' not in minion_dict:
-            raise SaltCloudConfigError(
-                'There\'s no master defined on the {0!r} VM settings'.format(
-                    vm_['name']
+        if deploy:
+            if make_master is False and 'master' not in minion_dict:
+                raise SaltCloudConfigError(
+                    'There\'s no master defined on the {0!r} VM settings'.format(
+                        vm_['name']
+                    )
                 )
-            )
 
-        if deploy is True and 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
-            priv, pub = saltcloud.utils.gen_keys(
-                config.get_config_value('keysize', vm_, self.opts)
-            )
-            vm_['pub_key'] = pub
-            vm_['priv_key'] = priv
+            if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+                log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+                priv, pub = saltcloud.utils.gen_keys(
+                    config.get_config_value('keysize', vm_, self.opts)
+                )
+                vm_['pub_key'] = pub
+                vm_['priv_key'] = priv
+        else:
+            # Note(pabelanger): We still reference pub_key and priv_key when
+            # deploy is disabled.
+            vm_['pub_key'] = None
+            vm_['priv_key'] = None
 
         key_id = minion_dict.get('id', vm_['name'])
 
