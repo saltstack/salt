@@ -998,6 +998,16 @@ def __grant_generate(grant,
     if grant == 'ALL':
         grant = 'ALL PRIVILEGES'
 
+    # If False gets passed in by the user it is interpreted as a string.
+    # That means that str 'False' will evaluate to bool True.
+    # This prevents that.
+    if grant_option == 'False':
+        grant_option = False
+    elif grant_option == 'True':
+        grant_option = True
+    else:
+        grant_option = False
+
     db_part = database.rpartition('.')
     dbc = db_part[0]
     table = db_part[2]
