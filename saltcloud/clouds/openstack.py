@@ -63,7 +63,10 @@ configuration at ``/etc/salt/cloud.providers`` or
       ssh_key_name
       # The OpenStack network UUIDs
       networks:
-          - 4402cd51-37ee-435e-a966-8245956dc0e6
+          - fixed:
+              - 4402cd51-37ee-435e-a966-8245956dc0e6
+          - floating:
+              - Ext-Net
 
       provider: openstack
 
@@ -93,17 +96,9 @@ following option may be useful. Using the old syntax:
 
 .. code-block:: yaml
 
-    # Ignore IP addresses on this network for bootstrap
-    OPENSTACK.ignore_ip_addr: 192.168.50.0/24
-
-
-Using the new syntax:
-
-.. code-block:: yaml
-
     my-openstack-config:
       # Ignore IP addresses on this network for bootstrap
-      ignore_ip_addr: 192.168.50.0/24
+      ignore_cidr: 192.168.50.0/24
 
 '''
 
@@ -117,6 +112,7 @@ import pprint
 
 # Import libcloud
 from libcloud.compute.base import NodeState
+from libcloud.compute.drivers.openstack import OpenStack_1_1_FloatingIpPool
 from libcloud.compute.drivers.openstack import OpenStackNetwork
 
 # Import generic libcloud functions
@@ -269,7 +265,7 @@ def preferred_ip(vm_, ips):
         return False
 
 
-def ignore_ip_addr(vm_, ip):
+def ignore_cidr(vm_, ip):
     '''
     Return True if we are to ignore the specified IP. Compatible with IPv4.
     '''
@@ -277,9 +273,13 @@ def ignore_ip_addr(vm_, ip):
         log.error('Error: netaddr is not installed')
         return 'Error: netaddr is not installed'
 
-    cidr = vm_.get('ip_ignore', __opts__.get('OPENSTACK.ignore_cidr', ''))
+    cidr = config.get_config_value(
+        'ignore_cidr', vm_, __opts__, default='', search_global=False
+    )
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
+        log.warning("IP '%s' found within '%s'; ignoring it.'" % (ip, cidr))
         return True
+
     return False
 
 
@@ -398,10 +398,32 @@ def create(vm_):
     networks = config.get_config_value(
         'networks', vm_, __opts__, search_global=False
     )
+
+    floating = []
+
     if networks is not None:
-        kwargs['networks'] = [
-            OpenStackNetwork(n, None, None, None) for n in networks
-        ]
+        for net in networks:
+            if 'fixed' in net:
+                kwargs['networks'] = [
+                    OpenStackNetwork(n, None, None, None) for n in net['fixed']
+                ]
+            elif 'floating' in net:
+                pool = OpenStack_1_1_FloatingIpPool(
+                    net['floating'], conn.connection
+                )
+                for idx in pool.list_floating_ips():
+                    if idx.node_id is None:
+                        floating.append(idx)
+                if not floating:
+                    # Note(pabelanger): We have no available floating IPs. For
+                    # now, we raise an execption and exit. A future enhancement
+                    # might be to allow salt-cloud to dynamically allociate new
+                    # address but that might be tricky to manage.
+                    raise SaltCloudSystemExit(
+                        "Floating pool '%s' has not more address available, "
+                        "please create some more or use a different pool." %
+                        net['floating']
+                    )
 
     saltcloud.utils.fire_event(
         'event',
@@ -426,7 +448,7 @@ def create(vm_):
         )
         return False
 
-    def __query_node_data(vm_, data):
+    def __query_node_data(vm_, data, floating):
         try:
             nodelist = list_nodes()
             log.debug(
@@ -464,6 +486,20 @@ def create(vm_):
                 log.debug('Waiting for Rackconnect automation to complete')
                 return
 
+        if floating:
+            try:
+                name = data.name
+                ip = floating[0].ip_address
+                conn.ex_attach_floating_ip_to_node(data, ip)
+                log.info(
+                    "Attaching floating IP '%s' to node '%s'" % (ip, name)
+                )
+            except Exception as e:
+                # Note(pabelanger): Because we loop, we only want to attach the
+                # floating IP address one. So, expect failures if the IP is
+                # already attached.
+                pass
+
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         if private and not public:
@@ -471,6 +507,7 @@ def create(vm_):
                 'Private IPs returned, but not public... Checking for '
                 'misidentified IPs'
             )
+            result = []
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if saltcloud.utils.is_public_ip(private_ip):
@@ -482,20 +519,18 @@ def create(vm_):
                     public = data.public_ips
                 else:
                     log.warn('{0} is a private IP'.format(private_ip))
-                    ignore_ip = ignore_ip_addr(vm_, private_ip)
+                    ignore_ip = ignore_cidr(vm_, private_ip)
                     if private_ip not in data.private_ips and not ignore_ip:
-                        data.private_ips.append(private_ip)
-
-            if ssh_interface(vm_) == 'private_ips' and data.private_ips:
-                return data
+                        result.append(private_ip)
 
         if rackconnect(vm_) is True:
             if ssh_interface(vm_) != 'private_ips':
                 data.public_ips = access_ip
                 return data
 
-        if private:
-            data.private_ips = private
+        if result:
+            log.debug('result = %s' % result)
+            data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
                 return data
 
@@ -507,7 +542,7 @@ def create(vm_):
     try:
         data = saltcloud.utils.wait_for_ip(
             __query_node_data,
-            update_args=(vm_, data),
+            update_args=(vm_, data, floating),
             timeout=10 * 60,
             interval=10
         )
