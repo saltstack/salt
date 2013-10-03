@@ -86,6 +86,8 @@ class WarnUntilTestCase(TestCase):
 
         # Define a salt version info
         salt_version_mock.__version_info__ = (0, 16)
+        # Let SaltStackVersion be the original one, not a MagicMock'ed one
+        salt_version_mock.SaltStackVersion = SaltStackVersion
 
         def raise_warning(**kwargs):
             kwargs_warn_until(
@@ -95,10 +97,10 @@ class WarnUntilTestCase(TestCase):
 
         # raise_warning({...}) should show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
-            raise_warning(foo=42) # with a kwarg
+            raise_warning(foo=42)  # with a kwarg
             self.assertEqual(
                 'The following parameter(s) have been deprecated and '
-                'will be removed in 0.17: \'foo\'.',
+                'will be removed in \'0.17.0\': \'foo\'.',
                 str(recorded_warnings[0].message)
             )
         # With no **kwargs, should not show warning until version info is >= (0, 17)
@@ -116,15 +118,15 @@ class WarnUntilTestCase(TestCase):
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)warnings_test.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
-                r'\'0.17\' is released. Current version is now \'0.17\'. Please '
-                r'remove the warning.'):
+                r'\'0.17.0\' is released. Current version is now \'0.17.0\'. '
+                r'Please remove the warning.'):
             raise_warning()  # no kwargs
         with self.assertRaisesRegexp(
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)warnings_test.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
-                r'\'0.17\' is released. Current version is now \'0.17\'. Please '
-                r'remove the warning.'):
+                r'\'0.17.0\' is released. Current version is now \'0.17.0\'. '
+                r'Please remove the warning.'):
             raise_warning(bar='baz', qux='quux')  # some kwargs
 
 
