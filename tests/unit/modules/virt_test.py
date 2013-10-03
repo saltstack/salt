@@ -32,6 +32,44 @@ virt.__salt__ = {
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtTestCase(TestCase):
 
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_gen_xml_for_serial(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            serial_type="pty",
+            console=True
+            )
+        root = ElementTree.fromstring(xml_data)
+        self.assertEquals(root.find('devices/serial').attrib['type'], 'pty')
+        self.assertEquals(root.find('devices/console').attrib['type'], 'pty')
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_gen_xml_for_serial_no_console(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            serial_type="pty",
+            console=False
+            )
+        root = ElementTree.fromstring(xml_data)
+        self.assertEquals(root.find('devices/serial').attrib['type'], 'pty')
+        self.assertEquals(root.find('devices/console'), None)
+
     def test_default_disk_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
