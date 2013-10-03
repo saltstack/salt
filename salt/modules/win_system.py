@@ -12,6 +12,7 @@ import salt.utils
 # Set up logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     This only supports Windows
@@ -128,7 +129,7 @@ def set_computer_name(name):
     log.debug('Attempting to change computer name. Cmd is: '.format(cmd))
     ret = __salt__['cmd.run'](cmd.format(name))
     if 'ReturnValue = 0;' in ret:
-        return {'Computer name': name }
+        return {'Computer name': name}
     return False
 
 
@@ -144,7 +145,7 @@ def set_computer_desc(desc):
     '''
     cmd = 'net config server /srvcomment:"{0}"'.format(desc)
     __salt__['cmd.run'](cmd)
-    return {'Computer Description': desc }
+    return {'Computer Description': desc}
 
 
 def join_domain(domain, username, passwd, ou, acct_exists=False,):
