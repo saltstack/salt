@@ -219,6 +219,7 @@ def run(opts):
     )
 
     if opts.download_remote_reports:
+        opts.download_remote_logs = vm_name
         opts.download_coverage_report = vm_name
         opts.download_unittest_reports = vm_name
 
