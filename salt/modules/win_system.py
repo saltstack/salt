@@ -227,3 +227,67 @@ def set_system_date(newdate):
     '''
     cmd = 'date {0}'.format(newdate)
     return not __salt__['cmd.retcode'](cmd)
+
+
+def start_time_service():
+    '''
+    Start the Windows time service
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.start_time_service
+    '''
+    return __salt__['service.start']('w32time')
+
+
+def stop_time_service():
+    '''
+    Stop the Windows time service
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.stop_time_service
+    '''
+    return __salt__['service.stop']('w32time')
+
+
+def set_ntp_servers(*servers):
+    '''
+    Set Windows to use a list of NTP servers
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_ntp_servers 'pool.ntp.org' 'us.pool.ntp.org'
+    '''
+    cmd = ('W32tm /config /syncfromflags:manual /manualpeerlist:"{0}" &&'
+          'W32tm /config /reliable:yes &&'
+          'W32tm /config /update &&'
+          'Net stop w32time && Net start w32time'
+          ).format(' '.join(servers))
+    ret = __salt__['cmd.run'](cmd)
+    return 'command completed successfully' in ret
+
+
+def get_ntp_servers():
+    '''
+    Get list of configured NTP servers
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_ntp_servers
+    '''
+    cmd = 'w32tm /query /configuration'
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    for line in lines:
+        if 'NtpServer' in line:
+            _, ntpsvrs = line.rstrip(' (Local)').split(':', 1)
+            return ntpsvrs.split()
+    return False
