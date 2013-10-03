@@ -124,6 +124,7 @@ def download_unittest_reports(options):
                     proc.returncode
                 )
             )
+        time.sleep(0.25)
 
 
 def download_coverage_report(options):
@@ -163,6 +164,7 @@ def download_coverage_report(options):
                     proc.returncode
                 )
             )
+        time.sleep(0.25)
 
 
 def download_remote_logs(options):
@@ -207,6 +209,7 @@ def download_remote_logs(options):
                     proc.returncode
                 )
             )
+        time.sleep(0.25)
 
 
 def run(opts):
