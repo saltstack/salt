@@ -115,20 +115,19 @@ def list_job(jid):
     if os.path.isfile(loadpath):
         load = serial.load(salt.utils.fopen(loadpath, 'rb'))
         jid = load['jid']
-        ret = { 'jid': jid,
-                'Start Time': salt.utils.jid_to_time(jid),
-                'Function': load['fun'],
-                'Arguments': list(load['arg']),
-                'Target': load['tgt'],
-                'Target-type': load['tgt_type'],
-                'User': load.get('user', 'root')}
+        ret = {'jid': jid,
+               'Start Time': salt.utils.jid_to_time(jid),
+               'Function': load['fun'],
+               'Arguments': list(load['arg']),
+               'Target': load['tgt'],
+               'Target-type': load['tgt_type'],
+               'User': load.get('user', 'root')}
         if os.path.isfile(minionspath):
             minions = serial.load(salt.utils.fopen(minionspath, 'rb'))
             ret['Minions'] = minions
-            
+
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
-
 
 
 def list_jobs():
@@ -163,7 +162,7 @@ def list_jobs():
             if os.path.isfile(minionspath):
                 minions = serial.load(salt.utils.fopen(minionspath, 'rb'))
                 ret[jid]['Minions'] = minions
-            
+
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
