@@ -222,7 +222,6 @@ def run(opts):
     )
 
     if opts.download_remote_reports:
-        opts.download_remote_logs = vm_name
         opts.download_coverage_report = vm_name
         opts.download_unittest_reports = vm_name
 
@@ -307,8 +306,6 @@ def run(opts):
         download_unittest_reports(opts)
         # Download coverage report
         download_coverage_report(opts)
-        # Download remote logs
-        download_remote_logs(opts)
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(vm_name)
