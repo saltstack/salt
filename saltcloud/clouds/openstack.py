@@ -69,6 +69,7 @@ configuration at ``/etc/salt/cloud.providers`` or
               - Ext-Net
 
       provider: openstack
+      userdata_file: /tmp/userdata.txt
 
 For in-house Openstack Essex installation, libcloud needs the service_type :
 
@@ -424,6 +425,14 @@ def create(vm_):
                         "please create some more or use a different pool." %
                         net['floating']
                     )
+
+    userdata_file = config.get_config_value(
+        'userdata_file', vm_, __opts__, search_global=False
+    )
+
+    if userdata_file is not None:
+        with salt.utils.fopen(userdata_file, 'r') as fp:
+            kwargs['ex_userdata'] = fp.read()
 
     saltcloud.utils.fire_event(
         'event',
