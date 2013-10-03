@@ -8,7 +8,7 @@ This backend exposes directories in S3 buckets as Salt environments.  This
 feature is managed by the :conf_master:`fileserver_backend` option in the Salt
 Master config.
 
-:configuration: 
+:configuration:
 
     S3 credentials can be set in the master config file with::
 
