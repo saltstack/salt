@@ -220,23 +220,23 @@ def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **
                            console=console)
 
 def _prepare_nics_xml(interfaces):
+    '''
+    Prepares the network interface section of the VM xml
 
-    template_str = '''
-                <interface type='{{ interface.type }}'>
-                    <source {{ interface.type }}='{{ interface.source }}'/>
-                    <mac address='{{ interface.mac }}'/>
-                    <model type='{{ interface.model }}'/>
-                </interface>\n'''
+    interfaces: list of dicts as returned from _nic_profile
 
-    results = []
+    Returns string representing interfaces devices suitable for
+    insertion into the VM XML definition
+    '''
 
-    import jinja2
-    template = jinja2.Template(template_str)
+    template_name = 'interface.jinja'
 
-    for interface in interfaces:
-        results.append(template.render(interface=interface))
-
-    return ''.join(results)
+    try:
+        template = JINJA.get_template(template_name)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template {0}'.format(template_name))
+        return ''
+    return template.render(interfaces=interfaces)
 
 def _gen_xml(name,
              cpu,
