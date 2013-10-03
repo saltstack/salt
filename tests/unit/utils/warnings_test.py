@@ -63,8 +63,8 @@ class WarnUntilTestCase(TestCase):
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)warnings_test.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
-                r'\'0.17\' is released. Current version is now \'0.17\'. Please '
-                r'remove the warning.'):
+                r'\'0.17.0\' is released. Current version is now \'0.17.0\'. '
+                r'Please remove the warning.'):
             raise_warning()
 
         # Even though we're calling warn_until, we pass _dont_call_warnings
@@ -73,8 +73,8 @@ class WarnUntilTestCase(TestCase):
                 RuntimeError,
                 r'The warning triggered on filename \'(.*)warnings_test.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
-                r'\'0.17\' is released. Current version is now \'0.17\'. Please '
-                r'remove the warning.'):
+                r'\'0.17.0\' is released. Current version is now \'0.17.0\'. '
+                r'Please remove the warning.'):
             warn_until(
                 (0, 17), 'Foo', _dont_call_warnings=True
             )
