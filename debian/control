@@ -22,6 +22,7 @@ Depends: ${python:Depends},
          salt-common,
          sshpass
 Suggests: python-botocore
+Recommends: python-netaddr
 Description: public cloud VM management system
  provision virtual machines on various public clouds via a cleanly 
  controlled profile and mapping system.
