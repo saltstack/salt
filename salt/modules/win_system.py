@@ -120,7 +120,7 @@ def set_computer_name(name):
 
     .. code-block:: bash
 
-        salt 'minion-id' ip.set_computer_name 'DavesComputer'
+        salt 'minion-id' system.set_computer_name 'DavesComputer'
     '''
     cmd = ('wmic computersystem where name="%COMPUTERNAME%"'
            ' call rename name="{0}"'
@@ -140,7 +140,7 @@ def set_computer_desc(desc):
 
     .. code-block:: bash
 
-        salt 'minion-id' ip.set_computer_desc 'This computer belongs to Dave!'
+        salt 'minion-id' system.set_computer_desc 'This computer belongs to Dave!'
     '''
     cmd = 'net config server /srvcomment:"{0}"'.format(desc)
     __salt__['cmd.run'](cmd)
