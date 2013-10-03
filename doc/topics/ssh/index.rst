@@ -2,6 +2,11 @@
 Salt SSH
 ========
 
+.. note::
+
+    On many systems, ``salt-ssh`` will be in its own package, usually named
+    ``salt-ssh``.
+
 In version 0.17.0 of Salt a new transport system was introduced, the ability
 to use SSH for Salt communication. This addition allows for Salt routines to
 be executed on remote systems entirely through ssh, bypassing the need for
