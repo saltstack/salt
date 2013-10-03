@@ -165,6 +165,50 @@ def download_coverage_report(options):
             )
 
 
+def download_remote_logs(options):
+    print('Downloading remote logs...')
+    sys.stdout.flush()
+
+    workspace = options.workspace
+    vm_name = options.download_remote_logs
+
+    for fname in ('salt-runtests.log', 'minion.log'):
+        if os.path.isfile(os.path.join(workspace, fname)):
+            os.unlink(os.path.join(workspace, fname))
+
+    cmds = (
+        'salt {0} archive.gzip /tmp/salt-runtests.log',
+        'salt {0} archive.gzip /var/log/salt/minion',
+        'salt {0} cp.push /tmp/salt-runtests.log.gz',
+        'salt {0} cp.push /var/log/salt/minion.gz',
+        'gunzip /var/cache/salt/master/minions/{0}/files/tmp/salt-runtests.log.gz',
+        'gunzip /var/cache/salt/master/minions/{0}/files/var/log/salt/minion.gz',
+        'mv /var/cache/salt/master/minions/{0}/files/tmp/salt-runtests.log {1}/salt-runtests.log',
+        'mv /var/cache/salt/master/minions/{0}/files/var/log/salt/minion {1}/minion.log'
+    )
+
+    for cmd in cmds:
+        cmd = cmd.format(vm_name, workspace)
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = NonBlockingPopen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
+            print(
+                '\nFailed to execute command. Exit code: {0}'.format(
+                    proc.returncode
+                )
+            )
+
+
 def run(opts):
     '''
     RUN!
@@ -259,6 +303,8 @@ def run(opts):
         download_unittest_reports(opts)
         # Download coverage report
         download_coverage_report(opts)
+        # Download remote logs
+        download_remote_logs(opts)
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(vm_name)
@@ -332,6 +378,11 @@ def parse():
         default=None,
         help='Download the XML coverage reports'
     )
+    parser.add_option(
+        '--download-remote-logs',
+        default=None,
+        help='Download remote minion and runtests log files'
+    )
 
     options, args = parser.parse_args()
 
@@ -345,6 +396,10 @@ def parse():
 
     if options.download_coverage_report is not None and not options.commit:
         download_coverage_report(options)
+        parser.exit(0)
+
+    if options.download_remote_logs is not None and not options.commit:
+        download_remote_logs(options)
         parser.exit(0)
 
     if not options.platform:
