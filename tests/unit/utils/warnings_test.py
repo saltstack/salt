@@ -22,6 +22,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import warn_until, kwargs_warn_until
+from salt.version import SaltStackVersion
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WarnUntilTestCase(TestCase):
@@ -33,6 +34,8 @@ class WarnUntilTestCase(TestCase):
 
         # Define a salt version info
         salt_version_mock.__version_info__ = (0, 16)
+        # Let SaltStackVersion be the original one, not a MagicMock'ed one
+        salt_version_mock.SaltStackVersion = SaltStackVersion
 
         def raise_warning():
             warn_until(
