@@ -66,7 +66,6 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         src = os.path.join(integration.FILES, 'file/base/top.sls')
         dst = os.path.join(integration.FILES, 'file/base/top.sls.bak')
         shutil.move(src, dst)
-        expected_tag = 'no_|-states_|-states_|-None'
         expected_comment = 'No Top file or external nodes data matches found'
         try:
             stdout, retcode = self.run_call(
@@ -74,9 +73,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 with_retcode=True
             )
         finally:
-            pass
             shutil.move(dst, src)
-        self.assertIn(expected_tag, ''.join(stdout))
         self.assertIn(expected_comment, ''.join(stdout))
         self.assertNotEqual(0, retcode)
 
