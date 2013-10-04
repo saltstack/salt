@@ -19,16 +19,8 @@ S3 credentials can be set in the master config file like so:
 Alternatively, if on EC2 these credentials can be automatically loaded from
 instance metadata.
 
-You will need to specify the service_url with:
-
-.. code-block:: yaml
-
-    service_url: s3.amazonaws.com
-
-You can find a listing of the S3 endpoints at: http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-
-
-Lastly, include s3fs in your fileserver_backend:
+Additionally, ``s3fs`` must be included in the
+:conf_master:`fileserver_backend` config parameter in the master config file:
 
 .. code-block:: yaml
 
