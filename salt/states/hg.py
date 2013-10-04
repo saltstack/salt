@@ -111,7 +111,7 @@ def latest(name,
             os.path.isdir('{0}/.hg'.format(target)))
 
     if is_repository:
-        ret = _update_repo(ret, target, user, rev, opts)
+        ret = _update_repo(ret, target, clean, user, rev, opts)
     else:
         if os.path.isdir(target):
             fail = _handle_existing(ret, target, force)
