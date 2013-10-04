@@ -146,7 +146,8 @@ def latest_version(*names, **kwargs):
         salt.utils.warn_until(
             'Hydrogen',
             'The \'repo\' argument to apt.latest_version is deprecated, and '
-            'will be removed in {version}. Please use \'fromrepo\' instead.'
+            'will be removed in Salt {version}. Please use \'fromrepo\' '
+            'instead.'
         )
     fromrepo = _get_repo(**kwargs)
     kwargs.pop('fromrepo', None)

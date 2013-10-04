@@ -93,7 +93,8 @@ def create(path,
             'Helium',
             '\'no_site_packages\' has been deprecated. Please start using '
             '\'system_site_packages=False\' which means exactly the same '
-            'as \'no_site_packages=True\''
+            'as \'no_site_packages=True\'. This warning and respective '
+            'workaround will be removed in Salt {version}'
         )
 
     if no_site_packages is True and system_site_packages is True:
