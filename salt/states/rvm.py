@@ -193,7 +193,7 @@ def installed(name, default=False, runas=None, user=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -254,7 +254,7 @@ def gemset_present(name, ruby='default', runas=None, user=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

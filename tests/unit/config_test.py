@@ -298,7 +298,7 @@ class ConfigTestCase(TestCase):
         self.assertEquals(syndic_opts['_minion_conf_file'], syndic_conf_path)
 
     def test_check_dns_deprecation_warning(self):
-        if salt_version.__version_info__ >= (0, 19):
+        if salt_version.__version_info__ >= 'Helium':
             raise AssertionError(
                 'Failing this test on purpose! Please delete this test case, '
                 'the \'check_dns\' keyword argument and the deprecation '

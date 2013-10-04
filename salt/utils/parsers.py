@@ -868,7 +868,7 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
             cls, *args, **kwargs
         )
         utils.warn_until(
-            (0, 19),
+            'Helium',
             '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
             'start using \'OutputOptionsMixIn\'; your code should not need '
             'any further changes.'
@@ -1167,7 +1167,11 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
         # XXX: Remove '--key-logfile' support in 0.18.0
-        utils.warn_until((0, 18), '', _dont_call_warnings=True)
+        utils.warn_until(
+            'Hydrogen',
+            'Remove \'--key-logfile\' support',
+            _dont_call_warnings=True
+        )
         self.logging_options_group.add_option(
             '--key-logfile',
             default=None,
@@ -1352,7 +1356,11 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if self.options.key_logfile:
             # XXX: Remove '--key-logfile' support in 0.18.0
             # In < 0.18.0 error out
-            utils.warn_until((0, 18), '', _dont_call_warnings=True)
+            utils.warn_until(
+                'Hydrogen',
+                'Remove \'--key-logfile\' support',
+                _dont_call_warnings=True
+            )
             self.error(
                 'The \'--key-logfile\' option has been deprecated in favour '
                 'of \'--log-file\''
