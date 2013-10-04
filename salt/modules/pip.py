@@ -250,7 +250,7 @@ def install(pkgs=None,
         salt.utils.warn_until(
             'Hydrogen',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in {version}. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.'
         )
 
     # "There can only be one"
@@ -561,7 +561,7 @@ def uninstall(pkgs=None,
         salt.utils.warn_until(
             'Hydrogen',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in {version}. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.'
         )
 
     # "There can only be one"
@@ -685,7 +685,7 @@ def freeze(bin_env=None,
         salt.utils.warn_until(
             'Hydrogen',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in {version}. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.'
         )
 
     # "There can only be one"
@@ -737,7 +737,7 @@ def list_(prefix=None,
         salt.utils.warn_until(
             'Hydrogen',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in {version}. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.'
         )
 
     # "There can only be one"

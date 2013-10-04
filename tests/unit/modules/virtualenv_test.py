@@ -177,7 +177,9 @@ class VirtualenvTestCase(TestCase):
                 self.assertEqual(
                     '\'no_site_packages\' has been deprecated. Please '
                     'start using \'system_site_packages=False\' which '
-                    'means exactly the same as \'no_site_packages=True\'',
+                    'means exactly the same as \'no_site_packages=True\'. '
+                    'This warning and respective workaround will be removed '
+                    'in Salt Helium (Unreleased)',
                     str(w[-1].message)
                 )
 

@@ -787,7 +787,7 @@ def script(source,
         salt.utils.warn_until(
             'Helium',
             'Passing a salt environment should be done using \'__env__\' not '
-            '\'env\'.'
+            '\'env\'. This functionality will be removed in Salt {version}.'
         )
         # Backwards compatibility
         __env__ = env
