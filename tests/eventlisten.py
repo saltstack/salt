@@ -6,10 +6,10 @@ This script is a generic tool to test event output
 '''
 
 # Import Python libs
-import os
 import optparse
 import pprint
 import time
+import os
 
 # Import Salt libs
 import salt.utils.event
@@ -42,18 +42,26 @@ def parse():
         if v is not None:
             opts[k] = v
 
+    if 'minion' in options.node:
+        if args:
+            opts['id'] = args[0]
+            return opts
+
+        opts['id'] = options.node
+
     opts['sock_dir'] = os.path.join(opts['sock_dir'], opts['node'])
 
     return opts
 
 
-def listen(sock_dir, node):
+def listen(sock_dir, node, id=None):
     '''
     Attach to the pub socket and grab messages
     '''
     event = salt.utils.event.SaltEvent(
             node,
             sock_dir,
+            id=id
             )
     print event.puburi
     while True:
@@ -69,4 +77,4 @@ def listen(sock_dir, node):
 
 if __name__ == '__main__':
     opts = parse()
-    listen(opts['sock_dir'], opts['node'])
+    listen(opts['sock_dir'], opts['node'], id=opts.get('id', ''))

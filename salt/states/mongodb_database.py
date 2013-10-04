@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
 '''
 Management of Mongodb databases
 
-Only deletion is supported, creation doesnt make sense
+Only deletion is supported, creation doesn't make sense
 and can be done using mongodb_user.present
 '''
+
+
 def absent(name,
            user=None,
            password=None,
