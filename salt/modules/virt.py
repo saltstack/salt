@@ -13,7 +13,7 @@ import re
 import sys
 import shutil
 import subprocess
-import string
+import string  # pylint: disable=deprecated-module
 import logging
 
 # Import third party libs
@@ -196,7 +196,10 @@ def _get_target(target, ssh):
     return ' {0}://{1}/{2}'.format(proto, target, 'system')
 
 
-def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **kwargs_sink):
+def _prepare_serial_port_xml(serial_type='pty',
+                             telnet_port='',
+                             console=True,
+                             **sink):  # pylint: disable=unused-argument
     '''
     Prepares the serial and console sections of the VM xml
 
@@ -219,6 +222,7 @@ def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **
                            telnet_port=telnet_port,
                            console=console)
 
+
 def _prepare_nics_xml(interfaces):
     '''
     Prepares the network interface section of the VM xml
@@ -228,15 +232,14 @@ def _prepare_nics_xml(interfaces):
     Returns string representing interfaces devices suitable for
     insertion into the VM XML definition
     '''
-
-    template_name = 'interface.jinja'
-
+    fn_ = 'interface.jinja'
     try:
-        template = JINJA.get_template(template_name)
+        template = JINJA.get_template(fn_)
     except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template {0}'.format(template_name))
+        log.error('Could not load template {0}'.format(fn_))
         return ''
     return template.render(interfaces=interfaces)
+
 
 def _gen_xml(name,
              cpu,
@@ -450,7 +453,7 @@ class _Interface(object):
     def __init__(self,
                  name=None,
                  source=None,
-                 type=None,
+                 type=None,  # pylint: disable=redefined-builtin
                  model='virtio',
                  mac=None,
                  **kwargs):
@@ -460,8 +463,8 @@ class _Interface(object):
                             .format(source, type))
         self.name = name
         self.model = model
-        self.source = source 
-        self.type = type 
+        self.source = source
+        self.type = type
 
         if mac is not None:
             self.mac = mac
@@ -484,8 +487,9 @@ class _NicProfile(object):
         self.interfaces = []
         self.name = name
 
-        config_data = __salt__['config.option']('virt.nic', {}) \
-                        .get(name, self.__class__.default)
+        config_data = __salt__['config.option']('virt.nic', {}).get(
+            name, self.__class__.default
+        )
 
         # support old style dicts
         if isinstance(config_data, dict):
@@ -511,11 +515,11 @@ class _NicProfile(object):
             type: network
             source: net0
         '''
-        for type in ['bridge', 'network']:
-            if type in attributes:
-                attributes['type'] = type
+        for type_ in ['bridge', 'network']:
+            if type_ in attributes:
+                attributes['type'] = type_
                 # we want to discard the original key
-                attributes['source'] = attributes.pop(type)
+                attributes['source'] = attributes.pop(type_)
 
         attributes['type'] = attributes.get('type', None)
         attributes['source'] = attributes.get('source', None)
@@ -524,7 +528,7 @@ class _NicProfile(object):
         lines = []
         for interface in self.interfaces:
             lines.append(interface.__str__())
-        return '\n'.join(lines) 
+        return '\n'.join(lines)
 
     def create_interfaces(self, **kwargs):
         results = []
@@ -598,11 +602,14 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
             }
 
     # support old location
-    config_data = __salt__['config.option']('virt.nic', {}) \
-                    .get(profile_name, None)
+    config_data = __salt__['config.option']('virt.nic', {}).get(
+        profile_name, None
+    )
 
     if config_data is None:
-        config_data = __salt__['config.get']('virt:nic', {}).get(profile_name, default)
+        config_data = __salt__['config.get']('virt:nic', {}).get(
+            profile_name, default
+        )
 
     interfaces = []
 
@@ -611,30 +618,32 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
             attributes['name'] = interface_name
             interfaces.append(attributes)
 
-    # support old style dicts (top-level dicts)
+    # old style dicts (top-level dicts)
+    #
     # virt:
     #    nic:
     #        eth0:
     #            bridge: br0
     #        eth1:
     #            network: test_net
-    #
     if isinstance(config_data, dict):
         append_dict_profile_to_interface_list(config_data)
 
+    # new style lists (may contain dicts)
+    #
     # virt:
-    #    nic:
-    #      -  eth0:
-    #           bridge: br0
-    #      -  eth1:
-    #           network: test_net
-    # or
-    #      -  name: eth0
+    #   nic:
+    #     - eth0:
     #         bridge: br0
-    #      -  name: eth1
+    #     - eth1:
     #         network: test_net
     #
-    # new style lists (may contain dicts)
+    # virt:
+    #   nic:
+    #     - name: eth0
+    #       bridge: br0
+    #     - name: eth1
+    #       network: test_net
     elif isinstance(config_data, list):
         for interface in config_data:
             if isinstance(interface, dict):
@@ -648,21 +657,21 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
         Guess which style of definition:
 
             bridge: br0
-             
+
              or
 
             network: net0
 
-              or
+             or
 
             type: network
             source: net0
         '''
-        for type in ['bridge', 'network']:
-            if type in attributes:
-                attributes['type'] = type
+        for type_ in ['bridge', 'network']:
+            if type_ in attributes:
+                attributes['type'] = type_
                 # we want to discard the original key
-                attributes['source'] = attributes.pop(type)
+                attributes['source'] = attributes.pop(type_)
 
         attributes['type'] = attributes.get('type', None)
         attributes['source'] = attributes.get('source', None)
@@ -693,7 +702,7 @@ def init(name,
          image=None,
          nic='default',
          hypervisor=VIRT_DEFAULT_HYPER,
-         start=True,
+         start=True,  # pylint: disable=redefined-outer-name
          disk='default',
          **kwargs):
     '''
