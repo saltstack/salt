@@ -75,7 +75,7 @@ def present(name,
            'comment': 'Group {0} is already present'.format(name)}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -148,7 +148,7 @@ def absent(name, runas=None, user=None):
            'comment': ''}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
