@@ -22,6 +22,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import warn_until, kwargs_warn_until
+from salt.version import SaltStackVersion
 
 
 class WarnUntilTestCase(TestCase):
@@ -105,6 +106,18 @@ class WarnUntilTestCase(TestCase):
             warn_until(
                 'Hydrogen', 'Foo', _dont_call_warnings=True,
                 _version_info_=(sys.maxint, 16, 0)
+            )
+
+        # version on the deprecation message gets properly formatted
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            vrs = SaltStackVersion.from_name('Helium')
+            warn_until(
+                'Helium', 'Deprecation Message until {version}!',
+                _version_info_=(vrs.major - 1, 0)
+            )
+            self.assertEqual(
+                'Deprecation Message until {0}!'.format(vrs.formatted_version),
+                str(recorded_warnings[0].message)
             )
 
     def test_kwargs_warn_until_warning_raised(self):

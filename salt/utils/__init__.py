@@ -1492,7 +1492,11 @@ def warn_until(version_info_or_name,
         )
 
     if _dont_call_warnings is False:
-        warnings.warn(message, category, stacklevel=stacklevel)
+        warnings.warn(
+            message.format(version=version.formatted_version),
+            category,
+            stacklevel=stacklevel
+        )
 
 
 def kwargs_warn_until(kwargs,
