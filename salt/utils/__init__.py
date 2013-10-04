@@ -762,7 +762,7 @@ def format_call(fun,
     # We'll be showing errors to the users until salt 0.20 comes out, after
     # which, errors will be raised instead.
     warn_until(
-        (0, 20),
+        'Lithium',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -1659,10 +1659,10 @@ def memoize(func):
     Deprecation warning wrapper since memoize is now on salt.utils.decorators
     '''
     warn_until(
-        (0, 19),
+        'Helium',
         'The \'memoize\' decorator was moved to \'salt.utils.decorators\', '
         'please start importing it from there. This warning and wrapper '
-        'will be removed on salt > 0.19.0.',
+        'will be removed on salt > {version}.',
         stacklevel=3
 
     )

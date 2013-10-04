@@ -90,7 +90,7 @@ def create(path,
     if no_site_packages is not None:
         # Show a deprecation warning
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             '\'no_site_packages\' has been deprecated. Please start using '
             '\'system_site_packages=False\' which means exactly the same '
             'as \'no_site_packages=True\''
