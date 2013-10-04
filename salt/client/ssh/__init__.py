@@ -47,9 +47,9 @@ SSH_SHIM = ''' << 'EOF'
             python2       \\
             python        ;
       do
-         if [ `type -p $py_candidate` ]
+         if [ `which $py_candidate` ]
          then
-               PYTHON=$(type -p $py_candidate)
+               PYTHON=$(which $py_candidate)
                break
          fi
       done
