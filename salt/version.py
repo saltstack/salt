@@ -274,6 +274,14 @@ class SaltStackVersion(object):
             version_string += '-{0}-{1}'.format(self.noc, self.sha)
         return version_string
 
+    @property
+    def formatted_version(self):
+        if self.name and self.major > 10000:
+            return '{0} (Unreleased)'.format(self.name)
+        elif self.name:
+            return '{0} ({1})'.format(self.name, self.string)
+        return self.string
+
     def __str__(self):
         return self.string
 
