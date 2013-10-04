@@ -412,9 +412,10 @@ def _qemu_image_info(path):
                  'format': r'file format: (\w+)'}
 
     for info, search in match_map.items():
-        m = re.search(search, out)
-        if m:
-            ret[info] = m.group(1)
+        try:
+            ret[info] = re.search(search, out).group(1)
+        except AttributeError:
+            continue
     return ret
 
 
@@ -429,6 +430,7 @@ def _image_type(vda):
         return 'qcow2'
     else:
         return 'raw'
+
 
 # TODO: this function is deprecated, should be merged and replaced
 # with _disk_profile()
