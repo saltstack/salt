@@ -484,8 +484,9 @@ class _NicProfile(object):
         self.interfaces = []
         self.name = name
 
-        config_data = __salt__['config.option']('virt.nic', {}) \
-                        .get(name, self.__class__.default)
+        config_data = __salt__['config.option']('virt.nic', {}).get(
+            name, self.__class__.default
+        )
 
         # support old style dicts
         if isinstance(config_data, dict):
@@ -598,11 +599,14 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
             }
 
     # support old location
-    config_data = __salt__['config.option']('virt.nic', {}) \
-                    .get(profile_name, None)
+    config_data = __salt__['config.option']('virt.nic', {}).get(
+        profile_name, None
+    )
 
     if config_data is None:
-        config_data = __salt__['config.get']('virt:nic', {}).get(profile_name, default)
+        config_data = __salt__['config.get']('virt:nic', {}).get(
+            profile_name, default
+        )
 
     interfaces = []
 
