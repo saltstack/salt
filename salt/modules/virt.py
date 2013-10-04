@@ -590,12 +590,11 @@ def _disk_profile(profile, hypervisor, **kwargs):
     return disklist
 
 
-
 def _nic_profile(profile_name, hypervisor, **kwargs):
 
     default = [{'eth0': {}}]
     vmware_overlay = {'type': 'bridge', 'source': 'DEFAULT', 'model': 'e1000'}
-    kvm_overlay    = {'type': 'bridge', 'source': 'br0',     'model': 'virtio'}
+    kvm_overlay = {'type': 'bridge', 'source': 'br0', 'model': 'virtio'}
     overlays = {
             'kvm': kvm_overlay,
             'qemu': kvm_overlay,
@@ -697,6 +696,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
             _apply_default_overlay(interface)
 
     return interfaces
+
 
 def init(name,
          cpu,
