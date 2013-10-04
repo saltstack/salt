@@ -54,9 +54,9 @@ class SaltStackVersion(object):
         # ----- Please refrain from fixing PEP-8 E203 ----------------------->
         # The idea is keep this readable
         # --------------------------------------------------------------------
-        'Hydrogen'     : (sys.maxint - 108, 0, 0, 0),  # noqa
-        'Helium'       : (sys.maxint - 107, 0, 0, 0),  # noqa
-        'Lithium'      : (sys.maxint - 106, 0, 0, 0),  # noqa
+        'Hydrogen': (sys.maxint - 108, 0, 0, 0),
+        'Helium': (sys.maxint - 107, 0, 0, 0),
+        'Lithium': (sys.maxint - 106, 0, 0, 0),
         #'Beryllium'    : (sys.maxint - 105, 0, 0, 0),
         #'Boron'        : (sys.maxint - 104, 0, 0, 0),
         #'Carbon'       : (sys.maxint - 103, 0, 0, 0),
