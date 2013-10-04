@@ -229,13 +229,11 @@ def _prepare_nics_xml(interfaces):
     Returns string representing interfaces devices suitable for
     insertion into the VM XML definition
     '''
-
-    template_name = 'interface.jinja'
-
+    fn_ = 'interface.jinja'
     try:
-        template = JINJA.get_template(template_name)
+        template = JINJA.get_template(fn_)
     except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template {0}'.format(template_name))
+        log.error('Could not load template {0}'.format(fn_))
         return ''
     return template.render(interfaces=interfaces)
 
