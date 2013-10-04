@@ -14,7 +14,7 @@
                   grouping="require_all"
                   restart_on="none"
                   type="path">
-          <service_fmri value='file:///etc/salt/minion'/>
+          <service_fmri value='file:///etc/salt/master'/>
       </dependency>
 
       <dependency name="network"

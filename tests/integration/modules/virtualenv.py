@@ -1,6 +1,12 @@
 # Import python libs
 import os
 import tempfile
+
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 import integration
 
 
@@ -13,7 +19,7 @@ class VirtualenvModuleTest(integration.ModuleCase):
         ret = self.run_function('cmd.has_exec', ['virtualenv'])
         if not ret:
             self.skipTest('virtualenv not installed')
-        self.venv_test_dir = tempfile.mkdtemp()
+        self.venv_test_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 
     def test_create_defaults(self):
@@ -40,7 +46,9 @@ class VirtualenvModuleTest(integration.ModuleCase):
         self.run_function('virtualenv.create', [self.venv_dir])
         self.run_function('pip.install', [], pkgs='pep8', bin_env=pip_bin)
         self.run_function('virtualenv.create', [self.venv_dir], clear=True)
-        packages = self.run_function('pip.list', prefix='pep8', bin_env=pip_bin)
+        packages = self.run_function(
+            'pip.list', prefix='pep8', bin_env=pip_bin
+        )
         self.assertFalse('pep8' in packages)
 
     def tearDown(self):

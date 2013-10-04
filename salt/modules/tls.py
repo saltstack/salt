@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
@@ -10,7 +11,7 @@ or use Self-Signed certificates.
         ca.cert_base_path: '/etc/pki'
 '''
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 # Import python libs
 import os
@@ -50,7 +51,7 @@ def _cert_base_path():
 
 def _new_serial(ca_name, CN):
     '''
-    Return a serial number in hex using md5sum, based upon the the ca_name and
+    Return a serial number in hex using md5sum, based upon the ca_name and
     CN values
 
     ca_name
@@ -171,16 +172,18 @@ def create_ca(
     already exists, the function just returns assuming the CA certificate
     already exists.
 
-    If the following values were set:
+    If the following values were set::
 
-    ca.cert_base_path='/etc/pki/koji'
-    ca_name='koji'
+        ca.cert_base_path='/etc/pki/koji'
+        ca_name='koji'
 
     the resulting CA would be written in the following location::
 
-    /etc/pki/koji/koji_ca_cert.crt
+        /etc/pki/koji/koji_ca_cert.crt
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tls.create_ca test_ca
     '''
@@ -191,7 +194,7 @@ def create_ca(
         os.makedirs('{0}/{1}'.format(_cert_base_path(), ca_name))
 
     key = OpenSSL.crypto.PKey()
-    key.generate_key(OpenSSL.crypto.TYPE_RSA, 2048)
+    key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
 
     ca = OpenSSL.crypto.X509()
     ca.set_version(3)
@@ -211,22 +214,22 @@ def create_ca(
     ca.set_pubkey(key)
 
     ca.add_extensions([
-      OpenSSL.crypto.X509Extension('basicConstraints', True,
-                                   'CA:TRUE, pathlen:0'),
-      OpenSSL.crypto.X509Extension('keyUsage', True,
-                                   'keyCertSign, cRLSign'),
-      OpenSSL.crypto.X509Extension('subjectKeyIdentifier', False, 'hash',
-                                   subject=ca)
+        OpenSSL.crypto.X509Extension('basicConstraints', True,
+                                     'CA:TRUE, pathlen:0'),
+        OpenSSL.crypto.X509Extension('keyUsage', True,
+                                     'keyCertSign, cRLSign'),
+        OpenSSL.crypto.X509Extension('subjectKeyIdentifier', False, 'hash',
+                                     subject=ca)
       ])
 
     ca.add_extensions([
-      OpenSSL.crypto.X509Extension(
-          'authorityKeyIdentifier',
-          False,
-          'issuer:always,keyid:always',
-          issuer=ca
-          )
-      ])
+        OpenSSL.crypto.X509Extension(
+            'authorityKeyIdentifier',
+            False,
+            'issuer:always,keyid:always',
+            issuer=ca
+        )
+    ])
     ca.sign(key, 'sha1')
 
     ca_key = salt.utils.fopen(
@@ -303,19 +306,21 @@ def create_csr(
     Writes out a Certificate Signing Request (CSR) If the file already
     exists, the function just returns assuming the CSR already exists.
 
-    If the following values were set:
+    If the following values were set::
 
-    ca.cert_base_path='/etc/pki/koji'
-    ca_name='koji'
-    CN='test.egavas.org'
+        ca.cert_base_path='/etc/pki/koji'
+        ca_name='koji'
+        CN='test.egavas.org'
 
     the resulting CSR, and corresponding key, would be written in the
-    following location:
+    following location::
 
-    /etc/pki/koji/certs/test.egavas.org.csr
-    /etc/pki/koji/certs/test.egavas.org.key
+        /etc/pki/koji/certs/test.egavas.org.csr
+        /etc/pki/koji/certs/test.egavas.org.key
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tls.create_csr test
     '''
@@ -419,19 +424,21 @@ def create_self_signed_cert(
     Writes out a Self-Signed Certificate (CERT). If the file already
     exists, the function just returns.
 
-    If the following values were set:
+    If the following values were set::
 
-    ca.cert_base_path='/etc/pki/koji'
-    tls_dir='koji'
-    CN='test.egavas.org'
+        ca.cert_base_path='/etc/pki/koji'
+        tls_dir='koji'
+        CN='test.egavas.org'
 
     the resulting CERT, and corresponding key, would be written in the
-    following location:
+    following location::
 
-    /etc/pki/tls/certs/test.egavas.org.crt
-    /etc/pki/tls/certs/test.egavas.org.key
+        /etc/pki/tls/certs/test.egavas.org.crt
+        /etc/pki/tls/certs/test.egavas.org.key
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tls.create_self_signed_cert
     '''
@@ -515,7 +522,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     CN
         common name matching the certificate signing request
     days
-        number of days certficate is valid, default is 365 (1 year)
+        number of days certificate is valid, default is 365 (1 year)
 
     Writes out a Certificate (CERT) If the file already
     exists, the function just returns assuming the CERT already exists.
@@ -523,7 +530,9 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     The CN *must* match an existing CSR generated by create_csr. If it
     does not, this method does nothing.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tls.create_ca_signed_cert test localhost
     '''
@@ -603,11 +612,13 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     ca_name
         name of the CA
     CN
-        common name matching the the certificate signing request
+        common name matching the certificate signing request
     passphrase
         used to unlock the PKCS#12 certificate when loaded into the browser
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' tls.create_pkcs12 test localhost
     '''

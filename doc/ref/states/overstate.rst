@@ -28,12 +28,12 @@ or to execute a state.highstate.
 .. code-block:: yaml
 
     mysql:
-      match: db*
+      match: 'db*'
       sls:
         - mysql.server
         - drbd
     webservers:
-      match: web*
+      match: 'web*'
       require:
         - mysql
     all:
@@ -53,12 +53,30 @@ mysql and webservers stages complete without failures. The overstate system
 checks for any states that return a result of `False`, if the run has any
 `False` returns then the overstate will quit.
 
+Adding Functions To Overstate
+=============================
+
+In 0.15.0 the ability to execute module functions directly in the overstate
+was added. Functions are called as a stage with the function key:
+
+.. code-block:: yaml
+
+    http:
+      function:
+        pkg.install:
+          - http
+
+
+The list of function arguments are passed after the declared function.
+Requisites only functions properly if the given function supports returning
+a custom return code.
+
 Executing the Over State
 ========================
 
 The over state can be executed from the salt-run command, calling the
 state.over runner function. The function will by default look in the base
-environment for the overstate.sls file:
+environment for the `overstate.sls` file:
 
 .. code-block:: bash
 

@@ -12,20 +12,30 @@ Full list of builtin state modules
 
     alias
     alternatives
+    apt
+    augeas
     cmd
     cron
     debconfmod
+    disk
+    eselect
     file
     gem
     git
+    grains
     group
     hg
     host
+    iptables
     keyboard
     kmod
     layman
+    libvirt
     locale
+    lvm
     makeconf
+    mdadm
+    modjk_worker
     module
     mongodb_database
     mongodb_user
@@ -34,16 +44,20 @@ Full list of builtin state modules
     mysql_grants
     mysql_user
     network
+    npm
     pecl
-    pip
-    pkgng
+    pip_state
     pkg
+    pkgng
     pkgrepo
+    portage_config
     postgres_database
-    postgres_user
     postgres_group
+    postgres_user
+    quota
     rabbitmq_user
     rabbitmq_vhost
+    rbenv
     rvm
     selinux
     service
@@ -54,5 +68,6 @@ Full list of builtin state modules
     svn
     sysctl
     timezone
+    tomcat
     user
-    virtualenv
+    virtualenv_mod

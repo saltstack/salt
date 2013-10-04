@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module is a central location for all salt exceptions
 '''
@@ -18,6 +19,12 @@ class SaltClientError(SaltException):
 class SaltMasterError(SaltException):
     '''
     Problem reading the master root key
+    '''
+
+
+class MasterExit(SystemExit):
+    '''
+    Rise when the master exits
     '''
 
 
@@ -52,7 +59,7 @@ class MinionError(SaltException):
     '''
 
 
-class SaltInvocationError(SaltException):
+class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
     arguments are specified on the command line
@@ -78,6 +85,13 @@ class SaltReqTimeoutError(SaltException):
     '''
 
 
+class TimedProcTimeoutError(SaltException):
+    '''
+    Thrown when a timed subprocess does not terminate within the timeout,
+    or if the specified timeout is not an int or a float
+    '''
+
+
 class EauthAuthenticationError(SaltException):
     '''
     Thrown when eauth authentication fails
@@ -89,3 +103,7 @@ class SaltSystemExit(SystemExit):
     This exception is raised when an unsolvable problem is found. There's
     nothing else to do, salt should just exit.
     '''
+    def __init__(self, code=0, msg=None):
+        SystemExit.__init__(self, code)
+        if msg:
+            self.message = msg

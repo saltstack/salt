@@ -21,9 +21,12 @@ in the master configuration file, and uses the new access control system:
           - 'web*':
             - test.*
             - network.*
+        steve:
+          - .*
 
 So, the above allows the user thatch to execute functions in the test and
-network modules on the minions that match the web* target.
+network modules on the minions that match the web* target. User steve is
+given unrestricted access to minion commands.
 
 The external authentication system can then be used from the command line by
 any user on the same system as the master with the `-a` option:
@@ -42,13 +45,14 @@ With external authentication alone the authentication credentials will be
 required with every call to Salt. This can be alleviated with Salt tokens.
 
 The tokens are short term authorizations and can be easily created by just
-adding a capital T option when authenticating:
+adding a ``-T`` option when authenticating:
 
 .. code-block:: bash
 
     $ salt -T -a pam web\* test.ping
 
 Now a token will be created that has a expiration of, by default, 12 hours.
-This token is stored in the active user's home directory and is now sent with
-all subsequent communications, so the authentication does not need to be 
-declared again until the token expires.
+This token is stored in a file named ``.salt_token`` in the active user's home 
+directory. Once the token is created, it is sent with all subsequent communications.
+The user authentication does not need to be entered again until the token expires. The
+token expiration time can be set in the Salt master config file.

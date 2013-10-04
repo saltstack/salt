@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The jail module for FreeBSD
 '''
@@ -16,12 +17,13 @@ def __virtual__():
     return 'jail' if __grains__['os'] == 'FreeBSD' else False
 
 
-# TODO: This docstring needs updating to make sense
 def start(jail=''):
     '''
     Start the specified jail or all, if none specified
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.start [<jail name>]
     '''
@@ -33,7 +35,9 @@ def stop(jail=''):
     '''
     Stop the specified jail or all, if none specified
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.stop [<jail name>]
     '''
@@ -45,7 +49,9 @@ def restart(jail=''):
     '''
     Restart the specified jail or all, if none specified
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.restart [<jail name>]
     '''
@@ -56,6 +62,12 @@ def restart(jail=''):
 def is_enabled():
     '''
     See if jail service is actually enabled on boot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jail.is_enabled <jail name>
     '''
     cmd = 'service -e | grep jail'
     return not __salt__['cmd.retcode'](cmd)
@@ -64,6 +76,12 @@ def is_enabled():
 def get_enabled():
     '''
     Return which jails are set to be run
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jail.get_enabled
     '''
     ret = []
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
@@ -84,7 +102,9 @@ def show_config(jail):
     '''
     Display specified jail's configuration
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.show_config <jail name>
     '''
@@ -107,7 +127,9 @@ def fstab(jail):
     Display contents of a fstab(5) file defined in specified
     jail's configuration. If no file is defined, return False.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.fstab <jail name>
     '''
@@ -145,7 +167,9 @@ def status(jail):
     '''
     See if specified jail is currently running
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jail.status <jail name>
     '''
@@ -156,6 +180,12 @@ def status(jail):
 def sysctl():
     '''
     Dump all jail related kernel states (sysctl)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jail.sysctl
     '''
     ret = {}
     sysctl_jail = __salt__['cmd.run']('sysctl security.jail')

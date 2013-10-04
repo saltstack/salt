@@ -5,6 +5,11 @@ pkg/arch/*.tar.xz
 doc/_build
 dist
 MANIFEST
+*~
+*#
+*.wpr
+*.wpu
+*.DS_Store
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -30,6 +35,11 @@ coverage.xml
 htmlcov/
 /.project
 /.pydevproject
+/.idea
 
 # ignore ctags file
 tags
+
+# ignore Vagrant file
+Vagrantfile
+.vagrant

@@ -1,4 +1,6 @@
-.TH "SALT-CALL" "1" "February 12, 2013" "0.13.0" "Salt"
+.\" Man page generated from reStructuredText.
+.
+.TH "SALT-CALL" "1" "September 18, 2013" "0.17.0" "Salt"
 .SH NAME
 salt-call \- salt-call Documentation
 .
@@ -28,15 +30,17 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.\" Man page generated from reStructuredText.
-.
 .SH SYNOPSIS
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-call [options]
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH DESCRIPTION
 .sp
 The salt\-call command is used to run module functions locally on a minion
@@ -44,8 +48,25 @@ instead of executing them from the master.
 .SH OPTIONS
 .INDENT 0.0
 .TP
+.B \-\-version
+Print the version of Salt that is running.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-h, \-\-help
-Print a usage message briefly summarizing these command\-line options
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -60,6 +81,20 @@ directories can be delimited by commas
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-d, \-\-doc, \-\-documentation
+Return the documentation for the specified module or for all modules if
+none are specified
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-master=MASTER
+Specify the master to use. The minion must be authenticated with the
+master. If this option is omitted, the master options from the minion
+config will be used. If multi masters are set up the first listed master
+that responds will be used.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-\-return RETURNER
 Set salt\-call to pass the return data to one or many returner interfaces.
 To use many returner interfaces specify a comma delimited list of
@@ -70,44 +105,69 @@ returners.
 .B \-\-local
 Run salt\-call locally, as if there was no master running.
 .UNINDENT
-.INDENT 0.0
-.TP
-.B \-d, \-\-doc
-Return the documentation for the specified module or for all modules if
-none are specified
-.UNINDENT
+.SS Logging Options
+.sp
+Logging options which override any settings defined on the configuration files.
 .INDENT 0.0
 .TP
 .B \-l LOG_LEVEL, \-\-log\-level=LOG_LEVEL
-Console log level. One of \fBinfo\fP, \fBnone\fP, \fBgarbage\fP,
-\fBtrace\fP, \fBwarning\fP, \fBerror\fP, \fBdebug\fP. For the logfile
-settings see the config file. Default: \fBinfo\fP.
+Console logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBinfo\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
-The location of the Salt configuration directory, this directory contains
-the configuration files for Salt master and minions. The default location
-on most systems is /etc/salt.
+.B \-\-log\-file=LOG_FILE
+Log file path. Default: /var/log/salt/minion\&.
 .UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file\-level=LOG_LEVEL_LOGFILE
+Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBinfo\fP\&.
+.UNINDENT
+.SS Output Options
 .INDENT 0.0
 .TP
 .B \-\-out
 Pass in an alternative outputter to display the return of data. This
 outputter can be any of the available outputters:
-grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
+.INDENT 7.0
+.INDENT 3.5
+\fBgrains\fP, \fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP
+.UNINDENT
+.UNINDENT
+.sp
 Some outputters are formatted only for data returned from specific
-functions, for instance the grains outputter will not work for non grains
+functions; for instance, the \fBgrains\fP outputter will not work for non\-grains
 data.
+.sp
 If an outputter is used that does not support the data passed into it, then
-Salt will fall back on the pprint outputter and display the return data
-using the python pprint library.
+Salt will fall back on the \fBpprint\fP outputter and display the return data
+using the Python \fBpprint\fP standard library module.
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
+Without the static option, you will get a JSON string for each minion.
+This is due to using an iterative outputter. So if you want to feed it
+to a JSON parser, use \fB\-\-static\fP as well.
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-\-out\-indent OUTPUT_INDENT, \-\-output\-indent OUTPUT_INDENT
 Print the output indented by the provided value in spaces. Negative values
-disables indentation. Only applicable in outputters that support indentation.
+disable indentation. Only applicable in outputters that support
+indentation.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-file=OUTPUT_FILE, \-\-output\-file=OUTPUT_FILE
+Write the output to the specified file.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -116,13 +176,8 @@ Disable all colored output
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-version
-Show program\(aqs version number and exit
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-versions\-report
-Show program\(aqs dependencies version number and exit
+.B \-\-force\-color
+Force colored output
 .UNINDENT
 .SH SEE ALSO
 .sp
@@ -132,6 +187,6 @@ Show program\(aqs dependencies version number and exit
 .SH AUTHOR
 Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
 .SH COPYRIGHT
-2013, Thomas S. Hatch
+2013 SaltStack, Inc.
 .\" Generated by docutils manpage writer.
 .

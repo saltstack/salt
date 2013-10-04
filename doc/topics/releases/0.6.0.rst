@@ -16,15 +16,15 @@ setup and use, the entire application is contained in a single package, and the
 master and minion daemons require no running dependencies in the way that Func
 requires Certmaster and MCollective requires activeMQ.
 
-Salt also manages authentication and encryption. Rather than using ssl for
+Salt also manages authentication and encryption. Rather than using SSL for
 encryption, salt manages encryption on a payload level, so the data sent across
-the network is encrypted with fast aes encryption, and authentication uses RSA
+the network is encrypted with fast AES encryption, and authentication uses RSA
 keys. This means that Salt is fast, secure, and very efficient.
 
-Messaging in Salt is executed with zeromq, so the message passing interface is
-built into salt and does not require an external MQ server. This also adds
+Messaging in Salt is executed with ZeroMQ, so the message passing interface is
+built into salt and does not require an external ZeroMQ server. This also adds
 speed to Salt since there is no additional bloat on the networking layer, and
-zeromq has already proven itself as a very fast networking system.
+ZeroMQ has already proven itself as a very fast networking system.
 
 The remote execution in Salt is "Lazy Execution", in that once the command is
 sent the requesting network connection is closed. This makes it easier to
@@ -36,20 +36,20 @@ Salt also allows users to make execution modules in Python. Writers of these
 modules should also be pleased to know that they have access to the impressive
 information gathered from PuppetLabs' Facter application, making Salt module
 more flexible. In the future I hope to also allow Salt to group servers based
-on facter information as well.
+on Facter information as well.
 
 All in all Salt is fast, efficient and clean, can be used from a simple command
-line client or through an api, uses message queue technology to make network
+line client or through an API, uses message queue technology to make network
 execution extremely fast, and encryption is handled in a very fast and
 efficient manner. Salt is also VERY easy to use and VERY easy to extend.
 
-You can find the source code for Salt on my github page, I have also set up a
+You can find the source code for Salt on my GitHub page, I have also set up a
 few wiki pages explaining how to use and set up Salt. If you are using Arch
 Linux there is a package available in the Arch Linux AUR.
 
 Salt 0.6.0 Source: :download:`salt-0.6.0.tar.gz`
 
-Github page: |saltrepo|
+GitHub page: |saltrepo|
 
 Wiki: https://github.com/saltstack/salt/wiki
 

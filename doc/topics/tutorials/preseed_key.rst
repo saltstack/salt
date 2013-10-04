@@ -9,13 +9,17 @@ developers provision new development machines on the fly.
 
 There is a general four step process to do this:
 
-1. Generate the keys on the master::
+1. Generate the keys on the master:
+
+.. code-block:: bash
 
     root@saltmaster# salt-key --gen-keys=[key_name]
 
 Pick a name for the key, such as the minion's id.
 
-2. Add the public key to the accepted minion folder:: 
+2. Add the public key to the accepted minion folder:
+
+.. code-block:: bash
 
     root@saltmaster# cp key_name.pub /etc/salt/pki/master/minions/[minion_id]
 
@@ -26,9 +30,10 @@ master config file.
 
 3. Distribute the minion keys.
 
-There is no single method to get the keypair to your minion. If you are 
-spooling up minions on EC2, you could pass them in using user_data or a 
-cloud-init script. If you are handing them off to a team of developers for provisioning dev machines, you will need a secure file transfer.
+There is no single method to get the keypair to your minion. If you are
+spooling up minions on EC2, you could pass them in using user_data or a
+cloud-init script. If you are handing them off to a team of developers for
+provisioning dev machines, you will need a secure file transfer.
 
 .. admonition:: Security Warning
 
@@ -38,7 +43,9 @@ cloud-init script. If you are handing them off to a team of developers for provi
 
 4. Preseed the Minion with the keys
 
-You will want to place the minion keys before starting the salt-minion daemon::
+You will want to place the minion keys before starting the salt-minion daemon:
+
+.. code-block:: bash
 
     /etc/salt/pki/minion/minion.pem
     /etc/salt/pki/minion/minion.pub

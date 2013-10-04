@@ -1,11 +1,12 @@
 # Import python libs
-import sys
 import yaml
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -53,7 +54,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
-
 
     def test_glob(self):
         '''
@@ -103,6 +103,12 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        data = self.run_salt('-G "planets:pluto" test.ping')
+        self.assertEqual(
+            ''.join(data),
+            'No minions matched the target. No command was sent, no jid was '
+            'assigned.'
+        )
         # Nested grain (string value)
         data = self.run_salt('-t 1 -G "level1:level2:foo" test.ping')
         data = '\n'.join(data)
@@ -197,7 +203,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're supporting --doc
         '''
-        data = self.run_salt('-d user')
+        data = self.run_salt('-d \* user')
         self.assertIn('user.add:', data)
 
     def test_salt_documentation_arguments_not_assumed(self):
@@ -216,10 +222,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('user.add:', data)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(MatchTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MatchTest)

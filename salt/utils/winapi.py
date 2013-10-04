@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
+
+# Import python libs
 import logging
 import pythoncom
 import threading
-import wmi
-
 
 log = logging.getLogger(__name__)
+
 
 class Com(object):
     def __init__(self):
@@ -15,10 +17,10 @@ class Com(object):
 
     def __enter__(self):
         if self.need_com_init:
-            log.debug("Initializing COM library")
+            log.debug('Initializing COM library')
             pythoncom.CoInitialize()
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.need_com_init:
-            log.debug("Uninitializing COM library")
+            log.debug('Uninitializing COM library')
             pythoncom.CoUninitialize()

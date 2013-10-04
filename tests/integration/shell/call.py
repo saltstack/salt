@@ -1,26 +1,28 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
+    :license: Apache 2.0, see LICENSE for more details.
+
+
     tests.integration.shell.call
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import python libs
 import os
 import sys
+import shutil
 import yaml
 from datetime import datetime
 
-# Import salt test libs
+# Import Salt Testing libs
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 import integration
-from saltunittest import (
-    TestLoader,
-    TextTestRunner,
-    skipIf,
-)
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -54,6 +56,29 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             'salt \'*\' user.delete name remove=True force=True',
             ''.join(ret)
         )
+
+    def test_issue_6973_state_highstate_exit_code(self):
+        '''
+        If there is no tops/master_tops or state file matches
+        for this minion, salt-call should exit non-zero if invoked with
+        option --retcode-passthrough
+        '''
+        src = os.path.join(integration.FILES, 'file/base/top.sls')
+        dst = os.path.join(integration.FILES, 'file/base/top.sls.bak')
+        shutil.move(src, dst)
+        expected_tag = 'no_|-states_|-states_|-None'
+        expected_comment = 'No Top file or external nodes data matches found'
+        try:
+            stdout, retcode = self.run_call(
+                '-l quiet --retcode-passthrough state.highstate',
+                with_retcode=True
+            )
+        finally:
+            pass
+            shutil.move(dst, src)
+        self.assertIn(expected_tag, ''.join(stdout))
+        self.assertIn(expected_comment, ''.join(stdout))
+        self.assertNotEqual(0, retcode)
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_issue_2731_masterless(self):
@@ -179,10 +204,6 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 os.unlink(this_minion_key)
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(CallTest)
-    print('Setting up Salt daemons to execute tests')
-    with integration.TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(CallTest)

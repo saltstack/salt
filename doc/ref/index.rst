@@ -3,8 +3,8 @@ Introduction to Extending Salt
 ==============================
 
 Salt is made to be used, and made to be extended. The primary goal of Salt is
-to provide a foundation which can be used to solve problems. And the goal of
-Salt is to not assume what those problems might be.
+to provide a foundation which can be used to solve problems without
+assuming what those problems might be.
 
 One of the greatest benefit of developing Salt has been the vast array of ways
 in which people have wanted to use it, while the original intention was as a
@@ -15,8 +15,10 @@ Client API
 ----------
 
 The primary interface used to extend Salt, is to simply use it. Salt executions
-can be called via the Salt client api, making programming master side solutions
+can be called via the Salt client API, making programming master side solutions
 with Salt is easy.
+
+.. seealso:: :ref:`client-apis`
 
 Adding Loadable Plugins
 -----------------------
@@ -70,7 +72,7 @@ Renderers
 `````````
 
 Salt states are controlled by simple data structures, these structures can be
-abstracted in a number of ways. While the default is to be in a yaml file
+abstracted in a number of ways. While the default is to be in a YAML file
 wrapped in a jinja template, any abstraction can be used. This means that any
 format that can be dreamed is possible, so long as a renderer is written for
 it.

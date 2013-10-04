@@ -36,6 +36,13 @@ def parse():
             dest='master',
             default='salt',
             help='The location of the salt master that this swarm will serve')
+    parser.add_option('--name',
+            '-n',
+            dest='name',
+            default='ms',
+            help=('Give the minions an alternative id prefix, this is used '
+                  'when minions from many systems are being aggregated onto '
+                  'a single master'))
     parser.add_option('-k',
             '--keep-modules',
             dest='keep',
@@ -98,7 +105,7 @@ class Swarm(object):
         print('Creating shared pki keys for the swarm on: {0}'.format(path))
         subprocess.call(
             'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} '
-            '--key-logfile {1}'.format(
+            '--log-file {1}'.format(
                 path, os.path.join(path, 'keys.log')
             ), shell=True
         )
@@ -109,7 +116,10 @@ class Swarm(object):
         '''
         Create a config file for a single minion
         '''
-        minion_id = 'ms-{0}'.format(str(idx).zfill(self.__zfill))
+        minion_id = '{0}-{1}'.format(
+                self.opts['name'],
+                str(idx).zfill(self.__zfill)
+                )
 
         dpath = os.path.join(self.swarm_root, minion_id)
         os.makedirs(dpath)
@@ -136,14 +146,11 @@ class Swarm(object):
         path = os.path.join(dpath, 'minion')
 
         if self.opts['keep']:
-            ignore = set()
             keep = self.opts['keep'].split(',')
             modpath = os.path.join(os.path.dirname(salt.__file__), 'modules')
-            for fn_ in os.listdir(modpath):
-                if fn_.split('.')[0] in keep:
-                    continue
-                ignore.add(fn_.split('.')[0])
-            data['disable_modules'] = list(ignore)
+            fn_prefixes = (fn_.partition('.')[0] for fn_ in os.listdir(modpath))
+            ignore = [fn_prefix for fn_prefix in fn_prefixes if fn_prefix not in keep]
+            data['disable_modules'] = ignore
 
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)

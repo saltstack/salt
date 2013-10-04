@@ -21,25 +21,22 @@ master
 Options
 =======
 
-.. program:: salt-cp
+.. program:: salt-run
 
-.. option:: -h, --help
+.. include:: _includes/common-options.rst
 
-    Print a usage message briefly summarizing these command-line options
+.. include:: _includes/timeout-option.rst
+.. |timeout| replace:: 1
 
-.. option:: --version
+.. option:: -d, --doc, --documentation
 
-    Show program's version number and exit
+    Display documentation for runners, pass a module or a runner to see 
+    documentation on only that module/runner.
 
-.. option:: --versions-report
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/master
+.. |loglevel| replace:: ``warning``
 
-    Show program's dependencies version number and exit
-
-.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
-
-    The location of the Salt configuration directory, this directory contains
-    the configuration files for Salt master and minions. The default location
-    on most systems is /etc/salt.
 
 See also
 ========

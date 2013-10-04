@@ -2,9 +2,13 @@
 import os
 import shutil
 
+# Import Salt Testing libs
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
 # Import salt libs
-import salt.utils
 import integration
+import salt.utils
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -222,7 +226,7 @@ fi
             for fname in list(fnames) + [to_include_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
-    
+
     def test_issue_2068_template_str(self):
         ret = self.run_function('cmd.has_exec', ['virtualenv'])
         if not ret:
@@ -334,6 +338,13 @@ fi
                  'invalid when rendering single templates'.format(item)],
                 ret
             )
+
+    def test_pydsl(self):
+        '''
+        Test the basics of the pydsl
+        '''
+        ret = self.run_function('state.sls', mods='pydsl-1')
+        self.assertSaltTrueReturn(ret)
 
 
 if __name__ == '__main__':

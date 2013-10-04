@@ -1,6 +1,6 @@
 publish_port: 64505
 ret_port: 64506
-worker_threads: 2
+worker_threads: 3
 root_dir: /tmp/salttest
 pidfile: masterpid
 pki_dir: pki
@@ -20,3 +20,6 @@ file_buffer_size: 8192
 
 ext_pillar:
   - cmd_yaml: cat ext.yaml
+
+config_opt:
+  layer2: 'kosher'
