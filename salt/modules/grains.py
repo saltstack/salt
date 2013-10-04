@@ -26,7 +26,7 @@ __outputter__ = {
 }
 
 # http://stackoverflow.com/a/12414913/127816
-infinitedict = lambda: collections.defaultdict(infinitedict)
+_infinitedict = lambda: collections.defaultdict(_infinitedict)
 
 
 def _serial_sanitizer(instr):
@@ -339,7 +339,7 @@ def _dict_from_path(path, val, delim=':'):
     >>> _dict_from_path('foo:bar:baz', 'somevalue')
     {"foo": {"bar": {"baz": "somevalue"}}
     '''
-    nested_dict = infinitedict()
+    nested_dict = _infinitedict()
     keys = path.rsplit(delim)
     lastplace = reduce(operator.getitem, keys[:-1], nested_dict)
     lastplace[keys[-1]] = val
