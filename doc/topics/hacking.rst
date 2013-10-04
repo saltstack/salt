@@ -361,6 +361,22 @@ If you are on Python < 2.7 then you will also need unittest2:
 
     pip install unittest2
 
+
+.. note::
+
+    In Salt 0.17, testing libraries were migrated into their own repo. To install them:
+
+     .. code-block:: bash
+
+         pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
+
+
+    Failure to install SaltTesting will result in import errors similar to the following:
+
+     .. code-block:: bash
+
+        ImportError: No module named salttesting
+
 Finally you use setup.py to run the tests with the following command:
 
 .. code-block:: bash
