@@ -26,16 +26,16 @@ from salt.states.git import _fail, _neutral_test
 log = logging.getLogger(__name__)
 
 if salt.utils.is_windows():
-    hg_binary = "hg.exe"
+    HG_BINARY = "hg.exe"
 else:
-    hg_binary = "hg"
+    HG_BINARY = "hg"
 
 
 def __virtual__():
     '''
     Only load if hg is available
     '''
-    return 'hg' if __salt__['cmd.has_exec'](hg_binary) else False
+    return __salt__['cmd.has_exec'](HG_BINARY)
 
 
 def latest(name,
