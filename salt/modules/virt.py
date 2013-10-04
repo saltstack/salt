@@ -611,30 +611,32 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
             attributes['name'] = interface_name
             interfaces.append(attributes)
 
-    # support old style dicts (top-level dicts)
+    # old style dicts (top-level dicts)
+    #
     # virt:
     #    nic:
     #        eth0:
     #            bridge: br0
     #        eth1:
     #            network: test_net
-    #
     if isinstance(config_data, dict):
         append_dict_profile_to_interface_list(config_data)
 
+    # new style lists (may contain dicts)
+    #
     # virt:
-    #    nic:
-    #      -  eth0:
-    #           bridge: br0
-    #      -  eth1:
-    #           network: test_net
-    # or
-    #      -  name: eth0
+    #   nic:
+    #     - eth0:
     #         bridge: br0
-    #      -  name: eth1
+    #     - eth1:
     #         network: test_net
     #
-    # new style lists (may contain dicts)
+    # virt:
+    #   nic:
+    #     - name: eth0
+    #       bridge: br0
+    #     - name: eth1
+    #       network: test_net
     elif isinstance(config_data, list):
         for interface in config_data:
             if isinstance(interface, dict):
@@ -653,7 +655,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
 
             network: net0
 
-              or
+             or
 
             type: network
             source: net0
