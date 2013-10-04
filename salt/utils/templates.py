@@ -63,7 +63,10 @@ def wrap_tmpl_func(render_str):
                         tmplsrc = os.path.join(tmplpath, tmplsrc)
                     with codecs.open(tmplsrc, 'r', SLS_ENCODING) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
-                except (UnicodeDecodeError, ValueError) as exc:
+                except (UnicodeDecodeError,
+                        ValueError,
+                        OSError,
+                        IOError) as exc:
                     if salt.utils.is_bin_file(tmplsrc):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
