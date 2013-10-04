@@ -149,9 +149,9 @@ def installed(name,
 
     if repo is not None:
         msg = ('The \'repo\' argument to pip.installed is deprecated and will '
-               'be removed in {version}. Please use \'name\' instead. The '
-               'current value for name, {0!r} will be replaced by the value '
-               'of repo, {1!r}'.format(name, repo))
+               'be removed in Salt {version}. Please use \'name\' instead. '
+               'The current value for name, {0!r} will be replaced by the '
+               'value of repo, {1!r}'.format(name, repo))
         salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)
         name = repo
@@ -210,7 +210,7 @@ def installed(name,
         # The user is using a deprecated argument, warn!
         msg = (
             'The \'runas\' argument to pip.installed is deprecated, and will '
-            'be removed in {version}. Please use \'user\' instead.'
+            'be removed in Salt {version}. Please use \'user\' instead.'
         )
         salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)
@@ -399,7 +399,7 @@ def removed(name,
         # The user is using a deprecated argument, warn!
         msg = (
             'The \'runas\' argument to pip.installed is deprecated, and will '
-            'be removed in {version}. Please use \'user\' instead.'
+            'be removed in Salt {version}. Please use \'user\' instead.'
         )
         salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)

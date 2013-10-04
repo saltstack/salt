@@ -1658,7 +1658,7 @@ def memoize(func):
         'Helium',
         'The \'memoize\' decorator was moved to \'salt.utils.decorators\', '
         'please start importing it from there. This warning and wrapper '
-        'will be removed on salt > {version}.',
+        'will be removed in Salt {version}.',
         stacklevel=3
 
     )

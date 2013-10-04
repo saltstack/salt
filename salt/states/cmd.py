@@ -639,7 +639,7 @@ def script(name,
     if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'__env__\' not '
-            '\'env\'. This warning will go away in salt {version} and this '
+            '\'env\'. This warning will go away in Salt {version} and this '
             'will be the default and expected behaviour. Please update your '
             'state files.'
         )
