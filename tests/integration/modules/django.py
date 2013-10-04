@@ -15,6 +15,7 @@ django.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.utils.which', lambda exe: exe)
 class DjangoModuleTest(integration.ModuleCase):
     '''
     Test the django module
