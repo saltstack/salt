@@ -24,6 +24,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
@@ -151,7 +152,12 @@ def installed(name,
         msg = ('The \'repo\' argument to pip.installed is deprecated and will '
                'be removed in Salt {version}. Please use \'name\' instead. '
                'The current value for name, {0!r} will be replaced by the '
-               'value of repo, {1!r}'.format(name, repo))
+               'value of repo, {1!r}'.format(
+                   name,
+                   repo,
+                   version=_SaltStackVersion.from_name(
+                       'Hydrogen').formatted_version
+               ))
         salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)
         name = repo
@@ -208,10 +214,12 @@ def installed(name,
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
-        msg = (
-            'The \'runas\' argument to pip.installed is deprecated, and will '
-            'be removed in Salt {version}. Please use \'user\' instead.'
-        )
+        msg = ('The \'runas\' argument to pip.installed is deprecated, and '
+               'will be removed in Salt {version}. Please use \'user\' '
+               'instead.'.format(
+                   version=_SaltStackVersion.from_name(
+                       'Hydrogen').formatted_version
+               ))
         salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)
 
@@ -397,10 +405,12 @@ def removed(name,
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
-        msg = (
-            'The \'runas\' argument to pip.installed is deprecated, and will '
-            'be removed in Salt {version}. Please use \'user\' instead.'
-        )
+        msg = ('The \'runas\' argument to pip.installed is deprecated, and '
+               'will be removed in Salt {version}. Please use \'user\' '
+               'instead.'.format(
+                   version=_SaltStackVersion.from_name(
+                       'Hydrogen').formatted_version
+               ))
         salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)
 
