@@ -785,7 +785,7 @@ def script(source,
 
     if isinstance(env, string_types):
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             'Passing a salt environment should be done using \'__env__\' not '
             '\'env\'.'
         )
