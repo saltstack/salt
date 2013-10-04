@@ -3,9 +3,6 @@
 Interaction with Mercurial repositories.
 ========================================
 
-NOTE: This module is currently experimental. Most of this code is copied from
-git.py with changes to handle hg.
-
 Before using hg over ssh, make sure the remote host fingerprint already exists
 in ~/.ssh/known_hosts, and the remote host has this host's public key.
 
@@ -44,6 +41,7 @@ def __virtual__():
 def latest(name,
            rev=None,
            target=None,
+           clean=False,
            runas=None,
            user=None,
            force=False,
@@ -59,6 +57,9 @@ def latest(name,
 
     target
         Name of the target directory where repository is about to be cloned
+
+    clean
+        Force a clean update with -C (Default: False)
 
     runas
         Name of the user performing repository management operations
@@ -129,7 +130,10 @@ def latest(name,
     return ret
 
 
-def _update_repo(ret, target, user, rev, opts):
+def _update_repo(ret, target, clean, user, rev, opts):
+    '''
+    Update the repo to a given revision. Using clean passes -C to the hg up
+    '''
     log.debug(
             'target {0} is found, '
             '"hg pull && hg up is probably required"'.format(target)
@@ -152,9 +156,9 @@ def _update_repo(ret, target, user, rev, opts):
     pull_out = __salt__['hg.pull'](target, user=user, opts=opts)
 
     if rev:
-        __salt__['hg.update'](target, rev, user=user)
+        __salt__['hg.update'](target, rev, force=clean, user=user)
     else:
-        __salt__['hg.update'](target, 'tip', user=user)
+        __salt__['hg.update'](target, 'tip', force=clean, user=user)
 
     new_rev = __salt__['hg.revision'](cwd=target, user=user)
 
