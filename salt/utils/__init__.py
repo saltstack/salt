@@ -1426,7 +1426,7 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
-def warn_until(version_info_or_name,
+def warn_until(version,
                message,
                category=DeprecationWarning,
                stacklevel=None,
@@ -1434,13 +1434,13 @@ def warn_until(version_info_or_name,
                _dont_call_warnings=False):
     '''
     Helper function to raise a warning, by default, a ``DeprecationWarning``,
-    until the provided ``version_info``, after which, a ``RuntimeError`` will
+    until the provided ``version``, after which, a ``RuntimeError`` will
     be raised to remind the developers to remove the warning because the
     target version has been reached.
 
-    :param version_info_or_name: The version info or name after which the
-                                 warning becomes a ``RuntimeError``.
-                                 For example ``(0, 17)`` or ``Hydrogen``.
+    :param version: The version info or name after which the warning becomes a
+                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
+                    or an instance of :class:`salt.version.SaltStackVersion`.
     :param message: The warning message to be displayed.
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
@@ -1454,19 +1454,17 @@ def warn_until(version_info_or_name,
                                 issued. When we're only after the salt version
                                 checks to raise a ``RuntimeError``.
     '''
-    if not isinstance(version_info_or_name, (tuple,
-                                             salt._compat.string_types,
-                                             salt.version.SaltStackVersion)):
+    if not isinstance(version, (tuple,
+                                salt._compat.string_types,
+                                salt.version.SaltStackVersion)):
         raise RuntimeError(
-            'The \'version_info\' argument should be passed as a tuple '
-            'or string.'
+            'The \'version\' argument should be passed as a tuple, string or '
+            'an instance of \'salt.version.SaltStackVersion\'.'
         )
-    elif isinstance(version_info_or_name, tuple):
-        version = salt.version.SaltStackVersion(*version_info_or_name)
-    elif isinstance(version_info_or_name, salt._compat.string_types):
-        version = salt.version.SaltStackVersion.from_name(version_info_or_name)
-    elif isinstance(version_info_or_name, salt.version.SaltStackVersion):
-        version = version_info_or_name
+    elif isinstance(version, tuple):
+        version = salt.version.SaltStackVersion(*version)
+    elif isinstance(version, salt._compat.string_types):
+        version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
         # Attribute the warning to the calling function, not to warn_until()
@@ -1500,7 +1498,7 @@ def warn_until(version_info_or_name,
 
 
 def kwargs_warn_until(kwargs,
-                      version_info_or_name,
+                      version,
                       category=DeprecationWarning,
                       stacklevel=None,
                       _version_info_=None,
@@ -1518,9 +1516,9 @@ def kwargs_warn_until(kwargs,
     for the modern strategy for deprecating a function parameter.
 
     :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
-    :param version_info_or_name: The version info or name after which the
-                                 warning becomes a ``RuntimeError``.
-                                 For example ``(0, 17)`` or ``Hydrogen``.
+    :param version: The version info or name after which the warning becomes a
+                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
+                    or an instance of :class:`salt.version.SaltStackVersion`.
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
     :param stacklevel: There should be no need to set the value of
@@ -1533,19 +1531,17 @@ def kwargs_warn_until(kwargs,
                                 issued. When we're only after the salt version
                                 checks to raise a ``RuntimeError``.
     '''
-    if not isinstance(version_info_or_name, (tuple,
-                                             salt._compat.string_types,
-                                             salt.version.SaltStackVersion)):
+    if not isinstance(version, (tuple,
+                                salt._compat.string_types,
+                                salt.version.SaltStackVersion)):
         raise RuntimeError(
-            'The \'version_info\' argument should be passed as a tuple '
-            'or string.'
+            'The \'version\' argument should be passed as a tuple, string or '
+            'an instance of \'salt.version.SaltStackVersion\'.'
         )
-    elif isinstance(version_info_or_name, tuple):
-        version = salt.version.SaltStackVersion(*version_info_or_name)
-    elif isinstance(version_info_or_name, salt._compat.string_types):
-        version = salt.version.SaltStackVersion.from_name(version_info_or_name)
-    elif isinstance(version_info_or_name, salt.version.SaltStackVersion):
-        version = version_info_or_name
+    elif isinstance(version, tuple):
+        version = salt.version.SaltStackVersion(*version)
+    elif isinstance(version, salt._compat.string_types):
+        version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
         # Attribute the warning to the calling function,
