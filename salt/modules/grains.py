@@ -330,6 +330,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None):
 
     return ret
 
+
 def _dict_from_path(path, val, delim=':'):
     '''
     Given a lookup string in the form of 'foo:bar:baz" return a nested
@@ -344,6 +345,7 @@ def _dict_from_path(path, val, delim=':'):
     lastplace[keys[-1]] = val
 
     return nested_dict
+
 
 def get_or_set_hash(name,
         length=8,
