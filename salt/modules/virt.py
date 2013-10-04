@@ -450,6 +450,7 @@ def _get_image_info(hypervisor, name, **kwargs):
         ret['pool'] = __salt__['config.option']('virt.images')
     return ret
 
+
 def _disk_profile(profile, hypervisor, **kwargs):
     '''
     Gather the disk profile from the config or apply the default based
