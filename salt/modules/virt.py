@@ -196,7 +196,10 @@ def _get_target(target, ssh):
     return ' {0}://{1}/{2}'.format(proto, target, 'system')
 
 
-def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True):
+def _prepare_serial_port_xml(serial_type='pty',
+                             telnet_port='',
+                             console=True,
+                             **sink):  # pylint: disable=unused-argument
     '''
     Prepares the serial and console sections of the VM xml
 
