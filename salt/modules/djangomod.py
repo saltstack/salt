@@ -10,6 +10,7 @@ import os
 import salt.utils
 import salt.exceptions
 
+
 def __virtual__():
     return 'django'
 
