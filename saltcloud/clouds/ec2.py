@@ -742,6 +742,16 @@ def list_availability_zones():
     return ret
 
 
+def block_device_mappings(vm_):
+    '''
+    Return the block device mapping
+    e.g. [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
+          {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
+    '''
+    return config.get_config_value(
+        'block_device_mappings', vm_, __opts__, search_global=True
+    )
+
 def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
@@ -855,6 +865,12 @@ def create(vm_=None, call=None):
         else:
             for (counter, sg_) in enumerate(ex_securitygroupid):
                 params[spot_prefix + 'SecurityGroupId.{0}'.format(counter)] = sg_
+
+    ex_blockdevicemappings = block_device_mappings(vm_)
+    if ex_blockdevicemappings:
+        for (idx, block_device_mapping) in enumerate(ex_blockdevicemappings):
+            params['BlockDeviceMapping.%d.DeviceName' % idx] = block_device_mapping['DeviceName']
+            params['BlockDeviceMapping.%d.VirtualName' % idx] = block_device_mapping['VirtualName']
 
     set_del_root_vol_on_destroy = config.get_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False

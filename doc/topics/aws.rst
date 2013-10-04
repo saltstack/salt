@@ -324,7 +324,10 @@ Multiple security groups can also be specified in the same fashion:
 
 Block device mappings enable you to specify additional EBS volumes or instance
 store volumes when the instance is launched. This setting is also available on
-each cloud profile.
+each cloud profile. Note that the number of instance stores varies by instance type.
+If more mappings are provided than are supported by the instance type, mappings will be
+created in the order provided and additional mappings will be ignored. Consult the
+`AWS documentation`_ for a listing of the available instance stores, device names, and mount points.
 
 .. code-block:: yaml
 
@@ -345,6 +348,7 @@ Tags can be set once an instance has been launched.
             tag0: value
             tag2: value
 
+.. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
 
 Modify EC2 Tags
 ===============
