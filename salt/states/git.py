@@ -3,9 +3,6 @@
 Interaction with Git repositories.
 ==================================
 
-NOTE: This module is under heavy development and the API is subject to change.
-It may be replaced with a generic VCS module if this proves viable.
-
 Important: Before using git over ssh, make sure your remote host fingerprint
 exists in "~/.ssh/known_hosts" file. To avoid requiring password
 authentication, it is also possible to pass private keys to use explicitly.
