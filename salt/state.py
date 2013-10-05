@@ -476,9 +476,8 @@ class State(object):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
-        self.opts['pillar'] = self.__gather_pillar()
-        if pillar and isinstance(pillar, dict):
-            self.opts['pillar'].update(pillar)
+        self._pillar_override = pillar
+        self.opts['pillar'] = self._gather_pillar()
         self.state_con = {}
         self.load_modules()
         self.active = set()
@@ -486,7 +485,7 @@ class State(object):
         self.pre = {}
         self.__run_num = 0
 
-    def __gather_pillar(self):
+    def _gather_pillar(self):
         '''
         Whenever a state run starts, gather the pillar data fresh
         '''
@@ -495,7 +494,10 @@ class State(object):
                 self.opts['grains'],
                 self.opts['id']
                 )
-        return pillar.compile_pillar()
+        ret = pillar.compile_pillar()
+        if self._pillar_override and isinstance(self._pillar_override, dict):
+            ret.update(self._pillar_override)
+        return ret
 
     def _mod_init(self, low):
         '''
@@ -1919,6 +1921,7 @@ class BaseHighState(object):
         syncd = self.state.functions['saltutil.sync_all'](list(matches))
         if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
+            self.state.opts['pillar'] = self.state._gather_pillar()
         self.state.module_refresh()
 
     def render_state(self, sls, env, mods, matches):
@@ -2245,7 +2248,19 @@ class BaseHighState(object):
                 'Error when rendering state with contents: {0}'.format(state)
             )
 
-    def call_highstate(self, exclude=None, cache=None, cache_name='highstate'):
+    def _check_pillar(self, force=False):
+        '''
+        Check the pillar for errors, refuse to run the state if there are
+        errors in the pillar and return the pillar errors
+        '''
+        if force:
+            return True
+        if '_errors' in self.state.opts['pillar']:
+            return False
+        return True
+
+    def call_highstate(self, exclude=None, cache=None, cache_name='highstate',
+                       force=False):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
@@ -2283,15 +2298,19 @@ class BaseHighState(object):
             ret[tag_name]['comment'] = msg
             return ret
         self.load_dynamic(matches)
-        high, errors = self.render_highstate(matches)
-        if exclude:
-            if isinstance(exclude, str):
-                exclude = exclude.split(',')
-            if '__exclude__' in high:
-                high['__exclude__'].extend(exclude)
-            else:
-                high['__exclude__'] = exclude
-        err += errors
+        if not self._check_pillar(force):
+            err += ['Pillar failed to render with the following messages:']
+            err += self.state.opts['pillar']['_errors']
+        else:
+            high, errors = self.render_highstate(matches)
+            if exclude:
+                if isinstance(exclude, str):
+                    exclude = exclude.split(',')
+                if '__exclude__' in high:
+                    high['__exclude__'].extend(exclude)
+                else:
+                    high['__exclude__'] = exclude
+            err += errors
         if err:
             return err
         if not high:
