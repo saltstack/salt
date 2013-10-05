@@ -18,6 +18,7 @@ import yaml
 # Import salt libs
 import salt
 import salt.fileclient
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +26,15 @@ __all__ = [
     'SaltCacheLoader',
     'SerializerExtension'
 ]
+
+
+# To dump OrderedDict objects as regular dicts. Used by the yaml
+# template filter.
+class OrderedDictDumper(yaml.Dumper):
+    pass
+yaml.add_representer(OrderedDict,
+                     yaml.representer.SafeRepresenter.represent_dict,
+                     Dumper=OrderedDictDumper)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -223,9 +233,8 @@ class SerializerExtension(Extension, object):
         return Markup(json.dumps(value, sort_keys=True).strip())
 
     def format_yaml(self, value):
-        if value.__class__.__name__ == 'OrderedDict':
-            value == dict(value)
-        return Markup(yaml.dump(value, default_flow_style=True).strip())
+        return Markup(yaml.dump(value, default_flow_style=True,
+                                Dumper=OrderedDictDumper).strip())
 
     def load_yaml(self, value):
         if isinstance(value, TemplateModule):
