@@ -15,7 +15,12 @@ ensure_in_syspath('../../')
 # Import salt libs
 import salt.utils
 from salt.utils.jinja import SaltCacheLoader, SerializerExtension
-from salt.utils.templates import SaltTemplateRenderError, render_jinja_tmpl, get_template_context
+from salt.utils.templates import (
+    JINJA,
+    SaltTemplateRenderError,
+    render_jinja_tmpl,
+    get_template_context
+)
 
 # Import 3rd party libs
 import yaml
@@ -207,6 +212,13 @@ class TestGetTemplate(TestCase):
             response = render_jinja_tmpl('{{ object|strftime("%y") }}',
                     dict(object=object, opts=self.local_opts, env='other'))
             self.assertEqual(response, '02')
+
+    def test_non_ascii(self):
+        fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
+        out = JINJA(fn, opts=self.local_opts, env='other')
+        with salt.utils.fopen(out['data']) as fp:
+            result = fp.read().decode('utf-8')
+            self.assertEqual(u'Assunção\n', result)
 
     def test_get_template_context_has_enough_context(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
@@ -410,4 +422,5 @@ class TestCustomExtensions(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests([TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions], needs_daemon=False)
+    run_tests(TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions,
+              needs_daemon=False)
