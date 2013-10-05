@@ -24,6 +24,7 @@ import getpass
 # Import salt libs
 import salt.loader
 import salt.utils
+import salt.utils.minions
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -144,6 +145,15 @@ class LoadAuth(object):
             except (IOError, OSError):
                 pass
         return tdata
+
+
+class Authorize(object):
+    '''
+    The authorization engine used by EAUTH
+    '''
+    def __init__(self, opts, load):
+        self.opts = opts
+        self.load = load
 
 
 class Resolver(object):
