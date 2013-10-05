@@ -89,9 +89,9 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
 
     cmd = 'tar -{0} {1}'.format(options, tarfile)
     if sources:
-        cmd += ' '.join(sources)
+        cmd += ' {0}'.format(' '.join(sources))
     elif dest:
-        cmd += '-C {0}'.format(dest)
+        cmd += ' -C {0}'.format(dest)
     return __salt__['cmd.run'](cmd, cwd=cwd, template=template).splitlines()
 
 
