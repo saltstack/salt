@@ -6,6 +6,7 @@ A module to wrap archive calls
 # Import salt libs
 import salt._compat
 from salt.utils import which as _which, which_bin as _which_bin
+from salt.exceptions import SaltInvocationError
 import salt.utils.decorators as decorators
 
 # TODO: Check that the passed arguments are correct
@@ -25,7 +26,7 @@ def __virtual__():
 
 
 @decorators.which('tar')
-def tar(options, tarfile, sources, cwd=None, template=None):
+def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
     '''
     .. note::
 
@@ -37,11 +38,31 @@ def tar(options, tarfile, sources, cwd=None, template=None):
 
     Uses the tar command to pack, unpack, etc tar files
 
+
+    options:
+        Options to pass to the ``tar`` binary.
+
+    tarfile:
+        The tar filename to pack/unpack.
+
+    sources:
+        Comma delimited list of files to **pack** into the tarfile.
+
+    dest:
+        The destination directory to **unpack** the tarfile to.
+
+    cwd:
+        The directory in which the tar command should be executed.
+
+    template:
+         Template engine name to render the command arguments before execution.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
+
 
     The template arg can be set to ``jinja`` or another supported template
     engine to render the command arguments before execution. For example:
@@ -50,11 +71,27 @@ def tar(options, tarfile, sources, cwd=None, template=None):
 
         salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 {{grains.saltpath}}
 
+
+    To unpack a tarfile, for example:
+
+    ..code-block:: bash
+
+        salt '*' archive.tar foo.tar xf dest=/target/directory
+
     '''
+    if sources is not None and dest is not None:
+        raise SaltInvocationError(
+            'The \'sources\' and \'dest\' arguments are mutually exclusive'
+        )
+
     if isinstance(sources, salt._compat.string_types):
         sources = [s.strip() for s in sources.split(',')]
 
-    cmd = 'tar -{0} {1} {2}'.format(options, tarfile, ' '.join(sources))
+    cmd = 'tar -{0} {1}'.format(options, tarfile)
+    if sources:
+        cmd += ' {0}'.format(' '.join(sources))
+    elif dest:
+        cmd += ' -C {0}'.format(dest)
     return __salt__['cmd.run'](cmd, cwd=cwd, template=template).splitlines()
 
 
