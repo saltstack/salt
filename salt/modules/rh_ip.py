@@ -10,7 +10,7 @@ import os.path
 import os
 import StringIO
 
-# import third party libs
+# Import third party libs
 import jinja2
 import jinja2.exceptions
 
@@ -22,7 +22,7 @@ import salt.utils.templates
 log = logging.getLogger(__name__)
 
 # Set up template environment
-ENV = jinja2.Environment(
+JINJA = jinja2.Environment(
     loader=jinja2.FileSystemLoader(
         os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'rh_ip')
     )
@@ -805,7 +805,7 @@ def build_bond(iface, **settings):
 
     opts = _parse_settings_bond(settings, iface)
     try:
-        template = ENV.get_template('conf.jinja')
+        template = JINJA.get_template('conf.jinja')
     except jinja2.exceptions.TemplateNotFound:
         log.error('Could not load template conf.jinja')
         return ''
@@ -865,7 +865,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
-            template = ENV.get_template('rh{0}_eth.jinja'.format(rh_major))
+            template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))
         except jinja2.exceptions.TemplateNotFound:
             log.error(
                 'Could not load template rh{0}_eth.jinja'.format(
@@ -898,7 +898,7 @@ def build_routes(iface, **settings):
     iface = iface.lower()
     opts = _parse_routes(iface, settings)
     try:
-        template = ENV.get_template('route_eth.jinja')
+        template = JINJA.get_template('route_eth.jinja')
     except jinja2.exceptions.TemplateNotFound:
         log.error(
             'Could not load template route_eth.jinja'
@@ -1041,7 +1041,7 @@ def build_network_settings(**settings):
     # Build settings
     opts = _parse_network_settings(settings, current_network_settings)
     try:
-        template = ENV.get_template('network.jinja')
+        template = JINJA.get_template('network.jinja')
     except jinja2.exceptions.TemplateNotFound:
         log.error('Could not load template network.jinja')
         return ''
