@@ -40,8 +40,12 @@ SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 
 def wrap_tmpl_func(render_str):
-    def render_tmpl(tmplsrc, from_str=False, to_str=False,
-                    context=None, tmplpath=None, **kws):
+    def render_tmpl(tmplsrc,
+                    from_str=False,
+                    to_str=False,
+                    context=None,
+                    tmplpath=None,
+                    **kws):
         if context is None:
             context = {}
         # We want explicit context to overwrite the **kws
@@ -55,9 +59,14 @@ def wrap_tmpl_func(render_str):
                 tmplstr = tmplsrc
             else:
                 try:
+                    if tmplpath is not None:
+                        tmplsrc = os.path.join(tmplpath, tmplsrc)
                     with codecs.open(tmplsrc, 'r', SLS_ENCODING) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
-                except (UnicodeDecodeError, ValueError) as exc:
+                except (UnicodeDecodeError,
+                        ValueError,
+                        OSError,
+                        IOError) as exc:
                     if salt.utils.is_bin_file(tmplsrc):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
