@@ -37,6 +37,7 @@ Use the commands to create the sqlite3 database and tables::
       fun TEXT KEY,
       jid TEXT KEY,
       id TEXT KEY,
+      fun_args TEXT,
       date TEXT NOT NULL,
       full_ret TEXT NOT NULL,
       success TEXT NOT NULL
@@ -103,12 +104,13 @@ def returner(ret):
     conn = _get_conn()
     cur = conn.cursor()
     sql = '''INSERT INTO salt_returns
-             (fun, jid, id, date, full_ret, success)
-             VALUES (:fun, :jid, :id, :date, :full_ret, :success)'''
+             (fun, jid, id, fun_args, date, full_ret, success)
+             VALUES (:fun, :jid, :id, :fun_args, :date, :full_ret, :success)'''
     cur.execute(sql,
                 {'fun': ret['fun'],
                  'jid': ret['jid'],
                  'id': ret['id'],
+                 'fun_args': str(ret['fun_args']) if ret['fun_args'] else None,
                  'date': str(datetime.datetime.now()),
                  'full_ret': json.dumps(ret['return']),
                  'success': ret['success']})
