@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage Windows features via the ServerManager powershell module
 '''
@@ -27,7 +28,6 @@ def _parse_powershell_list(lst):
     '''
     Parse command output when piped to format-list
     '''
-    
     ret = {}
     for line in lst.splitlines():
         if line:
@@ -47,7 +47,6 @@ def list_available():
 
         salt '*' win_servermanager.list_available
     '''
-    
     return _srvmgr('Get-WindowsFeature -erroraction silentlycontinue')
 
 
@@ -61,7 +60,6 @@ def list_installed():
 
         salt '*' win_servermanager.list_installed
     '''
-    
     ret = {}
     for line in list_available().splitlines()[2:]:
         splt = line.split()
@@ -92,7 +90,6 @@ def install(feature, recurse=False):
         salt '*' win_servermanager.install Telnet-Client
         salt '*' win_servermanager.install SNMP-Services True
     '''
-    
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
