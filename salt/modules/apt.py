@@ -394,8 +394,10 @@ def install(name=None,
             else:
                 cver = old.get(param)
                 if cver is not None \
-                        and __salt__['pkg.compare'](pkg1=version_num,
-                                                    oper='<', pkg2=cver):
+                        and salt.utils.compare_versions(ver1=version_num,
+                                                        oper='<',
+                                                        ver2=cver,
+                                                        cmp_func=version_cmp):
                     downgrade = True
                 targets.append('"{0}={1}"'.format(param, version_num))
         if fromrepo:
