@@ -10,7 +10,6 @@ import re
 import salt.utils
 
 
-
 def __virtual__():
     '''
     Only works on Windows systems
@@ -24,6 +23,7 @@ def _parse_return_code_powershell(string):
     '''
     return from the input string the return code of the powershell command
     '''
+    
     regex = re.search(r'ReturnValue\s*: (\d*)', string)
     if not regex:
         return False
