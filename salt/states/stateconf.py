@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Stateconf System
 ================
@@ -14,4 +15,4 @@ def _no_op(name, **kwargs):
     '''
     return dict(name=name, result=True, changes={}, comment='')
 
-set = context = _no_op  # pylint: disable-msg=C0103
+set = context = _no_op  # pylint: disable=C0103

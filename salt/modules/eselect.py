@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 '''
-Support for eselect: the Gentoo's configuration and management tool.
+Support for eselect, Gentoo's configuration and management tool.
 '''
 
 # Import salt libs
@@ -19,7 +20,9 @@ def exec_action(module, action, parameter='', state_only=False):
     '''
     Execute an arbitrary action on a module.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' eselect.exec_action <module name> <action> [parameter]
     '''
@@ -43,7 +46,9 @@ def get_modules():
     '''
     Get available modules list.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' eselect.get_modules
     '''
@@ -54,7 +59,9 @@ def get_target_list(module):
     '''
     Get available target for the given module.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' eselect.get_target_list <module name>
     '''
@@ -65,7 +72,9 @@ def get_current_target(module):
     '''
     Get the currently selected target for the given module.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' eselect.get_current_target <module name>
     '''
@@ -77,7 +86,9 @@ def set_target(module, target):
     Set the target for the given module.
     Target can be specified by index or name.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' eselect.set_target <module name> <target>
     '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing quotas on POSIX-like systems.
 '''
@@ -30,7 +31,9 @@ def report(mount):
     '''
     Report on quotas for a specific volume
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' quota.report /media/data
     '''
@@ -89,7 +92,9 @@ def set_(device, **kwargs):
     '''
     Calls out to setquota, for a specific user or group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' quota.set /media/data user=larry block-soft-limit=1048576
         salt '*' quota.set /media/data group=painters file-hard-limit=1000
@@ -143,7 +148,9 @@ def warn():
     Runs the warnquota command, to send warning emails to users who
     are over their quota limit.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' quota.warn
     '''
@@ -154,7 +161,9 @@ def stats():
     '''
     Runs the quotastats command, and returns the parsed output
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' quota.stats
     '''
@@ -173,7 +182,9 @@ def on(device):
     '''
     Turns on the quota system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' quota.on
     '''
@@ -186,7 +197,9 @@ def off(device):
     '''
     Turns off the quota system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' quota.off
     '''
@@ -199,7 +212,9 @@ def get_mode(device):
     '''
     Report whether the quota system for this device is on or off
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' quota.get_mode
     '''

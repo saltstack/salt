@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A flexible renderer that takes a templating engine and a data format
 
@@ -7,7 +8,7 @@ A flexible renderer that takes a templating engine and a data format
 '''
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
-# 
+#
 # FIXME: I really need to review and simplify this renderer, it's getting out of hand!
 #
 # TODO:
@@ -242,7 +243,7 @@ def has_names_decls(data):
             return sid
 
 
-def rewrite_single_shorthand_state_decl(data):  # pylint: disable-msg=C0103
+def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
     '''
     Rewrite all state declarations that look like this::
 
@@ -278,7 +279,7 @@ def rewrite_sls_includes_excludes(data, sls, env):
                     slsenv = env
                     incl = each
                 if incl.startswith('.'):
-                    includes[i] = {slsenv: sls+incl[1:]}
+                    includes[i] = {slsenv: (sls + incl[1:])}
         elif sid == 'exclude':
             for sdata in data[sid]:
                 if 'sls' in sdata and sdata['sls'].startswith('.'):
@@ -387,7 +388,6 @@ def rename_state_ids(data, sls, is_extend=False):
             del data[sid]
 
 
-
 REQUIRE = set(['require', 'watch'])
 REQUIRE_IN = set(['require_in', 'watch_in'])
 EXTENDED_REQUIRE = {}
@@ -401,7 +401,7 @@ from itertools import chain
 #   explicit require_in/watch_in can only contain states after it
 def add_implicit_requires(data):
 
-    def T(sid, state):  # pylint: disable-msg=C0103
+    def T(sid, state):  # pylint: disable=C0103
         return '{0}:{1}'.format(sid, state_name(state))
 
     states_before = set()
@@ -480,7 +480,7 @@ def add_start_state(data, sls):
     else:
         raise SaltRenderError('Can\'t determine the first state in the sls file!')
     reqin = {state_name(data[sid].iterkeys().next()): sid}
-    data[start_sid] = { STATE_FUNC: [ {'require_in': [reqin]} ] }
+    data[start_sid] = {STATE_FUNC: [{'require_in': [reqin]}]}
 
 
 def add_goal_state(data):

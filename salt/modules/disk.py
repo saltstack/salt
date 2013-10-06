@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for gathering disk information
 '''
@@ -24,7 +25,9 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.usage
     '''
@@ -77,7 +80,9 @@ def inodeusage(args=None):
     '''
     Return inode usage information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.inodeusage
     '''
@@ -98,17 +103,17 @@ def inodeusage(args=None):
             if __grains__['kernel'] == 'OpenBSD':
                 ret[comps[8]] = {
                     'inodes': int(comps[5]) + int(comps[6]),
-                    'used':   comps[5],
-                    'free':   comps[6],
-                    'use':    comps[7],
+                    'used': comps[5],
+                    'free': comps[6],
+                    'use': comps[7],
                     'filesystem': comps[0],
                 }
             else:
                 ret[comps[5]] = {
                     'inodes': comps[1],
-                    'used':   comps[2],
-                    'free':   comps[3],
-                    'use':    comps[4],
+                    'used': comps[2],
+                    'free': comps[3],
+                    'use': comps[4],
                     'filesystem': comps[0],
                 }
         except (IndexError, ValueError):

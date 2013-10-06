@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This module contains the function calls to execute command line scipts
 '''
@@ -86,6 +87,19 @@ def salt_run():
         sys.path.remove('')
     try:
         client = salt.cli.SaltRun()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
+
+
+def salt_ssh():
+    '''
+    Execute the salt-ssh system
+    '''
+    if '' in sys.path:
+        sys.path.remove('')
+    try:
+        client = salt.cli.SaltSSH()
         client.run()
     except KeyboardInterrupt:
         raise SystemExit('\nExiting gracefully on Ctrl-c')

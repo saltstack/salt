@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for APT (Advanced Packaging Tool)
 '''
@@ -10,8 +11,13 @@ import logging
 import urllib2
 import json
 
+# Import third party libs
+import yaml
+
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
 log = logging.getLogger(__name__)
@@ -44,12 +50,6 @@ def __virtual__():
     '''
     if __grains__['os_family'] != 'Debian':
         return False
-    if not apt_support:
-        err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
-        log.error(err_str.format(str(e)))
-    if not ppa_format_support and __grains__['os'] == 'Ubuntu':
-        err_str = 'Unable to import "softwareproperties.ppa": {0}'
-        log.warning(err_str.format(str(e)))
     return 'pkg'
 
 
@@ -93,16 +93,6 @@ def _reconstruct_ppa_name(owner_name, ppa_name):
     return 'ppa:{0}/{1}'.format(owner_name, ppa_name)
 
 
-def _pkgname_without_arch(name):
-    '''
-    Check for ':arch' appended to pkg name (i.e. 32 bit installed on 64 bit
-    machine is ':i386')
-    '''
-    if name.find(':') >= 0:
-        return name.split(':')[0]
-    return name
-
-
 def _get_repo(**kwargs):
     '''
     Check the kwargs for either 'fromrepo' or 'repo' and return the value.
@@ -116,6 +106,20 @@ def _get_repo(**kwargs):
     return ''
 
 
+def _get_virtual():
+    '''
+    Return a dict of virtual package information
+    '''
+    if 'pkg._get_virtual' not in __context__:
+        cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
+        out = __salt__['cmd.run_stdout'](cmd)
+        virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
+        __context__['pkg._get_virtual'] = {}
+        for realpkg, provides in virtpkg_re.findall(out):
+            __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
+    return __context__['pkg._get_virtual']
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -127,22 +131,47 @@ def latest_version(*names, **kwargs):
 
     A specific repo can be requested using the ``fromrepo`` keyword argument.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package name> fromrepo=unstable
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
+    if 'repo' in kwargs:
+        # Remember to kill _get_repo() too when removing this warning.
+        salt.utils.warn_until(
+            'Hydrogen',
+            'The \'repo\' argument to apt.latest_version is deprecated, and '
+            'will be removed in Salt {version}. Please use \'fromrepo\' '
+            'instead.'
+        )
+    fromrepo = _get_repo(**kwargs)
+    kwargs.pop('fromrepo', None)
+    kwargs.pop('repo', None)
+
     if len(names) == 0:
         return ''
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
-    pkgs = list_pkgs()
-    fromrepo = _get_repo(**kwargs)
+    pkgs = list_pkgs(versions_as_list=True)
     repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
         if fromrepo else ''
+
+    # Refresh before looking for the latest version available
+    if refresh:
+        refresh_db()
+
+    virtpkgs = _get_virtual()
+    all_virt = set()
+    for provides in virtpkgs.values():
+        all_virt.update(provides)
+
     for name in names:
         cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
         out = __salt__['cmd.run_all'](cmd)
@@ -150,14 +179,29 @@ def latest_version(*names, **kwargs):
         if len(candidate) >= 2:
             candidate = candidate[-1]
             if candidate.lower() == '(none)':
-                candidate = ''
+                # Virtual package is a candidate for installation if and only
+                # if it is not currently installed.
+                if name in all_virt and name not in pkgs:
+                    candidate = '1'
+                else:
+                    candidate = ''
         else:
             candidate = ''
 
-        installed = pkgs.get(name, '')
-        if candidate:
-            if not installed or compare(pkg1=installed, oper='<',
-                                        pkg2=candidate):
+        installed = pkgs.get(name, [])
+        if not installed:
+            ret[name] = candidate
+        elif candidate:
+            # If there are no installed versions that are greater than or equal
+            # to the install candidate, then the candidate is an upgrade, so
+            # add it to the return dict
+            if not any(
+                (salt.utils.compare_versions(ver1=x,
+                                             oper='>=',
+                                             ver2=candidate,
+                                             cmp_func=version_cmp)
+                 for x in installed)
+            ):
                 ret[name] = candidate
 
     # Return a string if only one package name passed
@@ -175,7 +219,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -190,11 +236,13 @@ def refresh_db():
     Returns a dict, with the keys being package databases and the values being
     the result of the update attempt. Values can be one of the following:
 
-        ``True``: Database updated successfully
-        ``False``: Problem updating database
-        ``None``: Database already up-to-date
+    - ``True``: Database updated successfully
+    - ``False``: Problem updating database
+    - ``None``: Database already up-to-date
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -237,7 +285,14 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
-        CLI Example::
+        32-bit packages can be installed on 64-bit systems by appending the
+        architecture designation (``:i386``, etc.) to the end of the package
+        name.
+
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install <package name>
 
     refresh
@@ -266,7 +321,10 @@ def install(name=None,
         A list of packages to install from a software repository. Must be
         passed as a python list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install pkgs='["foo", "bar"]'
             salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-0ubuntu0"}]'
 
@@ -275,7 +333,14 @@ def install(name=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        32-bit packages can be installed on 64-bit systems by appending the
+        architecture designation (``:i386``, etc.) to the end of the package
+        name.
+
+        CLI Example:
+
+        .. code-block:: bash
+
             salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
 
 
@@ -306,6 +371,9 @@ def install(name=None,
         except Exception as e:
             log.exception(e)
 
+    old = list_pkgs()
+
+    downgrade = False
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -324,11 +392,19 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
+                cver = old.get(param)
+                if cver is not None \
+                        and salt.utils.compare_versions(ver1=version_num,
+                                                        oper='<',
+                                                        ver2=cver,
+                                                        cmp_func=version_cmp):
+                    downgrade = True
                 targets.append('"{0}={1}"'.format(param, version_num))
         if fromrepo:
             log.info('Targeting repo "{0}"'.format(fromrepo))
-        cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install ' \
-              '{pkg}'.format(
+        cmd = 'apt-get -q -y {force_yes} {confold} {confdef} {verify} ' \
+              '{target} install {pkg}'.format(
+                  force_yes='--force-yes' if downgrade else '',
                   confold='-o DPkg::Options::=--force-confold',
                   confdef='-o DPkg::Options::=--force-confdef',
                   verify='--allow-unauthenticated' if skip_verify else '',
@@ -336,7 +412,6 @@ def install(name=None,
                   pkg=' '.join(targets),
               )
 
-    old = list_pkgs()
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -356,14 +431,25 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
+    old_removed = list_pkgs(removed=True)
     targets = [x for x in pkg_params if x in old]
+    if action == 'purge':
+        targets.extend([x for x in pkg_params if x in old_removed])
     if not targets:
         return {}
     cmd = 'apt-get -q -y {0} {1}'.format(action, ' '.join(targets))
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    new_removed = list_pkgs(removed=True)
+
+    ret = {'installed': __salt__['pkg_resource.find_changes'](old, new)}
+    if action == 'purge':
+        ret['removed'] = __salt__['pkg_resource.find_changes'](old_removed,
+                                                               new_removed)
+        return ret
+    else:
+        return ret['installed']
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -380,10 +466,14 @@ def remove(name=None, pkgs=None, **kwargs):
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    .. versionadded:: 0.16.0
+
 
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
@@ -407,9 +497,14 @@ def purge(name=None, pkgs=None, **kwargs):
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    .. versionadded:: 0.16.0
+
+
     Returns a dict containing the changes.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
@@ -427,7 +522,9 @@ def upgrade(refresh=True, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -443,68 +540,107 @@ def upgrade(refresh=True, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def list_pkgs(versions_as_list=False):
+def _clean_pkglist(pkgs):
+    '''
+    Go through package list and, if any packages have more than one virtual
+    package marker and no actual package versions, remove all virtual package
+    markers. If there is a mix of actual package versions and virtual package
+    markers, remove the virtual package markers.
+    '''
+    for name, versions in pkgs.iteritems():
+        stripped = filter(lambda x: x != '1', versions)
+        if not stripped:
+            pkgs[name] = ['1']
+        elif versions != stripped:
+            pkgs[name] = stripped
+
+
+def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
+
+    If removed is ``True``, then only packages which have been removed (but not
+    purged) will be returned.
 
     External dependencies::
 
         Virtual package resolution requires dctrl-tools.
         Without dctrl-tools virtual packages will be reported as not installed.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    removed = salt.utils.is_true(removed)
 
     if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
+        if removed:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs']['removed'])
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            ret = copy.deepcopy(__context__['pkg.list_pkgs']['installed'])
+        if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
-            return ret
+        return ret
 
-    ret = {}
+    ret = {'installed': {}, 'removed': {}}
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
-          '${Version}\n\' -W'
+          '${Version} ${Architecture}\n\' -W'
 
     out = __salt__['cmd.run_all'](cmd).get('stdout', '')
-    # Typical line of output:
-    # install ok installed zsh 4.3.17-1ubuntu1
+    # Typical lines of output:
+    # install ok installed zsh 4.3.17-1ubuntu1 amd64
+    # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64
     for line in out.splitlines():
         cols = line.split()
         try:
-            linetype, status, name, version_num = [cols[x] for x in (0, 2, 3, 4)]
+            linetype, status, name, version_num, arch = \
+                [cols[x] for x in (0, 2, 3, 4, 5)]
         except ValueError:
             continue
-        name = _pkgname_without_arch(name)
-        if len(cols) and ('install' in linetype or 'hold' in linetype) and \
-                'installed' in status:
-            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
+        if __grains__.get('cpuarch', '') == 'x86_64':
+            osarch = __grains__.get('osarch', '')
+            if arch != 'all' and osarch == 'amd64' and osarch != arch:
+                name += ':{0}'.format(arch)
+        if len(cols):
+            if ('install' in linetype or 'hold' in linetype) and \
+                    'installed' in status:
+                __salt__['pkg_resource.add_pkg'](ret['installed'],
+                                                 name,
+                                                 version_num)
+            elif 'deinstall' in linetype:
+                __salt__['pkg_resource.add_pkg'](ret['removed'],
+                                                 name,
+                                                 version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
-    if __salt__['cmd.has_exec']('grep-available'):
-        cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-        out = __salt__['cmd.run_stdout'](cmd)
-
-        virtpkg_re = re.compile('Package: (\\S+)\nProvides: ([\\S, ]+)')
+    if not removed and __salt__['cmd.has_exec']('grep-available'):
+        virtpkgs_all = _get_virtual()
         virtpkgs = set()
-        for realpkg, provides in virtpkg_re.findall(out):
+        for realpkg, provides in virtpkgs_all.iteritems():
             # grep-available returns info on all virtual packages. Ignore any
             # virtual packages that do not have the real package installed.
-            if realpkg in ret:
-                virtpkgs.update(provides.split(', '))
+            if realpkg in ret['installed']:
+                virtpkgs.update(provides)
         for virtname in virtpkgs:
             # Set virtual package versions to '1'
-            __salt__['pkg_resource.add_pkg'](ret, virtname, '1')
+            __salt__['pkg_resource.add_pkg'](ret['installed'], virtname, '1')
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
+    for pkglist_type in ('installed', 'removed'):
+        __salt__['pkg_resource.sort_pkglist'](ret[pkglist_type])
+        _clean_pkglist(ret[pkglist_type])
+
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+
+    if removed:
+        ret = ret['removed']
+    else:
+        ret = ret['installed']
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -544,7 +680,9 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
@@ -557,23 +695,26 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
     '''
     return latest_version(name) != ''
 
 
-def perform_cmp(pkg1='', pkg2=''):
+def version_cmp(pkg1, pkg2):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' pkg.perform_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0ubuntu1' pkg2='0.2.4.1-0ubuntu1'
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     '''
     try:
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
@@ -584,18 +725,6 @@ def perform_cmp(pkg1='', pkg2=''):
     except Exception as e:
         log.error(e)
     return None
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
 
 
 def _split_repo_str(repo):
@@ -641,13 +770,17 @@ def list_repos():
     '''
     Lists all repos in the sources.list (and sources.lists.d) files
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
        salt '*' pkg.list_repos
        salt '*' pkg.list_repos disabled=True
     '''
     if not apt_support:
-        return 'Error: aptsources.sourceslist python module not found'
+        msg = 'Error: aptsources.sourceslist python module not found'
+        log.error(msg)
+        return msg
 
     repos = {}
     sources = sourceslist.SourcesList()
@@ -673,7 +806,9 @@ def get_repo(repo, **kwargs):
 
     The repo passwd in needs to be a complete repo entry.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.get_repo "myrepo definition"
     '''
@@ -687,7 +822,7 @@ def get_repo(repo, **kwargs):
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
-        dist = __grains__['lsb_codename']
+        dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/')
         if ppa_auth:
             auth_info = '{0}@'.format(ppa_auth)
@@ -697,7 +832,7 @@ def get_repo(repo, **kwargs):
             if ppa_format_support:
                 repo = softwareproperties.ppa.expand_ppa_line(
                     repo,
-                    __grains__['lsb_codename'])[0]
+                    __grains__['lsb_distrib_codename'])[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
@@ -720,7 +855,9 @@ def get_repo(repo, **kwargs):
         for source in repos.values():
             for sub in source:
                 if (sub['type'] == repo_type and
-                    sub['uri'] == repo_uri and
+                    # strip trailing '/' from repo_uri, it's valid in definition
+                    # but not valid when compared to persisted source
+                    sub['uri'] == repo_uri.rstrip('/') and
                         sub['dist'] == repo_dist):
                     if not repo_comps:
                         return sub
@@ -731,7 +868,7 @@ def get_repo(repo, **kwargs):
     raise Exception('repo "{0}" was not found'.format(repo))
 
 
-def del_repo(repo, refresh=False, **kwargs):
+def del_repo(repo, **kwargs):
     '''
     Delete a repo from the sources.list / sources.list.d
 
@@ -742,10 +879,11 @@ def del_repo(repo, refresh=False, **kwargs):
     The repo passed in must be a fully formed repository definition
     string.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.del_repo "myrepo definition"
-        salt '*' pkg.del_repo "myrepo definition" refresh=True
     '''
     if not apt_support:
         return 'Error: aptsources.sourceslist python module not found'
@@ -755,7 +893,7 @@ def del_repo(repo, refresh=False, **kwargs):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         is_ppa = True
-        dist = __grains__['lsb_codename']
+        dist = __grains__['lsb_distrib_codename']
         if not ppa_format_support:
             warning_str = 'Unable to use functions from ' \
                           '"python-software-properties" package, making ' \
@@ -855,7 +993,9 @@ def mod_repo(repo, **kwargs):
                 at the same time.  Keys should be properly added on initial
                 configuration.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
@@ -871,11 +1011,18 @@ def mod_repo(repo, **kwargs):
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
             if ppa_format_support and 'ppa_auth' not in kwargs:
-                cmd = 'apt-add-repository -y {0}'.format(repo)
-                out = __salt__['cmd.run_stdout'](cmd, **kwargs)
-                # explicit refresh when a repo is modified.
-                refresh_db()
-                return {repo: out}
+                try:
+                    get_repo(repo)
+                    return {repo: ''}
+                except Exception:
+                    if float(__grains__['osrelease']) < 12.04:
+                        cmd = 'apt-add-repository {0}'.format(repo)
+                    else:
+                        cmd = 'apt-add-repository -y {0}'.format(repo)
+                    out = __salt__['cmd.run_stdout'](cmd, **kwargs)
+                    # explicit refresh when a repo is modified.
+                    refresh_db()
+                    return {repo: out}
             else:
                 if not ppa_format_support:
                     warning_str = 'Unable to use functions from ' \
@@ -893,7 +1040,7 @@ def mod_repo(repo, **kwargs):
                               '(e.g. saltstack/salt) not found.  Received ' \
                               '"{0}" instead.'
                     raise Exception(err_str.format(repo[4:]))
-                dist = __grains__['lsb_codename']
+                dist = __grains__['lsb_distrib_codename']
                 # ppa has a lot of implicit arguments. Make them explicit.
                 # These will defer to any user-defined variants
                 kwargs['dist'] = dist
@@ -1087,7 +1234,9 @@ def file_list(*packages):
     return a list of _every_ file on the system's package database (not
     generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
@@ -1102,7 +1251,9 @@ def file_dict(*packages):
     specifying any packages will return a list of _every_ file on the system's
     package database (not generally recommended).
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list httpd
         salt '*' pkg.file_list httpd postfix
@@ -1128,7 +1279,7 @@ def expand_repo_def(repokwargs):
     repo = repokwargs['repo']
 
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
-        dist = __grains__['lsb_codename']
+        dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
         if 'ppa_auth' in repokwargs:
             auth_info = '{0}@'.format(repokwargs['ppa_auth'])
@@ -1161,3 +1312,168 @@ def expand_repo_def(repokwargs):
     sanitized['architectures'] = getattr(source_entry, 'architectures', [])
 
     return sanitized
+
+
+def _parse_selections(dpkgselection):
+    '''
+    Parses the format from ``dpkg --get-selections`` and return a format that
+    pkg.get_selections and pkg.set_selections work with.
+    '''
+    ret = {}
+    if isinstance(dpkgselection, string_types):
+        dpkgselection = dpkgselection.split('\n')
+    for line in dpkgselection:
+        if line:
+            _pkg, _state = line.split()
+            if _state in ret:
+                ret[_state].append(_pkg)
+            else:
+                ret[_state] = [_pkg]
+    return ret
+
+
+def get_selections(pattern=None, state=None):
+    '''
+    View package state from the dpkg database.
+
+    Returns a dict of dicts containing the state, and package names:
+
+    .. code-block:: python
+
+        {'<host>':
+            {'<state>': ['pkg1',
+                         ...
+                        ]
+            },
+            ...
+        }
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_selections
+        salt '*' pkg.get_selections 'python-*'
+        salt '*' pkg.get_selections state=hold
+        salt '*' pkg.get_selections 'openssh*' state=hold
+    '''
+    ret = {}
+    cmd = 'dpkg --get-selections'
+    if pattern:
+        cmd += ' "{0}"'.format(pattern)
+    else:
+        cmd += ' "*"'
+    stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    ret = _parse_selections(stdout)
+    if state:
+        return {state: ret.get(state, [])}
+    return ret
+
+
+# TODO: allow state=None to be set, and that *args will be set to that state
+# TODO: maybe use something similar to pkg_resources.pack_pkgs to allow a list passed to selection, with the default state set to whatever is passed by the above, but override that if explicitly specified
+# TODO: handle path to selection file from local fs as well as from salt file server
+def set_selections(path=None, selection=None, clear=False):
+    '''
+    Change package state in the dpkg database.
+
+    The state can be any one of, documented in ``dpkg(1)``:
+
+     - install
+     - hold
+     - deinstall
+     - purge
+
+    This command is commonly used to mark specific packages to be held from
+    being upgraded, that is, to be kept at a certain version. When a state is
+    changed to anything but being held, then it is typically followed by
+    ``apt-get -u dselect-upgrade``.
+
+    Note: Be careful with the ``clear`` argument, since it will start
+    with setting all packages to deinstall state.
+
+    Returns a dict of dicts containing the package names, and the new and old
+    versions:
+
+    .. code-block:: python
+
+        {'<host>':
+            {'<package>': {'new': '<new-state>',
+                           'old': '<old-state>'}
+            },
+            ...
+        }
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.set_selections selection='{"install": ["netcat"]}'
+        salt '*' pkg.set_selections selection='{"hold": ["openssh-server", "openssh-client"]}'
+        salt '*' pkg.set_selections salt://path/to/file
+        salt '*' pkg.set_selections salt://path/to/file clear=True
+    '''
+    ret = {}
+    if not path and not selection:
+        return ret
+    if path and selection:
+        err = ('The \'selection\' and \'path\' arguments to '
+               'pkg.set_selections are mutually exclusive, and cannot be '
+               'specified together')
+        raise SaltInvocationError(err)
+
+    if isinstance(selection, string_types):
+        try:
+            selection = yaml.safe_load(selection)
+        except (yaml.parser.ParserError, yaml.scanner.ScannerError) as exc:
+            raise SaltInvocationError(
+                'Improperly-formatted selection: {0}'.format(exc)
+            )
+
+    if path:
+        path = __salt__['cp.cache_file'](path)
+        with salt.utils.fopen(path, 'r') as ifile:
+            content = ifile.readlines()
+        selection = _parse_selections(content)
+
+    if selection:
+        valid_states = ('install', 'hold', 'deinstall', 'purge')
+        bad_states = [x for x in selection if x not in valid_states]
+        if bad_states:
+            raise SaltInvocationError(
+                'Invalid state(s): {0}'.format(', '.join(bad_states))
+            )
+
+        if clear:
+            cmd = 'dpkg --clear-selections'
+            if not __opts__['test']:
+                result = __salt__['cmd.run_all'](cmd)
+                if result['retcode'] != 0:
+                    err = ('Running dpkg --clear-selections failed: '
+                           '{0}'.format(result['stderr']))
+                    log.error(err)
+                    raise CommandExecutionError(err)
+
+        sel_revmap = {}
+        for _state, _pkgs in get_selections().iteritems():
+            sel_revmap.update(dict((_pkg, _state) for _pkg in _pkgs))
+
+        for _state, _pkgs in selection.iteritems():
+            for _pkg in _pkgs:
+                if _state == sel_revmap.get(_pkg):
+                    continue
+                cmd = 'echo {0} {1} | dpkg --set-selections'.format(
+                    _pkg,
+                    _state
+                    )
+                if not __opts__['test']:
+                    result = __salt__['cmd.run_all'](cmd)
+                    if result['retcode'] != 0:
+                        log.error(
+                            'failed to set state {0} for package '
+                            '{1}'.format(_state, _pkg)
+                        )
+                    else:
+                        ret[_pkg] = {'old': sel_revmap.get(_pkg),
+                                     'new': _state}
+    return ret

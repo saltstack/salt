@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Control of SSH known_hosts entries.
 ===================================
@@ -35,7 +36,7 @@ def present(
     type.
 
     name
-        The name of the remote host (i.e. "github.com")
+        The name of the remote host (e.g. "github.com")
 
     user
         The user who owns the ssh authorized keys file to modify
@@ -69,6 +70,7 @@ def present(
                                                   config=config)
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
+            ret['result'] = True
             return dict(ret, comment=comment)
         elif result == 'add':
             comment = 'Key for {0} is set to be added to {1}'.format(name,

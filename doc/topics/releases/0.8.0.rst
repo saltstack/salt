@@ -2,7 +2,7 @@
 Salt 0.8.0 release notes
 ========================
 Salt 0.8.0 is ready for general consumption!
-The source tarball is available on github for download:
+The source tarball is available on GitHub for download:
 
 :download:`salt-0.8.0.tar.gz`
 
@@ -114,7 +114,7 @@ I could use some help bringing salt to the people! Right now I only have
 packages for Arch Linux, Fedora 14 and Gentoo. We need packages for Debian and
 people willing to help test on more platforms. We also need help writing more
 minion modules and returner modules. If you want to contribute to salt please
-hop on the mailing list and send in patches, make a fork on github and send in
+hop on the mailing list and send in patches, make a fork on GitHub and send in
 pull requests! If you want to help but are not sure where you can, please email
 me directly or post tot he mailing list!
 

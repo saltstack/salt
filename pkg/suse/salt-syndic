@@ -1,240 +1,140 @@
 #!/bin/sh
 #
-#     Template SUSE system startup script for salt-syndic
-#     Copyright (C) 1995--2005  Kurt Garloff, SUSE / Novell Inc.
-#          
-#     This library is free software; you can redistribute it and/or modify it
-#     under the terms of the GNU Lesser General Public License as published by
-#     the Free Software Foundation; either version 2.1 of the License, or (at
-#     your option) any later version.
-#			      
-#     This library is distributed in the hope that it will be useful, but
-#     WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#     Lesser General Public License for more details.
-# 
-#     You should have received a copy of the GNU Lesser General Public
-#     License along with this library; if not, write to the Free Software
-#     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA     
-#
-# /etc/init.d/salt-syndic
-#   and its symbolic link
-# /(usr/)sbin/rcsalt-syndic
-#
-#
-# LSB compatible service control script; see http://www.linuxbase.org/spec/
-# 
-# Note: This template uses functions rc_XXX defined in /etc/rc.status on
-# UnitedLinux/SUSE/Novell based Linux distributions. If you want to base your
-# script on this template and ensure that it works on non UL based LSB 
-# compliant Linux distributions, you either have to provide the rc.status
-# functions from UL or change the script to work without them.
-# See skeleton.compat for a template that works with other distros as well.
-#
+# Salt syndic
+###################################
+
+# LSB header
+
 ### BEGIN INIT INFO
-# Provides:          salt-syndic
-# Required-Start:    $syslog $network $remote_fs
-# Should-Start:      $time ypbind smtp
-# Required-Stop:     $syslog $remote_fs
-# Should-Stop:       ypbind smtp
-# Default-Start:     3 5
-# Default-Stop:      0 1 2 6
-# Short-Description: Salt master daemon providing control minions
-# Description:       This is a daemon that controls the salt minions
-#	Salt is an open source tool to manage your infrastructure. Easy enough to get
-#	running in minutes and fast enough to manage tens of thousands of servers (and still
-#	get a response back in seconds).
+# Provides:           salt-syndic
+# Required-Start:     $local_fs $remote_fs $network $named $time 
+# Should-Start:		    $time ypbind smtp
+# Required-Stop:	    $local_fs $remote_fs $network $named $time 
+# Should-Stop:		    ypbind smtp
+# Default-Start:      3 5
+# Default-Stop:       0 1 2 6
+# Short-Description:  Salt syndic master-minion passthrough daemon
+# Description:        This is a the Salt syndic daemon that enables Salt master-minion remote control passthrough.
 ### END INIT INFO
-# 
-# Any extensions to the keywords given above should be preceeded by 
-# X-VendorTag- (X-UnitedLinux- X-SuSE- for us) according to LSB.
-# 
-# Notes on Required-Start/Should-Start:
-# * There are two different issues that are solved by Required-Start
-#    and Should-Start
-# (a) Hard dependencies: This is used by the runlevel editor to determine
-#     which services absolutely need to be started to make the start of
-#     this service make sense. Example: nfsserver should have
-#     Required-Start: $portmap
-#     Also, required services are started before the dependent ones.
-#     The runlevel editor will warn about such missing hard dependencies
-#     and suggest enabling. During system startup, you may expect an error,
-#     if the dependency is not fulfilled.
-# (b) Specifying the init script ordering, not real (hard) dependencies.
-#     This is needed by insserv to determine which service should be
-#     started first (and at a later stage what services can be started
-#     in parallel). The tag Should-Start: is used for this.
-#     It tells, that if a service is available, it should be started
-#     before. If not, never mind.
-# * When specifying hard dependencies or ordering requirements, you can 
-#   use names of services (contents of their Provides: section)
-#   or pseudo names starting with a $. The following ones are available
-#   according to LSB (1.1):
-#	$local_fs		all local file systems are mounted
-#				(most services should need this!)
-#	$remote_fs		all remote file systems are mounted
-#				(note that /usr may be remote, so
-#				 many services should Require this!)
-#	$syslog			system logging facility up
-#	$network		low level networking (eth card, ...)
-#	$named			hostname resolution available
-#	$netdaemons		all network daemons are running
-#   The $netdaemons pseudo service has been removed in LSB 1.2.
-#   For now, we still offer it for backward compatibility.
-#   These are new (LSB 1.2):
-#	$time			the system time has been set correctly	
-#	$portmap		SunRPC portmapping service available
-#   UnitedLinux extensions:
-#	$ALL			indicates that a script should be inserted
-#				at the end
-# * The services specified in the stop tags 
-#   (Required-Stop/Should-Stop)
-#   specify which services need to be still running when this service
-#   is shut down. Often the entries there are just copies or a subset 
-#   from the respective start tag.
-# * Should-Start/Stop are now part of LSB as of 2.0,
-#   formerly SUSE/Unitedlinux used X-UnitedLinux-Should-Start/-Stop.
-#   insserv does support both variants.
-# * X-UnitedLinux-Default-Enabled: yes/no is used at installation time
-#   (%fillup_and_insserv macro in %post of many RPMs) to specify whether
-#   a startup script should default to be enabled after installation.
-#   It's not used by insserv.
+
+
+# chkconfig header
+
+# chkconfig: 345 99 99 
+# description:  This is a the Salt syndic daemon that enables Salt master-minion remote control passthrough.
 #
-# Note on runlevels:
-# 0 - halt/poweroff 			6 - reboot
-# 1 - single user			2 - multiuser without network exported
-# 3 - multiuser w/ network (text mode)  5 - multiuser w/ network and X11 (xdm)
-# 
-# Note on script names:
-# http://www.linuxbase.org/spec/refspecs/LSB_1.3.0/gLSB/gLSB/scrptnames.html
-# A registry has been set up to manage the init script namespace.
-# http://www.lanana.org/
-# Please use the names already registered or register one or use a
-# vendor prefix.
+# processname: /usr/bin/salt-syndic
 
 
-# Check for missing binaries (stale symlinks should not happen)
-# Note: Special treatment of stop for LSB conformance
 if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 else
-	SALTSYNDIC='/usr/bin/salt-syndic'
+    SALTSYNDIC=/usr/bin/salt-syndic
+    PYTHON=/usr/bin/python
 fi
-test -x $SALTSYNDIC || { echo "$SALTMINION not installed"; 
-	if [ "$1" = "stop" ]; then exit 0;
-	else exit 5; fi; }
 
-# Source LSB init functions
-# providing start_daemon, killproc, pidofproc, 
-# log_success_msg, log_failure_msg and log_warning_msg.
-# This is currently not used by UnitedLinux based distributions and
-# not needed for init scripts for UnitedLinux only. If it is used,
-# the functions from rc.status should not be sourced or used.
-#. /lib/lsb/init-functions
+# Sanity checks.
+[ -x $SALTSYNDIC ] || exit 0
 
-# Shell functions sourced from /etc/rc.status:
-#      rc_check         check and set local and overall rc status
-#      rc_status        check and set local and overall rc status
-#      rc_status -v     be verbose in local rc status and clear it afterwards
-#      rc_status -v -r  ditto and clear both the local and overall rc status
-#      rc_status -s     display "skipped" and exit with status 3
-#      rc_status -u     display "unused" and exit with status 3
-#      rc_failed        set local and overall rc status to failed
-#      rc_failed <num>  set local and overall rc status to <num>
-#      rc_reset         clear both the local and overall rc status
-#      rc_exit          exit appropriate to overall rc status
-#      rc_active        checks whether a service is activated by symlinks
-. /etc/rc.status
+DEBIAN_VERSION=/etc/debian_version
+SUSE_RELEASE=/etc/SuSE-release
+# Source function library.
+if [ -f $DEBIAN_VERSION ]; then
+   break   
+elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
+    . /etc/rc.status
+else
+    . /etc/rc.d/init.d/functions
+fi
 
-# Reset status of this service
-rc_reset
+SERVICE=salt-syndic
+PROCESS=salt-syndic
+CONFIG_ARGS=" "
 
-# Return values acc. to LSB for all commands but status:
-# 0	  - success
-# 1       - generic or unspecified error
-# 2       - invalid or excess argument(s)
-# 3       - unimplemented feature (e.g. "reload")
-# 4       - user had insufficient privileges
-# 5       - program is not installed
-# 6       - program is not configured
-# 7       - program is not running
-# 8--199  - reserved (8--99 LSB, 100--149 distrib, 150--199 appl)
-# 
-# Note that starting an already running service, stopping
-# or restarting a not-running service as well as the restart
-# with force-reload (in case signaling is not supported) are
-# considered a success.
+RETVAL=0
 
+start() {
+    echo -n $"Starting salt-syndic daemon: "
+    if [ -f $SUSE_RELEASE ]; then
+        startproc -f -p /var/run/$SERVICE.pid $SALTSYNDIC -d $CONFIG_ARGS
+        rc_status -v
+    elif [ -e $DEBIAN_VERSION ]; then
+        if [ -f $LOCKFILE ]; then
+            echo -n "already started, lock file found" 
+            RETVAL=1
+        elif $PYTHON $SALTSYNDIC -d >& /dev/null; then
+            echo -n "OK"
+            RETVAL=0
+        fi
+    else
+        daemon --check $SERVICE $SALTSYNDIC -d $CONFIG_ARGS
+    fi
+    RETVAL=$?
+    echo
+    return $RETVAL
+}
+
+stop() {
+    echo -n $"Stopping salt-syndic daemon: "
+    if [ -f $SUSE_RELEASE ]; then
+        killproc -TERM $SALTSYNDIC
+        rc_status -v
+    elif [ -f $DEBIAN_VERSION ]; then
+        # Added this since Debian's start-stop-daemon doesn't support spawned processes
+        if ps -ef | grep "$PYTHON $SALTSYNDIC" | grep -v grep | awk '{print $2}' | xargs kill &> /dev/null; then
+            echo -n "OK"
+            RETVAL=0
+        else
+            echo -n "Daemon is not started"
+            RETVAL=1
+        fi
+    else
+        killproc $PROCESS
+    fi
+    RETVAL=$?
+    echo
+}
+
+restart() {
+   stop
+   start
+}
+
+# See how we were called.
 case "$1" in
-    start)
-	echo -n "Starting salt-syndic daemon: "
-	## Start daemon with startproc(8). If this fails
-	## the return value is set appropriately by startproc.
-	/sbin/startproc ${SALTSYNDIC} -d
-	
-	# Remember status and be verbose
-	rc_status -v
-	;;
-    stop)
-	echo -n "Shutting down salt-syndic daemon: "
-	## Stop daemon with killproc(8) and if this fails
-	## killproc sets the return value according to LSB.
-
-	/sbin/killproc $SALTSYNDIC
-
-	# Remember status and be verbose
-	rc_status -v
-	;;
-    try-restart|condrestart)
-	## Do a restart only if the service was active before.
-	## Note: try-restart is now part of LSB (as of 1.9).
-	## RH has a similar command named condrestart.
-	if test "$1" = "condrestart"; then
-		echo "${attn} Use try-restart ${done}(LSB)${attn} rather than condrestart ${warn}(RH)${norm}"
-	fi
-	$0 status
-	if test $? = 0; then
-		$0 restart
-	else
-		rc_reset	# Not running is not a failure.
-	fi
-	# Remember status and be quiet
-	rc_status
-	;;
-    restart)
-	## Stop the service and regardless of whether it was
-	## running or not, start it again.
-	$0 stop
-	$0 start
-
-	# Remember status and be quiet
-	rc_status
-	;;
-    reload)
-        echo "can't reload configuration, you have to restart it"
-    ;;    
+    start|stop|restart)
+        $1
+        ;;
     status)
-	echo -n "Checking for service salt-syndic "
-	## Check status with checkproc(8), if process is running
-	## checkproc will return with exit status 0.
-
-	# Return value is slightly different for the status command:
-	# 0 - service up and running
-	# 1 - service dead, but /var/run/  pid  file exists
-	# 2 - service dead, but /var/lock/ lock file exists
-	# 3 - service not running (unused)
-	# 4 - service status unknown :-(
-	# 5--199 reserved (5--99 LSB, 100--149 distro, 150--199 appl.)
-	
-	# NOTE: checkproc returns LSB compliant status values.
-	/sbin/checkproc $SALTSYNDIC
-	# NOTE: rc_status knows that we called this init script with
-	# "status" option and adapts its messages accordingly.
-	rc_status -v
-	;;
+        if [ -f $SUSE_RELEASE ]; then
+            echo -n "Checking for service salt-syndic "
+            checkproc $SALTSYNDIC
+            rc_status -v
+        elif [ -f $DEBIAN_VERSION ]; then
+            if [ -f $LOCKFILE ]; then
+                RETVAL=0
+                echo "salt-syndic is running."
+            else
+                RETVAL=1
+                echo "salt-syndic is stopped."
+            fi
+        else
+            status $PROCESS
+            RETVAL=$?
+        fi
+        ;;
+   reload)
+        echo "can't reload configuration, you have to restart it"
+        if [ -f $SUSE_RELEASE ]; then
+        	rc_status -v
+        else
+        	RETVAL=$?
+        fi
+        ;;
     *)
-	echo "Usage: $0 {start|stop|status|try-restart|restart|reload}"
-	exit 1
-	;;
+        echo $"Usage: $0 {start|stop|status|restart|reload}"
+        exit 1
+        ;;
 esac
-rc_exit
+exit $RETVAL
+

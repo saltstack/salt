@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Take data from salt and "return" it into a carbon receiver
 
@@ -8,21 +9,24 @@ Add the following configuration to your minion configuration files::
 
 '''
 
+# Import python libs
 import pickle
 import socket
 import logging
 import time
 import struct
 
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     return 'carbon'
 
+
 def _formatHostname(hostname, separator='_'):
     ''' carbon uses . as separator, so replace this in the hostname '''
     return hostname.replace('.', separator)
+
 
 def _send_picklemetrics(metrics, carbon_sock):
     ''' Uses pickle protocol to send data '''
@@ -33,7 +37,7 @@ def _send_picklemetrics(metrics, carbon_sock):
     total_sent_bytes = 0
     while total_sent_bytes < len(data):
         sent_bytes = carbon_sock.send(data[total_sent_bytes:])
-        if sent_bytes == 0: 
+        if sent_bytes == 0:
             log.error('Bytes sent 0, Connection reset?')
             return
         total_sent_bytes += sent_bytes
@@ -64,7 +68,7 @@ def returner(ret):
     timestamp = int(time.time())
 
     saltdata = ret['return']
-    metric_base = ret['fun'] 
+    metric_base = ret['fun']
     # Strip the hostname from the carbon base if we are returning from virt
     # module since then we will get stable metric bases even if the VM is
     # migrate from host to host
@@ -90,7 +94,7 @@ def returner(ret):
         total_sent_bytes = 0
         while total_sent_bytes < len(data):
             sent_bytes = carbon_sock.send(data[total_sent_bytes:])
-            if sent_bytes == 0: 
+            if sent_bytes == 0:
                 log.error('Bytes sent 0, Connection reset?')
                 return
             logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
@@ -103,8 +107,3 @@ def returner(ret):
     # Shut down and close socket
     carbon_sock.shutdown(socket.SHUT_RDWR)
     carbon_sock.close()
-
-
-
-
-

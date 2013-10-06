@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the process of the overstate. The overstate is a means to orchestrate
 the deployment of states over groups of servers.
@@ -209,7 +210,7 @@ class OverState(object):
             for minion in local_cmd(**cmd_kwargs):
                 if all(key not in minion for key in ('id', 'return', 'fun')):
                     continue
-                ret.update({minion['id']: 
+                ret.update({minion['id']:
                         {
                         'ret': minion['return'],
                         'fun': minion['fun'],

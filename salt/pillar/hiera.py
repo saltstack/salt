@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Take in a hiera configuration file location and execute it.
 Adds the hiera data to pillar
@@ -25,7 +26,7 @@ def __virtual__():
     return 'hiera' if salt.utils.which('hiera') else False
 
 
-def ext_pillar(pillar, conf):
+def ext_pillar(minion_id, pillar, conf):
     '''
     Execute hiera and return the data
     '''

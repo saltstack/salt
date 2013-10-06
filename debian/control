@@ -1,7 +1,7 @@
 Source: salt
 Section: admin
 Priority: optional
-Maintainer: Sean Channel <pentabular@gmail.com>
+Maintainer: Corey Quinn <corey@sequestered.net>
 Build-Depends: debhelper (>= 7.0.50),
                cython,
                python | python-all | python-dev | python-all-dev,

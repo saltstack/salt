@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage information about files on the minion, set/read user, group
 data
@@ -13,7 +14,10 @@ import os
 import stat
 import os.path
 import logging
-import tempfile # do no remove. Used in import of salt.modules.file.__clean_tmp
+import contextlib
+import difflib
+import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
+import itertools  # same as above, do not remove, it's used in __clean_tmp
 
 # Import third party libs
 try:
@@ -25,15 +29,15 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt.modules.file import (check_hash, check_managed, check_perms, # pylint: disable=W0611
+from salt.modules.file import (check_hash, check_managed, check_perms,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
         patch, remove, source_list, sed_contains, touch, append, contains,
         contains_regex, contains_regex_multiline, contains_glob, patch,
         uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment,
-        manage_file, file_exists, get_diff, get_managed, __clean_tmp, _is_bin,
-        check_managed, check_file_meta, contains_regex)
+        manage_file, file_exists, get_diff, get_managed, __clean_tmp,
+        check_managed, check_file_meta, _binary_replace, contains_regex)
 
-from salt.utils import namespaced_function
+from salt.utils import namespaced_function as _namespaced_function
 
 log = logging.getLogger(__name__)
 
@@ -45,18 +49,17 @@ def __virtual__():
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
-            global source_list, mkdir, __clean_tmp, makedirs, _is_bin
+            global source_list, mkdir, __clean_tmp, makedirs
 
-            check_perms = namespaced_function(check_perms, globals())
-            get_managed = namespaced_function(get_managed, globals())
-            makedirs_perms = namespaced_function(makedirs_perms, globals())
-            makedirs = namespaced_function(makedirs, globals())
-            manage_file = namespaced_function(manage_file, globals())
-            source_list = namespaced_function(source_list, globals())
-            mkdir = namespaced_function(mkdir, globals())
-            __clean_tmp = namespaced_function(__clean_tmp, globals())
-            _is_bin = namespaced_function(_is_bin, globals())
-            
+            check_perms = _namespaced_function(check_perms, globals())
+            get_managed = _namespaced_function(get_managed, globals())
+            makedirs_perms = _namespaced_function(makedirs_perms, globals())
+            makedirs = _namespaced_function(makedirs, globals())
+            manage_file = _namespaced_function(manage_file, globals())
+            source_list = _namespaced_function(source_list, globals())
+            mkdir = _namespaced_function(mkdir, globals())
+            __clean_tmp = _namespaced_function(__clean_tmp, globals())
+
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
@@ -72,7 +75,9 @@ def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     '''
@@ -85,7 +90,9 @@ def group_to_gid(group):
     '''
     Convert the group to the gid on this system
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.group_to_gid administrators
     '''
@@ -97,7 +104,9 @@ def get_gid(path):
     '''
     Return the id of the group that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_gid c:\\temp\\test.txt
     '''
@@ -114,7 +123,9 @@ def get_group(path):
     '''
     Return the group that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_group c:\\temp\\test.txt
     '''
@@ -132,7 +143,9 @@ def uid_to_user(uid):
     '''
     Convert a uid to a user name
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.uid_to_user S-1-5-21-626487655-2533044672-482107328-1010
     '''
@@ -145,7 +158,9 @@ def user_to_uid(user):
     '''
     Convert user name to a uid
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.user_to_uid myusername
     '''
@@ -157,7 +172,9 @@ def get_uid(path):
     '''
     Return the id of the user that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_uid c:\\temp\\test.txt
     '''
@@ -178,7 +195,9 @@ def get_mode(path):
     because Windows' doesn't have a mode
     like Linux
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_mode /etc/passwd
     '''
@@ -192,7 +211,9 @@ def get_user(path):
     '''
     Return the user that owns a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.get_user c:\\temp\\test.txt
     '''
@@ -208,7 +229,9 @@ def chown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.chown c:\\temp\\test.txt myusername administrators
     '''
@@ -247,7 +270,9 @@ def chgrp(path, group):
     '''
     Change the group of a file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.chgrp c:\\temp\\test.txt administrators
     '''
@@ -265,14 +290,16 @@ def chgrp(path, group):
 
 
 def stats(path, hash_type='md5', follow_symlink=False):
-    '''  
+    '''
     Return a dict containing the stats for a given file
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' file.stats /etc/passwd
     '''
-    ret = {} 
+    ret = {}
     if not os.path.exists(path):
         return ret
     if follow_symlink:

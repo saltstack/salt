@@ -31,6 +31,22 @@ This does issue the burden, that function names, state names and function
 arguments should be very human readable inside state modules, since they
 directly define the user interface.
 
+.. admonition:: Keyword Arguments
+
+    Salt passes a number of keyword arguments to states when rendering them,
+    including the environment, a unique identifier for the state, and more.
+    Additionally, keep in mind that the requisites for a state are part of the
+    keyword arguments. Therefore, if you need to iterate through the keyword
+    arguments in a state, these must be considered and handled appropriately.
+    One such example is in the :mod:`pkgrepo.managed
+    <salt.states.pkgrepo.managed>` state, which needs to be able to handle
+    arbitrary keyword arguments and pass them to module execution functions.
+    An example of how these keyword arguments can be handled can be found
+    here_.
+
+    .. _here: https://github.com/saltstack/salt/blob/v0.16.2/salt/states/pkgrepo.py#L163-183
+
+
 Using Custom State Modules
 ==========================
 
@@ -41,6 +57,12 @@ are distributed when :mod:`state.highstate <salt.modules.state.highstate>` is
 run, or by executing the :mod:`saltutil.sync_states
 <salt.modules.saltutil.sync_states>` or :mod:`saltutil.sync_all
 <salt.modules.saltutil.sync_all>` functions.
+
+Any custom states which have been synced to a minion, that are named the
+same as one of Salt's default set of states, will take the place of the default
+state with the same name. Note that a state's default name is its filename
+(i.e. ``foo.py`` becomes state ``foo``), but that its name can be overridden
+by using a :ref:`__virtual__ function <virtual-modules>`.
 
 
 Cross Calling Modules

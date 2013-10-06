@@ -1,20 +1,16 @@
-import sys
-import os
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# Import Salt Testing libs
+from salttesting import skipIf, TestCase
+from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+ensure_in_syspath('../../')
 
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
-try:
-    from mock import MagicMock, patch
-    has_mock = True
-except ImportError:
-    has_mock = False
-
+# Import salt libs
 import salt.modules.gem as gem
+
 gem.__salt__ = {}
 
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestGemModule(TestCase):
 
     def test__gem(self):
@@ -22,16 +18,16 @@ class TestGemModule(TestCase):
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'cmd.run_all': mock}):
-            gem._gem("install rails")
-            mock.assert_called_once_with("gem install rails", runas=None)
+            gem._gem('install rails')
+            mock.assert_called_once_with('gem install rails', runas=None)
 
         mock = MagicMock(return_value=None)
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=True),
                          'rvm.do': mock}):
-            gem._gem("install rails", ruby="1.9.3")
+            gem._gem('install rails', ruby='1.9.3')
             mock.assert_called_once_with(
-                "1.9.3", "gem install rails", runas=None
+                '1.9.3', 'gem install rails', runas=None
             )
 
     def test_list(self):
@@ -69,7 +65,6 @@ http://rubygems.org/
                 ['http://rubygems.org/'], gem.sources_list())
 
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestGemModule)
-    TextTestRunner(verbosity=1).run(tests)
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestGemModule, needs_daemon=False)

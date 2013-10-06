@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the shadow file
 '''
@@ -19,13 +20,15 @@ def info(name):
     Return information for the specified user
     This is just returns dummy data so that salt states can work.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.info root
     '''
     ret = {
             'name': name,
-            'pwd': '',
+            'passwd': '',
             'lstchg': '',
             'min': '',
             'max': '',
@@ -39,7 +42,9 @@ def set_password(name, password):
     '''
     Set the password for a named user.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' shadow.set_password root mysecretpassword
     '''

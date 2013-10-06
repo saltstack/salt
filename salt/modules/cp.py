@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Minion side functions for salt-cp
 '''
@@ -29,15 +30,12 @@ def recv(files, dest):
     '''
     Used with salt-cp, pass the files dict, and the destination.
 
-    This function receives small fast copy files from the master via salt-cp
-
-    CLI Example::
-
-        This function does not work via the CLI
+    This function receives small fast copy files from the master via salt-cp.
+    It does not work via the CLI.
     '''
     ret = {}
     for path, data in files.items():
-        if os.path.basename(path) == os.path.basename(dest)\
+        if os.path.basename(path) == os.path.basename(dest) \
                 and not os.path.isdir(dest):
             final = dest
         elif os.path.isdir(dest):
@@ -113,12 +111,16 @@ def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
     '''
     Used to get a single file from the salt master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.get_file salt://path/to/file /minion/dest
 
     Template rendering can be enabled on both the source and destination file
-    names like so::
+    names like so:
+
+    .. code-block:: bash
 
         salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
 
@@ -152,7 +154,9 @@ def get_template(path, dest, template='jinja', env='base', **kwargs):
     '''
     Render a file as a template before setting it down
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.get_template salt://path/to/template /minion/dest
     '''
@@ -178,7 +182,9 @@ def get_dir(path, dest, env='base', template=None, gzip=None):
     '''
     Used to recursively copy a directory from the salt master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.get_dir salt://path/to/dir/ /minion/dest
 
@@ -194,7 +200,9 @@ def get_url(path, dest, env='base'):
     '''
     Used to get a single file from a URL.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.get_url salt://my/file /tmp/mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
@@ -207,7 +215,9 @@ def get_file_str(path, env='base'):
     '''
     Return the contents of a file from a URL
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.get_file_str salt://my/file
     '''
@@ -221,7 +231,9 @@ def cache_file(path, env='base'):
     '''
     Used to cache a single file in the local salt-master file cache.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.cache_file salt://path/to/file
     '''
@@ -242,7 +254,9 @@ def cache_files(paths, env='base'):
     saved in the minion cachedir reflective to the paths retrieved from the
     master.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.cache_files salt://pathto/file1,salt://pathto/file1
     '''
@@ -254,7 +268,9 @@ def cache_dir(path, env='base', include_empty=False):
     '''
     Download and cache everything under a directory from the master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.cache_dir salt://path/to/dir
     '''
@@ -266,7 +282,9 @@ def cache_master(env='base'):
     '''
     Retrieve all of the files on the master and cache them locally
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.cache_master
     '''
@@ -278,7 +296,9 @@ def cache_local_file(path):
     '''
     Cache a local file on the minion in the localfiles cache
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.cache_local_file /etc/hosts
     '''
@@ -304,7 +324,9 @@ def list_states(env='base'):
     '''
     List all of the available state modules in an environment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.list_states
     '''
@@ -312,35 +334,55 @@ def list_states(env='base'):
     return __context__['cp.fileclient'].list_states(env)
 
 
-def list_master(env='base'):
+def list_master(env='base', prefix=''):
     '''
     List all of the files stored on the master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.list_master
     '''
     _mk_client()
-    return __context__['cp.fileclient'].file_list(env)
+    return __context__['cp.fileclient'].file_list(env, prefix)
 
 
-def list_master_dirs(env='base'):
+def list_master_dirs(env='base', prefix=''):
     '''
     List all of the directories stored on the master
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.list_master_dirs
     '''
     _mk_client()
-    return __context__['cp.fileclient'].dir_list(env)
+    return __context__['cp.fileclient'].dir_list(env, prefix)
+
+
+def list_master_symlinks(env='base', prefix=''):
+    '''
+    List all of the symlinks stored on the master
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.list_master_symlinks
+    '''
+    _mk_client()
+    return __context__['cp.fileclient'].symlink_list(env, prefix)
 
 
 def list_minion(env='base'):
     '''
     List all of the files cached on the minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.list_minion
     '''
@@ -353,7 +395,9 @@ def is_cached(path, env='base'):
     Return a boolean if the given path on the master has been cached on the
     minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.is_cached salt://path/to/file
     '''
@@ -367,7 +411,9 @@ def hash_file(path, env='base'):
     salt master file server prepend the path with salt://<file on server>
     otherwise, prepend the file with / for a local file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.hash_file salt://path/to/file
     '''
@@ -379,14 +425,16 @@ def push(path):
     '''
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
-    (defaults to /var/cache/salt/master/minions/files)
+    (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
 
     Since this feature allows a minion to push a file up to the master server
-    it is disabled by default for security purposes. To enable add the option:
-    file_recv: True
-    to the master configuration and restart the master
+    it is disabled by default for security purposes. To enable, set
+    ``file_recv`` to ``True`` in the master configuration file, and restart the
+    master.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' cp.push /etc/fstab
     '''
@@ -401,7 +449,7 @@ def push(path):
             'id': __opts__['id'],
             'path': path.lstrip(os.sep)}
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    with salt.utils.fopen(path) as fp_:
+    with salt.utils.fopen(path, 'rb') as fp_:
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])

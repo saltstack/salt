@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 General management functions for salt, tools like seeing what hosts are up
 and what hosts are down
@@ -5,6 +6,7 @@ and what hosts are down
 
 # Import python libs
 import os
+import subprocess
 
 # Import salt libs
 import salt.key
@@ -15,6 +17,12 @@ import salt.output
 def status(output=True):
     '''
     Print the status of all known salt minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.status
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
@@ -43,8 +51,17 @@ def key_regen():
     After the master is restarted and minion keys are in the pending directory
     execute a salt-key -A command to accept the regenerated minion keys.
 
+    The master *must* be restarted within 60 seconds of running this command or
+    the minions will think there is something wrong with the keys and abort.
+
     Only Execute this runner after upgrading minions and master to 0.15.1 or
     higher!
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.key_regen
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     minions = client.cmd('*', 'saltutil.regen_keys')
@@ -69,19 +86,36 @@ def key_regen():
     print(msg)
 
 
-def down():
+def down(removekeys=False):
     '''
     Print a list of all the down or unresponsive salt minions
+    Optionally remove keys of down minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.down
+        salt-run manage.down removekeys=True
     '''
     ret = status(output=False).get('down', [])
     for minion in ret:
-        salt.output.display_output(minion, '', __opts__)
+        if removekeys:
+            subprocess.call(["salt-key", "-qyd", minion])
+        else:
+            salt.output.display_output(minion, '', __opts__)
     return ret
 
 
-def up():  # pylint: disable-msg=C0103
+def up():  # pylint: disable=C0103
     '''
     Print a list of all of the minions that are up
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.up
     '''
     ret = status(output=False).get('up', [])
     for minion in ret:
@@ -92,6 +126,12 @@ def up():  # pylint: disable-msg=C0103
 def versions():
     '''
     Check the version of active minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.versions
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
@@ -128,3 +168,33 @@ def versions():
 
     salt.output.display_output(ret, '', __opts__)
     return ret
+
+
+def bootstrap(version="develop",
+              script="http://bootstrap.saltstack.org",
+              hosts=""):
+    '''
+    Bootstrap minions with salt-bootstrap
+
+    Options:
+        version: git tag of version to install [default: develop]
+        script: Script to execute [default: http://bootstrap.saltstack.org]
+        hosts: Comma separated hosts [example: hosts="host1.local,host2.local"]
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.bootstrap hosts="host1,host2"
+        salt-run manage.bootstrap hosts="host1,host2" version="v0.17"
+        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.github.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
+
+    '''
+    for host in hosts.split(","):
+        # Could potentially lean on salt-ssh utils to make
+        # deployment easier on existing hosts (i.e. use sshpass,
+        # or expect, pass better options to ssh etc)
+        subprocess.call(["ssh", "root@" + host, "python -c 'import urllib; "
+                        "print urllib.urlopen("
+                        "\"" + script + "\""
+                        ").read()' | sh -s -- git " + version])

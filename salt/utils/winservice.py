@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # winservice.py
 
 # Import python libs
@@ -28,7 +29,7 @@ class Service(win32serviceutil.ServiceFramework):
     def sleep(self, sec):
         win32api.Sleep(sec * 1000, True)
 
-    def SvcDoRun(self):  # pylint: disable-msg=C0103
+    def SvcDoRun(self):  # pylint: disable=C0103
         self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
         try:
             self.ReportServiceStatus(win32service.SERVICE_RUNNING)
@@ -42,7 +43,7 @@ class Service(win32serviceutil.ServiceFramework):
             self.log('Exception: {0}'.format(err))
             self.SvcStop()
 
-    def SvcStop(self):  # pylint: disable-msg=C0103
+    def SvcStop(self):  # pylint: disable=C0103
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
         self.log('stopping')
         self.stop()

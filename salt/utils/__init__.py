@@ -1,31 +1,47 @@
+# -*- coding: utf-8 -*-
 '''
 Some of the utils used by salt
 '''
 from __future__ import absolute_import
 
 # Import python libs
-import os
-import re
+import copy
+import datetime
+import distutils.version  # pylint: disable=E0611
+import fnmatch
+import hashlib
 import imp
-import sys
-import stat
-import time
+import inspect
+import logging
+import os
+import random
+import re
 import shlex
 import shutil
-import random
 import socket
-import logging
-import inspect
-import hashlib
-import datetime
-import platform
-import tempfile
+import stat
+import string
 import subprocess
+import sys
+import tempfile
+import time
 import types
 import warnings
-import zmq
 from calendar import month_abbr as months
-import salt._compat
+
+
+try:
+    import timelib
+    HAS_TIMELIB = True
+except ImportError:
+    HAS_TIMELIB = False
+
+try:
+    import parsedatetime
+
+    HAS_PARSEDATETIME = True
+except ImportError:
+    HAS_PARSEDATETIME = False
 
 try:
     import fcntl
@@ -34,12 +50,27 @@ except ImportError:
     # fcntl is not available on windows
     HAS_FNCTL = False
 
+try:
+    import win32api
+    HAS_WIN32API = True
+except ImportError:
+    HAS_WIN32API = False
+
+try:
+    import zmq
+except ImportError:
+    # Running as purely local
+    pass
+
 # Import salt libs
+import salt._compat
 import salt.log
 import salt.minion
 import salt.payload
+import salt.version
+from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
-    SaltClientError, CommandNotFoundError, SaltSystemExit
+    SaltClientError, CommandNotFoundError, SaltSystemExit, SaltInvocationError
 )
 
 
@@ -65,11 +96,13 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
+#KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$', re.UNICODE) # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$')
 
 log = logging.getLogger(__name__)
 
 
-def _getargs(func):
+def get_function_argspec(func):
     '''
     A small wrapper around getargspec that also supports callable classes
     '''
@@ -138,12 +171,7 @@ def get_colors(use=True):
         'ENDC': '\033[0m',
     }
 
-    try:
-        fileno = sys.stdout.fileno()
-    except AttributeError:
-        fileno = -1  # sys.stdout is StringIO or fake
-
-    if not use or not os.isatty(fileno):
+    if not use:
         for color in colors:
             colors[color] = ''
 
@@ -310,19 +338,26 @@ def jid_to_time(jid):
     return ret
 
 
-def gen_mac(prefix='52:54:'):
+def gen_mac(prefix='AC:DE:48'):
     '''
-    Generates a mac addr with the defined prefix
+    Generates a MAC address with the defined OUI prefix.
+
+    Common prefixes:
+
+     - ``00:16:3E`` -- Xen
+     - ``00:18:51`` -- OpenVZ
+     - ``00:50:56`` -- VMware (manually generated)
+     - ``52:54:00`` -- QEMU/KVM
+     - ``AC:DE:48`` -- PRIVATE
+
+    References:
+
+     - http://standards.ieee.org/develop/regauth/oui/oui.txt
+     - https://www.wireshark.org/tools/oui-lookup.html
+     - https://en.wikipedia.org/wiki/MAC_address
     '''
-    src = ['1', '2', '3', '4', '5', '6', '7', '8',
-           '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
-    mac = prefix
-    while len(mac) < 18:
-        if len(mac) < 3:
-            mac = random.choice(src) + random.choice(src) + ':'
-        if mac.endswith(':'):
-            mac += random.choice(src) + random.choice(src) + ':'
-    return mac[:-1]
+    r = random.randint
+    return '%s:%02X:%02X:%02X' % (prefix, r(0, 0xff), r(0, 0xff), r(0, 0xff))
 
 
 def ip_bracket(addr):
@@ -403,14 +438,25 @@ def required_modules_error(name, docstring):
     return msg.format(filename, ', '.join(modules))
 
 
+def gen_jid():
+    '''
+    Generate a jid
+    '''
+    return '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+
+
 def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
-    jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+    jid = gen_jid()
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
+        if os.path.exists(jid_dir_):
+            # Somehow we ended up with a file at our jid destination.
+            # Delete it.
+            os.remove(jid_dir_)
         os.makedirs(jid_dir_)
         with fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
             fn_.write(jid)
@@ -426,6 +472,7 @@ def jid_dir(jid, cachedir, sum_type):
     '''
     Return the jid_dir for the given job id
     '''
+    jid = str(jid)
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 
@@ -439,7 +486,7 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
     if not os.path.isfile(load_fn):
         return {}
     serial = salt.payload.Serial(serial)
-    with open(load_fn) as fp_:
+    with fopen(load_fn) as fp_:
         return serial.load(fp_)
 
 
@@ -499,17 +546,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         bkroot = os.path.join(cachedir, 'file_backup')
     if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
         if os.path.exists(dest):
-            fstat = os.stat(dest)
-            msecs = str(int(time.time() * 1000000))[-6:]
-            stamp = time.asctime().replace(' ', '_')
-            stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
-            bkpath = os.path.join(bkroot,
-                                  dname[1:],
-                                  '{0}_{1}'.format(bname, stamp))
-            if not os.path.isdir(os.path.dirname(bkpath)):
-                os.makedirs(os.path.dirname(bkpath))
-            shutil.copyfile(dest, bkpath)
-            os.chown(bkpath, fstat.st_uid, fstat.st_gid)
+            backup_minion(dest, bkroot)
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
@@ -517,7 +554,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # If SELINUX is available run a restorecon on the file
     rcon = which('restorecon')
     if rcon:
-        with open(os.devnull, 'w') as dev_null:
+        with fopen(os.devnull, 'w') as dev_null:
             cmd = [rcon, dest]
             subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):
@@ -526,6 +563,24 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
             os.remove(tgt)
         except Exception:
             pass
+
+
+def backup_minion(path, bkroot):
+    '''
+    Backup a file on the minion
+    '''
+    dname, bname = os.path.split(path)
+    fstat = os.stat(path)
+    msecs = str(int(time.time() * 1000000))[-6:]
+    stamp = time.asctime().replace(' ', '_')
+    stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
+    bkpath = os.path.join(bkroot,
+                          dname[1:],
+                          '{0}_{1}'.format(bname, stamp))
+    if not os.path.isdir(os.path.dirname(bkpath)):
+        os.makedirs(os.path.dirname(bkpath))
+    shutil.copyfile(path, bkpath)
+    os.chown(bkpath, fstat.st_uid, fstat.st_gid)
 
 
 def path_join(*parts):
@@ -543,7 +598,7 @@ def path_join(*parts):
     if not parts:
         return root
 
-    if platform.system().lower() == 'windows':
+    if is_windows():
         if len(root) == 1:
             root += ':'
         root = root.rstrip(os.sep) + os.sep
@@ -618,52 +673,140 @@ def build_whitespace_split_regex(text):
 
 
 def build_whitepace_splited_regex(text):
-    warnings.warn("The build_whitepace_splited_regex function is deprecated,"
-                  " please use build_whitespace_split_regex instead.",
+    warnings.warn('The build_whitepace_splited_regex function is deprecated,'
+                  ' please use build_whitespace_split_regex instead.',
                   DeprecationWarning)
     build_whitespace_split_regex(text)
 
 
-def format_call(fun, data):
+def format_call(fun,
+                data,
+                initial_ret=None,
+                expected_extra_kws=()):
     '''
-    Pass in a function and a dict containing arguments to the function.
+    Build the required arguments and keyword arguments required for the passed
+    function.
 
-    A dict with the keys args and kwargs is returned
+    :param fun: The function to get the argspec from
+    :param data: A dictionary containing the required data to build the
+                 arguments and keyword arguments.
+    :param initial_ret: The initial return data pre-populated as dictionary or
+                        None
+    :param expected_extra_kws: Any expected extra keyword argument names which
+                               should not trigger a :ref:`SaltInvocationError`
+    :returns: A dictionary with the function required arguments and keyword
+              arguments.
     '''
-    ret = {}
+    ret = initial_ret is not None and initial_ret or {}
+
     ret['args'] = []
-    aspec = _getargs(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec.args, list):
-        arglen = len(aspec.args)
-    if isinstance(aspec.defaults, tuple):
-        deflen = len(aspec.defaults)
+    ret['kwargs'] = {}
+
+    aspec = get_function_argspec(fun)
+
+    args, kwargs = arg_lookup(fun).values()
+
+    # Since we WILL be changing the data dictionary, let's change a copy of it
+    data = data.copy()
+
+    missing_args = []
+
+    for key in kwargs.keys():
+        try:
+            kwargs[key] = data.pop(key)
+        except KeyError:
+            # Let's leave the default value in place
+            pass
+
+    while args:
+        arg = args.pop(0)
+        try:
+            ret['args'].append(data.pop(arg))
+        except KeyError:
+            missing_args.append(arg)
+
+    if missing_args:
+        used_args_count = len(ret['args']) + len(args)
+        args_count = used_args_count + len(missing_args)
+        raise SaltInvocationError(
+            '{0} takes at least {1} argument{2} ({3} given)'.format(
+                fun.__name__,
+                args_count,
+                args_count > 1 and 's' or '',
+                used_args_count
+            )
+        )
+
+    ret['kwargs'].update(kwargs)
+
     if aspec.keywords:
-        # This state accepts kwargs
-        ret['kwargs'] = {}
-        for key in data:
-            # Passing kwargs the conflict with args == stack trace
-            if key in aspec.args:
+        # The function accepts **kwargs, any non expected extra keyword
+        # arguments will made available.
+        for key, value in data.iteritems():
+            if key in expected_extra_kws:
                 continue
-            ret['kwargs'][key] = data[key]
-    kwargs = {}
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            kwargs[aspec.args[ind]] = aspec.defaults[-minus]
-    for arg in kwargs:
-        if arg in data:
-            kwargs[arg] = data[arg]
-    for arg in aspec.args:
-        if arg in kwargs:
-            ret['args'].append(kwargs[arg])
+            ret['kwargs'][key] = value
+
+        # No need to check for extra keyword arguments since they are all
+        # **kwargs now. Return
+        return ret
+
+    # Did not return yet? Lets gather any remaining and unexpected keyword
+    # arguments
+    extra = {}
+    for key, value in data.iteritems():
+        if key in expected_extra_kws:
+            continue
+        extra[key] = copy.deepcopy(value)
+
+    # We'll be showing errors to the users until salt 0.20 comes out, after
+    # which, errors will be raised instead.
+    warn_until(
+        'Lithium',
+        'It\'s time to start raising `SaltInvocationError` instead of '
+        'returning warnings',
+        # Let's not show the deprecation warning on the console, there's no
+        # need.
+        _dont_call_warnings=True
+    )
+
+    if extra:
+        # Found unexpected keyword arguments, raise an error to the user
+        if len(extra) == 1:
+            msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
+                extra.keys(),
+                ret.get(
+                    # In case this is being called for a state module
+                    'full',
+                    # Not a state module, build the name
+                    '{0}.{1}'.format(fun.__module__, fun.__name__)
+                )
+            )
         else:
-            try:
-                ret['args'].append(data[arg])
-            except KeyError:
-                # Bad arg match, can safely proceed
-                pass
+            msg = '{0} and {1!r} are invalid keyword arguments for {2}'.format(
+                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
+                extra.keys()[-1],
+                ret.get(
+                    # In case this is being called for a state module
+                    'full',
+                    # Not a state module, build the name
+                    '{0}.{1}'.format(fun.__module__, fun.__name__)
+                )
+            )
+
+        # Return a warning to the user explaining what's going on
+        ret.setdefault('warnings', []).append(
+            '{0}. If you were trying to pass additional data to be used '
+            'in a template context, please populate \'context\' with '
+            '\'key: value\' pairs. Your approach will work until salt>=0.20.0 '
+            'is out.{1}'.format(
+                msg,
+                '' if 'full' not in ret else ' Please update your state files.'
+            )
+        )
+
+        # Lets pack the current extra kwargs as template context
+        ret.setdefault('context', {}).update(extra)
     return ret
 
 
@@ -672,24 +815,11 @@ def arg_lookup(fun):
     Return a dict containing the arguments and default arguments to the
     function.
     '''
-    ret = {'args': [],
-           'kwargs': {}}
-    aspec = _getargs(fun)
-    arglen = 0
-    deflen = 0
-    if isinstance(aspec[0], list):
-        arglen = len(aspec[0])
-    if isinstance(aspec[3], tuple):
-        deflen = len(aspec[3])
-    for ind in range(arglen - 1, 0, -1):
-        minus = arglen - ind
-        if deflen - minus > -1:
-            ret['kwargs'][aspec[0][ind]] = aspec[3][-minus]
-    for arg in aspec[0]:
-        if arg in ret:
-            continue
-        else:
-            ret['args'].append(arg)
+    ret = {'kwargs': {}}
+    aspec = get_function_argspec(fun)
+    if aspec.defaults:
+        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
     return ret
 
 
@@ -700,12 +830,22 @@ def istextfile(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     '''
-    PY3 = sys.version_info[0] == 3  # pylint: disable-msg=C0103
+    PY3 = sys.version_info[0] == 3  # pylint: disable=C0103
     int2byte = (lambda x: bytes((x,))) if PY3 else chr
     text_characters = (
         b''.join(int2byte(i) for i in range(32, 127)) +
         b'\n\r\t\f\b')
-    block = fp_.read(blocksize)
+    try:
+        block = fp_.read(blocksize)
+    except AttributeError:
+        # This wasn't an open filehandle, so treat it as a file path and try to
+        # open the file
+        try:
+            with fopen(fp_, 'rb') as fp2_:
+                block = fp2_.read(blocksize)
+        except IOError:
+            # Unable to open file, bail out and return false
+            return False
     if b'\x00' in block:
         # Files with null bytes are binary
         return False
@@ -759,6 +899,13 @@ def mysql_to_dict(data, key):
     return ret
 
 
+def contains_whitespace(text):
+    '''
+    Returns True if there are any whitespace characters in the string
+    '''
+    return any(x.isspace() for x in text)
+
+
 def str_to_num(text):
     '''
     Convert a string to a number.
@@ -773,20 +920,6 @@ def str_to_num(text):
             return float(text)
         except ValueError:
             return text
-
-
-def memoize(func):
-    '''
-    Memoize aka cache the return output of a function
-    given a specific set of arguments
-    '''
-    cache = {}
-
-    def _memoize(*args):
-        if args not in cache:
-            cache[args] = func(*args)
-        return cache[args]
-    return _memoize
 
 
 def fopen(*args, **kwargs):
@@ -804,15 +937,58 @@ def fopen(*args, **kwargs):
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable-msg=C0103
+            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
         except AttributeError:
-            FD_CLOEXEC = 1                  # pylint: disable-msg=C0103
+            FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
 
-def traverse_dict(data, target, default, delim=':'):
+def subdict_match(data, expr, delim=':', regex_match=False):
+    '''
+    Check for a match in a dictionary using a delimiter character to denote
+    levels of subdicts, and also allowing the delimiter character to be
+    matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
+    data['foo']['bar'] == 'baz'. The former would take priority over the
+    latter.
+    '''
+    def _match(target, pattern, regex_match=False):
+        if regex_match:
+            try:
+                return re.match(pattern.lower(), str(target).lower())
+            except Exception:
+                log.error('Invalid regex {0!r} in match'.format(pattern))
+                return False
+        else:
+            return fnmatch.fnmatch(str(target).lower(), pattern.lower())
+
+    for idx in range(1, expr.count(delim) + 1):
+        splits = expr.split(delim)
+        key = delim.join(splits[:idx])
+        matchstr = delim.join(splits[idx:])
+        log.debug('Attempting to match {0!r} in {1!r} using delimiter '
+                  '{2!r}'.format(matchstr, key, delim))
+        match = traverse_dict(data, key, {}, delim=delim)
+        if match == {}:
+            continue
+        if isinstance(match, dict):
+            if matchstr == '*':
+                # We are just checking that the key exists
+                return True
+            continue
+        if isinstance(match, list):
+            # We are matching a single component to a single list member
+            for member in match:
+                if _match(member, matchstr, regex_match=regex_match):
+                    return True
+            continue
+        if _match(match, matchstr, regex_match=regex_match):
+            return True
+    return False
+
+
+def traverse_dict(data, key, default, delim=':'):
     '''
     Traverse a dict using a colon-delimited (or otherwise delimited, using
     the "delim" param) target string. The target 'foo:bar:baz' will return
@@ -820,7 +996,7 @@ def traverse_dict(data, target, default, delim=':'):
     return an empty dict.
     '''
     try:
-        for each in target.split(delim):
+        for each in key.split(delim):
             data = data[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
@@ -858,7 +1034,7 @@ def clean_kwargs(**kwargs):
     return ret
 
 
-@memoize
+@real_memoize
 def is_windows():
     '''
     Simple function to return if a host is Windows or not
@@ -866,7 +1042,7 @@ def is_windows():
     return sys.platform.startswith('win')
 
 
-@memoize
+@real_memoize
 def is_linux():
     '''
     Simple function to return if a host is Linux or not
@@ -874,7 +1050,7 @@ def is_linux():
     return sys.platform.startswith('linux')
 
 
-@memoize
+@real_memoize
 def is_darwin():
     '''
     Simple function to return if a host is Darwin (OS X) or not
@@ -1132,15 +1308,14 @@ def get_hash(path, form='md5', chunk_size=4096):
         raise ValueError('Invalid hash type: {0}'.format(form))
     with salt.utils.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
-        while True:
-            chunk = ifile.read(chunk_size)
-            if not chunk:
-                return hash_obj.hexdigest()
+        # read the file in in chunks, not the entire file
+        for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
+        return hash_obj.hexdigest()
 
 
 def namespaced_function(function, global_dict, defaults=None):
-    ''' 
+    '''
     Redefine(clone) a function under a different globals() namespace scope
     '''
     if defaults is None:
@@ -1151,6 +1326,410 @@ def namespaced_function(function, global_dict, defaults=None):
         global_dict,
         name=function.__name__,
         argdefs=defaults
-    )   
+    )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
+
+
+def parse_kwarg(string_):
+    '''
+    Parses the string and looks for the kwarg format:
+    "{argument name}={argument value}"
+    For example:
+    "my_message=Hello world"
+    The argument name must have a valid python identifier format (it should
+    match the following regular expression: [^\\d\\W]\\w*).
+    If the string matches, then this function returns the following tuple:
+    ({argument name}, {value})
+    Or else it returns:
+    (None, None)
+    '''
+    match = KWARG_REGEX.match(string_)
+    if match:
+        return match.groups()
+    else:
+        return None, None
+
+
+def _win_console_event_handler(event):
+    if event == 5:
+        # Do nothing on CTRL_LOGOFF_EVENT
+        return True
+    return False
+
+
+def enable_ctrl_logoff_handler():
+    if HAS_WIN32API:
+        win32api.SetConsoleCtrlHandler(_win_console_event_handler, 1)
+
+
+def date_cast(date):
+    '''
+    Casts any object into a datetime.datetime object
+
+    date
+      any datetime, time string representation...
+    '''
+    if date is None:
+        return datetime.datetime.now()
+    elif isinstance(date, datetime.datetime):
+        return date
+
+    # fuzzy date
+    try:
+        if isinstance(date, salt._compat.string_types):
+            try:
+                if HAS_TIMELIB:
+                    return timelib.strtodatetime(date)
+            except ValueError:
+                pass
+
+            # not parsed yet, obviously a timestamp?
+            if date.isdigit():
+                date = int(date)
+            else:
+                date = float(date)
+
+        return datetime.datetime.fromtimestamp(date)
+    except Exception as e:
+        if HAS_TIMELIB:
+            raise ValueError('Unable to parse {0}'.format(date))
+
+        raise RuntimeError('Unable to parse {0}.'
+            ' Consider installing timelib'.format(date))
+
+
+def date_format(date=None, format="%Y-%m-%d"):
+    '''
+    Converts date into a time-based string
+
+    date
+      any datetime, time string representation...
+
+    format
+       :ref:`strftime<http://docs.python.org/2/library/datetime.html#datetime.datetime.strftime>` format
+
+    >>> import datetime
+    >>> src = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
+    >>> date_format(src)
+    'Dec 25, 2002'
+    >>> src = '2002/12/25'
+    >>> date_format(src)
+    'Dec 25, 2002'
+    >>> src = 1040814000
+    >>> date_format(src)
+    'Dec 25, 2002'
+    >>> src = '1040814000'
+    >>> date_format(src)
+    'Dec 25, 2002'
+    '''
+    return date_cast(date).strftime(format)
+
+
+def warn_until(version,
+               message,
+               category=DeprecationWarning,
+               stacklevel=None,
+               _version_info_=None,
+               _dont_call_warnings=False):
+    '''
+    Helper function to raise a warning, by default, a ``DeprecationWarning``,
+    until the provided ``version``, after which, a ``RuntimeError`` will
+    be raised to remind the developers to remove the warning because the
+    target version has been reached.
+
+    :param version: The version info or name after which the warning becomes a
+                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
+                    or an instance of :class:`salt.version.SaltStackVersion`.
+    :param message: The warning message to be displayed.
+    :param category: The warning class to be thrown, by default
+                     ``DeprecationWarning``
+    :param stacklevel: There should be no need to set the value of
+                       ``stacklevel``. Salt should be able to do the right thing.
+    :param _version_info_: In order to reuse this function for other SaltStack
+                           projects, they need to be able to provide the
+                           version info to compare to.
+    :param _dont_call_warnings: This parameter is used just to get the
+                                functionality until the actual error is to be
+                                issued. When we're only after the salt version
+                                checks to raise a ``RuntimeError``.
+    '''
+    if not isinstance(version, (tuple,
+                                salt._compat.string_types,
+                                salt.version.SaltStackVersion)):
+        raise RuntimeError(
+            'The \'version\' argument should be passed as a tuple, string or '
+            'an instance of \'salt.version.SaltStackVersion\'.'
+        )
+    elif isinstance(version, tuple):
+        version = salt.version.SaltStackVersion(*version)
+    elif isinstance(version, salt._compat.string_types):
+        version = salt.version.SaltStackVersion.from_name(version)
+
+    if stacklevel is None:
+        # Attribute the warning to the calling function, not to warn_until()
+        stacklevel = 2
+
+    if _version_info_ is None:
+        _version_info_ = salt.version.__version_info__
+
+    _version_ = salt.version.SaltStackVersion(*_version_info_)
+
+    if _version_ >= version:
+        caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
+        raise RuntimeError(
+            'The warning triggered on filename {filename!r}, line number '
+            '{lineno}, is supposed to be shown until version '
+            '{until_version!r} is released. Current version is now '
+            '{salt_version!r}. Please remove the warning.'.format(
+                filename=caller.filename,
+                lineno=caller.lineno,
+                until_version=version.formatted_version,
+                salt_version=_version_.formatted_version
+            ),
+        )
+
+    if _dont_call_warnings is False:
+        warnings.warn(
+            message.format(version=version.formatted_version),
+            category,
+            stacklevel=stacklevel
+        )
+
+
+def kwargs_warn_until(kwargs,
+                      version,
+                      category=DeprecationWarning,
+                      stacklevel=None,
+                      _version_info_=None,
+                      _dont_call_warnings=False):
+    '''
+    Helper function to raise a warning (by default, a ``DeprecationWarning``)
+    when unhandled keyword arguments are passed to function, until the
+    provided ``version_info``, after which, a ``RuntimeError`` will be raised
+    to remind the developers to remove the ``**kwargs`` because the target
+    version has been reached.
+    This function is used to help deprecate unused legacy ``**kwargs`` that
+    were added to function parameters lists to preserve backwards compatibility
+    when removing a parameter. See
+    :doc:`the deprecation development docs </topics/development/deprecations>`
+    for the modern strategy for deprecating a function parameter.
+
+    :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
+    :param version: The version info or name after which the warning becomes a
+                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
+                    or an instance of :class:`salt.version.SaltStackVersion`.
+    :param category: The warning class to be thrown, by default
+                     ``DeprecationWarning``
+    :param stacklevel: There should be no need to set the value of
+                       ``stacklevel``. Salt should be able to do the right thing.
+    :param _version_info_: In order to reuse this function for other SaltStack
+                           projects, they need to be able to provide the
+                           version info to compare to.
+    :param _dont_call_warnings: This parameter is used just to get the
+                                functionality until the actual error is to be
+                                issued. When we're only after the salt version
+                                checks to raise a ``RuntimeError``.
+    '''
+    if not isinstance(version, (tuple,
+                                salt._compat.string_types,
+                                salt.version.SaltStackVersion)):
+        raise RuntimeError(
+            'The \'version\' argument should be passed as a tuple, string or '
+            'an instance of \'salt.version.SaltStackVersion\'.'
+        )
+    elif isinstance(version, tuple):
+        version = salt.version.SaltStackVersion(*version)
+    elif isinstance(version, salt._compat.string_types):
+        version = salt.version.SaltStackVersion.from_name(version)
+
+    if stacklevel is None:
+        # Attribute the warning to the calling function,
+        # not to kwargs_warn_until() or warn_until()
+        stacklevel = 3
+
+    if _version_info_ is None:
+        _version_info_ = salt.version.__version_info__
+
+    _version_ = salt.version.SaltStackVersion(*_version_info_)
+
+    if kwargs or _version_.info >= version.info:
+        arg_names = ', '.join('{0!r}'.format(key) for key in kwargs)
+        warn_until(
+            version,
+            message='The following parameter(s) have been deprecated and '
+                    'will be removed in {0!r}: {1}.'.format(version.string,
+                                                            arg_names),
+            category=category,
+            stacklevel=stacklevel,
+            _version_info_=_version_.info,
+            _dont_call_warnings=_dont_call_warnings
+        )
+
+
+def version_cmp(pkg1, pkg2):
+    '''
+    Compares two version strings using distutils.version.LooseVersion. This is
+    a fallback for providers which don't have a version comparison utility
+    built into them.  Return -1 if version1 < version2, 0 if version1 ==
+    version2, and 1 if version1 > version2. Return None if there was a problem
+    making the comparison.
+    '''
+    try:
+        if distutils.version.LooseVersion(pkg1) < \
+                distutils.version.LooseVersion(pkg2):
+            return -1
+        elif distutils.version.LooseVersion(pkg1) == \
+                distutils.version.LooseVersion(pkg2):
+            return 0
+        elif distutils.version.LooseVersion(pkg1) > \
+                distutils.version.LooseVersion(pkg2):
+            return 1
+    except Exception as e:
+        log.exception(e)
+    return None
+
+
+def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
+    '''
+    Compares two version numbers. Accepts a custom function to perform the
+    cmp-style version comparison, otherwise uses version_cmp().
+    '''
+    cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
+               '>=': (0, 1), '>': (1,)}
+    if oper not in ['!='] + cmp_map.keys():
+        log.error('Invalid operator "{0}" for version '
+                  'comparison'.format(oper))
+        return False
+
+    if cmp_func is None:
+        cmp_func = version_cmp
+
+    cmp_result = cmp_func(ver1, ver2)
+    if cmp_result is None:
+        return False
+
+    if oper == '!=':
+        return cmp_result not in cmp_map['==']
+    else:
+        return cmp_result in cmp_map[oper]
+
+
+def argspec_report(functions, module=''):
+    '''
+    Pass in a functions dict as it is returned from the loader and return the
+    argspec function sigs
+    '''
+    ret = {}
+    # TODO: cp.get_file will also match cp.get_file_str. this is the
+    # same logic as sys.doc, and it is not working as expected, see
+    # issue #3614
+    if module:
+        # allow both "sys" and "sys." to match sys, without also matching
+        # sysctl
+        comps = module.split('.')
+        comps = filter(None, comps)
+        if len(comps) < 2:
+            module = module + '.' if not module.endswith('.') else module
+    for fun in functions:
+        if fun.startswith(module):
+            try:
+                aspec = get_function_argspec(functions[fun])
+            except TypeError:
+                # this happens if not callable
+                continue
+
+            args, varargs, kwargs, defaults = aspec
+
+            ret[fun] = {}
+            ret[fun]['args'] = args if args else None
+            ret[fun]['defaults'] = defaults if defaults else None
+            ret[fun]['varargs'] = True if varargs else None
+            ret[fun]['kwargs'] = True if kwargs else None
+
+    return ret
+
+
+def memoize(func):
+    '''
+    Deprecation warning wrapper since memoize is now on salt.utils.decorators
+    '''
+    warn_until(
+        'Helium',
+        'The \'memoize\' decorator was moved to \'salt.utils.decorators\', '
+        'please start importing it from there. This warning and wrapper '
+        'will be removed in Salt {version}.',
+        stacklevel=3
+
+    )
+    return real_memoize(func)
+
+
+def decode_list(data):
+    '''
+    JSON decodes as unicode, Jinja needs bytes...
+    '''
+    rv = []
+    for item in data:
+        if isinstance(item, unicode):
+            item = item.encode('utf-8')
+        elif isinstance(item, list):
+            item = decode_list(item)
+        elif isinstance(item, dict):
+            item = decode_dict(item)
+        rv.append(item)
+    return rv
+
+
+def decode_dict(data):
+    '''
+    JSON decodes as unicode, Jinja needs bytes...
+    '''
+    rv = {}
+    for key, value in data.iteritems():
+        if isinstance(key, unicode):
+            key = key.encode('utf-8')
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
+        elif isinstance(value, list):
+            value = decode_list(value)
+        elif isinstance(value, dict):
+            value = decode_dict(value)
+        rv[key] = value
+    return rv
+
+
+def is_bin_file(path):
+    '''
+    Detects if the file is a binary, returns bool. Returns True if the file is
+    a bin, False if the file is not and None if the file is not available.
+    '''
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, 'r') as fp_:
+            return(is_bin_str(fp_.read(2048)))
+    except os.error:
+        return None
+
+
+def is_bin_str(data):
+    '''
+    Detects if the passed string of data is bin or text
+    '''
+    text_characters = ''.join(map(chr, range(32, 127)) + list('\n\r\t\b'))
+    _null_trans = string.maketrans('', '')
+    if '\0' in data:
+        return True
+    if not data:
+        return False
+
+    # Get the non-text characters (maps a character to itself then
+    # use the 'remove' option to get rid of the text characters.)
+    text = data.translate(_null_trans, text_characters)
+
+    # If more than 30% non-text characters, then
+    # this is considered a binary file
+    if len(text) / len(data) > 0.30:
+        return True
+    return False

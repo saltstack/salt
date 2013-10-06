@@ -18,13 +18,34 @@ Options
 
 .. program:: salt-key
 
-.. option:: -h, --help
+.. include:: _includes/common-options.rst
 
-    Print a usage message briefly summarizing these command-line options.
+.. option:: -q, --quiet
 
-.. option:: -l, --list
+   Suppress output
 
-    List the unaccepted minion public keys.
+.. option:: -y, --yes
+
+   Answer 'Yes' to all questions presented, defaults to False
+
+.. include:: _includes/logging-options.rst
+    :end-before: start-console-output
+.. include:: _includes/logging-options.rst
+    :start-after: stop-console-output
+.. |logfile| replace:: /var/log/salt/minion
+.. |loglevel| replace:: ``warning``
+
+.. include:: _includes/output-options.rst
+
+Actions
+-------
+
+.. option:: -l ARG, --list=ARG
+
+    List the public keys. The args "pre", "un", and "unaccepted" will list
+    unaccepted/unsigned keys. "acc" or "accepted" will list accepted/signed
+    keys. "rej" or "rejected" will list rejected keys. Finally, "all" will list
+    all keys.
 
 .. option:: -L, --list-all
 
@@ -47,6 +68,14 @@ Options
 
     Rejects all pending public keys.
 
+.. option:: -p PRINT, --print=PRINT
+
+   Print the specified public key
+
+.. option:: -P, --print-all
+
+   Print all public keys
+
 .. option:: -d DELETE, --delete=DELETE
 
     Delete the named minion key or minion keys matching a glob for command
@@ -56,31 +85,17 @@ Options
 
     Delete all keys
 
-.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
+.. option:: -f FINGER, --finger=FINGER
 
-    The location of the Salt configuration directory, this directory contains
-    the configuration files for Salt master and minions. The default location
-    on most systems is /etc/salt.
+    Print the named key's fingerprint
 
-.. option:: -p PRINT, --print=PRINT
+.. option:: -F, --finger-all
 
-   Print the specified public key
+    Print all key's fingerprints
 
-.. option:: -P, --print-all
 
-   Print all public keys
-
-.. option:: -q, --quiet
-
-   Supress output
-
-.. option:: -y, --yes
-
-   Answer 'Yes' to all questions presented, defaults to False
-
-.. option:: --key-logfile=KEY_LOGFILE
-
-   Send all output to a file. Default is /var/log/salt/key
+Key Generation Options
+-----------------------
 
 .. option:: --gen-keys=GEN_KEYS
 
@@ -98,34 +113,6 @@ Options
    higher, otherwise it will be rounded up to 2048. The
    default is 2048.
 
-.. option:: --out
-
-    Pass in an alternative outputter to display the return of data. This
-    outputter can be any of the available outputters:
-    grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
-    Some outputters are formatted only for data returned from specific
-    functions, for instance the grains outputter will not work for non grains
-    data.
-    If an outputter is used that does not support the data passed into it, then
-    Salt will fall back on the pprint outputter and display the return data
-    using the python pprint library.
-
-.. option:: --out-indent OUTPUT_INDENT, --output-indent OUTPUT_INDENT
-
-    Print the output indented by the provided value in spaces. Negative values
-    disables indentation. Only applicable in outputters that support indentation.
-
-.. option:: --no-color
-
-    Disable all colored output
-
-.. option:: --version
-
-    Show program's version number and exit
-
-.. option:: --versions-report
-
-    Show program's dependencies version number and exit
 
 See also
 ========

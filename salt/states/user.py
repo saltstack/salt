@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of user accounts.
 ============================
@@ -30,6 +31,17 @@ import sys
 log = logging.getLogger(__name__)
 
 
+def _group_changes(cur, wanted, remove=True):
+    '''
+    Determine if the groups need to be changed
+    '''
+    old = set(cur)
+    new = set(wanted)
+    if (remove and old != new) or (not remove and not new.issubset(old)):
+        return True
+    return False
+
+
 def _changes(name,
              uid=None,
              gid=None,
@@ -49,7 +61,7 @@ def _changes(name,
     otherwise return False.
     '''
 
-    if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    if 'shadow.info' in __salt__:
         lshad = __salt__['shadow.info'](name)
 
     lusr = __salt__['user.info'](name)
@@ -64,51 +76,47 @@ def _changes(name,
     if gid is not None:
         if lusr['gid'] not in (gid, __salt__['file.group_to_gid'](gid)):
             change['gid'] = gid
+    default_grp = __salt__['file.gid_to_group'](
+        gid if gid is not None else lusr['gid']
+    )
     # remove the default group from the list for comparison purposes
-    if gid and __salt__['file.gid_to_group'](gid or lusr['gid']) in \
-            lusr['groups']:
-        lusr['groups'].remove(
-            __salt__['file.gid_to_group'](gid or lusr['gid'])
-        )
+    if default_grp in lusr['groups']:
+        lusr['groups'].remove(default_grp)
     if name in lusr['groups'] and name not in wanted_groups:
         lusr['groups'].remove(name)
     # remove default group from wanted_groups, as this requirement is
     # already met
-    if gid and __salt__['file.gid_to_group'](gid or lusr['gid']) in \
-            wanted_groups:
-        wanted_groups.remove(
-            __salt__['file.gid_to_group'](gid or lusr['gid']))
-    if groups is not None or wanted_groups:
-        if remove_groups:
-            if lusr['groups'] != wanted_groups:
-                change['groups'] = wanted_groups
-        else:
-            for wanted_group in wanted_groups:
-                if wanted_group not in lusr['groups']:
-                    if 'groups' not in change:
-                        change['groups'] = []
-                    change['groups'].append(wanted_group)
+    if default_grp in wanted_groups:
+        wanted_groups.remove(default_grp)
+    if _group_changes(lusr['groups'], wanted_groups, remove_groups):
+        change['groups'] = wanted_groups
     if home:
         if lusr['home'] != home:
             change['home'] = home
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
-    if password:
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
-            if lshad['pwd'] == '!' or \
-                    lshad['pwd'] != '!' and enforce_password:
-                if lshad['pwd'] != password:
+    if 'shadow.info' in __salt__:
+        if password:
+            default_hash = __salt__['shadow.default_hash']()
+            if lshad['passwd'] == default_hash \
+                    or lshad['passwd'] != default_hash and enforce_password:
+                if lshad['passwd'] != password:
                     change['passwd'] = password
     # GECOS fields
-    if fullname and lusr['fullname'] != fullname:
+    if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
-    if roomnumber and lusr['roomnumber'] != roomnumber:
-        change['roomnumber'] = roomnumber
-    if workphone and lusr['workphone'] != workphone:
-        change['workphone'] = workphone
-    if homephone and lusr['homephone'] != homephone:
-        change['homephone'] = homephone
+    # MacOS doesn't have full GECOS support, so check for the "ch" functions
+    # and ignore these parameters if these functions do not exist.
+    if 'user.chroomnumber' in __salt__:
+        if roomnumber is not None and lusr['roomnumber'] != roomnumber:
+            change['roomnumber'] = roomnumber
+    if 'user.chworkphone' in __salt__:
+        if workphone is not None and lusr['workphone'] != workphone:
+            change['workphone'] = workphone
+    if 'user.chhomephone' in __salt__:
+        if homephone is not None and lusr['homephone'] != homephone:
+            change['homephone'] = homephone
 
     return change
 
@@ -175,7 +183,11 @@ def present(name,
         will NOT be created.
 
     password
-        A password hash to set for the user
+        A password hash to set for the user. This field is only supported on
+        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris.
+
+    .. versionchanged:: 0.16.0
+       BSD support added.
 
     enforce_password
         Set to False to keep the password from being changed if it has already
@@ -193,24 +205,29 @@ def present(name,
         Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
 
 
-    User comment field (GECOS) support (currently Linux and FreeBSD only):
+    User comment field (GECOS) support (currently Linux, FreeBSD, and MacOS
+    only):
 
     The below values should be specified as strings to avoid ambiguities when
     the values are loaded. (Especially the phone and room number fields which
     are likely to contain numeric data)
 
     fullname
-        The user's full name.
+        The user's full name
 
     roomnumber
-        The user's room number
+        The user's room number (not supported in MacOS)
 
     workphone
-        The user's work phone number
+        The user's work phone number (not supported in MacOS)
 
     homephone
-        The user's home phone number
+        The user's home phone number (not supported in MacOS)
     '''
+    roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
+    workphone = str(workphone) if workphone is not None else workphone
+    homephone = str(homephone) if homephone is not None else homephone
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -268,7 +285,7 @@ def present(name,
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
-        if not __grains__['os'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        if 'shadow.info' in __salt__:
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
@@ -276,25 +293,27 @@ def present(name,
                 __salt__['shadow.set_password'](name, password)
                 continue
             if key == 'groups':
-                __salt__['user.ch{0}'.format(key)](name, val, not remove_groups)
+                __salt__['user.ch{0}'.format(key)](
+                    name, val, not remove_groups
+                )
             else:
                 __salt__['user.ch{0}'.format(key)](name, val)
 
         # Clear cached groups
         sys.modules[
-            __salt__['user.info'].__module__
+            __salt__['test.ping'].__module__
         ].__context__.pop('user.getgrall', None)
 
         post = __salt__['user.info'](name)
         spost = {}
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
-            if lshad['pwd'] != password:
+        if 'shadow.info' in __salt__:
+            if lshad['passwd'] != password:
                 spost = __salt__['shadow.info'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
                 ret['changes'][key] = post[key]
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        if 'shadow.info' in __salt__:
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
@@ -347,10 +366,10 @@ def present(name,
                                 createhome=createhome):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
-            if password:
+            if all((password, 'shadow.info' in __salt__)):
                 __salt__['shadow.set_password'](name, password)
                 spost = __salt__['shadow.info'](name)
-                if spost['pwd'] != password:
+                if spost['passwd'] != password:
                     ret['comment'] = 'User {0} created but failed to set' \
                                      ' password to {1}'.format(name, password)
                     ret['result'] = False
@@ -374,7 +393,8 @@ def absent(name, purge=False, force=False):
 
     force
         If the user is logged in the absent state will fail, set the force
-        option to True to remove the user even if they are logged in
+        option to True to remove the user even if they are logged in. Not
+        supported in FreeBSD and Solaris.
     '''
     ret = {'name': name,
            'changes': {},

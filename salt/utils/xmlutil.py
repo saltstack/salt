@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
 '''
 Various XML utilities
 '''
 
+
 def to_dict(xmltree):
-    ''' 
+    '''
     Convert an XML tree into a dict. The tree that is passed in must be an
     ElementTree object.
     '''
@@ -38,4 +40,3 @@ def to_dict(xmltree):
                 xmldict[name] = [xmldict[name]]
             xmldict[name].append(to_dict(item))
     return xmldict
-

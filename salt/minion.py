@@ -12,14 +12,21 @@ import copy
 import os
 import hashlib
 import re
+import types
 import threading
 import time
 import traceback
 import sys
 import signal
+from random import randint
 
 # Import third party libs
-import zmq
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    # Running in local, zmq not needed
+    HAS_ZMQ = False
 import yaml
 
 HAS_RANGE = False
@@ -40,10 +47,9 @@ import salt.loader
 import salt.utils
 import salt.payload
 import salt.utils.schedule
-# TODO: should probably use _getargs() from salt.utils?
-from salt.state import _getargs
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
+from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
@@ -52,8 +58,8 @@ log = logging.getLogger(__name__)
 # 2. Generate the function mapping dict
 # 3. Authenticate with the master
 # 4. Store the AES key
-# 5. connect to the publisher
-# 6. handle publications
+# 5. Connect to the publisher
+# 6. Handle publications
 
 
 def resolve_dns(opts):
@@ -69,7 +75,8 @@ def resolve_dns(opts):
         # Because I import salt.log below I need to re-import salt.utils here
         import salt.utils
         try:
-            ret['master_ip'] = salt.utils.dns_check(opts['master'], True, opts['ipv6'])
+            ret['master_ip'] = \
+                    salt.utils.dns_check(opts['master'], True, opts['ipv6'])
         except SaltClientError:
             if opts['retry_dns']:
                 while True:
@@ -100,48 +107,43 @@ def resolve_dns(opts):
 
 def get_proc_dir(cachedir):
     '''
-    Return the directory that process data is stored in
+    Given the cache directory, return the directory that process data is
+    stored in, creating it if it doesn't exist.
     '''
     fn_ = os.path.join(cachedir, 'proc')
     if not os.path.isdir(fn_):
         # proc_dir is not present, create it
         os.makedirs(fn_)
-    else:
-        # proc_dir is present, clean out old proc files
-        for proc_fn in os.listdir(fn_):
-            os.remove(os.path.join(fn_, proc_fn))
     return fn_
 
 
-def detect_kwargs(func, args, data=None):
+def parse_args_and_kwargs(func, args, data=None):
     '''
-    Detect the args and kwargs that need to be passed to a function call
+    Detect the args and kwargs that need to be passed to a function call,
+    and yamlify all arguments and key-word argument values if:
+    - they are strings
+    - they do not contain '\n'
+    If yamlify results in a dict, and the original argument or kwarg value
+    did not start with a "{", then keep the original string value.
+    This is to prevent things like 'echo "Hello: world"' to be parsed as
+    dictionaries.
     '''
-    spec_args, _, has_kwargs, defaults = salt.state._getargs(func)
-    defaults = [] if defaults is None else defaults
-    starti = len(spec_args) - len(defaults)
-    kwarg_spec = set()
-    for ind in range(len(defaults)):
-        kwarg_spec.add(spec_args[starti])
-        starti += 1
+    spec_args, _, has_kwargs, _ = salt.utils.get_function_argspec(func)
     _args = []
     kwargs = {}
     for arg in args:
         if isinstance(arg, string_types):
-            if '=' in arg:
-                comps = arg.split('=')
-                if ' ' in comps[0]:
-                    # Invalid kwarg
-                    pass
-                elif has_kwargs:
-                    kwargs[comps[0]] = yamlify_arg('='.join(comps[1:]))
+            arg_name, arg_value = salt.utils.parse_kwarg(arg)
+            if arg_name:
+                if has_kwargs or arg_name in spec_args:
+                    kwargs[arg_name] = yamlify_arg(arg_value)
                     continue
-                elif comps[0] in kwarg_spec:
-                    kwargs[comps[0]] = yamlify_arg('='.join(comps[1:]))
-                    continue
-        _args.append(arg)
+            else:
+                # Not a kwarg
+                pass
+        _args.append(yamlify_arg(arg))
     if has_kwargs and isinstance(data, dict):
-        # this function accepts kwargs, pack in the publish data
+        # this function accepts **kwargs, pack in the publish data
         for key, val in data.items():
             kwargs['__pub_{0}'.format(key)] = val
     return _args, kwargs
@@ -149,14 +151,38 @@ def detect_kwargs(func, args, data=None):
 
 def yamlify_arg(arg):
     '''
-    yaml.safe_load the arg unless it has a newline in it
+    yaml.safe_load the arg unless it has a newline in it.
     '''
+    if not isinstance(arg, string_types):
+        return arg
     try:
-        if '\n' not in arg:
-            return yaml.safe_load(arg)
+        original_arg = str(arg)
+        if isinstance(arg, string_types):
+            if '\n' not in arg:
+                arg = yaml.safe_load(arg)
+        if isinstance(arg, dict):
+            # dicts must be wrapped in curly braces
+            if (isinstance(original_arg, string_types) and
+                    not original_arg.startswith('{')):
+                return original_arg
+            else:
+                return arg
+        elif isinstance(arg, (int, list, string_types)):
+            # yaml.safe_load will load '|' as '', don't let it do that.
+            if arg == '' and original_arg in ('|',):
+                return original_arg
+            # yaml.safe_load will treat '#' as a comment, so a value of '#'
+            # will become None. Keep this value from being stomped as well.
+            elif arg is None and original_arg.strip().startswith('#'):
+                return original_arg
+            else:
+                return arg
+        else:
+            # we don't support this type
+            return original_arg
     except Exception:
-        pass
-    return arg
+        # In case anything goes wrong...
+        return original_arg
 
 
 class SMinion(object):
@@ -226,7 +252,8 @@ class MasterMinion(object):
             rend=True,
             matcher=True,
             whitelist=None):
-        self.opts = opts
+        self.opts = salt.config.minion_config(opts['conf_file'])
+        self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
         self.opts['pillar'] = {}
@@ -292,8 +319,8 @@ class MultiMinion(object):
                 ret[minion['master']] = minion
             else:
                 ret[minion.opts['master']] = {
-                        'minion': minion,
-                        'generator': minion.tune_in_no_block()}
+                    'minion': minion,
+                    'generator': minion.tune_in_no_block()}
         return ret
 
     # Multi Master Tune In
@@ -419,7 +446,7 @@ class MultiMinion(object):
                 if pillar_refresh:
                     minion['minion'].pillar_refresh()
                 minion['generator'].next()
-        
+
 
 class Minion(object):
     '''
@@ -430,6 +457,15 @@ class Minion(object):
         '''
         Pass in the options dict
         '''
+
+        # Warn if ZMQ < 3.2
+        if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
+                        zmq.zmq_version_info() < (3, 2)):
+            # PyZMQ 2.1.9 does not have zmq_version_info
+            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
+                        'are known connection keep-alive issues with ZMQ < '
+                        '3.2 which may result in loss of contact with '
+                        'minions. Please upgrade your ZMQ!')
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
@@ -473,12 +509,13 @@ class Minion(object):
         returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
-    def _fire_master(self, data=None, tag=None, events=None):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None):
         '''
         Fire an event on the master
         '''
         load = {'id': self.opts['id'],
-                'cmd': '_minion_event'}
+                'cmd': '_minion_event',
+                'pretag': pretag}
         if events:
             load['events'] = events
         elif data and tag:
@@ -509,6 +546,13 @@ class Minion(object):
         try:
             data = self.crypticle.loads(load)
         except AuthenticationError:
+            # decryption of the payload failed, try to re-auth but wait
+            # random seconds if set in config with random_reauth_delay
+            if 'random_reauth_delay' in self.opts:
+                reauth_delay = randint(0, int(self.opts['random_reauth_delay']))
+                log.debug("Waiting {0} seconds to re-authenticate".format(reauth_delay))
+                time.sleep(reauth_delay)
+
             self.authenticate()
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
@@ -517,8 +561,9 @@ class Minion(object):
             return
         # Verify that the publication applies to this minion
         if 'tgt_type' in data:
-            if not getattr(self.matcher,
-                           '{0}_match'.format(data['tgt_type']))(data['tgt']):
+            match_func = getattr(self.matcher,
+                                 '{0}_match'.format(data['tgt_type']), None)
+            if match_func is None or not match_func(data['tgt']):
                 return
         else:
             if not self.matcher.glob_match(data['tgt']):
@@ -603,73 +648,86 @@ class Minion(object):
             sdata.update(data)
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write(minion_instance.serial.dumps(sdata))
-        ret = {}
-        for ind in range(0, len(data['arg'])):
-            try:
-                arg = data['arg'][ind]
-                if '\n' not in arg:
-                    arg = yaml.safe_load(arg)
-                if isinstance(arg, bool):
-                    data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (dict, int, list, string_types)):
-                    data['arg'][ind] = arg
-                else:
-                    data['arg'][ind] = str(data['arg'][ind])
-            except Exception:
-                pass
-
+        ret = {'success': False}
         function_name = data['fun']
         if function_name in minion_instance.functions:
-            ret['success'] = False
             try:
                 func = minion_instance.functions[data['fun']]
-                args, kwargs = detect_kwargs(func, data['arg'], data)
+                args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
-                ret['return'] = func(*args, **kwargs)
+                return_data = func(*args, **kwargs)
+                if isinstance(return_data, types.GeneratorType):
+                    ind = 0
+                    iret = {}
+                    for single in return_data:
+                        if isinstance(single, dict) and isinstance(iret, list):
+                            iret.update(single)
+                        else:
+                            if not iret:
+                                iret = []
+                            iret.append(single)
+                        tag = tagify([data['jid'], 'ret', opts['id'], ind])
+                        minion_instance._fire_master({'return': single}, tag)
+                        ind += 1
+                    ret['return'] = iret
+                else:
+                    ret['return'] = return_data
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
-                        'retcode',
-                        0
+                    'retcode',
+                    0
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
-                msg = 'Command required for \'{0}\' not found: {1}'
-                log.debug(msg.format(function_name, str(exc)))
-                ret['return'] = msg.format(function_name, str(exc))
+                msg = 'Command required for {0!r} not found'.format(
+                    function_name
+                )
+                log.debug(msg, exc_info=True)
+                ret['return'] = '{0}: {1}'.format(msg, exc)
             except CommandExecutionError as exc:
-                msg = 'A command in {0} had a problem: {1}'
-                log.error(msg.format(function_name, str(exc)))
-                ret['return'] = 'ERROR: {0}'.format(str(exc))
+                log.error(
+                    'A command in {0!r} had a problem: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR: {0}'.format(exc)
             except SaltInvocationError as exc:
-                msg = 'Problem executing "{0}": {1}'
-                log.error(msg.format(function_name, str(exc)))
-                ret['return'] = 'ERROR executing {0}: {1}'.format(
+                log.error(
+                    'Problem executing {0!r}: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR executing {0!r}: {1}'.format(
                     function_name, exc
                 )
             except TypeError as exc:
-                aspec = _getargs(minion_instance.functions[data['fun']])
-                msg = 'Missing arguments executing "{0}": {1}'.format(
-                    function_name, aspec
+                trb = traceback.format_exc()
+                aspec = salt.utils.get_function_argspec(
+                    minion_instance.functions[data['fun']]
                 )
-                log.warning(msg)
-                log.debug(
-                    '"Missing args" caused by exc: {0}'.format(exc),
-                    exc_info=True
-                )
+                msg = ('TypeError encountered executing {0}: {1}. See '
+                       'debug log for more info.  Possibly a missing '
+                       'arguments issue:  {2}').format(function_name,
+                                                       exc,
+                                                       aspec)
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
                 ret['return'] = msg
             except Exception:
-                trb = traceback.format_exc()
-                msg = 'The minion function caused an exception: {0}'
-                log.warning(msg.format(trb))
-                ret['return'] = trb
+                msg = 'The minion function caused an exception'
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
         else:
-            ret['return'] = '"{0}" is not available.'.format(function_name)
+            ret['return'] = '{0!r} is not available.'.format(function_name)
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         minion_instance._return_pub(ret)
         if data['ret']:
+            ret['id'] = opts['id']
             for returner in set(data['ret'].split(',')):
-                ret['id'] = opts['id']
                 try:
                     minion_instance.returners['{0}.returner'.format(
                         returner
@@ -697,24 +755,10 @@ class Minion(object):
             'success': {},
         }
         for ind in range(0, len(data['fun'])):
-            for index in range(0, len(data['arg'][ind])):
-                try:
-                    arg = data['arg'][ind][index]
-                    if '\n' not in arg:
-                        arg = yaml.safe_load(arg)
-                    if isinstance(arg, bool):
-                        data['arg'][ind][index] = str(data['arg'][ind][index])
-                    elif isinstance(arg, (dict, int, list, string_types)):
-                        data['arg'][ind][index] = arg
-                    else:
-                        data['arg'][ind][index] = str(data['arg'][ind][index])
-                except Exception:
-                    pass
-
             ret['success'][data['fun'][ind]] = False
             try:
                 func = minion_instance.functions[data['fun'][ind]]
-                args, kwargs = detect_kwargs(func, data['arg'][ind], data)
+                args, kwargs = parse_args_and_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
@@ -807,7 +851,7 @@ class Minion(object):
         Execute a state run based on information set in the minion config file
         '''
         if self.opts['startup_states']:
-            data = {'jid': 'req', 'ret': ''}
+            data = {'jid': 'req', 'ret': self.opts['ext_job_cache']}
             if self.opts['startup_states'] == 'sls':
                 data['fun'] = 'state.sls'
                 data['arg'] = [self.opts['sls_list']]
@@ -840,13 +884,20 @@ class Minion(object):
             )
         )
         auth = salt.crypt.Auth(self.opts)
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        if not acceptance_wait_time_max:
+            acceptance_wait_time_max = acceptance_wait_time
         while True:
             creds = auth.sign_in(timeout, safe)
             if creds != 'retry':
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
-            time.sleep(self.opts['acceptance_wait_time'])
+            time.sleep(acceptance_wait_time)
+            if acceptance_wait_time < acceptance_wait_time_max:
+                acceptance_wait_time += acceptance_wait_time
+                log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
@@ -961,13 +1012,36 @@ class Minion(object):
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+
+        recon_delay = self.opts['recon_default']
+
+        if self.opts['recon_randomize']:
+            recon_delay = randint(self.opts['recon_default'],
+                                  self.opts['recon_default'] + self.opts['recon_max']
+                          )
+
+            log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
+                self.opts['recon_default'],
+                self.opts['recon_default'] + self.opts['recon_max'],
+                recon_delay)
+            )
+
+        log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
+        self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
+
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format(
+                self.opts['recon_default'] + self.opts['recon_max'])
+            )
+
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
+
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+
         if hasattr(zmq, 'TCP_KEEPALIVE'):
             self.socket.setsockopt(
                 zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
@@ -992,11 +1066,23 @@ class Minion(object):
             ),
             'minion_start'
         )
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'minion'),
+        )
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
+
+        # Make sure to gracefully handle CTRL_LOGOFF_EVENT
+        salt.utils.enable_ctrl_logoff_handler()
+
         # On first startup execute a state run if configured to do so
         self._state_run()
+        time.sleep(.5)
 
         loop_interval = int(self.opts['loop_interval'])
         while True:
@@ -1084,6 +1170,14 @@ class Minion(object):
             ),
             'minion_start'
         )
+        # dup name spaced event
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'minion'),
+        )
         loop_interval = int(self.opts['loop_interval'])
         while True:
             try:
@@ -1109,15 +1203,28 @@ class Minion(object):
         Tear down the minion
         '''
         if hasattr(self, 'poller'):
-            for socket in self.poller.sockets.keys():
-                if socket.closed is False:
-                    socket.close()
-                self.poller.unregister(socket)
+            if isinstance(self.poller.sockets, dict):
+                for socket in self.poller.sockets.keys():
+                    if socket.closed is False:
+                        socket.close()
+                    self.poller.unregister(socket)
+            else:
+                for socket in self.poller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].close()
+                    self.poller.unregister(socket[0])
+
         if hasattr(self, 'epoller'):
-            for socket in self.epoller.sockets.keys():
-                if socket.closed is False:
-                    socket.close()
-                self.epoller.unregister(socket)
+            if isinstance(self.epoller.sockets, dict):
+                for socket in self.epoller.sockets.keys():
+                    if socket.closed is False:
+                        socket.close()
+                    self.epoller.unregister(socket)
+            else:
+                for socket in self.epoller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].close()
+                    self.epoller.unregister(socket[0])
         if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
             self.epub_sock.close()
         if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
@@ -1126,8 +1233,6 @@ class Minion(object):
             self.socket.close()
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
-        if hasattr(self, 'local'):
-            del self.local
 
     def __del__(self):
         self.destroy()
@@ -1143,8 +1248,6 @@ class Syndic(Minion):
         self._syndic = True
         opts['loop_interval'] = 1
         Minion.__init__(self, opts)
-        opts.update(self.opts)
-        self.opts = opts
 
     def _handle_aes(self, load):
         '''
@@ -1207,7 +1310,7 @@ class Syndic(Minion):
         Lock onto the publisher. This is the main event loop for the syndic
         '''
         # Instantiate the local client
-        self.local = salt.client.LocalClient(self.opts['_master_conf_file'])
+        self.local = salt.client.LocalClient(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
         self.local.opts['interface'] = self._syndic_interface
 
@@ -1248,6 +1351,13 @@ class Syndic(Minion):
             ),
             'syndic_start'
         )
+        self._fire_master(
+            'Syndic {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            tagify([self.opts['id'], 'start'], 'syndic'),
+        )
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -1278,16 +1388,16 @@ class Syndic(Minion):
                             jids[event['tag']]['__fun__'] = event['data'].get('fun')
                             jids[event['tag']]['__jid__'] = event['data']['jid']
                             jids[event['tag']]['__load__'] = salt.utils.jid_load(
-                                    event['data']['jid'],
-                                    self.local.opts['cachedir'],
-                                    self.opts['hash_type'])
+                                event['data']['jid'],
+                                self.local.opts['cachedir'],
+                                self.opts['hash_type'])
                         jids[event['tag']][event['data']['id']] = event['data']['return']
                     else:
                         # Add generic event aggregation here
                         if not 'retcode' in event['data']:
                             raw_events.append(event)
                 if raw_events:
-                    self._fire_master(events=raw_events)
+                    self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], base='syndic'))
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:
@@ -1300,6 +1410,14 @@ class Syndic(Minion):
                     'An exception occurred while polling the syndic',
                     exc_info=True
                 )
+
+    def destroy(self):
+        '''
+        Tear down the syndic minion
+        '''
+        super(Syndic, self).destroy()
+        if hasattr(self, 'local'):
+            del self.local
 
 
 class Matcher(object):
@@ -1341,6 +1459,9 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
+        if type(tgt) != str:
+            return False
+
         return fnmatch.fnmatch(self.opts['id'], tgt)
 
     def pcre_match(self, tgt):
@@ -1357,61 +1478,28 @@ class Matcher(object):
             tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
-    def grain_match(self, tgt):
+    def grain_match(self, tgt, delim=':'):
         '''
         Reads in the grains glob match
         '''
         log.debug('grains target: {0}'.format(tgt))
-        comps = tgt.rsplit(':', 1)
-        if len(comps) != 2:
+        if delim not in tgt:
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        match = salt.utils.traverse_dict(self.opts['grains'], comps[0], {})
-        if match == {}:
-            log.error('Targeted grain "{0}" not found'.format(comps[0]))
-            return False
-        if isinstance(match, dict):
-            if comps[1] == '*':
-                # We are just checking that the key exists
-                return True
-            log.error('Targeted grain "{0}" must correspond to a list, '
-                      'string, or numeric value'.format(comps[0]))
-            return False
-        if isinstance(match, list):
-            # We are matching a single component to a single list member
-            for member in match:
-                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
-                    return True
-            return False
-        return bool(fnmatch.fnmatch(str(match).lower(), comps[1].lower()))
+        return salt.utils.subdict_match(self.opts['grains'], tgt, delim=delim)
 
-    def grain_pcre_match(self, tgt):
+    def grain_pcre_match(self, tgt, delim=':'):
         '''
         Matches a grain based on regex
         '''
-        comps = tgt.split(':')
-        if len(comps) < 2:
-            log.error('Got insufficient arguments for grains from master')
+        log.debug('grains pcre target: {0}'.format(tgt))
+        if delim not in tgt:
+            log.error('Got insufficient arguments for grains pcre match '
+                      'statement from master')
             return False
-        if comps[0] not in self.opts['grains']:
-            log.error('Got unknown grain from master: {0}'.format(comps[0]))
-            return False
-        if isinstance(self.opts['grains'][comps[0]], dict) and comps[1] == '*':
-            # We are just checking that the key exists
-            return True
-        if isinstance(self.opts['grains'][comps[0]], list):
-            # We are matching a single component to a single list member
-            for member in self.opts['grains'][comps[0]]:
-                if re.match(comps[1].lower(), str(member).lower()):
-                    return True
-            return False
-        return bool(
-            re.match(
-                comps[1].lower(),
-                str(self.opts['grains'][comps[0]]).lower()
-            )
-        )
+        return salt.utils.subdict_match(self.opts['grains'], tgt,
+                                        delim=delim, regex_match=True)
 
     def data_match(self, tgt):
         '''
@@ -1447,34 +1535,16 @@ class Matcher(object):
             return False
         return(self.functions[tgt]())
 
-    def pillar_match(self, tgt):
+    def pillar_match(self, tgt, delim=':'):
         '''
         Reads in the pillar glob match
         '''
         log.debug('pillar target: {0}'.format(tgt))
-        comps = tgt.rsplit(':', 1)
-        if len(comps) != 2:
+        if delim not in tgt:
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        match = salt.utils.traverse_dict(self.opts['pillar'], comps[0], {})
-        if match == {}:
-            log.error('Targeted pillar "{0}" not found'.format(comps[0]))
-            return False
-        if isinstance(match, dict):
-            if comps[1] == '*':
-                # We are just checking that the key exists
-                return True
-            log.error('Targeted pillar "{0}" must correspond to a list, '
-                      'string, or numeric value'.format(comps[0]))
-            return False
-        if isinstance(match, list):
-            # We are matching a single component to a single list member
-            for member in match:
-                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
-                    return True
-            return False
-        return bool(fnmatch.fnmatch(str(match).lower(), comps[1].lower()))
+        return salt.utils.subdict_match(self.opts['pillar'], tgt, delim=delim)
 
     def ipcidr_match(self, tgt):
         '''
@@ -1482,10 +1552,16 @@ class Matcher(object):
         '''
         num_parts = len(tgt.split('/'))
         if num_parts > 2:
+            # Target is not valid CIDR
             return False
         elif num_parts == 2:
-            return self.functions['network.in_subnet'](tgt)
+            # Target is CIDR
+            return salt.utils.network.in_subnet(
+                tgt,
+                addrs=self.opts['grains'].get('ipv4', [])
+            )
         else:
+            # Target is an IPv4 address
             import socket
             try:
                 socket.inet_aton(tgt)
@@ -1493,7 +1569,7 @@ class Matcher(object):
                 # Not a valid IPv4 address
                 return False
             else:
-                return tgt in self.functions['network.ip_addrs']()
+                return tgt in self.opts['grains'].get('ipv4', [])
 
     def range_match(self, tgt):
         '''
@@ -1517,12 +1593,10 @@ class Matcher(object):
             return False
         ref = {'G': 'grain',
                'P': 'grain_pcre',
-               'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
-               'E': 'pcre',
-               'D': 'data'}
+               'E': 'pcre'}
         if HAS_RANGE:
             ref['R'] = 'range'
         results = []
@@ -1556,11 +1630,16 @@ class Matcher(object):
                         else:
                             results.append('and')
                     results.append(match)
+                else:
+                    # seq start with oper, fail
+                    if match not in ['(', ')']:
+                        return False
             else:
                 # The match is not explicitly defined, evaluate it as a glob
                 results.append(str(self.glob_match(match)))
+        results = ' '.join(results)
         try:
-            return eval(' '.join(results))
+            return eval(results)
         except Exception:
             log.error('Invalid compound target: {0}'.format(tgt))
             return False

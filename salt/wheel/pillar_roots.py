@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The `pillar_roots` wheel module is used to manage files under the pillar roots
 directories on the master server.
@@ -107,4 +108,3 @@ def write(data, path, env='base', index=0):
     with salt.utils.fopen(dest, 'w+') as fp_:
         fp_.write(data)
     return 'Wrote data to file {0}'.format(dest)
-

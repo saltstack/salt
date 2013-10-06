@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for handling openstack glance calls.
 
@@ -11,6 +12,30 @@ Module for handling openstack glance calls.
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.insecure: False   #(optional)
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+
+    If configuration for multiple openstack accounts is required, they can be
+    set up as different configuration profiles:
+    For example::
+
+        openstack1:
+          keystone.user: admin
+          keystone.password: verybadpass
+          keystone.tenant: admin
+          keystone.tenant_id: f80919baedab48ec8931f200c65a50df
+          keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+
+        openstack2:
+          keystone.user: admin
+          keystone.password: verybadpass
+          keystone.tenant: admin
+          keystone.tenant_id: f80919baedab48ec8931f200c65a50df
+          keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
+
+    With this configuration in place, any of the keystone functions can make use
+    of a configuration profile by declaring it explicitly.
+    For example::
+
+        salt '*' glance.image_list profile=openstack1
 '''
 
 # Import third party libs
@@ -35,11 +60,11 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth():
+def _auth(profile=None):
     '''
     Set up keystone credentials
     '''
-    kstone = __salt__['keystone.auth']()
+    kstone = __salt__['keystone.auth'](profile)
     token = kstone.auth_token
     endpoint = kstone.service_catalog.url_for(
         service_type='image',
@@ -49,21 +74,21 @@ def _auth():
     return client.Client('1', endpoint, token=token)
 
 
-def image_create(**kwargs):
+def image_create(profile=None, **kwargs):
     '''
     Create an image (glance image-create)
 
-    CLI Example::
+    CLI Example:
 
-        salt '*' glance.image_create name=f16-jeos is_public=true \
-                 disk_format=qcow2 container_format=ovf \
+    .. code-block:: bash
+
+        salt '*' glance.image_create name=f16-jeos is_public=true \\
+                 disk_format=qcow2 container_format=ovf \\
                  copy_from=http://berrange.fedorapeople.org/images/2012-02-29/f16-x86_64-openstack-sda.qcow2
 
-    For all possible values, run::
-
-        glance help image-create
+    For all possible values, run ``glance help image-create`` on the minion.
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     fields = dict(
         filter(
             lambda x: x[0] in glanceclient.v1.images.CREATE_PARAMS,
@@ -76,21 +101,23 @@ def image_create(**kwargs):
     return {newimage['name']: newimage}
 
 
-def image_delete(id=None, name=None):  # pylint: disable-msg=C0103
+def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
     '''
     Delete an image (glance image-delete)
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' glance.image_delete c2eb2eb0-53e1-4a80-b990-8ec887eae7df
         salt '*' glance.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
         salt '*' glance.image_delete name=f16-jeos
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id  # pylint: disable-msg=C0103
+                id = image.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve image id'}
@@ -101,20 +128,22 @@ def image_delete(id=None, name=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def image_show(id=None, name=None):  # pylint: disable-msg=C0103
+def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     '''
     Return details about a specific image (glance image-show)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' glance.image_get
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = {}
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id  # pylint: disable-msg=C0103
+                id = image.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve image id'}
@@ -139,15 +168,17 @@ def image_show(id=None, name=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def image_list(id=None):  # pylint: disable-msg=C0103
+def image_list(id=None, profile=None):  # pylint: disable=C0103
     '''
     Return a list of available images (glance image-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' glance.image_list
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = {}
     for image in nt_ks.images.list():
         ret[image.name] = {
@@ -172,16 +203,18 @@ def image_list(id=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def _item_list():
+def _item_list(profile=None):
     '''
     Template for writing list functions
     Return a list of available items (glance items-list)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' glance.item_list
     '''
-    nt_ks = _auth()
+    nt_ks = _auth(profile)
     ret = []
     for item in nt_ks.items.list():
         ret.append(item.__dict__)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for managing locales on POSIX-like systems.
 '''
@@ -67,7 +68,9 @@ def list_avail():
     '''
     Lists available (compiled) locales
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locale.list_avail
     '''
@@ -80,7 +83,9 @@ def get_locale():
     '''
     Get the current system locale
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locale.get_locale
     '''
@@ -88,9 +93,9 @@ def get_locale():
     if 'Arch' in __grains__['os_family']:
         return _localectl_get()
     elif 'RedHat' in __grains__['os_family']:
-        cmd = 'grep LANG /etc/sysconfig/i18n | grep -vE "^#"'
+        cmd = 'grep "^LANG=" /etc/sysconfig/i18n'
     elif 'Debian' in __grains__['os_family']:
-        cmd = 'grep LANG /etc/default/locale | grep -vE "^#"'
+        cmd = 'grep "^LANG=" /etc/default/locale'
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale show'
         return __salt__['cmd.run'](cmd).strip()
@@ -105,18 +110,30 @@ def set_locale(locale):
     '''
     Sets the current system locale
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' locale.set_locale 'en_US.UTF-8'
     '''
     if 'Arch' in __grains__['os_family']:
         return _localectl_set(locale)
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale))
-        __salt__['cmd.run']('grep "^LANG=" /etc/sysconfig/i18n || echo "\nLANG={0}" >> /etc/sysconfig/i18n'.format(locale))
+        __salt__['file.sed'](
+            '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
+        )
+        __salt__['cmd.run'](
+            'grep "^LANG=" /etc/sysconfig/i18n || echo "\nLANG={0}" '
+            '>> /etc/sysconfig/i18n'.format(locale)
+        )
     elif 'Debian' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale))
-        __salt__['cmd.run']('grep "^LANG=" /etc/default/locale || echo "\nLANG={0}" >> /etc/default/locale'.format(locale))
+        __salt__['file.sed'](
+            '/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale)
+        )
+        __salt__['cmd.run'](
+            'grep "^LANG=" /etc/default/locale || '
+            'echo "\nLANG={0}" >> /etc/default/locale'.format(locale)
+        )
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale set {0}'.format(locale)
         return __salt__['cmd.retcode'](cmd) == 0

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Print a stacktrace when sent a SIGUSR1 for debugging
 '''
@@ -47,5 +48,5 @@ def enable_sigusr1_handler():
     '''
     #  Skip setting up this signal on Windows
     #  SIGUSR1 doesn't exist on Windows and causes the minion to crash
-    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
+    if not salt.utils.is_windows():
         signal.signal(signal.SIGUSR1, _handle_sigusr1)

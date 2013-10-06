@@ -1,39 +1,70 @@
+# -*- coding: utf-8 -*-
 '''
-Package support for pkgin based systems, inspired from freebsdpkg.py
+Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
+import os
+import re
 import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
-
+VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
 
-@salt.utils.memoize
+
+@decorators.memoize
 def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system, return full path
     '''
-    return salt.utils.which('pkgin')
+    ppath = salt.utils.which('pkgin')
+    if ppath is None:
+        # pkgin was not found in $PATH, try to find it via LOCALBASE
+        localbase = __salt__['cmd.run']('pkg_info -Q LOCALBASE pkgin')
+        if localbase is not None:
+            ppath = '{0}/bin/pkgin'.format(localbase)
+            if not os.path.exists(ppath):
+                return None
+
+    return ppath
+
+
+@decorators.memoize
+def _supports_regex():
+    '''
+    Get the pkgin version
+    '''
+    ppath = _check_pkgin()
+    version_string = __salt__['cmd.run']('{0} -v'.format(ppath))
+    if version_string is None:
+        # Dunno why it would, but...
+        return False
+
+    version_match = VERSION_MATCH.search(version_string)
+    if not version_match:
+        return False
+
+    return tuple([int(i) for i in version_match.group(1).split('.')]) > (0, 5)
 
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is supported by pkgin
     '''
-    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin']
+    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin', 'SmartOS']
 
     if __grains__['os'] in supported and _check_pkgin():
         return 'pkg'
-
     return False
 
 
 def _splitpkg(name):
     # name is in the format foobar-1.0nb1, already space-splitted
-    if name[0].isalnum() and name != 'No': # avoid < > = and 'No result'
+    if name[0].isalnum() and name != 'No':  # avoid < > = and 'No result'
         return name.rsplit('-', 1)
 
 
@@ -41,23 +72,29 @@ def search(pkg_name):
     '''
     Searches for an exact match using pkgin ^package$
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.search 'mysql-server'
     '''
 
     pkglist = {}
     pkgin = _check_pkgin()
-
-    if pkgin:
-        for p in  __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, pkg_name)
-                                     ).splitlines():
-            if p:
-                s = _splitpkg(p.split()[0])
-                if s:
-                    pkglist[s[0]] = s[1]
-
+    if not pkgin:
         return pkglist
+
+    if _supports_regex():
+        pkg_name = '^{0}$'.format(pkg_name)
+
+    for p in __salt__['cmd.run']('{0} se {1}'.format(pkgin, pkg_name)
+                                 ).splitlines():
+        if p:
+            s = _splitpkg(p.split()[0])
+            if s:
+                pkglist[s[0]] = s[1]
+
+    return pkglist
 
 
 def latest_version(*names, **kwargs):
@@ -68,29 +105,43 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> ...
     '''
 
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
     pkglist = {}
     pkgin = _check_pkgin()
+    if not pkgin:
+        return pkglist
+
+    # Refresh before looking for the latest version available
+    if refresh:
+        refresh_db()
 
     for name in names:
-        if pkgin:
-            for line in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, name)
-                                           ).splitlines():
-                p = line.split() # pkgname-version status
-                if p:
-                    s = _splitpkg(p[0])
-                    if s :
-                        if len(p) > 1 and p[1] == '<':
-                            pkglist[s[0]] = s[1]
-                        else:
-                            pkglist[s[0]] = ''
+        if _supports_regex():
+            name = '^{0}$'.format(name)
+        for line in __salt__['cmd.run']('{0} se {1}'.format(pkgin, name)
+                                        ).splitlines():
+            p = line.split()  # pkgname-version status
+            if p and p[0] in ('=:', '<:', '>:'):
+                # These are explanation comments
+                continue
+            elif p:
+                s = _splitpkg(p[0])
+                if s:
+                    if len(p) > 1 and p[1] == '<':
+                        pkglist[s[0]] = s[1]
+                    else:
+                        pkglist[s[0]] = ''
 
-    if len(names) == 1 and pkglist :
+    if len(names) == 1 and pkglist:
         return pkglist[names[0]]
 
     return pkglist
@@ -106,7 +157,9 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
@@ -118,7 +171,9 @@ def refresh_db():
     '''
     Use pkg update to get latest pkg_summary
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
@@ -131,17 +186,22 @@ def refresh_db():
     return {}
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
 
     pkgin = _check_pkgin()
     if pkgin:
@@ -184,7 +244,9 @@ def install(name=None, refresh=False, fromrepo=None,
         A list of packages to install from a software repository. Must be
         passed as a python list.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install pkgs='["foo","bar"]'
 
@@ -193,7 +255,9 @@ def install(name=None, refresh=False, fromrepo=None,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
 
@@ -202,7 +266,9 @@ def install(name=None, refresh=False, fromrepo=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install <package name>
     '''
@@ -260,7 +326,9 @@ def upgrade():
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
@@ -278,26 +346,30 @@ def upgrade():
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package.
-
-    name : None
+    name
         The name of the package to be deleted.
 
-    pkgs : None
-        A list of packages to delete. Must be passed as a python list.
 
-        CLI Example::
+    Multiple Package Options:
 
-            salt '*' pkg.remove pkgs='["foo","bar"]'
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
 
     Returns a list containing the removed packages.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name, pkgs)
     if not pkg_params:
         return {}
 
@@ -331,17 +403,35 @@ def remove(name=None, pkgs=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with pkg_delete
+    Package purges are not supported, this function is identical to
+    ``remove()``.
 
-    Returns a list containing the removed packages.
+    name
+        The name of the package to be deleted.
 
-    CLI Example::
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    .. versionadded:: 0.16.0
+
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name)
+    return remove(name=name, pkgs=pkgs)
 
 
 def rehash():
@@ -350,7 +440,9 @@ def rehash():
     Use whenever a new command is created during the current
     session.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.rehash
     '''
@@ -359,37 +451,13 @@ def rehash():
         __salt__['cmd.run']('rehash')
 
 
-def perform_cmp(pkg1='', pkg2=''):
-    '''
-    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
-    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
-    making the comparison.
-
-    CLI Example::
-
-        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
-        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
-
-
-def compare(pkg1='', oper='==', pkg2=''):
-    '''
-    Compare two version strings.
-
-    CLI Example::
-
-        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
-        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
-    '''
-    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
-
-
 def file_list(package):
     '''
     List the files that belong to a package.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list nginx
     '''
@@ -405,7 +473,9 @@ def file_dict(package):
     '''
     List the files that belong to a package.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.file_list nginx
     '''

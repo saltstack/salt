@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The networking module for RHEL/Fedora based distros
 '''
@@ -9,26 +10,28 @@ import os.path
 import os
 import StringIO
 
-# import third party libs
+# Import third party libs
 import jinja2
 import jinja2.exceptions
 
 # Import salt libs
 import salt.utils
-from salt.modules import __path__ as saltmodpath
+import salt.utils.templates
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Set up template environment
-ENV = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(saltmodpath[0] + os.sep + 'rh_ip')
+JINJA = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(
+        os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'rh_ip')
+    )
 )
 
 
 def __virtual__():
     '''
-    Confine this module to RHEL/Fedora based distros$
+    Confine this module to RHEL/Fedora based distros
     '''
     if __grains__['os_family'] == 'RedHat':
         return 'ip'
@@ -73,6 +76,15 @@ def _error_msg_iface(iface, option, expected):
     '''
     msg = 'Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]'
     return msg.format(iface, option, '|'.join(expected))
+
+
+def _error_msg_routes(iface, option, expected):
+    '''
+    Build an appropriate error message from a given option and
+    a list of expected values.
+    '''
+    msg = 'Invalid option -- Route interface: {0}, Option: {1}, Expected: [{2}]'
+    return msg.format(iface, option, expected)
 
 
 def _log_default_iface(iface, opt, value):
@@ -180,7 +192,7 @@ def _parse_settings_bond(opts, iface):
         'tx_queues': '16',
         # Link monitoring in milliseconds. Most NICs support this
         'miimon': '100',
-        # arp interval in milliseconds
+        # ARP interval in milliseconds
         'arp_interval': '250',
         # Delay before considering link down in milliseconds (miimon * 2)
         'downdelay': '200',
@@ -197,7 +209,7 @@ def _parse_settings_bond(opts, iface):
         # On: driver sends mii
         # Off: ethtool sends mii
         'use_carrier': 'on',
-        # Defualt. Don't change unless you know what you are doing.
+        # Default. Don't change unless you know what you are doing.
         'xmit_hash_policy': 'layer2',
     }
 
@@ -261,13 +273,13 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     '''
     bond = {'mode': '0'}
 
-    # arp targets in n.n.n.n form
+    # ARP targets in n.n.n.n form
     valid = ['list of ips (up to 16)']
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
-                for ip in opts['arp_ip_target']:  # pylint: disable-msg=C0103
+                for ip in opts['arp_ip_target']:  # pylint: disable=C0103
                     bond['arp_ip_target'].append(ip)
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
@@ -340,7 +352,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
-                for ip in opts['arp_ip_target']:  # pylint: disable-msg=C0103
+                for ip in opts['arp_ip_target']:  # pylint: disable=C0103
                     bond['arp_ip_target'].append(ip)
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
@@ -586,11 +598,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                     _raise_error_iface(iface, opts[opt], valid)
         if bypassfirewall:
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '0')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables',  '0')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '0')
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '0')
         else:
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '1')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables',  '1')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '1')
             __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '1')
     else:
         if 'bridge' in opts:
@@ -633,6 +645,23 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             _raise_error_iface(iface, opts['userctl'], valid)
     else:
         result['userctl'] = 'no'
+
+    return result
+
+
+def _parse_routes(iface, opts):
+    '''
+    Filters given options and outputs valid settings for
+    the route settings file.
+    '''
+    # Normalize keys
+    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    result = {}
+    if not 'routes' in opts:
+        _raise_error_routes(iface, 'routes', 'List of routes')
+
+    for opt in opts:
+        result[opt] = opts[opt]
 
     return result
 
@@ -708,6 +737,15 @@ def _raise_error_network(option, expected):
     raise AttributeError(msg)
 
 
+def _raise_error_routes(iface, option, expected):
+    '''
+    Log and raise an error with a logical formated message.
+    '''
+    msg = _error_msg_routes(iface, option, expected)
+    log.error(msg)
+    raise AttributeError(msg)
+
+
 def _read_file(path):
     '''
     Reads and returns the contents of a file
@@ -752,12 +790,14 @@ def _read_temp(data):
     return output
 
 
-def build_bond(iface, settings):
+def build_bond(iface, **settings):
     '''
     Create a bond script in /etc/modprobe.d with the passed settings
     and load the bonding kernel module.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.build_bond bond0 mode=balance-alb
     '''
@@ -765,7 +805,7 @@ def build_bond(iface, settings):
 
     opts = _parse_settings_bond(settings, iface)
     try:
-        template = ENV.get_template('conf.jinja')
+        template = JINJA.get_template('conf.jinja')
     except jinja2.exceptions.TemplateNotFound:
         log.error('Could not load template conf.jinja')
         return ''
@@ -788,11 +828,13 @@ def build_bond(iface, settings):
     return _read_file(path)
 
 
-def build_interface(iface, iface_type, enabled, settings):
+def build_interface(iface, iface_type, enabled, **settings):
     '''
     Build an interface script for a network interface.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
@@ -823,7 +865,7 @@ def build_interface(iface, iface_type, enabled, settings):
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
-            template = ENV.get_template('rh{0}_eth.jinja'.format(rh_major))
+            template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))
         except jinja2.exceptions.TemplateNotFound:
             log.error(
                 'Could not load template rh{0}_eth.jinja'.format(
@@ -842,11 +884,44 @@ def build_interface(iface, iface_type, enabled, settings):
     return _read_file(path)
 
 
-def down(iface, iface_type, opts):
+def build_routes(iface, **settings):
+    '''
+    Build a route script for a network interface.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.build_routes eth0 <settings>
+    '''
+
+    iface = iface.lower()
+    opts = _parse_routes(iface, settings)
+    try:
+        template = JINJA.get_template('route_eth.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error(
+            'Could not load template route_eth.jinja'
+        )
+        return ''
+    routecfg = template.render(routes=opts['routes'])
+
+    if settings['test']:
+        return _read_temp(routecfg)
+
+    _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, 'route-{0}')
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+
+    return _read_file(path)
+
+
+def down(iface, iface_type):
     '''
     Shutdown a network interface
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.down eth0
     '''
@@ -860,7 +935,9 @@ def get_bond(iface):
     '''
     Return the content of a bond script
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.get_bond bond0
     '''
@@ -872,7 +949,9 @@ def get_interface(iface):
     '''
     Return the contents of an interface script
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.get_interface eth0
     '''
@@ -880,11 +959,13 @@ def get_interface(iface):
     return _read_file(path)
 
 
-def up(iface, iface_type, opts):  # pylint: disable-msg=C0103
+def up(iface, iface_type):  # pylint: disable=C0103
     '''
     Start up a network interface
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.up eth0
     '''
@@ -894,29 +975,47 @@ def up(iface, iface_type, opts):  # pylint: disable-msg=C0103
     return None
 
 
+def get_routes(iface):
+    '''
+    Return the contents of the interface routes script.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.get_routes eth0
+    '''
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+    return _read_file(path)
+
+
 def get_network_settings():
     '''
     Return the contents of the global network script.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.get_network_settings
     '''
     return _read_file(_RH_NETWORK_FILE)
 
 
-def apply_network_settings(opts):
+def apply_network_settings(**settings):
     '''
     Apply global network configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.apply_network_settings
     '''
-    if not 'require_reboot' in opts:
-        opts['require_reboot'] = False
+    if not 'require_reboot' in settings:
+        settings['require_reboot'] = False
 
-    if opts['require_reboot'] in _CONFIG_TRUE:
+    if settings['require_reboot'] in _CONFIG_TRUE:
         log.warning(
             'The network state sls is requiring a reboot of the system to '
             'properly apply network configuration.'
@@ -926,11 +1025,13 @@ def apply_network_settings(opts):
         return __salt__['service.restart']('network')
 
 
-def build_network_settings(settings):
+def build_network_settings(**settings):
     '''
     Build the global network script.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' ip.build_network_settings <settings>
     '''
@@ -940,7 +1041,7 @@ def build_network_settings(settings):
     # Build settings
     opts = _parse_network_settings(settings, current_network_settings)
     try:
-        template = ENV.get_template('network.jinja')
+        template = JINJA.get_template('network.jinja')
     except jinja2.exceptions.TemplateNotFound:
         log.error('Could not load template network.jinja')
         return ''
@@ -949,7 +1050,7 @@ def build_network_settings(settings):
     if settings['test']:
         return _read_temp(network)
 
-    # Wirte settings
+    # Write settings
     _write_file_network(network, _RH_NETWORK_FILE)
 
     return _read_file(_RH_NETWORK_FILE)

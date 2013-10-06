@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Salt module to manage RAID arrays with mdadm
 '''
@@ -35,7 +36,9 @@ def list_():
     '''
     List the RAID devices.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' raid.list
     '''
@@ -58,7 +61,9 @@ def detail(device='/dev/md0'):
     '''
     Show detail for a specified RAID device
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' raid.detail '/dev/md0'
     '''
@@ -103,7 +108,9 @@ def destroy(device):
 
     WARNING This will zero the superblock of all members of the RAID array..
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' raid.destroy /dev/md0
     '''
@@ -129,27 +136,31 @@ def create(*args):
     '''
     Create a RAID device.
 
-    WARNING!! Use with CAUTION, as this function can be very destructive if not
-    used properly!
+    .. warning::
+        Use with CAUTION, as this function can be very destructive if not used
+        properly!
 
-    Use it just as a regular mdadm command.
+    Use this module just as a regular mdadm command.
 
-    For more info, read 'man mdadm'
+    For more info, read the ``mdadm(8)`` manpage
 
     NOTE: It takes time to create a RAID array. You can check the progress in
-    "resync_status:" field of command:
+    "resync_status:" field of the results from the following command:
+
+    .. code-block:: bash
 
         salt '*' raid.detail /dev/md0
 
-    CLI Examples::
+    CLI Examples:
 
-        Test mode: if you add a test_mode=True as an argument - it will print out the command to double check.
+    .. code-block:: bash
 
-            salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde test_mode=True
+        salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde test_mode=True
 
-        NON-Testing mode:
+    .. note:: Test mode
 
-            salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde
+        Adding ``test_mode=True`` as an argument will print out the mdadm
+        command that would have been run.
 
     :param args: The arguments u pass to this function.
     :param arguments:

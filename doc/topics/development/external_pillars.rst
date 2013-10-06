@@ -9,18 +9,18 @@ module.
 Location
 --------
 
-Salt expects to find your ext_pillar module in the same location where it
+Salt expects to find your ``ext_pillar`` module in the same location where it
 looks for other python modules. If the ``extension_modules`` option in your
-Salt master configuration is set, Salt will look for a ``pillars`` directory
+Salt master configuration is set, Salt will look for a ``pillar`` directory
 under there and load all the modules it finds. Otherwise, it will look in
-your Python site-packages ``salt/pillars`` directory.
+your Python site-packages ``salt/pillar`` directory.
 
 Configuration
 -------------
 
-The external pillars that are called when a minion refreshes its pillars is 
+The external pillars that are called when a minion refreshes its pillars is
 controlled by the ``ext_pillar`` option in the Salt master configuration. You
-can pass a single argument, a list of arguments or a dictionary of arguments 
+can pass a single argument, a list of arguments or a dictionary of arguments
 to your pillar:
 
 .. code-block:: yaml
@@ -71,9 +71,9 @@ import errors and set a flag that the the ``__virtual__`` function can use later
 Options
 -------
 
-If you define an ``__opts__`` dictionary, it will be merged into the 
+If you define an ``__opts__`` dictionary, it will be merged into the
 ``__opts__`` dictionary handed to the ``ext_pillar`` function later. This is a
-good place to put default configuration items. The convention is to name 
+good place to put default configuration items. The convention is to name
 things ``modulename.option``.
 
 .. code-block:: python
@@ -142,7 +142,7 @@ pillar this function is called.
 How it is called depends on how it is configured in the Salt master
 configuration. The first argument is always the current pillar dictionary, this
 contains pillar items that have already been added, starting with the data from
-``pillar_roots``, and then from any already-ran external pillars. 
+``pillar_roots``, and then from any already-ran external pillars.
 
 Using our example above:
 
@@ -153,7 +153,7 @@ Using our example above:
     ext_pillar( pillar, keyA='valueA', keyB='valueB' } )    # example_c
 
 
-In the ``example_a`` case, ``pillar`` will contain the items from the 
+In the ``example_a`` case, ``pillar`` will contain the items from the
 ``pillar_roots``, in ``example_b`` ``pillar``  will contain that plus the items
 added by ``example_a``, and in ``example_c`` ``pillar`` will contain that plus
 the items added by ``example_b``.
@@ -165,13 +165,13 @@ is called once for each minion that fetches its pillar data.
 .. code-block:: python
 
     def ext_pillar( pillar, *args, **kwargs ):
-       
+
         my_pillar = {}
 
         # Do stuff
 
         return my_pillar
-        
+
 
 You shouldn't just add items to ``pillar`` and return that, since that will
 cause Salt to merge data that already exists. Rather, just return the items
@@ -180,17 +180,29 @@ to make some decision based on pillar data that already exists.
 
 This function has access to some useful globals:
 
-:__opts__: 
+:__opts__:
     A dictionary of mostly Salt configuration options. If you had an
-    ``__opts__`` dictionary defined in your module, those values will be 
+    ``__opts__`` dictionary defined in your module, those values will be
     included. Also included and most useful is ``__opts__['id']``, which
     is the minion id of the minion asking for pillar data.
 
 :__salt__:
     A dictionary of Salt module functions, useful so you don't have to
-    duplicate functions that already exist. E.g. 
+    duplicate functions that already exist. E.g.
     ``__salt__['cmd.run']( 'ls -l' )`` **Note**, runs on the *master*
 
 :__grains__:
     A dictionary of the grains of the minion making this pillar call.
 
+
+
+Example configuration
+---------------------
+
+As an example, if you wanted to add external pillar via the ``cmd_json``
+external pillar, add something like this to your master config:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - cmd_json: "echo {'arg':'value'}"

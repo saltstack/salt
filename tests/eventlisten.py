@@ -9,6 +9,7 @@ This script is a generic tool to test event output
 import optparse
 import pprint
 import time
+import os
 
 # Import Salt libs
 import salt.utils.event
@@ -47,6 +48,8 @@ def parse():
             return opts
 
         opts['id'] = options.node
+
+    opts['sock_dir'] = os.path.join(opts['sock_dir'], opts['node'])
 
     return opts
 

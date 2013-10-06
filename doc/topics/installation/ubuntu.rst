@@ -15,12 +15,18 @@ key in one step:
 
 .. admonition:: add-apt-repository: command not found?
 
-    The add-apt-repository command is not always present on Ubuntu systems.
-    This can be fixed by installing `software-properties-common`::
+    The ``add-apt-repository`` command is not always present on Ubuntu systems.
+    This can be fixed by installing `python-software-properties`::
 
-        sudo apt-get install software-properties-common
+        sudo apt-get install python-software-properties
 
-Alternately, manually add the repository and import the PPA key with these commands:
+    Note that since Ubuntu 12.10 (Raring Ringtail), ``add-apt-repository`` is
+    found in the `software-properties-common` package, and is part of the base
+    install. Thus, ``add-apt-repository`` should be able to be used
+    out-of-the-box to add the PPA.
+
+Alternately, manually add the repository and import the PPA key with these
+commands:
 
 .. code-block:: bash
 

@@ -26,6 +26,8 @@ Full list of builtin execution modules
     augeas_cfg
     bluez
     brew
+    bridge
+    bsd_shadow
     cassandra
     cmdmod
     config
@@ -34,8 +36,10 @@ Full list of builtin execution modules
     daemontools
     darwin_sysctl
     data
+    ddns
     debconfmod
     debian_service
+    dig
     disk
     djangomod
     dnsmasq
@@ -43,17 +47,18 @@ Full list of builtin execution modules
     dpkg
     ebuild
     eix
+    eselect
     event
     extfs
     file
+    freebsd_sysctl
     freebsdjail
     freebsdkmod
     freebsdpkg
     freebsdservice
-    freebsd_sysctl
     gem
-    gentoolkitmod
     gentoo_service
+    gentoolkitmod
     git
     glance
     grains
@@ -64,8 +69,8 @@ Full list of builtin execution modules
     hosts
     img
     iptables
-    keyboard
     key
+    keyboard
     keystone
     kmod
     launchctl
@@ -74,19 +79,25 @@ Full list of builtin execution modules
     linux_acl
     linux_lvm
     linux_sysctl
-    locale
+    localemod
     locate
     logrotate
+    lxc
+    mac_group
+    mac_user
     makeconf
     match
     mdadm
     mine
+    modjk
     mongodb
     monit
     moosefs
     mount
     munin
     mysql
+    netbsd_sysctl
+    netbsdservice
     network
     nfs3
     nginx
@@ -102,9 +113,11 @@ Full list of builtin execution modules
     pecl
     pillar
     pip
-    pkgng
     pkg_resource
+    pkgin
+    pkgng
     pkgutil
+    portage_config
     postgres
     poudriere
     ps
@@ -116,6 +129,7 @@ Full list of builtin execution modules
     qemu_nbd
     quota
     rabbitmq
+    rbenv
     reg
     ret
     rh_ip
@@ -124,14 +138,17 @@ Full list of builtin execution modules
     rvm
     s3
     saltutil
+    seed
     selinux
     service
     shadow
+    smartos_imgadm
+    smartos_vmadm
     smf
     solaris_group
-    solarispkg
     solaris_shadow
     solaris_user
+    solarispkg
     solr
     sqlite3
     ssh
@@ -141,8 +158,8 @@ Full list of builtin execution modules
     svn
     sysbench
     sysmod
-    systemd
     system
+    systemd
     test
     timezone
     tls
@@ -150,7 +167,7 @@ Full list of builtin execution modules
     upstart
     useradd
     virt
-    virtualenv
+    virtualenv_mod
     win_disk
     win_file
     win_groupadd
@@ -159,8 +176,11 @@ Full list of builtin execution modules
     win_service
     win_shadow
     win_status
+    win_system
     win_useradd
-    yumpkg5
+    xapi
     yumpkg
+    yumpkg5
+    zfs
     zpool
     zypper

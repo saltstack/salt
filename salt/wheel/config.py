@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the master configuration file
 '''
@@ -35,5 +36,5 @@ def apply(key, value):
         path = os.path.join(path, 'master')
     data = values()
     data[key] = value
-    with salt.utils.fopen(path, 'w+') as fp_ :
+    with salt.utils.fopen(path, 'w+') as fp_:
         fp_.write(yaml.dump(data, default_flow_style=False))

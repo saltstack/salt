@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 :maintainer: Jack Kuan <kjkuan@gmail.com>
 :maturity: new

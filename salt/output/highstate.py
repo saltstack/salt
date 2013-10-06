@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The return data from the Highstate command is a standard data structure
 which is parsed by the highstate outputter to deliver a clean and readable
@@ -36,6 +37,7 @@ def output(data):
     '''
     colors = salt.utils.get_colors(__opts__.get('color'))
     for host in data:
+        rcounts = {}
         hcolor = colors['GREEN']
         hstrs = []
         if isinstance(data[host], list):
@@ -64,6 +66,9 @@ def output(data):
                     data[host],
                     key=lambda k: data[host][k].get('__run_num__', 0)):
                 ret = data[host][tname]
+                # Increment result counts
+                rcounts.setdefault(ret['result'], 0)
+                rcounts[ret['result']] += 1
                 tcolor = colors['GREEN']
                 if ret['changes']:
                     tcolor = colors['CYAN']
@@ -77,25 +82,20 @@ def output(data):
                 if __opts__.get('state_output', 'full').lower() == 'terse':
                     # Print this chunk in a terse way and continue in the
                     # loop
-                    msg = (' {0}Name: {1} - Function: {2}.{3} - '
-                           'Result: {4}{5}').format(tcolor,
-                                                    comps[2],
-                                                    comps[0],
-                                                    comps[-1],
-                                                    str(ret['result']),
-                                                    colors['ENDC'])
+                    msg = _format_terse(tcolor, comps, ret, colors)
                     hstrs.append(msg)
                     continue
                 elif __opts__.get('state_output', 'full').lower() == 'mixed':
                     # Print terse unless it failed
                     if ret['result'] is not False:
-                        msg = (' {0}Name: {1} - Function: {2}.{3} - '
-                               'Result: {4}{5}').format(tcolor,
-                                                        comps[2],
-                                                        comps[0],
-                                                        comps[-1],
-                                                        str(ret['result']),
-                                                        colors['ENDC'])
+                        msg = _format_terse(tcolor, comps, ret, colors)
+                        hstrs.append(msg)
+                        continue
+                elif __opts__.get('state_output', 'full').lower() == 'changes':
+                    # Print terse if no error and no changes, otherwise, be
+                    # verbose
+                    if ret['result'] and not ret['changes']:
+                        msg = _format_terse(tcolor, comps, ret, colors)
                         hstrs.append(msg)
                         continue
                 hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
@@ -143,6 +143,62 @@ def output(data):
                                         '\n                   ')
                 hstrs.append(('{0}{1}{2[ENDC]}'
                               .format(tcolor, changes, colors)))
+
+            # Append result counts to end of output
+            colorfmt = '{0}{1}{2[ENDC]}'
+            rlabel = {True: 'Succeeded', False: 'Failed', None: 'Not Run'}
+            count_max_len = max([len(str(x)) for x in rcounts.values()] or [0])
+            label_max_len = max([len(x) for x in rlabel.values()] or [0])
+            line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
+            hstrs.append(
+                colorfmt.format(
+                    colors['CYAN'],
+                    '\nSummary\n{0}'.format('-' * line_max_len),
+                    colors
+                )
+            )
+
+            def _counts(label, count):
+                return '{0}: {1:>{2}}'.format(
+                    label,
+                    count,
+                    line_max_len - (len(label) + 2)
+                )
+
+            # Successful states
+            hstrs.append(
+                colorfmt.format(
+                    colors['GREEN'],
+                    _counts(rlabel[True], rcounts.get(True, 0)),
+                    colors
+                )
+            )
+
+            # Failed states
+            num_failed = rcounts.get(False, 0)
+            hstrs.append(
+                colorfmt.format(
+                    colors['RED'] if num_failed else colors['CYAN'],
+                    _counts(rlabel[False], num_failed),
+                    colors
+                )
+            )
+
+            # test=True states
+            if None in rcounts:
+                hstrs.append(
+                    colorfmt.format(
+                        colors['YELLOW'],
+                        _counts(rlabel[None], rcounts.get(None, 0)),
+                        colors
+                    )
+                )
+
+            totals = '{0}\nTotal: {1:>{2}}'.format('-' * line_max_len,
+                                                   sum(rcounts.values()),
+                                                   line_max_len - 7)
+            hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
+
         hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
         return '\n'.join(hstrs)
 
@@ -159,3 +215,18 @@ def _strip_clean(returns):
     for tag in rm_tags:
         returns.pop(tag)
     return returns
+
+
+def _format_terse(tcolor, comps, ret, colors):
+    '''
+    Terse formatting of a message.
+    '''
+    msg = (' {0}Name: {1} - Function: {2}.{3} - '
+           'Result: {4}{5}').format(tcolor,
+                                    comps[2],
+                                    comps[0],
+                                    comps[-1],
+                                    str(ret['result']),
+                                    colors['ENDC'])
+
+    return msg

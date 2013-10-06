@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The static grains, these are the core, or built in grains.
 
@@ -27,7 +28,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 # Import salt libs
 import salt.log
 import salt.utils
-import salt.utils.socket_util
+import salt.utils.network
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -134,6 +135,14 @@ def _linux_gpu_data():
       - vendor: nvidia|amd|ati|...
         model: string
     '''
+    lspci = salt.utils.which('lspci')
+    if not lspci:
+        log.info(
+            'The `lspci` binary is not available on the system. GPU grains '
+            'will not be available.'
+        )
+        return {}
+
     # dominant gpu vendors to search for (MUST be lowercase for matching below)
     known_vendors = ['nvidia', 'amd', 'ati', 'intel']
 
@@ -216,6 +225,34 @@ def _netbsd_gpu_data():
     return grains
 
 
+def _osx_gpudata():
+    '''
+    num_gpus: int
+    gpus:
+      - vendor: nvidia|amd|ati|...
+        model: string
+    '''
+
+    gpus = []
+    try:
+        pcictl_out = __salt__['cmd.run']('system_profiler SPDisplaysDataType')
+
+        for line in pcictl_out.splitlines():
+            fieldname, _, fieldval = line.partition(': ')
+            if fieldname.strip() == "Chipset Model":
+                vendor, _, model = fieldval.partition(' ')
+                vendor = vendor.lower()
+                gpus.append({'vendor': vendor, 'model': model})
+
+    except OSError:
+        pass
+
+    grains = {}
+    grains['num_gpus'] = len(gpus)
+    grains['gpus'] = gpus
+    return grains
+
+
 def _bsd_cpudata(osdata):
     '''
     Return CPU information for BSD-like systems
@@ -239,10 +276,17 @@ def _bsd_cpudata(osdata):
     if arch and osdata['kernel'] == 'OpenBSD':
         cmds['cpuarch'] = '{0} -s'.format(arch)
 
+    if osdata['kernel'] == 'Darwin':
+        cmds['cpu_model'] = '{0} -n machdep.cpu.brand_string'.format(sysctl)
+        cmds['cpu_flags'] = '{0} -n machdep.cpu.features'.format(sysctl)
+
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
-    grains['cpu_flags'] = []
+
+    if 'cpu_flags' in grains and isinstance(grains['cpu_flags'], basestring):
+        grains['cpu_flags'] = grains['cpu_flags'].split(' ')
 
     if osdata['kernel'] == 'NetBSD':
+        grains['cpu_flags'] = []
         for line in __salt__['cmd.run']('cpuctl identify 0').splitlines():
             m = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
             if m:
@@ -250,6 +294,7 @@ def _bsd_cpudata(osdata):
                 grains['cpu_flags'].extend(flag)
 
     if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
+        grains['cpu_flags'] = []
         # TODO: at least it needs to be tested for BSD other then FreeBSD
         with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
             cpu_here = False
@@ -322,13 +367,16 @@ def _memdata(osdata):
                         continue
                     if comps[0].strip() == 'MemTotal':
                         grains['mem_total'] = int(comps[1].split()[0]) / 1024
-    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Darwin'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
-            mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
+            if osdata['kernel'] == 'Darwin':
+                mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
+            else:
+                mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
             if (osdata['kernel'] == 'NetBSD' and mem.startswith('-')):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
-            grains['mem_total'] = str(int(mem) / 1024 / 1024)
+            grains['mem_total'] = int(mem) / 1024 / 1024
     elif osdata['kernel'] == 'SunOS':
         prtconf = '/usr/sbin/prtconf 2>/dev/null'
         for line in __salt__['cmd.run'](prtconf).splitlines():
@@ -358,10 +406,17 @@ def _virtual(osdata):
     #   virtual_subtype
     grains = {'virtual': 'physical'}
     for command in ('dmidecode', 'lspci', 'dmesg'):
+        args = []
+        if osdata['kernel'] == 'Darwin':
+            command = 'system_profiler'
+            args = ['SPDisplaysDataType']
+
         cmd = salt.utils.which(command)
 
         if not cmd:
             continue
+
+        cmd = '%s %s' % (command, ' '.join(args))
 
         ret = __salt__['cmd.run_all'](cmd)
 
@@ -377,8 +432,22 @@ def _virtual(osdata):
             continue
 
         output = ret['stdout']
+        if command == "system_profiler":
+            macoutput = output.lower()
+            if '0x1ab8' in macoutput:
+                grains['virtual'] = 'Parallels'
+            if 'parallels' in macoutput:
+                grains['virtual'] = 'Parallels'
+            if 'vmware' in macoutput:
+                grains['virtual'] = 'VMware'
+            if '0x15ad' in macoutput:
+                grains['virtual'] = 'VMware'
+            if 'virtualbox' in macoutput:
+                grains['virtual'] = 'VirtualBox'
+            # Break out of the loop so the next log message is not issued
+            break
 
-        if command == 'dmidecode' or command == 'dmesg':
+        elif command == 'dmidecode' or command == 'dmesg':
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
@@ -510,7 +579,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'VMware'
             # NetBSD has Xen dom0 support
             elif __salt__['cmd.run'](
-                '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
+                    '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
@@ -530,7 +599,7 @@ def _ps(osdata):
     elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
     elif osdata.get('virtual', '') == 'openvzhn':
-        grains['ps'] = 'vzps -E 0 -efH|cut -b 6-'
+        grains['ps'] = 'ps -fH -p $(grep -l \"^envID:[[:space:]]*0\\$\" /proc/[0-9]*/status | sed -e \"s=/proc/\\([0-9]*\\)/.*=\\1=\")  | awk \'{ $7=\"\"; print }\''
     else:
         grains['ps'] = 'ps -efH'
     return grains
@@ -568,6 +637,7 @@ def _windows_platform_data():
         # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
         (osfullname, _) = osinfo.Name.split('|', 1)
         osfullname = osfullname.strip()
+
         grains = {
             'osmanufacturer': osinfo.Manufacturer,
             'manufacturer': systeminfo.Manufacturer,
@@ -579,6 +649,21 @@ def _windows_platform_data():
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
         }
+
+        # test for virtualized environments
+        # I only had VMware available so the rest are unvalidated
+        if 'VRTUAL' in biosinfo.Version:  # (not a typo)
+            grains['virtual'] = 'HyperV'
+        elif 'A M I' in biosinfo.Version:
+            grains['virtual'] = 'VirtualPC'
+        elif 'VMware' in systeminfo.Model:
+            grains['virtual'] = 'VMware'
+        elif 'VirtualBox' in systeminfo.Model:
+            grains['virtual'] = 'VirtualBox'
+        elif 'Xen' in biosinfo.Version:
+            grains['virtual'] = 'Xen'
+            if 'HVM domU' in systeminfo.Model:
+                grains['virtual_subtype'] = 'HVM domU'
 
     return grains
 
@@ -602,11 +687,14 @@ _OS_NAME_MAP = {
     'arch': 'Arch',
     'debian': 'Debian',
     'debiangnu/': 'Debian',
+    'raspbiangn': 'Raspbian',
     'fedoraremi': 'Fedora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
+    'pidora': 'Fedora',
+    'scientific': 'ScientificLinux'
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -643,7 +731,11 @@ _OS_FAMILY_MAP = {
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
-    'GCEL': 'Debian'
+    'GCEL': 'Debian',
+    'Linaro': 'Debian',
+    'elementary OS': 'Debian',
+    'ScientificLinux': 'RedHat',
+    'Raspbian': 'Debian'
 }
 
 
@@ -678,7 +770,12 @@ def os_data():
             import lsb_release
             release = lsb_release.get_distro_information()
             for key, value in release.iteritems():
-                grains['lsb_{0}'.format(key.lower())] = value  # override /etc/lsb-release
+                key = key.lower()
+                lsb_param = 'lsb_{0}{1}'.format(
+                    '' if key.startswith('distrib_') else 'distrib_',
+                    key
+                )
+                grains[lsb_param] = value
         except ImportError:
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
@@ -730,9 +827,27 @@ def os_data():
                             grains['lsb_distrib_release'] = comps[2]
                             grains['lsb_distrib_codename'] = \
                                 comps[3].replace('(', '').replace(')', '')
+            elif os.path.isfile('/etc/centos-release'):
+                # CentOS Linux
+                grains['lsb_distrib_id'] = 'CentOS'
+                with salt.utils.fopen('/etc/centos-release') as ifile:
+                    for line in ifile:
+                        # Need to pull out the version and codename
+                        # in the case of custom content in /etc/centos-release
+                        find_release = re.compile(r'\d+\.\d+')
+                        find_codename = re.compile(r'(?<=\()(.*?)(?=\))')
+                        release = find_release.search(line)
+                        codename = find_codename.search(line)
+                        if release is not None:
+                            grains['lsb_distrib_release'] = release.group()
+                        if codename is not None:
+                            grains['lsb_distrib_codename'] = codename.group()
+
         # Use the already intelligent platform module to get distro info
-        (osname, osrelease, oscodename) = platform.linux_distribution(
-            supported_dists=_supported_dists)
+        # (though apparently it's not intelligent enough to strip quotes)
+        (osname, osrelease, oscodename) = \
+            [x.strip('"').strip("'") for x in
+             platform.linux_distribution(supported_dists=_supported_dists)]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -756,7 +871,7 @@ def os_data():
         uname_v = __salt__['cmd.run']('uname -v')
         if 'joyent_' in uname_v:
             # See https://github.com/joyent/smartos-live/issues/224
-            grains['os'] = 'SmartOS'
+            grains['os'] = grains['osfullname'] = 'SmartOS'
             grains['osrelease'] = uname_v
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
@@ -769,18 +884,21 @@ def os_data():
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
-                    grains['os'] = 'Solaris'
+                    grains['os'] = grains['osfullname'] = 'Solaris'
                     grains['osrelease'] = ''
                 else:
-                    grains['os'] = osname
+                    grains['os'] = grains['osfullname'] = osname
                     grains['osrelease'] = osrelease
 
         grains.update(_sunos_cpudata())
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
+        osrelease = __salt__['cmd.run']('sw_vers -productVersion')
         grains['os'] = 'MacOS'
+        grains['osrelease'] = osrelease
         grains.update(_bsd_cpudata(grains))
+        grains.update(_osx_gpudata())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
@@ -797,6 +915,15 @@ def os_data():
         grains['os_family'] = _OS_FAMILY_MAP.get(grains['os'],
                                                  grains['os'])
 
+    # Build the osarch grain. This grain will be used for platform-specific
+    # considerations such as package management. Fall back to the CPU
+    # architecture.
+    if grains.get('os_family') == 'Debian':
+        osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
+    else:
+        osarch = grains['cpuarch']
+    grains['osarch'] = osarch
+
     grains.update(_memdata(grains))
 
     # Get the hardware and bios data
@@ -805,6 +932,18 @@ def os_data():
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
+
+    # Load additional OS family grains
+    if grains['os_family'] == "RedHat":
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+                os=grains['osfullname'],
+                ver=grains['osrelease'].partition('.')[0])
+    elif grains.get('osfullname') == 'Ubuntu':
+        grains['osfinger'] = '{os}-{ver}'.format(
+                os=grains['osfullname'],
+                ver=grains['osrelease'])
 
     return grains
 
@@ -840,7 +979,7 @@ def hostname():
     grains['localhost'] = socket.gethostname()
     if '.' in socket.getfqdn():
         grains['fqdn'] = socket.getfqdn()
-    else :
+    else:
         grains['fqdn'] = grains['localhost']
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
@@ -860,9 +999,39 @@ def ip4():
     '''
     Return a list of ipv4 addrs
     '''
-    ips = []
-    ips = salt.utils.socket_util.ip4_addrs()
-    return {'ipv4': ips}
+    return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
+
+
+def fqdn_ip4():
+    '''
+    Return a list of ipv4 addrs of fqdn
+    '''
+    try:
+        info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET)
+        addrs = list(set(item[4][0] for item in info))
+    except socket.error:
+        addrs = []
+    return {'fqdn_ip4': addrs}
+
+
+def ip6():
+    '''
+    Return a list of ipv6 addrs
+    '''
+    return {'ipv6': salt.utils.network.ip_addrs6(include_loopback=True)}
+
+
+def fqdn_ip6():
+    '''
+    Return a list of ipv6 addrs of fqdn
+    '''
+    try:
+        info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET6)
+        addrs = list(set(item[4][0] for item in info))
+    except socket.error:
+        addrs = []
+    return {'fqdn_ip6': addrs}
+
 
 def ip_interfaces():
     '''
@@ -871,14 +1040,18 @@ def ip_interfaces():
     # Provides:
     #   ip_interfaces
     ret = {}
-    ifaces = salt.utils.socket_util.interfaces()
+    ifaces = salt.utils.network.interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
             if 'address' in inet:
                 iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
         ret[face] = iface_ips
     return {'ip_interfaces': ret}
+
 
 def path():
     '''
@@ -923,8 +1096,20 @@ def saltversion():
     '''
     # Provides:
     #   saltversion
-    from salt import __version__
+    from salt.version import __version__
     return {'saltversion': __version__}
+
+
+def saltversioninfo():
+    '''
+    Return the version_info of salt
+
+     .. versionadded:: 0.17.0
+    '''
+    # Provides:
+    #   saltversioninfo
+    from salt.version import __version_info__
+    return {'saltversioninfo': __version_info__}
 
 
 # Relatively complex mini-algorithm to iterate over the various
@@ -942,7 +1127,7 @@ def _dmidecode_data(regex_dict):
         out = __salt__['cmd.run']('dmidecode')
     elif salt.utils.which('smbios'):
         out = __salt__['cmd.run']('smbios')
-    else :
+    else:
         return ret
 
     for section in regex_dict:
@@ -1060,6 +1245,7 @@ def _hw_data(osdata):
 
     return grains
 
+
 def _smartos_zone_data():
     '''
     Return useful information from a SmartOS zone
@@ -1090,6 +1276,7 @@ def _smartos_zone_data():
 
     return grains
 
+
 def get_server_id():
     '''
     Provides an integer based on the FQDN of a machine.
@@ -1098,6 +1285,7 @@ def get_server_id():
     # Provides:
     #   server_id
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+
 
 def get_master():
     '''

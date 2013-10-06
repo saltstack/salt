@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The crypt module manages all of the cryptography functions for minions and
 masters, encrypting and decrypting payloads, preparing messages, and
@@ -9,12 +10,17 @@ import os
 import sys
 import time
 import hmac
+import shutil
 import hashlib
 import logging
 
 # Import third party libs
-from M2Crypto import RSA
-from Crypto.Cipher import AES
+try:
+    from M2Crypto import RSA
+    from Crypto.Cipher import AES
+except ImportError:
+    # No need for crypt in local mode
+    pass
 
 # Import salt libs
 import salt.utils
@@ -28,15 +34,25 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-def dropfile(cachedir):
+def dropfile(cachedir, user=None):
     '''
     Set an aes dropfile to update the publish session key
     '''
+    dfnt = os.path.join(cachedir, '.dfnt')
     dfn = os.path.join(cachedir, '.dfn')
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
-    with open(dfn, 'w+') as fp_:
+    with salt.utils.fopen(dfnt, 'w+') as fp_:
         fp_.write(aes)
+    if user:
+        try:
+            import pwd
+            uid = pwd.getpwnam(user).pw_uid
+            os.chown(dfnt, uid, -1)
+            shutil.move(dfnt, dfn)
+        except (KeyError, ImportError, OSError, IOError):
+            pass
+
     os.umask(mask)
 
 
@@ -168,7 +184,7 @@ class Auth(object):
             pub = RSA.load_pub_key(
                 os.path.join(self.opts['pki_dir'], self.mpub)
             )
-            payload['load']['token'] = pub.public_encrypt(self.token, 4)
+            payload['load']['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
         except Exception:
             pass
         with salt.utils.fopen(tmp_pub, 'r') as fp_:
@@ -187,7 +203,7 @@ class Auth(object):
         '''
         log.debug('Decrypting the current master AES key')
         key = self.get_keys()
-        key_str = key.private_decrypt(payload['aes'], 4)
+        key_str = key.private_decrypt(payload['aes'], RSA.pkcs1_oaep_padding)
         if 'sig' in payload:
             m_path = os.path.join(self.opts['pki_dir'], self.mpub)
             if os.path.exists(m_path):
@@ -205,7 +221,7 @@ class Auth(object):
             return key_str.split('_|-')
         else:
             if 'token' in payload:
-                token = key.private_decrypt(payload['token'], 4)
+                token = key.private_decrypt(payload['token'], RSA.pkcs1_oaep_padding)
                 return key_str, token
             elif not master_pub:
                 return key_str, ''
@@ -263,7 +279,6 @@ class Auth(object):
 
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
-            self.opts.get('id', '')
         )
         try:
             payload = sreq.send_auto(

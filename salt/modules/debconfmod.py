@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Support for Debconf
 '''
@@ -51,7 +52,9 @@ def get_selections(fetchempty=True):
 
         {'package': [['question', 'type', 'value'], ...]}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' debconf.get_selections
     '''
@@ -80,7 +83,9 @@ def show(name):
 
     If debconf doesn't know about a package, we return None.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' debconf.show <package name>
     '''
@@ -103,7 +108,9 @@ def set_(package, question, type, value, *extra):
     '''
     Set answers to debconf questions for a package.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' debconf.set <package> <question> <type> <value> [<value> ...]
     '''
@@ -128,7 +135,9 @@ def set_file(path, **kwargs):
     '''
     Set answers to debconf questions from a file.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' debconf.set_file salt://pathto/pkg.selections
     '''

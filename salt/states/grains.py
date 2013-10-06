@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
 '''
 Manage grains on the minion.
 ============================
 
-This state allows for grains to be set. If a grain with the 
-given name exists, its value is updated to the new value. If 
+This state allows for grains to be set. If a grain with the
+given name exists, its value is updated to the new value. If
 a grain does not yet exist, a new grain is set to the given
 value. Grains set or altered this way are stored in the 'grains'
-file on the minions, by default at: /etc/salt/grains 
+file on the minions, by default at: /etc/salt/grains
 
 Note: This does NOT override any grains set in the minion file.
 
@@ -16,6 +17,7 @@ Note: This does NOT override any grains set in the minion file.
       grains.present:
         - value: edam
 '''
+
 
 def present(name, value):
     '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Mac OS X implementations of various commands in the "desktop" interface
 '''
@@ -16,7 +17,9 @@ def get_output_volume():
     '''
     Get the output volume (range 0 to 100)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.get_output_volume
     '''
@@ -29,7 +32,9 @@ def set_output_volume(volume):
     '''
     Set the volume of sound (range 0 to 100)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.set_output_volume <volume>
     '''
@@ -44,7 +49,9 @@ def screensaver():
     '''
     Launch the screensaver
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.screensaver
     '''
@@ -57,7 +64,9 @@ def lock():
     '''
     Lock the desktop session
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.lock
     '''
@@ -65,11 +74,14 @@ def lock():
 
     return __salt__['cmd.run'](cmd)
 
+
 def say(*words):
     '''
     Say some words.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' desktop.say <word0> <word1> ... <wordN>
     '''

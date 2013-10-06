@@ -234,10 +234,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h2 {
-	font: 14px/24px 'Nexa XBold'; 
+	font: 18px/28px 'Nexa XBold'; 
 	text-transform: uppercase; 
 	color: #373e4b; 
 	margin-bottom: 0; 
+}
+h3 {
+	font-size: 16px; line-height:26px;
 }
 p {
 	font-size: 14px; line-height: 24px; color: #313131; 
@@ -452,15 +455,6 @@ div.header div.rel a {
   color:  #fcaf3e;
   letter-spacing: .1em;
   text-transform: uppercase;
-}
-
-.highlight {
-  padding: 3px;
-  background-color: #eeeeec;
-  border-top: 2px solid #dddddd;
-  border-bottom: 2px solid #dddddd;
-  margin-top: .8em;
-  margin-bottom: .8em;
 }
 
 .descname {

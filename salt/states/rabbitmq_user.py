@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage RabbitMQ Users.
 
@@ -28,8 +29,7 @@ def __virtual__():
 def present(name,
            password=None,
            force=False,
-           runas=None,
-        ):
+           runas=None):
     '''
     Ensure the RabbitMQ user exists.
 
@@ -90,8 +90,7 @@ def present(name,
 
 
 def absent(name,
-           runas=None,
-        ):
+           runas=None):
     '''
     Ensure the named user is absent
 

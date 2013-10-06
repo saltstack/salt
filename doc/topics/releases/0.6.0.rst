@@ -43,13 +43,13 @@ line client or through an API, uses message queue technology to make network
 execution extremely fast, and encryption is handled in a very fast and
 efficient manner. Salt is also VERY easy to use and VERY easy to extend.
 
-You can find the source code for Salt on my github page, I have also set up a
+You can find the source code for Salt on my GitHub page, I have also set up a
 few wiki pages explaining how to use and set up Salt. If you are using Arch
 Linux there is a package available in the Arch Linux AUR.
 
 Salt 0.6.0 Source: :download:`salt-0.6.0.tar.gz`
 
-Github page: |saltrepo|
+GitHub page: |saltrepo|
 
 Wiki: https://github.com/saltstack/salt/wiki
 
