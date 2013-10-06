@@ -36,40 +36,30 @@ else
     . /etc/rc.d/init.d/functions
 fi
 
-# Default values, can be overridden below in /etc/default/salt
+# Default values (can be overridden below)
 SALTMINION=/usr/bin/salt-minion
 PYTHON=/usr/bin/python
+MINION_ARGS=""
 
 if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 fi
 
-# Sanity checks.
-if [ ! -x "$SALTMINION" ]; then
-    echo "Unable to execute $SALTMINION!"
-    exit 2
-fi
-if [ ! -x "$PYTHON" ]; then
-    echo "$PYTHON does not exist or is not executable"
-    exit 2
-fi
-
 SERVICE=salt-minion
 PROCESS=salt-minion
-CONFIG_ARGS=" "
 
 RETVAL=0
 
 start() {
     echo -n $"Starting salt-minion daemon: "
     if [ -f $SUSE_RELEASE ]; then
-        startproc -f -p /var/run/$SERVICE.pid $SALTMINION -d $CONFIG_ARGS
+        startproc -f -p /var/run/$SERVICE.pid $SALTMINION -d $MINION_ARGS
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
             echo -n "already started, lock file found"
             RETVAL=1
-        elif $PYTHON $SALTMINION -d >& /dev/null; then
+        elif $PYTHON $SALTMINION -d $MINION_ARGS >& /dev/null; then
             echo -n "OK"
             RETVAL=0
         fi
@@ -78,7 +68,7 @@ start() {
 	          RETVAL=$?
 	          echo -n "already running"
         else
-	          daemon --check $SERVICE $SALTMINION -d $CONFIG_ARGS
+	          daemon --check $SERVICE $SALTMINION -d $MINION_ARGS
 	          RETVAL=$?
         fi
     fi

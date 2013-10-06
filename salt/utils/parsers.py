@@ -868,7 +868,7 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
             cls, *args, **kwargs
         )
         utils.warn_until(
-            (0, 19),
+            'Helium',
             '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
             'start using \'OutputOptionsMixIn\'; your code should not need '
             'any further changes.'
@@ -987,11 +987,11 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'queries')
         )
         self.add_option(
-           '--show-timeout',
-           default=False,
-           action='store_true',
-           help=('Display minions that timeout')
-       )
+            '--show-timeout',
+            default=False,
+            action='store_true',
+            help=('Display minions that timeout')
+        )
         self.add_option(
             '-b', '--batch',
             '--batch-size',
@@ -1167,7 +1167,11 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
         # XXX: Remove '--key-logfile' support in 0.18.0
-        utils.warn_until((0, 18), '', _dont_call_warnings=True)
+        utils.warn_until(
+            'Hydrogen',
+            'Remove \'--key-logfile\' support',
+            _dont_call_warnings=True
+        )
         self.logging_options_group.add_option(
             '--key-logfile',
             default=None,
@@ -1199,7 +1203,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-a', '--accept',
             default='',
-            help='Accept the following key'
+            help='Accept the specified public key (use --include-all to '
+                 'match rejected keys in addition to pending keys)'
         )
 
         actions_group.add_option(
@@ -1212,7 +1217,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-r', '--reject',
             default='',
-            help='Reject the specified public key'
+            help='Reject the specified public key (use --include-all to '
+                 'match accepted keys in addition to pending keys)'
         )
 
         actions_group.add_option(
@@ -1220,6 +1226,13 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help='Reject all pending keys'
+        )
+
+        actions_group.add_option(
+            '--include-all',
+            default=False,
+            action='store_true',
+            help='Include non-pending keys when accepting/rejecting'
         )
 
         actions_group.add_option(
@@ -1343,7 +1356,11 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if self.options.key_logfile:
             # XXX: Remove '--key-logfile' support in 0.18.0
             # In < 0.18.0 error out
-            utils.warn_until((0, 18), '', _dont_call_warnings=True)
+            utils.warn_until(
+                'Hydrogen',
+                'Remove \'--key-logfile\' support',
+                _dont_call_warnings=True
+            )
             self.error(
                 'The \'--key-logfile\' option has been deprecated in favour '
                 'of \'--log-file\''
@@ -1530,6 +1547,10 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'raw shell command')
         )
         self.add_option(
+            '--priv',
+            dest='ssh_priv',
+            help=('Ssh private key file'))
+        self.add_option(
             '--roster',
             dest='roster',
             default='',
@@ -1556,12 +1577,26 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
-            default=5,
+            default=25,
             type=int,
             help='Set the number of concurrent minions to communicate with. '
                  'This value defines how many processes are opened up at a '
                  'time to manage connections, the more running processes the '
-                 'faster communication should be, default is 5')
+                 'faster communication should be, default is 25')
+        self.add_option(
+            '--passwd',
+            dest='ssh_passwd',
+            default='',
+            help='Set the default password to attempt to use when '
+                 'authenticating')
+        self.add_option(
+            '--key-deploy',
+            dest='ssh_key_deploy',
+            default=False,
+            action='store_true',
+            help='Set this flag to atempt to deploy the authorized ssh key '
+                 'with all minions. This combined with --passwd can make '
+                 'initial deployment of keys very fast and easy')
 
     def _mixin_after_parsed(self):
         if self.options.list:

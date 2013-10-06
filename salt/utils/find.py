@@ -124,30 +124,32 @@ _FILE_TYPES = {'b': stat.S_IFBLK,
                stat.S_IFSOCK: 's'}
 
 _INTERVAL_REGEX = re.compile(r'''
-                            ^\s*
-                            (?: (?P<week>   \d+ (?:\.\d*)? ) \s* [wW]  )? \s*
-                            (?: (?P<day>    \d+ (?:\.\d*)? ) \s* [dD]? )? \s*
-                            (?: (?P<hour>   \d+ (?:\.\d*)? ) \s* [hH]  )? \s*
-                            (?: (?P<minute> \d+ (?:\.\d*)? ) \s* [mM]  )? \s*
-                            (?: (?P<second> \d+ (?:\.\d*)? ) \s* [sS]  )? \s*
-                            $
-                            ''',
-                            flags=re.VERBOSE)
+                             ^\s*
+                             (?P<modifier>[+-]?)
+                             (?: (?P<week>   \d+ (?:\.\d*)? ) \s* [wW]  )? \s*
+                             (?: (?P<day>    \d+ (?:\.\d*)? ) \s* [dD]  )? \s*
+                             (?: (?P<hour>   \d+ (?:\.\d*)? ) \s* [hH]  )? \s*
+                             (?: (?P<minute> \d+ (?:\.\d*)? ) \s* [mM]  )? \s*
+                             (?: (?P<second> \d+ (?:\.\d*)? ) \s* [sS]  )? \s*
+                             $
+                             ''',
+                             flags=re.VERBOSE)
 
 
 def _parse_interval(value):
     '''
-    Convert an interval string like 1w3d6h into the number of seconds and the
-    time resolution (1 unit of the smallest specified time unit).
+    Convert an interval string like 1w3d6h into the number of seconds, time
+    resolution (1 unit of the smallest specified time unit) and the modifier(
+    '+', '-', or '').
         w = week
         d = day
         h = hour
         m = minute
         s = second
     '''
-    match = _INTERVAL_REGEX.match(value)
+    match = _INTERVAL_REGEX.match(str(value))
     if match is None:
-        raise ValueError('invalid time interval: "{0}"'.format(value))
+        raise ValueError('invalid time interval: {0!r}'.format(value))
 
     result = 0
     resolution = None
@@ -161,7 +163,7 @@ def _parse_interval(value):
             if resolution is None:
                 resolution = multiplier
 
-    return result, resolution
+    return result, resolution, match.group('modifier')
 
 
 def _parse_size(value):
@@ -247,7 +249,8 @@ class InameOption(Option):
 
 
 class RegexOption(Option):
-    '''Match files with a case-sensitive regular expression.
+    '''
+    Match files with a case-sensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'regex', e.g. {'regex' : '.*\\.txt'}.
     '''
@@ -262,7 +265,8 @@ class RegexOption(Option):
 
 
 class IregexOption(Option):
-    '''Match files with a case-insensitive regular expression.
+    '''
+    Match files with a case-insensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'iregex', e.g. {'iregex' : '.*\\.txt'}.
     '''
@@ -395,14 +399,18 @@ class MtimeOption(Option):
     Whitespace is ignored in the value.
     '''
     def __init__(self, key, value):
-        secs, resolution = _parse_interval(value)
-        self.min_time = time.time() - int(secs / resolution) * resolution
+        secs, resolution, modifier = _parse_interval(value)
+        self.mtime = time.time() - int(secs / resolution) * resolution
+        self.modifier = modifier
 
     def requires(self):
         return _REQUIRES_STAT
 
     def match(self, dirname, filename, fstat):
-        return fstat[stat.ST_MTIME] >= self.min_time
+        if self.modifier == '-':
+            return fstat[stat.ST_MTIME] >= self.mtime
+        else:
+            return fstat[stat.ST_MTIME] <= self.mtime
 
 
 class GrepOption(Option):
@@ -515,7 +523,7 @@ class Finder(object):
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue
-            if value is None or len(value) == 0:
+            if value is None or len(str(value)) == 0:
                 raise ValueError('missing value for "{0}" option'.format(key))
             try:
                 obj = globals()[key.title() + "Option"](key, value)

@@ -6,7 +6,6 @@ Return config information
 # Import python libs
 import re
 import os
-import urllib2
 
 # Import salt libs
 import salt.utils
@@ -159,8 +158,8 @@ def merge(value,
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
                 ret = tmp
-            elif isinstance(ret, (list, tuple)) and isinstance(tmp,
-                                                               (list, tuple)):
+            elif (isinstance(ret, (list, tuple)) and
+                    isinstance(tmp, (list, tuple))):
                 ret = list(ret) + list(tmp)
     if not omit_pillar:
         if value in __pillar__:
@@ -172,8 +171,8 @@ def merge(value,
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
                 ret = tmp
-            elif isinstance(ret, (list, tuple)) and isinstance(tmp,
-                                                               (list, tuple)):
+            elif (isinstance(ret, (list, tuple)) and
+                    isinstance(tmp, (list, tuple))):
                 ret = list(ret) + list(tmp)
     if ret is None and value in DEFAULTS:
         return DEFAULTS[value]

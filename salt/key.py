@@ -57,32 +57,37 @@ class KeyCLI(object):
                 'key',
                 self.opts)
 
-    def accept(self, match):
+    def accept(self, match, include_rejected=False):
         '''
         Accept the keys matched
         '''
         def _print_accepted(matches, after_match):
-            if 'minions_pre' in after_match:
-                accepted = set(matches['minions_pre']).difference(
-                        set(after_match['minions_pre'])
-                        )
-            else:
-                accepted = matches['minions_pre']
-            for key in accepted:
-                print('Key for minion {0} accepted.'.format(key))
-
-        matches = self.key.name_match(match)
-        if not matches.get('minions_pre', False):
-            print(
-                'The key glob {0} does not match any unaccepted keys.'.format(
-                    match
+            if 'minions' in after_match:
+                accepted = sorted(
+                    set(after_match['minions']).difference(
+                        set(matches.get('minions', []))
                     )
                 )
+                for key in accepted:
+                    print('Key for minion {0} accepted.'.format(key))
+
+        matches = self.key.name_match(match)
+        keys = {}
+        if 'minions_pre' in matches:
+            keys['minions_pre'] = matches['minions_pre']
+        if include_rejected and bool(matches.get('minions_rejected')):
+            keys['minions_rejected'] = matches['minions_rejected']
+        if not keys:
+            msg = (
+                'The key glob {0!r} does not match any unaccepted {1}keys.'
+                .format(match, 'or rejected ' if include_rejected else '')
+            )
+            print(msg)
             return
         if not self.opts.get('yes', False):
             print('The following keys are going to be accepted:')
             salt.output.display_output(
-                    {'minions_pre': matches['minions_pre']},
+                    keys,
                     'key',
                     self.opts)
             try:
@@ -90,28 +95,48 @@ class KeyCLI(object):
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if not veri or veri.lower().startswith('y'):
-                _print_accepted(matches, self.key.accept(match))
+                _print_accepted(
+                    matches,
+                    self.key.accept(match, include_rejected=include_rejected)
+                )
         else:
             print('The following keys are going to be accepted:')
             salt.output.display_output(
-                    {'minions_pre': matches['minions_pre']},
+                    keys,
                     'key',
                     self.opts)
-            _print_accepted(matches, self.key.accept(match))
+            _print_accepted(
+                matches,
+                self.key.accept(match, include_rejected=include_rejected)
+            )
 
     def accept_all(self):
         '''
         Accept all keys
         '''
-        self.accept('*')
+        self.accept('*', include_rejected=False)
 
     def delete(self, match):
         '''
         Delete the matched keys
         '''
+        def _print_deleted(matches, after_match):
+            deleted = []
+            for keydir in ('minions', 'minions_pre', 'minions_rejected'):
+                deleted.extend(list(
+                    set(matches.get(keydir, [])).difference(
+                        set(after_match.get(keydir, []))
+                    )
+                ))
+            for key in sorted(deleted):
+                print('Key for minion {0} deleted.'.format(key))
+
         matches = self.key.name_match(match)
         if not matches:
-            print('No keys to delete.')
+            print(
+                'The key glob {0!r} does not match any accepted, unaccepted '
+                'or rejected keys.'.format(match)
+            )
             return
         if not self.opts.get('yes', False):
             print('The following keys are going to be deleted:')
@@ -124,14 +149,14 @@ class KeyCLI(object):
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if veri.lower().startswith('y'):
-                self.key.delete_key(match)
+                _print_deleted(matches, self.key.delete_key(match))
         else:
             print('Deleting the following keys:')
             salt.output.display_output(
                     matches,
                     'key',
                     self.opts)
-            self.key.delete_key(match)
+            _print_deleted(matches, self.key.delete_key(match))
 
     def delete_all(self):
         '''
@@ -139,32 +164,52 @@ class KeyCLI(object):
         '''
         self.delete('*')
 
-    def reject(self, match):
+    def reject(self, match, include_accepted=False):
         '''
         Reject the matched keys
         '''
+        def _print_rejected(matches, after_match):
+            if 'minions_rejected' in after_match:
+                rejected = sorted(
+                    set(after_match['minions_rejected']).difference(
+                        set(matches.get('minions_rejected', []))
+                    )
+                )
+                for key in rejected:
+                    print('Key for minion {0} rejected.'.format(key))
+
         matches = self.key.name_match(match)
+        keys = {}
         if 'minions_pre' in matches:
-            matches = {'minions_pre': matches['minions_pre']}
-        else:
-            print('No keys found to reject')
+            keys['minions_pre'] = matches['minions_pre']
+        if include_accepted and bool(matches.get('minions')):
+            keys['minions'] = matches['minions']
+        if not keys:
+            msg = 'The key glob {0!r} does not match any {1} keys.'.format(
+                match,
+                'accepted or unaccepted' if include_accepted else 'unaccepted'
+            )
+            print(msg)
             return
         if not self.opts.get('yes', False):
             print('The following keys are going to be rejected:')
             salt.output.display_output(
-                    matches,
+                    keys,
                     'key',
                     self.opts)
             veri = raw_input('Proceed? [n/Y] ')
             if veri.lower().startswith('n'):
                 return
-        self.key.reject(match)
+        _print_rejected(
+            matches,
+            self.key.reject(match, include_accepted=include_accepted)
+        )
 
     def reject_all(self):
         '''
         Reject all keys
         '''
-        self.reject('*')
+        self.reject('*', include_accepted=False)
 
     def print_key(self, match):
         '''
@@ -221,11 +266,17 @@ class KeyCLI(object):
         elif self.opts['print_all']:
             self.print_all()
         elif self.opts['accept']:
-            self.accept(self.opts['accept'])
+            self.accept(
+                self.opts['accept'],
+                include_rejected=self.opts['include_all']
+            )
         elif self.opts['accept_all']:
             self.accept_all()
         elif self.opts['reject']:
-            self.reject(self.opts['reject'])
+            self.reject(
+                self.opts['reject'],
+                include_accepted=self.opts['include_all']
+            )
         elif self.opts['reject_all']:
             self.reject_all()
         elif self.opts['delete']:
@@ -384,19 +435,22 @@ class Key(object):
                     ret[status][key] = fp_.read()
         return ret
 
-    def accept(self, match):
+    def accept(self, match, include_rejected=False):
         '''
         Accept a specified host's public key based on name or keys based on
         glob
         '''
         matches = self.name_match(match)
-        if 'minions_pre' in matches:
-            for key in matches['minions_pre']:
+        keydirs = ['minions_pre']
+        if include_rejected:
+            keydirs.append('minions_rejected')
+        for keydir in keydirs:
+            for key in matches.get(keydir, []):
                 try:
                     shutil.move(
                             os.path.join(
                                 self.opts['pki_dir'],
-                                'minions_pre',
+                                keydir,
                                 key),
                             os.path.join(
                                 self.opts['pki_dir'],
@@ -472,18 +526,21 @@ class Key(object):
         salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
-    def reject(self, match):
+    def reject(self, match, include_accepted=False):
         '''
         Reject a specified host's public key or keys based on a glob
         '''
         matches = self.name_match(match)
-        if 'minions_pre' in matches:
-            for key in matches['minions_pre']:
+        keydirs = ['minions_pre']
+        if include_accepted:
+            keydirs.append('minions')
+        for keydir in keydirs:
+            for key in matches.get(keydir, []):
                 try:
                     shutil.move(
                             os.path.join(
                                 self.opts['pki_dir'],
-                                'minions_pre',
+                                keydir,
                                 key),
                             os.path.join(
                                 self.opts['pki_dir'],
@@ -491,8 +548,8 @@ class Key(object):
                                 key)
                             )
                     eload = {'result': True,
-                             'act': 'reject',
-                             'id': key}
+                            'act': 'reject',
+                            'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (IOError, OSError):
                     pass

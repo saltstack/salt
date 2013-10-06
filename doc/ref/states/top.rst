@@ -295,7 +295,7 @@ are set as in the :ref:`above multi-environment example
       'db*dev*':
         - db
 
-``/srv/salt/qa/topsls:``
+``/srv/salt/qa/top.sls:``
 
 .. code-block:: yaml
 

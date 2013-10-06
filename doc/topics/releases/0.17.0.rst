@@ -16,6 +16,7 @@ be date based following this format:
 So if the release happens in November of 2013 the number will be 13.11.0, the
 first bugfix release will be 13.11.1 and so forth.
 
+
 Major Features
 ==============
 
@@ -155,3 +156,24 @@ Mac OS X User/Group Support
 
 Salt is now able to manage users and groups on Minions running Mac OS X.
 However, at this time user passwords cannot be managed.
+
+Django ORM External Pillar
+--------------------------
+
+Pillar data can now be derived from Django managed databases.
+
+Fixes from RC to release
+------------------------
+
+- Multiple documentation fixes
+- Add multiple source files + templating for :mod:`file.append
+  <salt.states.file.append>` (:issue:`6905`)
+- Support sysctl configuration files in systemd>=207 (:issue:`7351`)
+- Add :mod:`file.search <salt.modules.file.search>` and :mod:`file.replace
+  <salt.modules.file.replace>`
+- Fix cross-calling execution functions in provider overrides
+- Fix locale override for postgres (:issue:`4543`)
+- Fix Raspbian identification for service/pkg support (:issue:`7371`)
+- Fix :mod:`cp.push <salt.modules.cp.push>` file corruption (:issue:`6495`)
+- Fix ALT Linux password hash specification (:issue:`3474`)
+- Multiple salt-ssh-related fixes and improvements

@@ -23,9 +23,10 @@ from random import randint
 # Import third party libs
 try:
     import zmq
+    HAS_ZMQ = True
 except ImportError:
     # Running in local, zmq not needed
-    pass
+    HAS_ZMQ = False
 import yaml
 
 HAS_RANGE = False
@@ -142,7 +143,7 @@ def parse_args_and_kwargs(func, args, data=None):
                 pass
         _args.append(yamlify_arg(arg))
     if has_kwargs and isinstance(data, dict):
-        # this function accepts kwargs, pack in the publish data
+        # this function accepts **kwargs, pack in the publish data
         for key, val in data.items():
             kwargs['__pub_{0}'.format(key)] = val
     return _args, kwargs
@@ -456,6 +457,15 @@ class Minion(object):
         '''
         Pass in the options dict
         '''
+
+        # Warn if ZMQ < 3.2
+        if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
+                        zmq.zmq_version_info() < (3, 2)):
+            # PyZMQ 2.1.9 does not have zmq_version_info
+            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
+                        'are known connection keep-alive issues with ZMQ < '
+                        '3.2 which may result in loss of contact with '
+                        'minions. Please upgrade your ZMQ!')
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
@@ -668,17 +678,29 @@ class Minion(object):
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
-                msg = 'Command required for \'{0}\' not found: {1}'
-                log.debug(msg.format(function_name, str(exc)))
-                ret['return'] = msg.format(function_name, str(exc))
+                msg = 'Command required for {0!r} not found'.format(
+                    function_name
+                )
+                log.debug(msg, exc_info=True)
+                ret['return'] = '{0}: {1}'.format(msg, exc)
             except CommandExecutionError as exc:
-                msg = 'A command in {0} had a problem: {1}'
-                log.error(msg.format(function_name, str(exc)))
-                ret['return'] = 'ERROR: {0}'.format(str(exc))
+                log.error(
+                    'A command in {0!r} had a problem: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR: {0}'.format(exc)
             except SaltInvocationError as exc:
-                msg = 'Problem executing "{0}": {1}'
-                log.error(msg.format(function_name, str(exc)))
-                ret['return'] = 'ERROR executing {0}: {1}'.format(
+                log.error(
+                    'Problem executing {0!r}: {1}'.format(
+                        function_name,
+                        exc
+                    ),
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                ret['return'] = 'ERROR executing {0!r}: {1}'.format(
                     function_name, exc
                 )
             except TypeError as exc:
@@ -688,28 +710,24 @@ class Minion(object):
                 )
                 msg = ('TypeError encountered executing {0}: {1}. See '
                        'debug log for more info.  Possibly a missing '
-                       'arguments issue:  {2}').format(function_name, exc,
+                       'arguments issue:  {2}').format(function_name,
+                                                       exc,
                                                        aspec)
-                log.warning(msg)
-                log.debug(
-                    'TypeError intercepted: {0}\n{1}'.format(exc, trb),
-                    exc_info=True
-                )
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
                 ret['return'] = msg
             except Exception:
-                trb = traceback.format_exc()
-                msg = 'The minion function caused an exception: {0}'
-                log.warning(msg.format(trb))
-                ret['return'] = trb
+                msg = 'The minion function caused an exception'
+                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
         else:
-            ret['return'] = '"{0}" is not available.'.format(function_name)
+            ret['return'] = '{0!r} is not available.'.format(function_name)
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         minion_instance._return_pub(ret)
         if data['ret']:
+            ret['id'] = opts['id']
             for returner in set(data['ret'].split(',')):
-                ret['id'] = opts['id']
                 try:
                     minion_instance.returners['{0}.returner'.format(
                         returner
@@ -833,7 +851,7 @@ class Minion(object):
         Execute a state run based on information set in the minion config file
         '''
         if self.opts['startup_states']:
-            data = {'jid': 'req', 'ret': ''}
+            data = {'jid': 'req', 'ret': self.opts['ext_job_cache']}
             if self.opts['startup_states'] == 'sls':
                 data['fun'] = 'state.sls'
                 data['arg'] = [self.opts['sls_list']]

@@ -62,7 +62,7 @@ def present(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please start deprecating \'runas\' at this stage. Ping s0undt3ch for '
         'additional information or see #6961.',
         _dont_call_warnings=True

@@ -130,7 +130,7 @@ class APIClient(object):
         '''
         return self.localClient.run_job(**kwargs)
 
-    def minion_sync(self, *args, **kwargs):
+    def minion_sync(self, **kwargs):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
 

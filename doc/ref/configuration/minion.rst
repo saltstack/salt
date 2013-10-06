@@ -822,7 +822,7 @@ option then the minion will log a warning message.
 
     # Include files from a minion.d directory in the same
     # directory as the minion config file
-    include: minion.d/*
+    include: minion.d/*.conf
 
     # Include a single extra file into the configuration
     include: /etc/roles/webserver

@@ -31,13 +31,143 @@ class SaltStackVersion(object):
     and also supports version comparison.
     '''
 
-    __slots__ = ('major', 'minor', 'bugfix', 'rc', 'noc', 'sha')
+    __slots__ = ('name', 'major', 'minor', 'bugfix', 'rc', 'noc', 'sha')
 
     git_describe_regex = re.compile(
         r'(?:[^\d]+)?(?P<major>[\d]{1,2})\.(?P<minor>[\d]{1,2})'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?(?:rc(?P<rc>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
     )
+
+    # Salt versions after 0.17.0 will be numbered like:
+    #   <2-digit-year>.<month>.<bugfix>
+    #
+    # Since the actual version numbers will only be know on release dates, the
+    # periodic table element names will be what's going to be used to name
+    # versions and to be able to mention them.
+
+    NAMES = {
+        # Let's keep at least 3 version names uncommented counting from the
+        # latest release so we can map deprecation warnings to versions.
+
+
+        # ----- Please refrain from fixing PEP-8 E203 ----------------------->
+        # The idea is keep this readable
+        # --------------------------------------------------------------------
+        'Hydrogen': (sys.maxint - 108, 0, 0, 0),
+        'Helium': (sys.maxint - 107, 0, 0, 0),
+        'Lithium': (sys.maxint - 106, 0, 0, 0),
+        #'Beryllium'    : (sys.maxint - 105, 0, 0, 0),
+        #'Boron'        : (sys.maxint - 104, 0, 0, 0),
+        #'Carbon'       : (sys.maxint - 103, 0, 0, 0),
+        #'Nitrogen'     : (sys.maxint - 102, 0, 0, 0),
+        #'Oxygen'       : (sys.maxint - 101, 0, 0, 0),
+        #'Fluorine'     : (sys.maxint - 100, 0, 0, 0),
+        #'Neon'         : (sys.maxint - 99 , 0, 0, 0),
+        #'Sodium'       : (sys.maxint - 98 , 0, 0, 0),
+        #'Magnesium'    : (sys.maxint - 97 , 0, 0, 0),
+        #'Aluminium'    : (sys.maxint - 96 , 0, 0, 0),
+        #'Silicon'      : (sys.maxint - 95 , 0, 0, 0),
+        #'Phosphorus'   : (sys.maxint - 94 , 0, 0, 0),
+        #'Sulfur'       : (sys.maxint - 93 , 0, 0, 0),
+        #'Chlorine'     : (sys.maxint - 92 , 0, 0, 0),
+        #'Argon'        : (sys.maxint - 91 , 0, 0, 0),
+        #'Potassium'    : (sys.maxint - 90 , 0, 0, 0),
+        #'Calcium'      : (sys.maxint - 89 , 0, 0, 0),
+        #'Scandium'     : (sys.maxint - 88 , 0, 0, 0),
+        #'Titanium'     : (sys.maxint - 87 , 0, 0, 0),
+        #'Vanadium'     : (sys.maxint - 86 , 0, 0, 0),
+        #'Chromium'     : (sys.maxint - 85 , 0, 0, 0),
+        #'Manganese'    : (sys.maxint - 84 , 0, 0, 0),
+        #'Iron'         : (sys.maxint - 83 , 0, 0, 0),
+        #'Cobalt'       : (sys.maxint - 82 , 0, 0, 0),
+        #'Nickel'       : (sys.maxint - 81 , 0, 0, 0),
+        #'Copper'       : (sys.maxint - 80 , 0, 0, 0),
+        #'Zinc'         : (sys.maxint - 79 , 0, 0, 0),
+        #'Gallium'      : (sys.maxint - 78 , 0, 0, 0),
+        #'Germanium'    : (sys.maxint - 77 , 0, 0, 0),
+        #'Arsenic'      : (sys.maxint - 76 , 0, 0, 0),
+        #'Selenium'     : (sys.maxint - 75 , 0, 0, 0),
+        #'Bromine'      : (sys.maxint - 74 , 0, 0, 0),
+        #'Krypton'      : (sys.maxint - 73 , 0, 0, 0),
+        #'Rubidium'     : (sys.maxint - 72 , 0, 0, 0),
+        #'Strontium'    : (sys.maxint - 71 , 0, 0, 0),
+        #'Yttrium'      : (sys.maxint - 70 , 0, 0, 0),
+        #'Zirconium'    : (sys.maxint - 69 , 0, 0, 0),
+        #'Niobium'      : (sys.maxint - 68 , 0, 0, 0),
+        #'Molybdenum'   : (sys.maxint - 67 , 0, 0, 0),
+        #'Technetium'   : (sys.maxint - 66 , 0, 0, 0),
+        #'Ruthenium'    : (sys.maxint - 65 , 0, 0, 0),
+        #'Rhodium'      : (sys.maxint - 64 , 0, 0, 0),
+        #'Palladium'    : (sys.maxint - 63 , 0, 0, 0),
+        #'Silver'       : (sys.maxint - 62 , 0, 0, 0),
+        #'Cadmium'      : (sys.maxint - 61 , 0, 0, 0),
+        #'Indium'       : (sys.maxint - 60 , 0, 0, 0),
+        #'Tin'          : (sys.maxint - 59 , 0, 0, 0),
+        #'Antimony'     : (sys.maxint - 58 , 0, 0, 0),
+        #'Tellurium'    : (sys.maxint - 57 , 0, 0, 0),
+        #'Iodine'       : (sys.maxint - 56 , 0, 0, 0),
+        #'Xenon'        : (sys.maxint - 55 , 0, 0, 0),
+        #'Caesium'      : (sys.maxint - 54 , 0, 0, 0),
+        #'Barium'       : (sys.maxint - 53 , 0, 0, 0),
+        #'Lanthanum'    : (sys.maxint - 52 , 0, 0, 0),
+        #'Cerium'       : (sys.maxint - 51 , 0, 0, 0),
+        #'Praseodymium' : (sys.maxint - 50 , 0, 0, 0),
+        #'Neodymium'    : (sys.maxint - 49 , 0, 0, 0),
+        #'Promethium'   : (sys.maxint - 48 , 0, 0, 0),
+        #'Samarium'     : (sys.maxint - 47 , 0, 0, 0),
+        #'Europium'     : (sys.maxint - 46 , 0, 0, 0),
+        #'Gadolinium'   : (sys.maxint - 45 , 0, 0, 0),
+        #'Terbium'      : (sys.maxint - 44 , 0, 0, 0),
+        #'Dysprosium'   : (sys.maxint - 43 , 0, 0, 0),
+        #'Holmium'      : (sys.maxint - 42 , 0, 0, 0),
+        #'Erbium'       : (sys.maxint - 41 , 0, 0, 0),
+        #'Thulium'      : (sys.maxint - 40 , 0, 0, 0),
+        #'Ytterbium'    : (sys.maxint - 39 , 0, 0, 0),
+        #'Lutetium'     : (sys.maxint - 38 , 0, 0, 0),
+        #'Hafnium'      : (sys.maxint - 37 , 0, 0, 0),
+        #'Tantalum'     : (sys.maxint - 36 , 0, 0, 0),
+        #'Tungsten'     : (sys.maxint - 35 , 0, 0, 0),
+        #'Rhenium'      : (sys.maxint - 34 , 0, 0, 0),
+        #'Osmium'       : (sys.maxint - 33 , 0, 0, 0),
+        #'Iridium'      : (sys.maxint - 32 , 0, 0, 0),
+        #'Platinum'     : (sys.maxint - 31 , 0, 0, 0),
+        #'Gold'         : (sys.maxint - 30 , 0, 0, 0),
+        #'Mercury'      : (sys.maxint - 29 , 0, 0, 0),
+        #'Thallium'     : (sys.maxint - 28 , 0, 0, 0),
+        #'Lead'         : (sys.maxint - 27 , 0, 0, 0),
+        #'Bismuth'      : (sys.maxint - 26 , 0, 0, 0),
+        #'Polonium'     : (sys.maxint - 25 , 0, 0, 0),
+        #'Astatine'     : (sys.maxint - 24 , 0, 0, 0),
+        #'Radon'        : (sys.maxint - 23 , 0, 0, 0),
+        #'Francium'     : (sys.maxint - 22 , 0, 0, 0),
+        #'Radium'       : (sys.maxint - 21 , 0, 0, 0),
+        #'Actinium'     : (sys.maxint - 20 , 0, 0, 0),
+        #'Thorium'      : (sys.maxint - 19 , 0, 0, 0),
+        #'Protactinium' : (sys.maxint - 18 , 0, 0, 0),
+        #'Uranium'      : (sys.maxint - 17 , 0, 0, 0),
+        #'Neptunium'    : (sys.maxint - 16 , 0, 0, 0),
+        #'Plutonium'    : (sys.maxint - 15 , 0, 0, 0),
+        #'Americium'    : (sys.maxint - 14 , 0, 0, 0),
+        #'Curium'       : (sys.maxint - 13 , 0, 0, 0),
+        #'Berkelium'    : (sys.maxint - 12 , 0, 0, 0),
+        #'Californium'  : (sys.maxint - 11 , 0, 0, 0),
+        #'Einsteinium'  : (sys.maxint - 10 , 0, 0, 0),
+        #'Fermium'      : (sys.maxint - 9  , 0, 0, 0),
+        #'Mendelevium'  : (sys.maxint - 8  , 0, 0, 0),
+        #'Nobelium'     : (sys.maxint - 7  , 0, 0, 0),
+        #'Lawrencium'   : (sys.maxint - 6  , 0, 0, 0),
+        #'Rutherfordium': (sys.maxint - 5  , 0, 0, 0),
+        #'Dubnium'      : (sys.maxint - 4  , 0, 0, 0),
+        #'Seaborgium'   : (sys.maxint - 3  , 0, 0, 0),
+        #'Bohrium'      : (sys.maxint - 2  , 0, 0, 0),
+        #'Hassium'      : (sys.maxint - 1  , 0, 0, 0),
+        #'Meitnerium'   : (sys.maxint - 0  , 0, 0, 0),
+        # <---- Please refrain from fixing PEP-8 E203 ------------------------
+    }
+
+    LNAMES = dict((k.lower(), v) for (k, v) in NAMES.iteritems())
+    VNAMES = dict((v, k) for (k, v) in NAMES.iteritems())
 
     def __init__(self,              # pylint: disable=C0103
                  major,
@@ -72,17 +202,28 @@ class SaltStackVersion(object):
         self.minor = minor
         self.bugfix = bugfix
         self.rc = rc  # pylint: disable=C0103
+        self.name = self.VNAMES.get((major, minor, bugfix, rc), None)
         self.noc = noc
         self.sha = sha
 
     @classmethod
     def parse(cls, version_string):
+        if version_string.lower() in cls.LNAMES:
+            return cls.from_name(version_string)
         match = cls.git_describe_regex.match(version_string)
         if not match:
             raise ValueError(
                 'Unable to parse version string: {0!r}'.format(version_string)
             )
         return cls(*match.groups())
+
+    @classmethod
+    def from_name(cls, name):
+        if name.lower() not in cls.LNAMES:
+            raise ValueError(
+                'Named version {0!r} is not know'.format(name)
+            )
+        return cls(*cls.LNAMES[name.lower()])
 
     @property
     def info(self):
@@ -135,6 +276,14 @@ class SaltStackVersion(object):
             version_string += '-{0}-{1}'.format(self.noc, self.sha)
         return version_string
 
+    @property
+    def formatted_version(self):
+        if self.name and self.major > 10000:
+            return '{0} (Unreleased)'.format(self.name)
+        elif self.name:
+            return '{0} ({1})'.format(self.name, self.string)
+        return self.string
+
     def __str__(self):
         return self.string
 
@@ -165,6 +314,19 @@ class SaltStackVersion(object):
             other_noc_info = list(other.noc_info)
             other_noc_info[3] = -1
             return cmp(self.noc_info, tuple(other_noc_info))
+
+    def __repr__(self):
+        parts = []
+        if self.name:
+            parts.append('name={0!r}'.format(self.name))
+        parts.extend([
+            'major={0}'.format(self.major),
+            'minor={0}'.format(self.minor),
+            'bugfix={0}'.format(self.bugfix)
+        ])
+        if self.rc:
+            parts.append('rc={0}'.format(self.rc))
+        return '<{0} {1}>'.format(self.__class__.__name__, ' '.join(parts))
 
 
 # ----- Hardcoded Salt Version Information ---------------------------------->

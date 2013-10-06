@@ -410,11 +410,10 @@ def _check_directory(name,
     return True, 'The directory {0} is in the correct state'.format(name)
 
 
-def _check_dir_meta(
-        name,
-        user,
-        group,
-        mode):
+def _check_dir_meta(name,
+                    user,
+                    group,
+                    mode):
     '''
     Check the changes in directory metadata
     '''
@@ -573,9 +572,10 @@ def _test_owner(kwargs, user=None):
     if user:
         return user
     if 'owner' in kwargs:
-        msg = ('Use of argument owner found, "owner" is invalid, please use'
-               ' "user"')
-        log.warning(msg)
+        log.warning(
+            'Use of argument owner found, "owner" is invalid, please '
+            'use "user"'
+        )
         return kwargs['owner']
 
     return user
@@ -661,15 +661,14 @@ def _get_template_texts(source_list=None,
     return ret
 
 
-def symlink(
-        name,
-        target,
-        force=False,
-        makedirs=False,
-        user=None,
-        group=None,
-        mode=None,
-        **kwargs):
+def symlink(name,
+            target,
+            force=False,
+            makedirs=False,
+            user=None,
+            group=None,
+            mode=None,
+            **kwargs):
     '''
     Create a symlink
 
@@ -1340,6 +1339,7 @@ def recurse(name,
             group=None,
             dir_mode=None,
             file_mode=None,
+            sym_mode=None,
             template=None,
             context=None,
             defaults=None,
@@ -1349,6 +1349,8 @@ def recurse(name,
             include_pat=None,
             exclude_pat=None,
             maxdepth=None,
+            keep_symlinks=False,
+            force_symlinks=False,
             **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirectory
@@ -1384,6 +1386,9 @@ def recurse(name,
 
     file_mode
         The permissions mode to set any files created
+
+    sym_mode
+        The permissions mode to set on any symlink created
 
     template
         If this setting is applied then the named templating engine will be
@@ -1434,6 +1439,17 @@ def recurse(name,
                                 directory
           - maxdepth: 1      :: Only include files located in the source
                                 or immediate subdirectories
+
+    keep_symlinks
+        Keep symlinks when copying from the source. This option will cause
+        the copy operation to terminate at the symlink. If you are after
+        rsync-ish behavior, then set this to True.
+
+    force_symlinks
+        Force symlink creation. This option will force the symlink creation.
+        If a file or directory is obstructing symlink creation it will be
+        recursively removed so that symlink creation can proceed. This
+        option is usually not needed except in special circumstances.
     '''
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -1571,6 +1587,45 @@ def recurse(name,
             require=None)
         merge_ret(path, _ret)
 
+    # Process symlinks and return the updated filenames list
+    def process_symlinks(filenames, symlinks):
+        for lname, ltarget in symlinks.items():
+            if not _check_include_exclude(os.path.relpath(lname, srcpath),
+                                          include_pat,
+                                          exclude_pat):
+                continue
+            srelpath = os.path.relpath(lname, srcpath)
+            # Check for max depth
+            if maxdepth is not None:
+                srelpieces = srelpath.split('/')
+                if not srelpieces[-1]:
+                    srelpieces = srelpieces[:-1]
+                if len(srelpieces) > maxdepth + 1:
+                    continue
+            # Check for all paths that begin with the symlink
+            # and axe it leaving only the dirs/files below it.
+            _filenames = filenames
+            for filename in _filenames:
+                if filename.startswith(lname):
+                    log.debug('** skipping file ** {0}, it intersects a '
+                              'symlink'.format(filename))
+                    filenames.remove(filename)
+            # Create the symlink along with the necessary dirs.
+            # The dir perms/ownership will be adjusted later
+            # if needed
+            _ret = symlink(os.path.join(name, srelpath),
+                           ltarget,
+                           makedirs=True,
+                           force=force_symlinks,
+                           user=user,
+                           group=group,
+                           mode=sym_mode)
+            if not _ret:
+                continue
+            merge_ret(os.path.join(name, srelpath), _ret)
+            # Add the path to the keep set in case clean is set to True
+            keep.add(os.path.join(name, srelpath))
+        return filenames
     # If source is a list, find which in the list actually exists
     source, source_hash = __salt__['file.source_list'](source, '', env)
 
@@ -1581,7 +1636,13 @@ def recurse(name,
         #we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
-    for fn_ in __salt__['cp.list_master'](env, srcpath):
+    fns_ = __salt__['cp.list_master'](env, srcpath)
+    # If we are instructed to keep symlinks, then process them.
+    if keep_symlinks:
+        # Make this global so that emptydirs can use it if needed.
+        symlinks = __salt__['cp.list_master_symlinks'](env, srcpath)
+        fns_ = process_symlinks(fns_, symlinks)
+    for fn_ in fns_:
         if not fn_.strip():
             continue
 
@@ -1628,6 +1689,12 @@ def recurse(name,
                                           exclude_pat):
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
+            # Check for symlinks that happen to point to an empty dir.
+            if keep_symlinks:
+                for link in symlinks:
+                    if mdir.startswith(link, 0):
+                        log.debug('** skipping empty dir ** {0}, it intersects a symlink'.format(mdir))
+                    continue
             manage_directory(mdest)
             keep.add(mdest)
 
@@ -1662,14 +1729,13 @@ def recurse(name,
 
 
 def replace(name,
-        pattern,
-        repl,
-        count=0,
-        flags=0,
-        bufsize=1,
-        backup='.bak',
-        show_changes=True,
-        ):
+            pattern,
+            repl,
+            count=0,
+            flags=0,
+            bufsize=1,
+            backup='.bak',
+            show_changes=True):
     '''
     Maintain an edit in a file
 
@@ -1685,15 +1751,14 @@ def replace(name,
         return _error(ret, check_msg)
 
     changes = __salt__['file.replace'](name,
-        pattern,
-        repl,
-        count=count,
-        flags=flags,
-        bufsize=bufsize,
-        backup=backup,
-        dry_run=__opts__['test'],
-        show_changes=show_changes,
-        )
+                                       pattern,
+                                       repl,
+                                       count=count,
+                                       flags=flags,
+                                       bufsize=bufsize,
+                                       backup=backup,
+                                       dry_run=__opts__['test'],
+                                       show_changes=show_changes)
 
     if changes:
         ret['changes'] = changes
@@ -2057,11 +2122,11 @@ def append(name,
     # Add sources and source_hashes with template support
     # NOTE: FIX 'text' and any 'source' are mutually exclusive as 'text'
     #       is re-assigned in the original code.
-    (ok, err, sl) = _unify_sources_and_hashes(source=source,
-                                              source_hash=source_hash,
-                                              sources=sources,
-                                              source_hashes=source_hashes)
-    if not ok:
+    (ok_, err, sl_) = _unify_sources_and_hashes(source=source,
+                                                source_hash=source_hash,
+                                                sources=sources,
+                                                source_hashes=source_hashes)
+    if not ok_:
         return _error(ret, err)
 
     if makedirs is True:
@@ -2082,8 +2147,8 @@ def append(name,
         return _error(ret, check_msg)
 
     #Follow the original logic and re-assign 'text' if using source(s)...
-    if sl:
-        tmpret = _get_template_texts(source_list=sl,
+    if sl_:
+        tmpret = _get_template_texts(source_list=sl_,
                                      template=template,
                                      defaults=defaults,
                                      context=context,
@@ -2146,7 +2211,8 @@ def patch(name,
           hash=None,
           options='',
           dry_run_first=True,
-          env='base'):
+          env=None,
+          **kwargs):
     '''
     Apply a patch to a file. Note: a suitable ``patch`` executable must be
     available on the minion when using this state function.
@@ -2172,6 +2238,11 @@ def patch(name,
     dry_run_first : ``True``
         Run patch with ``--dry-run`` first to check if it will apply cleanly.
 
+    env
+        Specify the environment from which to retrieve the patch file indicated
+        by the ``source`` parameter. If not provided, this defaults to the
+        environment from which the state is being executed.
+
     Usage::
 
         # Equivalent to ``patch --forward /opt/file.txt file.patch``
@@ -2194,6 +2265,8 @@ def patch(name,
         return ret
 
     # get cached file or copy it to cache
+    if env is None:
+        env = kwargs.get('__env__', 'base')
     cached_source_path = __salt__['cp.cache_file'](source, env)
     log.debug(
         'State patch.applied cached source {0} -> {1}'.format(
@@ -2469,7 +2542,7 @@ def rename(name, source, force=False, makedirs=False):
 def accumulated(name, filename, text, **kwargs):
     '''
     Prepare accumulator which can be used in template in file.managed state.
-    accumulator dictionary becomes available in template.
+    Accumulator dictionary becomes available in template.
 
     name
         Accumulator name
@@ -2515,15 +2588,15 @@ def accumulated(name, filename, text, **kwargs):
 
 
 def serialize(name,
-            dataset,
-            user=None,
-            group=None,
-            mode=None,
-            env=None,
-            backup='',
-            show_diff=True,
-            create=True,
-            **kwargs):
+              dataset,
+              user=None,
+              group=None,
+              mode=None,
+              env=None,
+              backup='',
+              show_diff=True,
+              create=True,
+              **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
     simple configuration files.
@@ -2603,14 +2676,17 @@ def serialize(name,
     if formatter == 'yaml':
         contents = yaml.dump(dataset, default_flow_style=False)
     elif formatter == 'json':
-        contents = json.dumps(dataset, indent=2, separators=(',', ': '), sort_keys=True)
+        contents = json.dumps(dataset,
+                              indent=2,
+                              separators=(',', ': '),
+                              sort_keys=True)
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
                     formatter.capitalized()),
                 'name': name,
                 'result': False
-               }
+                }
 
     return __salt__['file.manage_file'](name=name,
                                         sfn='',
@@ -2629,22 +2705,25 @@ def serialize(name,
 
 def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     '''
-    Create a special file similar to the 'nix mknod command. The supported device types are
-    p (fifo pipe), c (character device), and b (block device). Provide the major and minor
-    numbers when specifying a character device or block device. A fifo pipe does not require
-    this information. The command will create the necessary dirs if needed. If a file of the
-    same name not of the same type/major/minor exists, it will not be overwritten or unlinked
-    (deleted). This is logically in place as a safety measure because you can really shoot
-    yourself in the foot here and it is the behavior of 'nix mknod. It is also important to
-    note that not just anyone can create special devices. Usually this is only done as root.
-    If the state is executed as none other than root on a minion, you may receive a permission
-    error.
+    Create a special file similar to the 'nix mknod command. The supported
+    device types are ``p`` (fifo pipe), ``c`` (character device), and ``b``
+    (block device). Provide the major and minor numbers when specifying a
+    character device or block device. A fifo pipe does not require this
+    information. The command will create the necessary dirs if needed. If a
+    file of the same name not of the same type/major/minor exists, it will not
+    be overwritten or unlinked (deleted). This is logically in place as a
+    safety measure because you can really shoot yourself in the foot here and
+    it is the behavior of 'nix ``mknod``. It is also important to note that not
+    just anyone can create special devices. Usually this is only done as root.
+    If the state is executed as none other than root on a minion, you may
+    receive a permission error.
 
     name
         name of the file
 
     ntype
-        node type 'p' (fifo pipe), 'c' (character device), or 'b' (block device)
+        node type 'p' (fifo pipe), 'c' (character device), or 'b'
+        (block device)
 
     major
         major number of the device
@@ -2698,61 +2777,120 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
            'result': False}
 
     if ntype == 'c':
-        #check for file existence
+        #  check for file existence
         if __salt__['file.file_exists'](name):
-            ret['comment'] = "File exists and is not a character device {0}. Cowardly refusing to continue".format(name)
+            ret['comment'] = (
+                'File exists and is not a character device {0}. Cowardly '
+                'refusing to continue'.format(name)
+            )
 
         #if it is a character device
         elif not __salt__['file.is_chrdev'](name):
-            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+            ret = __salt__['file.mknod'](name,
+                                         ntype,
+                                         major,
+                                         minor,
+                                         user,
+                                         group,
+                                         mode)
 
-        #check the major/minor
+        #  check the major/minor
         else:
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
-                ret['comment'] = "Character device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
+                ret['comment'] = (
+                    'Character device {0} exists and has a different '
+                    'major/minor {1}/{2}. Cowardly refusing to continue'
+                    .format(name, devmaj, devmin)
+                )
             #check the perms
             else:
-                ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+                ret = __salt__['file.check_perms'](name,
+                                                   None,
+                                                   user,
+                                                   group,
+                                                   mode)[0]
                 if not ret['changes']:
-                    ret['comment'] = "Character device {0} is in the correct state".format(name)
+                    ret['comment'] = (
+                        'Character device {0} is in the correct state'.format(
+                            name
+                        )
+                    )
 
     elif ntype == 'b':
-        #check for file existence
+        #  check for file existence
         if __salt__['file.file_exists'](name):
-            ret['comment'] = "File exists and is not a block device {0}. Cowardly refusing to continue".format(name)
+            ret['comment'] = (
+                'File exists and is not a block device {0}. Cowardly '
+                'refusing to continue'.format(name)
+            )
 
-        #if it is a block device
+        #  if it is a block device
         elif not __salt__['file.is_blkdev'](name):
-            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+            ret = __salt__['file.mknod'](name,
+                                         ntype,
+                                         major,
+                                         minor,
+                                         user,
+                                         group,
+                                         mode)
 
-        #check the major/minor
+        #  check the major/minor
         else:
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
-                ret['comment'] = "Block device {0} exists and has a different major/minor {1}/{2}. Cowardly refusing to continue".format(name, devmaj, devmin)
-            #check the perms
+                ret['comment'] = (
+                    'Block device {0} exists and has a different major/minor '
+                    '{1}/{2}. Cowardly refusing to continue'.format(
+                        name, devmaj, devmin
+                    )
+                )
+            #  check the perms
             else:
-                ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+                ret = __salt__['file.check_perms'](name,
+                                                   None,
+                                                   user,
+                                                   group,
+                                                   mode)[0]
                 if not ret['changes']:
-                    ret['comment'] = "Block device {0} is in the correct state".format(name)
+                    ret['comment'] = (
+                        'Block device {0} is in the correct state'.format(name)
+                    )
 
     elif ntype == 'p':
-        #check for file existence, if it is a fifo, user, group, and mode
+        #  check for file existence, if it is a fifo, user, group, and mode
         if __salt__['file.file_exists'](name):
-            ret['comment'] = "File exists and is not a fifo pipe {0}. Cowardly refusing to continue".format(name)
+            ret['comment'] = (
+                'File exists and is not a fifo pipe {0}. Cowardly refusing '
+                'to continue'.format(name)
+            )
 
-        #if it is a fifo
+        #  if it is a fifo
         elif not __salt__['file.is_fifo'](name):
-            ret = __salt__['file.mknod'](name, ntype, major, minor, user, group, mode)
+            ret = __salt__['file.mknod'](name,
+                                         ntype,
+                                         major,
+                                         minor,
+                                         user,
+                                         group,
+                                         mode)
 
-        #check the perms
+        #  check the perms
         else:
-            ret = __salt__['file.check_perms'](name, None, user, group, mode)[0]
+            ret = __salt__['file.check_perms'](name,
+                                               None,
+                                               user,
+                                               group,
+                                               mode)[0]
             if not ret['changes']:
-                ret['comment'] = "Fifo pipe {0} is in the correct state".format(name)
+                ret['comment'] = (
+                    'Fifo pipe {0} is in the correct state'.format(name)
+                )
 
     else:
-        ret['comment'] = "Node type unavailable: '{0}. Available node types are character ('c'), block ('b'), and pipe ('p')".format(ntype)
+        ret['comment'] = (
+            'Node type unavailable: {0!r}. Available node types are '
+            'character (\'c\'), block (\'b\'), and pipe (\'p\')'.format(ntype)
+        )
 
     return ret

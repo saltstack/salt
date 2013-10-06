@@ -22,41 +22,57 @@ import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
+import salt.exceptions
 
+# This is just a delimiter to distinguish the beginning of salt STDOUT.  There
+# is no special meaning
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
-HEREDOC = (' << "EOF"\n'
-           '{{0}}\n'
-           'if [ `type -p python2` ]\n'
-           'then\n'
-           '    PYTHON=python2\n'
-           'elif [ `type -p python26` ]\n'
-            'then\n'
-           '    PYTHON=python26\n'
-           'elif [ `type -p python27` ]\n'
-           'then\n'
-           '    PYTHON=python27\n'
-           'fi\n'
-           'if [ -f /tmp/.salt/salt-call ] \n'
-           'then\n'
-           '    if [[ $(cat /tmp/.salt/version) != {0} ]]\n'
-           '    then\n'
-           '        rm -rf /tmp/.salt\n'
-           '        install -m 1777 -d /tmp/.salt\n'
-           '        echo "{1}"\n'
-           '        echo "deploy"\n'
-           '        exit 1\n'
-           '    fi\n'
-           '    SALT=/tmp/.salt/salt-call\n'
-           'else\n'
-           '    echo "{1}"\n'
-           '    install -m 1777 -d /tmp/.salt\n'
-           '    echo "deploy"\n'
-           '    exit 1\n'
-           'fi\n'
-           'echo "{1}"\n'
-           '$PYTHON $SALT --local --out json -l quiet {{1}}\n'
-           'EOF').format(salt.__version__, RSTR)
+
+# This shim facilitaites remote salt-call operations
+# 1. Identify a suitable python
+# 2. Test for remote salt-call and version if present
+# 3. Signal to (re)deploy if missing or out of date
+# 4. Perform salt-call
+
+# Note there are two levels of formatting.
+# - First format pass inserts salt version and delimiter
+# - Second pass at run-time and inserts optional "sudo" and command
+SSH_SHIM = ''' << 'EOF'
+      for py_candidate in \\
+            python27      \\
+            python2.7     \\
+            python26      \\
+            python2.6     \\
+            python2       \\
+            python        ;
+      do
+         if [ `type -p $py_candidate` ]
+         then
+               PYTHON=$(type -p $py_candidate)
+               break
+         fi
+      done
+      if [ -f /tmp/.salt/salt-call ]
+      then
+         if [[ $(cat /tmp/.salt/version) != {0} ]]
+         then
+            {{0}} rm -rf /tmp/.salt
+            {{0}} install -m 1777 -d /tmp/.salt
+            echo "{1}"
+            echo "deploy"
+            exit 1
+         fi
+         SALT=/tmp/.salt/salt-call
+      else
+         echo "{1}"
+         {{0}} install -m 1777 -d /tmp/.salt
+         echo "deploy"
+         exit 1
+      fi
+      echo "{1}"
+      {{0}} $PYTHON $SALT --local --out json -l quiet {{1}}
+EOF\n'''.format(salt.__version__, RSTR)
 
 
 class SSH(object):
@@ -64,8 +80,10 @@ class SSH(object):
     Create an SSH execution system
     '''
     def __init__(self, opts):
+        self.verify_env()
         self.opts = opts
-        tgt_type = self.opts['selected_target_option'] if self.opts['selected_target_option'] else 'glob'
+        tgt_type = self.opts['selected_target_option'] \
+                if self.opts['selected_target_option'] else 'glob'
         self.roster = salt.roster.Roster(opts)
         self.targets = self.roster.targets(
                 self.opts['tgt'],
@@ -89,6 +107,14 @@ class SSH(object):
                 'sudo': self.opts.get('ssh_sudo', False),
                 }
 
+    def verify_env(self):
+        '''
+        Verify that salt-ssh is ready to run
+        '''
+        if not salt.utils.which('sshpass'):
+            print('Warning:  sshpass is not present, so password-based '
+                  'authentication is not available.')
+
     def get_pubkey(self):
         '''
         Return the keystring for the SSH public key
@@ -110,6 +136,10 @@ class SSH(object):
         Deploy the SSH key if the minions don't auth
         '''
         if not isinstance(ret[host], basestring):
+            if self.opts.get('ssh_key_deploy'):
+                target = self.targets[host]
+                if 'passwd' in target:
+                    self._key_deploy_run(host, target, False)
             return ret
         if ret[host].startswith('Permission denied'):
             target = self.targets[host]
@@ -121,23 +151,31 @@ class SSH(object):
                 return ret
             target['passwd'] = getpass.getpass(
                     'Password for {0}:'.format(host)
-                    )
-            arg_str = 'ssh.set_auth_key {0} {1}'.format(
-                    target.get('user', 'root'),
-                    self.get_pubkey())
-            single = Single(
-                    self.opts,
-                    arg_str,
-                    host,
-                    **target)
-            if salt.utils.which('ssh-copy-id'):
-                # we have ssh-copy-id, use it!
-                single.shell.copy_id()
-            else:
+                )
+            return self._key_deploy_run(host, target, True)
+        return ret
+
+    def _key_deploy_run(self, host, target, re_run=True):
+        '''
+        The ssh-copy-id routine
+        '''
+        arg_str = 'ssh.set_auth_key {0} {1}'.format(
+                target.get('user', 'root'),
+                self.get_pubkey())
+        single = Single(
+                self.opts,
+                arg_str,
+                host,
+                **target)
+        if salt.utils.which('ssh-copy-id'):
+            # we have ssh-copy-id, use it!
+            single.shell.copy_id()
+        else:
+            ret = single.cmd_block()
+            if ret[0].startswith('deploy'):
+                single.deploy()
                 ret = single.cmd_block()
-                if ret[0].startswith('deploy'):
-                    single.deploy()
-                    ret = single.cmd_block()
+        if re_run:
             target.pop('passwd')
             single = Single(
                     self.opts,
@@ -147,15 +185,11 @@ class SSH(object):
             stdout, stderr = single.cmd_block()
             try:
                 data = json.loads(stdout)
-                if 'local' in data:
-                    return {host: data['local']}
-                else:
-                    return {host: data}
+                return {host: data.get('local', data)}
             except Exception:
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-        return ret
 
     def process(self):
         '''
@@ -165,7 +199,7 @@ class SSH(object):
         target_iter = self.targets.__iter__()
         done = set()
         while True:
-            if len(running) < self.opts.get('ssh_max_procs', 5):
+            if len(running) < self.opts.get('ssh_max_procs', 25):
                 try:
                     host = next(target_iter)
                 except StopIteration:
@@ -191,17 +225,18 @@ class SSH(object):
                     running[host]['iter'] = single.cmd()
                 else:
                     # This job is done, yield
+                    id_ = running[host]['single'].id
                     try:
                         if not stdout and stderr:
-                            yield {running[host]['single'].id: stderr}
+                            yield {id_: stderr}
                         else:
                             data = json.loads(stdout)
                             if len(data) < 2 and 'local' in data:
-                                yield {running[host]['single'].id: data['local']}
+                                yield {id_: data['local']}
                             else:
-                                yield {running[host]['single'].id: data}
+                                yield {id_: data}
                     except Exception:
-                        yield {running[host]['single'].id: 'Bad Return'}
+                        yield {id_: 'Bad Return'}
                     done.add(host)
             for host in done:
                 if host in running:
@@ -253,7 +288,7 @@ class SSH(object):
         rets = set()
         init = False
         while True:
-            if len(running) < self.opts.get('ssh_max_procs', 5) and not init:
+            if len(running) < self.opts.get('ssh_max_procs', 25) and not init:
                 try:
                     host = next(target_iter)
                 except StopIteration:
@@ -268,7 +303,9 @@ class SSH(object):
                         host,
                         self.targets[host],
                         )
-                routine = multiprocessing.Process(target=self.handle_routine, args=args)
+                routine = multiprocessing.Process(
+                                target=self.handle_routine,
+                                args=args)
                 routine.start()
                 running[host] = {'thread': routine}
                 continue
@@ -334,28 +371,25 @@ class Single(object):
             priv=None,
             timeout=None,
             sudo=False,
+            tty=False,
             **kwargs):
         self.opts = opts
         self.arg_str = arg_str
         self.fun, self.arg = self.__arg_comps()
         self.id = id_
-        self.extra = kwargs
-        self.shell = salt.client.ssh.shell.Shell(
-                host,
-                user,
-                port,
-                passwd,
-                priv,
-                timeout,
-                sudo)
-        self.target = self.extra
-        self.target['host'] = host
-        self.target['user'] = user
-        self.target['port'] = port
-        self.target['passwd'] = passwd
-        self.target['priv'] = priv
-        self.target['timeout'] = timeout
-        self.target['sudo'] = sudo
+
+        args = {'host': host,
+                'user': user,
+                'port': port,
+                'passwd': passwd,
+                'priv': priv,
+                'timeout': timeout,
+                'sudo': sudo,
+                'tty': tty}
+        self.shell = salt.client.ssh.shell.Shell(**args)
+
+        self.target = kwargs
+        self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts)
 
@@ -363,13 +397,9 @@ class Single(object):
         '''
         Return the function name and the arg list
         '''
-        fun = ''
-        arg = []
         comps = self.arg_str.split()
-        if len(comps) > 0:
-            fun = comps[0]
-        if len(comps) > 1:
-            arg = comps[1:]
+        fun = comps[0] if comps else ''
+        arg = comps[1:]
         return fun, arg
 
     def deploy(self):
@@ -381,7 +411,7 @@ class Single(object):
                 thin,
                 '/tmp/.salt/salt-thin.tgz')
         self.shell.exec_cmd(
-                'tar xvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt'
+                'tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt'
                 )
         return True
 
@@ -405,7 +435,8 @@ class Single(object):
             if not os.path.isfile(datap):
                 refresh = True
             else:
-                if ((time.time() - os.stat(datap).st_mtime) / 60 > self.opts.get('cache_life', 60)):
+                passed_time = (time.time() - os.stat(datap).st_mtime) / 60
+                if (passed_time > self.opts.get('cache_life', 60)):
                     refresh = True
             if self.opts.get('refresh_cache'):
                 refresh = True
@@ -464,13 +495,10 @@ class Single(object):
             args, kwargs = salt.minion.parse_args_and_kwargs(
                     self.sls_seed, self.arg)
             self.sls_seed(*args, **kwargs)
-        sudo = 'sudo -i\n' if self.target['sudo'] else ''
-        cmd = HEREDOC.format(sudo, self.arg_str)
+        sudo = 'sudo' if self.target['sudo'] else ''
+        cmd = SSH_SHIM.format(sudo, self.arg_str)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
-            if stdout is None and stderr is None:
-                yield None, None
-            else:
-                yield stdout, stderr
+            yield stdout, stderr
 
     def cmd_block(self):
         '''
@@ -480,8 +508,8 @@ class Single(object):
         # 2. check is salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        sudo = 'sudo -i\n' if self.target['sudo'] else ''
-        cmd = HEREDOC.format(sudo, self.arg_str)
+        sudo = 'sudo' if self.target['sudo'] else ''
+        cmd = SSH_SHIM.format(sudo, self.arg_str)
         stdout, stderr = self.shell.exec_cmd(cmd)
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()

@@ -5,6 +5,7 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
@@ -17,9 +18,9 @@ import random
 import re
 import shlex
 import shutil
-import string
 import socket
 import stat
+import string
 import subprocess
 import sys
 import tempfile
@@ -69,7 +70,7 @@ import salt.payload
 import salt.version
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
-    SaltClientError, CommandNotFoundError, SaltSystemExit
+    SaltClientError, CommandNotFoundError, SaltSystemExit, SaltInvocationError
 )
 
 
@@ -95,8 +96,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-#KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$", re.UNICODE) # python 3
-KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$")
+#KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$', re.UNICODE) # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W]\w*)=(.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -672,47 +673,140 @@ def build_whitespace_split_regex(text):
 
 
 def build_whitepace_splited_regex(text):
-    warnings.warn("The build_whitepace_splited_regex function is deprecated,"
-                  " please use build_whitespace_split_regex instead.",
+    warnings.warn('The build_whitepace_splited_regex function is deprecated,'
+                  ' please use build_whitespace_split_regex instead.',
                   DeprecationWarning)
     build_whitespace_split_regex(text)
 
 
-def format_call(fun, data):
+def format_call(fun,
+                data,
+                initial_ret=None,
+                expected_extra_kws=()):
     '''
-    Pass in a function and a dict containing arguments to the function.
+    Build the required arguments and keyword arguments required for the passed
+    function.
 
-    A dict with the keys args and kwargs is returned
+    :param fun: The function to get the argspec from
+    :param data: A dictionary containing the required data to build the
+                 arguments and keyword arguments.
+    :param initial_ret: The initial return data pre-populated as dictionary or
+                        None
+    :param expected_extra_kws: Any expected extra keyword argument names which
+                               should not trigger a :ref:`SaltInvocationError`
+    :returns: A dictionary with the function required arguments and keyword
+              arguments.
     '''
-    ret = {}
+    ret = initial_ret is not None and initial_ret or {}
+
     ret['args'] = []
-    aspec = get_function_argspec(fun)
-    if aspec.keywords:
-        # This state accepts kwargs
-        ret['kwargs'] = {}
-        for key in data:
-            # Passing kwargs the conflict with args == traceback
-            if key in aspec.args:
-                continue
-            ret['kwargs'][key] = data[key]
+    ret['kwargs'] = {}
 
-    try:
-        kwargs = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
-    except TypeError:
-        # aspec.defaults is None
-        kwargs = {}
-    for arg in kwargs:
-        if arg in data:
-            kwargs[arg] = data[arg]
-    for arg in aspec.args:
-        if arg in kwargs:
-            ret['args'].append(kwargs[arg])
+    aspec = get_function_argspec(fun)
+
+    args, kwargs = arg_lookup(fun).values()
+
+    # Since we WILL be changing the data dictionary, let's change a copy of it
+    data = data.copy()
+
+    missing_args = []
+
+    for key in kwargs.keys():
+        try:
+            kwargs[key] = data.pop(key)
+        except KeyError:
+            # Let's leave the default value in place
+            pass
+
+    while args:
+        arg = args.pop(0)
+        try:
+            ret['args'].append(data.pop(arg))
+        except KeyError:
+            missing_args.append(arg)
+
+    if missing_args:
+        used_args_count = len(ret['args']) + len(args)
+        args_count = used_args_count + len(missing_args)
+        raise SaltInvocationError(
+            '{0} takes at least {1} argument{2} ({3} given)'.format(
+                fun.__name__,
+                args_count,
+                args_count > 1 and 's' or '',
+                used_args_count
+            )
+        )
+
+    ret['kwargs'].update(kwargs)
+
+    if aspec.keywords:
+        # The function accepts **kwargs, any non expected extra keyword
+        # arguments will made available.
+        for key, value in data.iteritems():
+            if key in expected_extra_kws:
+                continue
+            ret['kwargs'][key] = value
+
+        # No need to check for extra keyword arguments since they are all
+        # **kwargs now. Return
+        return ret
+
+    # Did not return yet? Lets gather any remaining and unexpected keyword
+    # arguments
+    extra = {}
+    for key, value in data.iteritems():
+        if key in expected_extra_kws:
+            continue
+        extra[key] = copy.deepcopy(value)
+
+    # We'll be showing errors to the users until salt 0.20 comes out, after
+    # which, errors will be raised instead.
+    warn_until(
+        'Lithium',
+        'It\'s time to start raising `SaltInvocationError` instead of '
+        'returning warnings',
+        # Let's not show the deprecation warning on the console, there's no
+        # need.
+        _dont_call_warnings=True
+    )
+
+    if extra:
+        # Found unexpected keyword arguments, raise an error to the user
+        if len(extra) == 1:
+            msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
+                extra.keys(),
+                ret.get(
+                    # In case this is being called for a state module
+                    'full',
+                    # Not a state module, build the name
+                    '{0}.{1}'.format(fun.__module__, fun.__name__)
+                )
+            )
         else:
-            try:
-                ret['args'].append(data[arg])
-            except KeyError:
-                # Bad arg match, can safely proceed
-                pass
+            msg = '{0} and {1!r} are invalid keyword arguments for {2}'.format(
+                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
+                extra.keys()[-1],
+                ret.get(
+                    # In case this is being called for a state module
+                    'full',
+                    # Not a state module, build the name
+                    '{0}.{1}'.format(fun.__module__, fun.__name__)
+                )
+            )
+
+        # Return a warning to the user explaining what's going on
+        ret.setdefault('warnings', []).append(
+            '{0}. If you were trying to pass additional data to be used '
+            'in a template context, please populate \'context\' with '
+            '\'key: value\' pairs. Your approach will work until salt>=0.20.0 '
+            'is out.{1}'.format(
+                msg,
+                '' if 'full' not in ret else ' Please update your state files.'
+            )
+        )
+
+        # Lets pack the current extra kwargs as template context
+        ret.setdefault('context', {}).update(extra)
     return ret
 
 
@@ -725,7 +819,7 @@ def arg_lookup(fun):
     aspec = get_function_argspec(fun)
     if aspec.defaults:
         ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
-    ret['args'] = aspec.args
+    ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
     return ret
 
 
@@ -1332,7 +1426,7 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
-def warn_until(version_info,
+def warn_until(version,
                message,
                category=DeprecationWarning,
                stacklevel=None,
@@ -1340,12 +1434,13 @@ def warn_until(version_info,
                _dont_call_warnings=False):
     '''
     Helper function to raise a warning, by default, a ``DeprecationWarning``,
-    until the provided ``version_info``, after which, a ``RuntimeError`` will
+    until the provided ``version``, after which, a ``RuntimeError`` will
     be raised to remind the developers to remove the warning because the
     target version has been reached.
 
-    :param version_info: The version info after which the warning becomes a
-                         ``RuntimeError``. For example ``(0, 17)``.
+    :param version: The version info or name after which the warning becomes a
+                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
+                    or an instance of :class:`salt.version.SaltStackVersion`.
     :param message: The warning message to be displayed.
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
@@ -1359,10 +1454,17 @@ def warn_until(version_info,
                                 issued. When we're only after the salt version
                                 checks to raise a ``RuntimeError``.
     '''
-    if not isinstance(version_info, tuple):
+    if not isinstance(version, (tuple,
+                                salt._compat.string_types,
+                                salt.version.SaltStackVersion)):
         raise RuntimeError(
-            'The \'version_info\' argument should be passed as a tuple.'
+            'The \'version\' argument should be passed as a tuple, string or '
+            'an instance of \'salt.version.SaltStackVersion\'.'
         )
+    elif isinstance(version, tuple):
+        version = salt.version.SaltStackVersion(*version)
+    elif isinstance(version, salt._compat.string_types):
+        version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
         # Attribute the warning to the calling function, not to warn_until()
@@ -1371,7 +1473,9 @@ def warn_until(version_info,
     if _version_info_ is None:
         _version_info_ = salt.version.__version_info__
 
-    if _version_info_ >= version_info:
+    _version_ = salt.version.SaltStackVersion(*_version_info_)
+
+    if _version_ >= version:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
@@ -1380,21 +1484,25 @@ def warn_until(version_info,
             '{salt_version!r}. Please remove the warning.'.format(
                 filename=caller.filename,
                 lineno=caller.lineno,
-                until_version='.'.join(map(str, version_info)),
-                salt_version='.'.join(map(str, _version_info_))
+                until_version=version.formatted_version,
+                salt_version=_version_.formatted_version
             ),
         )
 
     if _dont_call_warnings is False:
-        warnings.warn(message, category, stacklevel=stacklevel)
+        warnings.warn(
+            message.format(version=version.formatted_version),
+            category,
+            stacklevel=stacklevel
+        )
 
 
 def kwargs_warn_until(kwargs,
-               version_info,
-               category=DeprecationWarning,
-               stacklevel=None,
-               _version_info_=None,
-               _dont_call_warnings=False):
+                      version,
+                      category=DeprecationWarning,
+                      stacklevel=None,
+                      _version_info_=None,
+                      _dont_call_warnings=False):
     '''
     Helper function to raise a warning (by default, a ``DeprecationWarning``)
     when unhandled keyword arguments are passed to function, until the
@@ -1408,8 +1516,9 @@ def kwargs_warn_until(kwargs,
     for the modern strategy for deprecating a function parameter.
 
     :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
-    :param version_info: The version info after which the warning becomes a
-                         ``RuntimeError``. For example ``(0, 17)``.
+    :param version: The version info or name after which the warning becomes a
+                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
+                    or an instance of :class:`salt.version.SaltStackVersion`.
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
     :param stacklevel: There should be no need to set the value of
@@ -1422,10 +1531,17 @@ def kwargs_warn_until(kwargs,
                                 issued. When we're only after the salt version
                                 checks to raise a ``RuntimeError``.
     '''
-    if not isinstance(version_info, tuple):
+    if not isinstance(version, (tuple,
+                                salt._compat.string_types,
+                                salt.version.SaltStackVersion)):
         raise RuntimeError(
-            'The \'version_info\' argument should be passed as a tuple.'
+            'The \'version\' argument should be passed as a tuple, string or '
+            'an instance of \'salt.version.SaltStackVersion\'.'
         )
+    elif isinstance(version, tuple):
+        version = salt.version.SaltStackVersion(*version)
+    elif isinstance(version, salt._compat.string_types):
+        version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
         # Attribute the warning to the calling function,
@@ -1435,16 +1551,19 @@ def kwargs_warn_until(kwargs,
     if _version_info_ is None:
         _version_info_ = salt.version.__version_info__
 
-    if kwargs or _version_info_ >= version_info:
-        removal_version = '.'.join(str(component) for component in version_info)
-        arg_names = ', '.join('\'{0}\''.format(key) for key in kwargs)
-        warn_until(version_info,
-           message='The following parameter(s) have been deprecated and '
-           'will be removed in {0}: {1}.'.format(removal_version, arg_names),
-           category=category,
-           stacklevel=stacklevel,
-           _version_info_=_version_info_,
-           _dont_call_warnings=_dont_call_warnings
+    _version_ = salt.version.SaltStackVersion(*_version_info_)
+
+    if kwargs or _version_.info >= version.info:
+        arg_names = ', '.join('{0!r}'.format(key) for key in kwargs)
+        warn_until(
+            version,
+            message='The following parameter(s) have been deprecated and '
+                    'will be removed in {0!r}: {1}.'.format(version.string,
+                                                            arg_names),
+            category=category,
+            stacklevel=stacklevel,
+            _version_info_=_version_.info,
+            _dont_call_warnings=_dont_call_warnings
         )
 
 
@@ -1536,10 +1655,10 @@ def memoize(func):
     Deprecation warning wrapper since memoize is now on salt.utils.decorators
     '''
     warn_until(
-        (0, 19),
+        'Helium',
         'The \'memoize\' decorator was moved to \'salt.utils.decorators\', '
         'please start importing it from there. This warning and wrapper '
-        'will be removed on salt > 0.19.0.',
+        'will be removed in Salt {version}.',
         stacklevel=3
 
     )

@@ -167,6 +167,14 @@ class Master(SMaster):
         '''
         Create a salt master server instance
         '''
+        # Warn if ZMQ < 3.2
+        if not(hasattr(zmq, 'zmq_version_info')) or \
+                zmq.zmq_version_info() < (3, 2):
+            # PyZMQ 2.1.9 does not have zmq_version_info
+            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
+                        'are known connection keep-alive issues with ZMQ < '
+                        '3.2 which may result in loss of contact with '
+                        'minions. Please upgrade your ZMQ!')
         SMaster.__init__(self, opts)
 
     def _clear_old_jobs(self):
@@ -893,6 +901,7 @@ class AESFuncs(object):
         mopts['state_top'] = self.opts['state_top']
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
+        mopts['state_events'] = self.opts['state_events']
         return mopts
 
     def _mine_get(self, load):
@@ -2350,6 +2359,11 @@ class ClearFuncs(object):
         self.serial.dump(
                 clear_load,
                 salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
+                )
+        # save the minions to a cache so we can see in the UI
+        self.serial.dump(
+                minions,
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
                 )
         if self.opts['ext_job_cache']:
             try:

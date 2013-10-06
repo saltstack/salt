@@ -97,6 +97,39 @@ def lookup_jid(jid, ext_source=None):
     return ret
 
 
+def list_job(jid):
+    '''
+    List a specific job given by its jid
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.list_job 20130916125524463507
+    '''
+    serial = salt.payload.Serial(__opts__)
+    ret = {}
+    jid_dir = salt.utils.jid_dir(jid, __opts__['cachedir'], __opts__['hash_type'])
+    loadpath = os.path.join(jid_dir, '.load.p')
+    minionspath = os.path.join(jid_dir, '.minions.p')
+    if os.path.isfile(loadpath):
+        load = serial.load(salt.utils.fopen(loadpath, 'rb'))
+        jid = load['jid']
+        ret = {'jid': jid,
+               'Start Time': salt.utils.jid_to_time(jid),
+               'Function': load['fun'],
+               'Arguments': list(load['arg']),
+               'Target': load['tgt'],
+               'Target-type': load['tgt_type'],
+               'User': load.get('user', 'root')}
+        if os.path.isfile(minionspath):
+            minions = serial.load(salt.utils.fopen(minionspath, 'rb'))
+            ret['Minions'] = minions
+
+    salt.output.display_output(ret, 'yaml', __opts__)
+    return ret
+
+
 def list_jobs():
     '''
     List all detectable jobs and associated functions
@@ -114,16 +147,22 @@ def list_jobs():
         t_path = os.path.join(job_dir, top)
         for final in os.listdir(t_path):
             loadpath = os.path.join(t_path, final, '.load.p')
+            minionspath = os.path.join(t_path, final, '.minions.p')
             if not os.path.isfile(loadpath):
                 continue
             load = serial.load(salt.utils.fopen(loadpath, 'rb'))
             jid = load['jid']
-            ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
+            ret[jid] = {'jid': jid,
+                        'Start Time': salt.utils.jid_to_time(jid),
                         'Function': load['fun'],
                         'Arguments': list(load['arg']),
                         'Target': load['tgt'],
                         'Target-type': load['tgt_type'],
                         'User': load.get('user', 'root')}
+            if os.path.isfile(minionspath):
+                minions = serial.load(salt.utils.fopen(minionspath, 'rb'))
+                ret[jid]['Minions'] = minions
+
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 

@@ -68,6 +68,19 @@ def get_disabled():
     return sorted(ret)
 
 
+def available(name):
+    '''
+    Return if the specified service is available
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.available
+    '''
+    return name in get_all()
+
+
 def get_all():
     '''
     Return all installed services

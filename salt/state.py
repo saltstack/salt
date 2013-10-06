@@ -37,6 +37,28 @@ from salt.exceptions import SaltReqTimeoutError, SaltException
 log = logging.getLogger(__name__)
 
 
+STATE_INTERNAL_KEYWORDS = frozenset([
+    # These are keywords passed to state module functions which are to be used
+    # by salt in this state module and not on the actual state module function
+    'fun',
+    'order',
+    'state',
+    'require',
+    'fail_hard',
+    'reload_modules',
+    '__id__',
+    '__sls__',
+    '__env__',
+    '__pub_user',
+    '__pub_arg',
+    '__pub_jid',
+    '__pub_fun',
+    '__pub_tgt',
+    '__pub_ret',
+    '__pub_tgt_type'
+])
+
+
 def split_low_tag(tag):
     '''
     Take a low tag and split it back into the low dict that it came from
@@ -472,7 +494,7 @@ class State(object):
     '''
     Class used to execute salt states
     '''
-    def __init__(self, opts, pillar=None):
+    def __init__(self, opts, pillar=None, jid=None):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
@@ -485,6 +507,7 @@ class State(object):
         self.mod_init = set()
         self.pre = {}
         self.__run_num = 0
+        self.jid = jid
 
     def __gather_pillar(self):
         '''
@@ -841,53 +864,6 @@ class State(object):
                     chunk['order'] = cap + 1000000 + chunk['order']
         chunks.sort(key=lambda k: (k['order'], '{0[state]}{0[name]}{0[fun]}'.format(k)))
         return chunks
-
-    def format_call(self, data):
-        '''
-        Formats low data into a list of dict's used to actually call the state,
-        returns:
-        {
-        'full': 'module.function',
-        'args': [arg[0], arg[1], ...]
-        }
-        used to call the function like this:
-        self.states[ret['full']](*ret['args'])
-
-        It is assumed that the passed data has already been verified with
-        verify_data
-        '''
-        ret = {}
-        ret['full'] = '{0[state]}.{0[fun]}'.format(data)
-        ret['args'] = []
-        aspec = salt.utils.get_function_argspec(self.states[ret['full']])
-        arglen = 0
-        deflen = 0
-        if isinstance(aspec.args, list):
-            arglen = len(aspec.args)
-        if isinstance(aspec.defaults, tuple):
-            deflen = len(aspec.defaults)
-        if aspec.keywords:
-            # This state accepts **kwargs
-            ret['kwargs'] = {}
-            for key in data:
-                # Passing kwargs the conflict with args == stack trace
-                if key in aspec.args:
-                    continue
-                ret['kwargs'][key] = data[key]
-        kwargs = {}
-        for ind in range(arglen - 1, 0, -1):
-            minus = arglen - ind
-            if deflen - minus > -1:
-                kwargs[aspec.args[ind]] = aspec.defaults[-minus]
-        for arg in kwargs:
-            if arg in data:
-                kwargs[arg] = data[arg]
-        for arg in aspec.args:
-            if arg in kwargs:
-                ret['args'].append(kwargs[arg])
-            else:
-                ret['args'].append(data[arg])
-        return ret
 
     def compile_high_data(self, high):
         '''
@@ -1246,7 +1222,13 @@ class State(object):
 
         if 'provider' in data:
             self.load_modules(data)
-        cdata = self.format_call(data)
+
+        state_func_name = '{0[state]}.{0[fun]}'.format(data)
+        cdata = salt.utils.format_call(
+            self.states[state_func_name], data,
+            initial_ret={'full': state_func_name},
+            expected_extra_kws=STATE_INTERNAL_KEYWORDS
+        )
         if data.get('__prereq__'):
             test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
             sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = True
@@ -1269,11 +1251,18 @@ class State(object):
         finally:
             if data.get('__prereq__'):
                 sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = test
+
+        # If format_call got any warnings, let's show them to the user
+        if 'warnings' in cdata:
+            ret.setdefault('warnings', []).extend(cdata['warnings'])
+
         if 'provider' in data:
             self.load_modules()
+
         if data.get('__prereq__'):
             data['__prereq__'] = False
             return ret
+
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
@@ -1391,6 +1380,16 @@ class State(object):
             return 'change'
         return 'met'
 
+    def event(self, chunk_ret):
+        '''
+        Fire an event on the master bus
+        '''
+        if not self.opts.get('local') and self.opts.get('state_events', True):
+            tag = salt.utils.event.tagify(
+                    [self.jid, str(chunk_ret['__run_num__'])]
+                    )
+            self.functions['event.fire_master'](chunk_ret, tag)
+
     def call_chunk(self, low, running, chunks):
         '''
         Check if a chunk has any requires, execute the requires and then
@@ -1456,6 +1455,7 @@ class State(object):
                                 'comment': comment,
                                 '__run_num__': self.__run_num}
                 self.__run_num += 1
+                self.event(running[tag])
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -1477,6 +1477,7 @@ class State(object):
                                     'comment': 'Recursive requisite found',
                                     '__run_num__': self.__run_num}
                         self.__run_num += 1
+                        self.event(running[tag])
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
@@ -1523,6 +1524,7 @@ class State(object):
                 self.pre[tag] = self.call(low)
             else:
                 running[tag] = self.call(low)
+        self.event(running[tag])
         return running
 
     def call_high(self, high):
@@ -1704,6 +1706,7 @@ class BaseHighState(object):
                     'state_auto_order',
                     opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
+            opts['state_events'] = mopts.get('state_events')
         return opts
 
     def _get_envs(self):
@@ -1993,18 +1996,29 @@ class BaseHighState(object):
                     # An include must be resolved to a single environment, or
                     # the include must exist in the current environment
                     if len(resolved_envs) == 1 or env in resolved_envs:
-                        if inc_sls not in mods:
-                            nstate, err = self.render_state(
-                                inc_sls,
-                                resolved_envs[0] if len(resolved_envs) == 1 else env,
-                                mods,
-                                matches
-                            )
-                            if nstate:
-                                self.merge_included_states(state, nstate, errors)
-                                state.update(nstate)
-                            if err:
-                                errors.extend(err)
+                        # Match inc_sls against the available states in the
+                        # resolved env, matching wildcards in the process. If
+                        # there were no matches, then leave inc_sls as the
+                        # target so that the next recursion of render_state
+                        # will recognize the error.
+                        sls_targets = fnmatch.filter(
+                            self.avail[env],
+                            inc_sls
+                        ) or [inc_sls]
+
+                        for sls_target in sls_targets:
+                            if sls_target not in mods:
+                                nstate, err = self.render_state(
+                                    sls_target,
+                                    resolved_envs[0] if len(resolved_envs) == 1 else env,
+                                    mods,
+                                    matches
+                                )
+                                if nstate:
+                                    self.merge_included_states(state, nstate, errors)
+                                    state.update(nstate)
+                                if err:
+                                    errors.extend(err)
                     else:
                         msg = ''
                         if not resolved_envs:
@@ -2336,10 +2350,10 @@ class HighState(BaseHighState):
     # a stack of active HighState objects during a state.highstate run
     stack = []
 
-    def __init__(self, opts, pillar=None):
+    def __init__(self, opts, pillar=None, jid=None):
         self.client = salt.fileclient.get_file_client(opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(self.opts, pillar)
+        self.state = State(self.opts, pillar, jid)
         self.matcher = salt.minion.Matcher(self.opts)
 
         # tracks all pydsl state declarations globally across sls files

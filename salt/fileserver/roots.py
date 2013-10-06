@@ -243,15 +243,13 @@ def symlink_list(load):
     ret = {}
     if load['env'] not in __opts__['file_roots']:
         return ret
-
     for path in __opts__['file_roots'][load['env']]:
         try:
             prefix = load['prefix'].strip('/')
         except KeyError:
             prefix = ''
-        # No need to follow symlinks here, this is a symlink hunt :-)
-        for root, dirs, files in os.walk(os.path.join(path, prefix),
-                                         followlinks=False):
+        # Adopting rsync functionality here and stopping at any encounter of a symlink
+        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=False):
             for fname in files:
                 if not os.path.islink(os.path.join(root, fname)):
                     continue
@@ -263,5 +261,8 @@ def symlink_list(load):
                     ret[rel_fn] = os.readlink(os.path.join(root, fname))
             for dname in dirs:
                 if os.path.islink(os.path.join(root, dname)):
-                    ret[dname] = os.readlink(os.path.join(root, dname))
+                    ret[os.path.relpath(os.path.join(root,
+                                                     dname),
+                                        path)] = os.readlink(os.path.join(root,
+                                                                          dname))
     return ret

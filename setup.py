@@ -307,11 +307,17 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.search',
                              'salt.output',
                              'salt.utils',
+                             'salt.utils.decorators',
                              'salt.roster',
                              'salt.log',
                              'salt.log.handlers',
+                             'salt.templates',
                              ],
-                'package_data': {'salt.templates': ['rh_ip/*.jinja']},
+                'package_data': {'salt.templates': [
+                                    'rh_ip/*.jinja',
+                                    'virt/*.jinja'
+                                    ]
+                                },
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-master.1',
                                  'doc/man/salt-key.1',

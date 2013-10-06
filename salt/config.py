@@ -92,6 +92,8 @@ VALID_OPTS = {
     'cython_enable': bool,
     'state_verbose': bool,
     'state_output': str,
+    'state_auto_order': bool,
+    'state_events': bool,
     'acceptance_wait_time': float,
     'acceptance_wait_time_max': float,
     'loop_interval': float,
@@ -224,6 +226,7 @@ DEFAULT_MINION_OPTS = {
     'state_verbose': True,
     'state_output': 'full',
     'state_auto_order': True,
+    'state_events': True,
     'acceptance_wait_time': 10,
     'acceptance_wait_time_max': 0,
     'loop_interval': 1,
@@ -329,6 +332,7 @@ DEFAULT_MASTER_OPTS = {
     'state_verbose': True,
     'state_output': 'full',
     'state_auto_order': True,
+    'state_events': True,
     'search': '',
     'search_index_interval': 3600,
     'loop_interval': 60,
@@ -571,10 +575,10 @@ def minion_config(path,
         # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '
             'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in salt > 0.18.0'
+            'deprecated. \'check_dns\' will be removed in Salt {version}.'
         )
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
@@ -765,10 +769,10 @@ def apply_minion_config(overrides=None, defaults=None, check_dns=None):
         # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '
             'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in salt > 0.18.0'
+            'deprecated. \'check_dns\' will be removed in Salt {version}.'
         )
 
     if defaults is None:

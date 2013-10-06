@@ -20,48 +20,66 @@ class TestFind(TestCase):
 
     def test_parse_interval(self):
         self.assertRaises(ValueError, salt.utils.find._parse_interval, 'w')
+        self.assertRaises(ValueError, salt.utils.find._parse_interval, '1')
         self.assertRaises(ValueError, salt.utils.find._parse_interval, '1s1w')
         self.assertRaises(ValueError, salt.utils.find._parse_interval, '1s1s')
 
-        result, resolution = salt.utils.find._parse_interval('')
+        result, resolution, modifier = salt.utils.find._parse_interval('')
         self.assertEqual(result, 0)
         self.assertIs(resolution, None)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1')
-        self.assertEqual(result, 86400.0)
-        self.assertEqual(resolution, 86400)
-
-        result, resolution = salt.utils.find._parse_interval('1s')
+        result, resolution, modifier = salt.utils.find._parse_interval('1s')
         self.assertEqual(result, 1.0)
         self.assertEqual(resolution, 1)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1m')
+        result, resolution, modifier = salt.utils.find._parse_interval('1m')
         self.assertEqual(result, 60.0)
         self.assertEqual(resolution, 60)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1h')
+        result, resolution, modifier = salt.utils.find._parse_interval('1h')
         self.assertEqual(result, 3600.0)
         self.assertEqual(resolution, 3600)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1d')
+        result, resolution, modifier = salt.utils.find._parse_interval('1d')
         self.assertEqual(result, 86400.0)
         self.assertEqual(resolution, 86400)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1w')
+        result, resolution, modifier = salt.utils.find._parse_interval('1w')
         self.assertEqual(result, 604800.0)
         self.assertEqual(resolution, 604800)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1w3d6h')
+        result, resolution, modifier = salt.utils.find._parse_interval('1w3d6h')
         self.assertEqual(result, 885600.0)
         self.assertEqual(resolution, 3600)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1m1s')
+        result, resolution, modifier = salt.utils.find._parse_interval('1m1s')
         self.assertEqual(result, 61.0)
         self.assertEqual(resolution, 1)
+        self.assertEqual(modifier, '')
 
-        result, resolution = salt.utils.find._parse_interval('1m2s')
+        result, resolution, modifier = salt.utils.find._parse_interval('1m2s')
         self.assertEqual(result, 62.0)
         self.assertEqual(resolution, 1)
+        self.assertEqual(modifier, '')
+
+        result, resolution, modifier = salt.utils.find._parse_interval('+1d')
+        self.assertEqual(result, 86400.0)
+        self.assertEqual(resolution, 86400)
+        self.assertEqual(modifier, '+')
+
+        result, resolution, modifier = salt.utils.find._parse_interval('-1d')
+        self.assertEqual(result, 86400.0)
+        self.assertEqual(resolution, 86400)
+        self.assertEqual(modifier, '-')
+
+
 
     def test_parse_size(self):
         self.assertRaises(ValueError, salt.utils.find._parse_size, '')
@@ -254,10 +272,10 @@ class TestFind(TestCase):
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
     def test_mtime_option_match(self):
-        option = salt.utils.find.MtimeOption('mtime', '1w')
+        option = salt.utils.find.MtimeOption('mtime', '-1w')
         self.assertEqual(option.match('', '', [1] * 9), False)
 
-        option = salt.utils.find.MtimeOption('mtime', '1s')
+        option = salt.utils.find.MtimeOption('mtime', '-1s')
         self.assertEqual(option.match('', '', [10 ** 10] * 9), True)
 
 
