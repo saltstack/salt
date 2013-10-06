@@ -22,6 +22,7 @@ import random
 import getpass
 
 # Import salt libs
+import salt.config
 import salt.loader
 import salt.utils
 import salt.utils.minions
@@ -151,9 +152,24 @@ class Authorize(object):
     '''
     The authorization engine used by EAUTH
     '''
-    def __init__(self, opts, load):
-        self.opts = opts
+    def __init__(self, opts, load, loadauth=None):
+        self.opts = salt.config.master_config(opts['conf_file'])
         self.load = load
+        if loadauth is None:
+            self.loadauth = LoadAuth(opts)
+        else:
+            self.loadauth = loadauth
+
+    def auth_data(self):
+        '''
+        Gather and create the autorization data sets
+        '''
+        auth_data = [self.opts['external_auth']]
+        for auth_back in self.opts.get('external_auth_sources'):
+            fstr = '{0}.perms'.format(auth_back)
+            if fstr in self.loadauth.auth:
+                auth_data.append(getattr(self.loadauth.auth)())
+        return auth_data
 
 
 class Resolver(object):
