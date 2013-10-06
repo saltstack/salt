@@ -724,6 +724,7 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
+        ret['fun_args'] = data['arg']
         minion_instance._return_pub(ret)
         if data['ret']:
             ret['id'] = opts['id']
@@ -770,6 +771,8 @@ class Minion(object):
                 )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
+            ret['fun'] = data['fun']
+            ret['fun_args'] = data['arg']
         minion_instance._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):
