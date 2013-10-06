@@ -30,7 +30,7 @@ def _parse_return_code_powershell(string):
     else:
         return int(regex.group(1))
 
-def _psrdp(cmd)
+def _psrdp(cmd):
     '''
     Create a Win32_TerminalServiceSetting WMI Object as $RDP and execute the command cmd
     returns the STDOUT of the command
