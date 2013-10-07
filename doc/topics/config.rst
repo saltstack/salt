@@ -466,6 +466,17 @@ Using the new syntax:
       ignore_cidr: 192.168.0.0/16
 
 
+For in-house Openstack Essex installation, libcloud needs the service_type :
+
+.. code-block:: yaml
+
+  my-openstack-config:
+    identity_url: 'http://control.openstack.example.org:5000/v2.0/'
+    compute_name : Compute Service
+    service_type : compute
+
+
+
 Digital Ocean
 -------------
 
