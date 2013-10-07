@@ -1010,7 +1010,7 @@ def __grant_generate(grant,
     qry = 'GRANT {0} ON {1}.{2} TO {3!r}@{4!r}'.format(
         grant, dbc, table, user, host
     )
-    if grant_option:
+    if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
     log.debug('Query generated: {0}'.format(qry))
     return qry
@@ -1050,7 +1050,7 @@ def user_grants(user,
     for grant in results:
         tmp = grant[0].split(' IDENTIFIED BY')[0]
         if 'WITH GRANT OPTION' in grant[0]:
-            tmp = '{} WITH GRANT OPTION'.format(tmp)
+            tmp = '{0} WITH GRANT OPTION'.format(tmp)
         ret.append(tmp)
     log.debug(ret)
     return ret
@@ -1161,7 +1161,7 @@ def grant_revoke(grant,
         return False
     cur = dbc.cursor()
 
-    if grant_option:
+    if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'
     qry = 'REVOKE {0} ON {1} FROM {2!r}@{3!r};'.format(
         grant, database, user, host

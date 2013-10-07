@@ -724,10 +724,11 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
+        ret['fun_args'] = data['arg']
         minion_instance._return_pub(ret)
         if data['ret']:
+            ret['id'] = opts['id']
             for returner in set(data['ret'].split(',')):
-                ret['id'] = opts['id']
                 try:
                     minion_instance.returners['{0}.returner'.format(
                         returner
@@ -770,6 +771,8 @@ class Minion(object):
                 )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
+            ret['fun'] = data['fun']
+            ret['fun_args'] = data['arg']
         minion_instance._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):
@@ -851,7 +854,7 @@ class Minion(object):
         Execute a state run based on information set in the minion config file
         '''
         if self.opts['startup_states']:
-            data = {'jid': 'req', 'ret': ''}
+            data = {'jid': 'req', 'ret': self.opts['ext_job_cache']}
             if self.opts['startup_states'] == 'sls':
                 data['fun'] = 'state.sls'
                 data['arg'] = [self.opts['sls_list']]

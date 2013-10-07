@@ -3,8 +3,8 @@ Introduction to Extending Salt
 ==============================
 
 Salt is made to be used, and made to be extended. The primary goal of Salt is
-to provide a foundation which can be used to solve problems. And the goal of
-Salt is to not assume what those problems might be.
+to provide a foundation which can be used to solve problems without
+assuming what those problems might be.
 
 One of the greatest benefit of developing Salt has been the vast array of ways
 in which people have wanted to use it, while the original intention was as a

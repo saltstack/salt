@@ -39,9 +39,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         if self.config['verify_env']:
-            if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+            if not (self.config['log_file'].startswith('tcp://') or
+                    self.config['log_file'].startswith('udp://') or
+                    self.config['log_file'].startswith('file://')):
                 # Logfile is not using Syslog, verify
                 verify_files(
                     [self.config['log_file']],

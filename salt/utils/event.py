@@ -552,7 +552,7 @@ class ReactWrap(object):
                     'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
                     exc_info=True
                     )
-            return ret
+            return False
         return ret
 
     def cmd(self, *args, **kwargs):

@@ -48,16 +48,16 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 ret = pip_state.installed('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in 0.18.0. Please use \'user\' '
-                    'instead.', str(w[-1].message)
+                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'Please use \'user\' instead.', str(w[-1].message)
                 )
                 self.assertSaltTrueReturn({'testsuite': ret})
                 # Is the state returning a warnings key with the deprecation
                 # message?
                 self.assertInSalStatetWarning(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in 0.18.0. Please use \'user\' '
-                    'instead.', {'testsuite': ret}
+                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'Please use \'user\' instead.', {'testsuite': ret}
                 )
 
     def test_installed_runas_and_user_raises_exception(self):
@@ -86,16 +86,16 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 ret = pip_state.removed('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in 0.18.0. Please use \'user\' '
-                    'instead.', str(w[-1].message)
+                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'Please use \'user\' instead.', str(w[-1].message)
                 )
                 self.assertSaltTrueReturn({'testsuite': ret})
                 # Is the state returning a warnings key with the deprecation
                 # message?
                 self.assertInSalStatetWarning(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in 0.18.0. Please use \'user\' '
-                    'instead.', {'testsuite': ret}
+                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'Please use \'user\' instead.', {'testsuite': ret}
                 )
 
     def test_removed_runas_and_user_raises_exception(self):

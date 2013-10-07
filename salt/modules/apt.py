@@ -144,9 +144,10 @@ def latest_version(*names, **kwargs):
     if 'repo' in kwargs:
         # Remember to kill _get_repo() too when removing this warning.
         salt.utils.warn_until(
-            (0, 18),
-            'The \'repo\' argument to apt.latest_version is deprecated, and will be '
-            'removed in 0.18.0. Please use \'fromrepo\' instead.'
+            'Hydrogen',
+            'The \'repo\' argument to apt.latest_version is deprecated, and '
+            'will be removed in Salt {version}. Please use \'fromrepo\' '
+            'instead.'
         )
     fromrepo = _get_repo(**kwargs)
     kwargs.pop('fromrepo', None)
@@ -393,8 +394,10 @@ def install(name=None,
             else:
                 cver = old.get(param)
                 if cver is not None \
-                        and __salt__['pkg.compare'](pkg1=version_num,
-                                                    oper='<', pkg2=cver):
+                        and salt.utils.compare_versions(ver1=version_num,
+                                                        oper='<',
+                                                        ver2=cver,
+                                                        cmp_func=version_cmp):
                     downgrade = True
                 targets.append('"{0}={1}"'.format(param, version_num))
         if fromrepo:

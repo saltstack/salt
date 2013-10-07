@@ -248,9 +248,9 @@ def install(pkgs=None,
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
-            (0, 18),
+            'Hydrogen',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in 0.18.0. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.'
         )
 
     # "There can only be one"
@@ -559,9 +559,9 @@ def uninstall(pkgs=None,
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
-            (0, 18),
+            'Hydrogen',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in 0.18.0. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.'
         )
 
     # "There can only be one"
@@ -683,9 +683,9 @@ def freeze(bin_env=None,
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
-            (0, 18),
+            'Hydrogen',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in 0.18.0. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.'
         )
 
     # "There can only be one"
@@ -735,9 +735,9 @@ def list_(prefix=None,
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
-            (0, 18),
+            'Hydrogen',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in 0.18.0. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.'
         )
 
     # "There can only be one"

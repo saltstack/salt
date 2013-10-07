@@ -13399,8 +13399,8 @@ switching to a non\-threaded transport to see if that fixes your problem.
 .SH INTRODUCTION TO EXTENDING SALT
 .sp
 Salt is made to be used, and made to be extended. The primary goal of Salt is
-to provide a foundation which can be used to solve problems. And the goal of
-Salt is to not assume what those problems might be.
+to provide a foundation which can be used to solve problems without assuming
+what those problems might be.
 .sp
 One of the greatest benefit of developing Salt has been the vast array of ways
 in which people have wanted to use it, while the original intention was as a
@@ -53894,9 +53894,6 @@ Salt has been created to get the best of both worlds. States are evaluated in
 a finite order, which guarantees that states are always executed in the same
 order, and the states runtime is declarative, making Salt fully aware of
 dependencies via the requisite system.
-.sp
-Also, in Salt 0.17.0, the \fBstate_auto_order\fP option was added to Salt.
-It makes states get evaluated in the order in which they are defined.
 .SS State Auto Ordering
 .sp
 Salt always executes states in a finite manner, meaning that they will always

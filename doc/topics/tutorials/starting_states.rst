@@ -5,8 +5,8 @@ How Do I Use Salt States?
 Simplicity, Simplicity, Simplicity
 
 Many of the most powerful and useful engineering solutions are founded on
-simple principles. The Salt SLS system strives to do just that. K.I.S.S. 
-(Keep It Stupidly Simple)
+simple principles. Salt States strive to do just that: K.I.S.S. (Keep It
+Stupidly Simple)
 
 The core of the Salt State system is the SLS, or **S**\ a\ **L**\ t
 **S**\ tate file. The SLS is a representation of the state in which
@@ -34,8 +34,13 @@ By using this approach Salt can be much more flexible. As one writes more state
 files, it becomes clearer exactly what is being written. The result is a system
 that is easy to understand, yet grows with the needs of the admin or developer.
 
-In the section titled "State Data Structures" a reference exists, explaining
-in depth how the data is laid out.
+
+The Top File
+============
+
+The example SLS files in the below sections can be assigned to hosts using a
+file called :strong:`top.sls`. This file is described in-depth :doc:`here
+</ref/states/top>`.
 
 
 Default Data - YAML

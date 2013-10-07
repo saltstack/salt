@@ -575,10 +575,10 @@ def minion_config(path,
         # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '
             'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in salt > 0.18.0'
+            'deprecated. \'check_dns\' will be removed in Salt {version}.'
         )
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
@@ -769,10 +769,10 @@ def apply_minion_config(overrides=None, defaults=None, check_dns=None):
         # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '
             'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in salt > 0.18.0'
+            'deprecated. \'check_dns\' will be removed in Salt {version}.'
         )
 
     if defaults is None:
