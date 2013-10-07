@@ -1526,7 +1526,8 @@ class State(object):
                 self.pre[tag] = self.call(low)
             else:
                 running[tag] = self.call(low)
-        self.event(running[tag])
+        if tag in running:
+            self.event(running[tag])
         return running
 
     def call_high(self, high):
