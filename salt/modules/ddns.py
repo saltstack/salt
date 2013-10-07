@@ -51,7 +51,6 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True):
         p = parts.pop(0)
         popped.append(p)
         zone = '{0}.{1}'.format(p, zone)
-        log.info('trying.... {}'.format(zone))
         name = ip.replace('{0}.'.format('.'.join(popped)), '', 1)
         ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, replace)
         if ptr:
