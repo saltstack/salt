@@ -1188,12 +1188,21 @@ def append(path, *args):
 
     with salt.utils.fopen(path, "r+") as ofile:
         # Make sure we have a newline at the end of the file
-        ofile.seek(-1, os.SEEK_END)
-        if ofile.read(1) != '\n':
-            ofile.seek(0, os.SEEK_END)
-            ofile.write('\n')
+        try:
+            ofile.seek(-1, os.SEEK_END)
+        except IOError as exc:
+            if exc.errno == errno.EINVAL:
+                # Empty file, simply append lines at the beginning of the file
+                pass
+            else:
+                raise
         else:
-            ofile.seek(0, os.SEEK_END)
+            if ofile.read(1) != '\n':
+                ofile.seek(0, os.SEEK_END)
+                ofile.write('\n')
+            else:
+                ofile.seek(0, os.SEEK_END)
+        # Append lines
         for line in args:
             ofile.write('{0}\n'.format(line))
 

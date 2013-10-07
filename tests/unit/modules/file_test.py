@@ -126,18 +126,25 @@ class FileModuleTestCase(TestCase):
         Check that file.append works consistently on files with and without
         newlines at end of file.
         '''
+        # File ending with a newline
         with tempfile.NamedTemporaryFile() as tfile:
             tfile.write('foo\n')
             tfile.flush()
             filemod.append(tfile.name, 'bar')
             with open(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'foo\nbar\n')
+        # File not ending with a newline
         with tempfile.NamedTemporaryFile() as tfile:
             tfile.write('foo')
             tfile.flush()
             filemod.append(tfile.name, 'bar')
             with open(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'foo\nbar\n')
+        # A newline should not be added in empty files
+        with tempfile.NamedTemporaryFile() as tfile:
+            filemod.append(tfile.name, 'bar')
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), 'bar\n')
 
 
 if __name__ == '__main__':
