@@ -467,9 +467,9 @@ def install(name=None,
                 else:
                     arch = ''
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
-                if not cver or __salt__['pkg.compare'](pkg1=version_num,
-                                                       oper='>=',
-                                                       pkg2=cver):
+                if not cver or salt.utils.compare_versions(ver1=version_num,
+                                                           oper='>=',
+                                                           ver2=cver):
                     targets.append(pkgstr)
                 else:
                     downgrade.append(pkgstr)
