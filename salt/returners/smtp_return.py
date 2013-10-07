@@ -67,13 +67,15 @@ def returner(ret):
                '\r\n'
                'id: {4}\r\n'
                'function: {5}\r\n'
-               'jid: {6}\r\n'
-               '{7}').format(from_addr,
+               'function args: {6}\r\n'
+               'jid: {7}\r\n'
+               '{8}').format(from_addr,
                              to_addrs,
                              formatdate(localtime=True),
                              subject,
                              ret['id'],
                              ret['fun'],
+                             ret['fun_args'],
                              ret['jid'],
                              content)
 
