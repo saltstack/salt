@@ -48,15 +48,15 @@ def _recurmatch(path, aug):
                 yield _match
 
 
-def _lstrip_word(string, prefix):
+def _lstrip_word(word, prefix):
     '''
     Return a copy of the string after the specified prefix was removed
     from the beginning of the string
     '''
 
-    if string.startswith(prefix):
-        return string[len(prefix):]
-    return string
+    if str(word).startswith(prefix):
+        return str(word)[len(prefix):]
+    return word
 
 
 def get(path, value=''):
@@ -129,8 +129,8 @@ def setvalue(*args):
     aug = Augeas()
     ret = {'retval': False}
 
-    tuples = filter(lambda x: not x.startswith('prefix='), args)
-    prefix = filter(lambda x: x.startswith('prefix='), args)
+    tuples = filter(lambda x: not str(x).startswith('prefix='), args)
+    prefix = filter(lambda x: str(x).startswith('prefix='), args)
     if prefix:
         if len(prefix) > 1:
             raise SaltInvocationError(

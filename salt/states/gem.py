@@ -65,7 +65,7 @@ def installed(name,          # pylint: disable=C0103
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -139,7 +139,7 @@ def removed(name, ruby=None, runas=None, user=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

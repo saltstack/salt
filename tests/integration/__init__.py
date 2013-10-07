@@ -64,12 +64,20 @@ TMP_CONF_DIR = os.path.join(TMP, 'config')
 log = logging.getLogger(__name__)
 
 
-def run_tests(TestCase, needs_daemon=True):
+def run_tests(*test_cases, **kwargs):
     '''
-    Run integration tests for a chosen test case.
+    Run integration tests for the chosen test cases.
 
     Function uses optparse to set up test environment
     '''
+
+    needs_daemon = kwargs.pop('needs_daemon', True)
+    if kwargs:
+        raise RuntimeError(
+            'The \'run_tests\' function only accepts \'needs_daemon\' as a '
+            'keyword argument'
+        )
+
     class TestcaseParser(SaltTestcaseParser):
         def setup_additional_options(self):
             self.add_option(
@@ -95,8 +103,9 @@ def run_tests(TestCase, needs_daemon=True):
 
     parser = TestcaseParser()
     parser.parse_args()
-    if parser.run_testcase(TestCase, needs_daemon=needs_daemon) is False:
-        parser.finalize(1)
+    for case in test_cases:
+        if parser.run_testcase(case, needs_daemon=needs_daemon) is False:
+            parser.finalize(1)
     parser.finalize(0)
 
 
