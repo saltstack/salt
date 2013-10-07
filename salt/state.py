@@ -1386,9 +1386,10 @@ class State(object):
         '''
         if not self.opts.get('local') and self.opts.get('state_events', True):
             tag = salt.utils.event.tagify(
-                    [self.jid, str(chunk_ret['__run_num__'])]
+                    [self.jid, 'prog', self.opts['id'], str(chunk_ret['__run_num__'])], 'job'
                     )
-            self.functions['event.fire_master'](chunk_ret, tag)
+            preload = {'jid': self.jid}
+            self.functions['event.fire_master'](chunk_ret, tag, preload=preload)
 
     def call_chunk(self, low, running, chunks):
         '''
