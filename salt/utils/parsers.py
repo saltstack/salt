@@ -1572,6 +1572,10 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'initial deployment of keys very fast and easy')
 
     def _mixin_after_parsed(self):
+        if not self.args:
+            self.print_help()
+            self.exit(1)
+
         if self.options.list:
             if ',' in self.args[0]:
                 self.config['tgt'] = self.args[0].split(',')
