@@ -1186,7 +1186,14 @@ def append(path, *args):
     '''
     # Largely inspired by Fabric's contrib.files.append()
 
-    with salt.utils.fopen(path, "a") as ofile:
+    with salt.utils.fopen(path, "r+") as ofile:
+        # Make sure we have a newline at the end of the file
+        ofile.seek(-1, os.SEEK_END)
+        if ofile.read(1) != '\n':
+            ofile.seek(0, os.SEEK_END)
+            ofile.write('\n')
+        else:
+            ofile.seek(0, os.SEEK_END)
         for line in args:
             ofile.write('{0}\n'.format(line))
 

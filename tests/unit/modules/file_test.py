@@ -121,6 +121,24 @@ class FileModuleTestCase(TestCase):
                     newfile.read()
                 )
 
+    def test_append_newline_at_eof(self):
+        '''
+        Check that file.append works consistently on files with and without
+        newlines at end of file.
+        '''
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write('foo\n')
+            tfile.flush()
+            filemod.append(tfile.name, 'bar')
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), 'foo\nbar\n')
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write('foo')
+            tfile.flush()
+            filemod.append(tfile.name, 'bar')
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), 'foo\nbar\n')
+
 
 if __name__ == '__main__':
     from integration import run_tests
