@@ -7,6 +7,7 @@ The following fields can be set in the minion conf file:
     smtp.from (required)
     smtp.to (required)
     smtp.host (required)
+    smtp.port (optional, defaults to 25)
     smtp.username (optional)
     smtp.password (optional)
     smtp.tls (optional, defaults to False)
@@ -49,6 +50,7 @@ def returner(ret):
     from_addr = __salt__['config.option']('smtp.from')
     to_addrs = __salt__['config.option']('smtp.to')
     host = __salt__['config.option']('smtp.host')
+    port = __salt__['config.option']('smtp.port')
     user = __salt__['config.option']('smtp.username')
     passwd = __salt__['config.option']('smtp.password')
     subject = __salt__['config.option']('smtp.subject')
@@ -79,7 +81,7 @@ def returner(ret):
                              ret['jid'],
                              content)
 
-    server = smtplib.SMTP(host)
+    server = smtplib.SMTP(host, int(port))
     if __salt__['config.option']('smtp.tls') is True:
         server.starttls()
     if user and passwd:
