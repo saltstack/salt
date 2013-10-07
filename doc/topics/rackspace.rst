@@ -146,6 +146,24 @@ to your profiles:
         image: Ubuntu 12.04 LTS (Precise Pangolin)
         rackconnect: True
 
+Managed Cloud Environments
+--------------------------------
+
+Rackspace offers a managed service level of hosting. As part of the managed service level
+you have the ability to choose from base of lamp installations on cloud server images.
+The post build process for both the base and the lamp installations used Chef to install
+things such as the cloud monitoring agent and the cloud backup agent. It also takes care of
+installing the lamp stack if selected. In order to prevent the post installation process
+from stomping over the bootstrapping you can add the below to your profiles.
+
+.. code-block:: yaml
+
+    openstack_512:
+        provider: my-rackspace-config
+        size: 512MB Standard Instance
+        image: Ubuntu 12.04 LTS (Precise Pangolin)
+        managedcloud: True
+
 First and Next Generation Images
 --------------------------------
 

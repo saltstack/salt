@@ -304,6 +304,16 @@ def rackconnect(vm_):
         search_global=False
     )
 
+def managedcloud(vm_):
+    '''
+    Determine if we should wait for the managed cloud automation before running. Either
+    'False' (default) or 'True'.
+    '''
+    return config.get_config_value(
+        'managedcloud', vm_, __opts__, default='False',
+        search_global=False
+    )
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -493,6 +503,14 @@ def create(vm_):
 
             if rc_status != 'DEPLOYED':
                 log.debug('Waiting for Rackconnect automation to complete')
+                return
+
+        if managedcloud(vm_) is True:
+            extra = nodelist[vm_['name']].get('extra')
+            mc_status = extra.get('metadata').get('rax_service_level_automation')
+
+            if mc_status != 'Complete':
+                log.debug('Waiting for managed cloud automation to complete')
                 return
 
         if floating:
