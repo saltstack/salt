@@ -281,21 +281,17 @@ def which(exe=None):
             )
         )
     log.trace('No executable was passed to be searched by which')
-    return None
 
 
 def which_bin(exes):
     '''
     Scan over some possible executables and return the first one that is found
     '''
-    if not isinstance(exes, (list, tuple)):
-        return None
-    for exe in exes:
-        path = which(exe)
-        if not path:
-            continue
-        return path
-    return None
+    if isinstance(exes, (list, tuple)):
+        for exe in exes:
+            path = which(exe)
+            if path:
+                return path
 
 
 def list_files(directory):
@@ -305,10 +301,9 @@ def list_files(directory):
     ret = set()
     ret.add(directory)
     for root, dirs, files in safe_walk(directory):
-        for name in files:
-            ret.add(os.path.join(root, name))
-        for name in dirs:
-            ret.add(os.path.join(root, name))
+        for fname, dname in zip(files, dirs):
+            ret.add(os.path.join(root, fname))
+            ret.add(os.path.join(root, dname))
 
     return list(ret)
 
@@ -385,7 +380,8 @@ def dns_check(addr, safe=False, ipv6=False):
         else:
             addr = False
             for h in hostnames:
-                if h[0] == socket.AF_INET or (h[0] == socket.AF_INET6 and ipv6):
+                if (h[0] == socket.AF_INET or
+                        (h[0] == socket.AF_INET6 and ipv6)):
                     addr = ip_bracket(h[4][0])
                     break
             if not addr:
@@ -472,8 +468,7 @@ def jid_dir(jid, cachedir, sum_type):
     '''
     Return the jid_dir for the given job id
     '''
-    jid = str(jid)
-    jhash = getattr(hashlib, sum_type)(jid).hexdigest()
+    jhash = getattr(hashlib, sum_type)(str(jid)).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 
 
@@ -618,14 +613,14 @@ def pem_finger(path, sum_type='md5'):
     with fopen(path, 'rb') as fp_:
         key = ''.join(fp_.readlines()[1:-1])
     pre = getattr(hashlib, sum_type)(key).hexdigest()
-    finger = ''
+    finger = []
     for ind in range(len(pre)):
         if ind % 2:
             # Is odd
-            finger += '{0}:'.format(pre[ind])
+            finger.append('{0}:'.format(pre[ind]))
         else:
-            finger += pre[ind]
-    return finger.rstrip(':')
+            finger.append(pre[ind])
+    return ''.join(finger).rstrip(':')
 
 
 def build_whitespace_split_regex(text):
@@ -665,11 +660,12 @@ def build_whitespace_split_regex(text):
             lexer.quotes = '\''
         return list(lexer)
 
-    regex = r''
+    regex = []
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
-        regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
-    return r'(?m)^{0}$'.format(regex)
+        regex.append(r'(?:[\s]+)?{0}(?:[\s]+)?'.format(
+                r'(?:[\s]+)?'.join(parts)))
+    return r'(?m)^{0}$'.format(''.join(regex))
 
 
 def build_whitepace_splited_regex(text):
@@ -697,7 +693,7 @@ def format_call(fun,
     :returns: A dictionary with the function required arguments and keyword
               arguments.
     '''
-    ret = initial_ret is not None and initial_ret or {}
+    ret = initial_ret if initial_ret is not None else {}
 
     ret['args'] = []
     ret['kwargs'] = {}
@@ -743,9 +739,8 @@ def format_call(fun,
         # The function accepts **kwargs, any non expected extra keyword
         # arguments will made available.
         for key, value in data.iteritems():
-            if key in expected_extra_kws:
-                continue
-            ret['kwargs'][key] = value
+            if key not in expected_extra_kws:
+                ret['kwargs'][key] = value
 
         # No need to check for extra keyword arguments since they are all
         # **kwargs now. Return
@@ -755,9 +750,8 @@ def format_call(fun,
     # arguments
     extra = {}
     for key, value in data.iteritems():
-        if key in expected_extra_kws:
-            continue
-        extra[key] = copy.deepcopy(value)
+        if key not in expected_extra_kws:
+            extra[key] = copy.deepcopy(value)
 
     # We'll be showing errors to the users until salt 0.20 comes out, after
     # which, errors will be raised instead.
@@ -876,24 +870,18 @@ def mysql_to_dict(data, key):
     Convert MySQL-style output to a python dictionary
     '''
     ret = {}
-    headers = ['']
+    headers = False
     for line in data:
         if not line:
             continue
         if line.startswith('+'):
             continue
         comps = line.split('|')
-        for comp in range(len(comps)):
-            comps[comp] = comps[comp].strip()
-        if len(headers) > 1:
+        map(lambda x: x.strip(), comps)
+        if headers:
             index = len(headers) - 1
-            row = {}
-            for field in range(index):
-                if field < 1:
-                    continue
-                else:
-                    row[headers[field]] = str_to_num(comps[field])
-            ret[row[key]] = row
+            row = [(headers[f], str_to_num(comps[f])) for f in range(1, index)]
+            ret[row[key]] = dict(row)
         else:
             headers = comps
     return ret
@@ -1198,9 +1186,7 @@ def valid_url(url, protos):
     '''
     Return true if the passed URL is in the list of accepted protos
     '''
-    if salt._compat.urlparse(url).scheme in protos:
-        return True
-    return False
+    return salt._compat.urlparse(url).scheme in protos
 
 
 def parse_docstring(docstring):
@@ -1232,7 +1218,7 @@ def parse_docstring(docstring):
     else:
         txt = 'Required python modules: '
         data = docstring.splitlines()
-        dep_list = list(x for x in data if x.strip().startswith(txt))
+        dep_list = [x for x in data if x.strip().startswith(txt)]
         if not dep_list:
             ret['deps'] = []
             return ret
@@ -1391,7 +1377,7 @@ def date_cast(date):
                 date = float(date)
 
         return datetime.datetime.fromtimestamp(date)
-    except Exception as e:
+    except Exception:
         if HAS_TIMELIB:
             raise ValueError('Unable to parse {0}'.format(date))
 
@@ -1575,19 +1561,12 @@ def version_cmp(pkg1, pkg2):
     version2, and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
+    ver1 = distutils.version.LooseVersion(pkg1)
+    ver2 = distutils.version.LooseVersion(pkg2)
     try:
-        if distutils.version.LooseVersion(pkg1) < \
-                distutils.version.LooseVersion(pkg2):
-            return -1
-        elif distutils.version.LooseVersion(pkg1) == \
-                distutils.version.LooseVersion(pkg2):
-            return 0
-        elif distutils.version.LooseVersion(pkg1) > \
-                distutils.version.LooseVersion(pkg2):
-            return 1
+        return cmp(ver1, ver2)
     except Exception as e:
         log.exception(e)
-    return None
 
 
 def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
