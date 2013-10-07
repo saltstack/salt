@@ -86,20 +86,23 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
             if full_name in pkgs:
                 version_num = pkgs[full_name]
-            if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
-                                       pkg2=str(version_num)):
+            if salt.utils.compare_versions(ver1=str(candidate),
+                                           oper='>',
+                                           ver2=str(version_num)):
                 ret[name] = candidate
             continue
         for ver in pkginfo.keys():
-            if __salt__['pkg.compare'](pkg1=str(ver), oper='>',
-                                       pkg2=str(candidate)):
+            if salt.utils.compare_versions(ver1=str(ver),
+                                           oper='>',
+                                           ver2=str(candidate)):
                 candidate = ver
         full_name = pkginfo[candidate]['full_name']
         ret[name] = ''
         if full_name in pkgs:
             version_num = pkgs[full_name]
-        if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
-                                   pkg2=str(version_num)):
+        if salt.utils.compare_versions(ver1=str(candidate),
+                                       oper='>',
+                                       ver2=str(version_num)):
             ret[name] = candidate
     if len(names) == 1:
         return ret[names[0]]
