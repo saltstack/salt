@@ -36,13 +36,12 @@ def _lxc_profile(profile):
 
     .. code-block:: yaml
 
-        lxc:
-          profile:
-            ubuntu:
-              template: ubuntu
-              backing: lvm
-              vgname: lxc
-              size: 1G
+        lxc.profile:
+          ubuntu:
+            template: ubuntu
+            backing: lvm
+            vgname: lxc
+            size: 1G
     '''
     return __salt__['config.option']('lxc.profile', {}).get(profile, {})
 
@@ -56,12 +55,11 @@ def _nic_profile(nic):
 
     .. code-block:: yaml
 
-        lxc:
-          nic:
-            default:
-              eth0:
-                link: br0
-                type: veth
+        lxc.nic:
+          default:
+            eth0:
+              link: br0
+              type: veth
     '''
     default = {'eth0': {'link': 'br0', 'type': 'veth'}}
     return __salt__['config.option']('lxc.nic', {}).get(nic, default)
@@ -238,11 +236,8 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         if size:
             cmd += ' --fssize {0}'.format(size)
     if profile:
-#    if kwargs or profile:
         cmd += ' --'
         options = profile
-        #for k, v in kwargs.items():
-        #    options[k] = v
         for k, v in options.items():
             cmd += ' --{0} {1}'.format(k, v)
 
@@ -406,6 +401,44 @@ def state(name):
         return r['state:'].lower()
 
 
+def get_parameter(name, parameter):
+    '''
+    Returns the value of a cgroup parameter for a container.
+
+    .. code-block:: bash
+
+        salt '*' lxc.get_parameter name parameter
+    '''
+    if not exists(name):
+        return None
+
+    cmd = 'lxc-cgroup -n {0} {1}'.format(name, parameter)
+    ret = __salt__['cmd.run_all'](cmd)
+    if ret['retcode'] != 0:
+        return False
+    else:
+        return {parameter: ret['stdout'].strip()}
+
+
+def set_parameter(name, parameter, value):
+    '''
+    Set the value of a cgroup parameter for a container.
+
+    .. code-block:: bash
+
+        salt '*' lxc.set_parameter name parameter value
+    '''
+    if not exists(name):
+        return None
+
+    cmd = 'lxc-cgroup -n {0} {1} {2}'.format(name, parameter, value)
+    ret = __salt__['cmd.run_all'](cmd)
+    if ret['retcode'] != 0:
+        return False
+    else:
+        return True
+
+
 def info(name):
     '''
     Returns information about a container.
@@ -415,7 +448,6 @@ def info(name):
         salt '*' lxc.info name
     '''
     f = '/var/lib/lxc/{0}/config'.format(name)
-    cgroup_dir = '/sys/fs/cgroup/memory/lxc/{0}/'.format(name)
     if not os.path.isfile(f):
         return None
 
@@ -443,11 +475,11 @@ def info(name):
     ret['state'] = state(name)
 
     if ret['state'] == 'running':
-        with open(cgroup_dir + 'memory.limit_in_bytes') as f:
-            limit = int(f.read())
-        with open(cgroup_dir + 'memory.usage_in_bytes') as f:
-            memory = int(f.read())
-        free = limit - memory
+        limit = int(get_parameter(name, 'memory.limit_in_bytes').get(
+            'memory.limit_in_bytes'))
+        usage = int(get_parameter(name, 'memory.usage_in_bytes').get(
+            'memory.usage_in_bytes'))
+        free = limit - usage
         ret['memory_limit'] = limit
         ret['memory_free'] = free
 
