@@ -119,7 +119,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     msg = 'There was an error listing providers: {0}'
                     self.handle_exception(msg, exc)
 
-            if self.config.get('map', None):
+            elif self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
                     ret = mapper.interpolated_map(
