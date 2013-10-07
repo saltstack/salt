@@ -36,13 +36,12 @@ def _lxc_profile(profile):
 
     .. code-block:: yaml
 
-        lxc:
-          profile:
-            ubuntu:
-              template: ubuntu
-              backing: lvm
-              vgname: lxc
-              size: 1G
+        lxc.profile:
+          ubuntu:
+            template: ubuntu
+            backing: lvm
+            vgname: lxc
+            size: 1G
     '''
     return __salt__['config.option']('lxc.profile', {}).get(profile, {})
 
@@ -56,12 +55,11 @@ def _nic_profile(nic):
 
     .. code-block:: yaml
 
-        lxc:
-          nic:
-            default:
-              eth0:
-                link: br0
-                type: veth
+        lxc.nic:
+          default:
+            eth0:
+              link: br0
+              type: veth
     '''
     default = {'eth0': {'link': 'br0', 'type': 'veth'}}
     return __salt__['config.option']('lxc.nic', {}).get(nic, default)
@@ -192,10 +190,16 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     cmd = 'lxc-create -n {0}'.format(name)
 
     profile = _lxc_profile(profile)
-    template = kwargs.pop('template', profile.get('template'))
-    backing = kwargs.pop('backing', profile.get('backing'))
-    vgname = kwargs.pop('vgname', profile.get('vgname'))
-    size = kwargs.pop('size', profile.get('size', '1G'))
+
+    def select(k, default=None):
+        kw = kwargs.pop(k, None)
+        p = profile.pop(k, default)
+        return kw or p
+
+    template = select('template')
+    backing = select('backing')
+    vgname = select('vgname')
+    size = select('size', '1G')
 
     if config:
         cmd += ' -f {0}'.format(config)
@@ -342,7 +346,7 @@ def exists(name):
 
         salt '*' lxc.exists name
     '''
-    l = list()
+    l = list_()
     return name in (l['running'] + l['stopped'] + l['frozen'])
 
 
@@ -398,7 +402,7 @@ def info(name):
         elif k.startswith('lxc.network.'):
             current[k.replace('lxc.network.', '', 1)] = v
     if ifaces:
-        ret['ifaces'] = ifaces
+        ret['nics'] = ifaces
 
     ret['rootfs'] = next((i[1] for i in config if i[0] == 'lxc.rootfs'), None)
     ret['state'] = state(name)
