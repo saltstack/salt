@@ -668,6 +668,7 @@ def get_id():
     '''
     Guess the id of the minion.
 
+    - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
     - If socket.getfqdn() returns us something other than localhost, use it
     - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
@@ -684,6 +685,17 @@ def get_id():
             os.path.join(syspaths.CONFIG_DIR, 'minion')
         )
     )
+
+    # Check for CONFIG_DIR/minion_id (cached minion ID)
+    id_cache = os.path.join(syspaths.CONFIG_DIR, 'minion_id')
+    try:
+        with salt.utils.fopen(id_cache) as idf:
+            name = idf.read().strip()
+        if name:
+            log.info('Using cached minion ID: {0}'.format(name))
+            return name, False
+    except Exception:
+        pass
 
     # Nothing in /etc/hostname or /etc/hostname not found
     fqdn = socket.getfqdn()
