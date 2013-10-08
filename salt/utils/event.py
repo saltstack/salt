@@ -603,12 +603,12 @@ class StateFire(object):
         load = {}
         if preload:
             load.update(preload)
-            
+
         load.update({'id': self.opts['id'],
                     'tag': tag,
                     'data': data,
                     'cmd': '_minion_event'})
-        
+
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
             sreq.send('aes', self.auth.crypticle.dumps(load))
