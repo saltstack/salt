@@ -28,7 +28,7 @@ def fire_master(data, tag, preload=None):
             'tag': tag,
             'data': data,
             'cmd': '_minion_event'})
-    
+
     auth = salt.crypt.SAuth(__opts__)
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     try:
