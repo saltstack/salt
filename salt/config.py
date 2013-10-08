@@ -682,12 +682,6 @@ def get_id():
     not an IP address is being used for the ID.
     '''
 
-    log.debug(
-        'Guessing ID. The id can be explicitly in set {0}'.format(
-            os.path.join(syspaths.CONFIG_DIR, 'minion')
-        )
-    )
-
     # Check for CONFIG_DIR/minion_id (cached minion ID)
     id_cache = os.path.join(syspaths.CONFIG_DIR, 'minion_id')
     try:
@@ -698,6 +692,9 @@ def get_id():
             return name, False
     except Exception:
         pass
+
+    log.debug('Guessing ID. The id can be explicitly in set {0}'
+              .format(os.path.join(syspaths.CONFIG_DIR, 'minion')))
 
     # Nothing in /etc/hostname or /etc/hostname not found
     fqdn = socket.getfqdn()
