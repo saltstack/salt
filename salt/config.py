@@ -682,8 +682,16 @@ def get_id():
     not an IP address is being used for the ID.
     '''
 
-    # Check for CONFIG_DIR/minion_id (cached minion ID)
-    id_cache = os.path.join(syspaths.CONFIG_DIR, 'minion_id')
+    # Check for cached minion ID
+    libdir = os.path.join('/', 'var', 'lib', 'salt')
+    if salt.utils.is_windows():
+        libdir = os.path.join(r'c:\salt', 'var', 'lib')
+    id_cache = os.path.join(libdir, 'minion_id')
+    try:
+        if not os.path.isdir(libdir):
+            os.makedirs(libdir)
+    except Exception as e:
+        log.error('Could not create directory {0}: {1}'.format(libdir, e))
     try:
         with salt.utils.fopen(id_cache) as idf:
             name = idf.read().strip()
