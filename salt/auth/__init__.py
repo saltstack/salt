@@ -155,6 +155,7 @@ class Authorize(object):
     def __init__(self, opts, load, loadauth=None):
         self.opts = salt.config.master_config(opts['conf_file'])
         self.load = load
+        self.ckminions = salt.utils.minions.CkMinions(opts)
         if loadauth is None:
             self.loadauth = LoadAuth(opts)
         else:
