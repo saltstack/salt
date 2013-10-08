@@ -696,7 +696,7 @@ def get_id():
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(syspaths.CONFIG_DIR, 'minion')))
 
-    # Nothing in /etc/hostname or /etc/hostname not found
+    # Check socket.getfqdn()
     fqdn = socket.getfqdn()
     if fqdn != 'localhost':
         log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
