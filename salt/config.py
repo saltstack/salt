@@ -658,8 +658,8 @@ def get_id():
     '''
     Guess the id of the minion.
 
-    - Check /etc/hostname for a value other than localhost
     - If socket.getfqdn() returns us something other than localhost, use it
+    - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
     - A private IP is better than a loopback IP
@@ -675,6 +675,12 @@ def get_id():
         )
     )
 
+    # Nothing in /etc/hostname or /etc/hostname not found
+    fqdn = socket.getfqdn()
+    if fqdn != 'localhost':
+        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        return fqdn, False
+
     # Check /etc/hostname
     try:
         with salt.utils.fopen('/etc/hostname') as hfl:
@@ -687,12 +693,6 @@ def get_id():
                 return name, False
     except Exception:
         pass
-
-    # Nothing in /etc/hostname or /etc/hostname not found
-    fqdn = socket.getfqdn()
-    if fqdn != 'localhost':
-        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
-        return fqdn, False
 
     # Can /etc/hosts help us?
     try:
