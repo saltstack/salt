@@ -403,10 +403,10 @@ class CkMinions(object):
                     fun,
                     tgt,
                     tgt_type)
-        auth_func = getattr(self, '{0}_chrck'.format(form))
-        return auth_func(
+        return spec_check(
                 auth_list,
-                fun)
+                fun,
+                form)
 
     def auth_check(self, auth_list, funs, tgt, tgt_type='glob'):
         '''
@@ -491,6 +491,37 @@ class CkMinions(object):
                 if ind == '@runners':
                     return True
                 if ind == '@runner':
+                    return True
+            elif isinstance(ind, dict):
+                if len(ind) != 1:
+                    continue
+                valid = ind.keys()[0]
+                if valid.startswith('@') and valid[1:] == mod:
+                    if isinstance(ind[valid], str):
+                        if self.match_check(ind[valid], fun):
+                            return True
+                    elif isinstance(ind[valid], list):
+                        for regex in ind[valid]:
+                            if self.match_check(regex, fun):
+                                return True
+        return False
+
+    def spec_check(self, auth_list, fun, form):
+        '''
+        Check special API permissions
+        '''
+        comps = fun.split('.')
+        if len(comps) != 2:
+            return False
+        mod = comps[0]
+        fun = comps[1]
+        for ind in auth_list:
+            if isinstance(ind, str):
+                if ind.startswith('@') and ind[1:] == mod:
+                    return True
+                if ind == '@{0}'.format(form):
+                    return True
+                if ind == '@{0}s'.format(form):
                     return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
