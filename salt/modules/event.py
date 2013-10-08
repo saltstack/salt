@@ -10,7 +10,7 @@ import salt.utils.event
 import salt.payload
 
 
-def fire_master(data, tag):
+def fire_master(data, tag, preload=None):
     '''
     Fire an event off up to the master server
 
@@ -20,10 +20,15 @@ def fire_master(data, tag):
 
         salt '*' event.fire_master 'stuff to be in the event' 'tag'
     '''
-    load = {'id': __opts__['id'],
+    load = {}
+    if preload:
+        load.update(preload)
+
+    load.update({'id': __opts__['id'],
             'tag': tag,
             'data': data,
-            'cmd': '_minion_event'}
+            'cmd': '_minion_event'})
+    
     auth = salt.crypt.SAuth(__opts__)
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     try:

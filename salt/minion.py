@@ -702,8 +702,9 @@ class Minion(object):
                             if not iret:
                                 iret = []
                             iret.append(single)
-                        tag = tagify([data['jid'], 'ret', opts['id'], ind])
-                        minion_instance._fire_master({'return': single}, tag)
+                        tag = tagify([data['jid'], 'prog', opts['id'], str(ind)], 'job')
+                        event_data = {'return': single}
+                        minion_instance._fire_master(event_data, tag)
                         ind += 1
                     ret['return'] = iret
                 else:
