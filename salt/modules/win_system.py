@@ -133,7 +133,7 @@ def set_computer_name(name):
     return False
 
 
-def get_computer_name(name):
+def get_computer_name():
     '''
     Get the Windows computer name
 
@@ -167,7 +167,7 @@ def set_computer_desc(desc):
     return {'Computer Description': desc}
 
 
-def get_computer_desc(desc):
+def get_computer_desc():
     '''
     Get the Windows computer description
 
