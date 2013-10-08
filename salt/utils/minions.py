@@ -403,7 +403,7 @@ class CkMinions(object):
                     fun,
                     tgt,
                     tgt_type)
-        return spec_check(
+        return self.spec_check(
                 auth_list,
                 fun,
                 form)
