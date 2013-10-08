@@ -365,6 +365,7 @@ if IS_WINDOWS_PLATFORM:
         'ntsecuritycon',
         '_winreg',
         'wmi',
+        'fileinput',
     ])
     SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
