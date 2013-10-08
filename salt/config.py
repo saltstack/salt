@@ -734,7 +734,7 @@ def get_id():
     # Can Windows 'hosts' file help?
     try:
         windir = os.getenv("WINDIR")
-        with salt.utils.fopen(windir + '\\system32\\drivers\\etc\\hosts') as hfl:
+        with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
             for line in hfl:
                 # skip commented or blank lines
                 if line[0] == '#' or len(line) <= 1:
