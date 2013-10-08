@@ -592,7 +592,7 @@ class StateFire(object):
         else:
             self.auth = auth
 
-    def fire_master(self, data, tag):
+    def fire_master(self, data, tag, preload=None):
         '''
         Fire an event off on the master server
 
@@ -600,10 +600,15 @@ class StateFire(object):
 
             salt '*' event.fire_master 'stuff to be in the event' 'tag'
         '''
-        load = {'id': self.opts['id'],
-                'tag': tag,
-                'data': data,
-                'cmd': '_minion_event'}
+        load = {}
+        if preload:
+            load.update(preload)
+            
+        load.update({'id': self.opts['id'],
+                    'tag': tag,
+                    'data': data,
+                    'cmd': '_minion_event'})
+        
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
             sreq.send('aes', self.auth.crypticle.dumps(load))
