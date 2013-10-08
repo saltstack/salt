@@ -219,7 +219,7 @@ class Authorize(object):
             yield {'sub_auth': sub_auth, 'name': name}
         yield {}
 
-    def rights_check(self, sub_auth, name, load, eauth=None, form='publish'):
+    def rights_check(self, form, sub_auth, name, load, eauth=None):
         '''
         Read in the access system to determine if the validated user has
         requested rights
@@ -249,6 +249,7 @@ class Authorize(object):
             for sub_auth in self.token(adata, load):
                 if sub_auth:
                     if self.rights_check(
+                            form,
                             sub_auth['sub_auth'],
                             sub_auth['token']['name'],
                             load,
@@ -264,6 +265,7 @@ class Authorize(object):
             for sub_auth in self.eauth(adata, load):
                 if sub_auth:
                     if self.rights_check(
+                            form,
                             sub_auth['sub_auth'],
                             sub_auth['name'],
                             load,
@@ -274,6 +276,7 @@ class Authorize(object):
                     'Authentication failure of type "eauth" occurred.'
                 )
                 return False
+        return good
 
 
 class Resolver(object):
