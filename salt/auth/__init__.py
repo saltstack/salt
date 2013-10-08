@@ -219,14 +219,15 @@ class Authorize(object):
             yield {'sub_auth': sub_auth, 'name': name}
         yield {}
 
-    def rights_check(self, sub_auth, name, load, eauth=None):
+    def rights_check(self, sub_auth, name, load, eauth=None, form='publish'):
         '''
         Read in the access system to determine if the validated user has
         requested rights
         '''
         if load.get('eauth'):
             sub_auth = sub_auth[load['eauth']]
-        good = self.ckminions.auth_check(
+        good = self.ckminions.any_check(
+                form,
                 sub_auth[name] if name in sub_auth else sub_auth['*'],
                 load.get('fun', None),
                 load.get('tgt', None),
