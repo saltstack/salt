@@ -393,6 +393,21 @@ class CkMinions(object):
                 log.error('Invalid regular expression: {0}'.format(regex))
         return all(vals)
 
+    def any_auth(self, form, auth_list, fun, tgt=None, tgt_type='glob'):
+        '''
+        Read in the form and determine which auth check routine to execute
+        '''
+        if form == 'publish':
+            return self.auth_check(
+                    auth_list,
+                    fun,
+                    tgt,
+                    tgt_type)
+        auth_func = getattr(self, '{0}_chrck'.format(form))
+        return auth_func(
+                auth_list,
+                fun)
+
     def auth_check(self, auth_list, funs, tgt, tgt_type='glob'):
         '''
         Returns a bool which defines if the requested function is authorized.
