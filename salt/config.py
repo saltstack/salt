@@ -666,6 +666,8 @@ def get_id():
     - A private IP is better than a loopback IP
     - localhost may be better than killing the minion
 
+    Any non-ip id will be cached for later use in ``CONFIG_DIR/minion_id``
+
     Returns two values: the detected ID, and a boolean value noting whether or
     not an IP address is being used for the ID.
     '''
@@ -691,6 +693,11 @@ def get_id():
     fqdn = socket.getfqdn()
     if fqdn != 'localhost':
         log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        try:
+            with salt.utils.fopen(id_cache, 'w') as idf:
+                idf.write(fqdn)
+        except Exception as e:
+            log.error('Could not cache minion ID: {0}'.format(e))
         return fqdn, False
 
     # Check /etc/hostname
@@ -702,6 +709,11 @@ def get_id():
                         'This file should not contain any whitespace.')
         else:
             if name != 'localhost':
+                try:
+                    with salt.utils.fopen(id_cache, 'w') as idf:
+                        idf.write(name)
+                except Exception as e:
+                    log.error('Could not cache minion ID: {0}'.format(e))
                 return name, False
     except Exception:
         pass
@@ -717,6 +729,12 @@ def get_id():
                         if name != 'localhost':
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
+                            try:
+                                with salt.utils.fopen(id_cache, 'w') as idf:
+                                    idf.write(name)
+                            except Exception as e:
+                                log.error('Could not cache minion ID: {0}'
+                                          .format(e))
                             return name, False
     except Exception:
         pass
@@ -735,7 +753,14 @@ def get_id():
                     if entry[0].startswith('127.'):
                         for name in entry[1:]:  # try each name in the row
                             if name != 'localhost':
-                                log.info('Found minion id in hosts file: {0}'.format(name))
+                                log.info('Found minion id in hosts file: {0}'
+                                         .format(name))
+                                try:
+                                    with salt.utils.fopen(id_cache, 'w') as idf:
+                                        idf.write(name)
+                                except Exception as e:
+                                    log.error('Could not cache minion ID: {0}'
+                                              .format(e))
                                 return name, False
                 except IndexError:
                     pass  # could not split line (malformed entry?)
