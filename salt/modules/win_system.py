@@ -133,6 +133,25 @@ def set_computer_name(name):
     return False
 
 
+def get_computer_name(name):
+    '''
+    Get the Windows computer name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_computer_name
+    '''
+    cmd = 'net config server'
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    for line in lines:
+        if 'Server Name' in line:
+            _, srv_name = line.split('Server Name', 1)
+            return srv_name.strip().lstrip('\\')
+    return False
+
+
 def set_computer_desc(desc):
     '''
     Set the Windows computer description
