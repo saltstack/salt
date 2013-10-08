@@ -553,7 +553,7 @@ def sed(path,
         escape_all=False,
         negate_match=False):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :py:func:`~salt.modules.file.replace` instead.
 
     Make a simple edit to a file
@@ -582,7 +582,7 @@ def sed(path,
     negate_match : False
         Negate the search command (``!``)
 
-        .. versionadded:: 0.17
+        .. versionadded:: 0.17.0
 
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
@@ -627,7 +627,7 @@ def sed_contains(path,
                  limit='',
                  flags='g'):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :func:`search` instead.
 
     Return True if the file at ``path`` contains ``text``. Utilizes sed to
@@ -673,7 +673,7 @@ def psed(path,
          escape_all=False,
          multi=False):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :py:func:`~salt.modules.file.replace` instead.
 
     Make a simple edit to a file (pure Python version)
@@ -785,7 +785,7 @@ def uncomment(path,
               char='#',
               backup='.bak'):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :py:func:`~salt.modules.file.replace` instead.
 
     Uncomment specified commented lines in a file
@@ -824,7 +824,7 @@ def comment(path,
             char='#',
             backup='.bak'):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :py:func:`~salt.modules.file.replace` instead.
 
     Comment out specified lines in a file
@@ -904,7 +904,7 @@ def replace(path,
     '''
     Replace occurances of a pattern in a file
 
-    .. versionadded:: 0.17
+    .. versionadded:: 0.17.0
 
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
@@ -997,7 +997,7 @@ def search(path,
     '''
     Search for occurances of a pattern in a file
 
-    .. versionadded:: 0.17
+    .. versionadded:: 0.17.0
 
     Params are identical to :py:func:`~salt.modules.file.replace`.
 
@@ -1057,7 +1057,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
 def contains(path, text):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :func:`search` instead.
 
     Return ``True`` if the file at ``path`` contains ``text``
@@ -1084,7 +1084,7 @@ def contains(path, text):
 
 def contains_regex(path, regex, lchar=''):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :func:`search` instead.
 
     Return True if the given regular expression matches on any line in the text
@@ -1116,7 +1116,7 @@ def contains_regex(path, regex, lchar=''):
 
 def contains_regex_multiline(path, regex):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :func:`search` instead.
 
     Return True if the given regular expression matches anything in the text
@@ -1146,7 +1146,7 @@ def contains_regex_multiline(path, regex):
 
 def contains_glob(path, glob):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :func:`search` instead.
 
     Return True if the given glob matches a string in the named file
@@ -1186,7 +1186,23 @@ def append(path, *args):
     '''
     # Largely inspired by Fabric's contrib.files.append()
 
-    with salt.utils.fopen(path, "a") as ofile:
+    with salt.utils.fopen(path, "r+") as ofile:
+        # Make sure we have a newline at the end of the file
+        try:
+            ofile.seek(-1, os.SEEK_END)
+        except IOError as exc:
+            if exc.errno == errno.EINVAL:
+                # Empty file, simply append lines at the beginning of the file
+                pass
+            else:
+                raise
+        else:
+            if ofile.read(1) != '\n':
+                ofile.seek(0, os.SEEK_END)
+                ofile.write('\n')
+            else:
+                ofile.seek(0, os.SEEK_END)
+        # Append lines
         for line in args:
             ofile.write('{0}\n'.format(line))
 

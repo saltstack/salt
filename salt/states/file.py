@@ -999,7 +999,7 @@ def managed(name,
         file of any kind.  Ignores hashes and does not use a templating engine.
 
     contents_pillar
-        .. versionadded:: 0.17
+        .. versionadded:: 0.17.0
 
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
@@ -1739,7 +1739,7 @@ def replace(name,
     '''
     Maintain an edit in a file
 
-    .. versionadded:: 0.17
+    .. versionadded:: 0.17.0
 
     Params are identical to :py:func:`~salt.modules.file.replace`.
 
@@ -1779,7 +1779,7 @@ def sed(name,
         flags='g',
         negate_match=False):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :py:func:`~salt.states.file.replace` instead.
 
     Maintain a simple edit to a file
@@ -1808,7 +1808,7 @@ def sed(name,
     negate_match : False
         Negate the search command (``!``)
 
-        .. versionadded:: 0.17
+        .. versionadded:: 0.17.0
 
     Usage::
 
