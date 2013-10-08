@@ -148,6 +148,25 @@ def set_computer_desc(desc):
     return {'Computer Description': desc}
 
 
+def get_computer_desc(desc):
+    '''
+    Get the Windows computer description
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_computer_desc
+    '''
+    cmd = 'net config server'
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    for line in lines:
+        if 'Server Comment' in line:
+            _, desc = line.split('Server Comment', 1)
+            return desc.strip()
+    return False
+
+
 def join_domain(domain, username, passwd, ou, acct_exists=False,):
     '''
     Join a computer the an Active Directory domain
