@@ -33,7 +33,7 @@ RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
 # This shim facilitaites remote salt-call operations
 # - Explicitly invokes bourne shell for univeral compatibility
-# 
+#
 # 1. Identify a suitable python
 # 2. Test for remote salt-call and version if present
 # 3. Signal to (re)deploy if missing or out of date
@@ -88,6 +88,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
 EOF\n'''.format(salt.__version__, RSTR)
 
 log = logging.getLogger(__name__)
+
 
 class SSH(object):
     '''
@@ -430,8 +431,8 @@ class Single(object):
     def run(self, deploy_attempted=False):
         '''
         Execute the routine, the routine can be either:
-        1. Execute a raw shell command 
-        2. Execute a wrapper func 
+        1. Execute a raw shell command
+        2. Execute a wrapper func
         3. Execute a remote Salt command
 
         If a (re)deploy is needed, then retry the operation after a deploy
@@ -566,11 +567,11 @@ class Single(object):
                          "to be root or use sudo:\n {0}"
         errors = [
             ("sudo: no tty present and no askpass program specified",
-               "sudo expected a password, NOPASSWD required"),
+                "sudo expected a password, NOPASSWD required"),
             ("Python too old",
-               "salt requires python 2.6 or better on target hosts"),
+                "salt requires python 2.6 or better on target hosts"),
             ("sudo: sorry, you must have a tty to run sudo",
-               "sudo is configured with requiretty"),
+                "sudo is configured with requiretty"),
             ("Failed to open log file",
                 perm_error_fmt.format(stderr)),
             ("Permission denied:.*/salt",
@@ -583,7 +584,6 @@ class Single(object):
             if re.search(error[0], stderr):
                 return error[1]
         return None
-
 
     def sls_seed(self, mods, env='base', test=None, exclude=None, **kwargs):
         '''
