@@ -176,8 +176,11 @@ def checkout(cwd,
     return _run_svn('checkout', cwd, user, username, password, opts)
 
 
-def switch(cwd, remote, target=None, user=None, username=None, *opts):
+def switch(cwd, remote, target=None, user=None, username=None,
+           password=None, *opts):
     '''
+    .. versionadded:: Hydrogen
+
     Switch a working copy of a remote Subversion repository
     directory
 
@@ -197,6 +200,9 @@ def switch(cwd, remote, target=None, user=None, username=None, *opts):
     username : None
         Connect to the Subversion server as another user
 
+    password : None
+        Connect to the Subversion server with this password
+
     CLI Example::
 
         salt '*' svn.switch /path/to/repo svn://remote/repo
@@ -204,7 +210,7 @@ def switch(cwd, remote, target=None, user=None, username=None, *opts):
     opts += (remote,)
     if target:
         opts += (target,)
-    return _run_svn('switch', cwd, user, username, opts)
+    return _run_svn('switch', cwd, user, username, password, opts)
 
 
 def update(cwd, targets=None, user=None, username=None, password=None, *opts):
