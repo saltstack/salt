@@ -40,10 +40,17 @@ SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 
 def wrap_tmpl_func(render_str):
-    def render_tmpl(tmplsrc, from_str=False, to_str=False,
-                    context=None, tmplpath=None, **kws):
+
+    def render_tmpl(tmplsrc,
+                    from_str=False,
+                    to_str=False,
+                    context=None,
+                    tmplpath=None,
+                    **kws):
+
         if context is None:
             context = {}
+
         # We want explicit context to overwrite the **kws
         kws.update(context)
         context = kws
@@ -55,14 +62,23 @@ def wrap_tmpl_func(render_str):
                 tmplstr = tmplsrc
             else:
                 try:
+                    if tmplpath is not None:
+                        tmplsrc = os.path.join(tmplpath, tmplsrc)
                     with codecs.open(tmplsrc, 'r', SLS_ENCODING) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
-                except (UnicodeDecodeError, ValueError) as exc:
+                except (UnicodeDecodeError,
+                        ValueError,
+                        OSError,
+                        IOError) as exc:
                     if salt.utils.is_bin_file(tmplsrc):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
-                    log.error('Exception ocurred while reading file {0}: {1}'
-                              .format(tmplsrc, exc))
+                    log.error(
+                        'Exception occurred while reading file '
+                        '{0}: {1}'.format(tmplsrc, exc),
+                        # Show full traceback if debug logging is enabled
+                        exc_info=log.isEnabledFor(logging.DEBUG)
+                    )
                     raise exc
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
@@ -97,16 +113,26 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     loader = None
     newline = False
 
+    if tmplstr and not isinstance(tmplstr, unicode):
+        # http://jinja.pocoo.org/docs/api/#unicode
+        tmplstr = tmplstr.decode(SLS_ENCODING)
+
     if tmplstr.endswith('\n'):
         newline = True
 
     if not env:
         if tmplpath:
             # ie, the template is from a file outside the state tree
+            #
+            # XXX: FileSystemLoader is not being properly instantiated here is
+            # it? At least it ain't according to:
+            #
+            #   http://jinja.pocoo.org/docs/api/#jinja2.FileSystemLoader
             loader = jinja2.FileSystemLoader(
                 context, os.path.dirname(tmplpath))
     else:
         loader = JinjaSaltCacheLoader(opts, context['env'])
+
     env_args = {'extensions': [], 'loader': loader}
 
     if hasattr(jinja2.ext, 'with_'):
@@ -120,8 +146,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
     else:
-        jinja_env = jinja2.Environment(
-                        undefined=jinja2.StrictUndefined, **env_args)
+        jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
+                                       **env_args)
+
     jinja_env.filters['strftime'] = salt.utils.date_format
 
     unicode_context = {}
@@ -136,10 +163,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     try:
         output = jinja_env.from_string(tmplstr).render(**unicode_context)
-        if isinstance(output, unicode):
-            # Let's encode the output back to utf-8 since that's what's assumed
-            # in salt
-            output = output.encode('utf-8')
     except jinja2.exceptions.TemplateSyntaxError as exc:
         line = traceback.extract_tb(sys.exc_info()[2])[-1][1]
         marker = '    <======================'

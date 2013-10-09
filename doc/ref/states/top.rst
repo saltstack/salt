@@ -17,6 +17,15 @@ Environments
         directories. Environments can be made to be self-contained or state
         trees can be made to bleed through environments.
 
+.. note::
+
+    Environments in Salt are very flexible, this section defines how the top
+    file can be used to define what ststates from what environments are to be
+    used fro specific minions.
+
+    If the intent is to bind minions to specific environments, then the
+    `environment` option can be set in the minion configuration file.
+
 The environments in the top file corresponds with the environments defined in
 the :conf_master:`file_roots` variable. In a simple, single environment setup
 you only have the ``base`` environment, and therefore only one state tree. Here

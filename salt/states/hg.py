@@ -3,9 +3,6 @@
 Interaction with Mercurial repositories.
 ========================================
 
-NOTE: This module is currently experimental. Most of this code is copied from
-git.py with changes to handle hg.
-
 Before using hg over ssh, make sure the remote host fingerprint already exists
 in ~/.ssh/known_hosts, and the remote host has this host's public key.
 
@@ -29,21 +26,22 @@ from salt.states.git import _fail, _neutral_test
 log = logging.getLogger(__name__)
 
 if salt.utils.is_windows():
-    hg_binary = "hg.exe"
+    HG_BINARY = "hg.exe"
 else:
-    hg_binary = "hg"
+    HG_BINARY = "hg"
 
 
 def __virtual__():
     '''
     Only load if hg is available
     '''
-    return 'hg' if __salt__['cmd.has_exec'](hg_binary) else False
+    return __salt__['cmd.has_exec'](HG_BINARY)
 
 
 def latest(name,
            rev=None,
            target=None,
+           clean=False,
            runas=None,
            user=None,
            force=False,
@@ -59,6 +57,9 @@ def latest(name,
 
     target
         Name of the target directory where repository is about to be cloned
+
+    clean
+        Force a clean update with -C (Default: False)
 
     runas
         Name of the user performing repository management operations
@@ -79,7 +80,7 @@ def latest(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -110,7 +111,7 @@ def latest(name,
             os.path.isdir('{0}/.hg'.format(target)))
 
     if is_repository:
-        ret = _update_repo(ret, target, user, rev, opts)
+        ret = _update_repo(ret, target, clean, user, rev, opts)
     else:
         if os.path.isdir(target):
             fail = _handle_existing(ret, target, force)
@@ -129,7 +130,10 @@ def latest(name,
     return ret
 
 
-def _update_repo(ret, target, user, rev, opts):
+def _update_repo(ret, target, clean, user, rev, opts):
+    '''
+    Update the repo to a given revision. Using clean passes -C to the hg up
+    '''
     log.debug(
             'target {0} is found, '
             '"hg pull && hg up is probably required"'.format(target)
@@ -152,9 +156,9 @@ def _update_repo(ret, target, user, rev, opts):
     pull_out = __salt__['hg.pull'](target, user=user, opts=opts)
 
     if rev:
-        __salt__['hg.update'](target, rev, user=user)
+        __salt__['hg.update'](target, rev, force=clean, user=user)
     else:
-        __salt__['hg.update'](target, 'tip', user=user)
+        __salt__['hg.update'](target, 'tip', force=clean, user=user)
 
     new_rev = __salt__['hg.revision'](cwd=target, user=user)
 

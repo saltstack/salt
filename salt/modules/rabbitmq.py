@@ -30,7 +30,7 @@ def _format_response(response, msg):
         msg = 'Error'
 
     return {
-        msg: response.replace('\n', '')
+        msg: response
     }
 
 
@@ -241,6 +241,21 @@ def list_user_permissions(name, user=None):
     return [r.split('\t') for r in res.splitlines()]
 
 
+def set_user_tags(name, tags, runas=None):
+    '''Add user tags via rabbitctl set_user_tags
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.set_user_tags 'myadmin' 'administrator'
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl set_user_tags {0} {1}'.format(name, tags),
+        runas=runas)
+    return [r.split('\t') for r in res.splitlines()]
+
+
 def status(user=None):
     '''
     return rabbitmq status
@@ -274,6 +289,26 @@ def cluster_status(user=None):
         runas=user)
 
     return res
+
+
+def join_cluster(host, user='rabbit', runas=None):
+    '''
+    Join a rabbit cluster
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.join_cluster 'rabbit' 'rabbit.example.com'
+    '''
+
+    stop_app(runas)
+    res = __salt__['cmd.run'](
+        'rabbitmqctl join_cluster {0}@{1}'.format(user, host),
+        runas=runas)
+    start_app(runas)
+
+    return _format_response(res, 'Join')
 
 
 def stop_app(runas=None):
@@ -464,3 +499,25 @@ def policy_exists(vhost, name, runas=None):
     '''
     policies = list_policies(runas=runas)
     return bool(vhost in policies and name in policies[vhost])
+
+
+def enable_plugin(name, runas=None):
+    '''
+    Enable a RabbitMQ plugin via the rabbitmq-plugin command.
+    '''
+
+    ret = __salt__['cmd.run'](
+            'rabbitmq-plugin enable {0}'.format(name),
+            runas=runas)
+    return _format_response(ret, 'Enabled')
+
+
+def disable_plugin(name, runas=None):
+    '''
+    Disable a RabbitMQ plugin via the rabbitmq-plugin command.
+    '''
+
+    ret = __salt__['cmd.run'](
+            'rabbitmq-plugin disable {0}'.format(name),
+            runas=runas)
+    return _format_response(ret, 'Disabled')

@@ -13,7 +13,7 @@ import re
 import sys
 import shutil
 import subprocess
-import string
+import string  # pylint: disable=deprecated-module
 import logging
 
 # Import third party libs
@@ -196,7 +196,10 @@ def _get_target(target, ssh):
     return ' {0}://{1}/{2}'.format(proto, target, 'system')
 
 
-def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **kwargs_sink):
+def _prepare_serial_port_xml(serial_type='pty',
+                             telnet_port='',
+                             console=True,
+                             **sink):  # pylint: disable=unused-argument
     '''
     Prepares the serial and console sections of the VM xml
 
@@ -218,6 +221,24 @@ def _prepare_serial_port_xml(serial_type='pty', telnet_port='', console=True, **
     return template.render(serial_type=serial_type,
                            telnet_port=telnet_port,
                            console=console)
+
+
+def _prepare_nics_xml(interfaces):
+    '''
+    Prepares the network interface section of the VM xml
+
+    interfaces: list of dicts as returned from _nic_profile
+
+    Returns string representing interfaces devices suitable for
+    insertion into the VM XML definition
+    '''
+    fn_ = 'interface.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template {0}'.format(fn_))
+        return ''
+    return template.render(interfaces=interfaces)
 
 
 def _gen_xml(name,
@@ -335,30 +356,9 @@ def _gen_xml(name,
             disk_str += disk_i
     data = data.replace('%%DISKS%%', disk_str)
 
-    nic_str = ''
-    for dev, args in nicp.items():
-        nic_t = '''
-                <interface type='%%TYPE%%'>
-                    <source %%SOURCE%%/>
-                    <mac address='%%MAC%%'/>
-                    <model type='%%MODEL%%'/>
-                </interface>
-'''
-        if 'bridge' in args:
-            nic_t = nic_t.replace('%%SOURCE%%', 'bridge=\'{0}\''.format(args['bridge']))
-            nic_t = nic_t.replace('%%TYPE%%', 'bridge')
-        elif 'network' in args:
-            nic_t = nic_t.replace('%%SOURCE%%', 'network=\'{0}\''.format(args['network']))
-            nic_t = nic_t.replace('%%TYPE%%', 'network')
-        if 'model' in args:
-            nic_t = nic_t.replace('%%MODEL%%', args['model'])
-        dmac = '{0}_mac'.format(dev)
-        if dmac in kwargs:
-            nic_t = nic_t.replace('%%MAC%%', kwargs[dmac])
-        else:
-            nic_t = nic_t.replace('%%MAC%%', salt.utils.gen_mac())
-        nic_str += nic_t
+    nic_str = _prepare_nics_xml(nicp)
     data = data.replace('%%NICS%%', nic_str)
+
     return data
 
 
@@ -412,9 +412,10 @@ def _qemu_image_info(path):
                  'format': r'file format: (\w+)'}
 
     for info, search in match_map.items():
-        m = re.search(search, out)
-        if m:
-            ret[info] = m.group(1)
+        try:
+            ret[info] = re.search(search, out).group(1)
+        except AttributeError:
+            continue
     return ret
 
 
@@ -498,39 +499,112 @@ def _disk_profile(profile, hypervisor, **kwargs):
     return disklist
 
 
-def _nic_profile(profile, hypervisor):
-    '''
-    Gather the nic profile from the config or apply the default based
-    on the active hypervisor
+def _nic_profile(profile_name, hypervisor, **kwargs):
 
-    This is the ``default`` profile for KVM/QEMU, which can be
-    overridden in the configuration:
+    default = [{'eth0': {}}]
+    vmware_overlay = {'type': 'bridge', 'source': 'DEFAULT', 'model': 'e1000'}
+    kvm_overlay = {'type': 'bridge', 'source': 'br0', 'model': 'virtio'}
+    overlays = {
+            'kvm': kvm_overlay,
+            'qemu': kvm_overlay,
+            'esxi': vmware_overlay,
+            'vmware': vmware_overlay,
+            }
 
-    .. code-block:: yaml
+    # support old location
+    config_data = __salt__['config.option']('virt.nic', {}).get(
+        profile_name, None
+    )
 
-        virt:
-          nic:
-            default:
-              eth0:
-                bridge: br0
-                model: virtio
+    if config_data is None:
+        config_data = __salt__['config.get']('virt:nic', {}).get(
+            profile_name, default
+        )
 
-    The ``model`` parameter is optional, and will default to whatever
-    is best suitable for the active hypervisor.
-    '''
-    default = {'eth0': {}}
-    if hypervisor in ['esxi', 'vmware']:
-        overlay = {'bridge': 'DEFAULT', 'model': 'e1000'}
-    elif hypervisor in ['qemu', 'kvm']:
-        overlay = {'bridge': 'br0', 'model': 'virtio'}
-    else:
-        overlay = {}
-    nics = __salt__['config.get']('virt:nic', {}).get(profile, default)
-    for key, val in overlay.items():
-        for nic in nics:
-            if key not in nics[nic]:
-                nics[nic][key] = val
-    return nics
+    interfaces = []
+
+    def append_dict_profile_to_interface_list(profile_dict):
+        for interface_name, attributes in profile_dict.items():
+            attributes['name'] = interface_name
+            interfaces.append(attributes)
+
+    # old style dicts (top-level dicts)
+    #
+    # virt:
+    #    nic:
+    #        eth0:
+    #            bridge: br0
+    #        eth1:
+    #            network: test_net
+    if isinstance(config_data, dict):
+        append_dict_profile_to_interface_list(config_data)
+
+    # new style lists (may contain dicts)
+    #
+    # virt:
+    #   nic:
+    #     - eth0:
+    #         bridge: br0
+    #     - eth1:
+    #         network: test_net
+    #
+    # virt:
+    #   nic:
+    #     - name: eth0
+    #       bridge: br0
+    #     - name: eth1
+    #       network: test_net
+    elif isinstance(config_data, list):
+        for interface in config_data:
+            if isinstance(interface, dict):
+                if len(interface.keys()) == 1:
+                    append_dict_profile_to_interface_list(interface)
+                else:
+                    interfaces.append(interface)
+
+    def _normalize_net_types(attributes):
+        '''
+        Guess which style of definition:
+
+            bridge: br0
+
+             or
+
+            network: net0
+
+             or
+
+            type: network
+            source: net0
+        '''
+        for type_ in ['bridge', 'network']:
+            if type_ in attributes:
+                attributes['type'] = type_
+                # we want to discard the original key
+                attributes['source'] = attributes.pop(type_)
+
+        attributes['type'] = attributes.get('type', None)
+        attributes['source'] = attributes.get('source', None)
+
+    def _apply_default_overlay(attributes):
+        for key, value in overlays[hypervisor].items():
+            if key not in attributes or not attributes[key]:
+                attributes[key] = value
+
+    def _assign_mac(attributes):
+        dmac = '{0}_mac'.format(attributes['name'])
+        if dmac in kwargs:
+            attributes['mac'] = kwargs[dmac]
+        else:
+            attributes['mac'] = salt.utils.gen_mac()
+
+    for interface in interfaces:
+        _normalize_net_types(interface)
+        _assign_mac(interface)
+        if hypervisor in overlays:
+            _apply_default_overlay(interface)
+
+    return interfaces
 
 
 def init(name,
@@ -539,7 +613,7 @@ def init(name,
          image=None,
          nic='default',
          hypervisor=VIRT_DEFAULT_HYPER,
-         start=True,
+         start=True,  # pylint: disable=redefined-outer-name
          disk='default',
          **kwargs):
     '''
@@ -553,7 +627,9 @@ def init(name,
         salt 'hypervisor' virt.init vm_name 4 512 nic=profile disk=profile
     '''
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
-    nicp = _nic_profile(nic, hypervisor)
+
+    nicp = _nic_profile(nic, hypervisor, **kwargs)
+
     diskp = None
     seedable = False
     if image:  # with disk template image

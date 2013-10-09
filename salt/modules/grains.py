@@ -4,8 +4,11 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
+import collections
 import math
+import operator
 import os
+import random
 import yaml
 
 # Import salt libs
@@ -21,6 +24,9 @@ __outputter__ = {
     'item': 'grains',
     'setval': 'grains',
 }
+
+# http://stackoverflow.com/a/12414913/127816
+_infinitedict = lambda: collections.defaultdict(_infinitedict)
 
 
 def _serial_sanitizer(instr):
@@ -165,6 +171,9 @@ def setval(key, val):
         if not isinstance(grains, dict):
             grains = {}
     grains[key] = val
+    # Cast defaultdict to dict; is there a more central place to put this?
+    yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
+            yaml.representer.SafeRepresenter.represent_dict)
     cstr = yaml.safe_dump(grains, default_flow_style=False)
     with salt.utils.fopen(gfn, 'w+') as fp_:
         fp_.write(cstr)
@@ -320,3 +329,59 @@ def filter_by(lookup_dict, grain='os_family', merge=None):
         salt.utils.dictupdate.update(ret, merge)
 
     return ret
+
+
+def _dict_from_path(path, val, delim=':'):
+    '''
+    Given a lookup string in the form of 'foo:bar:baz" return a nested
+    dictionary of the appropriate depth with the final segment as a value.
+
+    >>> _dict_from_path('foo:bar:baz', 'somevalue')
+    {"foo": {"bar": {"baz": "somevalue"}}
+    '''
+    nested_dict = _infinitedict()
+    keys = path.rsplit(delim)
+    lastplace = reduce(operator.getitem, keys[:-1], nested_dict)
+    lastplace[keys[-1]] = val
+
+    return nested_dict
+
+
+def get_or_set_hash(name,
+        length=8,
+        chars='abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'):
+    '''
+    Perform a one-time generation of a hash and write it to the local grains.
+    If that grain has already been set return the value instead.
+
+    This is useful for generating passwords or keys that are specific to a
+    single minion that don't need to be stored somewhere centrally.
+
+    State Example:
+
+    .. code-block:: yaml
+
+        some_mysql_user:
+          mysql_user:
+            - present
+            - host: localhost
+            - password: {{ grains.get_or_set_hash('mysql:some_mysql_user') }}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.get_or_set_hash 'django:SECRET_KEY' 50
+    '''
+    ret = get(name, None)
+
+    if ret is None:
+        val = ''.join([random.choice(chars) for _ in range(length)])
+
+        if ':' in name:
+            name, rest = name.split(':', 1)
+            val = _dict_from_path(rest, val)
+
+        setval(name, val)
+
+    return get(name)

@@ -526,6 +526,33 @@ or just post what changes are going to be made
 Master File Server Settings
 ===========================
 
+.. conf_master:: fileserver_backend
+
+``fileserver_backend``
+----------------------
+
+Default:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+
+Salt supports a modular fileserver backend system, this system allows the salt
+master to link directly to third party systems to gather and manage the files
+available to minions. Multiple backends can be configured and will be searched
+for the requested file in the order in which they are defined here. The default
+setting only enables the standard backend ``roots``, which is configured using
+the :conf_master:`file_roots` option.
+
+Example:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+      - gitfs
+
 .. conf_master:: file_roots
 
 ``file_roots``
@@ -625,8 +652,11 @@ configuration is the same as :conf_master:`file_roots`:
 
 The ext_pillar option allows for any number of external pillar interfaces to be
 called when populating pillar data. The configuration is based on ext_pillar
-functions. The available ext_pillar functions are: hiera, cmd_yaml. By default
-the ext_pillar interface is not configured to run.
+functions. The available ext_pillar functions can be found herein:
+
+:blob:`salt/pillar`
+
+By default, the ext_pillar interface is not configured to run.
 
 Default:: ``None``
 
@@ -811,7 +841,7 @@ Master Logging Settings
 
 Default: ``/var/log/salt/master``
 
-The master log can be sent to a regular file, local path name, or network 
+The master log can be sent to a regular file, local path name, or network
 location. See also :conf-log:`log_file`.
 
 Examples:
@@ -853,7 +883,7 @@ The level of messages to send to the console. See also :conf-log:`log_level`.
 
 Default: ``warning``
 
-The level of messages to send to the log file. See also 
+The level of messages to send to the log file. See also
 :conf-log:`log_level_logfile`.
 
 .. code-block:: yaml
@@ -869,7 +899,7 @@ The level of messages to send to the log file. See also
 
 Default: ``%H:%M:%S``
 
-The date and time format used in console log messages. See also 
+The date and time format used in console log messages. See also
 :conf-log:`log_datefmt`.
 
 .. code-block:: yaml
@@ -886,7 +916,7 @@ The date and time format used in console log messages. See also
 
 Default: ``%Y-%m-%d %H:%M:%S``
 
-The date and time format used in log file messages. See also 
+The date and time format used in log file messages. See also
 :conf-log:`log_datefmt_logfile`.
 
 .. code-block:: yaml
@@ -902,7 +932,7 @@ The date and time format used in log file messages. See also
 
 Default: ``[%(levelname)-8s] %(message)s``
 
-The format of the console logging messages. See also 
+The format of the console logging messages. See also
 :conf-log:`log_fmt_console`.
 
 .. code-block:: yaml
@@ -918,7 +948,7 @@ The format of the console logging messages. See also
 
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
-The format of the log file logging messages. See also 
+The format of the log file logging messages. See also
 :conf-log:`log_fmt_logfile`.
 
 .. code-block:: yaml
@@ -934,7 +964,7 @@ The format of the log file logging messages. See also
 
 Default: ``{}``
 
-This can be used to control logging levels more specifically. See also 
+This can be used to control logging levels more specifically. See also
 :conf-log:`log_granular_levels`.
 
 
@@ -973,7 +1003,7 @@ option then the master will log a warning message.
 
     # Include files from a master.d directory in the same
     # directory as the master config file
-    include: master.d/*.conf
+    include: master.d/*
 
     # Include a single extra file into the configuration
     include: /etc/roles/webserver

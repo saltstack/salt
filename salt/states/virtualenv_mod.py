@@ -10,6 +10,9 @@ import logging
 import os
 import salt.utils
 
+# Import salt libs
+import salt.version
+
 log = logging.getLogger(__name__)
 
 
@@ -64,9 +67,11 @@ def managed(name,
         return ret
 
     salt.utils.warn_until(
-        (0, 18),
-        'Let\'s support \'runas\' until salt 0.19.0 is out, after which '
-        'it will stop being supported',
+        'Hydrogen',
+        'Let\'s support \'runas\' until salt {0} is out, after which it will'
+        'stop being supported'.format(
+            salt.version.SaltStackVersion.from_name('Helium').formatted_version
+        ),
         _dont_call_warnings=True
     )
     if runas:

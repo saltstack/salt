@@ -393,6 +393,21 @@ class CkMinions(object):
                 log.error('Invalid regular expression: {0}'.format(regex))
         return all(vals)
 
+    def any_auth(self, form, auth_list, fun, tgt=None, tgt_type='glob'):
+        '''
+        Read in the form and determine which auth check routine to execute
+        '''
+        if form == 'publish':
+            return self.auth_check(
+                    auth_list,
+                    fun,
+                    tgt,
+                    tgt_type)
+        return self.spec_check(
+                auth_list,
+                fun,
+                form)
+
     def auth_check(self, auth_list, funs, tgt, tgt_type='glob'):
         '''
         Returns a bool which defines if the requested function is authorized.
@@ -476,6 +491,37 @@ class CkMinions(object):
                 if ind == '@runners':
                     return True
                 if ind == '@runner':
+                    return True
+            elif isinstance(ind, dict):
+                if len(ind) != 1:
+                    continue
+                valid = ind.keys()[0]
+                if valid.startswith('@') and valid[1:] == mod:
+                    if isinstance(ind[valid], str):
+                        if self.match_check(ind[valid], fun):
+                            return True
+                    elif isinstance(ind[valid], list):
+                        for regex in ind[valid]:
+                            if self.match_check(regex, fun):
+                                return True
+        return False
+
+    def spec_check(self, auth_list, fun, form):
+        '''
+        Check special API permissions
+        '''
+        comps = fun.split('.')
+        if len(comps) != 2:
+            return False
+        mod = comps[0]
+        fun = comps[1]
+        for ind in auth_list:
+            if isinstance(ind, str):
+                if ind.startswith('@') and ind[1:] == mod:
+                    return True
+                if ind == '@{0}'.format(form):
+                    return True
+                if ind == '@{0}s'.format(form):
                     return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:

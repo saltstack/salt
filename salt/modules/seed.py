@@ -114,7 +114,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True):
         pubkey = fp_.read()
 
     if approve_key:
-        __salt__['pillar.ext']({'virtkey': {'name': id_, 'key': pubkey}})
+        res = __salt__['pillar.ext']({'virtkey': [id_, pubkey]})
     res = _check_install(mpt)
     if res:
         # salt-minion is already installed, just move the config and keys

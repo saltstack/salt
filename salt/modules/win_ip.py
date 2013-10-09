@@ -55,7 +55,7 @@ def _interface_configs():
             iface = ''
             continue
         if 'Configuration for interface' in line:
-            _, iface = line.rstrip('"').split('"', 1) # get iface name
+            _, iface = line.rstrip('"').split('"', 1)  # get iface name
             ret[iface] = {}
             ip = 0
             continue
@@ -75,7 +75,7 @@ def _interface_configs():
         if 'IP Address' in key:
             if 'ip_addrs' not in ret[iface]:
                 ret[iface]['ip_addrs'] = []
-            ret[iface]['ip_addrs'].append(dict([(key.strip(), val.strip()),]))
+            ret[iface]['ip_addrs'].append(dict([(key.strip(), val.strip())]))
             continue
         if 'Subnet Prefix' in key:
             subnet, _, netmask = val.strip().split(' ', 2)

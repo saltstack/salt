@@ -639,11 +639,11 @@ def script(name,
     if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'__env__\' not '
-            '\'env\'. This warning will go away in salt 0.19.0 and this will '
-            'be the default and expected behaviour. Please update your state '
-            'files.'
+            '\'env\'. This warning will go away in Salt {version} and this '
+            'will be the default and expected behaviour. Please update your '
+            'state files.'
         )
-        salt.utils.warn_until((0, 19), msg)
+        salt.utils.warn_until('Helium', msg)
         ret.setdefault('warnings', []).append(msg)
         # Backwards compatibility
         __env__ = env

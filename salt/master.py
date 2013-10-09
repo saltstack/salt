@@ -1865,6 +1865,16 @@ class ClearFuncs(object):
         self.event.fire_event(eload, tagify(prefix='auth'))
         return ret
 
+    def cloud(self, clear_load):
+        '''
+        Hook into the salt-cloud libs and execute cloud routines
+        # NOT HOOKED IN YET
+        '''
+        authorize = salt.auth.Authorize(self.opts, clear_load, self.loadauth)
+        if not authorize.rights('cloud', clear_load):
+            return False
+        return True
+
     def runner(self, clear_load):
         '''
         Send a master control function back to the runner system
@@ -2364,7 +2374,7 @@ class ClearFuncs(object):
         self.serial.dump(
                 minions,
                 salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
-                )        
+                )
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])

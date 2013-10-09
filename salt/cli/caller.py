@@ -101,6 +101,7 @@ class Caller(object):
         if self.opts.get('return', ''):
             ret['id'] = self.opts['id']
             ret['fun'] = fun
+            ret['fun_args'] = self.opts['arg']
             for returner in self.opts['return'].split(','):
                 try:
                     self.minion.returners['{0}.returner'.format(returner)](ret)
