@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage RabbitMQ Plugins.
 
@@ -22,6 +23,7 @@ def __virtual__():
     if not __salt__['cmd.has_exec']('rabbitmqctl'):
         name = False
     return name
+
 
 def enabled(name, runas=None):
     '''
@@ -49,6 +51,7 @@ def enabled(name, runas=None):
         ret['comment'] = result['Enabled']
 
     return ret
+
 
 def disabled(name, runas=None):
     '''
