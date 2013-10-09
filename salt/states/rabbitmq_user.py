@@ -34,11 +34,11 @@ def __virtual__():
 
 
 def present(name,
-           password=None,
-           force=False,
-           tags=None,
-           perms={},
-           runas=None):
+            password=None,
+            force=False,
+            tags=None,
+            perms=(),
+            runas=None):
     '''
     Ensure the RabbitMQ user exists.
 
@@ -81,9 +81,9 @@ def present(name,
             if tags:
                 result = __salt__['rabbitmq.set_user_tags'](
                     name, tags, runas=runas)
-            for vhost, p in perms:
+            for vhost, perm in perms:
                 result = __salt__['rabbitmq.set_permissions'](
-                    vhost, name, p[0], p[1], p[2], runas)
+                    vhost, name, perm[0], perm[1], perm[2], runas)
         elif force:
             log.debug('User exists and force is set - Overriding')
             if password is not None:
@@ -97,9 +97,9 @@ def present(name,
                 result.update(__salt__['rabbitmq.set_user_tags'](
                     name, tags, runas=runas)
                 )
-            for vhost, p in perms:
+            for vhost, perm in perms:
                 result.update(__salt__['rabbitmq.set_permissions'](
-                    vhost, name, p[0], p[1], p[2], runas)
+                    vhost, name, perm[0], perm[1], perm[2], runas)
                 )
         else:
             log.debug('User exists, and force is not set - Abandoning')
