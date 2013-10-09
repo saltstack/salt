@@ -668,22 +668,44 @@ def get_id():
     '''
     Guess the id of the minion.
 
-    - Check /etc/hostname for a value other than localhost
+    - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
     - If socket.getfqdn() returns us something other than localhost, use it
+    - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
     - A private IP is better than a loopback IP
     - localhost may be better than killing the minion
 
+    Any non-ip id will be cached for later use in ``CONFIG_DIR/minion_id``
+
     Returns two values: the detected ID, and a boolean value noting whether or
     not an IP address is being used for the ID.
     '''
 
-    log.debug(
-        'Guessing ID. The id can be explicitly in set {0}'.format(
-            os.path.join(syspaths.CONFIG_DIR, 'minion')
-        )
-    )
+    # Check for cached minion ID
+    id_cache = os.path.join(syspaths.CONFIG_DIR, 'minion_id')
+    try:
+        with salt.utils.fopen(id_cache) as idf:
+            name = idf.read().strip()
+        if name:
+            log.info('Using cached minion ID: {0}'.format(name))
+            return name, False
+    except Exception:
+        pass
+
+    log.debug('Guessing ID. The id can be explicitly in set {0}'
+              .format(os.path.join(syspaths.CONFIG_DIR, 'minion')))
+
+    # Check socket.getfqdn()
+    fqdn = socket.getfqdn()
+    if fqdn != 'localhost':
+        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        try:
+            with salt.utils.fopen(id_cache, 'w') as idf:
+                idf.write(fqdn)
+        except Exception as e:
+            log.error('Could not cache minion ID: {0}'.format(e))
+        return fqdn, False
 
     # Check /etc/hostname
     try:
@@ -694,15 +716,14 @@ def get_id():
                         'This file should not contain any whitespace.')
         else:
             if name != 'localhost':
+                try:
+                    with salt.utils.fopen(id_cache, 'w') as idf:
+                        idf.write(name)
+                except Exception as e:
+                    log.error('Could not cache minion ID: {0}'.format(e))
                 return name, False
     except Exception:
         pass
-
-    # Nothing in /etc/hostname or /etc/hostname not found
-    fqdn = socket.getfqdn()
-    if fqdn != 'localhost':
-        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
-        return fqdn, False
 
     # Can /etc/hosts help us?
     try:
@@ -715,6 +736,12 @@ def get_id():
                         if name != 'localhost':
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
+                            try:
+                                with salt.utils.fopen(id_cache, 'w') as idf:
+                                    idf.write(name)
+                            except Exception as e:
+                                log.error('Could not cache minion ID: {0}'
+                                          .format(e))
                             return name, False
     except Exception:
         pass
@@ -722,7 +749,7 @@ def get_id():
     # Can Windows 'hosts' file help?
     try:
         windir = os.getenv("WINDIR")
-        with salt.utils.fopen(windir + '\\system32\\drivers\\etc\\hosts') as hfl:
+        with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
             for line in hfl:
                 # skip commented or blank lines
                 if line[0] == '#' or len(line) <= 1:
@@ -733,7 +760,14 @@ def get_id():
                     if entry[0].startswith('127.'):
                         for name in entry[1:]:  # try each name in the row
                             if name != 'localhost':
-                                log.info('Found minion id in hosts file: {0}'.format(name))
+                                log.info('Found minion id in hosts file: {0}'
+                                         .format(name))
+                                try:
+                                    with salt.utils.fopen(id_cache, 'w') as idf:
+                                        idf.write(name)
+                                except Exception as e:
+                                    log.error('Could not cache minion ID: {0}'
+                                              .format(e))
                                 return name, False
                 except IndexError:
                     pass  # could not split line (malformed entry?)
