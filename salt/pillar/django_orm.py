@@ -18,10 +18,12 @@ requirements installed.
     ext_pillar:
       - django_orm:
           pillar_name: my_application
-          env: /path/to/virtualenv/
           project_path: /path/to/project/
-          env_file: /path/to/env/file.sh
           settings_module: my_application.settings
+          env_file: /path/to/env/file.sh
+          # Optional: If your project is not using the system python,\
+              add your virtualenv path here
+          env: /path/to/virtualenv/
 
           django_app:
 
@@ -81,45 +83,55 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not HAS_VIRTUALENV:
-        return False
     return 'django_orm'
 
 
 def ext_pillar(pillar,
                pillar_name,
-               env,
                project_path,
                settings_module,
                django_app,
+               env=None,
                env_file=None,
                *args,
                **kwargs):
     '''
     Connect to a Django database through the ORM and retrieve model fields
 
-    Parameters:
-        * `pillar_name`: The name of the pillar to be returned
-        * `env`: The full path to the virtualenv for your Django project
-        * `project_path`: The full path to your Django project (the directory
-          manage.py is in.)
-        * `settings_module`: The settings module for your project. This can be
-          found in your manage.py file.
-        * `django_app`: A dictionary containing your apps, models, and fields
-        * `env_file`: A bash file that sets up your environment. The file is
-          run in a subprocess and the changed variables are then added.
+    :type pillar_name: str
+    :param pillar_name: The name of the pillar to be returned
+
+    :type project_path: str
+    :param project_path: The full path to your Django project (the directory
+        manage.py is in)
+
+    :type settings_module: str
+    :param settings_module: The settings module for your project. This can be
+        found in your manage.py file
+
+    :type django_app: str
+    :param django_app: A dictionary containing your apps, models, and fields
+
+    :type env: str
+    :param env: The full path to the virtualenv for your Django project
+
+    :type env_file: str
+    :param env_file: An optional bash file that sets up your environment. The
+        file is run in a subprocess and the changed variables are then added
     '''
 
     if not os.path.isdir(project_path):
-        log.error('Django project dir: \'{}\' not a directory!'.format(env))
+        log.error('Django project dir: \'{}\' not a directory!'.format(
+            project_path))
         return {}
-    for path in virtualenv.path_locations(env):
-        if not os.path.isdir(path):
-            log.error('Virtualenv {} not a directory!'.format(path))
-            return {}
+    if HAS_VIRTUALENV and env is not None and os.path.is_dir(env):
+        for path in virtualenv.path_locations(env):
+            if not os.path.isdir(path):
+                log.error('Virtualenv {} not a directory!'.format(path))
+                return {}
+        # load the virtualenv
+        sys.path.append(virtualenv.path_locations(env)[1] + '/site-packages/')
 
-    # load the virtualenv
-    sys.path.append(virtualenv.path_locations(env)[1] + '/site-packages/')
     # load the django project
     sys.path.append(project_path)
 
