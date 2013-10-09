@@ -500,6 +500,7 @@ def policy_exists(vhost, name, runas=None):
     policies = list_policies(runas=runas)
     return bool(vhost in policies and name in policies[vhost])
 
+
 def enable_plugin(name, runas=None):
     '''
     Enable a RabbitMQ plugin via the rabbitmq-plugin command.
@@ -509,6 +510,7 @@ def enable_plugin(name, runas=None):
             'rabbitmq-plugin enable {0}'.format(name),
             runas=runas)
     return _format_response(ret, 'Enabled')
+
 
 def disable_plugin(name, runas=None):
     '''
