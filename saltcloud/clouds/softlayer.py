@@ -308,6 +308,8 @@ def create(vm_):
         return False
 
     ip_address = saltcloud.utils.wait_for_fun(wait_for_ip)
+    if config.get_config_value('deploy', vm_, __opts__) is not True:
+        return show_instance(vm_['name'], call='action')
 
     if not saltcloud.utils.wait_for_port(ip_address):
         raise SaltCloudSystemExit(
