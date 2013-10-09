@@ -1196,6 +1196,10 @@ def directory(name,
         When 'clean' is set to True, exclude this pattern from removal list
         and preserve in the destination.
     '''
+    # Remove trailing slash, if present
+    if name[-1] == '/':
+        name = name[:-1]
+
     user = _test_owner(kwargs, user=user)
 
     if 'mode' in kwargs and not dir_mode:
