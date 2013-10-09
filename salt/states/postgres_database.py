@@ -60,7 +60,7 @@ def present(name,
     runas
         System user all operations should be performed on behalf of
 
-        .. derecated:: 0.17.0
+        .. deprecated:: 0.17.0
 
     user
         System user all operations should be performed on behalf of
