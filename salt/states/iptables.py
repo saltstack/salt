@@ -46,6 +46,11 @@ def append(name, **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
+
+    for ignore in "__env__",  "__sls__", "order":
+        if ignore in kwargs:
+            del kwargs[ignore]
+
     rule = __salt__['iptables.build_rule'](**kwargs)
     command = __salt__['iptables.build_rule'](full=True, command='A', **kwargs)
     if __salt__['iptables.check'](kwargs['table'], kwargs['chain'], rule) is True:
