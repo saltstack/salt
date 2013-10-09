@@ -191,7 +191,12 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     stop(name)
-    return start(name)
+    for idx in xrange(5):
+        if status(name):
+            time.sleep(2)
+            continue
+        return start(name)
+    return False
 
 
 def status(name, sig=None):
@@ -211,7 +216,7 @@ def status(name, sig=None):
     for line in statuses:
         if 'RUNNING' in line:
             return True
-        elif 'PENDING' in line:
+        elif 'STOP_PENDING' in line:
             return True
     return False
 
