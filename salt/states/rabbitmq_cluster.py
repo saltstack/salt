@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage RabbitMQ Clusters
 
@@ -23,6 +24,7 @@ def __virtual__():
     if not __salt__['cmd.has_exec']('rabbitmqctl'):
         name = False
     return name
+
 
 def join(name, host, user='rabbit', runas=None):
     '''
