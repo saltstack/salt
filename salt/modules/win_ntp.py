@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Management of NTP servers on Windows
+
+.. versionadded:: Hydrogen
 '''
 
 # Import python libs
@@ -31,12 +33,16 @@ def set_servers(*servers):
 
         salt '*' ntp.set_servers 'pool.ntp.org' 'us.pool.ntp.org'
     '''
-    cmd = ('W32tm /config /syncfromflags:manual /manualpeerlist:"{0}" &&'
-          'W32tm /config /reliable:yes &&'
-          'W32tm /config /update &&'
-          'Net stop w32time && Net start w32time'
-          ).format(' '.join(servers))
-    ret = __salt__['cmd.run'](cmd)
+    service_name = 'w32time'
+    if not __salt__['service.status'](service_name):
+        if not __salt__['service.start'](service_name):
+            return False
+    ret = __salt__['cmd.run'](
+        'W32tm /config /syncfromflags:manual /manualpeerlist:"{0}" &&'
+        'W32tm /config /reliable:yes && W32tm /config /update'
+        .format(' '.join(servers))
+    )
+    __salt__['service.restart'](service_name)
     return 'command completed successfully' in ret
 
 
