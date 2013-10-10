@@ -124,7 +124,7 @@ def ext_pillar(pillar,
         log.error('Django project dir: \'{}\' not a directory!'.format(
             project_path))
         return {}
-    if HAS_VIRTUALENV and env is not None and os.path.is_dir(env):
+    if HAS_VIRTUALENV and env is not None and os.path.isdir(env):
         for path in virtualenv.path_locations(env):
             if not os.path.isdir(path):
                 log.error('Virtualenv {} not a directory!'.format(path))
