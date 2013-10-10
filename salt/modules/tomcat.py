@@ -461,6 +461,7 @@ def deploy_war(war,
     CLI Examples:
 
     cp module
+    
     .. code-block:: bash
 
         salt '*' tomcat.deploy_war salt://application.war /api
@@ -468,6 +469,7 @@ def deploy_war(war,
         salt '*' tomcat.deploy_war salt://application.war /api yes http://localhost:8080/manager
 
     minion local file system
+    
     .. code-block:: bash
 
         salt '*' tomcat.deploy_war /tmp/application.war /api
