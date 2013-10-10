@@ -3,6 +3,8 @@
 Management of Windows system information
 ========================================
 
+.. versionadded:: Hydrogen
+
 This state is used to manage system information such as the computer name and
 description.
 

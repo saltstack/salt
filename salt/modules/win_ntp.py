@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Management of NTP servers on Windows
+
+.. versionadded:: Hydrogen
 '''
 
 # Import python libs
