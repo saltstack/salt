@@ -226,6 +226,8 @@ def get_computer_desc():
             return desc.strip()
     return False
 
+get_computer_description = get_computer_desc
+
 
 def join_domain(domain, username, passwd, ou, acct_exists=False,):
     '''
