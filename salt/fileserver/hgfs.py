@@ -176,7 +176,7 @@ def envs():
         tags = repo.tags()
         for tag in tags:
             tag_name = tag[0]
-            # Avoid adding the special 'tip' tag ad an env.
+            # Avoid adding the special 'tip' tag as an env.
             if tag_name != 'tip':
                 ret.add(tag_name)
     return list(ret)
