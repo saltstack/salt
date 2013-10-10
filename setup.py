@@ -354,6 +354,10 @@ FREEZER_INCLUDES = [
     'distutils.version',
     'numbers',
     'json',
+    'M2Crypto',
+    'Cookie',
+    'asyncore',
+    'fileinput'
 ]
 
 if IS_WINDOWS_PLATFORM:
