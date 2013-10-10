@@ -594,7 +594,7 @@ def minion_config(path,
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    opts = apply_minion_config(overrides, defaults, minion_id)
+    opts = apply_minion_config(overrides, defaults, minion_id=minion_id)
     _validate_opts(opts)
     return opts
 
