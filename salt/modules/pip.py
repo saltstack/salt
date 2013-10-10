@@ -344,7 +344,7 @@ def install(pkgs=None,
             find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
-            if not salt.utils.valid_url(link, VALID_PROTOS) or os.path.exists(link):
+            if not (salt.utils.valid_url(link, VALID_PROTOS) or os.path.exists(link)):
                 raise CommandExecutionError(
                     '{0!r} must be a valid URL or path'.format(link)
                 )
