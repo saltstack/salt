@@ -565,7 +565,8 @@ def prepend_root_dir(opts, path_options):
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
-                  check_dns=None):
+                  check_dns=None,
+                  minion_id=False):
     '''
     Reads in the minion configuration file and sets up special options
     '''
@@ -593,7 +594,7 @@ def minion_config(path,
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    opts = apply_minion_config(overrides, defaults)
+    opts = apply_minion_config(overrides, defaults, minion_id)
     _validate_opts(opts)
     return opts
 
@@ -797,7 +798,10 @@ def get_id(root_dir=None):
     return 'localhost', False
 
 
-def apply_minion_config(overrides=None, defaults=None, check_dns=None):
+def apply_minion_config(overrides=None,
+                        defaults=None,
+                        check_dns=None,
+                        minion_id=False):
     '''
     Returns minion configurations dict.
     '''
@@ -827,7 +831,7 @@ def apply_minion_config(overrides=None, defaults=None, check_dns=None):
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if opts['id'] is None:
+    if opts['id'] is None and minion_id:
         opts['id'], using_ip_for_id = get_id(opts['root_dir'])
 
     # it does not make sense to append a domain to an IP based id

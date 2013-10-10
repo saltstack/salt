@@ -907,7 +907,8 @@ class MinionOptionParser(MasterOptionParser):
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'minion')
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path())
+        return config.minion_config(self.get_config_file_path(),
+                                    minion_id=True)
 
 
 class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -1468,7 +1469,8 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path())
+        return config.minion_config(self.get_config_file_path(),
+                                    minion_id=True)
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
