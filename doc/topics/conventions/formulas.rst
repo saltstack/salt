@@ -82,7 +82,7 @@ Here is an example of a state that uses the :formula:`epel-formula` in a
 ``require`` declaration which directs Salt to not install the ``python26``
 package until after the EPEL repository has also been installed:
 
-.. code:: yaml
+.. code-block:: yaml
 
     include:
       - epel
@@ -104,7 +104,7 @@ For example the easiest way to set up an OpenStack deployment on a single
 machine is to include the :formula:`openstack-standalone-formula` directly from
 a :file:`top.sls` file:
 
-.. code:: yaml
+.. code-block:: yaml
 
     base:
       'myopenstackmaster':
@@ -113,7 +113,7 @@ a :file:`top.sls` file:
 Quickly deploying OpenStack across several dedicated machines could also be
 done directly from a Top File and may look something like this:
 
-.. code:: yaml
+.. code-block:: yaml
 
     base:
       'controller':
@@ -191,7 +191,7 @@ target platform, and any other installation or usage instructions or tips.
 
 A sample skeleton for the ``README.rst`` file:
 
-.. code:: rest
+.. code-block:: rest
 
     foo
     ===
@@ -222,7 +222,7 @@ A sample skeleton for the `CHANGELOG.rst` file:
 
 :file:`CHANGELOG.rst`:
 
-.. code:: rest
+.. code-block:: rest
 
     foo formula
     ===========
@@ -246,7 +246,7 @@ The following is an example from the MySQL Formula.
 
 :file:`map.jinja`:
 
-.. code:: jinja
+.. code-block:: jinja
 
     {% set mysql = salt['grains.filter_by']({
         'Debian': {
@@ -272,7 +272,7 @@ The following is an example from the MySQL Formula.
 Any of the values defined above can be fetched for the current platform in any
 state file using the following syntax:
 
-.. code:: yaml
+.. code-block:: yaml
 
     {% from "mysql/map.jinja" import mysql with context %}
 
@@ -343,7 +343,7 @@ formula is not applicable to a platform it should do nothing. See the
 
 Any platform-specific states must be wrapped in conditional statements:
 
-.. code:: jinja
+.. code-block:: jinja
 
     {% if grains['os_family'] == 'Debian' %}
     ...
@@ -352,7 +352,7 @@ Any platform-specific states must be wrapped in conditional statements:
 A handy method for using platform-specific values is to create a lookup table
 using the :py:func:`~salt.modules.grains.filter_by` function:
 
-.. code:: jinja
+.. code-block:: jinja
 
     {% set apache = salt['grains.filter_by']({
         'Debian': {'conf': '/etc/apache2/conf.d'},
@@ -373,7 +373,7 @@ Each Formula should strive for sane defaults that can then be customized using
 Pillar. Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get`
 and must provide a default value:
 
-.. code:: jinja
+.. code-block:: jinja
 
     {% if salt['pillar.get']('horizon:use_ssl', False) %}
     ssl_crt: {{ salt['pillar.get']('horizon:ssl_crt', '/etc/ssl/certs/horizon.crt') }}
@@ -393,7 +393,7 @@ Remember that both State files and Pillar files can easily call out to Salt
 :ref:`execution modules <all-salt.modules>` and have access to all the system
 grains as well.
 
-.. code:: jinja
+.. code-block:: jinja
 
     {% if '/storage' in salt['mount.active']() %}
     /usr/local/etc/myfile.conf:
