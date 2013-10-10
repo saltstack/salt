@@ -207,6 +207,8 @@ def set_computer_desc(desc):
     __salt__['cmd.run'](cmd)
     return {'Computer Description': get_computer_desc()}
 
+set_computer_description = set_computer_desc
+
 
 def get_computer_desc():
     '''
