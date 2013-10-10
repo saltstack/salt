@@ -664,7 +664,7 @@ def syndic_config(master_config_path,
     return opts
 
 
-def get_id(root_dir='/'):
+def get_id(root_dir=None):
     '''
     Guess the id of the minion.
 
@@ -681,11 +681,13 @@ def get_id(root_dir='/'):
     Returns two values: the detected ID, and a boolean value noting whether or
     not an IP address is being used for the ID.
     '''
+    if root_dir is None:
+        root_dir = syspaths.ROOT_DIR
 
     # Check for cached minion ID
-    id_cache = os.path.join(
-        root_dir, syspaths.CONFIG_DIR.lstrip('/'), 'minion_id'
-    )
+    id_cache = os.path.join(root_dir,
+                            syspaths.CONFIG_DIR.lstrip(syspaths.ROOT_DIR),
+                            'minion_id')
     try:
         with salt.utils.fopen(id_cache) as idf:
             name = idf.read().strip()
