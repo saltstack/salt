@@ -45,6 +45,7 @@ Full list of builtin state modules
     mysql_user
     network
     npm
+    ntp
     pecl
     pip_state
     pkg
@@ -71,3 +72,8 @@ Full list of builtin state modules
     tomcat
     user
     virtualenv_mod
+    win_dns_client
+    win_firewall
+    win_path
+    win_servermanager
+    win_system
