@@ -266,7 +266,8 @@ class MasterMinion(object):
             rend=True,
             matcher=True,
             whitelist=None):
-        self.opts = salt.config.minion_config(opts['conf_file'])
+        self.opts = salt.config.minion_config(opts['conf_file'],
+                                              minion_id=True)
         self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
