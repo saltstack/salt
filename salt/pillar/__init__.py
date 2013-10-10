@@ -69,6 +69,8 @@ class Pillar(object):
     Read over the pillar top files and render the pillar data
     '''
     def __init__(self, opts, grains, id_, env, ext=None):
+        # Store the file_roots path so we can restore later. Issue 5449
+        self.actual_file_roots = opts['file_roots']
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, id_, env, ext)
         self.client = salt.fileclient.get_file_client(self.opts)
@@ -451,6 +453,8 @@ class Pillar(object):
                 mopts.pop('grains')
             if 'aes' in mopts:
                 mopts.pop('aes')
+            # Restore the actual file_roots path. Issue 5449
+            mopts['file_roots'] = self.actual_file_roots
             mopts['saltversion'] = __version__
             pillar['master'] = mopts
         if errors:
