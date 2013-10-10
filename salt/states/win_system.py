@@ -21,10 +21,8 @@ description.
 
 # Import python libs
 import logging
-import sys
 
 # Import salt libs
-from salt._compat import string_types
 import salt.utils
 
 
