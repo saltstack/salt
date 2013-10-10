@@ -338,7 +338,7 @@ class LocalClient(object):
 
         Usage:
 
-        .. code:: python
+        .. code-block:: python
 
             import salt.client
             client = salt.client.LocalClient()
@@ -346,7 +346,7 @@ class LocalClient(object):
 
         With authentication:
 
-        .. code:: yaml
+        .. code-block:: yaml
 
             # Master config
             ...
@@ -357,13 +357,13 @@ class LocalClient(object):
             ...
 
 
-        .. code:: python
+        .. code-block:: python
 
             ret = client.cmd('*', 'test.ping', [], username='fred', password='pw', eauth='pam')
 
         Compound command usage:
 
-        .. code:: python
+        .. code-block:: python
 
             ret = client.cmd('*', ['grains.items', 'cmd.run'], [[], ['whoami']])
 
