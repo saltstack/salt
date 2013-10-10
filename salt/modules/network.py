@@ -159,7 +159,7 @@ def arp():
 
     .. code-block:: bash
 
-        salt '*' '*' network.arp
+        salt '*' network.arp
     '''
     ret = {}
     out = __salt__['cmd.run']('arp -an')
