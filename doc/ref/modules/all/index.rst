@@ -172,6 +172,7 @@ Full list of builtin execution modules
     win_file
     win_groupadd
     win_network
+    win_ntp
     win_pkg
     win_service
     win_shadow
