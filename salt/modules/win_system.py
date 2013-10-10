@@ -205,7 +205,7 @@ def set_computer_desc(desc):
     '''
     cmd = 'net config server /srvcomment:"{0}"'.format(desc)
     __salt__['cmd.run'](cmd)
-    return {'Computer Description': str(desc)}
+    return {'Computer Description': get_computer_desc()}
 
 
 def get_computer_desc():

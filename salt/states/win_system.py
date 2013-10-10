@@ -64,15 +64,15 @@ def computer_desc(name):
                           .format(name))
         return ret
 
-    if not __salt__['system.set_computer_desc'](name):
-        ret['result'] = False
-        ret['comment'] = ('Unable to set computer description to '
-                          '{0!r}'.format(name))
-    else:
+    result = __salt__['system.set_computer_desc'](name)
+    if result['Computer Description'] == name:
         ret['comment'] = ('Computer description successfully changed to {0!r}'
                           .format(name))
         ret['changes'] = {'old': before_desc, 'new': name}
-
+    else:
+        ret['result'] = False
+        ret['comment'] = ('Unable to set computer description to '
+                          '{0!r}'.format(name))
     return ret
 
 computer_description = computer_desc
