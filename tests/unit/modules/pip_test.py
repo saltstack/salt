@@ -885,8 +885,8 @@ class PipTestCase(TestCase):
                 pip.install('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in 0.18.0. Please use \'user\' instead.',
-                    str(w[-1].message)
+                    'will be removed in Salt Hydrogen (Unreleased). Please '
+                    'use \'user\' instead.', str(w[-1].message)
                 )
 
     def test_uninstall_deprecated_runas_triggers_warning(self):
@@ -900,8 +900,8 @@ class PipTestCase(TestCase):
                 pip.uninstall('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in 0.18.0. Please use \'user\' instead.',
-                    str(w[-1].message)
+                    'will be removed in Salt Hydrogen (Unreleased). Please '
+                    'use \'user\' instead.', str(w[-1].message)
                 )
 
     def test_freeze_deprecated_runas_triggers_warning(self):
@@ -915,8 +915,8 @@ class PipTestCase(TestCase):
                 pip.freeze('/tmp/pip-env', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in 0.18.0. Please use \'user\' instead.',
-                    str(w[-1].message)
+                    'will be removed in Salt Hydrogen (Unreleased). Please '
+                    'use \'user\' instead.', str(w[-1].message)
                 )
 
     def test_list_deprecated_runas_triggers_warning(self):
@@ -930,8 +930,8 @@ class PipTestCase(TestCase):
                 pip.list_('blah', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in 0.18.0. Please use \'user\' instead.',
-                    str(w[-1].message)
+                    'will be removed in Salt Hydrogen (Unreleased). Please '
+                    'use \'user\' instead.', str(w[-1].message)
                 )
 
     def test_install_user_and_runas_raises_exception(self):

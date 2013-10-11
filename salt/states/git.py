@@ -3,9 +3,6 @@
 Interaction with Git repositories.
 ==================================
 
-NOTE: This module is under heavy development and the API is subject to change.
-It may be replaced with a generic VCS module if this proves viable.
-
 Important: Before using git over ssh, make sure your remote host fingerprint
 exists in "~/.ssh/known_hosts" file. To avoid requiring password
 authentication, it is also possible to pass private keys to use explicitly.
@@ -36,12 +33,12 @@ def __virtual__():
     return 'git' if __salt__['cmd.has_exec']('git') else False
 
 
-def __ls_remote__(name, branch):
+def __ls_remote__(name, branch, user, cwd):
     '''
     Returns the upstream hash for any given URL and branch.
     '''
     cmd = "git ls-remote -h " + name + " " + branch + " | cut -f 1"
-    return __salt__['cmd.run_stdout'](cmd)
+    return __salt__['cmd.run_stdout'](cmd, cwd, runas=user)
 
 
 def latest(name,
@@ -126,7 +123,7 @@ def latest(name,
         return _fail(ret, '"target" option is required')
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -172,11 +169,11 @@ def latest(name,
 
             # handle the case where a branch was provided for rev
             remote_rev = None
-            branch = __salt__['git.current_branch'](target, user=runas)
+            branch = __salt__['git.current_branch'](target, user=user)
             # We're only interested in the remote branch if a branch
             # (instead of a hash, for example) was provided for rev.
             if len(branch) > 0 and branch == rev:
-                remote_rev = __ls_remote__(name, branch)
+                remote_rev = __ls_remote__(name, branch, user, target)
 
             # only do something, if the specified rev differs from the
             # current_rev and remote_rev
@@ -350,7 +347,7 @@ def present(name, bare=True, runas=None, user=None, force=False):
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

@@ -254,8 +254,8 @@ available in all minion's pillars. This makes global configuration of services
 and systems very easy but may not be desired if sensitive data is stored in the
 master configuration.
 
-To disable the master config from being added to the pillar set `pillar_opts`
-to `False`:
+To disable the master config from being added to the pillar set ``pillar_opts``
+to ``False``:
 
 .. code-block:: yaml
 

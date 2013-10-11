@@ -8,56 +8,56 @@ This backend exposes directories in S3 buckets as Salt environments.  This
 feature is managed by the :conf_master:`fileserver_backend` option in the Salt
 Master config.
 
-:configuration:
 
-    S3 credentials can be set in the master config file with::
+S3 credentials can be set in the master config file like so:
 
-        s3.keyid: GKTADJGHEIQSXMKKRBJ08H
-        s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+.. code-block:: yaml
 
-    Alternatively, if on EC2 these credentials can be automatically loaded from
-    instance metadata.
+    s3.keyid: GKTADJGHEIQSXMKKRBJ08H
+    s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    You will need to specify the service_url with:
+Alternatively, if on EC2 these credentials can be automatically loaded from
+instance metadata.
 
-        service_url: s3.amazonaws.com
+Additionally, ``s3fs`` must be included in the
+:conf_master:`fileserver_backend` config parameter in the master config file:
 
-    You can find a listing of the S3 enpoints at:
+.. code-block:: yaml
 
-        http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+    fileserver_backend:
+      - s3fs
 
-    Lastly, include s3fs in your fileserver_backend:
+This fileserver supports two modes of operation for the buckets:
 
-        fileserver_backend:
-          - s3fs
+1. :strong:`A single bucket per environment`
 
-    This fileserver supports two modes of operation for the buckets:
+   .. code-block:: yaml
 
-    - A single bucket per environment::
+    s3.buckets:
+      production:
+        - bucket1
+        - bucket2
+      staging:
+        - bucket3
+        - bucket4
 
-        s3.buckets:
-            production:
-                - bucket1
-                - bucket2
-            staging:
-                - bucket3
-                - bucket4
+2. :strong:`Multiple environments per bucket`
 
-    - Or multiple environments per bucket::
+   .. code-block:: yaml
 
-        s3.buckets:
-            - bucket1
-            - bucket2
-            - bucket3
-            - bucket4
+    s3.buckets:
+      - bucket1
+      - bucket2
+      - bucket3
+      - bucket4
 
-    Note that bucket names must be all lowercase both in the AWS console
-    and in Salt, otherwise you may encounter "SignatureDoesNotMatch" errors.
+Note that bucket names must be all lowercase both in the AWS console and in
+Salt, otherwise you may encounter ``SignatureDoesNotMatch`` errors.
 
-    A multiple environment bucket must adhere to the following root directory
-    structure::
+A multiple-environment bucket must adhere to the following root directory
+structure::
 
-        s3://<bucket name>/<environment>/<files>
+    s3://<bucket name>/<environment>/<files>
 '''
 
 # Import python libs

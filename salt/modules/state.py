@@ -233,11 +233,6 @@ def highstate(test=None, queue=False, **kwargs):
         if conflict:
             __context__['retcode'] = 1
             return conflict
-    if not _check_pillar(kwargs):
-        __context__['retcode'] = 5
-        err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
-        return err
     opts = copy.copy(__opts__)
 
     if salt.utils.test_mode(test=test, **kwargs):
@@ -256,7 +251,8 @@ def highstate(test=None, queue=False, **kwargs):
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),
                 cache=kwargs.get('cache', None),
-                cache_name=kwargs.get('cache_name', 'highstate')
+                cache_name=kwargs.get('cache_name', 'highstate'),
+                force=kwargs.get('force', False)
                 )
     finally:
         st_.pop_active()
@@ -271,6 +267,9 @@ def highstate(test=None, queue=False, **kwargs):
     # but I'm guessing it likely should not be.
     cumask = os.umask(191)
     try:
+        if salt.utils.is_windows():
+            # Make sure cache file isn't read-only
+            __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
@@ -355,6 +354,9 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     cumask = os.umask(191)
     try:
+        if salt.utils.is_windows():
+            # Make sure cache file isn't read-only
+            __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):

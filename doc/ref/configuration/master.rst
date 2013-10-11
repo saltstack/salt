@@ -526,6 +526,33 @@ or just post what changes are going to be made
 Master File Server Settings
 ===========================
 
+.. conf_master:: fileserver_backend
+
+``fileserver_backend``
+----------------------
+
+Default:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+
+Salt supports a modular fileserver backend system, this system allows the salt
+master to link directly to third party systems to gather and manage the files
+available to minions. Multiple backends can be configured and will be searched
+for the requested file in the order in which they are defined here. The default
+setting only enables the standard backend ``roots``, which is configured using
+the :conf_master:`file_roots` option.
+
+Example:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+      - gitfs
+
 .. conf_master:: file_roots
 
 ``file_roots``

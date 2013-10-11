@@ -49,8 +49,10 @@ def __virtual__():
 
 def _chugid(runas):
     uinfo = pwd.getpwnam(runas)
+    supgroups_seen = set()
     supgroups = [g.gr_gid for g in grp.getgrall()
-                 if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid]
+                 if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid
+                 and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)]
 
     # No logging can happen on this function
     #
@@ -785,9 +787,9 @@ def script(source,
 
     if isinstance(env, string_types):
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             'Passing a salt environment should be done using \'__env__\' not '
-            '\'env\'.'
+            '\'env\'. This functionality will be removed in Salt {version}.'
         )
         # Backwards compatibility
         __env__ = env

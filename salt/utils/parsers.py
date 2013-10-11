@@ -868,7 +868,7 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
             cls, *args, **kwargs
         )
         utils.warn_until(
-            (0, 19),
+            'Helium',
             '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
             'start using \'OutputOptionsMixIn\'; your code should not need '
             'any further changes.'
@@ -907,7 +907,8 @@ class MinionOptionParser(MasterOptionParser):
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'minion')
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path())
+        return config.minion_config(self.get_config_file_path(),
+                                    minion_id=True)
 
 
 class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -1167,7 +1168,11 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def _mixin_setup(self):
         # XXX: Remove '--key-logfile' support in 0.18.0
-        utils.warn_until((0, 18), '', _dont_call_warnings=True)
+        utils.warn_until(
+            'Hydrogen',
+            'Remove \'--key-logfile\' support',
+            _dont_call_warnings=True
+        )
         self.logging_options_group.add_option(
             '--key-logfile',
             default=None,
@@ -1352,7 +1357,11 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if self.options.key_logfile:
             # XXX: Remove '--key-logfile' support in 0.18.0
             # In < 0.18.0 error out
-            utils.warn_until((0, 18), '', _dont_call_warnings=True)
+            utils.warn_until(
+                'Hydrogen',
+                'Remove \'--key-logfile\' support',
+                _dont_call_warnings=True
+            )
             self.error(
                 'The \'--key-logfile\' option has been deprecated in favour '
                 'of \'--log-file\''
@@ -1460,7 +1469,8 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path())
+        return config.minion_config(self.get_config_file_path(),
+                                    minion_id=True)
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
@@ -1591,6 +1601,10 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'initial deployment of keys very fast and easy')
 
     def _mixin_after_parsed(self):
+        if not self.args:
+            self.print_help()
+            self.exit(1)
+
         if self.options.list:
             if ',' in self.args[0]:
                 self.config['tgt'] = self.args[0].split(',')

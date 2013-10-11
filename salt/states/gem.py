@@ -43,12 +43,12 @@ def installed(name,          # pylint: disable=C0103
         For RVM installations: the ruby version and gemset to target.
 
     runas: None
-        The user to run gem as.
+        The user under which to run the ``gem`` command
 
         .. deprecated:: 0.17.0
 
-    name: None
-        The user to run gem as
+    user: None
+        The user under which to run the ``gem`` command
 
         .. versionadded:: 0.17.0
 
@@ -65,7 +65,7 @@ def installed(name,          # pylint: disable=C0103
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -126,20 +126,21 @@ def removed(name, ruby=None, runas=None, user=None):
 
     ruby: None
         For RVM installations: the ruby version and gemset to target.
+
     runas: None
-        The user to run gem as.
+        The user under which to run the ``gem`` command
 
         .. deprecated:: 0.17.0
 
     user: None
-        The user to run gem as
+        The user under which to run the ``gem`` command
 
         .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        (0, 18),
+        'Hydrogen',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

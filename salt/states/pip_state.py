@@ -24,6 +24,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
@@ -128,6 +129,20 @@ def installed(name,
 
     .. versionchanged:: 0.17.0
         ``use_wheel`` option added.
+
+    .. admonition:: Attention
+
+        As of Salt 0.17.0 the pip state **needs** an importable pip module.
+        This usually means having the system's pip package installed or running
+        Salt from an active `virtualenv`_.
+
+        The reason for this requirement is because ``pip`` already does a
+        pretty good job parsing it's own requirements. It makes no sense for
+        Salt to do ``pip`` requirements parsing and validation before passing
+        them to the ``pip`` library. It's functionality duplication and it's
+        more error prone.
+
+    .. _`virtualenv`: http://www.virtualenv.org
     '''
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -149,10 +164,15 @@ def installed(name,
 
     if repo is not None:
         msg = ('The \'repo\' argument to pip.installed is deprecated and will '
-               'be removed in 0.18.0. Please use \'name\' instead. The '
-               'current value for name, {0!r} will be replaced by the value '
-               'of repo, {1!r}'.format(name, repo))
-        salt.utils.warn_until((0, 18), msg)
+               'be removed in Salt {version}. Please use \'name\' instead. '
+               'The current value for name, {0!r} will be replaced by the '
+               'value of repo, {1!r}'.format(
+                   name,
+                   repo,
+                   version=_SaltStackVersion.from_name(
+                       'Hydrogen').formatted_version
+               ))
+        salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
@@ -208,11 +228,13 @@ def installed(name,
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
-        msg = (
-            'The \'runas\' argument to pip.installed is deprecated, and will '
-            'be removed in 0.18.0. Please use \'user\' instead.'
-        )
-        salt.utils.warn_until((0, 18), msg)
+        msg = ('The \'runas\' argument to pip.installed is deprecated, and '
+               'will be removed in Salt {version}. Please use \'user\' '
+               'instead.'.format(
+                   version=_SaltStackVersion.from_name(
+                       'Hydrogen').formatted_version
+               ))
+        salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)
 
         # "There can only be one"
@@ -397,11 +419,13 @@ def removed(name,
 
     if runas is not None:
         # The user is using a deprecated argument, warn!
-        msg = (
-            'The \'runas\' argument to pip.installed is deprecated, and will '
-            'be removed in 0.18.0. Please use \'user\' instead.'
-        )
-        salt.utils.warn_until((0, 18), msg)
+        msg = ('The \'runas\' argument to pip.installed is deprecated, and '
+               'will be removed in Salt {version}. Please use \'user\' '
+               'instead.'.format(
+                   version=_SaltStackVersion.from_name(
+                       'Hydrogen').formatted_version
+               ))
+        salt.utils.warn_until('Hydrogen', msg)
         ret.setdefault('warnings', []).append(msg)
 
     # "There can only be one"

@@ -9,8 +9,6 @@ import re
 # Import salt libs
 import salt.utils
 
-POWERSHELL = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
-
 
 def __virtual__():
     '''
@@ -25,11 +23,24 @@ def _parse_return_code_powershell(string):
     '''
     return from the input string the return code of the powershell command
     '''
+
     regex = re.search(r'ReturnValue\s*: (\d*)', string)
     if not regex:
         return False
     else:
         return int(regex.group(1))
+
+
+def _psrdp(cmd):
+    '''
+    Create a Win32_TerminalServiceSetting WMI Object as $RDP and execute the
+    command cmd returns the STDOUT of the command
+    '''
+    rdp = ('$RDP = Get-WmiObject -Class Win32_TerminalServiceSetting '
+           '-Namespace root\\CIMV2\\TerminalServices -Computer . '
+           '-Authentication 6 -ErrorAction Stop')
+    return __salt__['cmd.run']('{0} ; {1}'.format(rdp, cmd),
+                               shell='powershell')
 
 
 def enable():
@@ -43,9 +54,8 @@ def enable():
         salt '*' rdp.enable
     '''
 
-    cmd = '-InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(1,1) }"'
-    cmd = '{0} {1}'.format(POWERSHELL, cmd)
-    return _parse_return_code_powershell(__salt__['cmd.run'](cmd)) == 0
+    return _parse_return_code_powershell(
+        _psrdp('$RDP.SetAllowTsConnections(1,1)')) == 0
 
 
 def disable():
@@ -59,9 +69,8 @@ def disable():
         salt '*' rdp.disable
     '''
 
-    cmd = '-InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; $RDP.SetAllowTsConnections(0,1) }"'
-    cmd = '{0} {1}'.format(POWERSHELL, cmd)
-    return _parse_return_code_powershell(__salt__['cmd.run'](cmd)) == 0
+    return _parse_return_code_powershell(
+        _psrdp('$RDP.SetAllowTsConnections(0,1)')) == 0
 
 
 def status():
@@ -75,7 +84,5 @@ def status():
         salt '*' rdp.status
     '''
 
-    cmd = '-InputFormat None -Command "& { $RDP = Get-WmiObject -Class Win32_TerminalServiceSetting -Namespace root\\CIMV2\\TerminalServices -Computer . -Authentication 6 -ErrorAction Stop ; echo $RDP.AllowTSConnections }"'
-    cmd = '{0} {1}'.format(POWERSHELL, cmd)
-    out = int(__salt__['cmd.run'](cmd).strip())
+    out = int(_psrdp('echo $RDP.AllowTSConnections').strip())
     return out != 0

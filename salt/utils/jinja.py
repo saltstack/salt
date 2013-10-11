@@ -7,6 +7,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 from os import path
 import logging
 import json
+from functools import wraps
 
 # Import third party libs
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
@@ -18,6 +19,7 @@ import yaml
 # Import salt libs
 import salt
 import salt.fileclient
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +27,15 @@ __all__ = [
     'SaltCacheLoader',
     'SerializerExtension'
 ]
+
+
+# To dump OrderedDict objects as regular dicts. Used by the yaml
+# template filter.
+class OrderedDictDumper(yaml.Dumper):
+    pass
+yaml.add_representer(OrderedDict,
+                     yaml.representer.SafeRepresenter.represent_dict,
+                     Dumper=OrderedDictDumper)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -98,6 +109,33 @@ class SaltCacheLoader(BaseLoader):
                 continue
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
+
+
+class PrintableDict(OrderedDict):
+    '''
+    Ensures that dict str() and repr() are YAML friendly.
+
+    .. code-block:: python
+        mapping = OrderedDict([('a', 'b'), ('c', None)])
+        print mapping
+        # OrderedDict([('a', 'b'), ('c', None)])
+
+        decorated = PrintableDict(mapping)
+        print decorated
+        # {'a': 'b', 'c': None}
+
+    '''
+    def __str__(self):
+        output = []
+        for key, value in self.items():
+            output.append('{0!r}: {1!r}'.format(str(key), str(value)))
+        return '{' + ', '.join(output) + '}'
+
+    def __repr__(self):  # pylint: disable=W0221
+        output = []
+        for key, value in self.items():
+            output.append('{0!r}: {1!r}'.format(key, value))
+        return '{' + ', '.join(output) + '}'
 
 
 class SerializerExtension(Extension, object):
@@ -219,11 +257,34 @@ class SerializerExtension(Extension, object):
             'load_json': self.load_json
         })
 
+        if self.environment.finalize is None:
+            self.environment.finalize = self.finalizer
+        else:
+            finalizer = self.environment.finalize
+
+            @wraps(finalizer)
+            def wrapper(self, data):
+                return finalizer(self.finalizer(data))
+            self.environment.finalize = wrapper
+
+    def finalizer(self, data):
+        '''
+        Ensure that printed mappings are YAML friendly.
+        '''
+        def explore(data):
+            if isinstance(data, (dict, OrderedDict)):
+                return PrintableDict([(key, explore(value)) for key, value in data.items()])
+            elif isinstance(data, (list, tuple, set)):
+                return data.__class__([explore(value) for value in data])
+            return data
+        return explore(data)
+
     def format_json(self, value):
         return Markup(json.dumps(value, sort_keys=True).strip())
 
     def format_yaml(self, value):
-        return Markup(yaml.dump(value, default_flow_style=True).strip())
+        return Markup(yaml.dump(value, default_flow_style=True,
+                                Dumper=OrderedDictDumper).strip())
 
     def load_yaml(self, value):
         if isinstance(value, TemplateModule):

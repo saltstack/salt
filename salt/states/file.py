@@ -198,6 +198,7 @@ import yaml
 # Import salt libs
 import salt.utils
 import salt.utils.templates
+from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -838,8 +839,8 @@ def absent(name):
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except (OSError, IOError):
-            return _error(ret, 'Failed to remove file {0}'.format(name))
+        except CommandExecutionError as exc:
+            return _error(ret, '{0}'.format(exc))
 
     elif os.path.isdir(name):
         if __opts__['test']:
@@ -999,7 +1000,7 @@ def managed(name,
         file of any kind.  Ignores hashes and does not use a templating engine.
 
     contents_pillar
-        .. versionadded:: 0.17
+        .. versionadded:: 0.17.0
 
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
@@ -1196,6 +1197,10 @@ def directory(name,
         When 'clean' is set to True, exclude this pattern from removal list
         and preserve in the destination.
     '''
+    # Remove trailing slash, if present
+    if name[-1] == '/':
+        name = name[:-1]
+
     user = _test_owner(kwargs, user=user)
 
     if 'mode' in kwargs and not dir_mode:
@@ -1739,7 +1744,7 @@ def replace(name,
     '''
     Maintain an edit in a file
 
-    .. versionadded:: 0.17
+    .. versionadded:: 0.17.0
 
     Params are identical to :py:func:`~salt.modules.file.replace`.
 
@@ -1779,7 +1784,7 @@ def sed(name,
         flags='g',
         negate_match=False):
     '''
-    .. deprecated:: 0.17
+    .. deprecated:: 0.17.0
        Use :py:func:`~salt.states.file.replace` instead.
 
     Maintain a simple edit to a file
@@ -1808,7 +1813,7 @@ def sed(name,
     negate_match : False
         Negate the search command (``!``)
 
-        .. versionadded:: 0.17
+        .. versionadded:: 0.17.0
 
     Usage::
 

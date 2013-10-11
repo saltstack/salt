@@ -30,8 +30,6 @@ class Mock(object):
     def __getattr__(self, name):
         if name in ('__file__', '__path__'):
             return '/dev/null'
-        elif name[0] == name[0].upper():
-            return type(name, (), {})
         else:
             return Mock()
 # pylint: enable=R0903
@@ -103,7 +101,7 @@ copyright = '2013 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '0.16.4'
+release = '0.17.0'
 
 language = 'en'
 locale_dirs = [

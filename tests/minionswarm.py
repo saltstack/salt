@@ -217,8 +217,7 @@ class Swarm(object):
     def shutdown(self):
         print('Killing any remaining running minions')
         subprocess.call(
-            'kill -KILL $(ps aux | grep python | grep "salt-minion" '
-            '| awk \'{print $2}\')',
+            'pkill -KILL -f "python.*salt-minion"',
             shell=True
         )
         if not self.opts['no_clean']:

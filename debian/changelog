@@ -1,3 +1,9 @@
+salt (0.17.0-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- Joe Healy <joehealy@gmail.com>  Mon, 07 Oct 2013 20:48:54 +1100
+
 salt (0.16.0-1) unstable; urgency=low
 
   * New upstream version

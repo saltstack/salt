@@ -8,6 +8,13 @@ Manage RabbitMQ Users.
         rabbitmq_user.present:
             - password: password
             - force: True
+            - tags: administrator
+            - permissions:
+              - '/':
+                - '.*'
+                - '.*'
+                - '.*'
+            - runas: rabbitmq
 '''
 
 # Import python libs
@@ -27,9 +34,11 @@ def __virtual__():
 
 
 def present(name,
-           password=None,
-           force=False,
-           runas=None):
+            password=None,
+            force=False,
+            tags=None,
+            perms=(),
+            runas=None):
     '''
     Ensure the RabbitMQ user exists.
 
@@ -39,9 +48,14 @@ def present(name,
         User's password, if one needs to be set
     force
         If user exists, forcibly change the password
+    tags
+        Optionally set user tags for user
+    permissions
+        A list of dicts with vhost keys and 3-tuple values
     runas
         Name of the user to run the command
     '''
+
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     result = {}
 
@@ -63,8 +77,15 @@ def present(name,
                 "User doesn't exist - Creating")
             result = __salt__['rabbitmq.add_user'](
                 name, password, runas=runas)
+
+            if tags:
+                result = __salt__['rabbitmq.set_user_tags'](
+                    name, tags, runas=runas)
+            for vhost, perm in perms:
+                result = __salt__['rabbitmq.set_permissions'](
+                    vhost, name, perm[0], perm[1], perm[2], runas)
         elif force:
-            log.debug('User exists and force is set - Overriding password')
+            log.debug('User exists and force is set - Overriding')
             if password is not None:
                 result = __salt__['rabbitmq.change_password'](
                     name, password, runas=runas)
@@ -72,6 +93,14 @@ def present(name,
                 log.debug('Password is not set - Clearing password')
                 result = __salt__['rabbitmq.clear_password'](
                     name, runas=runas)
+            if tags:
+                result.update(__salt__['rabbitmq.set_user_tags'](
+                    name, tags, runas=runas)
+                )
+            for vhost, perm in perms:
+                result.update(__salt__['rabbitmq.set_permissions'](
+                    vhost, name, perm[0], perm[1], perm[2], runas)
+                )
         else:
             log.debug('User exists, and force is not set - Abandoning')
             ret['comment'] = 'User {0} is not going to be modified'.format(name)

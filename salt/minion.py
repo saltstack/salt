@@ -36,6 +36,20 @@ try:
 except ImportError:
     pass
 
+HAS_PSUTIL = False
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    pass
+
+HAS_RESOURCE = False
+try:
+    import resource
+    HAS_RESOURCE = True
+except ImportError:
+    pass
+
 # Import salt libs
 from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
@@ -504,9 +518,31 @@ class Minion(object):
         Return the functions and the returners loaded up from the loader
         module
         '''
+        # if this is a *nix system AND modules_max_memory is set, lets enforce
+        # a memory limit on module imports
+        # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
+        modules_max_memory = False
+        if self.opts.get('modules_max_memory', -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
+            log.debug('modules_max_memory set, enforcing a maximum of {0}'.format(self.opts['modules_max_memory']))
+            modules_max_memory = True
+            old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
+            rss, vms = psutil.Process(os.getpid()).get_memory_info()
+            mem_limit = rss + vms + self.opts['modules_max_memory']
+            resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+        elif self.opts.get('modules_max_memory', -1) > 0:
+            if not HAS_PSUTIL:
+                log.error('Unable to enforce modules_max_memory because psutil is missing')
+            if not HAS_RESOURCE:
+                log.error('Unable to enforce modules_max_memory because resource is missing')
+
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts, functions)
+
+        # we're done, reset the limits!
+        if modules_max_memory is True:
+            resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
+
         return functions, returners
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None):
@@ -666,8 +702,9 @@ class Minion(object):
                             if not iret:
                                 iret = []
                             iret.append(single)
-                        tag = tagify([data['jid'], 'ret', opts['id'], ind])
-                        minion_instance._fire_master({'return': single}, tag)
+                        tag = tagify([data['jid'], 'prog', opts['id'], str(ind)], 'job')
+                        event_data = {'return': single}
+                        minion_instance._fire_master(event_data, tag)
                         ind += 1
                     ret['return'] = iret
                 else:
@@ -724,6 +761,7 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
+        ret['fun_args'] = data['arg']
         minion_instance._return_pub(ret)
         if data['ret']:
             ret['id'] = opts['id']
@@ -770,6 +808,8 @@ class Minion(object):
                 )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
+            ret['fun'] = data['fun']
+            ret['fun_args'] = data['arg']
         minion_instance._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):

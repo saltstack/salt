@@ -313,7 +313,11 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.log.handlers',
                              'salt.templates',
                              ],
-                'package_data': {'salt.templates': ['rh_ip/*.jinja']},
+                'package_data': {'salt.templates': [
+                                    'rh_ip/*.jinja',
+                                    'virt/*.jinja'
+                                    ]
+                                },
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-master.1',
                                  'doc/man/salt-key.1',
@@ -361,6 +365,7 @@ if IS_WINDOWS_PLATFORM:
         'ntsecuritycon',
         '_winreg',
         'wmi',
+        'fileinput',
     ])
     SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):

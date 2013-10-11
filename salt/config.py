@@ -162,6 +162,7 @@ VALID_OPTS = {
     'win_repo': str,
     'win_repo_mastercachefile': str,
     'win_gitrepos': list,
+    'modules_max_memory': int,
 }
 
 # default configurations
@@ -248,12 +249,13 @@ DEFAULT_MINION_OPTS = {
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,
     'tcp_keepalive_intvl': -1,
+    'modules_max_memory': -1,
 }
 
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
     'publish_port': '4505',
-    'pub_hwm': 1,
+    'pub_hwm': 100,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
@@ -563,7 +565,8 @@ def prepend_root_dir(opts, path_options):
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
-                  check_dns=None):
+                  check_dns=None,
+                  minion_id=False):
     '''
     Reads in the minion configuration file and sets up special options
     '''
@@ -575,10 +578,10 @@ def minion_config(path,
         # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '
             'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in salt > 0.18.0'
+            'deprecated. \'check_dns\' will be removed in Salt {version}.'
         )
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
@@ -591,7 +594,7 @@ def minion_config(path,
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    opts = apply_minion_config(overrides, defaults)
+    opts = apply_minion_config(overrides, defaults, minion_id=minion_id)
     _validate_opts(opts)
     return opts
 
@@ -662,26 +665,52 @@ def syndic_config(master_config_path,
     return opts
 
 
-def get_id():
+def get_id(root_dir=None):
     '''
     Guess the id of the minion.
 
-    - Check /etc/hostname for a value other than localhost
+    - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
     - If socket.getfqdn() returns us something other than localhost, use it
+    - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
     - A private IP is better than a loopback IP
     - localhost may be better than killing the minion
 
+    Any non-ip id will be cached for later use in ``CONFIG_DIR/minion_id``
+
     Returns two values: the detected ID, and a boolean value noting whether or
     not an IP address is being used for the ID.
     '''
+    if root_dir is None:
+        root_dir = syspaths.ROOT_DIR
 
-    log.debug(
-        'Guessing ID. The id can be explicitly in set {0}'.format(
-            os.path.join(syspaths.CONFIG_DIR, 'minion')
-        )
-    )
+    # Check for cached minion ID
+    id_cache = os.path.join(root_dir,
+                            syspaths.CONFIG_DIR.lstrip(syspaths.ROOT_DIR),
+                            'minion_id')
+    try:
+        with salt.utils.fopen(id_cache) as idf:
+            name = idf.read().strip()
+        if name:
+            log.info('Using cached minion ID: {0}'.format(name))
+            return name, False
+    except (IOError, OSError):
+        pass
+
+    log.debug('Guessing ID. The id can be explicitly in set {0}'
+              .format(os.path.join(syspaths.CONFIG_DIR, 'minion')))
+
+    # Check socket.getfqdn()
+    fqdn = socket.getfqdn()
+    if fqdn != 'localhost':
+        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        try:
+            with salt.utils.fopen(id_cache, 'w') as idf:
+                idf.write(fqdn)
+        except (IOError, OSError) as exc:
+            log.error('Could not cache minion ID: {0}'.format(exc))
+        return fqdn, False
 
     # Check /etc/hostname
     try:
@@ -692,15 +721,14 @@ def get_id():
                         'This file should not contain any whitespace.')
         else:
             if name != 'localhost':
+                try:
+                    with salt.utils.fopen(id_cache, 'w') as idf:
+                        idf.write(name)
+                except (IOError, OSError) as exc:
+                    log.error('Could not cache minion ID: {0}'.format(exc))
                 return name, False
-    except Exception:
+    except (IOError, OSError):
         pass
-
-    # Nothing in /etc/hostname or /etc/hostname not found
-    fqdn = socket.getfqdn()
-    if fqdn != 'localhost':
-        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
-        return fqdn, False
 
     # Can /etc/hosts help us?
     try:
@@ -713,14 +741,20 @@ def get_id():
                         if name != 'localhost':
                             log.info('Found minion id in hosts file: {0}'
                                      .format(name))
+                            try:
+                                with salt.utils.fopen(id_cache, 'w') as idf:
+                                    idf.write(name)
+                            except (IOError, OSError) as exc:
+                                log.error('Could not cache minion ID: {0}'
+                                          .format(exc))
                             return name, False
-    except Exception:
+    except (IOError, OSError):
         pass
 
     # Can Windows 'hosts' file help?
     try:
         windir = os.getenv("WINDIR")
-        with salt.utils.fopen(windir + '\\system32\\drivers\\etc\\hosts') as hfl:
+        with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
             for line in hfl:
                 # skip commented or blank lines
                 if line[0] == '#' or len(line) <= 1:
@@ -731,11 +765,18 @@ def get_id():
                     if entry[0].startswith('127.'):
                         for name in entry[1:]:  # try each name in the row
                             if name != 'localhost':
-                                log.info('Found minion id in hosts file: {0}'.format(name))
+                                log.info('Found minion id in hosts file: {0}'
+                                         .format(name))
+                                try:
+                                    with salt.utils.fopen(id_cache, 'w') as idf:
+                                        idf.write(name)
+                                except (IOError, OSError) as exc:
+                                    log.error('Could not cache minion ID: {0}'
+                                              .format(exc))
                                 return name, False
                 except IndexError:
                     pass  # could not split line (malformed entry?)
-    except Exception:
+    except (IOError, OSError):
         pass
 
     # What IP addresses do we have?
@@ -757,7 +798,10 @@ def get_id():
     return 'localhost', False
 
 
-def apply_minion_config(overrides=None, defaults=None, check_dns=None):
+def apply_minion_config(overrides=None,
+                        defaults=None,
+                        check_dns=None,
+                        minion_id=False):
     '''
     Returns minion configurations dict.
     '''
@@ -769,10 +813,10 @@ def apply_minion_config(overrides=None, defaults=None, check_dns=None):
         # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
-            (0, 19),
+            'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '
             'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in salt > 0.18.0'
+            'deprecated. \'check_dns\' will be removed in Salt {version}.'
         )
 
     if defaults is None:
@@ -787,8 +831,8 @@ def apply_minion_config(overrides=None, defaults=None, check_dns=None):
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if opts['id'] is None:
-        opts['id'], using_ip_for_id = get_id()
+    if opts['id'] is None and minion_id:
+        opts['id'], using_ip_for_id = get_id(opts['root_dir'])
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:

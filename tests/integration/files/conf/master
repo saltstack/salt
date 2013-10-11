@@ -19,7 +19,8 @@ token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 file_buffer_size: 8192
 
 ext_pillar:
-  - cmd_yaml: cat ext.yaml
+  - test_ext_pillar_opts:
+    - test_issue_5951_actual_file_roots_in_opts
 
 config_opt:
   layer2: 'kosher'
