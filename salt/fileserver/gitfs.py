@@ -12,6 +12,7 @@ the fileserver_backend option in the salt master config.
 # Import python libs
 import glob
 import os
+import shutil
 import time
 import hashlib
 import logging
@@ -118,8 +119,9 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     repos = []
-    for ind, opt in enumerate(__opts__['gitfs_remotes']):
-        rp_ = os.path.join(bp_, str(ind))
+    for _, opt in enumerate(__opts__['gitfs_remotes']):
+        repo_hash = hashlib.md5(opt).hexdigest()
+        rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
         repo = git.Repo.init(rp_)
@@ -137,6 +139,23 @@ def init():
     return repos
 
 
+def purge_cache():
+    bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
+    remove_dirs = os.listdir(bp_)
+    for _, opt in enumerate(__opts__['gitfs_remotes']):
+        repo_hash = hashlib.md5(opt).hexdigest()
+        try:
+            remove_dirs.remove(repo_hash)
+        except ValueError:
+            pass
+    remove_dirs = [os.path.join(bp_, r) for r in remove_dirs if r not in ('hash', 'refs')]
+    if remove_dirs:
+        for r in remove_dirs:
+            shutil.rmtree(r)
+        return True
+    return False
+
+
 def update():
     '''
     Execute a git pull on all of the repos
@@ -145,6 +164,7 @@ def update():
     data = {'changed': False,
             'backend': 'gitfs'}
     pid = os.getpid()
+    data['changed'] = purge_cache()
     repos = init()
     for repo in repos:
         origin = repo.remotes[0]
