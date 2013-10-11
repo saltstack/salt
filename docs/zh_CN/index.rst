@@ -2,19 +2,19 @@
 
 .. _contents:
 
-What is Salt Stack?
+.. _what-is-salt-stack:
+Salt Stack是什么?
 ===================
 
-Salt is a new approach to infrastructure management. Easy enough to get
-running in minutes, scalable enough to manage tens of thousands of servers,
-and fast enough to communicate with them in *seconds*.
+salt是一个新的基础平台管理工具。只需花费数分钟即可运行起来, 扩展性足以支撑管理上万台服务器，数秒钟即可完成数据传递.
+
 
 Salt delivers a dynamic communication bus for infrastructures that can be used
 for orchestration, remote execution, configuration management and much more.
 
-.. seealso:: Offline documentation
+.. seealso:: 离线文档 
 
-    Download a copy of the Salt documentation:
+    下载Salt文档的副本:
 
     * `PDF`_
     * `ePub`_
@@ -22,54 +22,55 @@ for orchestration, remote execution, configuration management and much more.
 .. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
 .. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
 
-Download
+.. _download:
+下载
 ========
 
-Salt source releases are available for download via PyPI:
+Salt源码版本可以通过PyPI下载:
 
     https://pypi.python.org/pypi/salt
 
-The installation documents outline where to obtain packages and installation
-specifics for platforms:
+安装文档中将给出各操作系统平台下如何得到包及对应的安装方法:    
 
-    :doc:`Installation </topics/installation/index>`
+    :doc:`安装 </topics/installation/index>`
 
-The Salt Bootstrap project is a single shell script which aims to automate
-the install correctly on platforms:
+Salt Bootstrap项目是一个以在各平台下能够正确的自动完成Salt安装为目标的shell脚本:    
 
     https://github.com/saltstack/salt-bootstrap
 
-Getting Started
-===============
+.. _getting-started:    
+入门指南
+========================
 
-This walkthrough is made to help individuals get started quickly and gain a
-foundational knowledge of Salt:
+本教程将帮你快速开始使用Salt并了解到关于Salt的基础知识:
 
-:doc:`Official Salt Walkthrough</topics/tutorials/walkthrough>`
+:doc:`官方Salt教程 </topics/tutorials/walkthrough>`
 
 Additional tutorials are available when getting started with Salt
 
-States - Configuration Management with Salt:
-    - :doc:`Getting Started with States<topics/tutorials/starting_states>`
-    - :doc:`Basic config management <topics/tutorials/states_pt1>`
+States - Salt配置管理系统:
+    - :doc:`States入门 <topics/tutorials/starting_states>`
+    - :doc:`基本配置管理 <topics/tutorials/states_pt1>`
     - :doc:`Less basic config management <topics/tutorials/states_pt2>`
-    - :doc:`Advanced techniques <topics/tutorials/states_pt3>`
+    - :doc:`高级技巧 <topics/tutorials/states_pt3>`
     - :doc:`Salt Fileserver Path Inheritance <topics/tutorials/states_pt4>`
 
-Masterless Quickstart:
-    :doc:`Salt Quickstart </topics/tutorials/quickstart>`
+无Master(Masterless)快速入门:
+    :doc:`Salt快速入门  </topics/tutorials/quickstart>`
 
-A list of all tutorials can be found here:
-    :doc:`All Salt tutorials <topics/tutorials/index>`
+所有的教程都可以在以下列表中找到:
+    :doc:` Salt教程列表 <topics/tutorials/index>`
 
-Salt in depth
+.. _salt-in-depth:    
+深入Salt
 =============
 
 Setting up and using Salt is a simple task but its capabilities run much, much
 deeper. These documents will lead to a greater understating of how Salt will
 empower infrastructure management.
 
-Remote execution
+.. _remote-execution:
+远程执行
 ----------------
 
 Remote execution is the core function of Salt. Running pre-defined or
@@ -121,7 +122,8 @@ should execute commands or manage server configuration.
     Loop through all matching minions so that only a subset are executing a
     command at one time.
 
-Configuration management
+.. configuration-management:    
+配置管理
 ------------------------
 
 Building on the remote execution core is a robust and flexible configuration
