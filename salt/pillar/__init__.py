@@ -81,7 +81,11 @@ class Pillar(object):
             self.functions = salt.loader.minion_mods(self.opts)
         self.matcher = salt.minion.Matcher(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
-        self.ext_pillars = salt.loader.pillars(self.opts, self.functions)
+        # Fix self.opts['file_roots'] so that ext_pillars know the real
+        # location of file_roots. Issue 5951
+        ext_pillar_opts = dict(self.opts)
+        ext_pillar_opts['file_roots'] = self.actual_file_roots
+        self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
 
     def __valid_ext(self, ext):
         '''

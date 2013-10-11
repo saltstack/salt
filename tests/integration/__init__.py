@@ -167,14 +167,15 @@ class TestDaemon(object):
                 TMP_STATE_TREE
             ]
         }
-        self.master_opts['ext_pillar'] = [
+        self.master_opts['ext_pillar'].append(
             {'cmd_yaml': 'cat {0}'.format(
                 os.path.join(
                     FILES,
                     'ext.yaml'
                 )
             )}
-        ]
+        )
+        self.master_opts['extension_modules'] = os.path.join(INTEGRATION_TEST_DIR, 'files', 'extension_modules')
         # clean up the old files
         self._clean()
 
