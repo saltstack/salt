@@ -970,7 +970,7 @@ def replace(path,
             if result:
                 return True
         else:
-            result = re.sub(cpattern, repl, line, count)
+            result = re.sub(cpattern, repl, line, count, flags_num)
 
             # Identity check each potential change until one change is made
             if has_changes is False and not result is line:
