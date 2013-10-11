@@ -285,11 +285,18 @@ def check_user(user):
     if user == getpass.getuser():
         return True
     import pwd  # after confirming not running Windows
+    import grp
     try:
         pwuser = pwd.getpwnam(user)
         try:
             os.setgid(pwuser.pw_gid)
             os.setuid(pwuser.pw_uid)
+            if hasattr(os, 'initgroups'):
+                os.initgroups(user, pwuser.pw_gid)
+            else:
+                os.setgroups([e.gr_gid for e in grp.getgrall()
+                              if user in e.gr_mem] + [pwuser.gid]) 
+
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
             msg = msg.format(user)
