@@ -43,6 +43,11 @@ class PillarModuleTest(integration.ModuleCase):
                 self.run_function('pillar.data')['ext_spam'], 'eggs'
                 )
 
+    def test_issue_5951_actual_file_roots_in_opts(self):
+        self.assertIn(
+            integration.TMP_STATE_TREE,
+            self.run_function('pillar.data')['test_ext_pillar_opts']['file_roots']['base']
+        )
 
 if __name__ == '__main__':
     from integration import run_tests
