@@ -309,7 +309,7 @@ def check_user(user):
 
 
 def list_path_traversal(path):
-    """
+    '''
     Returns a full list of directories leading up to, and including, a path.
 
     So list_path_traversal('/path/to/salt') would return:
@@ -319,7 +319,7 @@ def list_path_traversal(path):
     This routine has been tested on Windows systems as well.
     list_path_traversal('c:\\path\\to\\salt') on Windows would return:
         ['c:\\', 'c:\\path', 'c:\\path\\to', 'c:\\path\\to\\salt']
-    """
+    '''
     out = [path]
     (head, tail) = os.path.split(path)
     if tail == '':
