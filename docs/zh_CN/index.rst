@@ -62,7 +62,7 @@ States - Salt配置管理系统:
     :doc:`Salt快速入门  </topics/tutorials/quickstart>`
 
 所有的教程都可以在以下列表中找到:
-    :doc:` Salt教程列表 <topics/tutorials/index>`
+    :doc:`Salt教程列表 <topics/tutorials/index>`
 
 .. _salt-in-depth:    
 
