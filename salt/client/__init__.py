@@ -361,6 +361,12 @@ class LocalClient(object):
 
             ret = client.cmd('*', 'test.ping', [], username='fred', password='pw', eauth='pam')
 
+        With extra keyword arguments for the command function to be run:
+
+        .. code-block:: python
+
+            ret = client.cmd('*', 'test.arg', ['arg1', 'arg2'], kwarg={ 'foo': 'bar'})
+
         Compound command usage:
 
         .. code-block:: python
@@ -409,6 +415,8 @@ class LocalClient(object):
         :param ret: The returner to use. The value passed can be single
             returner, or a comma delimited list of returners to call in order
             on the minions
+
+        :param kwarg: A dictionary with keyword arguments for the function.
 
         :param kwargs: Optional keyword arguments.
 
