@@ -1378,7 +1378,7 @@ class Caller(object):
     ``Caller`` is the same interface used by the :command:`salt-call`
     command-line tool on the Salt Minion.
 
-    Importing and using ``LocalClient`` must be done on the same machine as a
+    Importing and using ``Caller`` must be done on the same machine as a
     Salt Minion and it must be done using the same user that the Salt Minion is
     running as.
 
