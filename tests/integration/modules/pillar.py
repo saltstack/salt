@@ -23,6 +23,18 @@ class PillarModuleTest(integration.ModuleCase):
         else:
             self.assertEqual(pillar['class'], 'other')
 
+    def test_issue_5449_report_actual_file_roots_in_pillar(self):
+        '''
+        pillar['master']['file_roots'] is overwritten by the master
+        in order to use the fileclient interface to read the pillar
+        files. We should restore the actual file_roots when we send
+        the pillar back to the minion.
+        '''
+        self.assertIn(
+            integration.TMP_STATE_TREE,
+            self.run_function('pillar.data')['master']['file_roots']['base']
+        )
+
     def test_ext_cmd_yaml(self):
         '''
         pillar.data for ext_pillar cmd.yaml
