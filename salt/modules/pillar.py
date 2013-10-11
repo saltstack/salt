@@ -123,7 +123,7 @@ def ext(external):
         salt '*' pillar.ext 'libvirt: _'
     '''
     if isinstance(external, basestring):
-        external = yaml.load(external)
+        external = yaml.safe_load(external)
     pillar = salt.pillar.get_pillar(
         __opts__,
         __grains__,
