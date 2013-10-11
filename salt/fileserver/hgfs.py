@@ -166,17 +166,19 @@ def envs():
             for branch in branches:
                 branch_name = branch[0]
                 if branch_name == 'default':
-                    branch = 'base'
+                    branch_name = 'base'
                 ret.add(branch_name)
         if __opts__['hgfs_branch_method'] != 'branches':
             bookmarks = repo.bookmarks()
             for bookmark in bookmarks:
                 bookmark_name = bookmark[0]
                 ret.add(bookmark_name)
-        tags = repo.get_tags()
-        for tag in tags.keys():
+        tags = repo.tags()
+        for tag in tags:
             tag_name = tag[0]
-            ret.add(tag_name)
+            # Avoid adding the special 'tip' tag as an env.
+            if tag_name != 'tip':
+                ret.add(tag_name)
     return list(ret)
 
 
@@ -239,7 +241,7 @@ def find_file(path, short='base', **kwargs):
                     fnd['path'] = dest
                     return fnd
         try:
-            repo.cat(['path:{0}'.format(local_path)], rev=ref[2], output=dest)
+            repo.cat(['path:{0}'.format(path)], rev=ref[2], output=dest)
         except hglib.error.CommandError:
             continue
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
