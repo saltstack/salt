@@ -135,7 +135,6 @@ def get(tgt, fun, expr_form='glob'):
         pcre
         grain
         grain_pcre
-        pillar
 
     CLI Example:
 
@@ -144,6 +143,9 @@ def get(tgt, fun, expr_form='glob'):
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
     '''
+    if expr_form.lower == 'pillar':
+        log.error('Pillar matching not supported on mine.get')
+        return ''
     auth = _auth()
     load = {
             'cmd': '_mine_get',
