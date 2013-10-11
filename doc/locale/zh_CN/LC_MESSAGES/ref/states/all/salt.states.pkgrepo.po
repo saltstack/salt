@@ -1,0 +1,261 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.pkgrepo.rst:6
+msgid "salt.states.pkgrepo"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo:2
+msgid "Management of package repos"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo:4
+msgid "Package repositories can be managed with the pkgrepo state:"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:1
+msgid ""
+"This function deletes the specified repo on the system, if it exists. It is "
+"essentially a wrapper around pkg.del_repo."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:6
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:7
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:58
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:5
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:5
+msgid ""
+"The name of the package repo, as it would be referred to when running the "
+"regular package manager commands."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:12
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:43
+msgid "ppa"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:9
+msgid ""
+"On Ubuntu, you can take advantage of Personal Package Archives on Launchpad "
+"simply by specifying the user and archive name."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:12
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:43
+msgid "EXAMPLE: ppa: wolfnet/logstash"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:20
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:50
+msgid "ppa_auth"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:15
+msgid ""
+"For Ubuntu PPAs there can be private PPAs that require authentication to "
+"access. For these PPAs the username/password can be specified.  This is "
+"required for matching if the name format uses the \"ppa:\" specifier and is "
+"private (requires username/password to access, which is encoded in the URI)"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.absent:21
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:50
+msgid "EXAMPLE: ppa_auth: username:password"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:1
+msgid ""
+"This function manages the configuration on a system that points to the "
+"repositories for the system's package manager."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:9
+msgid ""
+"For yum-based systems, take note of the following configuration values:"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:13
+msgid "humanname"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:12
+msgid ""
+"On yum-based systems, this is stored as the \"name\" value in the .repo file"
+" in /etc/yum.repos.d/. On yum-based systems, this is required."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:18
+msgid "baseurl"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:16
+msgid ""
+"On yum-based systems, baseurl refers to a direct URL to be used for this yum"
+" repo. One of baseurl or mirrorlist is required."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:23
+msgid "mirrorlist"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:21
+msgid ""
+"a URL which contains a collection of baseurls to choose from. On yum-based "
+"systems. One of baseurl or mirrorlist is required."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:28
+msgid "comments"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:26
+msgid ""
+"Sometimes you want to supply additional information, but not as enabled "
+"configuration. Anything supplied for this list will be saved in the repo "
+"configuration with a comment marker (#) in front."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:30
+msgid ""
+"Additional configuration values, such as gpgkey or gpgcheck, are used "
+"verbatim to update the options for the yum repo in question."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:34
+msgid ""
+"For apt-based systems, take note of the following configuration values:"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:37
+msgid ""
+"On Ubuntu, you can take advantage of Personal Package Archives on Launchpad "
+"simply by specifying the user and archive name. The keyid will be queried "
+"from launchpad and everything else is set automatically. You can override "
+"any of the below settings by simply setting them as you would normally."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:46
+msgid ""
+"For Ubuntu PPAs there can be private PPAs that require authentication to "
+"access. For these PPAs the username/password can be passed as an HTTP Basic "
+"style username/password combination."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:53
+msgid ""
+"On apt-based systems this must be the complete entry as it would be seen in "
+"the sources.list file.  This can have a limited subset of components (i.e. "
+"'main') which can be added/modified with the \"comps\" option."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:58
+msgid "EXAMPLE: name: deb http://us.archive.ubuntu.com/ubuntu/ precise main"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:62
+msgid "disabled"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:61
+msgid ""
+"On apt-based systems, disabled toggles whether or not the repo is used for "
+"resolving dependencies and/or installing packages"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:67
+msgid "comps"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:65
+msgid ""
+"On apt-based systems, comps dictate the types of packages to be installed "
+"from the repository (e.g. main, nonfree, ...).  For purposes of this, comps "
+"should be a comma-separated list."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:72
+msgid "file"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:70
+msgid ""
+"The filename for the .list that the repository is configured in. It is "
+"important to include the full-path AND make sure it is in a directory that "
+"APT will look in when handling packages"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:76
+msgid "dist"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:75
+msgid ""
+"This dictates the release of the distro the packages should be built for.  "
+"(e.g. unstable)"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:80
+msgid "keyid"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:79
+msgid ""
+"The KeyID of the GPG key to install.  This option also requires the "
+"'keyserver' option to be set."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:84
+msgid "keyserver"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:83
+msgid ""
+"This is the name of the keyserver to retrieve gpg keys from.  The keyid "
+"option must also be set for this option to work."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:87
+msgid "key_url"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:87
+msgid "A web URL to retrieve the GPG key from."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:95
+msgid "consolidate"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:90
+msgid ""
+"If set to true, this will consolidate all sources definitions to the "
+"sources.list file, cleanup the now unused files, consolidate components "
+"(e.g. main) for the same URI, type, and architecture to a single line, and "
+"finally remove comments from the sources.list file.  The consolidate will "
+"run every time the state is processed. The option only needs to be set on "
+"one repo managed by salt to take effect."
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:99
+msgid "require_in"
+msgstr ""
+
+#: ../../../salt/states/pkgrepo.pydocstring of salt.states.pkgrepo.managed:98
+msgid ""
+"Set this to a list of pkg.installed or pkg.latest to trigger the running of "
+"apt-get update prior to attempting to install these packages. Setting a "
+"require in the pkg will not work for this."
+msgstr ""

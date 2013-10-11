@@ -1,0 +1,113 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.bluez.rst:6
+msgid "salt.modules.bluez"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez:1
+msgid "Support for Bluetooth (using BlueZ in Linux)."
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez:3
+msgid "The following packages are required packages for this module:"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez:5
+msgid "bluez >= 5.7 bluez-libs >= 5.7 bluez-utils >= 5.7 pybluez >= 0.18"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.address_:1
+msgid "Get the many addresses of the Bluetooth adapter"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.address_:3
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.block:3
+#: ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.discoverable:3 ../../../salt/modules/bluez.pydocstring
+#: of salt.modules.bluez.noscan:3 ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.pair:3 ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.scan:3 ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.start:3 ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.stop:3 ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.unblock:3 ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.unpair:3 ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.version:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.block:1
+msgid "Block a specific bluetooth device by BD Address"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of
+#: salt.modules.bluez.discoverable:1
+msgid "Enable this bluetooth device to be discovrable."
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.noscan:1
+msgid "Turn off scanning modes on this device."
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.pair:1
+msgid "Pair the bluetooth adapter with a device"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.pair:9
+msgid ""
+"Where DE:AD:BE:EF:CA:FE is the address of the device to pair with, and 1234 "
+"is the passphrase."
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.pair:12
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.unpair:11
+msgid ""
+"TODO: This function is currently broken, as the bluez-simple-agent program "
+"no longer ships with BlueZ >= 5.0. It needs to be refactored."
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.power:1
+msgid "Power a bluetooth device on or off"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.power:3
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.scan:1
+msgid "Scan for bluetooth devices in the area"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.start:1
+msgid "Start the bluetooth service."
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.stop:1
+msgid "Stop the bluetooth service."
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.unblock:1
+msgid "Unblock a specific bluetooth device by BD Address"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.unpair:1
+msgid "Unpair the bluetooth adapter from a device"
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.unpair:9
+msgid "Where DE:AD:BE:EF:CA:FE is the address of the device to unpair."
+msgstr ""
+
+#: ../../../salt/modules/bluez.pydocstring of salt.modules.bluez.version:1
+msgid "Return Bluez version from bluetoothd -v"
+msgstr ""

@@ -1,0 +1,60 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.mdadm.rst:6
+msgid "salt.states.mdadm"
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm:2
+msgid "Managing software RAID with mdadm"
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm:4
+msgid "A state module for creating or destroying software RAID devices."
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.absent:1
+msgid "Verify that the raid is absent"
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.absent:4
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.present:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.absent:4
+msgid "The name of raid device to be destroyed"
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.present:1
+msgid "Verify that the raid is present"
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.present:4
+msgid "The name of raid device to be created"
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.present:27
+msgid "opts"
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.present:7
+msgid ""
+"The mdadm options to use to create the raid. See :mod:`mdadm "
+"<salt.modules.mdadm>` for more information. Opts can be expressed as a "
+"single string of options."
+msgstr ""
+
+#: ../../../salt/states/mdadm.pydocstring of salt.states.mdadm.present:17
+msgid "Or as a list of options."
+msgstr ""

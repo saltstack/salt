@@ -1,0 +1,90 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.rh_ip.rst:6
+msgid "salt.modules.rh_ip"
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip:1
+msgid "The networking module for RHEL/Fedora based distros"
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.apply_network_settings:1
+msgid "Apply global network configuration."
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.apply_network_settings:3
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip.build_bond:4
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.build_interface:3
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.build_network_settings:3
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.build_routes:3 ../../../salt/modules/rh_ip.pydocstring
+#: of salt.modules.rh_ip.down:3 ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.get_bond:3 ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.get_interface:3 ../../../salt/modules/rh_ip.pydocstring
+#: of salt.modules.rh_ip.get_network_settings:3
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip.get_routes:3
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip.up:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip.build_bond:1
+msgid ""
+"Create a bond script in /etc/modprobe.d with the passed settings and load "
+"the bonding kernel module."
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.build_interface:1
+msgid "Build an interface script for a network interface."
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.build_network_settings:1
+msgid "Build the global network script."
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.build_routes:1
+msgid "Build a route script for a network interface."
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip.down:1
+msgid "Shutdown a network interface"
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip.get_bond:1
+msgid "Return the content of a bond script"
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.get_interface:1
+msgid "Return the contents of an interface script"
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of
+#: salt.modules.rh_ip.get_network_settings:1
+msgid "Return the contents of the global network script."
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip.get_routes:1
+msgid "Return the contents of the interface routes script."
+msgstr ""
+
+#: ../../../salt/modules/rh_ip.pydocstring of salt.modules.rh_ip.up:1
+msgid "Start up a network interface"
+msgstr ""

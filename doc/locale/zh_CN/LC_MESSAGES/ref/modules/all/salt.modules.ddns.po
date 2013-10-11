@@ -1,0 +1,50 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.ddns.rst:6
+msgid "salt.modules.ddns"
+msgstr ""
+
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns:1
+msgid "Support for RFC 2136 dynamic DNS updates. Requires dnspython module."
+msgstr ""
+
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.add_host:1
+msgid "Add, replace, or update the A and PTR (reverse) records for a host."
+msgstr ""
+
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.add_host:3
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.delete:3
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.delete_host:5
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.update:6
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.delete:1
+msgid "Delete a DNS record."
+msgstr ""
+
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.delete_host:1
+msgid "Delete the forward and reverse records for a host."
+msgstr ""
+
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.delete_host:3
+msgid "Returns true if any records are deleted."
+msgstr ""
+
+#: ../../../salt/modules/ddns.pydocstring of salt.modules.ddns.update:1
+msgid ""
+"Add, replace, or update a DNS record. nameserver must be an IP address and "
+"the minion running this module must have update privileges on that server. "
+"If replace is true, first deletes all records for this name and type."
+msgstr ""

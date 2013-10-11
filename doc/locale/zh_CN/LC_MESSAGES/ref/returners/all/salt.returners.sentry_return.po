@@ -1,0 +1,47 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/returners/all/salt.returners.sentry_return.rst:6
+msgid "salt.returners.sentry_return"
+msgstr ""
+
+#: ../../../salt/returners/sentry_return.pydocstring of
+#: salt.returners.sentry_return:1
+msgid ""
+"Salt returner that report execution results back to sentry. The returner "
+"will inspect the payload to identify errors and flag them as such."
+msgstr ""
+
+#: ../../../salt/returners/sentry_return.pydocstring of
+#: salt.returners.sentry_return:4
+msgid "Pillar need something like::"
+msgstr ""
+
+#: ../../../salt/returners/sentry_return.pydocstring of
+#: salt.returners.sentry_return:19
+msgid "and http://pypi.python.org/pypi/raven installed"
+msgstr ""
+
+#: ../../../salt/returners/sentry_return.pydocstring of
+#: salt.returners.sentry_return:21
+msgid ""
+"The tags list (optional) specifies grains items that will be used as sentry "
+"tags, allowing tagging of events in the sentry ui."
+msgstr ""
+
+#: ../../../salt/returners/sentry_return.pydocstring of
+#: salt.returners.sentry_return.returner:1
+msgid ""
+"Log outcome to sentry. The returner tries to identify errors and report them"
+" as such. All other messages will be reported at info level."
+msgstr ""

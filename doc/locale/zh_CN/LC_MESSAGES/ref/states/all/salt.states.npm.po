@@ -1,0 +1,88 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.npm.rst:6
+msgid "salt.states.npm"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm:2
+msgid "Installation of NPM Packages"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm:4
+msgid ""
+"These states manage the installed packages for node.js using the Node "
+"Package Manager (npm). Note that npm must be installed for these states to "
+"be available, so npm states should include a requisite to a pkg.installed "
+"state for the package which provides npm (simply ``npm`` in most cases). "
+"Example:"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.bootstrap:1
+msgid "Bootstraps a node.js application."
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.bootstrap:3
+msgid "will execute npm install --json on the specified directory"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.bootstrap:9
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:11
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.removed:10
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.bootstrap:7
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.bootstrap:12
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:9
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:14
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.removed:8
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.removed:13
+msgid "The user to run NPM with"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.bootstrap:13
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:16
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.removed:14
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:1
+msgid ""
+"Verify that the given package is installed and is at the correct version (if"
+" specified)."
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:6
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.removed:5
+msgid "dir"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:5
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.removed:4
+msgid ""
+"The target directory in which to install the package, or None for global "
+"installation"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:18
+msgid "force_reinstall"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.installed:19
+msgid "Install the package even if it is already installed"
+msgstr ""
+
+#: ../../../salt/states/npm.pydocstring of salt.states.npm.removed:1
+msgid "Verify that the given package is not installed."
+msgstr ""

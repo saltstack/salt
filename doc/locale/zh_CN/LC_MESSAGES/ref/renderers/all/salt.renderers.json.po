@@ -1,0 +1,26 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/renderers/all/salt.renderers.json.rst:6
+msgid "salt.renderers.json"
+msgstr ""
+
+#: ../../../salt/renderers/json.pydocstring of salt.renderers.json.render:1
+msgid ""
+"Accepts JSON as a string or as a file object and runs it through the JSON "
+"parser."
+msgstr ""
+
+#: ../../../salt/renderers/json.pydocstring of salt.renderers.json.render:4
+msgid "A Python data structure"
+msgstr ""

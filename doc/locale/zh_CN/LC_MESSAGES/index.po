@@ -1,0 +1,558 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../index.rst:9
+msgid "What is Salt Stack?"
+msgstr ""
+
+#: ../../index.rst:11
+msgid ""
+"Salt is a new approach to infrastructure management. Easy enough to get "
+"running in minutes, scalable enough to manage tens of thousands of servers, "
+"and fast enough to communicate with them in *seconds*."
+msgstr ""
+
+#: ../../index.rst:15
+msgid ""
+"Salt delivers a dynamic communication bus for infrastructures that can be "
+"used for orchestration, remote execution, configuration management and much "
+"more."
+msgstr ""
+
+#: ../../index.rst:18
+msgid "Offline documentation"
+msgstr ""
+
+#: ../../index.rst:20
+msgid "Download a copy of the Salt documentation:"
+msgstr ""
+
+#: ../../index.rst:22
+msgid "`PDF`_"
+msgstr ""
+
+#: ../../index.rst:23
+msgid "`ePub`_"
+msgstr ""
+
+#: ../../index.rst:29
+msgid "Download"
+msgstr ""
+
+#: ../../index.rst:31
+msgid "Salt source releases are available for download via PyPI:"
+msgstr ""
+
+#: ../../index.rst:33
+msgid "https://pypi.python.org/pypi/salt"
+msgstr ""
+
+#: ../../index.rst:35
+msgid ""
+"The installation documents outline where to obtain packages and installation"
+" specifics for platforms:"
+msgstr ""
+
+#: ../../index.rst:38
+msgid ":doc:`Installation </topics/installation/index>`"
+msgstr ""
+
+#: ../../index.rst:40
+msgid ""
+"The Salt Bootstrap project is a single shell script which aims to automate "
+"the install correctly on platforms:"
+msgstr ""
+
+#: ../../index.rst:43
+msgid "https://github.com/saltstack/salt-bootstrap"
+msgstr ""
+
+#: ../../index.rst:46
+msgid "Getting Started"
+msgstr ""
+
+#: ../../index.rst:48
+msgid ""
+"This walkthrough is made to help individuals get started quickly and gain a "
+"foundational knowledge of Salt:"
+msgstr ""
+
+#: ../../index.rst:51
+msgid ":doc:`Official Salt Walkthrough</topics/tutorials/walkthrough>`"
+msgstr ""
+
+#: ../../index.rst:53
+msgid "Additional tutorials are available when getting started with Salt"
+msgstr ""
+
+#: ../../index.rst:60
+msgid "States - Configuration Management with Salt:"
+msgstr ""
+
+#: ../../index.rst:56
+msgid ":doc:`Getting Started with States<topics/tutorials/starting_states>`"
+msgstr ""
+
+#: ../../index.rst:57
+msgid ":doc:`Basic config management <topics/tutorials/states_pt1>`"
+msgstr ""
+
+#: ../../index.rst:58
+msgid ":doc:`Less basic config management <topics/tutorials/states_pt2>`"
+msgstr ""
+
+#: ../../index.rst:59
+msgid ":doc:`Advanced techniques <topics/tutorials/states_pt3>`"
+msgstr ""
+
+#: ../../index.rst:60
+msgid ":doc:`Salt Fileserver Path Inheritance <topics/tutorials/states_pt4>`"
+msgstr ""
+
+#: ../../index.rst:63
+msgid "Masterless Quickstart:"
+msgstr ""
+
+#: ../../index.rst:63
+msgid ":doc:`Salt Quickstart </topics/tutorials/quickstart>`"
+msgstr ""
+
+#: ../../index.rst:66
+msgid "A list of all tutorials can be found here:"
+msgstr ""
+
+#: ../../index.rst:66
+msgid ":doc:`All Salt tutorials <topics/tutorials/index>`"
+msgstr ""
+
+#: ../../index.rst:69
+msgid "Salt in depth"
+msgstr ""
+
+#: ../../index.rst:71
+msgid ""
+"Setting up and using Salt is a simple task but its capabilities run much, "
+"much deeper. These documents will lead to a greater understating of how Salt"
+" will empower infrastructure management."
+msgstr ""
+
+#: ../../index.rst:76
+msgid "Remote execution"
+msgstr ""
+
+#: ../../index.rst:78
+msgid ""
+"Remote execution is the core function of Salt. Running pre-defined or "
+"arbitrary commands on remote hosts."
+msgstr ""
+
+#: ../../index.rst:90
+msgid "**Modules**"
+msgstr ""
+
+#: ../../index.rst:82
+msgid ""
+"Salt modules are the core of remote execution. They provide functionality "
+"such as installing packages, restarting a service, running a remote command,"
+" transferring files, and infinitely more."
+msgstr ""
+
+#: ../../index.rst:87
+msgid ":doc:`Full list of modules </ref/modules/all/index>`"
+msgstr ""
+
+#: ../../index.rst:87
+msgid "The giant list of core modules that ship with Salt"
+msgstr ""
+
+#: ../../index.rst:90
+msgid ":doc:`Writing modules <ref/modules/index>`"
+msgstr ""
+
+#: ../../index.rst:90
+msgid "A guide on how to write Salt modules."
+msgstr ""
+
+#: ../../index.rst:102
+msgid "**Returners**"
+msgstr ""
+
+#: ../../index.rst:93
+msgid ""
+"Salt returners allow saving minion responses in various datastores or to "
+"various locations in addition to display at the CLI."
+msgstr ""
+
+#: ../../index.rst:97
+msgid ":doc:`Full list of returners </ref/returners/all/index>`"
+msgstr ""
+
+#: ../../index.rst:97
+msgid "Store minion responses in Redis, Mongo, Cassandra, SQL or more."
+msgstr ""
+
+#: ../../index.rst:102
+msgid ":doc:`Writing returners <ref/returners/index>`"
+msgstr ""
+
+#: ../../index.rst:100
+msgid ""
+"Extending Salt to communicate with more interfaces is easy, new databases "
+"can be supported or custom interfaces can be easily communicated with."
+msgstr ""
+
+#: ../../index.rst:105
+msgid "Targeting"
+msgstr ""
+
+#: ../../index.rst:107
+msgid ""
+":doc:`Targeting </topics/targeting/index>` is specifying which minions "
+"should execute commands or manage server configuration."
+msgstr ""
+
+#: ../../index.rst:111
+msgid ":doc:`Globbing and regex </topics/targeting/globbing>`"
+msgstr ""
+
+#: ../../index.rst:111
+msgid "Match minions using globbing and regular expressions."
+msgstr ""
+
+#: ../../index.rst:115
+msgid ":doc:`Grains </topics/targeting/grains>`"
+msgstr ""
+
+#: ../../index.rst:114
+msgid ""
+"Match minions using bits of static information about the minion such as OS, "
+"software versions, virtualization, CPU, memory, and much more."
+msgstr ""
+
+#: ../../index.rst:118
+msgid ":doc:`Node groups </topics/targeting/nodegroups>`"
+msgstr ""
+
+#: ../../index.rst:118
+msgid "Statically define groups of minions."
+msgstr ""
+
+#: ../../index.rst:121
+msgid ":doc:`Compound matchers </topics/targeting/compound>`"
+msgstr ""
+
+#: ../../index.rst:121
+msgid "Combine the above matchers as a single target."
+msgstr ""
+
+#: ../../index.rst:125
+msgid ":doc:`Batching execution </topics/targeting/batch>`"
+msgstr ""
+
+#: ../../index.rst:124
+msgid ""
+"Loop through all matching minions so that only a subset are executing a "
+"command at one time."
+msgstr ""
+
+#: ../../index.rst:128
+msgid "Configuration management"
+msgstr ""
+
+#: ../../index.rst:130
+msgid ""
+"Building on the remote execution core is a robust and flexible configuration"
+" management framework. Execution happens on the minions allowing effortless,"
+" simultaneous configuration of tens of thousands of hosts."
+msgstr ""
+
+#: ../../index.rst:154
+msgid "**States**"
+msgstr ""
+
+#: ../../index.rst:135
+msgid ""
+"Express the state of a host using small, easy to read, easy to understand "
+"configuration files. *No programming required*."
+msgstr ""
+
+#: ../../index.rst:140
+msgid ":doc:`Full list of states <ref/states/all/index>`"
+msgstr ""
+
+#: ../../index.rst:139
+msgid ""
+"Install packages, create users, transfer files, start services, and much "
+"more."
+msgstr ""
+
+#: ../../index.rst:143
+msgid ":doc:`Pillar System <topics/pillar/index>`"
+msgstr ""
+
+#: ../../index.rst:143
+msgid "Salt's Pillar system"
+msgstr ""
+
+#: ../../index.rst:146
+msgid ":doc:`States Overview<ref/states/index>`"
+msgstr ""
+
+#: ../../index.rst:146
+msgid "An overview of States and some of the core components."
+msgstr ""
+
+#: ../../index.rst:150
+msgid ":doc:`Highstate data structure <ref/states/highstate>`"
+msgstr ""
+
+#: ../../index.rst:149
+msgid ""
+"A dry vocabulary and technical representation of the configuration format "
+"that states represent."
+msgstr ""
+
+#: ../../index.rst:154
+msgid ":doc:`Writing states <ref/states/writing>`"
+msgstr ""
+
+#: ../../index.rst:153
+msgid ""
+"A guide on how to write Salt state modules. Extending Salt to directly "
+"manage in more software is easy."
+msgstr ""
+
+#: ../../index.rst:168
+msgid "**Renderers**"
+msgstr ""
+
+#: ../../index.rst:157
+msgid ""
+"Write state configuration files in the language, templating engine, or file "
+"type of choice. Salt's configuration management system is, under the hood, "
+"language agnostic."
+msgstr ""
+
+#: ../../index.rst:164
+msgid ":doc:`Full list of renderers <ref/renderers/all/index>`"
+msgstr ""
+
+#: ../../index.rst:162
+msgid ""
+"YAML is not the only choice, many systems are available, from alternative "
+"templating engines to the PyDSL language for rendering sls formulas."
+msgstr ""
+
+#: ../../index.rst:168
+msgid ":doc:`Renderers <ref/renderers/index>`"
+msgstr ""
+
+#: ../../index.rst:167
+msgid ""
+"Salt states are only concerned with the ultimate highstate data structure. "
+"How that data structure is created is not important."
+msgstr ""
+
+#: ../../index.rst:171
+msgid "Miscellaneous topics"
+msgstr ""
+
+#: ../../index.rst:173
+msgid "Salt is many splendid things."
+msgstr ""
+
+#: ../../index.rst:177
+msgid ":doc:`File Server <ref/file_server/index>`"
+msgstr ""
+
+#: ../../index.rst:176
+msgid ""
+"Salt can easily and quickly transfer files (in fact, that's how Salt States "
+"work). Even under heavy load, files are chunked and served."
+msgstr ""
+
+#: ../../index.rst:181
+msgid ":doc:`Syndic <ref/syndic>`"
+msgstr ""
+
+#: ../../index.rst:180
+msgid ""
+"A seamless master of masters. Scale Salt to tens of thousands of hosts or "
+"across many different networks."
+msgstr ""
+
+#: ../../index.rst:186
+msgid ":doc:`Peer Communication <ref/peer>`"
+msgstr ""
+
+#: ../../index.rst:184
+msgid ""
+"Allow minions to communicate amongst themselves. For example, configure one "
+"minion by querying live data from all the others. With great power comes "
+"great responsibility."
+msgstr ""
+
+#: ../../index.rst:190
+msgid ":doc:`Reactor System <topics/reactor/index>`"
+msgstr ""
+
+#: ../../index.rst:189
+msgid ""
+"The reactor system allows for Salt to create a self aware environment by "
+"hooking infrastructure events into actions."
+msgstr ""
+
+#: ../../index.rst:193
+msgid ":doc:`Firewall Settings and Salt <topics/tutorials/firewall>`"
+msgstr ""
+
+#: ../../index.rst:193
+msgid "A tutorial covering how to properly firewall a Salt Master server."
+msgstr ""
+
+#: ../../index.rst:197
+msgid ":doc:`Scheduling Executions (like states)<topics/jobs/schedule>`"
+msgstr ""
+
+#: ../../index.rst:196
+msgid ""
+"The schedule system in Salt allows for executions to be run of all sorts "
+"from the master or minion at automatic intervals."
+msgstr ""
+
+#: ../../index.rst:203
+msgid ":doc:`Network topology <ref/topology>`"
+msgstr ""
+
+#: ../../index.rst:200
+msgid ""
+"At it's core, Salt is a highly scalable communication layer built on top of "
+"ZeroMQ that enables remote execution and configuration management. The "
+"possibilities are endless and Salt's future looks bright."
+msgstr ""
+
+#: ../../index.rst:206
+msgid ":doc:`Testing Salt <topics/tests/index>`"
+msgstr ""
+
+#: ../../index.rst:206
+msgid "A howto for writing unit tests and integration tests."
+msgstr ""
+
+#: ../../index.rst:210
+msgid ":ref:`Python API interface <python-api>`"
+msgstr ""
+
+#: ../../index.rst:209
+msgid ""
+"Use Salt programmatically from scripts and programs easily and simply via "
+"``import salt``."
+msgstr ""
+
+#: ../../index.rst:215
+msgid ""
+":doc:`Automatic Updates and Frozen Binary Deployments "
+"<topics/tutorials/esky>`"
+msgstr ""
+
+#: ../../index.rst:213
+msgid ""
+"Use a frozen install to make deployments easier (Even on Windows!). Or take "
+"advantage of automatic updates to keep minions running the latest builds."
+msgstr ""
+
+#: ../../index.rst:221
+msgid ""
+":doc:`Windows Software Manager / Package Repository <ref/windows-package-"
+"manager>`"
+msgstr ""
+
+#: ../../index.rst:218
+msgid ""
+"Looking for an easy way to manage software on Windows machines? Search no "
+"more! Salt has an integrated software package manager for Windows machines! "
+"Install software hosted on the master, somewhere on the network, or any "
+"HTTP, HTTPS, or ftp server."
+msgstr ""
+
+#: ../../index.rst:224
+msgid "Reference"
+msgstr ""
+
+#: ../../index.rst:227
+msgid ":doc:`Command-line interface <ref/cli/index>`"
+msgstr ""
+
+#: ../../index.rst:227
+msgid "Read the Salt manpages."
+msgstr ""
+
+#: ../../index.rst:230
+msgid ":doc:`Full list of master settings <ref/configuration/master>`"
+msgstr ""
+
+#: ../../index.rst:230
+msgid "Read through the heavily-commented master configuration file."
+msgstr ""
+
+#: ../../index.rst:233
+msgid ":doc:`Full list of minion settings <ref/configuration/minion>`"
+msgstr ""
+
+#: ../../index.rst:233
+msgid "Read through the heavily-commented minion configuration file."
+msgstr ""
+
+#: ../../index.rst:236
+msgid ":doc:`Full table of contents </contents>`"
+msgstr ""
+
+#: ../../index.rst:236
+msgid "Dense but complete."
+msgstr ""
+
+#: ../../index.rst:239
+msgid "FAQ"
+msgstr ""
+
+#: ../../index.rst:241
+msgid "See :doc:`here <faq>` for a list of Frequently Asked Questions."
+msgstr ""
+
+#: ../../index.rst:244
+msgid "More information about the project"
+msgstr ""
+
+#: ../../index.rst:247
+msgid ":doc:`Release notes </topics/releases/index>`"
+msgstr ""
+
+#: ../../index.rst:247
+msgid "Living history of Salt Stack."
+msgstr ""
+
+#: ../../index.rst:250
+msgid ":doc:`Community </topics/community>`"
+msgstr ""
+
+#: ../../index.rst:250
+msgid "How to get involved."
+msgstr ""
+
+#: ../../index.rst:253
+msgid ":doc:`Salt Development </topics/development/index>`"
+msgstr ""
+
+#: ../../index.rst:253
+msgid "Information for Hacking on Salt"
+msgstr ""

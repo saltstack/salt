@@ -1,0 +1,93 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.alternatives.rst:6
+msgid "salt.modules.alternatives"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives:1
+msgid "Support for Alternatives system"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives:3
+msgid "Radek Rada <radek.rada@gmail.com>"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives:4
+msgid "© 2012 by the SaltStack Team, see AUTHORS for more details."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives:5
+msgid "Apache 2.0, see LICENSE for more details."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.auto:1
+msgid ""
+"Trigger alternatives to set the path for <name> as specified by priority."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.auto:4
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.check_installed:4
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.display:3
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.install:3
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.remove:3
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.set_:3
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.show_current:4
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.check_installed:1
+msgid ""
+"Check if the current highest-priority match for a given alternatives link is"
+" set to the desired path"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.display:1
+msgid "Display alternatives settings for defined command name"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.install:1
+msgid "Install symbolic links determining default commands"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.remove:1
+msgid "Remove symbolic links determining the default commands."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.set_:1
+msgid "Manually set the alternative <path> for <name>."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.pydocstring of
+#: salt.modules.alternatives.show_current:1
+msgid ""
+"Display the current highest-priority alternative for a given alternatives "
+"link"
+msgstr ""

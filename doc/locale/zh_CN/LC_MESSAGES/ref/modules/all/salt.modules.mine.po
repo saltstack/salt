@@ -1,0 +1,65 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.mine.rst:6
+msgid "salt.modules.mine"
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine:1
+msgid ""
+"The function cache system allows for data to be stored on the master so it "
+"can be easily read by other minions"
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.delete:1
+msgid "Remove specific function contents of minion. Returns True on success."
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.delete:3
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.flush:3
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.get:12
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.send:3
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.update:15
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.flush:1
+msgid "Remove all mine contents of minion. Returns True on success."
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.get:1
+msgid "Get data from the mine based on the target, function and expr_form"
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.get:3
+msgid ""
+"Targets can be matched based on any standard matching system that can be "
+"matched on the master via these keywords::"
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.send:1
+msgid "Send a specific function to the mine."
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.update:1
+msgid ""
+"Execute the configured functions and send the data back up to the master The"
+" functions to be executed are merged from the master config, pillar and "
+"minion config under the option \"function_cache\":"
+msgstr ""
+
+#: ../../../salt/modules/mine.pydocstring of salt.modules.mine.update:12
+msgid ""
+"The function cache will be populated with information from executing these "
+"functions"
+msgstr ""

@@ -1,0 +1,99 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.linux_lvm.rst:6
+msgid "salt.modules.linux_lvm"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of salt.modules.linux_lvm:1
+msgid "Support for Linux LVM2"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.fullversion:1
+msgid "Return all version info from lvm version"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.fullversion:3
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.lvremove:3
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.version:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.lvcreate:1
+msgid ""
+"Create a new logical volume, with option for which physical volume to be "
+"used"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.lvcreate:3
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.lvdisplay:3
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.pvcreate:3
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.pvdisplay:3
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.vgcreate:3
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.vgdisplay:3
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.vgremove:3
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.lvdisplay:1
+msgid "Return information about the logical volume(s)"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.lvremove:1
+msgid ""
+"Remove a given existing logical volume from a named existing volume group"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.pvcreate:1
+msgid "Set a physical device to be used as an LVM physical volume"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.pvdisplay:1
+msgid "Return information about the physical volume(s)"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.version:1
+msgid "Return LVM version from lvm version"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.vgcreate:1
+msgid "Create an LVM volume group"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.vgdisplay:1
+msgid "Return information about the volume group(s)"
+msgstr ""
+
+#: ../../../salt/modules/linux_lvm.pydocstring of
+#: salt.modules.linux_lvm.vgremove:1
+msgid "Remove an LVM volume group"
+msgstr ""

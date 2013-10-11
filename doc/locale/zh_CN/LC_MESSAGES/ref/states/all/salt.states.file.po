@@ -1,0 +1,1092 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.file.rst:6
+msgid "salt.states.file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:2
+msgid "Operations on regular files, special files, directories, and symlinks."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:4
+msgid ""
+"Salt States can aggressively manipulate files on a system. There are a "
+"number of ways in which files can be managed."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:7
+msgid ""
+"Regular files can be enforced with the ``managed`` function. This function "
+"downloads files from the salt master and places them on the target system. "
+"The downloaded files can be rendered as a jinja, mako, or wempy template, "
+"adding a dynamic component to file management. An example of "
+"``file.managed`` which makes use of the jinja templating system would look "
+"like this:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:30
+msgid ""
+"If using a template, any user-defined template variables in the file defined"
+" in ``source`` must be passed in using the ``defaults`` and/or ``context`` "
+"arguments. The general best practice is to place default values in "
+"``defaults``, with conditional overrides going into ``context``, as seen "
+"above."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:35
+msgid ""
+"The ``source`` parameter can be specified as a list. If this is done, then "
+"the first file to be matched will be the one that is used. This allows you "
+"to have a default file on which to fall back if the desired file does not "
+"exist on the salt fileserver. Here's an example:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:51
+msgid ""
+"The ``source`` parameter can also specify a file in another Salt "
+"environment. In this example ``foo.conf`` in the ``dev`` environment will be"
+" used instead."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:66
+msgid ""
+"When using a mode that includes a leading zero you must wrap the value in "
+"single quotes. If the value is not wrapped in quotes it will be read by YAML"
+" as an integer and evaluated as an octal."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:70
+msgid ""
+"Special files can be managed via the ``mknod`` function. This function will "
+"create and enforce the permissions on a special file. The function supports "
+"the creation of character devices, block devices, and fifo pipes. The "
+"function will create the directory structure up to the special file if it is"
+" needed on the minion. The function will not overwrite or operate on (change"
+" major/minor numbers) existing special files with the exception of user, "
+"group, and permissions. In most cases the creation of some special files "
+"require root permisisons on the minion. This would require that the minion "
+"to be run as the root user. Here is an example of a character device:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:91
+msgid "Here is an example of a block device:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:104
+msgid "Here is an example of a fifo pipe:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:115
+msgid ""
+"Directories can be managed via the ``directory`` function. This function can"
+" create and enforce the permissions on a directory. A directory statement "
+"will look like this:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:128
+msgid ""
+"If you need to enforce user and/or group ownership or permissions "
+"recursively on the directory's contents, you can do so by adding a "
+"``recurse`` directive:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:144
+msgid ""
+"As a default, ``mode`` will resolve to ``dir_mode`` and ``file_mode``, to "
+"specify both directory and file permissions, use this form:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:161
+msgid ""
+"Symlinks can be easily created; the symlink function is very simple and only"
+" takes a few arguments:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file:170
+msgid ""
+"Recursive directory management can also be set via the ``recurse`` function."
+" Recursive directory management allows for a directory on the salt master to"
+" be recursively copied down to the minion. This is a great tool for "
+"deploying large code and configuration systems. A state using ``recurse`` "
+"would look something like this:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.absent:1
+msgid ""
+"Verify that the named file or directory is absent, this will work to reverse"
+" any of the functions in the file state module."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.absent:4
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:5
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:3
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:6
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:4
+#: ../../../salt/states/file.pydocstring of salt.states.file.exists:6
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:5
+#: ../../../salt/states/file.pydocstring of salt.states.file.missing:4
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:15
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:5
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:5
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:6
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:5
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:10
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:11
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:3
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.absent:5
+msgid "The path which should be deleted"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:1
+msgid ""
+"Prepare accumulator which can be used in template in file.managed state. "
+"Accumulator dictionary becomes available in template."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:5
+msgid "Accumulator name"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:9
+msgid "filename"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:8
+msgid ""
+"Filename which would receive this accumulator (see file.managed state "
+"documentation about ``name``)"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:12
+msgid "text"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:12
+msgid "String or list for adding in accumulator"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:15
+msgid "require_in / watch_in"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.accumulated:15
+msgid ""
+"One of them required for sure we fill up accumulator before we manage the "
+"file. Probably the same as filename"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.append:1
+msgid "Ensure that some text appears at the end of a file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.append:3
+msgid ""
+"The text will not be appended again if it already exists in the file. You "
+"may specify a single line of text or a list of lines to append."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.append:6
+msgid "Multi-line example::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.append:15
+msgid "Multiple lines of text::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.append:23
+msgid "Gather text from multiple template files::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:1
+msgid "Comment out specified lines in a file."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:4
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:4
+msgid "The full path to the file to be edited"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:10
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:10
+msgid "regex"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:6
+msgid ""
+"A regular expression used to find the lines that are to be commented; this "
+"pattern will be wrapped in parenthesis and will move any preceding/trailing "
+"``^`` or ``$`` characters outside the parenthesis (e.g., the pattern "
+"``^foo$`` will be rewritten as ``^(foo)$``) Note that you _need_ the leading"
+" ^, otherwise each time you run highstate, another comment char will be "
+"inserted."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:13
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:12
+msgid "char : ``#``"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:13
+msgid ""
+"The character to be inserted at the beginning of a line in order to comment "
+"it out"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:22
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:17
+msgid "backup : ``.bak``"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:16
+msgid "The file will be backed up before edit with this file extension"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:20
+msgid ""
+"This backup will be overwritten each time ``sed`` / ``comment`` / "
+"``uncomment`` is called. Meaning the backup will only be useful after the "
+"first invocation."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.comment:24
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:38
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:30
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:32
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:23
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:19
+msgid "Usage::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:1
+msgid ""
+"If the source file exists on the system, copy it to the named file. The "
+"named file will not be overwritten if it already exists unless the force "
+"option is set to True."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:6
+msgid "The location of the file to copy to"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:9
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:16
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:11
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:11
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:9
+msgid "source"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:9
+msgid "The location of the file to copy to the location specified with name"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:13
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:13
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:18
+msgid "force"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:12
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:12
+msgid ""
+"If the target location is present then the file will not be moved, specify "
+"\"force: True\" to overwrite the target file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:15
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:41
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:54
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:15
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:22
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:21
+msgid "makedirs"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.copy:16
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:16
+msgid "If the target subdirectories don't exist create them"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:1
+msgid "Ensure that a named directory is present and has the right perms"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:4
+msgid "The location to create or manage a directory"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:8
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:36
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:30
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:23
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:15
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:7
+msgid ""
+"The user to own the directory; this defaults to the user salt is running as "
+"on the minion"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:12
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:40
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:33
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:27
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:19
+msgid "group"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:11
+msgid ""
+"The group ownership set for the directory; this defaults to the group salt "
+"is running as on the minion"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:28
+msgid "recurse"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:15
+msgid ""
+"Enforce user/group ownership and mode of directory recursively. Accepts a "
+"list of strings representing what you would like to recurse. Example::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:31
+msgid "dir_mode / mode"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:31
+msgid "The permissions mode to set any directories created."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:35
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:33
+msgid "file_mode"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:34
+msgid ""
+"The permissions mode to set any files created if 'mode' is ran in 'recurse'."
+" This defaults to dir_mode."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:38
+msgid ""
+"If the directory is located in a path without a parent directory, then the "
+"state will fail. If makedirs is set to True, then the parent directories "
+"will be created to facilitate the creation of the named file."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:46
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:16
+msgid "clean"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:44
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:14
+msgid ""
+"Make sure that only files that are set up by salt and required by this "
+"function are kept. If this option is set then everything in this directory "
+"will be deleted unless it is required."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:49
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:19
+msgid "require"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:49
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:19
+msgid "Require other resources such as packages or files"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:52
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:76
+msgid "exclude_pat"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.directory:52
+msgid ""
+"When 'clean' is set to True, exclude this pattern from removal list and "
+"preserve in the destination."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.exists:1
+msgid ""
+"Verify that the named file or directory is present or exists. Ensures pre-"
+"requisites outside of Salt's purview (e.g., keytabs, private keys, etc.) "
+"have been previously satisfied before deployment."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.exists:7
+msgid "Absolute path which must exist"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:1
+msgid ""
+"Manage a given file, this function allows for a file to be downloaded from "
+"the salt master and potentially run through a templating system."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:5
+msgid "The location of the file to manage"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:8
+msgid ""
+"The source file to download to the minion, this source file can be hosted on"
+" either the salt master server, or on an HTTP or FTP server. For files "
+"hosted on the salt file server, if the file is located on the master in the "
+"directory named spam, and is called eggs, the source string is "
+"salt://spam/eggs. If source is left blank or None, the file will be created "
+"as an empty file and the content will not be managed"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:15
+msgid ""
+"If the file is hosted on a HTTP or FTP server then the source_hash argument "
+"is also required"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:32
+msgid "source_hash:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:19
+msgid ""
+"This can be either a file which contains a source hash string for the "
+"source, or a source hash string. The source hash string is the hash "
+"algorithm followed by the hash of the file: "
+"md5=e138491e9d5b97023cea823fe17bac22"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:24
+msgid ""
+"The file can contain checksums for several files, in this case every line "
+"must consist of full name of the file and checksum separated by space:"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:28
+msgid "Example::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:35
+msgid ""
+"The user to own the file, this defaults to the user salt is running as on "
+"the minion"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:39
+msgid ""
+"The group ownership set for the file, this defaults to the group salt is "
+"running as on the minion"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:43
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:36
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:22
+msgid "mode"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:43
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:22
+msgid "The permissions to set on this file, aka 644, 0775, 4664"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:48
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:41
+msgid "template"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:46
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:39
+msgid ""
+"If this setting is applied then the named templating engine will be used to "
+"render the downloaded file, currently jinja, mako, and wempy are supported"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:51
+msgid ""
+"If the file is located in a path without a parent directory, then the state "
+"will fail. If makedirs is set to True, then the parent directories will be "
+"created to facilitate the creation of the named file."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:59
+msgid "replace"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:57
+msgid ""
+"If this file should be replaced.  If false, this command will not overwrite "
+"file contents but will enforce permissions if the file exists already.  "
+"Default is True."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:62
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:44
+msgid "context"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:62
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:44
+msgid "Overrides default context variables passed to the template."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:65
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:47
+msgid "defaults"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:65
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:47
+msgid "Default context passed to the template."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:68
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:25
+msgid "backup"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:68
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:25
+msgid "Overrides the default backup mode for this specific file."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:71
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:28
+msgid "show_diff"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:71
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:28
+msgid "If set to False, the diff will not be shown."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:75
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:33
+msgid "create"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:74
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:31
+msgid ""
+"Default is True, if create is set to False then the file will only be "
+"managed if the file already exists on the system."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:80
+msgid "contents"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:78
+msgid ""
+"Default is None.  If specified, will use the given string as the contents of"
+" the file.  Should not be used in conjunction with a source file of any "
+"kind.  Ignores hashes and does not use a templating engine."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:89
+msgid "contents_pillar"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.managed:85
+msgid ""
+"Operates like ``contents``, but draws from a value stored in pillar, using "
+"the pillar path syntax used in :mod:`pillar.get <salt.modules.pillar.get>`. "
+"This is useful when the pillar value contains newlines, as referencing a "
+"pillar variable using a jinja/mako template can result in YAML formatting "
+"issues due to the newlines causing indentation mismatches."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.missing:1
+msgid ""
+"Verify that the named file or directory is missing, this returns True only "
+"if the named file is missing but does not remove the file if it is present."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.missing:5
+msgid "Absolute path which must NOT exist"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:1
+msgid ""
+"Create a special file similar to the 'nix mknod command. The supported "
+"device types are ``p`` (fifo pipe), ``c`` (character device), and ``b`` "
+"(block device). Provide the major and minor numbers when specifying a "
+"character device or block device. A fifo pipe does not require this "
+"information. The command will create the necessary dirs if needed. If a file"
+" of the same name not of the same type/major/minor exists, it will not be "
+"overwritten or unlinked (deleted). This is logically in place as a safety "
+"measure because you can really shoot yourself in the foot here and it is the"
+" behavior of 'nix ``mknod``. It is also important to note that not just "
+"anyone can create special devices. Usually this is only done as root. If the"
+" state is executed as none other than root on a minion, you may receive a "
+"permission error."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:15
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:11
+msgid "name of the file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:19
+msgid "ntype"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:18
+msgid ""
+"node type 'p' (fifo pipe), 'c' (character device), or 'b' (block device)"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:23
+msgid "major"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:22
+msgid "major number of the device does not apply to a fifo pipe"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:27
+msgid "minor"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:26
+msgid "minor number of the device does not apply to a fifo pipe"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:30
+msgid "owning user of the device/pipe"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:33
+msgid "owning group of the device/pipe"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.mknod:36
+msgid "permissions on the device/pipe"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:1
+msgid ""
+"Apply a patch to a file. Note: a suitable ``patch`` executable must be "
+"available on the minion when using this state function."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:5
+msgid "The file to with the patch will be applied."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:8
+msgid ""
+"The source patch to download to the minion, this source file must be hosted "
+"on the salt master server. If the file is located in the directory named "
+"spam, and is called eggs, the source string is salt://spam/eggs. A source is"
+" required."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:17
+msgid "hash"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:14
+msgid ""
+"Hash of the patched file. If the hash of the target file matches this value "
+"then the patch is assumed to have been applied. The hash string is the hash "
+"algorithm followed by the hash of the file: "
+"md5=e138491e9d5b97023cea823fe17bac22"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:20
+msgid "options"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:20
+msgid "Extra options to pass to patch."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:23
+msgid "dry_run_first : ``True``"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:23
+msgid "Run patch with ``--dry-run`` first to check if it will apply cleanly."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:28
+msgid "env"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.patch:26
+msgid ""
+"Specify the environment from which to retrieve the patch file indicated by "
+"the ``source`` parameter. If not provided, this defaults to the environment "
+"from which the state is being executed."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:1
+msgid ""
+"Recurse through a subdirectory on the master and copy said subdirectory over"
+" to the specified path."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:5
+msgid "The directory to set the recursion in"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:8
+msgid ""
+"The source directory, this directory is located on the salt master file "
+"server and is specified with the salt:// protocol. If the directory is "
+"located on the master in the directory named spam, and is called eggs, the "
+"source string is salt://spam/eggs"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:22
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:14
+msgid ""
+"The user to own the directory, this defaults to the user salt is running as "
+"on the minion"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:26
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:18
+msgid ""
+"The group ownership set for the directory, this defaults to the group salt "
+"is running as on the minion"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:30
+msgid "dir_mode"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:30
+msgid "The permissions mode to set any directories created"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:33
+msgid "The permissions mode to set any files created"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:36
+msgid "sym_mode"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:36
+msgid "The permissions mode to set on any symlink created"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:51
+msgid "include_empty"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:50
+msgid ""
+"Set this to True if empty directories should also be created (default is "
+"False)"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:61
+msgid "include_pat"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:54
+msgid ""
+"When copying, include only this pattern from the source. Default is glob "
+"match; if prefixed with 'E@', then regexp match. Example::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:64
+msgid ""
+"When copying, exclude this pattern from the source. If both include_pat and "
+"exclude_pat are supplied, then it will apply conditions cumulatively. i.e. "
+"first select based on include_pat, and then within that result apply "
+"exclude_pat."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:69
+msgid ""
+"Also, when 'clean=True', exclude this pattern from the removal list and "
+"preserve in the destination. Example::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:86
+msgid "maxdepth"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:79
+msgid ""
+"When copying, only copy paths which are depth maxdepth from the source path."
+" Example::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:91
+msgid "keep_symlinks"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:89
+msgid ""
+"Keep symlinks when copying from the source. This option will cause the copy "
+"operation to terminate at the symlink. If you are after rsync-ish behavior, "
+"then set this to True."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:96
+msgid "force_symlinks"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.recurse:94
+msgid ""
+"Force symlink creation. This option will force the symlink creation. If a "
+"file or directory is obstructing symlink creation it will be recursively "
+"removed so that symlink creation can proceed. This option is usually not "
+"needed except in special circumstances."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:1
+msgid ""
+"If the source file exists on the system, rename it to the named file. The "
+"named file will not be overwritten if it already exists unless the force "
+"option is set to True."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:6
+msgid "The location of the file to rename to"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.rename:9
+msgid "The location of the file to move to the location specified with name"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.replace:1
+msgid "Maintain an edit in a file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.replace:5
+msgid "Params are identical to :py:func:`~salt.modules.file.replace`."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:1
+msgid "Use :py:func:`~salt.states.file.replace` instead."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:4
+msgid "Maintain a simple edit to a file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:6
+msgid ""
+"The file will be searched for the ``before`` pattern before making the edit."
+"  In general the ``limit`` pattern should be as specific as possible and "
+"``before`` and ``after`` should contain the minimal text to be changed."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:10
+msgid "before"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:11
+msgid "A pattern that should exist in the file before the edit."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:12
+msgid "after"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:13
+msgid "A pattern that should exist in the file after the edit."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:15
+msgid "limit"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:15
+msgid ""
+"An optional second pattern that can limit the scope of the before pattern."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:18
+msgid "backup : '.bak'"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:18
+msgid ""
+"The extension for the backed-up version of the file before the edit. If no "
+"backups is desired, pass in the empty string: ''"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:22
+msgid "options : ``-r -e``"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:21
+msgid ""
+"Any options to pass to the ``sed`` command. ``-r`` uses extended regular "
+"expression syntax and ``-e`` denotes that what follows is an expression that"
+" sed will execute."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:25
+msgid "flags : ``g``"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:25
+msgid ""
+"Any flags to append to the sed expression. ``g`` specifies the edit should "
+"be made globally (and not stop after the first replacement)."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:30
+msgid "negate_match : False"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.sed:28
+msgid "Negate the search command (``!``)"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:1
+msgid ""
+"Serializes dataset and store it into managed file. Useful for sharing simple"
+" configuration files."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:5
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:10
+msgid "The location of the symlink to create"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:8
+msgid "dataset"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:8
+msgid "the dataset that will be serialized"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:11
+msgid "formatter"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:11
+msgid "the formatter, currently only yaml and json are supported"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:35
+msgid "For example, this state::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.serialize:49
+msgid "will manages the file ``/etc/dummy/package.json``::"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:1
+msgid "Create a symlink"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:3
+msgid ""
+"If the file already exists and is a symlink pointing to any location other "
+"than the specified target, the symlink will be replaced. If the symlink is a"
+" regular file or directory then the state will return False. If the regular "
+"file or directory is desired to be replaced with a symlink pass force: True."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:13
+msgid "target"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:13
+msgid "The location that the symlink points to"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:16
+msgid ""
+"If the location of the symlink exists and is not a symlink then the state "
+"will fail, set force to True and any file or directory in the way of the "
+"symlink file will be deleted to make room for the symlink"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.symlink:21
+msgid ""
+"If the location of the symlink does not already have a parent directory then"
+" the state will fail, setting makedirs to True will allow Salt to create the"
+" parent directory"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:1
+msgid ""
+"Replicate the 'nix \"touch\" command to create a new empty file or update "
+"the atime and mtime of an existing file."
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:4
+msgid ""
+"Note that if you just want to create a file and don't care about atime or "
+"mtime, you should use ``file.managed`` instead, as it is more feature-"
+"complete.  (Just leave out the ``source``/``template``/``contents`` "
+"arguments, and it will just create the file and/or check its permissions, "
+"without messing with contents)"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:14
+msgid "atime"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:14
+msgid "atime of the file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:17
+msgid "mtime"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:17
+msgid "mtime of the file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.touch:20
+msgid ""
+"whether we should create the parent directory/directories in order to touch "
+"the file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:1
+msgid "Uncomment specified commented lines in a file"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:6
+msgid ""
+"A regular expression used to find the lines that are to be uncommented. This"
+" regex should not include the comment character. A leading ``^`` character "
+"will be stripped for convenience (for easily switching between comment() and"
+" uncomment()).  The regex will be searched for from the beginning of the "
+"line, ignoring leading spaces (we prepend '^[ \\t]*')"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:13
+msgid "The character to remove in order to uncomment a line"
+msgstr ""
+
+#: ../../../salt/states/file.pydocstring of salt.states.file.uncomment:15
+msgid ""
+"The file will be backed up before edit with this file extension; "
+"**WARNING:** each time ``sed``/``comment``/``uncomment`` is called will "
+"overwrite this backup"
+msgstr ""

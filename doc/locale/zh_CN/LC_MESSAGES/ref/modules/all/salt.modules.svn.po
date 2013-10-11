@@ -1,0 +1,278 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.svn.rst:6
+msgid "salt.modules.svn"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn:1
+msgid "Subversion SCM"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:1
+msgid "Add files to be tracked by the Subversion working-copy checkout"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:4
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:5
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:5
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:5
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:4
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:4
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:4
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:5
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:7
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:5
+msgid "cwd"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:4
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:5
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:5
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:5
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:4
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:4
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:4
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:5
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:7
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:5
+msgid "The path to the Subversion repository"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:7
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:9
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:9
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:8
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:7
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:9
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:9
+msgid "targets : None"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:7
+msgid "files and directories to pass to the command as arguments"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:10
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:15
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:15
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:12
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:14
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:11
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:13
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:12
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:17
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:12
+msgid "user : None"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:10
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:15
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:15
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:12
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:14
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:11
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:13
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:12
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:17
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:12
+msgid "Run svn as a user other than what the minion runs as"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:13
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:18
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:18
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:15
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:17
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:14
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:16
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:15
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:20
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:20
+msgid "username : None"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:13
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:18
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:18
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:15
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:17
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:14
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:16
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:15
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:20
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:20
+msgid "Connect to the Subversion server as another user"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:18
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:23
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:23
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:20
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:22
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:19
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:21
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:20
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:23
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:17
+msgid "password : None"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:16
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:21
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:21
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:18
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:20
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:17
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:19
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:18
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:23
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:15
+msgid "Connect to the Subversion server with this password"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.add:20
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:25
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:25
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:22
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:24
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:25
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:23
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:22
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:22
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:1
+msgid ""
+"Download a working copy of the remote Subversion repository directory or "
+"file"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:8
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:7
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:10
+msgid "remote : None"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:8
+msgid "URL to checkout"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:12
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:11
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:14
+msgid "target : None"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.checkout:11
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:10
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:13
+msgid ""
+"The name to give the file or directory working copy Default: svn uses the "
+"remote basename"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:1
+msgid ""
+"Commit the current directory, files, or directories to the remote Subversion"
+" repository"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:8
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:8
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:8
+msgid ""
+"files and directories to pass to the command as arguments Default: svn uses "
+"'.'"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:12
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:10
+msgid "msg : None"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.commit:12
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:10
+msgid "Message to attach to the commit log"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.diff:1
+msgid ""
+"Return the diff of the current directory, files, or directories from the "
+"remote Subversion repository"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:1
+msgid "Create an unversioned copy of a tree."
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.export:7
+msgid "URL and path to file or directory checkout"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:1
+msgid "Display the Subversion information from the checkout."
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:7
+msgid ""
+"files, directories, and URLs to pass to the command as arguments svn uses "
+"'.' by default"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:23
+msgid "fmt : str"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.info:22
+msgid "How to fmt the output from info. (str, xml, list, dict)"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:1
+msgid "Remove files and directories from the Subversion repository"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.remove:7
+msgid "files, directories, and URLs to pass to the command as arguments"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:1
+msgid ""
+"Display the status of the current directory, files, or directories in the "
+"Subversion repository"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.status:8
+msgid ""
+"files, directories, and URLs to pass to the command as arguments Default: "
+"svn uses '.'"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:3
+msgid "Switch a working copy of a remote Subversion repository directory"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:10
+msgid "URL to switch"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.switch:25
+msgid "CLI Example::"
+msgstr ""
+
+#: ../../../salt/modules/svn.pydocstring of salt.modules.svn.update:1
+msgid ""
+"Update the current directory, files, or directories from the remote "
+"Subversion repository"
+msgstr ""

@@ -1,0 +1,1339 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/index.rst:8
+msgid "Full list of builtin execution modules"
+msgstr ""
+
+#: ../../ref/modules/all/index.rst:10
+msgid "Virtual modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`aliases <salt.modules.aliases>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage the information in the aliases file"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`alternatives <salt.modules.alternatives>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Alternatives system"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`apache <salt.modules.apache>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Apache"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`apt <salt.modules.apt>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for APT (Advanced Packaging Tool)"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`archive <salt.modules.archive>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "A module to wrap archive calls"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`at <salt.modules.at>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Wrapper module for at(1)"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`augeas_cfg <salt.modules.augeas_cfg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manages configuration files via augeas"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`bluez <salt.modules.bluez>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Bluetooth (using BlueZ in Linux)."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`brew <salt.modules.brew>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Homebrew for Mac OS X"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`bridge <salt.modules.bridge>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for gathering and managing bridging information"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`bsd_shadow <salt.modules.bsd_shadow>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage the password database on BSD systems"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`cassandra <salt.modules.cassandra>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Cassandra NoSQL Database Module"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`cmdmod <salt.modules.cmdmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "A module for shelling out"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`config <salt.modules.config>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Return config information"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`cp <salt.modules.cp>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Minion side functions for salt-cp"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`cron <salt.modules.cron>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Work with cron"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`daemontools <salt.modules.daemontools>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "daemontools service module. This module will create daemontools type"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`darwin_sysctl <salt.modules.darwin_sysctl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1 ../../<autosummary>:1
+#: ../../<autosummary>:1
+msgid "Module for viewing and modifying sysctl parameters"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`data <salt.modules.data>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Manage a local persistent data structure that can hold any arbitrary data"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`ddns <salt.modules.ddns>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for RFC 2136 dynamic DNS updates."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`debconfmod <salt.modules.debconfmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Debconf"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`debian_service <salt.modules.debian_service>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Service support for Debian systems (uses update-rc.d and /sbin/service)"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`dig <salt.modules.dig>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Compendium of generic DNS utilities"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`disk <salt.modules.disk>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for gathering disk information"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`djangomod <salt.modules.djangomod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage Django sites"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`dnsmasq <salt.modules.dnsmasq>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing dnqmasq"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`dnsutil <salt.modules.dnsutil>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`dpkg <salt.modules.dpkg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for DEB packages"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`ebuild <salt.modules.ebuild>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Portage"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`eix <salt.modules.eix>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Eix"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`eselect <salt.modules.eselect>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for eselect, Gentoo's configuration and management tool."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`event <salt.modules.event>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Use the :doc:`Salt Event System </topics/event/index>` to fire events from "
+"the"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`extfs <salt.modules.extfs>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing ext2/3/4 file systems"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`file <salt.modules.file>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage information about regular files, directories,"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`freebsd_sysctl <salt.modules.freebsd_sysctl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`freebsdjail <salt.modules.freebsdjail>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The jail module for FreeBSD"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`freebsdkmod <salt.modules.freebsdkmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module to manage FreeBSD kernel modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`freebsdpkg <salt.modules.freebsdpkg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Remote package support using ``pkg_add(1)``  .."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`freebsdservice <salt.modules.freebsdservice>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The service module for FreeBSD"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`gem <salt.modules.gem>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage ruby gems."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`gentoo_service <salt.modules.gentoo_service>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Top level package command wrapper, used to translate the os detected by "
+"grains to the correct service manager"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`gentoolkitmod <salt.modules.gentoolkitmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Gentoolkit"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`git <salt.modules.git>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for the Git SCM"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`glance <salt.modules.glance>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for handling openstack glance calls."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`grains <salt.modules.grains>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Return/control aspects of the grains data"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`groupadd <salt.modules.groupadd>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage groups on Linux and OpenBSD"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`grub_legacy <salt.modules.grub_legacy>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for GRUB Legacy"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`guestfs <salt.modules.guestfs>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Interact with virtual machine images via libguestfs"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`hg <salt.modules.hg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for the Mercurial SCM"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`hosts <salt.modules.hosts>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage the information in the hosts file"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`img <salt.modules.img>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Virtual machine image management tools"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`iptables <salt.modules.iptables>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for iptables"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`key <salt.modules.key>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Functions to view the minion's public key information"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`keyboard <salt.modules.keyboard>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing keyboards on POSIX-like systems."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`keystone <salt.modules.keystone>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for handling openstack keystone calls."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`kmod <salt.modules.kmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module to manage Linux kernel modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`launchctl <salt.modules.launchctl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for the management of MacOS systems that use launchd/launchctl"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`layman <salt.modules.layman>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Layman"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`ldapmod <salt.modules.ldapmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Salt interface to LDAP commands"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`linux_acl <salt.modules.linux_acl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Linux File Access Control Lists"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`linux_lvm <salt.modules.linux_lvm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Linux LVM2"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`linux_sysctl <salt.modules.linux_sysctl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`localemod <salt.modules.localemod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing locales on POSIX-like systems."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`locate <salt.modules.locate>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for using the locate utilities"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`logrotate <salt.modules.logrotate>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing logrotate."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`lxc <salt.modules.lxc>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Work with linux containers"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mac_group <salt.modules.mac_group>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage groups on Mac OS 10.7+"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mac_user <salt.modules.mac_user>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage users on Mac OS 10.7+"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`makeconf <salt.modules.makeconf>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for modifying make.conf under Gentoo"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`match <salt.modules.match>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"The match module allows for match routines to be run and determine target "
+"specs"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mdadm <salt.modules.mdadm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Salt module to manage RAID arrays with mdadm"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mine <salt.modules.mine>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"The function cache system allows for data to be stored on the master so it "
+"can be easily read by other minions"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`modjk <salt.modules.modjk>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Control Modjk via the Apache Tomcat \"Status\" worker"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mongodb <salt.modules.mongodb>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module to provide MongoDB functionality to Salt"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`monit <salt.modules.monit>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Monit service module."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`moosefs <salt.modules.moosefs>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for gathering and managing information about MooseFS"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mount <salt.modules.mount>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Salt module to manage unix mounts and the fstab file"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`munin <salt.modules.munin>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Run munin plugins/checks from salt and format the output as data."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mysql <salt.modules.mysql>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module to provide MySQL compatibility to salt."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`netbsd_sysctl <salt.modules.netbsd_sysctl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`netbsdservice <salt.modules.netbsdservice>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The service module for NetBSD"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`network <salt.modules.network>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Module for gathering and managing network information"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`nfs3 <salt.modules.nfs3>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing NFS version 3."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`nginx <salt.modules.nginx>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for nginx"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`nova <salt.modules.nova>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for handling openstack nova calls."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`npm <salt.modules.npm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage and query NPM packages."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`nzbget <salt.modules.nzbget>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for nzbget"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`openbsdpkg <salt.modules.openbsdpkg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Package support for OpenBSD"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`openbsdservice <salt.modules.openbsdservice>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The service module for OpenBSD"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`osxdesktop <salt.modules.osxdesktop>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Mac OS X implementations of various commands in the \"desktop\" interface"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pacman <salt.modules.pacman>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "A module to wrap pacman calls, since Arch is the best"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pam <salt.modules.pam>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for pam"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`parted <salt.modules.parted>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing partitions on POSIX-like systems."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pecl <salt.modules.pecl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage PHP pecl extensions."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pillar <salt.modules.pillar>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Extract the pillar data for this minion"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pip <salt.modules.pip>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Install Python packages with pip to either the system or a virtualenv"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pkg_resource <salt.modules.pkg_resource>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Resources needed by pkg providers"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pkgin <salt.modules.pkgin>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Package support for pkgin based systems, inspired from freebsdpkg module"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pkgng <salt.modules.pkgng>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for ``pkgng``, the new package manager for FreeBSD"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pkgutil <salt.modules.pkgutil>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Pkgutil support for Solaris"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`portage_config <salt.modules.portage_config>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Configure ``portage(5)``"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`postgres <salt.modules.postgres>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module to provide Postgres compatibility to salt."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`poudriere <salt.modules.poudriere>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for poudriere"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`ps <salt.modules.ps>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "A salt interface to psutil, a system and process library."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`publish <salt.modules.publish>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Publish a command from a minion to a target"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`puppet <salt.modules.puppet>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Execute puppet routines"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pw_group <salt.modules.pw_group>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage groups on FreeBSD"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pw_user <salt.modules.pw_user>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Manage users with the useradd command"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`qemu_img <salt.modules.qemu_img>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Qemu-img Command Wrapper"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`qemu_nbd <salt.modules.qemu_nbd>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Qemu Command Wrapper"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`quota <salt.modules.quota>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing quotas on POSIX-like systems."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`rabbitmq <salt.modules.rabbitmq>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module to provide RabbitMQ compatibility to Salt."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`rbenv <salt.modules.rbenv>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage ruby installations with rbenv."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`reg <salt.modules.reg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage the registry on Windows"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`ret <salt.modules.ret>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Module to integrate with the returner system and retrieve data sent to a "
+"salt returner"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`rh_ip <salt.modules.rh_ip>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The networking module for RHEL/Fedora based distros"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`rh_service <salt.modules.rh_service>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Service support for RHEL-based systems, including support for both upstart "
+"and sysvinit"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`rpm <salt.modules.rpm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for rpm"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`rvm <salt.modules.rvm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Manage ruby installations and gemsets with RVM, the Ruby Version Manager."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`s3 <salt.modules.s3>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Connection module for Amazon S3"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`saltutil <salt.modules.saltutil>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"The Saltutil module is used to manage the state of the salt minion itself. "
+"It is used to manage minion modules as well as automate updates to the salt "
+"minion."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`seed <salt.modules.seed>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`selinux <salt.modules.selinux>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Execute calls on selinux  .."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`service <salt.modules.service>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"The default service module, if not otherwise specified salt will fall back"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`shadow <salt.modules.shadow>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Manage the shadow file"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`smartos_imgadm <salt.modules.smartos_imgadm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for running imgadm command on SmartOS"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`smartos_vmadm <salt.modules.smartos_vmadm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing VMs on SmartOS"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`smf <salt.modules.smf>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Service support for Solaris 10 and 11, should work with other systems"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`solaris_group <salt.modules.solaris_group>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage groups on Solaris"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`solaris_shadow <salt.modules.solaris_shadow>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage the password database on Solaris systems"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`solaris_user <salt.modules.solaris_user>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`solarispkg <salt.modules.solarispkg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Package support for Solaris"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`solr <salt.modules.solr>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Apache Solr Salt Module"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`sqlite3 <salt.modules.sqlite3>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for SQLite3"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`ssh <salt.modules.ssh>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage client ssh components"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`state <salt.modules.state>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Control the state system on the minion"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`status <salt.modules.status>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Module for returning various status data about a minion."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`supervisord <salt.modules.supervisord>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Provide the service module for system supervisord or supervisord in a"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`svn <salt.modules.svn>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Subversion SCM"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`sysbench <salt.modules.sysbench>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The 'sysbench' module is used to analyse the"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`sysmod <salt.modules.sysmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"The sys module provides information about the available functions on the "
+"minion"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`system <salt.modules.system>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Support for reboot, shutdown, etc"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`systemd <salt.modules.systemd>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Provide the service module for systemd"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`test <salt.modules.test>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for running arbitrary tests"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`timezone <salt.modules.timezone>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for managing timezone on POSIX-like systems."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`tls <salt.modules.tls>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "A salt module for SSL/TLS."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`tomcat <salt.modules.tomcat>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Support for Tomcat"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`upstart <salt.modules.upstart>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for the management of upstart systems."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`useradd <salt.modules.useradd>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`virt <salt.modules.virt>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Work with virtual machines managed by libvirt"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`virtualenv_mod <salt.modules.virtualenv_mod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Create virtualenv environments"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_disk <salt.modules.win_disk>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for gathering disk information on Windows"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_file <salt.modules.win_file>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage information about files on the minion, set/read user, group"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_groupadd <salt.modules.win_groupadd>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage groups on Windows"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_network <salt.modules.win_network>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_ntp <salt.modules.win_ntp>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Management of NTP servers on Windows"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_pkg <salt.modules.win_pkg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "A module to manage software on Windows"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_service <salt.modules.win_service>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Windows Service module."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_shadow <salt.modules.win_shadow>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_status <salt.modules.win_status>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_system <salt.modules.win_system>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`win_useradd <salt.modules.win_useradd>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage Windows users with the net user command"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`xapi <salt.modules.xapi>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "This module (mostly) uses the XenAPI to manage Xen virtual machines."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`yumpkg <salt.modules.yumpkg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Support for YUM"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`yumpkg5 <salt.modules.yumpkg5>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`zfs <salt.modules.zfs>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for running ZFS command"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`zpool <salt.modules.zpool>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Module for running ZFS zpool command"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`zypper <salt.modules.zypper>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Package support for openSUSE via the zypper package manager"
+msgstr ""

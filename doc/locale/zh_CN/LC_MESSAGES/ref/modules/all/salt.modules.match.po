@@ -1,0 +1,82 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.match.rst:6
+msgid "salt.modules.match"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match:1
+msgid ""
+"The match module allows for match routines to be run and determine target "
+"specs"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.compound:1
+msgid "Return True if the minion matches the given compound target"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.compound:3
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.data:3
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.glob:3
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.grain:4
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.grain_pcre:4
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.ipcidr:3
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.list_:3
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.pcre:3
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.pillar:4
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.data:1
+msgid "Return True if the minion matches the given data target"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.glob:1
+msgid "Return True if the minion matches the given glob target"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.grain:1
+msgid ""
+"Return True if the minion matches the given grain target. The ``delim`` "
+"argument can be used to specify a different delimiter."
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.grain:11
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.grain_pcre:11
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.pillar:11
+msgid "``delim`` argument added"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.grain_pcre:1
+msgid ""
+"Return True if the minion matches the given grain_pcre target. The ``delim``"
+" argument can be used to specify a different delimiter."
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.ipcidr:1
+msgid "Return True if the minion matches the given ipcidr target"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.list_:1
+msgid "Return True if the minion matches the given list target"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.pcre:1
+msgid "Return True if the minion matches the given pcre target"
+msgstr ""
+
+#: ../../../salt/modules/match.pydocstring of salt.modules.match.pillar:1
+msgid ""
+"Return True if the minion matches the given pillar target. The ``delim`` "
+"argument can be used to specify a different delimiter."
+msgstr ""

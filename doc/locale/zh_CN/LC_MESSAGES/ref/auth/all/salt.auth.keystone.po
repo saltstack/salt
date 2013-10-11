@@ -1,0 +1,33 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/auth/all/salt.auth.keystone.rst:6
+msgid "salt.auth.keystone"
+msgstr ""
+
+#: ../../../salt/auth/keystone.pydocstring of salt.auth.keystone:1
+msgid "Provide authentication using OpenStack Keystone"
+msgstr ""
+
+#: ../../../salt/auth/keystone.pydocstring of salt.auth.keystone:3
+msgid "keystoneclient Python module"
+msgstr ""
+
+#: ../../../salt/auth/keystone.pydocstring of salt.auth.keystone.auth:1
+msgid "Try and authenticate"
+msgstr ""
+
+#: ../../../salt/auth/keystone.pydocstring of
+#: salt.auth.keystone.get_auth_url:1
+msgid "Try and get the URL from the config, else return localhost"
+msgstr ""

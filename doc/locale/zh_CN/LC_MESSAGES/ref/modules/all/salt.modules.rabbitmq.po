@@ -1,0 +1,234 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.rabbitmq.rst:6
+msgid "salt.modules.rabbitmq"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of salt.modules.rabbitmq:1
+msgid ""
+"Module to provide RabbitMQ compatibility to Salt. Todo: A lot, need to add "
+"cluster support, logging, and minion configuration data."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.add_user:1
+msgid "Add a rabbitMQ user via rabbitmqctl user_add <user> <password>"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.add_user:3 ../../../salt/modules/rabbitmq.pydocstring
+#: of salt.modules.rabbitmq.add_vhost:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.change_password:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.clear_password:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.cluster_status:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.delete_policy:5
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.delete_user:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.delete_vhost:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.disable_plugin:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.enable_plugin:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.force_reset:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.join_cluster:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_policies:6
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_queues:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_queues_vhost:6
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_user_permissions:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_users:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_vhosts:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.policy_exists:5
+#: ../../../salt/modules/rabbitmq.pydocstring of salt.modules.rabbitmq.reset:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.set_permissions:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.set_policy:5
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.set_user_tags:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.start_app:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.status:3 ../../../salt/modules/rabbitmq.pydocstring
+#: of salt.modules.rabbitmq.stop_app:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.user_exists:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.vhost_exists:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.add_vhost:1
+msgid "Adds a vhost via rabbitmqctl add_vhost."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.change_password:1
+msgid "Changes a user's password."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.clear_password:1
+msgid "Removes a user's password."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.cluster_status:1
+msgid "return rabbitmq cluster_status"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.delete_policy:1
+msgid "Delete a policy based on rabbitmqctl clear_policy."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.delete_policy:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_policies:4
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.policy_exists:3
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.set_policy:3
+msgid "Reference: http://www.rabbitmq.com/ha.html"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.delete_user:1
+msgid "Deletes a user via rabbitmqctl delete_user."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.delete_vhost:1
+msgid "Deletes a vhost rabbitmqctl delete_vhost."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.disable_plugin:1
+msgid "Disable a RabbitMQ plugin via the rabbitmq-plugin command."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.enable_plugin:1
+msgid "Enable a RabbitMQ plugin via the rabbitmq-plugin command."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.force_reset:1
+msgid "Forcefully Return a RabbitMQ node to its virgin state"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.join_cluster:1
+msgid "Join a rabbit cluster"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_policies:1
+msgid ""
+"Return a dictionary of policies nested by vhost and name based on the data "
+"returned from rabbitmqctl list_policies."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_queues:1
+msgid "Returns queue details of the / virtual host"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_queues_vhost:1
+msgid ""
+"Returns queue details of specified virtual host. This command will consider "
+"first parameter as the vhost name and rest will be treated as queueinfoitem."
+" For getting details on vhost ``/``, use :mod:`list_queues "
+"<salt.modules.rabbitmq.list_queues>` instead)."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_user_permissions:1
+msgid "List permissions for a user via rabbitmqctl list_user_permissions"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_users:1
+msgid "Return a list of users based off of rabbitmqctl user_list."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.list_vhosts:1
+msgid "Return a list of vhost based on rabbitmqctl list_vhosts."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.policy_exists:1
+msgid "Return whether the policy exists based on rabbitmqctl list_policies."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of salt.modules.rabbitmq.reset:1
+msgid "Return a RabbitMQ node to its virgin state"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.set_permissions:1
+msgid "Sets permissions for vhost via rabbitmqctl set_permissions"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.set_policy:1
+msgid "Set a policy based on rabbitmqctl set_policy."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.set_user_tags:1
+msgid "Add user tags via rabbitctl set_user_tags"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.start_app:1
+msgid "Start the RabbitMQ application."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.status:1
+msgid "return rabbitmq status"
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.stop_app:1
+msgid "Stops the RabbitMQ application, leaving the Erlang node running."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.user_exists:1
+msgid "Return whether the user exists based on rabbitmqctl list_users."
+msgstr ""
+
+#: ../../../salt/modules/rabbitmq.pydocstring of
+#: salt.modules.rabbitmq.vhost_exists:1
+msgid "Return whether the vhost exists based on rabbitmqctl list_vhosts."
+msgstr ""

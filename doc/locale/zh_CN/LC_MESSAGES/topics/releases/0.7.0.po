@@ -1,0 +1,166 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.7.0.rst:6
+msgid "Salt 0.7.0 release notes"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:8
+msgid "I am pleased to announce the release of Salt 0.7.0!"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:10
+msgid ""
+"This release marks what is the first stable release of salt, 0.7.0 should be"
+" suitable for general use."
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:13
+msgid "0.7.0 Brings the following new features to Salt:"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:15
+msgid "Integration with Facter data from puppet labs"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:16
+msgid "Allow for matching minions from the salt client via Facter information"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:17
+msgid ""
+"Minion job threading, many jobs can be executed from the master at once"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:18
+msgid "Preview of master clustering support - Still experimental"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:19
+msgid ""
+"Introduce new minion modules for stats, virtualization, service management "
+"and more"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:20
+msgid "Add extensive logging to the master and minion daemons"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:21
+msgid "Add sys.reload_functions for dynamic function reloading"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:22
+msgid "Greatly improve authentication"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:23
+msgid "Introduce the saltkey command for managing public keys"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:24
+msgid "Begin backend development preparatory to introducing butter"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:25
+msgid "Addition of man pages for the core commands"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:26
+msgid "Extended and cleaned configuration"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:28
+msgid "0.7.0 Fixes the following major bugs:"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:30
+msgid "Fix crash in minions when matching failed"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:31
+msgid "Fix configuration file lookups for the local client"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:32
+msgid "Repair communication bugs in encryption"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:33
+msgid "Numerous fixes in the minion modules"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:35
+msgid "The next release of Salt should see the following features:"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:37
+msgid "Stabilize the cluster support"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:38
+msgid "Introduce a remote client for salt command tiers"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:39
+msgid "salt-ftp system for distributed file copies"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:40
+msgid "Initial support for \"butter\""
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:42
+msgid ""
+"Coming up next is a higher level management framework for salt called "
+"Butter. I want salt to stay as a simple and effective communication "
+"framework, and allow for more complicated executions to be managed via "
+"Butter."
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:47
+msgid ""
+"Right now Butter is being developed to act as a cloud controller using salt "
+"as the communication layer, but features like system monitoring and advanced"
+" configuration control (a puppet manager) are also in the pipe."
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:51
+msgid ""
+"Special thanks to Joseph Hall for the status and network modules, and thanks"
+" to Matthias Teege for tracking down some configuration bugs!"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:54
+msgid "Salt can be downloaded from the following locations;"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:56
+msgid "Source Tarball:"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:58
+msgid ":download:`salt-0.7.0.tar.gz`"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:60
+msgid "Arch Linux Package:"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:62
+msgid "https://aur.archlinux.org/packages.php?ID=47512"
+msgstr ""
+
+#: ../../topics/releases/0.7.0.rst:64
+msgid "Please enjoy the latest Salt release!"
+msgstr ""

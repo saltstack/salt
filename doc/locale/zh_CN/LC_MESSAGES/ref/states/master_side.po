@@ -1,0 +1,87 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/master_side.rst:6
+msgid "Remote Control States"
+msgstr ""
+
+#: ../../ref/states/master_side.rst:10
+msgid ""
+"Remote Control States is the capability to organize routines on minions from"
+" the master, using state files."
+msgstr ""
+
+#: ../../ref/states/master_side.rst:13
+msgid ""
+"This allows for the use of the Salt state system to execute state runs and "
+"function runs in a way more powerful than the overstate, will full command "
+"of the requisite and ordering systems inside of states."
+msgstr ""
+
+#: ../../ref/states/master_side.rst:19
+msgid ""
+"Remote Control States was added in 0.17.0 with the intent to eventually "
+"deprecate the overstate system in favor of this new, substantially more "
+"powerful system."
+msgstr ""
+
+#: ../../ref/states/master_side.rst:23
+msgid "The Overstate will still be maintained for the forseable future."
+msgstr ""
+
+#: ../../ref/states/master_side.rst:26
+msgid "Creating States Trigger Remote Executions"
+msgstr ""
+
+#: ../../ref/states/master_side.rst:28
+msgid ""
+"The new `salt` state module allows for these new states to be defined in "
+"such a way to call out to the `salt` and/or the `salt-ssh` remote execution "
+"systems, this also supports the addition of states to connect to remote "
+"embedded devices."
+msgstr ""
+
+#: ../../ref/states/master_side.rst:33
+msgid ""
+"To create a state that calls out to minions simple specify the `salt.state` "
+"or `salt.function` states:"
+msgstr ""
+
+#: ../../ref/states/master_side.rst:43
+msgid ""
+"This sls file can now be referenced by the `state.sls` runner the same way "
+"an sls is normally referenced, assuming the default configurtion with "
+"/srv/salt as the root of the state tree and the above file being saved as "
+"/srv/salt/webserver.sls, the state can be run from the master with the salt-"
+"run command:"
+msgstr ""
+
+#: ../../ref/states/master_side.rst:53
+msgid "This will execute the defined state to fire up the webserver routine."
+msgstr ""
+
+#: ../../ref/states/master_side.rst:56
+msgid "Calling Multiple State Runs"
+msgstr ""
+
+#: ../../ref/states/master_side.rst:58
+msgid ""
+"All of the concepts of states exist so building something more complex is "
+"easy:"
+msgstr ""
+
+#: ../../ref/states/master_side.rst:63
+msgid ""
+"As of Salt 0.17.0 states are run in the order in which they are defined, so "
+"the cmd.run defined below will always execute first"
+msgstr ""

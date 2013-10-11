@@ -1,0 +1,61 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.linux_acl.rst:6
+msgid "salt.modules.linux_acl"
+msgstr ""
+
+#: ../../../salt/modules/linux_acl.pydocstring of salt.modules.linux_acl:1
+msgid "Support for Linux File Access Control Lists"
+msgstr ""
+
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.delfacl:1
+msgid "Remove specific FACL from the specified file(s)"
+msgstr ""
+
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.delfacl:3
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.getfacl:3
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.modfacl:3
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.wipefacls:3
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.getfacl:1
+msgid "Return (extremely verbose) map of FACLs on specified file(s)"
+msgstr ""
+
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.modfacl:1
+msgid "Add or modify a FACL for the specified file(s)"
+msgstr ""
+
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.version:1
+msgid "Return facl version from getfacl --version"
+msgstr ""
+
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.version:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/linux_acl.pydocstring of
+#: salt.modules.linux_acl.wipefacls:1
+msgid "Remove all FACLs from the specified file(s)"
+msgstr ""

@@ -1,0 +1,58 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/pillar/all/salt.pillar.git_pillar.rst:6
+msgid "salt.pillar.git_pillar"
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of salt.pillar.git_pillar:1
+msgid ""
+"Clone a remote git repository and use the filesystem as a pillar directory."
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of salt.pillar.git_pillar:3
+msgid "This looks like:"
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of salt.pillar.git_pillar:7
+msgid "ext_pillar:"
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of salt.pillar.git_pillar:6
+msgid "git: master git://gitserver/git-pillar.git"
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of
+#: salt.pillar.git_pillar.envs:1
+msgid "Return a list of refs that can be used as environments"
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of
+#: salt.pillar.git_pillar.ext_pillar:1
+msgid "Execute a command and read the output as YAML"
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of
+#: salt.pillar.git_pillar.init:1
+msgid "Return the git repo object for this session"
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of
+#: salt.pillar.git_pillar.update:1
+msgid "Ensure you are on the right branch, and execute a git pull"
+msgstr ""
+
+#: ../../../salt/pillar/git_pillar.pydocstring of
+#: salt.pillar.git_pillar.update:3
+msgid "return boolean wether it worked"
+msgstr ""

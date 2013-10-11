@@ -1,0 +1,112 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.alternatives.rst:6
+msgid "salt.states.alternatives"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of salt.states.alternatives:2
+msgid "Configuration of the alternatives system"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of salt.states.alternatives:4
+msgid "Control the alternatives system"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.auto:3
+msgid "Instruct alternatives to use the highest priority path for <name>"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.auto:7
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:5
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.remove:6
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.set_:8
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.auto:7
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:4
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.remove:5
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.set_:7
+msgid "is the master name for this link group (e.g. pager)"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:1
+msgid "Install new alternative for defined <name>"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:9
+msgid "link"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:8
+msgid ""
+"is the symlink pointing to /etc/alternatives/<name>. (e.g. /usr/bin/pager)"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:14
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.remove:9
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.set_:11
+msgid "path"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:12
+msgid ""
+"is the location of the new alternative target. NB: This file / directory "
+"must already exist. (e.g. /usr/bin/less)"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:17
+msgid "priority"
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.install:17
+msgid ""
+"is an integer; options with higher numbers have higher priority in automatic"
+" mode."
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.remove:1
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.set_:3
+msgid ""
+"Removes installed alternative for defined <name> and <path> or fallback to "
+"default alternative, if some defined before."
+msgstr ""
+
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.remove:9
+#: ../../../salt/states/alternatives.pydocstring of
+#: salt.states.alternatives.set_:11
+msgid ""
+"is the location of one of the alternative target files. (e.g. /usr/bin/less)"
+msgstr ""

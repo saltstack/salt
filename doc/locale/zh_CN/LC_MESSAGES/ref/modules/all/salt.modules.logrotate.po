@@ -1,0 +1,55 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.logrotate.rst:6
+msgid "salt.modules.logrotate"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.pydocstring of salt.modules.logrotate:1
+msgid "Module for managing logrotate."
+msgstr ""
+
+#: ../../../salt/modules/logrotate.pydocstring of
+#: salt.modules.logrotate.set_:1
+msgid "Set a new value for a specific configuration line"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.pydocstring of
+#: salt.modules.logrotate.set_:3 ../../../salt/modules/logrotate.pydocstring
+#: of salt.modules.logrotate.show_conf:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.pydocstring of
+#: salt.modules.logrotate.set_:9
+msgid ""
+"Can also be used to set a single value inside a multiline configuration "
+"block. For instance, to change rotate in the following block::"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.pydocstring of
+#: salt.modules.logrotate.set_:18
+msgid "Use the following command:"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.pydocstring of
+#: salt.modules.logrotate.set_:24
+msgid ""
+"This module also has the ability to scan files inside an include directory, "
+"and make changes in the appropriate file."
+msgstr ""
+
+#: ../../../salt/modules/logrotate.pydocstring of
+#: salt.modules.logrotate.show_conf:1
+msgid "Show parsed configuration"
+msgstr ""

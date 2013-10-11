@@ -1,0 +1,303 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.tls.rst:6
+msgid "salt.modules.tls"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls:1
+msgid ""
+"A salt module for SSL/TLS. Can create a Certificate Authority (CA) or use "
+"Self-Signed certificates."
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls:5
+msgid "PyOpenSSL Python module"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls:6
+msgid ""
+"Add the following values in /etc/salt/minion for the CA module to function "
+"properly::"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:1
+msgid "Create a Certificate Authority (CA)"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:3
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:4
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:4
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_pkcs12:3
+msgid "ca_name"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:4
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:5
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:5
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_pkcs12:4
+msgid "name of the CA"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:5
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:6
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:5
+msgid "bits"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:6
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:7
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:6
+msgid "number of RSA key bits, default is 2048"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:7
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:9
+msgid "days"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:8
+msgid "number of days the CA will be valid, default is 365"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:9
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:6
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:8
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_pkcs12:5
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:7
+msgid "CN"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:10
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:9
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:8
+msgid "common name in the request, default is \"localhost\""
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:11
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:10
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:9
+msgid "C"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:12
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:11
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:10
+msgid "country, default is \"US\""
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:13
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:12
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:11
+msgid "ST"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:14
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:13
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:12
+msgid "state, default is \"Utah\""
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:15
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:14
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:13
+msgid "L"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:16
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:15
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:14
+msgid "locality, default is \"Centerville\", the city where SaltStack originated"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:17
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:17
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:16
+msgid "O"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:18
+msgid "organization, default is \"Salt Stack\""
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:19
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:19
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:18
+msgid "OU"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:20
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:20
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:19
+msgid "organizational unit, default is None"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:22
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:22
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:21
+msgid "emailAddress"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:22
+msgid "email address for the CA owner, default is 'xyz@pdq.net'"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:24
+msgid ""
+"Writes out a CA certificate based upon defined config values. If the file "
+"already exists, the function just returns assuming the CA certificate "
+"already exists."
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:28
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:27
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:26
+msgid "If the following values were set::"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:33
+msgid "the resulting CA would be written in the following location::"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_ca:37
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:17
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:39
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_pkcs12:10
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:38
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:1
+msgid ""
+"Create a Certificate (CERT) signed by a named Certificate Authority (CA)"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:7
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_pkcs12:6
+msgid "common name matching the certificate signing request"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:9
+msgid "number of days certificate is valid, default is 365 (1 year)"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:11
+msgid ""
+"Writes out a Certificate (CERT) If the file already exists, the function "
+"just returns assuming the CERT already exists."
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_ca_signed_cert:14
+msgid ""
+"The CN *must* match an existing CSR generated by create_csr. If it does not,"
+" this method does nothing."
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:1
+msgid ""
+"Create a Certificate Signing Request (CSR) for a particular Certificate "
+"Authority (CA)"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:17
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:16
+msgid ""
+"organization, default is \"Salt Stack\" NOTE: Must the same as CA "
+"certificate or an error will be raised"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:22
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:21
+msgid "email address for the request, default is 'xyz@pdq.net'"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:24
+msgid ""
+"Writes out a Certificate Signing Request (CSR) If the file already exists, "
+"the function just returns assuming the CSR already exists."
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_csr:33
+msgid ""
+"the resulting CSR, and corresponding key, would be written in the following "
+"location::"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_pkcs12:1
+msgid "Create a PKCS#12 browser certificate for a particular Certificate (CN)"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_pkcs12:8
+msgid "passphrase"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of salt.modules.tls.create_pkcs12:8
+msgid "used to unlock the PKCS#12 certificate when loaded into the browser"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:1
+msgid "Create a Self-Signed Certificate (CERT)"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:3
+msgid "tls_dir"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:4
+msgid "location appended to the ca.cert_base_path, default is 'tls'"
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:23
+msgid ""
+"Writes out a Self-Signed Certificate (CERT). If the file already exists, the"
+" function just returns."
+msgstr ""
+
+#: ../../../salt/modules/tls.pydocstring of
+#: salt.modules.tls.create_self_signed_cert:32
+msgid ""
+"the resulting CERT, and corresponding key, would be written in the following"
+" location::"
+msgstr ""

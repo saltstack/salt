@@ -1,0 +1,88 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.9.6.rst:6
+msgid "Salt 0.9.6 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:8
+msgid ""
+"Salt 0.9.6 is a release targeting a few bugs and changes. This is primarily "
+"targeting an issue found in the names declaration in the state system. But a"
+" few other bugs were also repaired, like missing support for grains in "
+"extmods."
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:12
+msgid ""
+"Due to a conflict in distribution packaging msgpack will no longer be "
+"bundled with Salt, and is required as a dependency."
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:16
+msgid "New Features"
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:19
+msgid "HTTP and ftp support in files.managed"
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:21
+msgid ""
+"Now under the source option in the file.managed state a HTTP or ftp address "
+"can be used instead of a file located on the salt master."
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:25
+msgid "Allow Multiple Returners"
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:27
+msgid ""
+"Now the returner interface can define multiple returners, and will also "
+"return data back to the master, making the process less ambiguous."
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:31
+msgid "Minion Memory Improvements"
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:33
+msgid ""
+"A number of modules have been taken out of the minion if the underlying "
+"systems required by said modules are not present on the minion system. A "
+"number of other modules need to be stripped out in this same way which "
+"should continue to make the minion more efficient."
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:39
+msgid "Minions Can Locally Cache Return Data"
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:41
+msgid ""
+"A new option, cache_jobs, has been added to the minion to allow for all of "
+"the historically run jobs to cache on the minion, allowing for looking up "
+"historic returns. By default cache_jobs is set to False."
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:46
+msgid "Pure Python Template Support For file.managed"
+msgstr ""
+
+#: ../../topics/releases/0.9.6.rst:48
+msgid ""
+"Templates in the file.managed state can now be defined in a Python script. "
+"This script needs to have a run function that returns the string that needs "
+"to be in the named file."
+msgstr ""

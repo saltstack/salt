@@ -1,0 +1,950 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/configuration/master.rst:8
+msgid "Configuring the Salt Master"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:10
+msgid ""
+"The Salt system is amazingly simple and easy to configure, the two "
+"components of the Salt system each have a respective configuration file. The"
+" :command:`salt-master` is configured via the master configuration file, and"
+" the :command:`salt-minion` is configured via the minion configuration file."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:16
+msgid ""
+":ref:`example master configuration file <configuration-examples-master>`"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:18
+msgid ""
+"The configuration file for the salt-master is located at "
+":file:`/etc/salt/master`. The available options are as follows:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:22
+msgid "Primary Master Configuration"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:28
+msgid "``interface``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:30
+msgid "Default: ``0.0.0.0`` (all interfaces)"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:32
+msgid "The local interface to bind to."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:41
+msgid "``publish_port``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:43
+msgid "Default: ``4505``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:45
+msgid "The network port to set up the publication interface"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:55
+msgid "``user``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:57
+msgid "Default: ``root``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:59
+msgid "The user to run the Salt processes"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:68
+msgid "``max_open_files``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:70
+msgid "Default: ``max_open_files``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:72
+msgid ""
+"Each minion connecting to the master uses AT LEAST one file descriptor, the "
+"master subscription connection. If enough minions connect you might start "
+"seeing on the console(and then salt-master crashes)::"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:79
+msgid ""
+"By default this value will be the one of `ulimit -Hn`, i.e., the hard limit "
+"for max open files."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:82
+msgid ""
+"If you wish to set a different value than the default one, uncomment and "
+"configure this setting. Remember that this value CANNOT be higher than the "
+"hard limit. Raising the hard limit depends on your OS and/or distribution, a"
+" good way to find the limit is to search the internet for(for example)::"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:96
+msgid "``worker_threads``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:98
+msgid "Default: ``5``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:100
+msgid ""
+"The number of threads to start for receiving commands and replies from "
+"minions. If minions are stalling on replies because you have many minions, "
+"raise the worker_threads value."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:104
+msgid ""
+"Worker threads should not be put below 3 when using the peer system, but can"
+" drop down to 1 worker otherwise."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:114
+msgid "``ret_port``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:116
+#: ../../ref/configuration/master.rst:721
+msgid "Default: ``4506``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:118
+msgid ""
+"The port used by the return server, this is the server used by Salt to "
+"receive execution returns and command executions."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:128
+msgid "``pidfile``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:130
+msgid "Default: ``/var/run/salt-master.pid``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:132
+msgid "Specify the location of the master pidfile"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:141
+msgid "``root_dir``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:143
+msgid "Default: :file:`/`"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:145
+msgid ""
+"The system root directory to operate from, change this to make Salt run from"
+" an alternative root"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:155
+msgid "``pki_dir``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:157
+msgid "Default: :file:`/etc/salt/pki`"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:159
+msgid "The directory to store the pki authentication keys."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:168
+msgid "``cachedir``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:170
+msgid "Default: :file:`/var/cache/salt`"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:172
+msgid ""
+"The location used to store cache information, particularly the job "
+"information for executed salt commands."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:182
+msgid "``keep_jobs``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:184
+msgid "Default: ``24``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:186
+msgid "Set the number of hours to keep old job information"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:191
+msgid "``job_cache``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:193
+msgid "Default: ``True``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:195
+msgid ""
+"The master maintains a job cache, while this is a great addition it can be a"
+" burden on the master for larger deployments (over 5000 minions). Disabling "
+"the job cache will make previously executed jobs unavailable to the jobs "
+"system and is not generally recommended. Normally it is wise to make sure "
+"the master has access to a faster IO system or a tmpfs is mounted to the "
+"jobs dir"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:205
+msgid "``ext_job_cache``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:207
+msgid "Default: ''"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:209
+msgid ""
+"Used to specify a default returner for all minions, when this option is set "
+"the specified returner needs to be properly configured and the minions will "
+"always default to sending returns to this returner. This will also disable "
+"the local job cache on the master"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:221
+msgid "``minion_data_cache``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:223
+msgid "Default: True"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:225
+msgid ""
+"The minion data cache is a cache of information about the minions stored on "
+"the master, this information is primarily the pillar and grains data. The "
+"data is cached in the Master cachedir under the name of the minion and used "
+"to pre determine what minions are expected to reply from executions."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:237
+msgid "``enforce_mine_cache``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:239
+msgid "Default: False"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:241
+msgid ""
+"By-default when disabling the minion_data_cache mine will stop working since"
+" it is based on cached data, by enabling this option we explicitly enabling "
+"only the cache for the mine system."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:252
+msgid "``sock_dir``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:254
+msgid "Default:: :file:`/tmp/salt-unix`"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:256
+msgid ""
+"Set the location to use for creating Unix sockets for master process "
+"communication"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:261
+msgid "Master Security Settings"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:266
+msgid "``open_mode``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:268
+#: ../../ref/configuration/master.rst:287
+#: ../../ref/configuration/master.rst:384
+#: ../../ref/configuration/master.rst:411
+#: ../../ref/configuration/master.rst:428
+#: ../../ref/configuration/master.rst:692
+msgid "Default: ``False``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:270
+msgid ""
+"Open mode is a dangerous security feature. One problem encountered with pki "
+"authentication systems is that keys can become \"mixed up\" and "
+"authentication begins to fail. Open mode turns off authentication and tells "
+"the master to accept all authentication. This will clean up the pki keys "
+"received from the minions. Open mode should not be turned on for general "
+"use. Open mode should only be used for a short period of time to clean up "
+"pki keys. To turn on open mode set this value to ``True``."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:285
+msgid "``auto_accept``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:289
+msgid ""
+"Enable auto_accept. This setting will automatically accept all incoming "
+"public keys from the minions"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:299
+msgid "``autosign_file``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:301
+msgid "Default ``not defined``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:303
+msgid ""
+"If the autosign_file is specified incoming keys specified in the "
+"autosign_file will be automatically accepted.  Matches will be searched for "
+"first by string comparison, then by globbing, then by full-string regex "
+"matching.  This is insecure!"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:311
+msgid "``client_acl``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:313
+#: ../../ref/configuration/master.rst:330
+#: ../../ref/configuration/master.rst:354
+#: ../../ref/configuration/master.rst:771
+#: ../../ref/configuration/master.rst:801
+#: ../../ref/configuration/master.rst:822
+#: ../../ref/configuration/master.rst:968
+msgid "Default: ``{}``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:315
+msgid ""
+"Enable user accounts on the master to execute specific modules. These "
+"modules can be expressed as regular expressions"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:328
+msgid "``client_acl_blacklist``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:332
+msgid "Blacklist users or modules"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:334
+msgid ""
+"This example would blacklist all non sudo users, including root from running"
+" any commands. It would also blacklist any use of the \"cmd\" module."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:338
+msgid "This is completely disabled by default."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:352
+msgid "``external_auth``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:356
+msgid ""
+"The external auth system uses the Salt auth modules to authenticate and "
+"validate users to access areas of the Salt system."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:369
+msgid "``token_expire``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:371
+msgid "Default: ``43200``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:373
+msgid ""
+"Time (in seconds) for a newly generated token to live. Default: 12 hours"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:382
+msgid "``file_recv``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:386
+msgid ""
+"Allow minions to push files to the master. This is disabled by default, for "
+"security purposes."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:395
+msgid "Master Module Management"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:400
+msgid "``runner_dirs``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:402
+msgid "Default: ``[]``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:404
+msgid "Set additional directories to search for runner modules"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:409
+msgid "``cython_enable``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:413
+msgid ""
+"Set to true to enable cython modules (.pyx files) to be compiled on the fly "
+"on the Salt master"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:421
+msgid "Master State System Settings"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:426
+msgid "``state_verbose``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:430
+msgid ""
+"state_verbose allows for the data returned from the minion to be more "
+"verbose. Normally only states that fail or states that have changes are "
+"returned, but setting state_verbose to ``True`` will return all states that "
+"were checked"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:442
+msgid "``state_output``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:444
+msgid "Default: ``full``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:446
+msgid ""
+"The state_output setting changes if the output is the full multi line output"
+" for each changed state if set to 'full', but if set to 'terse' the output "
+"will be shortened to a single line.  If set to 'mixed', the output will be "
+"terse unless a state failed, in which case that output will be full. If set "
+"to 'changes', the output will be full unless the state didn't change."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:459
+msgid "``state_top``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:461
+msgid "Default: ``top.sls``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:463
+msgid ""
+"The state system uses a \"top\" file to tell the minions what environment to"
+" use and what modules to use. The state_top file is defined relative to the "
+"root of the base environment"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:474
+msgid "``external_nodes``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:476
+msgid "Default: None"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:478
+msgid ""
+"The external_nodes option allows Salt to gather data that would normally be "
+"placed in a top file from and external node controller. The external_nodes "
+"option is the executable that will return the ENC data. Remember that Salt "
+"will look for external nodes AND top files and combine the results if both "
+"are enabled and available!"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:491
+msgid "``renderer``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:493
+msgid "Default: ``yaml_jinja``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:495
+msgid "The renderer to use on the minions to render the state data"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:504
+msgid "``failhard``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:506
+#: ../../ref/configuration/master.rst:520
+msgid "Default:: ``False``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:508
+msgid ""
+"Set the global failhard flag, this informs all states to stop running states"
+" at the moment a single state fails"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:518
+msgid "``test``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:522
+msgid ""
+"Set all state calls to only test if they are going to actually make changes "
+"or just post what changes are going to be made"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:530
+msgid "Master File Server Settings"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:535
+msgid "``fileserver_backend``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:537
+#: ../../ref/configuration/master.rst:564
+#: ../../ref/configuration/master.rst:631
+msgid "Default:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:544
+msgid ""
+"Salt supports a modular fileserver backend system, this system allows the "
+"salt master to link directly to third party systems to gather and manage the"
+" files available to minions. Multiple backends can be configured and will be"
+" searched for the requested file in the order in which they are defined "
+"here. The default setting only enables the standard backend ``roots``, which"
+" is configured using the :conf_master:`file_roots` option."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:551
+msgid "Example:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:562
+msgid "``file_roots``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:571
+msgid ""
+"Salt runs a lightweight file server written in ZeroMQ to deliver files to "
+"minions. This file server is built into the master daemon and does not "
+"require a dedicated port."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:575
+msgid ""
+"The file server works on environments passed to the master. Each environment"
+" can have multiple root directories. The subdirectories in the multiple file"
+" roots cannot match, otherwise the downloaded files will not be able to be "
+"reliably ensured. A base environment is required to house the top file. "
+"Example:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:596
+msgid "``hash_type``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:598
+msgid "Default: ``md5``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:600
+msgid ""
+"The hash_type is the hash to use when discovering the hash of a file on the "
+"master server. The default is md5, but sha1, sha224, sha256, sha384 and "
+"sha512 are also supported."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:611
+msgid "``file_buffer_size``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:613
+msgid "Default: ``1048576``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:615
+msgid "The buffer size in the file server in bytes"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:624
+msgid "Pillar Configuration"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:629
+msgid "``pillar_roots``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:638
+msgid ""
+"Set the environments and directories used to hold pillar sls data. This "
+"configuration is the same as :conf_master:`file_roots`:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:654
+msgid "``ext_pillar``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:656
+msgid ""
+"The ext_pillar option allows for any number of external pillar interfaces to"
+" be called when populating pillar data. The configuration is based on "
+"ext_pillar functions. The available ext_pillar functions can be found "
+"herein:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:660
+msgid ":blob:`salt/pillar`"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:662
+msgid "By default, the ext_pillar interface is not configured to run."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:664
+msgid "Default:: ``None``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:674
+msgid "There are additional details at :ref:`salt-pillars`"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:677
+msgid "Syndic Server Settings"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:679
+msgid ""
+"A Salt syndic is a Salt master used to pass commands from a higher Salt "
+"master to minions below the syndic. Using the syndic is simple. If this is a"
+" master that will have syndic servers(s) below it, set the \"order_masters\""
+" setting to True. If this is a master that will be running a syndic daemon "
+"for passthrough the \"syndic_master\" setting needs to be set to the "
+"location of the master server"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:685
+msgid ""
+"Do not not forget that in other word it means that it shares with the local "
+"minion it's ID and PKI_DIR."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:690
+msgid "``order_masters``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:694
+msgid ""
+"Extra data needs to be sent with publications if the master is controlling a"
+" lower level master via a syndic minion. If this is the case the "
+"order_masters value must be set to True"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:705
+msgid "``syndic_master``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:707
+msgid "Default: ``None``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:709
+msgid ""
+"If this master will be running a salt-syndic to connect to a higher level "
+"master, specify the higher level master with this configuration value"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:719
+msgid "``syndic_master_port``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:723
+msgid ""
+"If this master will be running a salt-syndic to connect to a higher level "
+"master, specify the higher level master port with this configuration value"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:733
+msgid "``syndic_log_file``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:735
+msgid "Default: ``syndic.log``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:737
+msgid ""
+"If this master will be running a salt-syndic to connect to a higher level "
+"master, specify the log_file of the syndic daemon."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:747
+msgid "``syndic_pidfile``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:749
+msgid "Default: ``salt-syndic.pid``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:751
+msgid ""
+"If this master will be running a salt-syndic to connect to a higher level "
+"master, specify the pidfile of the syndic daemon."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:759
+msgid "Peer Publish Settings"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:761
+msgid ""
+"Salt minions can send commands to other minions, but only if the minion is "
+"allowed to. By default \"Peer Publication\" is disabled, and when enabled it"
+" is enabled for specific minions and specific commands. This allows secure "
+"compartmentalization of commands based on individual minions."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:769
+msgid "``peer``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:773
+msgid ""
+"The configuration uses regular expressions to match minions and then a list "
+"of regular expressions to match functions. The following will allow the "
+"minion authenticated as foo.example.com to execute functions from the test "
+"and pkg modules"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:785
+msgid "This will allow all minions to execute all commands:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:793
+msgid ""
+"This is not recommended, since it would allow anyone who gets root on any "
+"single minion to instantly have root on all of the minions!"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:799
+msgid "``peer_run``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:803
+msgid ""
+"The peer_run option is used to open up runners on the master to access from "
+"the minions. The peer_run configuration matches the format of the peer "
+"configuration."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:807
+msgid ""
+"The following example would allow foo.example.com to execute the manage.up "
+"runner:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:818
+msgid "Node Groups"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:824
+msgid ""
+"Node groups allow for logical groupings of minion nodes. A group consists of"
+" a group name and a compound target."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:838
+msgid "Master Logging Settings"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:843
+msgid "``log_file``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:845
+msgid "Default: ``/var/log/salt/master``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:847
+msgid ""
+"The master log can be sent to a regular file, local path name, or network "
+"location. See also :conf-log:`log_file`."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:850
+msgid "Examples:"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:869
+msgid "``log_level``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:871
+#: ../../ref/configuration/master.rst:887
+msgid "Default: ``warning``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:873
+msgid ""
+"The level of messages to send to the console. See also :conf-"
+"log:`log_level`."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:885
+msgid "``log_level_logfile``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:889
+msgid ""
+"The level of messages to send to the log file. See also :conf-"
+"log:`log_level_logfile`."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:901
+msgid "``log_datefmt``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:903
+msgid "Default: ``%H:%M:%S``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:905
+msgid ""
+"The date and time format used in console log messages. See also :conf-"
+"log:`log_datefmt`."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:918
+msgid "``log_datefmt_logfile``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:920
+msgid "Default: ``%Y-%m-%d %H:%M:%S``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:922
+msgid ""
+"The date and time format used in log file messages. See also :conf-"
+"log:`log_datefmt_logfile`."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:934
+msgid "``log_fmt_console``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:936
+msgid "Default: ``[%(levelname)-8s] %(message)s``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:938
+msgid ""
+"The format of the console logging messages. See also :conf-"
+"log:`log_fmt_console`."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:950
+msgid "``log_fmt_logfile``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:952
+msgid ""
+"Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] "
+"%(message)s``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:954
+msgid ""
+"The format of the log file logging messages. See also :conf-"
+"log:`log_fmt_logfile`."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:966
+msgid "``log_granular_levels``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:970
+msgid ""
+"This can be used to control logging levels more specifically. See also "
+":conf-log:`log_granular_levels`."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:976
+msgid "Include Configuration"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:981
+msgid "``default_include``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:983
+msgid "Default: ``master.d/*.conf``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:985
+msgid ""
+"The master can include configuration from other files. Per default the "
+"master will automatically include all config files from ``master.d/*.conf`` "
+"where ``master.d`` is relative to the directory of the master configuration "
+"file."
+msgstr ""
+
+#: ../../ref/configuration/master.rst:994
+msgid "``include``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:996
+msgid "Default: ``not defined``"
+msgstr ""
+
+#: ../../ref/configuration/master.rst:998
+msgid ""
+"The master can include configuration from other files. To enable this, pass "
+"a list of paths to this option. The paths can be either relative or "
+"absolute; if relative, they are considered to be relative to the directory "
+"the main minion configuration file lives in. Paths can make use of shell-"
+"style globbing. If no files are matched by a path passed to this option then"
+" the master will log a warning message."
+msgstr ""

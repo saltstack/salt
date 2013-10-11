@@ -1,0 +1,353 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/clients/index.rst:9
+msgid "Python client API"
+msgstr ""
+
+#: ../../ref/clients/index.rst:11
+msgid ""
+"Salt is written to be completely API centric, Salt minions and master can be"
+" built directly into third party applications as a communication layer. The "
+"Salt client API is very straightforward."
+msgstr ""
+
+#: ../../ref/clients/index.rst:15
+msgid ""
+"A number of client command methods are available depending on the exact "
+"behavior desired."
+msgstr ""
+
+#: ../../ref/clients/index.rst:19
+msgid "LocalClient"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient:1
+msgid ""
+"``LocalClient`` is the same interface used by the :command:`salt` command-"
+"line tool on the Salt Master. ``LocalClient`` is used to send a command to "
+"Salt minions to execute :ref:`execution modules <all-salt.modules>` and "
+"return the results to the Salt Master."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient:6
+msgid ""
+"Importing and using ``LocalClient`` must be done on the same machine as the "
+"Salt Master and it must be done using the same user that the Salt Master is "
+"running as (unless :conf_master:`external_auth` is configured and "
+"authentication credentials are included in the execution."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:1
+msgid ""
+"The cmd method will execute and wait for the timeout period for all minions "
+"to reply, then it will return all minion data at once."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:4
+#: ../../../salt/client/__init__.pydocstring of salt.client.Caller:8
+msgid "Usage:"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:12
+msgid "With authentication:"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:29
+msgid "With extra keyword arguments for the command function to be run:"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:35
+msgid "Compound command usage:"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:41
+msgid ""
+"Which minions to target for the execution. Default is shell glob. Modified "
+"by the ``expr_form`` option."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:45
+msgid ""
+"The module and function to call on the specified minions of the form "
+"``module.function``. For example ``test.ping`` or ``grains.items``.  "
+"Compound commands     Multiple functions may be called in a single publish "
+"by     passing a list of commands. This can dramatically lower     overhead "
+"and speed up the application communicating with Salt.      This requires "
+"that the ``arg`` param is a list of lists. The     ``fun`` list and the "
+"``arg`` list must correlate by index     meaning a function that does not "
+"take arguments must still have     a corresponding empty list at the "
+"expected index."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:45
+msgid ""
+"The module and function to call on the specified minions of the form "
+"``module.function``. For example ``test.ping`` or ``grains.items``."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:56
+msgid "Compound commands"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:50
+msgid ""
+"Multiple functions may be called in a single publish by passing a list of "
+"commands. This can dramatically lower overhead and speed up the application "
+"communicating with Salt."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:54
+msgid ""
+"This requires that the ``arg`` param is a list of lists. The ``fun`` list "
+"and the ``arg`` list must correlate by index meaning a function that does "
+"not take arguments must still have a corresponding empty list at the "
+"expected index."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:60
+msgid ""
+"A list of arguments to pass to the remote function. If the function takes no"
+" arguments ``arg`` may be omitted except when executing a compound command."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:65
+msgid ""
+"Seconds to wait after the last minion returns but before all minions return."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:68
+msgid ""
+"The type of ``tgt``. Allowed values:  * ``glob`` - Bash glob completion - "
+"Default * ``pcre`` - Perl style regular expression * ``list`` - Python list "
+"of hosts * ``grain`` - Match based on a grain comparison * ``grain_pcre`` - "
+"Grain comparison with a regex * ``pillar`` - Pillar data comparison * "
+"``nodegroup`` - Match on nodegroup * ``range`` - Use a Range server for "
+"matching * ``compound`` - Pass a compound match string"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:68
+msgid "The type of ``tgt``. Allowed values:"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:70
+msgid "``glob`` - Bash glob completion - Default"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:71
+msgid "``pcre`` - Perl style regular expression"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:72
+msgid "``list`` - Python list of hosts"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:73
+msgid "``grain`` - Match based on a grain comparison"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:74
+msgid "``grain_pcre`` - Grain comparison with a regex"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:75
+msgid "``pillar`` - Pillar data comparison"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:76
+msgid "``nodegroup`` - Match on nodegroup"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:77
+msgid "``range`` - Use a Range server for matching"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:78
+msgid "``compound`` - Pass a compound match string"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:80
+msgid ""
+"The returner to use. The value passed can be single returner, or a comma "
+"delimited list of returners to call in order on the minions"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:84
+msgid "A dictionary with keyword arguments for the function."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:86
+msgid ""
+"Optional keyword arguments.  Authentication credentials may be passed when "
+"using :conf_master:`external_auth`.  * ``eauth`` - the external_auth backend"
+" * ``username`` and ``password`` * ``token``"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:86
+msgid "Optional keyword arguments."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:88
+msgid ""
+"Authentication credentials may be passed when using "
+":conf_master:`external_auth`."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:91
+msgid "``eauth`` - the external_auth backend"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:92
+msgid "``username`` and ``password``"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:93
+msgid "``token``"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.LocalClient.cmd:95
+msgid ""
+"A dictionary with the result of the execution, keyed by minion ID. A "
+"compound command will return a sub-dictionary keyed by function name."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_async:1
+msgid "Execute a command and get back the jid, don't wait for anything"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_async:3
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_cli:4 ../../../salt/client/__init__.pydocstring
+#: of salt.client.LocalClient.cmd_iter:3
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_iter_no_block:3
+msgid ""
+"The function signature is the same as :py:meth:`cmd` with the following "
+"exceptions."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_async:6
+msgid "A job ID"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_cli:1
+msgid ""
+"Used by the :command:`salt` CLI. This method returns minion returns as the "
+"come back and attempts to block until all minions return."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_cli:7
+msgid "Print extra information about the running command"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_cli:8
+msgid "A generator"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_iter:1
+msgid "Yields the individual minion returns as they come in"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_iter_no_block:1
+msgid "Blocks while waiting for individual minions to return."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of
+#: salt.client.LocalClient.cmd_iter_no_block:6
+msgid ""
+"None until the next minion returns. This allows for actions to be injected "
+"in between minion returns."
+msgstr ""
+
+#: ../../ref/clients/index.rst:25
+msgid "Salt Caller"
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.Caller:1
+msgid ""
+"``Caller`` is the same interface used by the :command:`salt-call` command-"
+"line tool on the Salt Minion."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.Caller:4
+msgid ""
+"Importing and using ``Caller`` must be done on the same machine as a Salt "
+"Minion and it must be done using the same user that the Salt Minion is "
+"running as."
+msgstr ""
+
+#: ../../../salt/client/__init__.pydocstring of salt.client.Caller.function:1
+msgid "Call a single salt function"
+msgstr ""
+
+#: ../../ref/clients/index.rst:31
+msgid "RunnerClient"
+msgstr ""
+
+#: ../../../salt/runner.pydocstring of salt.runner.RunnerClient:1
+msgid ""
+"``RunnerClient`` is the same interface used by the :command:`salt-run` "
+"command-line tool on the Salt Master. It executes :ref:`runner modules <all-"
+"salt.runners>` which run on the Salt Master."
+msgstr ""
+
+#: ../../../salt/runner.pydocstring of salt.runner.RunnerClient:5
+msgid ""
+"Importing and using ``RunnerClient`` must be done on the same machine as the"
+" Salt Master and it must be done using the same user that the Salt Master is"
+" running as."
+msgstr ""
+
+#: ../../../salt/runner.pydocstring of salt.runner.RunnerClient.cmd:1
+msgid "Execute a runner with the given arguments"
+msgstr ""
+
+#: ../../../salt/runner.pydocstring of salt.runner.RunnerClient.low:1
+msgid "Pass in the runner function name and the low data structure"
+msgstr ""
+
+#: ../../ref/clients/index.rst:37
+msgid "WheelClient"
+msgstr ""
+
+#: ../../../salt/wheel/__init__.pydocstring of salt.wheel.Wheel:1
+msgid ""
+"``WheelClient`` is an interface to Salt's :ref:`wheel modules <all-"
+"salt.wheel>`. Wheel modules interact with various parts of the Salt Master."
+msgstr ""
+
+#: ../../../salt/wheel/__init__.pydocstring of salt.wheel.Wheel:5
+msgid ""
+"Importing and using ``WheelClient`` must be done on the same machine as the "
+"Salt Master and it must be done using the same user that the Salt Master is "
+"running as."
+msgstr ""
+
+#: ../../../salt/wheel/__init__.pydocstring of salt.wheel.Wheel.call_func:1
+msgid "Execute a master control function"
+msgstr ""
+
+#: ../../../salt/wheel/__init__.pydocstring of salt.wheel.Wheel.master_call:1
+msgid ""
+"Send a function call to a wheel module through the master network interface "
+"Expects that one of the kwargs is key 'fun' whose value is the namestring of"
+" the function to call"
+msgstr ""

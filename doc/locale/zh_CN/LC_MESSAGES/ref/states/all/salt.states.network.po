@@ -1,0 +1,97 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.network.rst:6
+msgid "salt.states.network"
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network:2
+msgid "Configuration of network interfaces."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network:4
+msgid ""
+"The network module is used to create and manage network settings, interfaces"
+" can be set as either managed or ignored. By default all interfaces are "
+"ignored unless specified."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network:8
+msgid ""
+"Please note that only Redhat-style networking is currently supported. This "
+"module will therefore only work on RH/CentOS/Fedora."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:1
+msgid "Ensure that the named interface is configured properly."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:4
+#: ../../../salt/states/network.pydocstring of salt.states.network.routes:4
+#: ../../../salt/states/network.pydocstring of salt.states.network.system:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:4
+msgid "The name of the interface to manage"
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:7
+msgid "type"
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:7
+msgid "Type of interface and configuration."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:10
+msgid "enabled"
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:10
+msgid "Designates the state of this interface."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:12
+#: ../../../salt/states/network.pydocstring of salt.states.network.routes:6
+#: ../../../salt/states/network.pydocstring of salt.states.network.system:6
+msgid "kwargs"
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.managed:13
+msgid "The IP parameters for this interface."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.routes:1
+msgid "Manage network interface static routes."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.routes:4
+msgid "Interface name to apply the route to."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.routes:7
+msgid "Named routes"
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.system:1
+msgid "Ensure that global network settings are configured properly."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.system:4
+msgid "Custom name to represent this configuration change."
+msgstr ""
+
+#: ../../../salt/states/network.pydocstring of salt.states.network.system:7
+msgid "The global parameters for the system."
+msgstr ""

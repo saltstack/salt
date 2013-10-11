@@ -1,0 +1,109 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/pillar/all/index.rst:8
+msgid "Full list of builtin pillar modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`cmd_json <salt.pillar.cmd_json>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Execute a command and read the output as JSON. The JSON data is then "
+"directly"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`cmd_yaml <salt.pillar.cmd_yaml>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Execute a command and read the output as YAML. The YAML data is then "
+"directly"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`cobbler <salt.pillar.cobbler>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Cobbler Pillar"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`django_orm <salt.pillar.django_orm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Generate pillar data from Django models through the Django ORM"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`git_pillar <salt.pillar.git_pillar>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Clone a remote git repository and use the filesystem as a pillar directory."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`hiera <salt.pillar.hiera>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Take in a hiera configuration file location and execute it."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`libvirt <salt.pillar.libvirt>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Load up the libvirt keys into pillar for a given minion if said keys have"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mongo <salt.pillar.mongo>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Read pillar data from a mongodb collection."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pillar_ldap <salt.pillar.pillar_ldap>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"This pillar module parses a config file (specified in the salt master "
+"config),"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`puppet <salt.pillar.puppet>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"Execute an unmodified puppet_node_classifier and read the output as YAML."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`reclass_adapter <salt.pillar.reclass_adapter>`\\"
+msgstr ""

@@ -1,0 +1,142 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.postgres_database.rst:6
+msgid "salt.states.postgres_database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database:2
+msgid "Management of PostgreSQL databases."
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database:4
+msgid ""
+"The postgres_database module is used to create and manage Postgres "
+"databases. Databases can be set as either absent or present"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.absent:1
+msgid "Ensure that the named database is absent"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.absent:4
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:5
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.absent:4
+msgid "The name of the database to remove"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.absent:9
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:28
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.absent:7
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.absent:12
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:26
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:31
+msgid "System user all operations should be performed on behalf of"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.absent:13
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:32
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:1
+msgid ""
+"Ensure that the named database is present with the specified properties. For"
+" more information about all of these options see man createdb(1)"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:5
+msgid "The name of the database to manage"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:8
+msgid "tablespace"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:8
+msgid "Default tablespace for the database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:11
+msgid "encoding"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:11
+msgid "The character encoding scheme to be used in this database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:14
+msgid "lc_collate"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:14
+msgid "The LC_COLLATE setting to be used in this database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:17
+msgid "lc_ctype"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:17
+msgid "The LC_CTYPE setting to be used in this database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:20
+msgid "owner"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:20
+msgid "The username of the database owner"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:23
+msgid "template"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.pydocstring of
+#: salt.states.postgres_database.present:23
+msgid "The template database from which to build this database"
+msgstr ""

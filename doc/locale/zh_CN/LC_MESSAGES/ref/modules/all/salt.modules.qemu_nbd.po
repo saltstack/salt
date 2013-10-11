@@ -1,0 +1,56 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.qemu_nbd.rst:6
+msgid "salt.modules.qemu_nbd"
+msgstr ""
+
+#: ../../../salt/modules/qemu_nbd.pydocstring of salt.modules.qemu_nbd:2
+msgid "Qemu Command Wrapper"
+msgstr ""
+
+#: ../../../salt/modules/qemu_nbd.pydocstring of salt.modules.qemu_nbd:4
+msgid ""
+"The qemu system comes with powerful tools, such as qemu-img and qemu-nbd "
+"which are used here to build up kvm images."
+msgstr ""
+
+#: ../../../salt/modules/qemu_nbd.pydocstring of salt.modules.qemu_nbd.clear:1
+msgid ""
+"Pass in the mnt dict returned from nbd_mount to unmount and disconnect the "
+"image from nbd. If all of the partitions are unmounted return an empty dict,"
+" otherwise return a dict containing the still mounted partitions"
+msgstr ""
+
+#: ../../../salt/modules/qemu_nbd.pydocstring of salt.modules.qemu_nbd.clear:6
+#: ../../../salt/modules/qemu_nbd.pydocstring of
+#: salt.modules.qemu_nbd.connect:3 ../../../salt/modules/qemu_nbd.pydocstring
+#: of salt.modules.qemu_nbd.init:3 ../../../salt/modules/qemu_nbd.pydocstring
+#: of salt.modules.qemu_nbd.mount:4
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/qemu_nbd.pydocstring of
+#: salt.modules.qemu_nbd.connect:1
+msgid "Activate nbd for an image file."
+msgstr ""
+
+#: ../../../salt/modules/qemu_nbd.pydocstring of salt.modules.qemu_nbd.init:1
+msgid "Mount the named image via qemu-nbd and return the mounted roots"
+msgstr ""
+
+#: ../../../salt/modules/qemu_nbd.pydocstring of salt.modules.qemu_nbd.mount:1
+msgid ""
+"Pass in the nbd connection device location, mount all partitions and return "
+"a dict of mount points"
+msgstr ""

@@ -1,0 +1,64 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.img.rst:6
+msgid "salt.modules.img"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img:1
+msgid "Virtual machine image management tools"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.bootstrap:1
+msgid "HIGHLY EXPERIMENTAL Bootstrap a virtual machine image"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.bootstrap:5
+msgid "location:"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.bootstrap:5
+msgid "The location to create the image"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.bootstrap:8
+msgid "size:"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.bootstrap:8
+msgid "The size of the image to create in megabytes"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.bootstrap:11
+msgid "fmt:"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.bootstrap:11
+msgid "The image format, raw or qcow2"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.bootstrap:13
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.mnt_image:3
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.mount_image:3
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.umount_image:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.mnt_image:1
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.mount_image:1
+msgid "Mount the named image and return the mount point"
+msgstr ""
+
+#: ../../../salt/modules/img.pydocstring of salt.modules.img.umount_image:1
+msgid "Unmount an image mountpoint"
+msgstr ""

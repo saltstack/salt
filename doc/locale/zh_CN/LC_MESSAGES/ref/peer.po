@@ -1,0 +1,126 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/peer.rst:6
+msgid "Peer Communication"
+msgstr ""
+
+#: ../../ref/peer.rst:8
+msgid ""
+"Salt 0.9.0 introduced the capability for Salt minions to publish commands. "
+"The intent of this feature is not for Salt minions to act as independent "
+"brokers one with another, but to allow Salt minions to pass commands to each"
+" other."
+msgstr ""
+
+#: ../../ref/peer.rst:12
+msgid ""
+"In Salt 0.10.0 the ability to execute runners from the master was added. "
+"This allows for the master to return collective data from runners back to "
+"the minions via the peer interface."
+msgstr ""
+
+#: ../../ref/peer.rst:16
+msgid ""
+"The peer interface is configured through two options in the master "
+"configuration file. For minions to send commands from the master the "
+"``peer`` configuration is used. To allow for minions to execute runners from"
+" the master the ``peer_run`` configuration is used."
+msgstr ""
+
+#: ../../ref/peer.rst:21
+msgid ""
+"Since this presents a viable security risk by allowing minions access to the"
+" master publisher the capability is turned off by default. The minions can "
+"be allowed access to the master publisher on a per minion basis based on "
+"regular expressions. Minions with specific ids can be allowed access to "
+"certain Salt modules and functions."
+msgstr ""
+
+#: ../../ref/peer.rst:28
+msgid "Peer Configuration"
+msgstr ""
+
+#: ../../ref/peer.rst:30
+msgid ""
+"The configuration is done under the ``peer`` setting in the Salt master "
+"configuration file, here are a number of configuration possibilities."
+msgstr ""
+
+#: ../../ref/peer.rst:33
+msgid ""
+"The simplest approach is to enable all communication for all minions, this "
+"is only recommended for very secure environments."
+msgstr ""
+
+#: ../../ref/peer.rst:42
+msgid ""
+"This configuration will allow minions with IDs ending in example.com access "
+"to the test, ps, and pkg module functions."
+msgstr ""
+
+#: ../../ref/peer.rst:54
+msgid ""
+"The configuration logic is simple, a regular expression is passed for "
+"matching minion ids, and then a list of expressions matching minion "
+"functions is associated with the named minion. For instance, this "
+"configuration will also allow minions ending with foo.org access to the "
+"publisher."
+msgstr ""
+
+#: ../../ref/peer.rst:72
+msgid "Peer Runner Communication"
+msgstr ""
+
+#: ../../ref/peer.rst:74
+msgid ""
+"Configuration to allow minions to execute runners from the master is done "
+"via the ``peer_run`` option on the master. The ``peer_run`` configuration "
+"follows the same logic as the ``peer`` option. The only difference is that "
+"access is granted to runner modules."
+msgstr ""
+
+#: ../../ref/peer.rst:79
+msgid "To open up access to all minions to all runners:"
+msgstr ""
+
+#: ../../ref/peer.rst:87
+msgid ""
+"This configuration will allow minions with IDs ending in example.com access "
+"to the manage and jobs runner functions."
+msgstr ""
+
+#: ../../ref/peer.rst:98
+msgid "Using Peer Communication"
+msgstr ""
+
+#: ../../ref/peer.rst:100
+msgid ""
+"The publish module was created to manage peer communication. The publish "
+"module comes with a number of functions to execute peer communication in "
+"different ways. Currently there are three functions in the publish module. "
+"These examples will show how to test the peer system via the salt-call "
+"command."
+msgstr ""
+
+#: ../../ref/peer.rst:105
+msgid "To execute test.ping on all minions:"
+msgstr ""
+
+#: ../../ref/peer.rst:111
+msgid "To execute the manage.up runner:"
+msgstr ""
+
+#: ../../ref/peer.rst:117
+msgid "To match minions using other matchers, use ``expr_form``:"
+msgstr ""

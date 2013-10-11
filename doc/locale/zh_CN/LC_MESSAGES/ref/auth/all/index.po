@@ -1,0 +1,48 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/auth/all/index.rst:8
+msgid "Full list of builtin auth modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`keystone <salt.auth.keystone>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Provide authentication using OpenStack Keystone"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`ldap <salt.auth.ldap>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Provide authentication using simple LDAP binds"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pam <salt.auth.pam>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Authenticate against PAM"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`stormpath_mod <salt.auth.stormpath_mod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Salt Stormpath Authentication"
+msgstr ""

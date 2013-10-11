@@ -1,0 +1,327 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.17.0.rst:6
+msgid "Salt 0.17.0 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:8
+msgid ""
+"The 0.17.0 release is a very exciting release of Salt, this brings to Salt "
+"some very powerful new features and advances. The advances range from the "
+"state system to the test suite, covering new transport capabilities and "
+"making states easier and more powerful, to extending Salt Virt and much "
+"more!"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:13
+msgid ""
+"The 0.17.0 release will also be the last release of Salt to follow the old "
+"0.XX.X numbering system, the next release of Salt will change the numbering "
+"to be date based following this format:"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:17
+msgid "<Year>.<Month>.<Minor>"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:19
+msgid ""
+"So if the release happens in November of 2013 the number will be 13.11.0, "
+"the first bugfix release will be 13.11.1 and so forth."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:24
+msgid "Major Features"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:27
+msgid "Halite"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:29
+msgid ""
+"The new Halite web GUI is now available, a great deal of work has been put "
+"into Halite to make it fully event driven and amazingly fast. The Halite UI "
+"can be started from within the Salt Master, or standalone, and does not "
+"require an external database to run, it is very lightweight!"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:34
+msgid ""
+"This initial release of Halite is primarily the framework for the UI and the"
+" communication systems making it easy to extend and build the UI up. It "
+"presently supports watching the event bus and firing commands over Salt."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:38
+msgid "Halite is, like the rest of Salt, Open Source!"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:40
+msgid "Much more will be coming in the future of Halite!"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:43
+msgid "Salt SSH"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:45
+msgid ""
+"The new ``salt-ssh`` command has been added to Salt. This system allows for "
+"remote execution and states to be run over ssh. The benefit here being, that"
+" salt can run relying only on the ssh agent, rather than requiring a minion "
+"to be deployed."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:50
+msgid ""
+"The ``salt-ssh`` system runs states in a compatible way as Salt and states "
+"created and run with salt-ssh can be moved over to a standard salt "
+"deployment without modification."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:54
+msgid ""
+"Since this is the initial release of salt-ssh, there is plenty of room for "
+"improvement, but it is fully operational, not just a bootstrap tool."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:58
+msgid "Rosters"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:60
+msgid ""
+"Salt is designed to have the minions be aware of the master and the master "
+"does not need to be aware of the location of the minions. The new salt "
+"roster system was created and designed to facilitate listing the targets for"
+" salt-ssh."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:64
+msgid ""
+"The roster system, like most of Salt, is a plugin system, allowing for the "
+"list of systems to target to be derived from any pluggable backend. The "
+"rosters shipping with 0.17.0 are flat and scan. Flat is a file which is read"
+" in via the salt render system and the scan roster does simple network "
+"scanning to discover ssh servers."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:71
+msgid "State Auto Order"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:73
+msgid ""
+"This is a major change in how states are evaluated in Salt. State Auto Order"
+" is a new feature that makes states get evaluated and executed in the order "
+"in which they are defined in the sls file. This feature makes it very easy "
+"to see the finite order in which things will be executed, making Salt now, "
+"fully imperative AND fully declarative."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:79
+msgid ""
+"The requisite system still takes precedence over the order in which states "
+"are defined, so no existing states should break with this change. But this "
+"new feature can be turned off by setting ``state_auto_order: False`` in the "
+"master config, thus reverting to the old lexicographical order."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:85
+msgid "state.sls Runner"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:87
+msgid ""
+"The ``state.sls`` runner has been created to allow for a more powerful "
+"system for orchestrating state runs and function calls across the salt "
+"minions. This new system uses the state system for organizing executions."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:91
+msgid ""
+"This allows for states to be defined that are executed on the master to call"
+" states on minions via ``salt-run state.sls``."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:95
+msgid "Salt Thin"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:97
+msgid ""
+"Salt Thin is an exciting new component of Salt, this is the ability to "
+"execute Salt routines without any transport mechanisms installed, it is a "
+"pure python subset of Salt."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:101
+msgid ""
+"Salt Thin does not have any networking capability, but can be dropped into "
+"any system with Python installed and then ``salt-call`` can be called "
+"directly. The Salt Thin system, is used by the ``salt-ssh`` command, but can"
+" still be used to just drop salt somewhere for easy use."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:107
+msgid "Event Namespacing"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:109
+msgid ""
+"Events have been updated to be much more flexible. The tags in events have "
+"all been namespaced allowing easier tracking of event names."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:113
+msgid "Mercurial Fileserver Backend"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:115
+msgid ""
+"The popular git fileserver backend has been joined by the mercurial "
+"fileserver backend, allowing the state tree to be managed entirely via "
+"mercurial."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:119
+msgid "External Logging Handlers"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:121
+msgid ""
+"The external logging handler system allows for Salt to directly hook into "
+"any external logging system. Currently supported are sentry and logstash."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:125
+msgid "Jenkins Testing"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:127
+msgid ""
+"The testing systems in Salt have been greatly enhanced, tests for salt are "
+"now executed, via jenkins.saltstack.com, across many supported platforms. "
+"Jenkins calls out to salt-cloud to create virtual machines on Rackspace, "
+"then the minion on the virtual machine checks into the master running on "
+"Jenkins where a state run is executed that sets up the minion to run tests "
+"and executes the test suite."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:134
+msgid ""
+"This now automates the sequence of running platform tests and allows for "
+"continuous destructive tests to be run."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:138
+msgid "Salt Testing Project"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:140
+msgid ""
+"The testing libraries for salt have been moved out of the main salt code "
+"base and into a standalone codebase. This has been done to ease the use of "
+"the testing systems being used in salt based projects other than Salt "
+"itself."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:145
+msgid "StormPath External Authentication"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:147
+msgid ""
+"The external auth system now supports the fantastic Stormpath cloud based "
+"authentication system."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:151
+msgid "LXC Support"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:153
+msgid ""
+"Extensive additions have been added to Salt for LXC support. This included "
+"the backend libs for managing LXC containers. Addition into the salt-virt "
+"system is still in the works."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:158
+msgid "Mac OS X User/Group Support"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:160
+msgid ""
+"Salt is now able to manage users and groups on Minions running Mac OS X. "
+"However, at this time user passwords cannot be managed."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:164
+msgid "Django ORM External Pillar"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:166
+msgid "Pillar data can now be derived from Django managed databases."
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:169
+msgid "Fixes from RC to release"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:171
+msgid "Multiple documentation fixes"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:172
+msgid ""
+"Add multiple source files + templating for :mod:`file.append "
+"<salt.states.file.append>` (:issue:`6905`)"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:174
+msgid "Support sysctl configuration files in systemd>=207 (:issue:`7351`)"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:175
+msgid ""
+"Add :mod:`file.search <salt.modules.file.search>` and :mod:`file.replace "
+"<salt.modules.file.replace>`"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:177
+msgid "Fix cross-calling execution functions in provider overrides"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:178
+msgid "Fix locale override for postgres (:issue:`4543`)"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:179
+msgid "Fix Raspbian identification for service/pkg support (:issue:`7371`)"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:180
+msgid ""
+"Fix :mod:`cp.push <salt.modules.cp.push>` file corruption (:issue:`6495`)"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:181
+msgid "Fix ALT Linux password hash specification (:issue:`3474`)"
+msgstr ""
+
+#: ../../topics/releases/0.17.0.rst:182
+msgid "Multiple salt-ssh-related fixes and improvements"
+msgstr ""

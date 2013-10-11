@@ -1,0 +1,50 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.iptables.rst:6
+msgid "salt.states.iptables"
+msgstr ""
+
+#: ../../../salt/states/iptables.pydocstring of salt.states.iptables:2
+msgid "Management of iptables"
+msgstr ""
+
+#: ../../../salt/states/iptables.pydocstring of salt.states.iptables:4
+msgid ""
+"This is an iptables-specific module designed to manage Linux firewalls. It "
+"is expected that this state module, and other system-specific firewall "
+"states, may at some point be deprecated in favor of a more generic "
+"`firewall` state."
+msgstr ""
+
+#: ../../../salt/states/iptables.pydocstring of salt.states.iptables.append:1
+msgid "Append a rule to a chain"
+msgstr ""
+
+#: ../../../salt/states/iptables.pydocstring of salt.states.iptables.append:5
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/iptables.pydocstring of salt.states.iptables.append:4
+msgid ""
+"A user-defined name to call this rule by in another part of a state or "
+"formula. This should not be an actual rule."
+msgstr ""
+
+#: ../../../salt/states/iptables.pydocstring of salt.states.iptables.append:7
+msgid ""
+"All other arguments are passed in with the same name as the long option that"
+" would normally be used for iptables, with one exception: `--state` is "
+"specified as `connstate` instead of `state` (not to be confused with "
+"`ctstate`)."
+msgstr ""

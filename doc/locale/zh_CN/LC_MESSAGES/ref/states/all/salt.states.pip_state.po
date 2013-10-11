@@ -1,0 +1,140 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.pip_state.rst:6
+msgid "salt.states.pip"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of salt.states.pip_state:2
+msgid "Installation of Python Packages Using pip"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of salt.states.pip_state:4
+msgid ""
+"These states manage system installed python packages. Note that pip must be "
+"installed for these states to be available, so pip states should include a "
+"requisite to a pkg.installed state for the package which provides pip "
+"(``python-pip`` in most cases). Example:"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:1
+msgid "Make sure the package is installed"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:3
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.removed:3
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:4
+msgid "The name of the python package to install"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:5
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.removed:5
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:6
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.removed:6
+msgid "The user under which to run pip"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:7
+msgid "pip_bin : None"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:8
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:12
+msgid "Deprecated, use bin_env"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:9
+msgid "use_wheel : False"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:10
+msgid "Prefer wheel archives (requires pip>=1.4)"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:11
+msgid "env : None"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:14
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.removed:7
+msgid "bin_env : None"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:14
+msgid "the pip executable or virtualenv to use"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:16
+msgid "``use_wheel`` option added."
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:19
+msgid "Attention"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:21
+msgid ""
+"As of Salt 0.17.0 the pip state **needs** an importable pip module. This "
+"usually means having the system's pip package installed or running Salt from"
+" an active `virtualenv`_."
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.installed:25
+msgid ""
+"The reason for this requirement is because ``pip`` already does a pretty "
+"good job parsing it's own requirements. It makes no sense for Salt to do "
+"``pip`` requirements parsing and validation before passing them to the "
+"``pip`` library. It's functionality duplication and it's more error prone."
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.removed:1
+msgid "Make sure that a package is not installed."
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.removed:4
+msgid "The name of the package to uninstall"
+msgstr ""
+
+#: ../../../salt/states/pip_state.pydocstring of
+#: salt.states.pip_state.removed:8
+msgid "the pip executable or virtualenenv to use"
+msgstr ""

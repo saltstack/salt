@@ -1,0 +1,121 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/installation/rhel.rst:6
+msgid "RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:8
+msgid ""
+"Beginning with version 0.9.4, Salt has been available in `EPEL`_. It is "
+"installable using yum. Salt should work properly with all mainstream "
+"derivatives of RHEL, including CentOS, Scientific Linux, Oracle Linux and "
+"Amazon Linux. Report any bugs or issues to the salt GitHub project."
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:12
+msgid "Installation"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:14
+msgid ""
+"Salt and all dependencies have been accepted into the yum repositories for "
+"EPEL5 and EPEL6. The latest salt version can be found in epel-testing, while"
+" an older but more tested version can be found in regular epel."
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:18
+msgid "Example showing how to install salt from epel-testing:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:24
+msgid ""
+"On RHEL6, the proper Jinja package 'python-jinja2' was moved from EPEL to "
+"the \"RHEL Server Optional Channel\". Verify this repository is enabled "
+"before installing salt on RHEL6."
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:31
+msgid ""
+"Salt can be installed using ``yum`` and is available in the standard Fedora "
+"repositories."
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:35
+msgid "Enabling EPEL on RHEL"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:37
+msgid ""
+"If EPEL is not enabled on your system, you can use the following commands to"
+" enable it."
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:40
+msgid "For RHEL 5:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:46
+msgid "For RHEL 6:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:54
+msgid "Stable Release"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:56
+msgid ""
+"Salt is packaged separately for the minion and the master. It is necessary "
+"only to install the appropriate package for the role the machine will play. "
+"Typically, there will be one master and multiple minions."
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:58
+msgid "On the salt-master, run this:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:64
+msgid "On each salt-minion, run this:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:71
+msgid "Post-installation tasks"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:73
+msgid "**Master**"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:75
+msgid "To have the Master start automatically at boot time:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:82
+msgid "To start the Master:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:88
+msgid "**Minion**"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:90
+msgid "To have the Minion start automatically at boot time:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:97
+msgid "To start the Minion:"
+msgstr ""
+
+#: ../../topics/installation/rhel.rst:103
+msgid "Now go to the :doc:`Configuring Salt</topics/configuration>` page."
+msgstr ""

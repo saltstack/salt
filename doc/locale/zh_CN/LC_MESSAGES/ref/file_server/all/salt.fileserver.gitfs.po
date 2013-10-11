@@ -1,0 +1,77 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/all/salt.fileserver.gitfs.rst:6
+msgid "salt.fileserver.gitfs"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of salt.fileserver.gitfs:1
+msgid "The backend for the git based file server system."
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of salt.fileserver.gitfs:3
+msgid ""
+"After enabling this backend, branches and tags in a remote git repository "
+"are exposed to salt as different environments. This feature is managed by "
+"the fileserver_backend option in the salt master config."
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of salt.fileserver.gitfs:7
+msgid "gitpython Python module"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of
+#: salt.fileserver.gitfs.dir_list:1
+msgid "Return a list of all directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of salt.fileserver.gitfs.envs:1
+msgid "Return a list of refs that can be used as environments"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of
+#: salt.fileserver.gitfs.file_hash:1
+msgid "Return a file hash, the hash type is set in the master config file"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of
+#: salt.fileserver.gitfs.file_list:1
+msgid ""
+"Return a list of all files on the file server in a specified environment"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of
+#: salt.fileserver.gitfs.file_list_emptydirs:1
+msgid "Return a list of all empty directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of
+#: salt.fileserver.gitfs.find_file:1
+msgid ""
+"Find the first file to match the path and ref, read the file out of git and "
+"send the path to the newly cached file"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of salt.fileserver.gitfs.init:1
+msgid "Return the git repo object for this session"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of
+#: salt.fileserver.gitfs.serve_file:1
+msgid "Return a chunk from a file based on the data received"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.pydocstring of
+#: salt.fileserver.gitfs.update:1
+msgid "Execute a git pull on all of the repos"
+msgstr ""

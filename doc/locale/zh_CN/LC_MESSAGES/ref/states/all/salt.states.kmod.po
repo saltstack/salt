@@ -1,0 +1,68 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.kmod.rst:6
+msgid "salt.states.kmod"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod:2
+msgid "Loading and unloading of kernel modules."
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod:4
+msgid ""
+"The Kernel modules on a system can be managed cleanly with the kmod state "
+"module:"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.absent:1
+msgid "Verify that the named kernel module is not loaded"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.absent:4
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.present:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.absent:4
+msgid "The name of the kernel module to verify is not loaded"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.absent:7
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.present:6
+msgid "persist"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.absent:7
+msgid "Delete module from /etc/modules"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.absent:9
+msgid "comment"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.absent:10
+msgid "Don't remove module from /etc/modules, only comment it"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.present:1
+msgid "Ensure that the specified kernel module is loaded"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.present:4
+msgid "The name of the kernel module to verify is loaded"
+msgstr ""
+
+#: ../../../salt/states/kmod.pydocstring of salt.states.kmod.present:7
+msgid "Also add module to /etc/modules"
+msgstr ""

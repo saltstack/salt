@@ -1,0 +1,48 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/targeting/nodegroups.rst:6
+msgid "Node groups"
+msgstr ""
+
+#: ../../topics/targeting/nodegroups.rst:9
+msgid "Node group"
+msgstr ""
+
+#: ../../topics/targeting/nodegroups.rst:11
+msgid ""
+"A predefined group of minions declared in the master configuration file "
+":conf_master:`nodegroups` setting as a compound target."
+msgstr ""
+
+#: ../../topics/targeting/nodegroups.rst:14
+msgid ""
+"Nodegroups are declared using a compound target specification. The compound "
+"target documentation can be found :doc:`here <compound>`."
+msgstr ""
+
+#: ../../topics/targeting/nodegroups.rst:17
+msgid ""
+"The :conf_master:`nodegroups` master config file parameter is used to define"
+" nodegroups. Here's an example nodegroup configuration:"
+msgstr ""
+
+#: ../../topics/targeting/nodegroups.rst:26
+msgid "To match a nodegroup on the CLI, use the ``-N`` command-line option:"
+msgstr ""
+
+#: ../../topics/targeting/nodegroups.rst:32
+msgid ""
+"To match in your :term:`top file`, make sure to put ``- match: nodegroup`` "
+"on the line directly following the nodegroup name."
+msgstr ""

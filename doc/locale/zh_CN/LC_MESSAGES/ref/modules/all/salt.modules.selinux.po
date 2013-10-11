@@ -1,0 +1,82 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.selinux.rst:6
+msgid "salt.modules.selinux"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of salt.modules.selinux:1
+msgid "Execute calls on selinux"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of salt.modules.selinux:4
+msgid ""
+"This module requires the ``semanage`` and ``setsebool`` commands to be "
+"available on the minion. On RHEL-based distros, this means that the "
+"``policycoreutils`` and ``policycoreutils-python`` packages must be "
+"installed. If not on a RHEL-based distribution, consult the selinux "
+"documentation for your distro to ensure that the proper packages are "
+"installed."
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.getenforce:1
+msgid "Return the mode selinux is running in"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.getenforce:3 ../../../salt/modules/selinux.pydocstring
+#: of salt.modules.selinux.getsebool:3
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.list_sebool:4
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.selinux_fs_path:3
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.setenforce:3 ../../../salt/modules/selinux.pydocstring
+#: of salt.modules.selinux.setsebool:3
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.setsebools:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.getsebool:1
+msgid "Return the information on a specific selinux boolean"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.list_sebool:1
+msgid ""
+"Return a structure listing all of the selinux booleans on the system and "
+"what state they are in"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.selinux_fs_path:1
+msgid "Return the location of the SELinux VFS directory"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.setenforce:1
+msgid "Set the SELinux enforcing mode"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.setsebool:1
+msgid "Set the value for a boolean"
+msgstr ""
+
+#: ../../../salt/modules/selinux.pydocstring of
+#: salt.modules.selinux.setsebools:1
+msgid "Set the value of multiple booleans"
+msgstr ""
