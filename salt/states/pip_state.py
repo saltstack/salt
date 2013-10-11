@@ -129,6 +129,14 @@ def installed(name,
 
     .. versionchanged:: 0.17.0
         ``use_wheel`` option added.
+
+    .. admonition:: Attention
+
+        As of Salt 0.17.0 the pip state **needs** an importable pip module.
+        This usually means having the system's pip package installed or running
+        Salt from an active `virtualenv`_.
+
+    .. _`virtualenv`: http://www.virtualenv.org
     '''
     if pip_bin and not bin_env:
         bin_env = pip_bin
