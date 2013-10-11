@@ -3,6 +3,7 @@
 .. _contents:
 
 .. _what-is-salt-stack:
+
 Salt Stack是什么?
 ===================
 
@@ -23,6 +24,7 @@ for orchestration, remote execution, configuration management and much more.
 .. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
 
 .. _download:
+
 下载
 ========
 
@@ -39,6 +41,7 @@ Salt Bootstrap项目是一个以在各平台下能够正确的自动完成Salt�
     https://github.com/saltstack/salt-bootstrap
 
 .. _getting-started:    
+
 入门指南
 ========================
 
@@ -62,6 +65,7 @@ States - Salt配置管理系统:
     :doc:` Salt教程列表 <topics/tutorials/index>`
 
 .. _salt-in-depth:    
+
 深入Salt
 =============
 
@@ -70,6 +74,7 @@ deeper. These documents will lead to a greater understating of how Salt will
 empower infrastructure management.
 
 .. _remote-execution:
+
 远程执行
 ----------------
 
@@ -123,6 +128,7 @@ should execute commands or manage server configuration.
     command at one time.
 
 .. configuration-management:    
+
 配置管理
 ------------------------
 
@@ -166,7 +172,9 @@ simultaneous configuration of tens of thousands of hosts.
         Salt states are only concerned with the ultimate highstate data
         structure. How that data structure is created is not important.
 
-Miscellaneous topics
+.. miscellaneous-topic:
+
+其他主题
 --------------------
 
 Salt is many splendid things.
@@ -218,6 +226,8 @@ Salt is many splendid things.
     Search no more! Salt has an integrated software package manager for
     Windows machines! Install software hosted on the master, somewhere on the
     network, or any HTTP, HTTPS, or ftp server.
+
+.. reference:    
 
 Reference
 ---------
