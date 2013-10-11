@@ -198,6 +198,7 @@ import yaml
 # Import salt libs
 import salt.utils
 import salt.utils.templates
+from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -838,8 +839,8 @@ def absent(name):
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except (OSError, IOError):
-            return _error(ret, 'Failed to remove file {0}'.format(name))
+        except CommandExecutionError as exc:
+            return _error(ret, '{0}'.format(exc))
 
     elif os.path.isdir(name):
         if __opts__['test']:
