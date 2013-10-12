@@ -65,12 +65,13 @@ class Shell(object):
         Return options for the ssh command base for Salt to call
         '''
         options = [
-                   'StrictHostKeyChecking=no',
                    'KbdInteractiveAuthentication=no',
                    'GSSAPIAuthentication=no',
                    'PasswordAuthentication=no',
                    ]
         options.append('ConnectTimeout={0}'.format(self.timeout))
+        if self.opts.get('ignore_host_keys'):
+            options.append('StrictHostKeyChecking=no')
         if self.port:
             options.append('Port={0}'.format(self.port))
         if self.priv:
@@ -95,6 +96,8 @@ class Shell(object):
                    'GSSAPIAuthentication=no',
                    ]
         options.append('ConnectTimeout={0}'.format(self.timeout))
+        if self.opts.get('ignore_host_keys'):
+            options.append('StrictHostKeyChecking=no')
 
         if self.passwd:
             options.extend(['PasswordAuthentication=yes',
