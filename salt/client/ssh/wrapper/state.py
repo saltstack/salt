@@ -54,11 +54,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
             file_refs)
     single = salt.client.ssh.Single(
             __opts__,
-            'state.pkg /tmp/salt_state.tgz test={0}'.format(test),
+            'state.pkg /tmp/.salt/salt_state.tgz test={0}'.format(test),
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/salt_state.tgz')
+            '/tmp/.salt/salt_state.tgz')
     stdout, stderr = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
@@ -86,11 +86,11 @@ def low(data):
             file_refs)
     single = salt.client.ssh.Single(
             __opts__,
-            'state.pkg /tmp/salt_state.tgz',
+            'state.pkg /tmp/.salt/salt_state.tgz',
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/salt_state.tgz')
+            '/tmp/.salt/salt_state.tgz')
     stdout, stderr = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
@@ -115,11 +115,11 @@ def high(data):
             file_refs)
     single = salt.client.ssh.Single(
             __opts__,
-            'state.pkg /tmp/salt_state.tgz',
+            'state.pkg /tmp/.salt/salt_state.tgz',
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/salt_state.tgz')
+            '/tmp/.salt/salt_state.tgz')
     stdout, stderr = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
@@ -146,11 +146,11 @@ def highstate(test=None, **kwargs):
             file_refs)
     single = salt.client.ssh.Single(
             __opts__,
-            'state.pkg /tmp/salt_state.tgz test={0}'.format(test),
+            'state.pkg /tmp/.salt/salt_state.tgz test={0}'.format(test),
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/salt_state.tgz')
+            '/tmp/.salt/salt_state.tgz')
     stdout, stderr = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
@@ -181,11 +181,11 @@ def top(topfn, test=None, **kwargs):
             file_refs)
     single = salt.client.ssh.Single(
             __opts__,
-            'state.pkg /tmp/salt_state.tgz test={0}'.format(test),
+            'state.pkg /tmp/.salt/salt_state.tgz test={0}'.format(test),
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/salt_state.tgz')
+            '/tmp/.salt/salt_state.tgz')
     stdout, stderr = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
