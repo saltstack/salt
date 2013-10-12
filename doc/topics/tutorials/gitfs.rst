@@ -216,4 +216,4 @@ synced, and thus interrupt the sync itself. Try disabling the git fileserver
 backend in the master config, restarting the master, and attempting the sync
 again.
 
-This issue will be worked around in Salt 0.16.4 and newer.
+This issue is worked around in Salt 0.16.4 and newer.
