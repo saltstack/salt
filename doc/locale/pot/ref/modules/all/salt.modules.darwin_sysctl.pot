@@ -1,0 +1,59 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.darwin_sysctl.rst:6
+# 87559d27d0b34dd387ea27960fb362dc
+msgid "salt.modules.darwin_sysctl"
+msgstr ""
+
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl:1
+# 64a5e6e5cbd142a28e811b681a5d5c59
+msgid "Module for viewing and modifying sysctl parameters"
+msgstr ""
+
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl.assign:1
+# bbd1657db76f4e63933c8e456b795f34
+msgid "Assign a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl.assign:3
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl.get:3
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl.persist:3
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl.show:3
+# 1665c131b6c54de1a41a55e1f3d14ec2
+# 66dfb8f6d17e40d294c4550590c56f90
+# 70a3d1758c3e4a4db3452deef81e5ce9
+# e79f7d5b5995431abea1da942be68981
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl.get:1
+# bef3c460e21448a1b4e759179bdec718
+msgid "Return a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl.persist:1
+# 8fe95ba70858456bac47b9b9f66cf75a
+msgid "Assign and persist a simple sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/darwin_sysctl.py:docstring of salt.modules.darwin_sysctl.show:1
+# 8b77d3aeaf9c458f88d11c006fb22c4f
+msgid "Return a list of sysctl parameters for this minion"
+msgstr ""
+

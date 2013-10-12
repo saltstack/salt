@@ -1,0 +1,243 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/cli/index.rst:6
+# 7bb1811ce17947879ffccc8e9b563a3c
+msgid "Command Line Reference"
+msgstr ""
+
+#: ../../ref/cli/index.rst:8
+# 6cd61942eee840e396d18f492113cfb3
+msgid "Salt can be controlled by a command line client by the root user on the Salt master. The Salt command line client uses the Salt client API to communicate with the Salt master server. The Salt client is straightforward and simple to use."
+msgstr ""
+
+#: ../../ref/cli/index.rst:13
+# 5516f7a942b948fcad0cde8e2123b9a3
+msgid "Using the Salt client commands can be easily sent to the minions."
+msgstr ""
+
+#: ../../ref/cli/index.rst:15
+# 2d32e91e2e3c4a2ba7e13ab6cc5c42bb
+msgid "Each of these commands accepts an explicit `--config` option to point to either the master or minion configuration file.  If this option is not provided and the default configuration file does not exist then Salt falls back to use the environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``."
+msgstr ""
+
+#: ../../ref/cli/index.rst:22
+# eb57f65df5f04b1c9f7b312184b9b280
+msgid ":doc:`/topics/configuration`"
+msgstr ""
+
+#: ../../ref/cli/index.rst:25
+# 159398025d2e4cc1823a138e7a712f55
+msgid "Using the Salt Command"
+msgstr ""
+
+#: ../../ref/cli/index.rst:27
+# 16204cfbaf5e475e97f2a0eb5d2249e7
+msgid "The Salt command needs a few components to send information to the Salt minions. The target minions need to be defined, the function to call and any arguments the function requires."
+msgstr ""
+
+#: ../../ref/cli/index.rst:32
+# f5eb90ec01d34f29bbd40c6e7c6ad3df
+msgid "Defining the Target Minions"
+msgstr ""
+
+#: ../../ref/cli/index.rst:34
+# 81ddff25e3fb4036a7bc155c78c3b920
+msgid "The first argument passed to salt, defines the target minions, the target minions are accessed via their hostname. The default target type is a bash glob:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:43
+# a2c5f375deca41148a6df79facfbfd46
+msgid "Salt can also define the target minions with regular expressions:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:49
+# 7bd469eb8cdd445784c85791318abbdf
+msgid "Or to explicitly list hosts, salt can take a list:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:56
+# 106ad646e9c84952869532d89c1bd67f
+msgid "More Powerful Targets"
+msgstr ""
+
+#: ../../ref/cli/index.rst:58
+# e77baa4cee594534a76b0e9a366be524
+msgid "The simple target specifications, glob, regex and list will cover many use cases, and for some will cover all use cases, but more powerful options exist."
+msgstr ""
+
+#: ../../ref/cli/index.rst:62
+# d21c4dc85eb6458ba5bdcb1a9b1e25b7
+msgid "Targeting with Grains"
+msgstr ""
+
+#: ../../ref/cli/index.rst:64
+# 778a0fd02bf04646b3f9458786585277
+msgid "The Grains interface was built into Salt to allow minions to be targeted by system properties. So minions running on a particular operating system can be called to execute a function, or a specific kernel."
+msgstr ""
+
+#: ../../ref/cli/index.rst:68
+# 2a5673f8987c4b7fbff2e461e48d38a0
+msgid "Calling via a grain is done by passing the -G option to salt, specifying a grain and a glob expression to match the value of the grain. The syntax for the target is the grain key followed by a globexpression: \"os:Arch*\"."
+msgstr ""
+
+#: ../../ref/cli/index.rst:76
+# 3714678e10c84eeebd0898545860a0e1
+msgid "Will return True from all of the minions running Fedora."
+msgstr ""
+
+#: ../../ref/cli/index.rst:78
+# c228be7cd8f94a909a5c4c39e116544b
+msgid "To discover what grains are available and what the values are, execute the grains.item salt function:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:86
+# 3540fd2dca7f487991b02e336a65381f
+msgid "Targeting with Executions"
+msgstr ""
+
+#: ../../ref/cli/index.rst:88
+# 2c839f800d5540049f860c206f995d55
+msgid "As of 0.8.8 targeting with executions is still under heavy development and this documentation is written to reference the behavior of execution matching in the future."
+msgstr ""
+
+#: ../../ref/cli/index.rst:92
+# 0f63dd11bfb6488ebe8c483b7fe48f4b
+msgid "Execution matching allows for a primary function to be executed, and then based on the return of the primary function the main function is executed."
+msgstr ""
+
+#: ../../ref/cli/index.rst:95
+# f83d351ff6ef4e5695e6f01d69109a58
+msgid "Execution matching allows for matching minions based on any arbitrary running data on the minions."
+msgstr ""
+
+#: ../../ref/cli/index.rst:99
+# 008580a34e0c4192855ae7a04079c619
+msgid "Compound Targeting"
+msgstr ""
+
+#: ../../ref/cli/index.rst:103
+# 85884d342de64217b086180129c7120a
+msgid "Multiple target interfaces can be used in conjunction to determine the command targets. These targets can then be combined using and or or statements. This is well defined with an example:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:111
+# 4c24928bac914e32bcea51fc85e29ca0
+msgid "In this example any minion who's id starts with ``webser`` and is running Debian, or any minion who's id starts with db will be matched."
+msgstr ""
+
+#: ../../ref/cli/index.rst:114
+# 88a1f1c643ba4a09870b7f28a56c7f2a
+msgid "The type of matcher defaults to glob, but can be specified with the corresponding letter followed by the ``@`` symbol. In the above example a grain is used with ``G@`` as well as a regular expression with ``E@``. The ``webser*`` target does not need to be prefaced with a target type specifier because it is a glob."
+msgstr ""
+
+#: ../../ref/cli/index.rst:121
+# 2449254ee01446c1adc6c15e071c35b6
+msgid "Node Group Targeting"
+msgstr ""
+
+#: ../../ref/cli/index.rst:125
+# 1c85033517634f778f968cc374a0b78a
+msgid "Often the convenience of having a predefined group of minions to execute targets on is desired. This can be accomplished with the new nodegroups feature. Nodegroups allow for predefined compound targets to be declared in the master configuration file:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:137
+# 6b607a4ee51d4ba29f36fb4884aa9d22
+msgid "Calling the Function"
+msgstr ""
+
+#: ../../ref/cli/index.rst:139
+# 9323dc91eb214edfbaaea77b11be2557
+msgid "The function to call on the specified target is placed after the target specification."
+msgstr ""
+
+#: ../../ref/cli/index.rst:144
+# 134d1b82565f42e68e6b2c702a3ddb74
+msgid "Functions may also accept arguments, space-delimited:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:150
+# 1206b9d2c88841168391fcf2836a083b
+msgid "Optional, keyword arguments are also supported:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:156
+# 0e3a0ba59cfd423fa77985523fb97184
+msgid "They are always in the form of ``kwarg=argument``."
+msgstr ""
+
+#: ../../ref/cli/index.rst:158
+# 7b850ba7525443bc9636d1a70970200a
+msgid "Arguments are formatted as YAML:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:164
+# fc4deff8cfdf4b7797bbbf80cc0327f4
+msgid "Note: dictionaries must have curly braces around them (like the ``env`` keyword argument above).  This was changed in 0.15.1: in the above example, the first argument used to be parsed as the dictionary ``{'echo \"Hello': '$FIRST_NAME\"'}``. This was generally not the expected behavior."
+msgstr ""
+
+#: ../../ref/cli/index.rst:170
+# 2c5c89974c7e402eae77c4cd54cc18c5
+msgid "If you want to test what parameters are actually passed to a module, use the ``test.arg_repr`` command:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:178
+# 6aeadca3755d4d61891ecbafb962a6d9
+msgid "Finding available minion functions"
+msgstr ""
+
+#: ../../ref/cli/index.rst:180
+# 1c4e8bca79b8485da0b8ade9d345d320
+msgid "The Salt functions are self documenting, all of the function documentation can be retried from the minions via the :func:`sys.doc` function:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:188
+# 445c9e70507b41cc98f3e07d698bf357
+msgid "Compound Command Execution"
+msgstr ""
+
+#: ../../ref/cli/index.rst:190
+# ccb008992ef54ecba3c8a2873ecc6586
+msgid "If a series of commands needs to be sent to a single target specification then the commands can be sent in a single publish. This can make gathering groups of information faster, and lowers the stress on the network for repeated commands."
+msgstr ""
+
+#: ../../ref/cli/index.rst:195
+# afc12ae18b0f446e9daf047465d87df3
+msgid "Compound command execution works by sending a list of functions and arguments instead of sending a single function and argument. The functions are executed on the minion in the order they are defined on the command line, and then the data from all of the commands are returned in a dictionary. This means that the set of commands are called in a predictable way, and the returned data can be easily interpreted."
+msgstr ""
+
+#: ../../ref/cli/index.rst:202
+# 5433883457834441b08e48dc9dadad8c
+msgid "Executing compound commands if done by passing a comma delimited list of functions, followed by a comma delimited list of arguments:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:209
+# f84dabb96b404c9c87f806aae514986c
+msgid "The trick to look out for here, is that if a function is being passed no arguments, then there needs to be a placeholder for the absent arguments. This is why in the above example, there are two commas right next to each other. ``test.ping`` takes no arguments, so we need to add another comma, otherwise Salt would attempt to pass \"foo\" to ``test.ping``."
+msgstr ""
+
+#: ../../ref/cli/index.rst:215
+# 15286a51952e43aba2eda70f81129663
+msgid "If you need to pass arguments that include commas, then make sure you add spaces around the commas that separate arguments. For example:"
+msgstr ""
+
+#: ../../ref/cli/index.rst:222
+# d6abc45798044bb39e51d908b0c44c4e
+msgid "You may change the arguments separator using the ``--args-separator`` option:"
+msgstr ""
+

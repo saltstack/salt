@@ -1,0 +1,87 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.kmod.rst:6
+# 147b9f2b2f844dccbd2d2cd7304b2c73
+msgid "salt.states.kmod"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod:2
+# 5a1b168b3c92492696a3fdeb81389028
+msgid "Loading and unloading of kernel modules."
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod:4
+# e62ce8a5369946cca14ad47014aa7131
+msgid "The Kernel modules on a system can be managed cleanly with the kmod state module:"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.absent:1
+# 953a7855344c42688e4cef3e8f7a1d00
+msgid "Verify that the named kernel module is not loaded"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.absent:4
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.present:4
+# 2affe26baab04e6abda7ef312c9350b8
+# 6b5e07c602fb400dbc60acef31740cdb
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.absent:4
+# 6b7a774387924306a818c86dee108c76
+msgid "The name of the kernel module to verify is not loaded"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.absent:7
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.present:6
+# 336f604090d549cf87913f385a3b3613
+# e4376d813df84e29a243be47919561b4
+msgid "persist"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.absent:7
+# b77cb0b8752b49f58f46bf81100180fd
+msgid "Delete module from /etc/modules"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.absent:9
+# 0fb12b056d184f86b8380994efb43208
+msgid "comment"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.absent:10
+# 359e4e1e9fae4f87a1f1b7b8c3c858fe
+msgid "Don't remove module from /etc/modules, only comment it"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.present:1
+# b8d0cec64a9743ee87bddf2f24251f0b
+msgid "Ensure that the specified kernel module is loaded"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.present:4
+# e1d5df6187f64323b3ffdad3c4b3a31f
+msgid "The name of the kernel module to verify is loaded"
+msgstr ""
+
+#: ../../../salt/states/kmod.py:docstring of salt.states.kmod.present:7
+# a83c3b8e766441e3bca152ab1ccb6be3
+msgid "Also add module to /etc/modules"
+msgstr ""
+

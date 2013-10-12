@@ -1,0 +1,135 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.mac_user.rst:6
+# 102edeef138140d1b480e6e29d851b8b
+msgid "salt.modules.mac_user"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user:1
+# 0b6ab619208e4e129bef9443e729c5bf
+msgid "Manage users on Mac OS 10.7+"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.add:1
+# 4f9dd083f66f4ee4bd2b08e294e269f1
+msgid "Add a user to the minion"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.add:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chfullname:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chgid:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chgroups:13
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chhome:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chshell:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chuid:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.delete:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.getent:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.info:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.list_groups:3
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.list_users:3
+# b57ff5ab88874a849a58eae46deeddd8
+# 81455fb014a047bdbacc3ca85cee8ab8
+# 7d8c26a476f04bf58de1ab4061214a84
+# 5b984fa2eb714c93b587e8176de01b97
+# 9133936855a04da7996ccb438a5c4a9a
+# 5ff08135139d4f5b9ac4fd0227d4676e
+# 0aa0bc2c12f04d1d96875179c77cea2a
+# 141d9287be5649f69d1ee12619621477
+# 6123d8d7e3d4489a91571b89ca9c2497
+# 65407e1f9aa84fbd9f7c7b7ff3e685d2
+# de530c5232f943d483b2ddcb83113547
+# 02747b612e7e43d4acf3e1d8f651b2b3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chfullname:1
+# e36fa5b7f25d4523bd322fc1eaa4d4bc
+msgid "Change the user's Full Name"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chgid:1
+# 31223c15ad97416694bc7b183c4f9990
+msgid "Change the default group of the user"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chgroups:1
+# 05e57df6e0d64f3fb554118a2b2d0b07
+msgid "Change the groups to which the user belongs. Note that the user's primary group does not have to be one of the groups passed, membership in the user's primary group is automatically assumed."
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chgroups:7
+# 3cd77bbab09147e68d888a36b6891c6b
+msgid "groups"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chgroups:6
+# 2bebb1d927804b2da34189fb5f519d32
+msgid "Groups to which the user should belong, can be passed either as a python list or a comma-separated string"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chgroups:11
+# 69c0dab858d04d6fb350d2567f0ee078
+msgid "append"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chgroups:10
+# 076e79fcd7414528848c0f26bacc4617
+msgid "Instead of removing user from groups not included in the ``groups`` parameter, just add user to any groups for which they are not members"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chhome:1
+# 8cc4236c93944cf7b9b6b74c4d96f6a3
+msgid "Change the home directory of the user"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chshell:1
+# 5ce4686a954847da8fa54f70a179602a
+msgid "Change the default shell of the user"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.chuid:1
+# 9dba1414207e4857b0b9bfe3dae0f33f
+msgid "Change the uid for a named user"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.delete:1
+# cf88a2dde41d448098dc5581e6fac8f4
+msgid "Remove a user from the minion"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.getent:1
+# 35f4c009208240c5ba06a36840802a74
+msgid "Return the list of all info for all users"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.info:1
+# d4754e6ed15b4615953b3eb7e8927e51
+msgid "Return user information"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.list_groups:1
+# 91c49c7c34df48298fe4013c3202cd85
+msgid "Return a list of groups the named user belongs to"
+msgstr ""
+
+#: ../../../salt/modules/mac_user.py:docstring of salt.modules.mac_user.list_users:1
+# 56866d7be6d2492ab948d16a5fb56677
+msgid "Return a list of all users"
+msgstr ""
+

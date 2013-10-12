@@ -1,0 +1,145 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.postgres_database.rst:6
+# 8ba62cec5775466a8664f8389c88402c
+msgid "salt.states.postgres_database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database:2
+# 0dd73104080f4f8986607c1a9e7e501b
+msgid "Management of PostgreSQL databases."
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database:4
+# 92fe22823a5346bfb21ab28a5d945ee6
+msgid "The postgres_database module is used to create and manage Postgres databases. Databases can be set as either absent or present"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.absent:1
+# d54dbcb82a6548638334e9c942e74006
+msgid "Ensure that the named database is absent"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.absent:4
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:5
+# 3d5623d0c2714204a7f0ece65afab44d
+# b9114446283544d294df0b128aa73a50
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.absent:4
+# 8434c507631045eeb91e0aa9f524fcf6
+msgid "The name of the database to remove"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.absent:9
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:28
+# 0dcba951436f4a78beea385d6de638b2
+# 6376700d0099423d85f37afcfbb2f82d
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.absent:7
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.absent:12
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:26
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:31
+# ede1d128f1c74b839187197c24c815b8
+# 869d8fa805564146b7a430e3d0167280
+# 3bdc0f3d1bc949da86f21ec52c95c835
+# 6a7a0a64390c4be78cb06a31b351c497
+msgid "System user all operations should be performed on behalf of"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.absent:13
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:32
+# 63291a229ca74b8a850a5d3b40c8ddba
+# 8ec769d526924ee7a3601638e4a07ea3
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:1
+# 8afab1c66dc644eda77d4fa915bd76ef
+msgid "Ensure that the named database is present with the specified properties. For more information about all of these options see man createdb(1)"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:5
+# eb20d1f7fc3e4d7c82125e32f4fe3ad2
+msgid "The name of the database to manage"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:8
+# 2bf05cee25bb46f8b24debb12823e010
+msgid "tablespace"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:8
+# a0a12d77e77e4635838fde8af382933b
+msgid "Default tablespace for the database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:11
+# 9d267e6da5fe4bb5a967a7fd66c0ec64
+msgid "encoding"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:11
+# 0865fcf225e5413a9eecc359353ae4b1
+msgid "The character encoding scheme to be used in this database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:14
+# a2aada3977204d9e8b5f4a93eb1aca66
+msgid "lc_collate"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:14
+# 1f055e9c05964a979f636cd1b23c8c5d
+msgid "The LC_COLLATE setting to be used in this database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:17
+# a45d6af534ad45d58358826986559e2e
+msgid "lc_ctype"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:17
+# 7ef9aa4ad1a042d3890960c2d437f1ba
+msgid "The LC_CTYPE setting to be used in this database"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:20
+# 2d6f6bf860554628a4f4bfff98cf683b
+msgid "owner"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:20
+# 90a6bc45ec06427d891002e423f5ef23
+msgid "The username of the database owner"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:23
+# 5744753219894243a82a290332bf6885
+msgid "template"
+msgstr ""
+
+#: ../../../salt/states/postgres_database.py:docstring of salt.states.postgres_database.present:23
+# b957247b06a8443088d8c0337a655537
+msgid "The template database from which to build this database"
+msgstr ""
+

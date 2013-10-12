@@ -1,0 +1,83 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/file_roots.rst:6
+# a3d7cb1d966b4096bcf821524cf06554
+msgid "File Server Configuration"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:8
+# bd1b3492521249fbbbe0f87f5c446f62
+msgid "The Salt file server is a high performance file server written in ZeroMQ. It manages large files quickly and with little overhead, and has been optimized to handle small files in an extremely efficient manner."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:12
+# bbc26fb03b2c43afb98aa1bd9d5a6e70
+msgid "The Salt file server is an environment aware file server. This means that files can be allocated within many root directories and accessed by specifying both the file path and the environment to search. The individual environments can span across multiple directory roots to create overlays and to allow for files to be organized in many flexible ways."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:20
+# 5135f53351ce48ce867de47a5211e275
+msgid "Environments"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:22
+# 0d838a52de6a48fc9468f638c5806feb
+msgid "The Salt file server defaults to the mandatory ``base`` environment. This environment **MUST** be defined and is used to download files when no environment is specified."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:26
+# 024a7b957f4e4f96a2b1fc001c8d242b
+msgid "Environments allow for files and sls data to be logically separated, but environments are not isolated from each other. This allows for logical isolation of environments by the engineer using Salt, but also allows for information to be used in multiple environments."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:33
+# 83985bebf3cd4e449d34881a444bf0ff
+msgid "Directory Overlay"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:35
+# fbc128470b704475964aae5f411d3a14
+msgid "The ``environment`` setting is a list of directories to publish files from. These directories are searched in order to find the specified file and the first file found is returned."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:39
+# 2a712d44fae94240bf7a99e6840f2cc0
+msgid "This means that directory data is prioritized based on the order in which they are listed. In the case of this ``file_roots`` configuration:"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:49
+# f7cf3418da1a40bbb0c7652289ab28cf
+msgid "If a file's URI is ``salt://httpd/httpd.conf``, it will first search for the file at ``/srv/salt/base/httpd/httpd.conf``. If the file is found there it will be returned. If the file is not found there, then ``/srv/salt/failover/httpd/httpd.conf`` will be used for the source."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:54
+# 000c6ceb4aa54628b6c7a008d561fcb9
+msgid "This allows for directories to be overlaid and prioritized based on the order they are defined in the configuration."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:58
+# 09b338061ecd46c1b0c09bbb79bc014c
+msgid "Local File Server"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:63
+# b5a5aa7de5984628be500a02c61f330a
+msgid "The file server can be rerouted to run from the minion. This is primarily to enable running Salt states without a Salt master. To use the local file server interface, copy the file server data to the minion and set the file_roots option on the minion to point to the directories copied from the master. Once the minion ``file_roots`` option has been set, change the ``file_client`` option to local to make sure that the local file server interface is used."
+msgstr ""
+

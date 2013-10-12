@@ -1,0 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/output/all/salt.output.yaml_out.rst:6
+# 5b790e2777d14985bc0012aa5181c556
+msgid "salt.output.yaml_out"
+msgstr ""
+
+#: ../../../salt/output/yaml_out.py:docstring of salt.output.yaml_out:1
+# e2d176cb8e86444892b700b1975af5fc
+msgid "Output data in YAML, this outputter defaults to printing in YAML block mode for better readability."
+msgstr ""
+
+#: ../../../salt/output/yaml_out.py:docstring of salt.output.yaml_out.output:1
+# 33909d49581140bbb519ac0d9e3a759e
+msgid "Print out YAML using the block mode"
+msgstr ""
+

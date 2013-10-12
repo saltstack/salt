@@ -1,0 +1,99 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.daemontools.rst:6
+# f2aa1eb773d1410b862b1dd795b2c738
+msgid "salt.modules.daemontools"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools:1
+# 8e76df50adcc4c81b9a760597a916c93
+msgid "daemontools service module. This module will create daemontools type service watcher."
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools:4
+# 63f264ccac4a4a979a1603b08d0ffe30
+msgid "This module is compatible with the :mod:`service <salt.states.service>` states, so it can be used to maintain services using the ``provider`` argument:"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.available:1
+# 35de16363ed64df4bc42deb4600bea01
+msgid "Returns ``True`` if the specified service is available, otherwise returns ``False``."
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.available:4
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.full_restart:3
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.get_all:3
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.reload_:3
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.restart:3
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.start:3
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.status:3
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.stop:3
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.term:3
+# 54013afc70424147b0146660dfd77f95
+# d7437a2b65fa48548086f98d3b9c6335
+# c901667b84944a40b2f0c638fa4880c5
+# 953551a4f61b4ec6924254ec06261bce
+# 5271997798ca43879a072d013eb749fe
+# 069888b99da6499d931b0d9e77e6a56b
+# 0005f1f2aa5c4d66b9a2f817c4626a9a
+# 492cb7dd2c254c27872917bfcf538a62
+# e92d017c98674537addc0433552145a7
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.full_restart:1
+# ad55ecf04ffd463ea78a2d51ae94ecf0
+msgid "Calls daemontools.restart() function"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.get_all:1
+# 5e9b3e3f09e944bf9ca4a34d2fe6a9f2
+msgid "Return a list of all available services"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.reload_:1
+# bdd756486ffa418fa174c6e1dd4b51b8
+msgid "Wrapper for term()"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.restart:1
+# ebb35eba786a4627b55754fe58e061c0
+msgid "Restart service via daemontools. This will stop/start service"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.start:1
+# d4ca8ab718c84cb8b34be011ffdedba7
+msgid "Starts service via daemontools"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.status:1
+# 46c081114a1b4c608775afd6ffd3d323
+msgid "Return the status for a service via daemontools, return pid if running"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.stop:1
+# 07c12bf00ec84106be88e2dbd57bf6e6
+msgid "Stops service via daemontools"
+msgstr ""
+
+#: ../../../salt/modules/daemontools.py:docstring of salt.modules.daemontools.term:1
+# 78f6b925fc3046a8ae4116d658653820
+msgid "Send a TERM to service via daemontools"
+msgstr ""
+

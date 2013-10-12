@@ -1,0 +1,105 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:7
+# 61170868a0974302b9521232d06036ad
+msgid "Logstash Logging Handler"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:11
+# 61944ec3661b477b9e87b0f317f8be7e
+msgid "This module provides some `Logstash`_ logging handlers."
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:15
+# cc48d9afacfa4e978193d1b6223dfc46
+msgid "UDP Logging Handler"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:17
+# 7117eeffc16940df8b6e7020a33bb6a4
+msgid "In order to setup the datagram handler for `Logstash`_, please define on the salt configuration file:"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:27
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:54
+# 62afedd135bb42bfa964e9b9c225bf6f
+# c2bcb5047f23497aa5ac07a2f296277b
+msgid "On the `Logstash`_ configuration file you need something like:"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:39
+# 2e580ca865784792ae3f2ddca5d90fb9
+msgid "Please read the `UDP input`_ configuration page for additional information."
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:43
+# a9fe64e0269b481bb611682139cb9f67
+msgid "ZeroMQ Logging Handler"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:45
+# c9f2bd837b824994a5fdd86778247851
+msgid "In order to setup the ZMQ handler for `Logstash`_, please define on the salt configuration file:"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:70
+# f0d576772c444e578007d8ac75a79a82
+msgid "Please read the `ZeroMQ input`_ configuration page for additional information."
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:73
+# faf2323daf704024b7ab94eb0b40710b
+msgid "Important Logstash Setting"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:75
+# 68c80c7572f947f48fa503dfe9a8d346
+msgid "One of the most important settings that you should not forget on your `Logstash`_ configuration file regarding these logging handlers is ``format``. Both the `UDP` and `ZeroMQ` inputs need to have ``format`` as ``json_event`` which is what we send over the wire."
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:83
+# ff390afdc5ba439eabd152018c29cdef
+msgid "Log Level"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:85
+# d41df301c6fa44f2938447ef2d31e4cb
+msgid "Both the ``logstash_udp_handler`` and the ``logstash_zmq_handler`` configuration sections accept an additional setting ``log_level``. If not set, the logging level used will be the one defined for ``log_level`` in the global configuration file section."
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:91
+# 14d7dd806e7f476493aa9d1ddc690be2
+msgid "HWM"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:93
+# 202303c6c2464785a96219e6dc5eb64d
+msgid "The `high water mark`_ for the ZMQ socket setting. Only applicable for the ``logstash_zmq_handler``."
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:98
+# 368b8933b1ee47ff86a2df649f79c462
+msgid "Inspiration"
+msgstr ""
+
+#: ../../../salt/log/handlers/logstash_mod.py:docstring of salt.log.handlers.logstash_mod:100
+# 80984c118c554ab79723d921a8252d8a
+msgid "This work was inspired in `pylogstash`_, `python-logstash`_, `canary`_ and the `PyZMQ logging handler`_."
+msgstr ""
+

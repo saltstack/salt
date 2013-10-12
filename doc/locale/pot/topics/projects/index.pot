@@ -1,0 +1,73 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/projects/index.rst:6
+# b940e45ecb8741078f69c5f95ded395b
+msgid "Salt Based Projects"
+msgstr ""
+
+#: ../../topics/projects/index.rst:8
+# 3b234ccfc911435a9f1e11ad99c3db5e
+msgid "A number of unofficial open source projects, based on Salt, or written to enhance Salt have been created."
+msgstr ""
+
+#: ../../topics/projects/index.rst:12
+# 16bd0bb22ea24fcc8afd5f11bb50e7c6
+msgid "Salt Sandbox"
+msgstr ""
+
+#: ../../topics/projects/index.rst:14
+# 626749d932bb43769a3102809afbf882
+msgid "Created by Aaron Bull Schaefer, aka \"elasticdog\"."
+msgstr ""
+
+#: ../../topics/projects/index.rst:16
+# b9f06805f7a34706a75ea9c67e3358ec
+msgid "https://github.com/elasticdog/salt-sandbox"
+msgstr ""
+
+#: ../../topics/projects/index.rst:18
+# 119324903ace42a1b58d95e020d3bb79
+msgid "Salt Sandbox is a multi-VM Vagrant-based Salt development environment used for creating and testing new Salt state modules outside of your production environment. It's also a great way to learn firsthand about Salt and its remote execution capabilities."
+msgstr ""
+
+#: ../../topics/projects/index.rst:23
+# fea90e393da34b9a9d99344fda3f0820
+msgid "Salt Sandbox will set up three separate virtual machines:"
+msgstr ""
+
+#: ../../topics/projects/index.rst:25
+# 7b2735b00c814564ab8bf21fdca9c13e
+msgid "salt.example.com - the Salt master server"
+msgstr ""
+
+#: ../../topics/projects/index.rst:26
+# 88fdc3f9851f4b0888684803e0ad3262
+msgid "minion1.example.com - the first Salt minion machine"
+msgstr ""
+
+#: ../../topics/projects/index.rst:27
+# 4fa006ed32744eae87e4f813877ad5ed
+msgid "minion2.example.com - the second Salt minion machine"
+msgstr ""
+
+#: ../../topics/projects/index.rst:29
+# 80fa2afde5964ee4bf0908ae8ca2b5fe
+msgid "These VMs can be used in conjunction to segregate and test your modules based on node groups, top file environments, grain values, etc. You can even test modules on different Linux distributions or release versions to better match your production infrastructure."
+msgstr ""
+

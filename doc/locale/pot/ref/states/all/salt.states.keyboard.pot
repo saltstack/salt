@@ -1,0 +1,65 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.keyboard.rst:6
+# c269fdca093a4173a31f07bdf12f95c5
+msgid "salt.states.keyboard"
+msgstr ""
+
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard:2
+# cd138a996f7a42af8da62211d9dd8b39
+msgid "Management of keyboard layouts"
+msgstr ""
+
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard:4
+# b6e72c8ce8d4465f9615da610beb9b16
+msgid "The keyboard layout can be managed for the system:"
+msgstr ""
+
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard:11
+# 8b4be3b38cc148ebb2ac057e41ef73b3
+msgid "Or it can be managed for XOrg:"
+msgstr ""
+
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard.system:1
+# 925dfa9820434cf093358a4ca5e469dc
+msgid "Set the keyboard layout for the system"
+msgstr ""
+
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard.system:3
+# 81c49cce56cd4d4e842ff1f5b3976b14
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard.system:4
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard.xorg:4
+# d4574dfa4b9d40aeb06a6434e32c436a
+# 0318fdd78bb64142aa57842c331c10f6
+msgid "The keyboard layout to use"
+msgstr ""
+
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard.xorg:1
+# 5147d1d0aae344ec8a7661e0798d1268
+msgid "Set the keyboard layout for XOrg"
+msgstr ""
+
+#: ../../../salt/states/keyboard.py:docstring of salt.states.keyboard.xorg:3
+# 3e8884c8fa7140c39b9be23064cbf660
+msgid "layout"
+msgstr ""
+

@@ -1,0 +1,60 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.logrotate.rst:6
+# c96239798422421191fbf57df8115054
+msgid "salt.modules.logrotate"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.py:docstring of salt.modules.logrotate:1
+# c5d0e59e01134a54b21f1563991b7764
+msgid "Module for managing logrotate."
+msgstr ""
+
+#: ../../../salt/modules/logrotate.py:docstring of salt.modules.logrotate.set_:1
+# 84f03a28ed954db48e3f945874b06388
+msgid "Set a new value for a specific configuration line"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.py:docstring of salt.modules.logrotate.set_:3
+#: ../../../salt/modules/logrotate.py:docstring of salt.modules.logrotate.show_conf:3
+# c7b5c50ded4241d5982c1f609f6535a6
+# decc7e4c64ad44c3b2e51f5386eef831
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.py:docstring of salt.modules.logrotate.set_:9
+# bca2fb7d74f84f3f9253d6a3bea17ec2
+msgid "Can also be used to set a single value inside a multiline configuration block. For instance, to change rotate in the following block::"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.py:docstring of salt.modules.logrotate.set_:18
+# 2d38f97921f840eb917bafb2672d152e
+msgid "Use the following command:"
+msgstr ""
+
+#: ../../../salt/modules/logrotate.py:docstring of salt.modules.logrotate.set_:24
+# 371ddcba1b844a03b7b33949e7ca6351
+msgid "This module also has the ability to scan files inside an include directory, and make changes in the appropriate file."
+msgstr ""
+
+#: ../../../salt/modules/logrotate.py:docstring of salt.modules.logrotate.show_conf:1
+# 4855a9154b894ee7840a702b414b2b1a
+msgid "Show parsed configuration"
+msgstr ""
+

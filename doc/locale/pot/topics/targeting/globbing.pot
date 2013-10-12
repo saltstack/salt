@@ -1,0 +1,118 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/targeting/globbing.rst:6
+# 3dec87a78edd421ba3a58c8f38756003
+msgid "Matching the ``minion id``"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:9
+# 1a01e54ab967426587726f418d3b4940
+msgid "minion id"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:11
+# 1bafd3a02d75424b9fdcecdaf456434f
+msgid "A unique identifier for a given minion. By default the minion id is the FQDN of that host but this can be overridden."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:14
+# 7829b3bf5fa14812af495983411761a4
+msgid "Each minion needs a unique identifier. By default when a minion starts for the first time it chooses its :abbr:`FQDN (fully qualified domain name)` as that identifier. The minion id can be overridden via the minion's :conf_minion:`id` configuration setting."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:19
+# 85dec1cca3e44ef2875814195ca24854
+msgid "minion id and minion keys"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:21
+# 0b8f6cdbee934a8c925468894a916c50
+msgid "The :term:`minion id` is used to generate the minion's public/private keys and if it ever changes the master must then accept the new key as though the minion was a new host."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:26
+# b4f508ddec7c451683cf5ab9adc57553
+msgid "Globbing"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:28
+# 426bfd6ee6214d39b4f823ada919be0e
+msgid "The default matching that Salt utilizes is :py:mod:`shell-style globbing <python2:fnmatch>` around the :term:`minion id`. This also works for states in the :term:`top file`."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:34
+# 518f63c8aba64c879cc580f054813dbf
+msgid "You must wrap :command:`salt` calls that use globbing in single-quotes to prevent the shell from expanding the globs before Salt is invoked."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:37
+# 7ae562412e314571b8c14b0ad0c14f89
+msgid "Match all minions:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:43
+# 54c91d4152224dea9afdb3b9b6474911
+msgid "Match all minions in the example.net domain or any of the example domains:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:50
+# 684b49530b9c40a4b032a50737d56faf
+msgid "Match all the ``webN`` minions in the example.net domain (``web1.example.net``, ``web2.example.net`` … ``webN.example.net``):"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:57
+# 81f4bf89f62b4122aacd08031a308228
+msgid "Match the ``web1`` through ``web5`` minions:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:63
+# ea27f146538c4f609dcb61c1d320f7c6
+msgid "Match the ``web-x``, ``web-y``, and ``web-z`` minions:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:71
+# ed380ed9584146f7b04ad40a6829da25
+msgid "Regular Expressions"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:73
+# f4e57ca0c4d64e8ea15e99830396f22b
+msgid "Minions can be matched using Perl-compatible :py:mod:`regular expressions <python2:re>` (which is globbing on steroids and a ton of caffeine)."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:76
+# edde13033a60436ba3831aa0e8433f03
+msgid "Match both ``web1-prod`` and ``web1-devel`` minions:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:82
+# 90ef2e12ee844c6990007e2d8b5c2977
+msgid "When using regular expressions in a State's :term:`top file`, you must specify the matcher as the first option. The following example executes the contents of ``webserver.sls`` on the above-mentioned minions."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:95
+# 746ff5b9cfb443b797925545cf017f22
+msgid "Lists"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:97
+# d96ac57c8f0e4cbcb07c723c9efeed86
+msgid "At the most basic level, you can specify a flat list of minion IDs:"
+msgstr ""
+

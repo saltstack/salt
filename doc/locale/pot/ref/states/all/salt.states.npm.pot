@@ -1,0 +1,110 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.npm.rst:6
+# e07a3b3167ae47c78d4446c9c9d0f133
+msgid "salt.states.npm"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm:2
+# 3846321c60f0430e9bb16b68b272afc0
+msgid "Installation of NPM Packages"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm:4
+# bc97d28bac6e4be3bc38fd24a57428d3
+msgid "These states manage the installed packages for node.js using the Node Package Manager (npm). Note that npm must be installed for these states to be available, so npm states should include a requisite to a pkg.installed state for the package which provides npm (simply ``npm`` in most cases). Example:"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.bootstrap:1
+# 1a7cc692e3b944b7b022fbfc500dcb33
+msgid "Bootstraps a node.js application."
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.bootstrap:3
+# f921842069354c67bf05851cb710def1
+msgid "will execute npm install --json on the specified directory"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.bootstrap:9
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:11
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.removed:10
+# be2e23c329d44d73ad65830fdfb3283b
+# 6d4e3639f5fb4a639ebd2a6a28621fdf
+# 84a105390c3e46b5824f62541e2cce54
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.bootstrap:7
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.bootstrap:12
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:9
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:14
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.removed:8
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.removed:13
+# 2cf837c44e224f9bb20c5a8a3afebfe0
+# da143d75e1564f1aa844f16e75e42b70
+# a074bbb9e6ae4690a8d9bdd436320383
+# b4cc705bcaae45f6b2791f4057bec07a
+# 8b69cfea4c9842058de943ed24e27c2c
+# d553df8d72fc42adacb86a6ed5499900
+msgid "The user to run NPM with"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.bootstrap:13
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:16
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.removed:14
+# 33191b0459fa431d937f63033258d11e
+# 3bf8a69f902f476f974c9d25dcb1bb47
+# 2fe1aff049a34cd6b91a492bfe32ae61
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:1
+# 04a46266d298451392eb8e57f2354546
+msgid "Verify that the given package is installed and is at the correct version (if specified)."
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:6
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.removed:5
+# 529fc01e937943959c20120aedb1e689
+# 9bbe0feef6b14e74b9815fee792b7269
+msgid "dir"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:5
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.removed:4
+# a12717447cf4430db023ebe0c71321f5
+# fffeea8643954adeabf69f675507d8c2
+msgid "The target directory in which to install the package, or None for global installation"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:18
+# d210bcc0256e4d70abece0f96fdebf48
+msgid "force_reinstall"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.installed:19
+# c653de4a33c640008f1d649d233b1c9d
+msgid "Install the package even if it is already installed"
+msgstr ""
+
+#: ../../../salt/states/npm.py:docstring of salt.states.npm.removed:1
+# 83516c8758fd415ba14c6ba236291309
+msgid "Verify that the given package is not installed."
+msgstr ""
+

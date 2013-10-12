@@ -1,0 +1,45 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.nfs3.rst:6
+# e19ed79b0f014289a3554599756b0973
+msgid "salt.modules.nfs3"
+msgstr ""
+
+#: ../../../salt/modules/nfs3.py:docstring of salt.modules.nfs3:1
+# d464719b1c4540aabe00342462f3a730
+msgid "Module for managing NFS version 3."
+msgstr ""
+
+#: ../../../salt/modules/nfs3.py:docstring of salt.modules.nfs3.del_export:1
+# 59bb16282eb542daa1ec6b2abab2bdec
+msgid "Remove an export"
+msgstr ""
+
+#: ../../../salt/modules/nfs3.py:docstring of salt.modules.nfs3.del_export:3
+#: ../../../salt/modules/nfs3.py:docstring of salt.modules.nfs3.list_exports:3
+# 181ef4659ed74405902984549fa3926a
+# f73bb004e2134a17a4254404bf3fcdab
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/nfs3.py:docstring of salt.modules.nfs3.list_exports:1
+# c4103e5146c14063aced5e002f0954fb
+msgid "List configured exports"
+msgstr ""
+

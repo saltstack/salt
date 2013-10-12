@@ -1,0 +1,64 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.locate.rst:6
+# a32948746e1a46fea31a40fd09c22cdd
+msgid "salt.modules.locate"
+msgstr ""
+
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate:1
+# d9d862171b8d4646ac58ab1f21e99390
+msgid "Module for using the locate utilities"
+msgstr ""
+
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.locate:1
+# ddf9a4f66e9743cc8e431c54c1398508
+msgid "Performs a file lookup. Valid options (and their defaults) are::"
+msgstr ""
+
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.locate:14
+# 903fd32091c442e2980bcc816d842067
+msgid "See the manpage for ``locate(1)`` for further explanation of these options."
+msgstr ""
+
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.locate:16
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.stats:3
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.updatedb:3
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.version:3
+# e76f7d4f6d6b4ae2beb1782436579764
+# 81f0e8a88a1745968d223ab771f0c656
+# d232a001f727428c978388bd6128aa6b
+# 4a067fcbb2e740d1a2eaa13d16b38ce8
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.stats:1
+# c3182554b7524c01ab2193df394be147
+msgid "Returns statistics about the locate database"
+msgstr ""
+
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.updatedb:1
+# d0dea15a723d4d2fbe76d9c7be2b6be8
+msgid "Updates the locate database"
+msgstr ""
+
+#: ../../../salt/modules/locate.py:docstring of salt.modules.locate.version:1
+# aa02ba229655414f9856b7d755fb0097
+msgid "Returns the version of locate"
+msgstr ""
+

@@ -1,0 +1,68 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/eauth/index.rst:8
+# c1a79f48d67540b29c5243a959ef8334
+msgid "External Authentication System"
+msgstr ""
+
+#: ../../topics/eauth/index.rst:10
+# 54e6a6102e604eb4a0f608c26d8dee95
+msgid "Salt 0.10.4 comes with a fantastic new way to open up running Salt commands to users. This system allows for Salt itself to pass through authentication to any authentication system (The Unix PAM system was the first) to determine if a user has permission to execute a Salt command."
+msgstr ""
+
+#: ../../topics/eauth/index.rst:15
+# 6b9264df7f3444c1ac118398a67afb63
+msgid "The external authentication system allows for specific users to be granted access to execute specific functions on specific minions. Access is configured in the master configuration file, and uses the new access control system:"
+msgstr ""
+
+#: ../../topics/eauth/index.rst:30
+# a4f35f10551645159d9590f09d768859
+msgid "So, the above allows the user thatch to execute functions in the test and network modules on the minions that match the web* target. User steve is given unrestricted access to minion commands."
+msgstr ""
+
+#: ../../topics/eauth/index.rst:34
+# 550e859500a94ede9a8f86da714dd328
+msgid "The external authentication system can then be used from the command line by any user on the same system as the master with the `-a` option:"
+msgstr ""
+
+#: ../../topics/eauth/index.rst:41
+# 9d72ec2f277b412eaf28c7741d388cad
+msgid "The system will ask the user for the credentials required by the authentication system and then publish the command."
+msgstr ""
+
+#: ../../topics/eauth/index.rst:45
+# 71c3eafaa0ad4ec3a992b3fa6b91cf22
+msgid "Tokens"
+msgstr ""
+
+#: ../../topics/eauth/index.rst:47
+# 19dee23c2a014190aac7bcfa988e03d3
+msgid "With external authentication alone the authentication credentials will be required with every call to Salt. This can be alleviated with Salt tokens."
+msgstr ""
+
+#: ../../topics/eauth/index.rst:50
+# a938ca70ee93411aa259d1990f756261
+msgid "The tokens are short term authorizations and can be easily created by just adding a ``-T`` option when authenticating:"
+msgstr ""
+
+#: ../../topics/eauth/index.rst:57
+# b7a5410c5dec4e79a58ddf2468903844
+msgid "Now a token will be created that has a expiration of, by default, 12 hours. This token is stored in a file named ``.salt_token`` in the active user's home directory. Once the token is created, it is sent with all subsequent communications. The user authentication does not need to be entered again until the token expires. The token expiration time can be set in the Salt master config file."
+msgstr ""
+

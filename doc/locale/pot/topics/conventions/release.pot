@@ -1,0 +1,107 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/conventions/release.rst:6
+# 1a9992c6c1264b5dbcef4232bc5c68d9
+msgid "Salt Release Process"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:8
+# bffad12a037742c58155666529d2b4b0
+msgid "The goal for Salt projects is to cut a new feature release every four to six weeks.  This document outlines the process for these releases, and the subsequent bug fix releases which follow."
+msgstr ""
+
+#: ../../topics/conventions/release.rst:14
+# 0957ddb109a64b4388f8d9365e04e9c2
+msgid "Feature Release Process"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:16
+# 258ebebd32004ac89da5a9491760c17f
+msgid "When a new release is ready to be cut, the person responsible for cutting the release will follow the following steps (written using the 0.16 release as an example):"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:20
+# d3a8c248628e41538da65d867e6762f5
+msgid "All open issues on the release milestone should be moved to the next release milestone. (e.g. from the ``0.16`` milestone to the ``0.17`` milestone)"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:22
+# d428faeb7e034f6e898cf41bcb59a2f4
+msgid "Release notes should be created documenting the major new features and bugfixes in the release."
+msgstr ""
+
+#: ../../topics/conventions/release.rst:24
+# 057f8c2e2aee4b899fc85d19880ee4dd
+msgid "Create an annotated tag with only the major and minor version numbers, preceded by the letter ``v``.  (e.g. ``v0.16``)  This tag will reside on the ``develop`` branch."
+msgstr ""
+
+#: ../../topics/conventions/release.rst:27
+# 432d97319a4646298d2f5bb0a31d56ff
+msgid "Create a branch for the new release, using only the major and minor version numbers.  (e.g. ``0.16``)"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:29
+# 05931fa392ce4f588f5b84bb285934ee
+msgid "On this new branch, create an annotated tag for the first revision release, which is generally a release candidate.  It should be preceded by the letter ``v``.  (e.g. ``v0.16.0RC``)"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:32
+#: ../../topics/conventions/release.rst:52
+# de3947fc0adf45b2af0726cfe89d4247
+# 0bc3c8516de3459ba150209336745db2
+msgid "The release should be packaged from this annotated tag and uploaded to PyPI."
+msgstr ""
+
+#: ../../topics/conventions/release.rst:33
+# 1b064c9ee59a466cb07bcfa7c9d0e8d5
+msgid "The packagers should be notified on the ``salt-packagers`` mailing list so they can create packages for all the major operating systems.  (note that release candidates should go in the testing repositories)"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:36
+#: ../../topics/conventions/release.rst:55
+# 766a071a5ac64afe94c4b8c413f77db9
+# 04883fce4ac3476a9c800b98f96dedbe
+msgid "After the packagers have been given a few days to compile the packages, the release is announced on the ``salt-users`` mailing list."
+msgstr ""
+
+#: ../../topics/conventions/release.rst:38
+# c853cc0db7b54e7a832d5dc8cdf3b618
+msgid "Log into RTD and add the new release there.  (Have to do it manually)"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:42
+# 0b3ee77e1fd545d598aec188a6c2d29d
+msgid "Maintenance and Bugfix Releases"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:44
+# 22441c0593434c55b12f6ef8629b2f68
+msgid "Once a release has been cut, regular cherry-picking sessions should begin to cherry-pick any bugfixes from the ``develop`` branch to the release branch (e.g. ``0.16``).  Once major bugs have been fixes and cherry-picked, a bugfix release can be cut:"
+msgstr ""
+
+#: ../../topics/conventions/release.rst:49
+# 84aa0577707c4dc28de4d84e4fee5f20
+msgid "On the release branch (i.e. ``0.16``), create an annotated tag for the revision release.  It should be preceded by the letter ``v``.  (e.g. ``v0.16.2``)  Release candidates are unnecessary for bugfix releases."
+msgstr ""
+
+#: ../../topics/conventions/release.rst:53
+# 1be994ccf5b042998cf37a5e675c0951
+msgid "The packagers should be notified on the ``salt-packagers`` mailing list so they can create packages for all the major operating systems."
+msgstr ""
+

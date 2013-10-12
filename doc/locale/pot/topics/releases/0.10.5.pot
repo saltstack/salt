@@ -1,0 +1,218 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.10.5.rst:6
+# de4439e0bd3945978faceb9917cea69d
+msgid "Salt 0.10.5 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:8
+# a2036de98070433e98d584481f971ab4
+msgid "Salt 0.10.5 is ready, and comes with some great new features. A few more interfaces have been modularized, like the outputter system. The job cache system has been made more powerful and can now store and retrieve jobs archived in external databases. The returner system has been extended to allow minions to easily retrieve data from a returner interface."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:14
+# c7989c37237342009a2f6fadac98d242
+msgid "As usual, this is an exciting release, with many noteworthy additions!"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:17
+# 2bff6bae8bce4d4eb219fee153a7f69b
+msgid "Major Features"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:20
+# 5a9f195d0778441ebd61aaea5e4102ac
+msgid "External Job Cache"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:22
+# 698e8e9b953d48508331c5521b9ee0f8
+msgid "The external job cache is a system which allows for a returner interface to also act as a job cache. This system is intended to allow users to store job information in a central location for longer periods of time and to make the act of looking up information from jobs executed on other minions easier."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:27
+# 8195cd1c9b5849c9be4a254dabf0365f
+msgid "Currently the external job cache is supported via the mongo and redis returners:"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:35
+# ca2250f330984844a0cac1a4c9002dd3
+msgid "Once the external job cache is turned on the new `ret` module can be used on the minions to retrieve return information from the job cache. This can be a great way for minions to respond and react to other minions."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:40
+# 4f16456e411d4ffeaac9cd23970c56ae
+msgid "OpenStack Additions"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:42
+# e3691452f8234ecaa1f40ff453d4ae94
+msgid "OpenStack integration with Salt has been moving forward at a blistering pace. The new `nova`, `glance` and `keystone` modules represent the beginning of ongoing OpenStack integration."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:46
+# 6c49b036929442909a9df91db488656a
+msgid "The Salt team has had many conversations with core OpenStack developers and is working on linking to OpenStack in powerful new ways."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:50
+# daf969d3ef87497eb9d6d40f4cd9fc92
+msgid "Wheel System"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:52
+# e713ead8d13b44e39bf9036bf4bf18ae
+msgid "A new API was added to the Salt Master which allows the master to be managed via an external API. This new system allows Salt API to easily hook into the Salt Master and manage configs, modify the state tree, manage the pillar and more. The main motivation for the wheel system is to enable features needed in the upcoming web UI so users can manage the master just as easily as they manage minions."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:59
+# 647e399aa95c48dcb5621a31778a59c2
+msgid "The wheel system has also been hooked into the external auth system. This allows specific users to have granular access to manage components of the Salt Master."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:64
+# 44f22e1bdfbc434e92fa8f83b5502111
+msgid "Render Pipes"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:66
+# a81d9361e13449b5abc895c3578ac8e3
+msgid "Jack Kuan has added a substantial new feature. The render pipes system allows Salt to treat the render system like unix pipes. This new system enables sls files to be passed through specific render engines. While the default renderer is still recommended, different engines can now be more easily merged. So to pipe the output of Mako used in YAML use this shebang line:"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:72
+# d20c99af3d9f41b4a15a4d349929c472
+msgid "#!mako|yaml"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:75
+# b6797f6acf034d9daeb05c31bbf01f5f
+msgid "Salt Key Overhaul"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:77
+# 9e16c05ab43f4b4fbffe32a09eb9a8c7
+msgid "The Salt Key system was originally developed as only a CLI interface, but as time went on it was pressed into becoming a clumsy API. This release marks a complete overhaul of Salt Key. Salt Key has been rewritten to function purely from an API and to use the outputter system. The benefit here is that the outputter system works much more cleanly with Salt Key now, and the internals of Salt Key can be used much more cleanly."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:85
+# e120ff4c2e474ff2a8f66d8ae0dfb3b4
+msgid "Modular Outputters"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:87
+# 5babeb9416c040808198f90541776de1
+msgid "The outputter system is now loaded in a modular way. This means that output systems can be more easily added by dropping a python file down on the master that contains the function `output`."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:92
+# 99674910803e4285aae6e61e1006134e
+msgid "Gzip from Fileserver"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:94
+# bed3b82f794b4714860ca7db93c60d6a
+msgid "Gzip compression has been added as an option to the cp.get_file and cp.get_dir commands. This will make file transfers more efficient and faster, especially over slower network links."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:99
+# c4533f412ea14de5928b0a416fd9e525
+msgid "Unified Module Configuration"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:101
+# e2bf209a2a4b467d8d23441353b294e5
+msgid "In past releases of Salt, the minions needed to be configured for certain modules to function. This was difficult because it required pre-configuring the minions. 0.10.5 changes this by making all module configs on minions search the master config file for values."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:106
+# 16382b98fc9e49fabe0ea7c0c30339aa
+msgid "Now if a single database server is needed, then it can be defined in the master config and all minions will become aware of the configuration value."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:110
+# 7937cbc3a1f44d2dad6f7838c5e6d8ed
+msgid "Salt Call Enhancements"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:112
+# 857ac20e0dd5482da90cf8795cce16fd
+msgid "The ``salt-call`` command has been updated in a few ways. Now, ``salt-call`` can take the --return option to send the data to a returner. Also, ``salt-call`` now reports executions in the minion proc system, this allows the master to be aware of the operation salt-call is running."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:118
+# a686752d7725474381096427aecc4af2
+msgid "Death to pub_refresh and sub_timeout"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:120
+# a564975765b94f68a17c93e26cd19dd4
+msgid "The old configuration values `pub_refresh` and `sub_timeout` have been removed. These options were in place to alleviate problems found in earlier versions of ZeroMQ which have since been fixed. The continued use of these options has proven to cause problems with message passing and have been completely removed."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:126
+# 681c251feafd46b7b851afc6ff16a0f9
+msgid "Git Revision Versions"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:128
+# 1543da12692c47a6817a6d4310461b6c
+msgid "When running Salt directly from git (for testing or development, of course) it has been difficult to know exactly what code is being executed. The new versioning system will detect the git revision when building and how many commits have been made since the last release. A release from git will look like this:"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:134
+# 02cf7008e26942fc93db73c7e23ee0e3
+msgid "0.10.4-736-gec74d69"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:137
+# c60317cbf5734968856430b1951bf094
+msgid "Svn Module Addition"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:139
+# 5c34c60785854d518cf297dc46a02b0d
+msgid "Anthony Cornehl (twinshadow) contributed a module that adds Subversion support to Salt.  This great addition helps round out Salt's VCS support."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:143
+# 617fc5e5be4d4af880eb075c3f56cc09
+msgid "Noteworthy Changes"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:146
+# 04c0545a9ef5407f8b56b15f2ac3ba3b
+msgid "Arch Linux Defaults to Systemd"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:148
+# b41b54efcb0145048934bce855ad99cc
+msgid "Arch Linux recently changed to use systemd by default and discontinued support for init scripts. Salt has followed suit and defaults to systemd now for managing services in Arch."
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:153
+# 01ab997fa4e047d885899d24acf5bb3e
+msgid "Salt, Salt Cloud and Openstack"
+msgstr ""
+
+#: ../../topics/releases/0.10.5.rst:155
+# c82cb73686a34eb9905a82852fdd720f
+msgid "With the releases of Salt 0.10.5 and Salt Cloud 0.8.2, OpenStack becomes the first (non-OS) piece of software to include support both on the user level (with Salt Cloud) and the admin level (with Salt). We are excited to continue to extend support of other platforms at this level."
+msgstr ""
+

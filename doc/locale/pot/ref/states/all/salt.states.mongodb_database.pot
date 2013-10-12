@@ -1,0 +1,88 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.mongodb_database.rst:6
+# f522f447dc2a40adaad498d448d87cd0
+msgid "salt.states.mongodb_database"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database:1
+# f74241c136ee46fcafbf0796e73b4616
+msgid "Management of Mongodb databases"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database:3
+# 72a81f8c07734505893c495d5f9251dc
+msgid "Only deletion is supported, creation doesn't make sense and can be done using mongodb_user.present"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:1
+# e9968bfdf6814ba595a5cb3d390f1301
+msgid "Ensure that the named database is absent"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:4
+# 621166323f2049d2abe9ed59a4e07343
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:4
+# 109598b6db804ad5aaeb320f2135f7ae
+msgid "The name of the database to remove"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:7
+# 61f3cc2a8a1a41bd95a7e35f7496ceaa
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:7
+# dff80edd9e6147a280e82be2869d7f12
+msgid "The user to connect as (must be able to create the user)"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:10
+# 221708063d5a406eb5d845c30164adde
+msgid "password"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:10
+# 8bc2b8b878ea4e2cab69aae3712e0cb1
+msgid "The password of the user"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:13
+# e5f8b5d19a244fc78e8803faae9809d2
+msgid "host"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:13
+# 636ae5fc89cb476aac582152e84f26b8
+msgid "The host to connect to"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:15
+# 4ef4884960db4d428766da3300a4b273
+msgid "port"
+msgstr ""
+
+#: ../../../salt/states/mongodb_database.py:docstring of salt.states.mongodb_database.absent:16
+# e91f458bd7c14e1dbcdb3336d8236f93
+msgid "The port to connect to"
+msgstr ""
+

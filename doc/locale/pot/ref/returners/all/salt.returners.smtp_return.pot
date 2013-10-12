@@ -1,0 +1,73 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/returners/all/salt.returners.smtp_return.rst:6
+# 35b5fe1704a24a8ca43fc3e07b0ce19b
+msgid "salt.returners.smtp_return"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:1
+# df431026ede64b48bd6721cef9922cb1
+msgid "Return salt data via email"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:3
+# dff453105bdb450b93fa76b7df2f8b84
+msgid "The following fields can be set in the minion conf file:"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:5
+# d25545958a2f42a0ab9c7483d5970e51
+msgid "smtp.from (required) smtp.to (required) smtp.host (required) smtp.port (optional, defaults to 25) smtp.username (optional) smtp.password (optional) smtp.tls (optional, defaults to False) smtp.subject (optional, but helpful) smtp.fields (optional)"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:15
+# cd5249002eda4153ae74388d5b088a2d
+msgid "There are a few things to keep in mind:"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:17
+# dc39e772af414988b087c273d3e30316
+msgid "If a username is used, a password is also required."
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:18
+# 3c48839bab3c4af19ab7e579dac28c1b
+msgid "You should at least declare a subject, but you don't have to."
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:19
+# d77bad1e748346e29a07685afecad6ea
+msgid "smtp.fields lets you include the value(s) of various fields in the subject line of the email. These are comma-delimited. For instance:"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:22
+# baf47efd20cc4b298a05347bb11b354c
+msgid "smtp.fields: id,fun"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return:24
+# 2d31b0eb85f94646ae959d2391cbeb04
+msgid "...will display the id of the minion and the name of the function in the subject line. You may also use 'jid' (the job id), but it is generally recommended not to use 'return', which contains the entire return data structure (which can be very large)."
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.py:docstring of salt.returners.smtp_return.returner:1
+# 646630b9bc154be283b04ee11989021c
+msgid "Send an email with the data"
+msgstr ""
+

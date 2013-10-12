@@ -1,0 +1,87 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.host.rst:6
+# bd91331886b746c9a460a022846d2dcc
+msgid "salt.states.host"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host:2
+# 96789f5d89b74350b80f9d1c568acb51
+msgid "Management of addresses and names in hosts file."
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host:4
+# 35ccace5a10c4dc2b73353f57c50824a
+msgid "The /etc/hosts file can be managed to contain definitions for specific hosts:"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host:12
+# 3081de064c464b14bf6d01e5536e314e
+msgid "Or using the \"names:\" directive, you can put several names for the same IP. (Do not try one name with space-separated values)."
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host:24
+# 17fd1ae200244831a1a69ea66f9b0a3f
+msgid "NOTE: changing the name(s) in the present() function does not cause an update to remove the old entry."
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host.absent:1
+# 8f49b5bffe694f5ba27e6f36f2fd2d4f
+msgid "Ensure that the named host is absent"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host.absent:4
+#: ../../../salt/states/host.py:docstring of salt.states.host.present:4
+# 9f0e940d4e56485faf975bc13783ba43
+# 3d1a212665074e6fa152a6fad5083f6e
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host.absent:4
+# 5e3b57ea9fcc48e197068b68ac1b4e3f
+msgid "The host to remove"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host.absent:6
+#: ../../../salt/states/host.py:docstring of salt.states.host.present:6
+# 314729de81c041aa96ceaebf7cbe5e39
+# 04928aa7ace14a429ef6ab11e64927e4
+msgid "ip"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host.absent:7
+# e815a70c4e284d1395faf612bd4329f0
+msgid "The ip addr of the host to remove"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host.present:1
+# 97e021367d2f4098bc6add5d75918f1b
+msgid "Ensures that the named host is present with the given ip"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host.present:4
+# 58a4787346554b8eba019c3e4cd6657d
+msgid "The host to assign an ip to"
+msgstr ""
+
+#: ../../../salt/states/host.py:docstring of salt.states.host.present:7
+# d0baeb7d6a7447b9b49348e1872c771c
+msgid "The ip addr to apply to the host"
+msgstr ""
+

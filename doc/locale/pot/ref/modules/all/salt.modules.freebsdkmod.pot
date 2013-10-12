@@ -1,0 +1,66 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.freebsdkmod.rst:6
+# 561a4bbf4dae48469cf56623bdc9af7d
+msgid "salt.modules.freebsdkmod"
+msgstr ""
+
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod:1
+# 4321794dc6404486a70f018da7b506a0
+msgid "Module to manage FreeBSD kernel modules"
+msgstr ""
+
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.available:1
+# 8a307d44aa1a4c9a956ff78f1b2d64a5
+msgid "Return a list of all available kernel modules"
+msgstr ""
+
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.available:3
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.check_available:3
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.load:3
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.lsmod:3
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.remove:3
+# a0ac8ab3a771420d967288ae04bd97a4
+# 1bea1e78efe34f7a914d531dc4e09310
+# 3c95722ce633433585ac58afd5dd2492
+# 2aada8d34a63450c85e16714ded40556
+# a9f07d5fe0b54b78885897039324c788
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.check_available:1
+# 73cda4d3e07040f8a006f916cf8cc305
+msgid "Check to see if the specified kernel module is available"
+msgstr ""
+
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.load:1
+# 5549a41d870443ffb6c4fb2ae3ed86ae
+msgid "Load the specified kernel module"
+msgstr ""
+
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.lsmod:1
+# 7f3af7d86747414ab1a84f3c7ded4f30
+msgid "Return a dict containing information about currently loaded modules"
+msgstr ""
+
+#: ../../../salt/modules/freebsdkmod.py:docstring of salt.modules.freebsdkmod.remove:1
+# 235395c7742a47a5a91cd29c12953038
+msgid "Remove the specified kernel module"
+msgstr ""
+

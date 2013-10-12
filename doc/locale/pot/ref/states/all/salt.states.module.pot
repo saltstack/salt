@@ -1,0 +1,105 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.module.rst:6
+# 7a2687f5277540918e4474b1eb4b880d
+msgid "salt.states.module"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module:2
+# 0995f74bc8f24a8db799c74b9ba2a268
+msgid "Execution of Salt modules from within states."
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module:4
+# 63b0fc6baa6342f69d5ed61d7d851bf4
+msgid "Individual module calls can be made via states. to call a single module function use the run function."
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module:7
+# 709bfc7973624a9f956b579be7a80c9d
+msgid "One issue exists, since the name and fun arguments are present in the state call data structure and is present in many modules, this argument will need to be replaced in the sls data with the arguments m_name and m_fun."
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.mod_watch:1
+#: ../../../salt/states/module.py:docstring of salt.states.module.run:1
+# bc9342c9d97c40a581df076202073cd1
+# 12bfa2e75efb4bd9804d0a2ed2b72af6
+msgid "Run a single module function"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.mod_watch:4
+#: ../../../salt/states/module.py:docstring of salt.states.module.run:4
+#: ../../../salt/states/module.py:docstring of salt.states.module.wait:4
+# 07fdba1530e34bfe8dab579334837138
+# 7f761f560ee9487b95fd275419fbede1
+# 2c85242c4ecf4d3b9f1b10ddb9723c98
+msgid "``name``"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.mod_watch:4
+#: ../../../salt/states/module.py:docstring of salt.states.module.run:4
+#: ../../../salt/states/module.py:docstring of salt.states.module.wait:4
+# d874ce6cc1864684ab36cb936627bf9a
+# 4c2ebd2914034147bc1ebb7b7a8f500c
+# efbcd7166a204cfc83b44e00dc3648b4
+msgid "The module function to execute"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.mod_watch:7
+#: ../../../salt/states/module.py:docstring of salt.states.module.run:7
+# 69381157b8a7477bbce981b393b94dd7
+# 11345f4eca2a40cc8de6f7f5383cc6dd
+msgid "``returner``"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.mod_watch:7
+#: ../../../salt/states/module.py:docstring of salt.states.module.run:7
+# c1cd0e23da1743feb1dc33b217b0d86b
+# 429ef8e717444985a0ae01e0f41f191c
+msgid "Specify the returner to send the return of the module execution to"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.mod_watch:9
+#: ../../../salt/states/module.py:docstring of salt.states.module.run:9
+#: ../../../salt/states/module.py:docstring of salt.states.module.wait:7
+# a83f9ac8406c44439c03d19c4360aee7
+# 2a7b053da0f44415b14586bd8742cead
+# 0eb02916274f4db784f891eaa6f46ad7
+msgid "``**kwargs``"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.mod_watch:10
+#: ../../../salt/states/module.py:docstring of salt.states.module.run:10
+#: ../../../salt/states/module.py:docstring of salt.states.module.wait:7
+# 60b2adf5ced0460188e6cf2f07e39bb1
+# a945dc9e782549d9ab2213abac284816
+# d2de06a392164e32afbb3a13f653e9e6
+msgid "Pass any arguments needed to execute the function"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.wait:1
+# d4ea4d4bf222469cb9cedd8c71a12c24
+msgid "Run a single module function only if the watch statement calls it"
+msgstr ""
+
+#: ../../../salt/states/module.py:docstring of salt.states.module.wait:9
+# aee1d0578570484bade93d73bf17dafe
+msgid "Note that this function actually does nothing -- however, if the `watch` is satisfied, then `mod_watch` (defined at the bottom of this file) will be run.  In this case, `mod_watch` is an alias for `run()`."
+msgstr ""
+

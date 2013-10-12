@@ -1,0 +1,84 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.pillar.rst:6
+# c48720428e2a4be9a1f813bc42d37af9
+msgid "salt.modules.pillar"
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar:1
+# e8e5c8e359f74660bd0930b256b85c48
+msgid "Extract the pillar data for this minion"
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.ext:1
+# 4c8fc1fcd23e404084d3cc2fe14b5218
+msgid "Generate the pillar and apply an explicit external pillar"
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.ext:3
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.get:16
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.items:5
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.raw:4
+# e1c087955cd84fcfad2a6d78d80f6211
+# 67e5c69ae8c445ae942905a6f996a715
+# 846bc5201aaf425da4c8ac32fe906aa8
+# 568ac4390175409196c184631c00ce7b
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.get:3
+# 37d92033cb9247caa94ec7a53718fe5b
+msgid "Attempt to retrieve the named value from pillar, if the named value is not available return the passed default. The default return is an empty string."
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.get:6
+# 7c55ecdb1dd540939db0b483719ede4e
+msgid "The value can also represent a value in a nested dict using a \":\" delimiter for the dict. This means that if a dict in pillar looks like this::"
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.get:11
+# cea07b701981445e86aaafad59a37713
+msgid "To retrieve the value associated with the apache key in the pkg dict this key can be passed::"
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.item:3
+# 54bbc81e8a4c4200b2526d939071eb72
+msgid "Return one ore more pillar entries"
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.item:5
+# 1081cc4c8eb04bd8ad6fc2bc0ef15a36
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.items:1
+# df93f823a8ac4f61b1f5b4c76c1b5f53
+msgid "This function calls the master for a fresh pillar and generates the pillar data on the fly, unlike pillar.raw which returns the pillar data which is currently loaded into the minion."
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.raw:1
+# 850576897def443abf860f7f8bf9cb3e
+msgid "Return the raw pillar data that is available in the module. This will show the pillar as it is loaded as the __pillar__ dict."
+msgstr ""
+
+#: ../../../salt/modules/pillar.py:docstring of salt.modules.pillar.raw:10
+# 370a3c8034b648bfb3ccac8c9a3a3981
+msgid "With the optional key argument, you can select a subtree of the pillar raw data.::"
+msgstr ""
+

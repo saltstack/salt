@@ -1,0 +1,130 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.ssh.rst:6
+# 9473a9815c3f4de3931fb52b6a947362
+msgid "salt.modules.ssh"
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh:1
+# c84d28ded2664a9886db0df4d8cf83c1
+msgid "Manage client ssh components"
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.auth_keys:1
+# c3a78951a61541a7ad70e1736904f726
+msgid "Return the authorized keys for the specified user"
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.auth_keys:3
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.check_key:3
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.check_key_file:4
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.check_known_host:12
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.get_known_host:4
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.host_keys:3
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.recv_known_host:3
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.rm_auth_key:3
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.rm_known_host:3
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.set_auth_key:6
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.set_auth_key_from_file:3
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.set_known_host:8
+# 78128758e7a04f57b565576678ef27d4
+# 2c8dc908a78147c896761cabff2d800e
+# 1aa7a16d32834fa98252f3b20cef9ce2
+# 28d925c681af4606b18b19b2d023f3bd
+# fc012899b77b4846b0517b598099df6a
+# 32d7d843703f4e4199f393598c6446ae
+# 57f1aa1dbdb74344b608c4c167fc55cd
+# 915f1362c6bd49a6be6968b7cb288121
+# d4cb172dcd87466a8bd212fd23769f25
+# de02fce1f124428c8449de7adac0cb01
+# fc956f9544e44d409754b6dbd4886980
+# b99c2c6f93db492ca532abf19eed7383
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.check_key:1
+# 096546aae4684b149eed41be865f89c7
+msgid "Check to see if a key needs updating, returns \"update\", \"add\" or \"exists\""
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.check_key_file:1
+# 233d23654d164db0a1198cb5809b480a
+msgid "Check a keyfile from a source destination against the local keys and return the keys to change"
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.check_known_host:1
+# 6be75270af504d68bb31436bb78e15aa
+msgid "Check the record in known_hosts file, either by its value or by fingerprint (it's enough to set up either key or fingerprint, you don't need to set up both)."
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.check_known_host:5
+# c6a2895b4e95438bac47000399757467
+msgid "If provided key or fingerprint doesn't match with stored value, return \"update\", if no value is found for a given host, return \"add\", otherwise return \"exists\"."
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.check_known_host:9
+# 887a4d76d3d04220bb023ea4f9273361
+msgid "If neither key, nor fingerprint is defined, then additional validation is not performed."
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.get_known_host:1
+# 411c30adc8b24f3b8f8ee00149410abf
+msgid "Return information about known host from the configfile, if any. If there is no such key, return None."
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.host_keys:1
+# 04fd693d12ee4dfba3543d5d2d768026
+msgid "Return the minion's host keys"
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.recv_known_host:1
+# 44e1dc20951b4fb198446ad188f9b1a8
+msgid "Retrieve information about host public key from remote server"
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.rm_auth_key:1
+# 73e4ad66ac674c94bdd7ba853eea9ccf
+msgid "Remove an authorized key from the specified user's authorized key file"
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.rm_known_host:1
+# 8c3a4671aba3492d86680088ba29a586
+msgid "Remove all keys belonging to hostname from a known_hosts file."
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.set_auth_key:1
+# 2280a0a39d0447dd8b0d5f9ed1fa1e4d
+msgid "Add a key to the authorized_keys file. The \"key\" parameter must only be the string of text that is the encoded key. If the key begins with \"ssh-rsa\" or ends with user@host, remove those from the key before passing it to this function."
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.set_auth_key_from_file:1
+# ea5b1af2fb8d4b50ac5373fc3d0bb91d
+msgid "Add a key to the authorized_keys file, using a file as the source."
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.set_known_host:1
+# d8494f3538d4416a9a5002c0f38e1c67
+msgid "Download SSH public key from remote host \"hostname\", optionally validate its fingerprint against \"fingerprint\" variable and save the record in the known_hosts file."
+msgstr ""
+
+#: ../../../salt/modules/ssh.py:docstring of salt.modules.ssh.set_known_host:5
+# 565d33a090a247ff9c3d1acd8bcb389e
+msgid "If such a record does already exists in there, do nothing."
+msgstr ""
+

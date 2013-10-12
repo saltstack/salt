@@ -1,0 +1,59 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.freebsd_sysctl.rst:6
+# 7aed09e715f0424cb95ca3422fb65a22
+msgid "salt.modules.freebsd_sysctl"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl:1
+# 1f772bbd437444658167c1d36a967d7a
+msgid "Module for viewing and modifying sysctl parameters"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl.assign:1
+# c1794af026a94d80ab208afdf2712b20
+msgid "Assign a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl.assign:3
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl.get:3
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl.persist:3
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl.show:3
+# 00b6d74882b44567b48ebc561d119210
+# 1f562c9263ce42258f5fd6439f607d48
+# b316ea5f4188405080bfd70575e137ac
+# 545c17c01db848d1b91c653a10fd5226
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl.get:1
+# 946fcdde48da4c31b2a0770a739fa311
+msgid "Return a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl.persist:1
+# b622dfb3f61e4a83b8b642bbf7582e47
+msgid "Assign and persist a simple sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.py:docstring of salt.modules.freebsd_sysctl.show:1
+# dd05b85c98f0403f9c0166eec8c0859f
+msgid "Return a list of sysctl parameters for this minion"
+msgstr ""
+

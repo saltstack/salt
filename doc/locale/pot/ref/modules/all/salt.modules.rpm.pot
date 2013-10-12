@@ -1,0 +1,62 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.rpm.rst:6
+# d955b327230844039e79c83cc4b6e8cd
+msgid "salt.modules.rpm"
+msgstr ""
+
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm:1
+# 1f44e7da12c54dfca66b17c4404e7e6d
+msgid "Support for rpm"
+msgstr ""
+
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm.file_dict:1
+# b7f770408d864693a5566030a6ee2261
+msgid "List the files that belong to a package, sorted by group. Not specifying any packages will return a list of _every_ file on the system's rpm database (not generally recommended)."
+msgstr ""
+
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm.file_dict:5
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm.file_list:5
+# f1d82f6dec7a496b9acd3ff83080cfd9
+# 811e70200bc245dd87b563616251f831
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm.file_list:1
+# 7184e88395174eeeb59fdf637b0ef824
+msgid "List the files that belong to a package. Not specifying any packages will return a list of _every_ file on the system's rpm database (not generally recommended)."
+msgstr ""
+
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm.list_pkgs:1
+# a26dcde688db453d8ec24b9a19ddccb9
+msgid "List the packages currently installed in a dict::"
+msgstr ""
+
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm.list_pkgs:5
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm.verify:3
+# 853d92d55e3146ff9629960507ba295e
+# 60b71664aee84b5bb4b9ea2126d58324
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/rpm.py:docstring of salt.modules.rpm.verify:1
+# c332717205884b02b46605f8939c66d2
+msgid "Runs an rpm -Va on a system, and returns the results in a dict"
+msgstr ""
+

@@ -1,0 +1,48 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/testing.rst:6
+# c2e3a3b1fecf49aa96279acb52726d38
+msgid "State Testing"
+msgstr ""
+
+#: ../../ref/states/testing.rst:8
+# 011aaaeef6ba4893af4b88b708a3bcaf
+msgid "Executing a Salt state run can potentially change many aspects of a system and it may be desirable to first see what a state run is going to change before applying the run."
+msgstr ""
+
+#: ../../ref/states/testing.rst:12
+# e14c6dff66c64501bd9dfcf37a15d128
+msgid "Salt has a test interface to report on exactly what will be changed, this interface can be invoked on any of the major state run functions:"
+msgstr ""
+
+#: ../../ref/states/testing.rst:21
+# 9c3907059c4c4531bd14e624d9fe3102
+msgid "The test run is mandated by adding the ``test=True`` option to the states. The return information will show states that will be applied in yellow and the result is reported as ``None``."
+msgstr ""
+
+#: ../../ref/states/testing.rst:26
+# 177494becd5f4b23bb1b3d8c3153df4f
+msgid "Default Test"
+msgstr ""
+
+#: ../../ref/states/testing.rst:28
+# 9ec05f9d01ab4cd88af6e2fa98309807
+msgid "If the value ``test`` is set to ``True`` in the minion configuration file then states will default to being executed in test mode. If this value is set then states can still be run by calling test=False:"
+msgstr ""
+

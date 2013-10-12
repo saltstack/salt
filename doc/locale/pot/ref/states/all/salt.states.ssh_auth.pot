@@ -1,0 +1,145 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.ssh_auth.rst:6
+# f2a3da3312824913a08b866fb11727e2
+msgid "salt.states.ssh_auth"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth:2
+# 1bc5cc9d0c8b477c87acdf93f3fa9433
+msgid "Control of entries in SSH authorized_key files."
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth:4
+# d6ec5ea6b06e48ecb3476e99697c341a
+msgid "The information stored in a user's ssh authorized key file can be easily controlled via the ssh_auth state. Defaults can be set by the enc, options, and comment keys. These defaults can be overridden by including them in the name."
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.absent:1
+# b219d0d3476246fba027f22ccf62747f
+msgid "Verifies that the specified ssh key is absent"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.absent:4
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:4
+# 2898cac20fdd47758b02b746a51480eb
+# e2d2628372bd44bda1636ecda72cab55
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.absent:4
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:4
+# f98faba920c14dc4b83a456b36ca7359
+# 753dc9d87b1047ae8b67578fc72fbc43
+msgid "The ssh key to manage"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.absent:7
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:7
+# 980dd60d08334b3b8323eb4176ea64d1
+# b4e68de4e72a4a7295cb64ef7c8067d8
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.absent:7
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:7
+# e8a9dbaa43eb4618aefbdcc9e0e0429c
+# 4c140ed26092459bafbbbae5b7719eb5
+msgid "The user who owns the ssh authorized keys file to modify"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.absent:10
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:36
+# 0cc51ac5a89e4506b5b093c107b1e222
+# d88112f9bc334fdd9c2d20ecd3244a0d
+msgid "config"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.absent:10
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:36
+# 8cfffa2ef70b47aea81f759044dc9e21
+# b656ecf489644518b1696fd97af47821
+msgid "The location of the authorized keys file relative to the user's home directory, defaults to \".ssh/authorized_keys\""
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:1
+# 1e1e1a9f6fa8448e913a04a58c2f958c
+msgid "Verifies that the specified ssh key is present for the specified user"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:10
+# cd05bd42640f437e84274f905ab7a1f7
+msgid "enc"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:10
+# 15df1795051e43f3a2ee7b85d05b65b5
+msgid "Defines what type of key is being used, can be ecdsa ssh-rsa, ssh-dss"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:13
+# c45b8100e8ad45cbb2c133eb60da97ec
+msgid "comment"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:13
+# 0fe8031531134f93a952e13195d344d4
+msgid "The comment to be placed with the ssh public key"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:18
+# 325dbb29a17246988d9618dcc076ee7e
+msgid "source"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:16
+# 9569c2cd36d5463089fd1f18ce4b23ea
+msgid "The source file for the key(s). Can contain any number of public keys, in standard \"authorized_keys\" format. If this is set, comment, enc, and options will be ignored."
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:21
+# 6713c2f27e804eb4812b7d0c1ad81cf6
+msgid "The source file must contain keys in the format ``<enc> <key> <comment>``. If you have generated a keypair using PuTTYgen, then you will need to do the following to retrieve an OpenSSH-compatible public key."
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:26
+# 904037ac96ae4ed193d2df27e0d22fce
+msgid "In PuTTYgen, click ``Load``, and select the *private* key file (not the public key), and click ``Open``."
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:28
+# 4316505195cf4771a3f6468b43a7e5a7
+msgid "Copy the public key from the box labeled ``Public key for pasting into OpenSSH authorized_keys file``."
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:30
+# e0822a3694fa45cca3ee0e6a3f2aa372
+msgid "Paste it into a new file."
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:33
+# b16ebefda67d46d98606ed1f841b634e
+msgid "options"
+msgstr ""
+
+#: ../../../salt/states/ssh_auth.py:docstring of salt.states.ssh_auth.present:33
+# 3688854c73924c72a0673f4fdb2c655b
+msgid "The options passed to the key, pass a list object"
+msgstr ""
+

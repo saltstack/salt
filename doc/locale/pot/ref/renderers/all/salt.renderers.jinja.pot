@@ -1,0 +1,202 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:6
+# f5413d7082e34bd1af43b7f2e054e9af
+msgid "salt.renderers.jinja"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:9
+# 35647aea75be43bfb03e2be792930b45
+msgid "Jinja in States"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:13
+# 1874a962a5b9467c92abcb3b83e90b87
+msgid "The most basic usage of Jinja in state files is using control structures to wrap conditional or redundant state elements:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:33
+# e71226def8094ac4be4001349f4274db
+msgid "In this example, the first if block will only be evaluated on minions that aren't running FreeBSD, and the second block changes the file name based on the *os* grain."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:37
+# 85c464848b89457a8f77fa08bdc356b2
+msgid "Writing **if-else** blocks can lead to very redundant state files however. In this case, using :doc:`pillars</topics/pillar/index>`, or using a previously defined variable might be easier:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:54
+# 20fc2ec345f14a9c8113af2f83c08924
+msgid "Using a variable set by the template, the `for loop`_ will iterate over the list of MOTD files to update, adding a state block for each file."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:60
+# 9dbf1907c7fa4567a43a5feaa60b2551
+msgid "Passing Variables"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:62
+# 42d613c45f8d421e88047c908a070cab
+msgid "It is also possible to pass additional variable context directly into a template, using the ``defaults`` and ``context`` mappings of the :doc:`file.managed</ref/states/all/salt.states.file>` state:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:79
+# 4cac620dcaa840a987c3242166e12177
+msgid "The template will receive a variable ``message``, which would be accessed in the template using ``{{ message }}``. If the operating system is FreeBSD, the value of the variable ``message`` would be *Bar*, otherwise it is the default *Foo*"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:85
+# cb325c3e7c734f7ea8a276b7bea40c8b
+msgid "Include and Import"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:87
+# f0d37530abcf4aabac48a7844831aefe
+msgid "Includes and imports_ can be used to share common, reusable state configuration between state files and between files."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:94
+# e88ae8b557c84895949bc3f1bb76ec99
+msgid "This would import the ``test`` template variable or macro, not the ``test`` state element, from the file ``lib.sls``. In the case that the included file performs checks again grains, or something else that requires context, passing the context into the included file is required:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:106
+# f5648eaf51ac4fa6bcec005c23ca6c21
+msgid "Variable and block Serializers"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:108
+# 11b11c8215c946ec9ecdcd5f1dbb43d0
+msgid "Salt allows one to serialize any variable into **json** or **yaml**. For example this variable::"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:120
+# 28340059de8341fcbf7104f1140d0803
+msgid "with this template::"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:126
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:158
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:197
+# 1a375a49798d438483b8641fdcb6825b
+# d7e697a5ce854e6f8a0ee7c1918697ba
+# efc392042bf94cd29ff778c7ba08778e
+msgid "will be rendered has::"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:133
+# 8ce2caf8652a48c69e84ea3f930193e2
+msgid "Strings and variables can be deserialized with **load_yaml** and **load_json** tags and filters. It allows one to manipulate data directly in templates, easily:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:169
+# 49a41187cc0e4ed5a0b49db563498197
+msgid "Template Serializers"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:171
+# aee37f24080b461aac983e7de7971146
+msgid "Salt implements **import_yaml** and **import_json** tags. They work like the `import tag`_, except that the document is also deserialized."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:174
+# 5da53b139918467ca91f2cb060d07398
+msgid "Imagine you have a generic state file in which you have the complete data of your infrastucture:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:188
+# 65e6a7a94657498bbe9c5fafc085d0ea
+msgid "But you don't want to expose everything to a minion. This state file:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:205
+# d2577a05a4214bb38742763a41509877
+msgid "Macros"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:207
+# f6cd132bbb324982ae00f01ea0334d4c
+msgid "Macros_ are helpful for eliminating redundant code, however stripping whitespace from the template block, as well as contained blocks, may be necessary to emulate a variable return from the macro."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:235
+# 20b44c962835496e94fbe8998a551a6e
+msgid "This would define a macro_ that would return a string of the full package name, depending on the packaging system's naming convention. The whitespace of the macro was eliminated, so that the macro would return a string without line breaks, using `whitespace control`_."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:241
+# 143d9147a0aa4094b1547bf72f608af4
+msgid "Template Inheritance"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:243
+# e0301dca2c0645ddb2d4f7fe6ea68aa1
+msgid "`Template inheritance`_ works fine from state files and files. The search path starts at the root of the state tree or pillar."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:252
+# e69c6c41d9c9461b91dc74a6c201e043
+msgid "Filters"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:254
+# f2e41ce8d78f4edfaa387453bcde3cad
+msgid "Saltstack extends `builtin filters`_ with his custom filters:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:268
+# cdf35d556b064536a6a54fb4873244bb
+msgid "strftime"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:257
+# f79e66b4508142138450ead5d894f0db
+msgid "Converts any time related object into a time based string. It requires a valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in the official Python documentation. Fuzzy dates are parsed by `timelib`_ python module. Some exemples are available on this pages."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:274
+# b7e9ec70ce4a451683b8722e52e72ff6
+msgid "Jinja in Files"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:276
+# eec222179bcd425da0bee47e2576b4fe
+msgid "Jinja_ can be used in the same way in managed files:"
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:300
+# 4956c56249ff491fa3df49c238b8940f
+msgid "As an example, configuration was pulled from the file context and from an external template file."
+msgstr ""
+
+#: ../../ref/renderers/all/salt.renderers.jinja.rst:305
+# 7bb2b77947364a1c9a3cd7de2f7faa4a
+msgid "Macros and variables can be shared across templates. They should not be starting with one or more underscores, and should be managed by one of the following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and `import_json`."
+msgstr ""
+
+#: ../../../salt/renderers/jinja.py:docstring of salt.renderers.jinja.render:1
+# 85d570ba0109408d9fd2f271f5565bfb
+msgid "Render the template_file, passing the functions and grains into the Jinja rendering system."
+msgstr ""
+
+#: ../../../salt/renderers/jinja.py:docstring of salt.renderers.jinja.render:4
+# dfeadd425fb7475f889b66be974c3e9d
+msgid "string"
+msgstr ""
+

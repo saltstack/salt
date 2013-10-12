@@ -1,0 +1,123 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/pillar/all/salt.pillar.mongo.rst:6
+# a527963bb89c46a6ade2df3ae2f697b9
+msgid "salt.pillar.mongo"
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:1
+# 84af0695661a402892956fe56d3ca792
+msgid "Read pillar data from a mongodb collection."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:3
+# 834a0ed074984b4eb0811696ab15f9ba
+msgid "This module will load a node-specific pillar dictionary from a mongo collection. It uses the node's id for lookups and can load either the whole document, or just a specific field from that document as the pillar dictionary."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:9
+# 72e710db5c91403d8d37c9239b484438
+msgid "Salt Master Mongo Configuration"
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:11
+# cbbf2fe2a16c4a459110eabce530f3db
+msgid "The module shares the same base mongo connection variables as :py:mod:`salt.returners.mongo_return`. These variables go in your master config file."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:15
+# 7c2fc9c5474d4507a419429a572b888e
+msgid "``mongo.db`` - The mongo database to connect to. Defaults to ``'salt'``."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:16
+# 419b8855e50a42aebe226906093206c6
+msgid "``mongo.host`` - The mongo host to connect to. Supports replica sets by specifying all hosts in the set, comma-delimited. Defaults to ``'salt'``."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:18
+# 6cb53d208bfe4270be2c2607421f53bc
+msgid "``mongo.port`` - The port that the mongo database is running on. Defaults to ``27017``."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:20
+# b45e85d7ad4f4cd89e2a0035e47bfd78
+msgid "``mongo.user`` - The username for connecting to mongo. Only required if you are using mongo authentication. Defaults to ``''``."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:22
+# 72bd5fe003ff46c8955f7912140a73c2
+msgid "``mongo.password`` - The password for connecting to mongo. Only required if you are using mongo authentication. Defaults to ``''``."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:27
+# f09288d20ef348eeae696416c6a2d75f
+msgid "Configuring the Mongo ext_pillar"
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:29
+# 2fbc15c6f99849e6a33de242fdfe431a
+msgid "The Mongo ext_pillar takes advantage of the fact that the Salt Master configuration file is yaml. It uses a sub-dictionary of values to adjust specific features of the pillar. This is the explicit single-line dictionary notation for yaml. One may be able to get the easier-to-read multine dict to work correctly with some experimentation."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:40
+# 0d699eaf183b4837a353b3ef81dbf88d
+msgid "In the example above, we've decided to use the ``vm`` collection in the database to store the data. Minion ids are stored in the ``name`` field on documents in that collection. And, since minion ids are FQDNs in most cases, we'll need to trim the domain name in order to find the minion by hostname in the collection. When we find a minion, return only the ``customer_id``, ``software``, and ``apache_vhosts`` fields, as that will contain the data we want for a given node. They will be available directly inside the ``pillar`` dict in your SLS templates."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo:51
+# a1fe138797a748b684f2e56703a2c3fa
+msgid "Module Documentation"
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo.ext_pillar:1
+# 66ebbc5ef7f140e882fb277bb613be55
+msgid "Connect to a mongo database and read per-node pillar information."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo.ext_pillar:20
+# 8b96f14b1ba44681a709ccce6e2ea547
+msgid "Parameters:"
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo.ext_pillar:4
+# 84930a36fa804addb167159d7cdda367
+msgid "`collection`: The mongodb collection to read data from. Defaults to ``'pillar'``."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo.ext_pillar:6
+# c04e0428c3e4473291627452f0b83ea3
+msgid "`id_field`: The field in the collection that represents an individual minion id. Defaults to ``'_id'``."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo.ext_pillar:8
+# 4c70e9d8181746e58c1a359ddfa95eb9
+msgid "`re_pattern`: If your naming convention in the collection is shorter than the minion id, you can use this to trim the name. `re_pattern` will be used to match the name, and `re_replace` will be used to replace it. Backrefs are supported as they are in the Python standard library. If ``None``, no mangling of the name will be performed - the collection will be searched with the entire minion id. Defaults to ``None``."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo.ext_pillar:15
+# 6c16e95e820a436e8af4d40849838e24
+msgid "`re_replace`: Use as the replacement value in node ids matched with `re_pattern`. Defaults to ''. Feel free to use backreferences here."
+msgstr ""
+
+#: ../../../salt/pillar/mongo.py:docstring of salt.pillar.mongo.ext_pillar:17
+# 1133c9e394394acea223c7f3fd404556
+msgid "`fields`: The specific fields in the document to use for the pillar data. If ``None``, will use the entire document. If using the entire document, the ``_id`` field will be converted to string. Be careful with other fields in the document as they must be string serializable. Defaults to ``None``."
+msgstr ""
+

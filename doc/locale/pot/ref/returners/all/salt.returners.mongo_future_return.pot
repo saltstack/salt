@@ -1,0 +1,75 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/returners/all/salt.returners.mongo_future_return.rst:6
+# 105ddf9ee7444693be9b35a33d80df31
+msgid "salt.returners.mongo_future_return"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return:1
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return.returner:1
+# f606405f0d174b799414c32e10087784
+# b923db40d62e499ca10125db0016594f
+msgid "Return data to a mongodb server"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return:3
+# d358c676fb2b4265b2b014602e9f6b18
+msgid "Required python modules: pymongo"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return:6
+# b72074113c0e45a28760cd88af889be7
+msgid "This returner will send data from the minions to a MongoDB server. To configure the settings for your MongoDB server, add the following lines to the minion config files::"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return:16
+# 3cb847dd97234531804e1d35e30f166c
+msgid "This mongo returner is being developed to replace the default mongodb returner in the future and should not be considered API stable yet."
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return.get_fun:1
+# cc96709a36a4437789a3782ff4b4ec22
+msgid "Return the most recent jobs that have executed the named function"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return.get_jid:1
+# 521b9f1620e9428f987a663bc256cdbd
+msgid "Return the return information associated with a jid"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return.get_jids:1
+# de37bc1dbd364a7189afb0c7b7c637f6
+msgid "Return a list of job ids"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return.get_load:1
+# 682381025aa241408519c2c1b0939855
+msgid "Return the load associated with a given job id"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return.get_minions:1
+# e5b684582a394eba8460f836530cef1d
+msgid "Return a list of minions"
+msgstr ""
+
+#: ../../../salt/returners/mongo_future_return.py:docstring of salt.returners.mongo_future_return.save_load:1
+# 87407ed280fe467f83df15ae964fcba9
+msgid "Save the load for a given job id"
+msgstr ""
+

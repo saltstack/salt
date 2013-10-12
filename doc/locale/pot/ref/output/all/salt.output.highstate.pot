@@ -1,0 +1,58 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/output/all/salt.output.highstate.rst:6
+# f24ad3db26cc4e7a8cb86a31530a78d2
+msgid "salt.output.highstate"
+msgstr ""
+
+#: ../../../salt/output/highstate.py:docstring of salt.output.highstate:1
+# 40c9cac0504e4f63aefe6298e8d71f9a
+msgid "The return data from the Highstate command is a standard data structure which is parsed by the highstate outputter to deliver a clean and readable set of information about the HighState run on minions."
+msgstr ""
+
+#: ../../../salt/output/highstate.py:docstring of salt.output.highstate:5
+# 88352e2e9c0e41bda432589c5b646165
+msgid "Two configurations can be set to modify the highstate outputter. These values can be set in the master config to change the output of the ``salt`` command or set in the minion config to change the output of the ``salt-call`` command."
+msgstr ""
+
+#: ../../../salt/output/highstate.py:docstring of salt.output.highstate:11
+# 55aa29ce91a64f099a1a25a4547cbaf6
+msgid "state_verbose:"
+msgstr ""
+
+#: ../../../salt/output/highstate.py:docstring of salt.output.highstate:10
+# 52f4362802c24a91b2cc21725c85a574
+msgid "By default `state_verbose` is set to `True`, setting this to `False` will instruct the highstate outputter to omit displaying anything in green, this means that nothing with a result of True and no changes will not be printed"
+msgstr ""
+
+#: ../../../salt/output/highstate.py:docstring of salt.output.highstate:20
+# f115781d372f4fb0bac03203e2982af1
+msgid "state_output:"
+msgstr ""
+
+#: ../../../salt/output/highstate.py:docstring of salt.output.highstate:14
+# 0c9e0c9262e54ec5b244ae1060f30f81
+msgid "The highstate outputter has three output modes, `full`, `terse`, and `mixed`. The default is set to full, which will display many lines of detailed information for each executed chunk. If the `state_output` option is set to `terse` then the output is greatly simplified and shown in only one line.  If `mixed` is used, then terse output will be used unless a state failed, in which case full output will be used."
+msgstr ""
+
+#: ../../../salt/output/highstate.py:docstring of salt.output.highstate.output:1
+# 181bf958794e459ead03fd527ccdd555
+msgid "The HighState Outputter is only meant to be used with the state.highstate function, or a function that returns highstate return data."
+msgstr ""
+

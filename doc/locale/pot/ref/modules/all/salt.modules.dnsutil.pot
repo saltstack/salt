@@ -1,0 +1,122 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.dnsutil.rst:6
+# 1172133e1df3497faff853b566515c7d
+msgid "salt.modules.dnsutil"
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil:1
+# cc45ed4b032f48498793e90fe8f054da
+msgid "Compendium of generic DNS utilities"
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.A:1
+# 9b9af6b78ce74b17a79755ff3109dd79
+msgid "Return the A record for 'host'."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.A:3
+# 10c2fe7f07f94595aa7b146b790cf121
+msgid "Always returns a list."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.A:5
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.MX:10
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.NS:5
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.SPF:7
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.check_ip:3
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.hosts_append:3
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.parse_hosts:3
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.parse_zone:3
+# 3e8d14224395415e8972204c042a979e
+# 22518fe975444013a3159032eb269f80
+# b9a8831fbbe741bdb1a33a5ec67bfa26
+# 96cfc3fe1e09420f9491726c215fbd85
+# dbad1c5ca7d649b5a6fc172e1ba3a122
+# a9b56abacb4f4352a9d561defa7b181f
+# 989f8ef747cf4ec7b7589a023e25e2d1
+# b45acdda47a34b1da4b561d0cef4005f
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.MX:1
+# 2614dade24dc478c9806e5b055121539
+msgid "Return a list of lists for the MX of ``domain``."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.MX:3
+# f542951d23cf497e8dd9874950470305
+msgid "If the 'resolve' argument is True, resolve IPs for the servers."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.MX:5
+# faff0806caa04789bc77439c02f0fe5f
+msgid "It's limited to one IP, because although in practice it's very rarely a round robin, it is an acceptable configuration and pulling just one IP lets the data be similar to the non-resolved version. If you think an MX has multiple IPs, don't use the resolver here, resolve them in a separate step."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.NS:1
+# f6795c3a3ecc42288802b155e391c11a
+msgid "Return a list of IPs of the nameservers for ``domain``"
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.NS:3
+# 87ca88993f19423bbc54cdd6c5237dba
+msgid "If 'resolve' is False, don't resolve names."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.SPF:1
+# c2785e1986e94a739184e9077d4d881a
+msgid "Return the allowed IPv4 ranges in the SPF record for ``domain``."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.SPF:3
+# 798ed419432d43da8179025d5374d41b
+msgid "If record is ``SPF`` and the SPF record is empty, the TXT record will be searched automatically. If you know the domain uses TXT and not SPF, specifying that will save a lookup."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.check_ip:1
+# 044bf579918f4178a3950cfa073b6773
+msgid "Check that string ip_addr is a valid IP"
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.hosts_append:1
+# c2cd2b13dfff4ab28fad295e2b5d407e
+msgid "Append a single line to the /etc/hosts file."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.hosts_remove:1
+# e68044862cde4ed18af202bc34299565
+msgid "Remove a host from the /etc/hosts file. If doing so will leave a line containing only an IP address, then the line will be deleted. This function will leave comments and blank lines intact."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.hosts_remove:5
+# 37862beffdd9491d8c3b98f50aba06b1
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.parse_hosts:1
+# 9111dfa42d694d83a4b3b6015e7870cc
+msgid "Parse /etc/hosts file."
+msgstr ""
+
+#: ../../../salt/modules/dnsutil.py:docstring of salt.modules.dnsutil.parse_zone:1
+# ee4c74e9934a4c9a9824f42ca2b76c25
+msgid "Parses a zone file. Can be passed raw zone data on the API level."
+msgstr ""
+

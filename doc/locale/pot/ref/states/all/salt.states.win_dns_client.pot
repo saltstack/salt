@@ -1,0 +1,60 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.win_dns_client.rst:6
+# 382e9c1319184229af2cbf47f90ca532
+msgid "salt.states.win_system"
+msgstr ""
+
+#: ../../../salt/states/win_system.py:docstring of salt.states.win_system:2
+# 4fd135a07bdd4a308d9acfcfa962a938
+msgid "Management of Windows system information"
+msgstr ""
+
+#: ../../../salt/states/win_system.py:docstring of salt.states.win_system:6
+# 0c0b5a400f7942cfb666599c429d3de7
+msgid "This state is used to manage system information such as the computer name and description."
+msgstr ""
+
+#: ../../../salt/states/win_system.py:docstring of salt.states.win_system.computer_desc:1
+# 60554a6dd66c435f8d4932caa3cf1b3a
+msgid "Manage the computer's description field"
+msgstr ""
+
+#: ../../../salt/states/win_system.py:docstring of salt.states.win_system.computer_desc:3
+#: ../../../salt/states/win_system.py:docstring of salt.states.win_system.computer_name:3
+# 978180faf2174612a0beca4b38706c81
+# 6576dce4d4bd400c8111577d2bdab9ba
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/win_system.py:docstring of salt.states.win_system.computer_desc:4
+# 2ddf5bc52a4243b889f5678857eb3487
+msgid "The desired computer description"
+msgstr ""
+
+#: ../../../salt/states/win_system.py:docstring of salt.states.win_system.computer_name:1
+# 7319cd17585342058ffc1aceda3d4208
+msgid "Manage the computer's name"
+msgstr ""
+
+#: ../../../salt/states/win_system.py:docstring of salt.states.win_system.computer_name:4
+# d8e27f31cc4f4c858a8819922dc23472
+msgid "The desired computer name"
+msgstr ""
+

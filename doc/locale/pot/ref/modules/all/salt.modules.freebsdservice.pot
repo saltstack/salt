@@ -1,0 +1,160 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.freebsdservice.rst:6
+# b9b77bc3ec354f43b2d2911f99eee84f
+msgid "salt.modules.freebsdservice"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice:1
+# 6c1c7ea267d64c2bb893ebc5230fde8c
+msgid "The service module for FreeBSD"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.available:1
+# 3230c40266894b889f2bcdd53fa9f2ac
+msgid "Check that the given service is available."
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.available:3
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.disable:5
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.disabled:3
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enable:13
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enabled:6
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.get_all:3
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.get_disabled:3
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.get_enabled:3
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.reload_:3
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.restart:3
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.start:3
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.status:6
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.stop:3
+# 9e0bf6dc159e4c3ebdf57e538fb74ee0
+# a0867ef492fb41c8b3c46d1d16475784
+# d2bafe4afb9549f89bcae0dafdf238e6
+# 84ba57366e6a42a5b0bf564b65a7cf2d
+# 156a60f3910047868a7eabefb8dd3e1d
+# f041b42f5ecc4783ae4e8b84ec3c4140
+# 3b313f0a4ca94ccea88dca254ae18aea
+# 5ec45de6446b4b08a16a24e119cff0d8
+# 7bf70da1ffb6432c8dffad6ec8e014de
+# db07b9da11a34ee8aeb0ad3a6dd151d0
+# c7aa7c8c70ef49518e89e5a5763f3f19
+# df1dbe0ba40345c587d103fe328a6073
+# b311517c854f4abfbbb9eddf81cc372d
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.disable:1
+# e8441725905047f5a27c581da62bd19e
+msgid "Disable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.disable:3
+# 6ec670f33ff84a459843e0531aa452a3
+msgid "Arguments the same as for enable()"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.disabled:1
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enabled:1
+# ac732f197ff54efdb5d14ae448291e1c
+# 80e78c5f7d994f56b5f60513d8fac5fe
+msgid "Return True if the named service is enabled, false otherwise"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enable:1
+# e4423a83fd8640cfb9a52a420ed5cfe4
+msgid "Enable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enable:4
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enabled:4
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.status:4
+# 65372a5d057846808c5e6e3ab9346c97
+# 078755e4e0b4400e866424fecd7c7d99
+# 094b2498ce5040119f5b42c5d7058c3d
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enable:4
+# 0342804927984c1bb527a27f7103bfc6
+msgid "service name"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enable:11
+# 81f56b64eb294019963b03c9c38731ca
+msgid "config : /etc/rc.conf"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enable:7
+# d6cb268b9941462ebf01e8fcf40afa3c
+msgid "Config file for managing service. If config value is empty string, then /etc/rc.conf.d/<service> used. See man rc.conf(5) for details."
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enable:11
+# c66a4f7f17794830a57ed497205e72a7
+msgid "Also service.config variable can be used to change default."
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.enabled:4
+# 24a76c44d4184d1096071cb5b368bb4c
+msgid "Service name"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.get_all:1
+# 9deccc7c701c4e77bf557d43f374525c
+msgid "Return a list of all available services"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.get_disabled:1
+# 9ab5ab91a2d74155b0b1a2f1f6a1e964
+msgid "Return what services are available but not enabled to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.get_enabled:1
+# 8f00b7b0ec62403ba59f46d4837b3091
+msgid "Return what services are set to run on boot"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.reload_:1
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.restart:1
+# 7d9a6883a1404fa0a75e9998501da17d
+# 0a92269c96f643b59ef4b3dd9a8d8ba9
+msgid "Restart the named service"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.start:1
+# d8b090bc65d24df5864f3a687b769536
+msgid "Start the specified service"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.status:1
+# 9207b32fdbd64724b8d94057ec9262cb
+msgid "Return the status for a service (True or False)."
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.status:4
+# e4e8d6467f7c46a4a3557bea7c41bd12
+msgid "Name of service"
+msgstr ""
+
+#: ../../../salt/modules/freebsdservice.py:docstring of salt.modules.freebsdservice.stop:1
+# 2a20adb64a214250bb15672909733ea9
+msgid "Stop the specified service"
+msgstr ""
+

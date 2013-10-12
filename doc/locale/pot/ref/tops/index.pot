@@ -1,0 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/tops/index.rst:9
+# 2fd71ffed4254bd6ac27e93c7c572ac1
+msgid "Master Tops"
+msgstr ""
+
+#: ../../ref/tops/index.rst:11
+# 13b9e45f7be74ad291c3cc6549caf7a4
+msgid "Salt includes a number of built-in subsystems to generate top file data, they are listed listed at :ref:`all-salt.tops`."
+msgstr ""
+
+#: ../../ref/tops/index.rst:15
+# 39a730b6c4f440aeafd937f436b48034
+msgid "The source for the built-in Salt master tops can be found here: :blob:`salt/tops`"
+msgstr ""
+

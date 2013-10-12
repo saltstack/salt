@@ -1,0 +1,70 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.mysql_database.rst:6
+# df02048a3eac4f77a823bb7eabc9bbd3
+msgid "salt.states.mysql_database"
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database:2
+# bc4b80253fea4eeb8db58f0da539912d
+msgid "Management of MySQL databases (schemas)."
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database:4
+# 57108553821b4f0b9898253c7e28e19f
+msgid "MySQLdb Python module"
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database:5
+# caf43533bb3949a9bfe6f2f78e84db01
+msgid "See :py:mod:`salt.modules.mysql` for setup instructions."
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database:7
+# c0edef4f647c4ac4b683122539903ec5
+msgid "The mysql_database module is used to create and manage MySQL databases. Databases can be set as either absent or present."
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database.absent:1
+# e63f2abc429b4e4ea4ceea0a91a340dc
+msgid "Ensure that the named database is absent"
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database.absent:3
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database.present:3
+# ff9682b08fa74be6b786905bc436dfa8
+# 93249b3fa76546c29f2a56c98b6783e9
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database.absent:4
+# 1fe41b33ab6b4047bdaff53b5cafa5b2
+msgid "The name of the database to remove"
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database.present:1
+# 351757e48dbe4eb9acf3c6a218675a1b
+msgid "Ensure that the named database is present with the specified properties"
+msgstr ""
+
+#: ../../../salt/states/mysql_database.py:docstring of salt.states.mysql_database.present:4
+# 873fbb62038a4998a817993c5c980dd6
+msgid "The name of the database to manage"
+msgstr ""
+

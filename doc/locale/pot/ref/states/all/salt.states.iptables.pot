@@ -1,0 +1,53 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.iptables.rst:6
+# e180971dc77c4e4983f6dde673b7e352
+msgid "salt.states.iptables"
+msgstr ""
+
+#: ../../../salt/states/iptables.py:docstring of salt.states.iptables:2
+# 29c74a901ded4b33884f02c7209c250a
+msgid "Management of iptables"
+msgstr ""
+
+#: ../../../salt/states/iptables.py:docstring of salt.states.iptables:4
+# 67bbba5abcc04765844ce155d0c86e95
+msgid "This is an iptables-specific module designed to manage Linux firewalls. It is expected that this state module, and other system-specific firewall states, may at some point be deprecated in favor of a more generic `firewall` state."
+msgstr ""
+
+#: ../../../salt/states/iptables.py:docstring of salt.states.iptables.append:1
+# c9368ebe5e46434da5ccc8422a8df191
+msgid "Append a rule to a chain"
+msgstr ""
+
+#: ../../../salt/states/iptables.py:docstring of salt.states.iptables.append:5
+# bcd874b682004e65a89814e38b725762
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/iptables.py:docstring of salt.states.iptables.append:4
+# bc4de5f099bb491b8e99828c7b97fc39
+msgid "A user-defined name to call this rule by in another part of a state or formula. This should not be an actual rule."
+msgstr ""
+
+#: ../../../salt/states/iptables.py:docstring of salt.states.iptables.append:7
+# dd783eccda744cbd80a7c6730b092e99
+msgid "All other arguments are passed in with the same name as the long option that would normally be used for iptables, with one exception: `--state` is specified as `connstate` instead of `state` (not to be confused with `ctstate`)."
+msgstr ""
+

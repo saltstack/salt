@@ -1,0 +1,66 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.osxdesktop.rst:6
+# 594570b9289243ee8240bda3727166be
+msgid "salt.modules.osxdesktop"
+msgstr ""
+
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop:1
+# 16c2066c8631491195d977038f3eb733
+msgid "Mac OS X implementations of various commands in the \"desktop\" interface"
+msgstr ""
+
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.get_output_volume:1
+# d47f1702bb014fe2bf49778f076cbf3d
+msgid "Get the output volume (range 0 to 100)"
+msgstr ""
+
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.get_output_volume:3
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.lock:3
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.say:3
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.screensaver:3
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.set_output_volume:3
+# 25958dc2aaa645f2b2b5dcd398b8698c
+# 66aec3eafb9d48d881d3f8c8a37cb988
+# ca494bc6c4d747b3b24e6bb7978b5138
+# 704dd149e51b4fdebf0adb4a5ed2c19e
+# cb78a40e6ab64b07a0f92245c23d0d5f
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.lock:1
+# 761c287fb0e54ced90314f1a2601accc
+msgid "Lock the desktop session"
+msgstr ""
+
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.say:1
+# 817c456502114e879978294d31d6c138
+msgid "Say some words."
+msgstr ""
+
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.screensaver:1
+# a3e168aabad04291a1421f12021db1a2
+msgid "Launch the screensaver"
+msgstr ""
+
+#: ../../../salt/modules/osxdesktop.py:docstring of salt.modules.osxdesktop.set_output_volume:1
+# f99a0bacc9d34a71a8da56daa01432a4
+msgid "Set the volume of sound (range 0 to 100)"
+msgstr ""
+

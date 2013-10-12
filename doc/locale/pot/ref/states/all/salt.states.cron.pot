@@ -1,0 +1,238 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.cron.rst:6
+# 0e1ce94e96bc4864bde61fb2cc173f24
+msgid "salt.states.cron"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron:2
+# 709a622fa45549268b9ee72a635c550b
+msgid "Management of cron, the Unix command scheduler."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron:4
+# 17025786ac304c0e9394f2bacdf2bcc9
+msgid "The cron state module allows for user crontabs to be cleanly managed."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron:6
+# 2936c182536b4b12815c51d3264cc4ca
+msgid "Cron declarations require a number of parameters. The timing parameters need to be declared: minute, hour, daymonth, month, and dayweek. The user whose crontab is to be edited also needs to be defined."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron:10
+# 1e102d1c6bfb4de7937cc6338feeb249
+msgid "By default, the timing arguments are all ``*`` and the user is root. When making changes to an existing cron job, the name declaration is the unique factor, so if an existing cron that looks like this:"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron:21
+# f6112b8f877441f4802808aca9a1a996
+msgid "Is changed to this:"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron:31
+# 1ac3d0d4e40246da931a28cce13078c7
+msgid "Then the existing cron will be updated, but if the cron command is changed, then a new cron job will be added to the user's crontab."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron:35
+# 9b8c19ddfc4d4786895778de5b60c272
+msgid "Additionally, the temporal parameters (minute, hour, etc.) can be randomized by using ``random`` instead of using a specific value. For example, by using the ``random`` keyword in the ``minute`` parameter of a cron state, the same cron job can be pushed to hundreds or thousands of hosts, and they would each use a randomly-generated minute. This can be helpful when the cron job accesses a network resource, and it is not desirable for all hosts to run the job concurrently."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron:53
+# 604a4ac80d014d4b99670d8c72c85abf
+msgid "Since Salt assumes a value of ``*`` for unspecified temporal parameters, adding a parameter to the state and setting it to ``random`` will change that value from ``*`` to a randomized numeric value. However, if that field in the cron entry on the minion already contains a numeric value, then using the ``random`` keyword will not modify it."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.absent:1
+# 2e8bff497ed24d5b81871e8949be861d
+msgid "Verifies that the specified cron job is absent for the specified user; only the name is matched when removing a cron job."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.absent:5
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:12
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:8
+# bf36665d65c84038b9ecc2aeab85f1bb
+# 89046d6b1e214e67aa9bd6f8f13a25da
+# fcce0f4f40f84a739f7ca50fe9ec4a21
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.absent:5
+# 27e12166f5764ad3935395f30eeb1f57
+msgid "The command that should be absent in the user crontab."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.absent:8
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:22
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:12
+# 52d4cc1e7a0c4174966a563691255303
+# 0d1b0349ac864de5b851c119c0cebc66
+# e31d7d9206bb4b07a8cbfd2e54d66836
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.absent:8
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:11
+# c428934a965f46748385fcc0cb64f3b7
+# ce56cdfd743b4d859a7bcc4c8ee993cf
+msgid "The name of the user who's crontab needs to be modified, defaults to the root user"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:1
+# b5662186612e4f68b00a31aa9694ca38
+msgid "Provides file.managed-like functionality (templating, etc.) for a pre-made crontab file, to be assigned to a given user."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:5
+# 2ed848d4bc4345b1ace5580a0b3408e3
+msgid "The source file to be used as the crontab. This source file can be hosted on either the salt master server, or on an HTTP or FTP server. For files hosted on the salt file server, if the file is located on the master in the directory named spam, and is called eggs, the source string is salt://spam/eggs."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:11
+# 065701df525d48bc829775d5cadcf428
+msgid "If the file is hosted on a HTTP or FTP server then the source_hash argument is also required"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:18
+# 9c75659679d446308b7ada076dfd7e7d
+msgid "source_hash"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:15
+# 5f55462db6fb4de6b39ab56c85c63474
+msgid "This can be either a file which contains a source hash string for the source, or a source hash string. The source hash string is the hash algorithm followed by the hash of the file: md5=e138491e9d5b97023cea823fe17bac22"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:21
+# ccaaa9cbd47b4bcab3ebbcdd93d7d4a0
+msgid "The user to whom the crontab should be assigned. This defaults to root."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:27
+# 1d1013d7170e40f189957e4c6453d3e2
+msgid "template"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:25
+# 070b7c727fa646528d231b67f7aeac99
+msgid "If this setting is applied then the named templating engine will be used to render the downloaded file. Currently, jinja and mako are supported."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:30
+# b3a38cff0b4b4b1295c838d870d87783
+msgid "context"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:30
+# cd61f07ea98f46a8af1fbf298d0fac71
+msgid "Overrides default context variables passed to the template."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:34
+# 8cdcec44bcf746fb853a2e83f5f4c4f2
+msgid "replace"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:33
+# c69a4b255c944bb88302838a45569b03
+msgid "If the crontab should be replaced, if False then this command will be ignored if a crontab exists for the specified user. Default is True."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:37
+# e077ede81f08499b8ef988293fe914e0
+msgid "defaults"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:37
+# 33746f925e144e52b7c6b7765efb0476
+msgid "Default context passed to the template."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:39
+# d348f7f92c444542992ee9995be7c75f
+msgid "backup"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.file:40
+# 1fbc3d4e734a431f831cf5e4723bf937
+msgid "Overrides the default backup mode for the user's crontab."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:1
+# 05022e5e2b2646a5b9b0295b9fab0d0b
+msgid "Verifies that the specified cron job is present for the specified user. For more advanced information about what exactly can be set in the cron timing parameters, check your cron system's documentation. Most Unix-like systems' cron documentation can be found via the crontab man page: ``man 5 crontab``."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:8
+# 43fbafbe80664835bd0c08ef8c68fe31
+msgid "The command that should be executed by the cron job."
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:17
+# 147eebac83704469b09d51c3f2620834
+msgid "minute"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:15
+# 36a71c747fd64c43b6c7e81ef2a00f1a
+msgid "The information to be set into the minute section, this can be any string supported by your cron system's the minute field. Default is ``*``"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:20
+# ad93bda71c97495095d8dc6d07d27262
+msgid "hour"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:20
+# 836629fb538d4833bcb6067ab93d87dd
+msgid "The information to be set in the hour section. Default is ``*``"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:23
+# 62b8d8b03f514223af01978c32effa2a
+msgid "daymonth"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:23
+# a053f1390bed4106b6e44e77bad5cbe1
+msgid "The information to be set in the day of month section. Default is ``*``"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:26
+# 2862ea190c604d91a535c71ab57705e6
+msgid "month"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:26
+# c6f39bf9ec03435aa3db2a02f67fbd24
+msgid "The information to be set in the month section. Default is ``*``"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:28
+# d79e1ca519c74ffe8083030541ad176b
+msgid "dayweek"
+msgstr ""
+
+#: ../../../salt/states/cron.py:docstring of salt.states.cron.present:29
+# 8fc3107da0fc4ef2b4018d36ef048e22
+msgid "The information to be set in the day of week section. Default is ``*``"
+msgstr ""
+

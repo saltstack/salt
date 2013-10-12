@@ -1,0 +1,87 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.glance.rst:6
+# 35a02e57583a4a6cbadb060808892829
+msgid "salt.modules.glance"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance:1
+# 8ab37f3ab4724e60a8484ae99514f47d
+msgid "Module for handling openstack glance calls."
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance:3
+# 06140b732a6f444c9fad771e6648dd83
+msgid "glanceclient Python adapter"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance:4
+# 59aebb228c9c40fca7bbc546910f0b1b
+msgid "This module is not usable until the following are specified either in a pillar or in the minion's config file::"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance:14
+# 709689fe1b3c47148e54820a57e51b60
+msgid "If configuration for multiple openstack accounts is required, they can be set up as different configuration profiles: For example::"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance:32
+# 271f07b5b820412089da0004501d9517
+msgid "With this configuration in place, any of the keystone functions can make use of a configuration profile by declaring it explicitly. For example::"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_create:1
+# 438b625d1bf14da0bce14cdb237ddcfb
+msgid "Create an image (glance image-create)"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_create:3
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_list:3
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_show:3
+# 4850dcf15ca14a299d19a994770b0f55
+# d5fa1e9b58884de5943f248c5f196fae
+# 2338a05101b74ec1bfba658b74332c43
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_create:11
+# 9eac8ed0870a4545ba84ed97ce14ad81
+msgid "For all possible values, run ``glance help image-create`` on the minion."
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_delete:1
+# b3f44fc6a9874de39357b2f7da327598
+msgid "Delete an image (glance image-delete)"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_delete:3
+# c6b776785e9d464dba5472d0c0d68d6c
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_list:1
+# 1a438f8eda824780841e5565defdf868
+msgid "Return a list of available images (glance image-list)"
+msgstr ""
+
+#: ../../../salt/modules/glance.py:docstring of salt.modules.glance.image_show:1
+# bc01a49dc7654f968f1d1ff8d164cc6e
+msgid "Return details about a specific image (glance image-show)"
+msgstr ""
+

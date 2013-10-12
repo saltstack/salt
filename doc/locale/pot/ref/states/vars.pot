@@ -1,0 +1,103 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/vars.rst:6
+# 4127bfc28ac14a1b8853f83be95a2950
+msgid "SLS Template Variable Reference"
+msgstr ""
+
+#: ../../ref/states/vars.rst:8
+# 2b0dc2a85053456c96807e2b2424c253
+msgid "The template engines available to sls files and file templates come loaded with a number of context variables. These variables contain information and functions to assist in the generation of templates."
+msgstr ""
+
+#: ../../ref/states/vars.rst:13
+# 5144f1c4fff341ee9431f6d7d097055f
+msgid "Salt"
+msgstr ""
+
+#: ../../ref/states/vars.rst:15
+# 6690e48c6b82458bbc8b501694562418
+msgid "The `salt` variable is available to abstract the salt library functions. This variable is a python dictionary containing all of the functions available to the running salt minion:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:27
+# 5bf58e5560c54ad2a600001f502a3bd3
+msgid "Opts"
+msgstr ""
+
+#: ../../ref/states/vars.rst:29
+# f66fba6d66c342b68d72b7321a4cc3e0
+msgid "The `opts` variable abstracts the contents of the minion's configuration file directly to the template. The `opts` variable is a dictionary."
+msgstr ""
+
+#: ../../ref/states/vars.rst:36
+# 8b9cd7b8138a4abb9b2451f4dfa28179
+msgid "The ``config.get`` function also searches for values in the `opts` dictionary."
+msgstr ""
+
+#: ../../ref/states/vars.rst:39
+# df46317654fa4eee9f929aaab4890de4
+msgid "Pillar"
+msgstr ""
+
+#: ../../ref/states/vars.rst:41
+# 5fcdef38e0954a148effd399be7f39a6
+msgid "The `pillar` dictionary can be referenced directly:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:47
+# 4dadee7198294f49a1b3928762fd5c4c
+msgid "Using the ``pillar.get`` function via the `salt` variable is generally recommended since a default can be safely set in the event that the value is not available in pillar and dictionaries can be traversed directly:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:57
+# 1097a43dff9c4ffbb1c923b834b1f566
+msgid "Grains"
+msgstr ""
+
+#: ../../ref/states/vars.rst:59
+# ef35950708ae4d159053c20d9621f596
+msgid "The `grains` dictionary makes the minion's grains directly available:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:65
+# 50b299c07dfa44868efde4182546f193
+msgid "The ``grains.get`` function can be used to traverse deeper grains and set defaults:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:73
+# 64fff384565e42dca439282ebc2420e6
+msgid "env"
+msgstr ""
+
+#: ../../ref/states/vars.rst:75
+# ea0ee3d301b24f86a6c107825a41e11c
+msgid "The `env` variable is available in sls files when gathering the sls from an environment."
+msgstr ""
+
+#: ../../ref/states/vars.rst:83
+# e5f743c6dda84d6cba1d55d7082b9569
+msgid "sls"
+msgstr ""
+
+#: ../../ref/states/vars.rst:85
+# e6cba2accfd542f794f96b131e1fa8ee
+msgid "The `sls` variable contains the sls reference value. The sls reference value is the value used to include the sls in top files or via the include option."
+msgstr ""
+

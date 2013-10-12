@@ -1,0 +1,88 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/installation/fedora.rst:6
+# 1c02eb47f0584f9385a6540f46690a34
+msgid "Fedora"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:8
+# 3f1e754f54fe4befa843c71224df2ae4
+msgid "Beginning with version 0.9.4, Salt has been available in the primary Fedora repositories and `EPEL`_. It is installable using yum. Fedora will have more up to date versions of Salt than other members of the Red Hat family, which makes it a great place to help improve Salt!"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:14
+# 34abc48fe17746ff950634a976decfab
+msgid "Installation"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:16
+# da888e989c0742c69f80f3d305f92e13
+msgid "Salt can be installed using ``yum`` and is available in the standard Fedora repositories."
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:20
+# 6d3e6475d5fe4af08e2c3139a3d493f0
+msgid "Stable Release"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:22
+# c7a75f82a8a043e69642a2046dc48f57
+msgid "Salt is packaged separately for the minion and the master. It is necessary only to install the appropriate package for the role the machine will play. Typically, there will be one master and multiple minions."
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:34
+# 83d69c913eaa48a1a20573e280fde231
+msgid "Post-installation tasks"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:36
+# c578a0e2301f47aba598982e0b13f8f9
+msgid "**Master**"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:38
+# ce69d69a7f5b4c94a98ff69b7d9601cb
+msgid "To have the Master start automatically at boot time:"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:44
+# b71d694572204ad3b9ea1af86ccb1b69
+msgid "To start the Master:"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:50
+# 081cf7de915d430880317c5de7e06bd3
+msgid "**Minion**"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:52
+# 75c0dd569af647b8a7dc65e7a87f71ed
+msgid "To have the Minion start automatically at boot time:"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:58
+# 7425ca23a982421f96bda1134e670034
+msgid "To start the Minion:"
+msgstr ""
+
+#: ../../topics/installation/fedora.rst:64
+# 82f5f7dd1080401fa792a2474881d478
+msgid "Now go to the :doc:`Configuring Salt</topics/configuration>` page."
+msgstr ""
+

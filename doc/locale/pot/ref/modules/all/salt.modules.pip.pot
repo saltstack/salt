@@ -1,0 +1,476 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.pip.rst:6
+# 44e78745d3214d1dbe64f2d9324d0011
+msgid "salt.modules.pip"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip:1
+# ef944c7303df4a2ead9f7f26bef388fe
+msgid "Install Python packages with pip to either the system or a virtualenv"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:1
+# 9bb5ed7bdf9c44ae9b6bad465f82fc28
+msgid "Return a list of installed packages either globally or in the specified virtualenv"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:8
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:14
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:14
+# 56aecff638b043219e5828bd33e31899
+# ca0f39fcefbe4acbbfd4680a16f4862b
+# 2efecf6b06544aa08fb72d3ba9278f25
+msgid "bin_env"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:5
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:11
+# 59f3b7591b1c4e09ad9f5c954786cce8
+# 53b2f31e18554809afd56caab8e747cf
+msgid "path to pip bin or path to virtualenv. If doing an uninstall from the system python and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just specify the pip bin you want. If uninstalling from a virtualenv, just use the path to the virtualenv (/home/code/path/to/virtualenv/)"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:11
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:83
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:28
+# a9737632044147388363ce863d8d37cd
+# b1e91fa926b0417cae974cd870d883b6
+# e4360aad47d4464580570b748159239b
+msgid "user"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:11
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:83
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:28
+# c135e1a8e187492aaeadfd0b153ee67c
+# 2bc517b58cbd44cfa597ec67fd5d414e
+# 0dd697273ddf44b682719cdcdba53aa4
+msgid "The user under which to run pip"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:14
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:86
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:31
+# 10c13613030a452e9d58bf7e33039d59
+# 96951d1661ff480f992452a7a1eb422c
+# 018bdcd6ad914cb08b5f0778f7023f9c
+msgid "The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be used instead."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:18
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:92
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:38
+# 7d3c306b4e42438d8927ba3b56dcca1b
+# cb0420640aba467d8a8001ebdec0cef3
+# b80cc7b6e6544b13a4b0c351a9a974a5
+msgid "cwd"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:18
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:93
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:38
+# fc95151ecb8d4d369eb428f6ac302e08
+# 741f94e998544d67952af1ee881a91a6
+# 63605f0e63a145f29e694eade3fed310
+msgid "Current working directory to run pip from"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.freeze:20
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:101
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.list_:4
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:40
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.version:8
+# 4ab056ff1f494905a2eb445dfc994955
+# f9c4bcf6c04c4b3eb187c87c6fcbe9e7
+# 5c86f270102f4098b6d425aca830ab7f
+# b4ea17bfa0754c36bc81250ed1f9ef3f
+# c26fe6adcfc74e1f984b86246bc65b57
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:1
+# 96bf81700d0a42509d60f6ed5b2d3b44
+msgid "Install packages with pip"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:3
+# 050e81590d294bda88f811e1149a3aba
+msgid "Install packages individually or from a pip requirements file. Install packages globally or to a virtualenv."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:6
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:6
+# 7a89708995e74597b5d9ff956c92fbb8
+# 40a32683e8de4e1d96822e4fbf90eae8
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:7
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:7
+# 30321b869577400597405a9a1b37e957
+# 22800d08447b409b8cf961f942908e5d
+msgid "comma separated list of packages to install"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:8
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:8
+# 30e5aa7382d942cf91046d9d3a75625b
+# 219f1f7d5c1b44de894c50677251d668
+msgid "requirements"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:9
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:9
+# 8258a2e819454a87b4679c6334186e98
+# 1e06aca59f434e93aa48e7896fde5a86
+msgid "path to requirements"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:11
+# 15ed37ad67cc4c70b0a346adbf075633
+msgid "path to pip bin or path to virtualenv. If doing a system install, and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just specify the pip bin you want. If installing into a virtualenv, just use the path to the virtualenv (/home/code/path/to/virtualenv/)"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:16
+# 26f4a9373177460480ad56f756df7ecf
+msgid "env"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:17
+# 443969d9447e4aafb83cdb476f6044c5
+msgid "deprecated, use bin_env now"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:18
+# a5d965364fce4fe8a97c9a952bb11fd9
+msgid "use_wheel"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:19
+# 946b81cd471b488392cb3e2e14f50d93
+msgid "Prefer wheel archives (requires pip>=1.4)"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:20
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:16
+# c3326766cfa748c1b04b56ab8ad71718
+# 68dbb6dc5edb4caca6a1bc29df6b127a
+msgid "log"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:21
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:17
+# 2c6c317614d34f2db808970f57be452d
+# 225f86ae0d2746a39bcde89e018df241
+msgid "Log file where a complete (maximum verbosity) record will be kept"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:27
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:23
+# 0c8a92c158744d2e8923faa0eb678ead
+# 92e678f386e44ee6a7b9c65d3e933cee
+msgid "proxy"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:23
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:19
+# 23811bde728048fdae3099367bdac79b
+# 0ce358300dff4df89adba172c9edb905
+msgid "Specify a proxy in the form user:passwd@proxy.server:port. Note that the user:password@ is optional and required only if you are behind an authenticated proxy.  If you provide user@proxy.server:port then you will be prompted for a password."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:29
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:25
+# 5f240677f50343b99212ec60e24374d8
+# cf579862f46e44c98dab3d6d60d19a6c
+msgid "timeout"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:30
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:26
+# 8af16e4f249c45b6abe5b9596e4c4994
+# b1f3e45768134099b55b881228aaf9c3
+msgid "Set the socket timeout (default 15 seconds)"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:32
+# fe5dc7c4b3194a7d95d614fb131e9281
+msgid "editable"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:32
+# abb9d60cc61a4747b96fbb3731e2256a
+msgid "install something editable (i.e. git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:34
+# 88abb39381c2426298cdb1ddcf4ea9bd
+msgid "find_links"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:35
+# f75aa914fe0c42b7860f87c410e6c3ae
+msgid "URL to look for packages at"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:36
+# 8bdc9ac77eca4aa9a5ca20eeec4dcefa
+msgid "index_url"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:37
+# b339fbb892384df1925a958f60bfdebb
+msgid "Base URL of Python Package Index"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:38
+# 3d71993117a649d5af8de2aaa74d6fcd
+msgid "extra_index_url"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:39
+# 1e29e1ea40a443b8af3e5653e4992166
+msgid "Extra URLs of package indexes to use in addition to ``index_url``"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:40
+# 931190bd4e4b40d787e373580176dbc0
+msgid "no_index"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:41
+# b25240e5ff324018b5f1762f96c4f6ec
+msgid "Ignore package index"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:42
+# 80c5c002b2e54475b2ba9815ee5d35c3
+msgid "mirrors"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:43
+# 6a3435d19e624a6dae7783ebe0cefcb1
+msgid "Specific mirror URL(s) to query (automatically adds --use-mirrors)"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:44
+# 8603c59a2de44fae83265ec6ed3fbcf7
+msgid "build"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:45
+# 2cf030c91ea84e1b88e93cfea6d7e233
+msgid "Unpack packages into ``build`` dir"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:46
+# 0fbb671c6e564187a70786d98866531a
+msgid "target"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:47
+# 6ba72a93689a43889ee050d096c25221
+msgid "Install packages into ``target`` dir"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:48
+# 436b6c0563504ce38c628ef31eb7a1a2
+msgid "download"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:49
+# 494b76dc5807421babfa509aa6caf262
+msgid "Download packages into ``download`` instead of installing them"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:50
+# 1849fdb7f11a4a68bdab057ddbd4559a
+msgid "download_cache"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:51
+# d1d3f0a04f65415fb8a17171d7057dc9
+msgid "Cache downloaded packages in ``download_cache`` dir"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:52
+# a2b6659e93fd4f568cff3e7093d23553
+msgid "source"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:53
+# 7fc13d580bf2439384128c6270e683c7
+msgid "Check out ``editable`` packages into ``source`` dir"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:54
+# 95755de550b4464ab52c492b62b844ad
+msgid "upgrade"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:55
+# f6a89de413a640ae9aa487e0c38bfa6e
+msgid "Upgrade all packages to the newest available version"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:57
+# 24acea8a597640a285f7b8c514e106d0
+msgid "force_reinstall"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:57
+# 9384cd8c8b4c45d5bdcee1a85fe7ab5a
+msgid "When upgrading, reinstall all packages even if they are already up-to-date."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:59
+# 74f3411d91714b6b8a7e5f2d5a3a4f10
+msgid "ignore_installed"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:60
+# ba2e3cbe311e4ad7912afb868fb74d5d
+msgid "Ignore the installed packages (reinstalling instead)"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:62
+# a34b22e047d24425aea38e496d8738df
+msgid "exists_action"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:62
+# 1995a14d39dc4f20a4f7b5d493f3044d
+msgid "Default action when a path already exists: (s)witch, (i)gnore, (w)wipe, (b)ackup"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:64
+# 6c2aab02e60546feb16775cd2467206b
+msgid "no_deps"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:65
+# ad97e92cbfeb437195b239ea43ec1a80
+msgid "Ignore package dependencies"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:66
+# 346263b7514044c4bb60a561120f37b5
+msgid "no_install"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:67
+# 4552b0ffa31b46c788789265148bc54d
+msgid "Download and unpack all packages, but don't actually install them"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:70
+# d0504c24bffa4cebb7e614872bfb1f73
+msgid "no_download"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:69
+# 941313b463cc4dbf8c17bd482a9ac5b4
+msgid "Don't download any packages, just install the ones already downloaded (completes an install run with --no-install)"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:77
+# ea56b09b363c4addbfd2bc36012953d8
+msgid "install_options"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:73
+# 8eacfada73fe4bf89c8362dbfb4ca6a0
+msgid "Extra arguments to be supplied to the setup.py install command (use like --install-option=\"--install- scripts=/usr/local/bin\").  Use multiple --install- option options to pass multiple options to setup.py install.  If you are using an option with a directory path, be sure to use absolute path."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:80
+# 221c06fb93c44d0f9e8c3c521ee3aa63
+msgid "global_options"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:80
+# c84dfd1d4a9c450194c471e62e6c53cc
+msgid "Extra global options to be supplied to the setup.py call before the install command."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:90
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:35
+# 9821b76ee5de40a89525e7eebf1e645e
+# 95fe524cc267436ba4a153113157fd64
+msgid "no_chown"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:90
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:35
+# 1160df3e2a6f430582cc8370285d0c10
+# 96ccbb6785db42ed8266aaa42d0d0f7a
+msgid "When user is given, do not attempt to copy and chown a requirements file"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:95
+# 7bc43bcb297d4488b1225c9220a4c889
+msgid "activate"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:95
+# ec26e91383004c04b83fd883f939dede
+msgid "Activates the virtual environment, if given via bin_env, before running install."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:99
+# 1ccf237bcbcd4e3cbea9141098a4d9ba
+msgid "pre_releases"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:98
+# d9ee52224f404535a92a69f46908325a
+msgid "Include pre-releases in the available versions"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.install:110
+# 13699230a15c4629ad56c2853e9d38f3
+msgid "Complicated CLI example::"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.list_:1
+# 96e907648bda47b4883248408fc70236
+msgid "Filter list of installed apps from ``freeze`` and check to see if ``prefix`` exists in the list of packages installed."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:1
+# 05e131538ea041e89d55ea238eb9aece
+msgid "Uninstall packages with pip"
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.uninstall:3
+# 08055f8045764586b6e15094c6a0c39a
+msgid "Uninstall packages individually or from a pip requirements file. Uninstall packages globally or from a virtualenv."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.version:3
+# c7786b5de2fc41d780bd4375d2bcae84
+msgid "Returns the version of pip. Use ``bin_env`` to specify the path to a virtualenv and get the version of pip in that virtualenv."
+msgstr ""
+
+#: ../../../salt/modules/pip.py:docstring of salt.modules.pip.version:6
+# cbdd5136f6084a098c0c5efea28cec37
+msgid "If unable to detect the pip version, returns ``None``."
+msgstr ""
+

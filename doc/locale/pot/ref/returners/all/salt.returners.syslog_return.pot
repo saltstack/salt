@@ -1,0 +1,43 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/returners/all/salt.returners.syslog_return.rst:6
+# 5afb90b6f0314fee8ddc82f1fed07240
+msgid "salt.returners.syslog_return"
+msgstr ""
+
+#: ../../../salt/returners/syslog_return.py:docstring of salt.returners.syslog_return:1
+# ef3a31f957694c2ab27ca910ab5b39e0
+msgid "Return data to the host operating system's syslog facility"
+msgstr ""
+
+#: ../../../salt/returners/syslog_return.py:docstring of salt.returners.syslog_return:3
+# 890c2520724041d4b8b87d307060fe12
+msgid "Required python modules: syslog, json"
+msgstr ""
+
+#: ../../../salt/returners/syslog_return.py:docstring of salt.returners.syslog_return:5
+# ff2dca70a0814b34b95679c15bd079ec
+msgid "The syslog returner simply reuses the operating system's syslog facility to log return data"
+msgstr ""
+
+#: ../../../salt/returners/syslog_return.py:docstring of salt.returners.syslog_return.returner:1
+# b768a0c1e83a40759e7d3f65fc8b87dd
+msgid "Return data to the local syslog"
+msgstr ""
+

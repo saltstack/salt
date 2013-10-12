@@ -1,0 +1,108 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.pecl.rst:6
+# 36a8507ae7034d37aebfb5520c436df5
+msgid "salt.modules.pecl"
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl:1
+# 8c002b3bde724f05b574d7c4bc3f03e7
+msgid "Manage PHP pecl extensions."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:1
+# c66c5b2872bb4a11be536d6d2db76db0
+msgid "Installs one or several pecl extensions."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:4
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.uninstall:4
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.update:4
+# 78f3a50f80c848609f90acd7ac5374a6
+# b7b6c4d82cb34c19b625b90eebd48bc2
+# d93d924c163e4aa581d50333e17eb868
+msgid "pecls"
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:4
+# a2781caa8f1e435daf0490415d5a16cc
+msgid "The pecl extensions to install."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:9
+# 3a55963dfe20401484bae170b5a5ffa7
+msgid "defaults"
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:7
+# 615b3ad104344c64b2c30abaf44e1a5d
+msgid "Use default answers for extensions such as pecl_http which ask questions before installation. Without this option, the pecl.installed state will hang indefinitely when trying to install these extensions."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:12
+# efaf0b6f1ee345f5afbd728a0654591c
+msgid "force"
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:12
+# d9ba33c5bb7641adb298add17fbb6529
+msgid "Whether to force the installed version or not"
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:15
+# c964196e6e1943f2aa5022aec98428a9
+msgid "The ``defaults`` option will be available in version 0.17.0."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.install:17
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.list_:3
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.uninstall:6
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.update:6
+# 49c0131e07c947499b6b588a2025790c
+# cb578b9d0c6d444d915c7dfdf8071708
+# 37b27d272b78409685e2337e231d96cc
+# f3329866948f45bd82a17509b52f65c4
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.list_:1
+# 43c58201327647babcb18d4790d21177
+msgid "List installed pecl extensions."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.uninstall:1
+# 5b6cf82f4b0e4bd19220326cf7678d76
+msgid "Uninstall one or several pecl extensions."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.uninstall:4
+# 2adc588f081447f29e2082021e4493fe
+msgid "The pecl extensions to uninstall."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.update:1
+# ddcb4dad147141199107aae4318b3079
+msgid "Update one or several pecl extensions."
+msgstr ""
+
+#: ../../../salt/modules/pecl.py:docstring of salt.modules.pecl.update:4
+# 8400d12076734a9caeb03b32d3df11fd
+msgid "The pecl extensions to update."
+msgstr ""
+

@@ -1,0 +1,98 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/installation/osx.rst:6
+# e9fcdca17c81450db09f9b36d2e248e5
+msgid "OS X"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:9
+# 6619dc9bcdb745188530e00da30339ea
+msgid "Dependency Installation"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:11
+# b6f338e3121b4876900741d7859ae855
+msgid "ZeroMQ and swig need to be installed first."
+msgstr ""
+
+#: ../../topics/installation/osx.rst:13
+# ab477de4a7f446fdb7d2b383172521fc
+msgid "For installs using `python installed via homebrew`_, sudo should be unnecessary:"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:18
+# 642e310c6f374ad39e7831d6eacdee46
+msgid "Using homebrew with"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:18
+# 57e0c14fee1c4ca7857599bffbd7cde3
+msgid "`XCode Command Line Tool (XCode: Preferences: Downloads: Command Line Tools: Install)`_ pre-installed:"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:30
+# 00bd59c2419b4df39691151426aba58f
+msgid "This should pip install salt and its dependencies, such as:"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:30
+# 504794008ba14053a2338175f2b26d01
+msgid "Jinja2 M2Crypto msgpack-python pycrypto PyYAML pyzmq markupsafe"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:32
+# 3e912aafe9c74458b277e415625661d1
+msgid "Whereas when using macports, zmq, swig, and pip may need to be installed this way:"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:43
+# ad1d982f221f4f74ab49823019b0bb65
+msgid "For installs using the OS X system python, pip install needs to use 'sudo':"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:50
+# 6e0322b4bf04401a9c7afc0b0c92e7ee
+msgid "Salt-Master Customizations"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:52
+# fed9c52abea7489ebd349fa45ad1f5f8
+msgid "To run salt-master on OS X, the root user maxfiles limit must be increased:"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:58
+# ba3a4d01d9ac4966a0297baa741a7836
+msgid "And sudo add this configuration option to the /etc/salt/master file:"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:64
+# d22de542ed834e0284881192f6989a73
+msgid "Now the salt-master should run without errors:"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:71
+# 93f5a8d41b8544f8bf268165588d1f41
+msgid "Post-installation tasks"
+msgstr ""
+
+#: ../../topics/installation/osx.rst:73
+# 03f10ea9c3974a55bf4945146e4ae065
+msgid "Now go to the :doc:`Configuring Salt</topics/configuration>` page."
+msgstr ""
+

@@ -1,0 +1,173 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.virtualenv_mod.rst:6
+# 8a16ce1d19d246faa8925777d98e0bdb
+msgid "salt.modules.virtualenv"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod:1
+# 687cad836b0047f9904d64ca5f14c003
+msgid "Create virtualenv environments"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:1
+# 5f7e9b6c597848c6b5360d0540a0620f
+msgid "Create a virtualenv"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:3
+# 9ac02127f21b422980d990322afa78c5
+msgid "path"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:4
+# 1dcc22c59dbb44e3a22b82b72ae7049c
+msgid "The path to create the virtualenv"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:6
+# 9fcfd7d7ba9d4eacb9487f4dca51cb4e
+msgid "venv_bin : None (default 'virtualenv')"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:6
+# 4f05479c79c44bc3b2bd035cf1d3f397
+msgid "The name (and optionally path) of the virtualenv command. This can also be set globally in the minion config file as ``virtualenv.venv_bin``."
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:9
+# 401d3fb7b4ef49e0b82b515bd9e3ab9b
+msgid "no_site_packages : None"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:9
+# b21c6a5091744753a1443887207292a3
+msgid "Passthrough argument given to virtualenv if True. Deprecated since ``salt>=0.17.0``. Use ``system_site_packages=False`` instead."
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:11
+# faa9f7dc90794f8eb440a8233d1ecc4d
+msgid "system_site_packages : False"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:12
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:19
+# e068ee781dcf414eb8e865d4fd237cbb
+# 72577ea9a3f944648bf8b2ab2ed817b2
+msgid "Passthrough argument given to virtualenv or pyvenv"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:13
+# e1685f28b47e4cf3b599a534d7d03bf0
+msgid "distribute : False"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:14
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:21
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:23
+# d24ded9c41d54ccb9927d08789b50d74
+# e406ceeb8777482bbe33e34444888e89
+# a62d4c6a17d64285a149ba3f565cc833
+msgid "Passthrough argument given to virtualenv"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:16
+# 00a333d63c8242969d3eb0109679e05e
+msgid "pip : False"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:16
+# 1b35ba7a6fdc41b7837c35280897f11a
+msgid "Install pip after creating a virtual environment, implies distribute=True"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:18
+# f6e3309f60e24ae89f1d8444b2bc6837
+msgid "clear : False"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:20
+# 990e01bf996f453393c979a27d6e3c01
+msgid "python : None (default)"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:22
+# 7999477a841a4211a4315b60ea30bae7
+msgid "extra_search_dir : None (default)"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:24
+# e792a6869d494648af5fcc1f21881143
+msgid "never_download : None (default)"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:25
+# d320e6cb5ea643f2bed05a657162b96d
+msgid "Passthrough argument given to virtualenv if True"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:26
+# 119e0f9e7b6d41fa9d70786fab7ba29e
+msgid "prompt : None (default)"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:27
+# d3daf5192d574b77890d4be6619ea469
+msgid "Passthrough argument given to virtualenv if not None"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:28
+# 6026759ae3264af289078e1c43831f8f
+msgid "symlinks : None"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:29
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:31
+# 4ce16bc8921940ff8c3603eb3f1152d8
+# c5ade41c77ed40239e1136b63d9a5d29
+msgid "Passthrough argument given to pyvenv if True"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:30
+# 090226ad69c54602ac47ac3089eff749
+msgid "upgrade : None"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:33
+# 212a719b1d83496b9bca548edd1a8694
+msgid "runas : None"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:33
+# 969bc3939b504677b1e614a86f909cbf
+msgid "Set ownership for the virtualenv"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.create:35
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.get_site_packages:3
+# 36dcfa33bf2a486a856fd1c1c7c68440
+# 391116e33dd5402f95989414639f609f
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/virtualenv_mod.py:docstring of salt.modules.virtualenv_mod.get_site_packages:1
+# b65bb9ca085f45e39f371657b1db43d8
+msgid "Returns the path to the site-packages directory inside a virtualenv"
+msgstr ""
+

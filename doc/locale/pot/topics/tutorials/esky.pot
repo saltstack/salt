@@ -1,0 +1,128 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/esky.rst:6
+# 8a23852b192a41d681f1f758980d4f1f
+msgid "Automatic Updates / Frozen Deployments"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:10
+# 02181b8e3c7046d4b865f121bfc22f58
+msgid "Salt has support for the `Esky <https://github.com/cloudmatrix/esky>`_ application freezing and update tool. This tool allows one to build a complete zipfile out of the salt scripts and all their dependencies - including shared objects / DLLs."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:16
+# 5d6bc347ba4d418fa798b34d08fef52c
+msgid "Getting Started"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:18
+# 7d672c4a5970467892535823c6d3dca2
+msgid "To build frozen applications, you'll need a suitable build environment for each of your platforms. You should probably set up a virtualenv in order to limit the scope of Q/A."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:22
+# 713fec73a21f41b48f1ce23d9dd8691f
+msgid "This process does work on Windows. Follow the directions at `<https://github.com/saltstack/salt-windows-install>`_ for details on installing Salt in Windows. Only the 32-bit Python and dependencies have been tested, but they have been tested on 64-bit Windows."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:27
+# c1db5ff845fe47bc9f59f27b25eb5226
+msgid "You will need to install ``esky`` and ``bbfreeze`` from Pypi in order to enable the ``bdist_esky`` command in ``setup.py``."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:31
+# c23fe790c49e4b53abcb14b691de5de4
+msgid "Building and Freezing"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:33
+# dd383ca76c774a5da39474b820e16f29
+msgid "Once you have your tools installed and the environment configured, you can then ``python setup.py bdist`` to get the eggs prepared. After that is done, run ``python setup.py bdist_esky`` to have Esky traverse the module tree and pack all the scripts up into a redistributable. There will be an appropriately versioned ``salt-VERSION.zip`` in ``dist/`` if everything went smoothly."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:40
+# b7d295dfd33a485f8190995db18e7824
+msgid "Windows"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:41
+# f72a8abfee90488699b23d3a880110ca
+msgid "You will need to add ``C:\\Python27\\lib\\site-packages\\zmq`` to your PATH variable. This helps bbfreeze find the zmq dll so it can pack it up."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:45
+# 55cf8d2a706f4d23b11016b2d23d02d3
+msgid "Using the Frozen Build"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:47
+# 5e5ff743fc444f458e8a021f09e8da06
+msgid "Unpack the zip file in your desired install location. Scripts like ``salt-minion`` and ``salt-call`` will be in the root of the zip file. The associated libraries and bootstrapping will be in the directories at the same level. (Check the `Esky <https://github.com/cloudmatrix/esky>`_ documentation for more information)"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:53
+# 9428e46d14fe4d98a0fc3160266c74d3
+msgid "To support updating your minions in the wild, put your builds on a web server that your minions can reach. :py:func:`salt.modules.saltutil.update` will trigger an update and (optionally) a restart of the minion service under the new version."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:59
+# acca5b2d9aa84d0baf0468e607328d71
+msgid "Gotchas"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:62
+# 703de58c281f4bcd89dcc4eddcdbbbf7
+msgid "My Windows minion isn't responding"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:63
+# 86ae2a7c1430482da85cde69b5a67f93
+msgid "The process dispatch on Windows is slower than it is on \\*nix. You may need to add '-t 15' to your salt calls to give them plenty of time to return."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:67
+# e75cdb1be67a4fe88709fca99ab2bfc6
+msgid "Windows and the Visual Studio Redist"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:68
+# 5d694599d7f3433da7d42656ad3a44f8
+msgid "You will need to install the Visual C++ 2008 32-bit redistributable on all Windows minions. Esky has an option to pack the library into the zipfile, but OpenSSL does not seem to acknowledge the new location. If you get a ``no OPENSSL_Applink`` error on the console when trying to start your frozen minion, you have forgotten to install the redistributable."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:75
+# 6b7cbc1f3e18400abe8347422e8416cb
+msgid "Mixed Linux environments and Yum"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:76
+# 50eb4618a0c64fa4a3a141021a3c0557
+msgid "The Yum Python module doesn't appear to be available on any of the standard Python package mirrors. If you need to support RHEL/CentOS systems, you should build on that platform to support all your Linux nodes. Also remember to build your virtualenv with ``--system-site-packages`` so that the ``yum`` module is included."
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:83
+# a7569cc0fd1d44fb92d3826fd42d91b1
+msgid "Automatic (Python) module discovery"
+msgstr ""
+
+#: ../../topics/tutorials/esky.rst:84
+# eb374d05b916419180e392de57453061
+msgid "Automatic (Python) module discovery does not work with the late-loaded scheme that Salt uses for (Salt) modules. You will need to explicitly add any misbehaving modules to the ``freezer_includes`` in Salt's ``setup.py``. Always check the zipped application to make sure that the necessary modules were included."
+msgstr ""
+

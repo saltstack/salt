@@ -1,0 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/renderers/all/salt.renderers.mako.rst:6
+# 134b7c4858214e60ab32d8d4e4d4f576
+msgid "salt.renderers.mako"
+msgstr ""
+
+#: ../../../salt/renderers/mako.py:docstring of salt.renderers.mako.render:1
+# 9df9f11007374de8bb2ab18765bc7c0e
+msgid "Render the template_file, passing the functions and grains into the Mako rendering system."
+msgstr ""
+
+#: ../../../salt/renderers/mako.py:docstring of salt.renderers.mako.render:4
+# 801d7b43934e4a8a8fcaaa249994a857
+msgid "string"
+msgstr ""
+

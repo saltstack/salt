@@ -1,0 +1,83 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/all/salt.fileserver.gitfs.rst:6
+# a36b1784ff4d4c25a2d09628c2058244
+msgid "salt.fileserver.gitfs"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs:1
+# c8a46e01a3ad4f388c2f1795108b6d18
+msgid "The backend for the git based file server system."
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs:3
+# 7b01c04db1574e73af954bd7d36d1a8e
+msgid "After enabling this backend, branches and tags in a remote git repository are exposed to salt as different environments. This feature is managed by the fileserver_backend option in the salt master config."
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs:7
+# 51508bcc75064ca1afd0c2dc6258efd4
+msgid "gitpython Python module"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.dir_list:1
+# 7f6481dffca54b78910cb60bdfb5cb56
+msgid "Return a list of all directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.envs:1
+# 89e13db804e84425ba3495d2e83c8f7e
+msgid "Return a list of refs that can be used as environments"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.file_hash:1
+# fc823fc330fc402a86a696736aa93fba
+msgid "Return a file hash, the hash type is set in the master config file"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.file_list:1
+# f1768ca85a5d457a971b68847c3ff174
+msgid "Return a list of all files on the file server in a specified environment"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.file_list_emptydirs:1
+# fe88e43f35964fbd8bdd36ecbea17dc9
+msgid "Return a list of all empty directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.find_file:1
+# c0589f4488b54d2ca3c44903cce2500b
+msgid "Find the first file to match the path and ref, read the file out of git and send the path to the newly cached file"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.init:1
+# 1ab4da7fdcc748c4982a13266c25f2a3
+msgid "Return the git repo object for this session"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.serve_file:1
+# f68ce8bbd59d4e8caa928d6012df7dfd
+msgid "Return a chunk from a file based on the data received"
+msgstr ""
+
+#: ../../../salt/fileserver/gitfs.py:docstring of salt.fileserver.gitfs.update:1
+# 31bd8e2b631d4dcb95f46f1bc920c4fe
+msgid "Execute a git pull on all of the repos"
+msgstr ""
+

@@ -1,0 +1,1015 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.pkgng.rst:6
+# 7ecc75f301a34537a65e21664096dcf0
+msgid "salt.modules.pkgng"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng:1
+# 91d612a2d4f34c6cbeceb63c48c62dbc
+msgid "Support for ``pkgng``, the new package manager for FreeBSD"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng:5
+# 524954fc41f446b8a7b615fd050dc923
+msgid "This module has been completely rewritten. Up to and includng version 0.17.0, it was available as the ``pkgng`` module, (``pkgng.install``, ``pkgng.delete``, etc.), but moving forward this module will no longer be available as ``pkgng``, as it will behave like a normal Salt ``pkg`` provider. The documentation below should not be considered to apply to this module in versions <= 0.17.0. If your minion is running one of these versions, then the documentation for this module can be viewed using the :mod:`sys.doc <salt.modules.sys.doc>` function:"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng:19
+# 4fbaeb2c82624f83b555b717314920c8
+msgid "This module provides an interface to ``pkg(8)``. It acts as the default package provider for FreeBSD 10 and newer. For FreeBSD hosts which have been upgraded to use pkgng, you will need to override the ``pkg`` provider by setting the :conf_minion:`providers` parameter in your Minion config file, in order to use this module to manage packages, like so:"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.audit:1
+# 85d5795b60c3453688e3cd35f1788ea2
+msgid "Audits installed packages against known vulnerabilities"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.audit:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.audit:12
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.audit:22
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.autoremove:8
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.backup:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.backup:14
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.backup:26
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:6
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:16
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:28
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:37
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:46
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.clean:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:12
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:22
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:31
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:40
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:50
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:59
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:68
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:77
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:87
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:96
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:6
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:24
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:33
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:42
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:53
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:63
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:73
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:83
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:93
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:102
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:111
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.latest_version:8
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.list_pkgs:12
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.parse_config:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:8
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:25
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:11
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:28
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:38
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:47
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:57
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:66
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:75
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:84
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.restore:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.restore:14
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.restore:26
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:12
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:22
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:31
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:40
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:49
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:58
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:67
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:76
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:85
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:94
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:103
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:113
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:122
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:131
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:12
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:21
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:30
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:42
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.update_package_site:5
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:4
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:13
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:23
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:32
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:41
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:12
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:22
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:34
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:45
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:56
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.version:18
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:3
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:12
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:22
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:32
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:41
+# 7b478c4382224e47a7e296eb00910d73
+# 9d45165425a9409dbb14e13e4e7c9155
+# 2db6131e5e224aacbdfe11095768e790
+# 7e57ac0b3afe4bfb90ee1a4388328a31
+# b38110d9aa114e52ac87739edec3b17f
+# b0fdde436142479d86ac5c821463aac7
+# e562b555c8b242a2877a81555e9e15ee
+# d7ccda73065743758f7a950ad45253a1
+# 2f6b034c5570403cb640f2e881223127
+# e7061930c69d44af8b2ee4e642c07971
+# 99a14ce58b1b46588d8db44037e3147c
+# 362aa569f37b4ff68e998bd0980c0832
+# c0b716f40c46452a8d4dfa8eaf017462
+# b717995b2a2d46c6aefe0ac067572873
+# d5fe1d3a78374acc8cdcaafe6fc3a485
+# 00e2749d5dbd462ba11296da5b7678e9
+# 487cb53de0a44418a94342fb370210a2
+# 0f1540db42c04af4abf5688538decc6b
+# a8dcb77c76f64c0e89c75fdda5eb4c3e
+# 09ba641366e4488084759050a93dcacd
+# 8fa61aba14f040e4b307bf57b48d90a0
+# cd39b2cb3c13465f84582074ac3128a4
+# 8f229b120cd74cd194c9994fd09b2332
+# 441438ce101b435f8177bec1c07a83e7
+# 4e250091b7654f42881c7f066e1082e8
+# cbf95802421c43f5bcc625c61bd7e3f5
+# 7a09a85009264aa8a696b8a7e383a730
+# 2845ff67a1f04173bf80209c162743fc
+# 7f7788de75bb492d843af2ad1cd25803
+# 7f8a7b4b533c4001bda7959446d1b654
+# d596f8e6c759443594996772daf9fc74
+# f4e5ec3630cf429fa66bb3a655b1f50a
+# e30452bf16064d80bc560de0fca9f50e
+# 5b031de829f54b9197ba145091f41ecc
+# ed02e552f7c141698ea9f2c28717650b
+# 3e544f490f994a58a4773fa378f6ac52
+# a3ecedc22c834792a2b62ae3502d3e05
+# c7cbef24e5ec4324a943ae71b564669a
+# 37afbbe513d54ac5b1164e2f6a8d979c
+# 14dd0bf4b2fc40989d1697339afcf8ac
+# f9043a27f1c641cfb8635846eaf4140d
+# bcf16f543f994cb586adda128bd22115
+# 179a3cec7185489f81829c242d9809c7
+# 1b0bff83e83543868b885bfbc94f14dc
+# 614f16a5defd40ed8133ad99edb5e019
+# 61bce9fd21684e9d8a0b4546ad7d8eb1
+# 3a21121e16bf47dc8a1eafcdb55bd0ec
+# 140bf71a6953409cad587c133863ae18
+# 46a6dc2dfd864474868e7d518c2bcd46
+# 62900f46d3314185a823f4f901ccf2db
+# 5d525e30acea4007925867c83bb091d7
+# 04d979d9a3494b9fb6cf1d46086f2b12
+# bf9a704cdc404ceeaea2b9ddfe5555ad
+# 873778306d51466793f2cc47193b3ecb
+# fdef1215dba8477fbac32e23875fb480
+# 8065747552f046fe819716753b1745bc
+# ca66ced4d60547869c91d03aaf26d9e0
+# 6365f57a7a8e4706b9d786c79a7e41f9
+# 6cef644e6eb549b6bbc1ab0e94513ab4
+# 95f0b623e708482aa1c8fd182bb26c42
+# 3e25413827594706a0423f45f72690f0
+# 3ad06bcb065b4a3aa365cbc99026b231
+# 8019f2024f9140eabe57735a20ccba12
+# aa53e56e5a364a7dbb2f1e5a3a1bb1be
+# 04d17b5bb46d41c2b22693cb192e20e8
+# 4b7d58c10e5d4deca8d160e115bd0c69
+# 9e12d845b2224cd8b5e39a076785b8ad
+# a314618a822d4db79bc7b786aa2c883a
+# 26e1ddb523a447c8b1cf112bef7a19c6
+# 3cd52e6a51cb40699a703b4c2fa0d57d
+# 5c0c64f5d30240ac92c788fc25b0281e
+# 10806a1f6c1b4c73bde4e9bb50657fe2
+# a2445119c4ab45398f1c3b9c95b194de
+# ddb6406b269f45f1ad3c363f85b76066
+# 84f3ca34ac3742e28df5f2a1cafe171f
+# 1a0ae0cddb094cfa8e0de92eecdc84e9
+# f0e52048bc164278a1fbb129e8c673b5
+# 6e8d589bd0214137a100ed0cfd023ad1
+# c69ff7a1e2124724a9e1c0f5f3513a57
+# a6528d002cbb4c0ab9edc9bcfabd09d1
+# 7ba0b27dc5954fc297a72fe042d51932
+# d0eca05112c943f0b444c850f556d50c
+# cd946ec074cc4f28a991e535150ec94b
+# 9542c93fd7004f3198f301eada4a3a67
+# a78ca748fd6a49188aac075a584276af
+# 5d9d183759f941a4a5f416a38a4b36a4
+# 26de3f2ca6514386808ab3d225503c74
+# 79201fe33afc48b0876a5266a7a65ec5
+# 0ad4eb5cea8146958b3effde20c857e3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.audit:16
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.backup:18
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:10
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:16
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:13
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.list_pkgs:6
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:15
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:18
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.restore:18
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:16
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:36
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:17
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:16
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.version:11
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:16
+# 770cd00d62d642bc80458867a24a6528
+# b319f21a59544b108ca3f3b40d5f922a
+# bbf70aae48a74971afe2eded8797f523
+# cdad89a4379945069a4142dac576dbeb
+# 103ba1b4b22e4f78b070d975d4aa466a
+# da15cc40e70b48ab8185784bab28a19d
+# d50d482cceff46de825a7ffdad2d78e8
+# 81e3f98335854db6928a3ee77e623e4f
+# 70822db242e54b999ac91e097a3d9e2b
+# 56d471ac74ff4fec9823ac6243fa9092
+# 584f2fe73bff45f7b64183dc22ae7a94
+# b33a3b38cc164db5af36293e01873199
+# 0dc69cc521ea432baa0573528ae9f4ad
+# a1c71f95a4c042ccb20f382fad6dd033
+# 70b3ca26d67e4a8c8f408d9ef2116338
+msgid "jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.audit:10
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:10
+# 572f762b450c4ce5ab9d6ad0fae21bdf
+# 475110f0e20649aa89e68f780a0f3523
+msgid "Audit packages within the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.audit:25
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.backup:29
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:21
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:26
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:17
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.list_pkgs:10
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:19
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:22
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.restore:29
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:26
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:47
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:27
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:27
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.version:16
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:27
+# fc83363552d1439d911c80a88290a1e2
+# 4b99ca97230640f1a67d662b54068e9b
+# cd40913f76c847c1865b2f1cf319da81
+# 77d462f229904fb486796c5943bca91d
+# 3169c7c8baaa461c880e81072ce438e2
+# 6d4f12bc0f7d40268a80ee0793021d6c
+# 25578b8ea7dc4abfb61af7e30ff6355b
+# b8cc6b11274d455a8817e533108e5325
+# a444ee78771a4f7fad00376c72695931
+# e2d641e62c9c48bdb2552a2099255cb8
+# 7b09bfaf993d47f28191b551201d1b96
+# cdcb86fda67d49b5b96f33b004b74c76
+# 3b2aaf49ab0c48b6b4c1585bedae5162
+# 1a0cafa80f9e4b27868396133f89eb4e
+# 1ec8ca81975045d1ac1d280a9c808d30
+msgid "chroot"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.audit:19
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:19
+# fcf6aeba494e4615af0331ae5b718a54
+# 8a8369d05c454e43a27cf15704976eda
+msgid "Audit packages within the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.autoremove:1
+# 600e0291cfe142d5a20cf5eeb02095b2
+msgid "Delete packages which were automatically installed as dependencies and are not required anymore."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.autoremove:6
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:67
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:61
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:59
+# d1d0964f5b8641a4b19318c39a3fe281
+# 23f2bef58bb447faa526200fa9ed08d8
+# 87b3d2e65fcc4deb847f900f297b9b95
+# cdcd9ae1200949bfa3f154c8bc76b6b7
+msgid "dryrun"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.autoremove:5
+# feb63b159d934846bc2cc0670e2bf313
+msgid "Dry-run mode. The list of changes to packages is always printed, but no changes are actually made."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.backup:1
+# 19a938a03d2d44d78d0f4272fb24f568
+msgid "Export installed packages into yaml+mtree file"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.backup:10
+# accb7e6f79344119a48f8512bb1b631b
+msgid "Backup packages from the specified jail. Note that this will run the command within the jail, and so the path to the backup file will be relative to the root of the jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.backup:21
+# d0b8ad384da54105bb664b307e7fd02b
+msgid "Backup packages from the specified chroot (ignored if ``jail`` is specified). Note that this will run the command within the chroot, and so the path to the backup file will be relative to the root of the chroot."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:1
+# d41c8a23cd3b42e3b421ed081ccac236
+msgid "Sanity checks installed packages"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:4
+# 09052edad6e749da8e2d2ea36da9ffb3
+msgid "Perform the sanity check in the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:13
+# 1729685620974775a3ed5ccc1e0487a6
+msgid "Perform the sanity check in the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:23
+# 3dfef6b64a1742348891779dd373addb
+msgid "Of the below, at least one must be set to ``True``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:32
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:99
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:98
+# 6b5a4598d5134bb69490a01b89f23eac
+# 6be9ca951a994bcc819dadb8bc21675d
+# b641bb39b33a4d018c9b7b8bdc39e27a
+msgid "depends"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:26
+# 4895255e82a04917a4f5c6a33b45bd0f
+msgid "Check for and install missing dependencies."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:41
+# c36bb29808aa46899d01a0fbf9c1b927
+msgid "recompute"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:35
+# 1a321c59c3e0450c9b5c8fbb0302191e
+msgid "Recompute sizes and checksums of installed packages."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:49
+# 166020cc488d48cf866ac7954524651b
+msgid "checksum"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.check:44
+# 1cbcf906b53e43a68348a4bb19417f96
+msgid "Find invalid checksums for installed packages."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.clean:1
+# 7b4429cb52fa4a1c8a088c60fb4cee59
+msgid "Cleans the local cache of fetched remote packages"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:1
+# e0a4a8b68b1a488b859491c0a3ad3544
+msgid "Fetches remote packages"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:10
+# 4822b45fd3ad4a6a92f8b252465da4d0
+msgid "Fetch package in the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:19
+# 0745e0981cc842c6b224afd80ae5b050
+msgid "Fetch package in the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:35
+# 47b14d52bfad46c286fde3af18633279
+msgid "fetch_all"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:29
+# 8a78224e68b9419f94f9cbbf66e92e49
+msgid "Fetch all packages."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:44
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:77
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:117
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:44
+# b04879385af240edb9485e9d0bee06b5
+# f457a1fec0714515818daa1535c5a572
+# e17587b9e327468baacd8304f3b415ea
+# 395f57c4e6054510b616bc46296e7a3c
+msgid "quiet"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:38
+# 78184ed9e64041aaaaa1c5862842c830
+msgid "Quiet mode. Show less output."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:54
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:97
+# 9575cb87fb4b4a56893f040b5864f60c
+# b03a0925b81b41229442c2e8e5363ca0
+msgid "fromrepo"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:47
+# 3eafb049633243d9904de1095e297913
+msgid "Fetches packages from the given repo if multiple repo support is enabled. See ``pkg.conf(5)``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:63
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:46
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:51
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:44
+# c0f30d105e0f463cb1c3a0fb502ff203
+# 9e87bd5a3b494d729322857a94747eb3
+# 99286bd393674fc69bd2d313c53d9e10
+# a03f831c891a481686232479fac3551f
+msgid "glob"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:57
+# e4d79172d1de4345b1c61e51b17632a3
+msgid "Treat pkg_name as a shell glob pattern."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:72
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:106
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:79
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:53
+# e0ec0fa9347f4a0390b7d665c4565b7f
+# 22fbfea9bb974f9589b9cb6d81871399
+# f8cd879c506f472ab292c1aaa4cd5fcf
+# dd8969440cd64838ac222017a30dfda5
+msgid "regex"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:66
+# 77723f54f34b45beb054e9dbddc2215c
+msgid "Treat pkg_name as a regular expression."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:81
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:114
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:87
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:62
+# 0fe42df827544a55a63110a27c1157ce
+# a6d6f04d590a46af947f3cf21c01e016
+# 94a09a65d10f42a89188dad819337ddd
+# 506c92d2450a4d0fa8025575a24157d5
+msgid "pcre"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:75
+# a5c7b9ec9e524cb695b206619d9f7342
+msgid "Treat pkg_name is an extended regular expression."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:91
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:57
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:16
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:49
+# 1a2603baa3bd412081d743d3b5d059e5
+# e29c0c8754ea4a529518ced5716eeb82
+# d42d2879074347b9937695be2b095ff7
+# 76157d75366b40aaa2d19bc63d7c1734
+msgid "local"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:84
+# b92f58b789b749f8b54e1893a9cac763
+msgid "Skip updating the repository catalogues with pkg-update(8). Use the local cache only."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.fetch:94
+# 5a8b143881534e92916b1d72c45e32a5
+msgid "Fetch the package and its dependencies as well."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:1
+# 3be6a08c77b44452a068325746ffdea1
+msgid "Install package(s) from a repository"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:10
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:15
+# e1dc78a7f89c44038a0a984bf9e25cc2
+# 32211618fb3946e2b7cd2f595497f24a
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:4
+# 1021be67f38c4bb481da540b45a87acd
+msgid "The name of the package to install"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:13
+# a7aa52b267b3452984baa60450a4751f
+msgid "Install the package into the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:16
+# 3cab6266685340a1ae0680050897c8e4
+msgid "Install the paackage into the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:28
+# dfa39375481f46f7a3585fc0acdcd7c5
+msgid "orphan"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:20
+# 10fd5d7ecb034c088aaeb46d66d44b05
+msgid "Mark the installed package as orphan. Will be automatically removed if no other packages depend on them. For more information please refer to ``pkg-autoremove(8)``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:37
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:28
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:42
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:38
+# 5325766e114e4bea9604238d6067e3d3
+# 884cd1788a3348098bec47ea6057b75f
+# d777950beed34d35943924b1ee498cf8
+# 250a4dcf5c744f85b1b03350447da6cd
+msgid "force"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:31
+# ceb174991a2f49e0a13ccf8bd193ff0d
+msgid "Force the reinstallation of the package if already installed."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:40
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:45
+# 958ce48ca0da4e33a1811033a63c7275
+# cedd06c772514e0b9d820e737d50d9ca
+msgid "Treat the package names as shell glob patterns."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:49
+# fe3e2daeed4b45018fc28a05d5ad3fe5
+msgid "Do not update the repository catalogues with ``pkg-update(8)``.  A value of ``True`` here is equivalent to using the ``-U`` flag with ``pkg install``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:60
+# b0bf2c6e3757438982aed9f5dc7c7d2b
+msgid "Dru-run mode. The list of changes to packages is always printed, but no changes are actually made."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:70
+# b9d296ae57b94a14b321bf7cdd8d3b65
+msgid "Force quiet output, except when dryrun is used, where pkg install will always show packages to be installed, upgraded or deleted."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:87
+# 8e6642db687b4e89969977a3e66ba70f
+msgid "require"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:80
+# b1117c7d7ba842678583d4859713e456
+msgid "When used with force, reinstalls any packages that require the given package."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:90
+# ebfd28b6a645492281ddcd1e60086c28
+msgid "In multi-repo mode, override the pkg.conf ordering and only attempt to download packages from the named repository."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:100
+# cfba9414d5844f3c978dbee46b3e8c76
+msgid "Treat the package names as a regular expression"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.install:109
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:82
+# 76e482b77b8a430fb4bd71acd6c36491
+# d041f852c6c544c483f1b231c1aff1e2
+msgid "Treat the package names as extended regular expressions."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.latest_version:1
+# cf43d755b8f6461f88a03f6933629ca7
+msgid "Return the latest version of the named package available for upgrade or installation. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.latest_version:5
+# 9fba536915df4e0d881c343521971e7d
+msgid "If the latest version of a given package is already installed, an empty string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.list_pkgs:1
+# 426adcf59a954910b1d60acef4144b65
+msgid "List the packages currently installed as a dict::"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.list_pkgs:6
+# 318ba77f6eb44d8fa1a795a4d1802660
+msgid "List the packages in the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.list_pkgs:9
+# e440cdd785de47e389b4f7afe9a93c98
+msgid "List the pacakges in the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.parse_config:1
+# 9489d56579fd4dd5a42e2fb2598bee0b
+msgid "Return dict of uncommented global variables."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.parse_config:9
+# 8c55a4914ad0421b966c1b6229ab0d3a
+msgid "``NOTE:`` not working properly right now"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:1
+# 645abb09949c41f9a640a0f44b10107c
+msgid "Refresh PACKAGESITE contents"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:5
+# 044b179b53a440339dc8d306ad39e259
+msgid "This function can accessed using ``pkg.update`` in addition to ``pkg.refresh_db``, to more closely match the CLI usage of ``pkg(8)``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:15
+# 1198285be331425d8891efd4cce60d63
+msgid "Refresh the pkg database within the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:18
+# d2da5215fcb0424dad4a2b6a62bef23a
+msgid "Refresh the pkg database within the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.refresh_db:22
+# 240946a1e6f14c03b6b8bec2ca278824
+msgid "Force a full download of the repository catalogue without regard to the respective ages of the local and remote copies of the catalogue."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:1
+# ba91658aaafe4baf90c42c698b2c30fc
+msgid "Remove a package from the database and system"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:5
+# 3cc8b952f0a0481abf5fc3cbe57da527
+msgid "This function can accessed using ``pkg.delete`` in addition to ``pkg.remove``, to more closely match the CLI usage of ``pkg(8)``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:9
+# 41f4aefcd42749d69729a1ebc77178a3
+msgid "The package to remove"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:18
+# df11c7620dd9419299a4321fed91705c
+msgid "Delete the package from the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:21
+# 91e1b1dbe8b9440eb705fe75e229c434
+msgid "Delete the paackage grom the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:32
+# 85f5dbcb95bd41b7a4e38db5febfa9bf
+msgid "all_installed"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:25
+# 19106b2cb6044f718ddd449ab5593757
+msgid "Deletes all installed packages from the system and empties the database. USE WITH CAUTION!"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:35
+# 7bbda7efcbb8496990cd887cd4ce9b45
+msgid "Forces packages to be removed despite leaving unresolved dependencies."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:54
+# 923539d193ed4677966de742d9e27898
+msgid "Dry run mode. The list of packages to delete is always printed, but no packages are actually deleted."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:70
+# 98041581c7274767b2b87a623822b419
+msgid "recurse"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:64
+# c1648c40a78e48938a9ce511f0e95e8f
+msgid "Delete all packages that require the listed package as well."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.remove:73
+# 012297be3aa84116b45518a074caad8a
+msgid "Treat the package names as regular expressions."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.restore:1
+# 2137d3e9deed43e498d6f7d124939b7b
+msgid "Reads archive created by pkg backup -d and recreates the database."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.restore:10
+# a75bbd020395453ca57cdacfd0d10720
+msgid "Restore database to the specified jail. Note that this will run the command within the jail, and so the path to the file from which the pkg database will be restored is relative to the root of the jail."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.restore:21
+# 38e9f05d5a3d4b0280b5c552b5b61fc9
+msgid "Restore database to the specified chroot (ignored if ``jail`` is specified). Note that this will run the command within the chroot, and so the path to the file from which the pkg database will be restored is relative to the root of the chroot."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:1
+# ede0f648e024466fa166a1872ef8184a
+msgid "Searches in remote package repositories"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:10
+# bb1ac666b0fa48978aa39232d1b89b31
+msgid "Perform the search using the ``pkg.conf(5)`` from the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:19
+# 806c5ebb57174b93955f1ed0fc2b5572
+msgid "Perform the search using the ``pkg.conf(5)`` from the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:35
+# e43e14086e1040cbab7074eaed43dabd
+msgid "exact"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:29
+# 5ddc474025264ecc9f87cbcf479e72ce
+msgid "Treat pattern as exact pattern."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:38
+# b55fdc9e334c408f83696d8b0219f5fb
+msgid "Treat pattern as a shell glob pattern."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:47
+# f3cd0efd978544b19f55175bc497e549
+msgid "Treat pattern as a regular expression."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:56
+# 6273cf9697204cf58d0bdfcc98f0e864
+msgid "Treat pattern as an extended regular expression."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:71
+# a8ac66e565f041b9ac65946ada08dfeb
+msgid "comment"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:65
+# 2bc0e9b605134c3db1803fb15dab7dba
+msgid "Search for pattern in the package comment one-line description."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:80
+# 4cb3a3bcc025492eadecba435a5a6278
+msgid "desc"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:74
+# d0dbcbe4aa65461293e5d3cfdabfc0ec
+msgid "Search for pattern in the package description."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:89
+# 093e01a346f540469ff714671fe78c16
+msgid "full"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:83
+# 90d1e38b99934351baa9789579df227c
+msgid "Displays full information about the matching packages."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:92
+# 172e8b14384d42508404be4cd02aa3ee
+msgid "Displays the dependencies of pattern."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:107
+# da33a1906c5b4958bb31d6c4592aca8a
+msgid "size"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:101
+# 71a8b14f040c43b8ac7924ff834a7d25
+msgid "Displays the size of the package"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:110
+# 78d03ebd748e4008876c2ed90f8dfe75
+msgid "Be quiet. Prints only the requested information without displaying many hints."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:126
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:36
+# 95d5d10fe95748d3b4685d2448f6ce3c
+# 2ab8679f804b40f3a3eb89cc7a1a0417
+msgid "origin"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:120
+# d6fbba1a5a254ff8a9884fbfff626363
+msgid "Displays pattern origin."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:134
+# c5ca55fc03364ce6823855c1797e54df
+msgid "prefix"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.search:129
+# eb301b873f224390b63bc57ba0ebafcb
+msgid "Displays the installation prefix for each package matching pattern."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:1
+# 73674d2b197b4e589121bec2cf1a6ca5
+msgid "Return pkgng stats."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:10
+# cc98c379b8b341458f67d6677533cfb5
+msgid "Display stats only for the local package database."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:25
+# fbef7bbcc15740028d5e4b2c2c515f44
+msgid "remote"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:19
+# b55a1deac5304b5e9f3dd7edee6a3e1d
+msgid "Display stats only for the remote package database(s)."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:28
+# e146bcf499264cc7a6dac4e72bbc1469
+msgid "Retrieve stats from the specified jail."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.stats:39
+# c90551428ea9444ca5dc8dbb2c2ab739
+msgid "Retrieve stats from the specified chroot (ignored if ``jail`` is specified)."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.update_package_site:1
+# 3791f3777467409bae1feb0ea7b956cd
+msgid "Updates remote package repo URL, PACKAGESITE var to be exact."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.update_package_site:3
+# bb9f5378b9b34502a148f53e3a02b663
+msgid "Must use ``http://``, ``ftp://``, or ``https://`` protocol"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:1
+# 8a3561ad7c824f84bd0db3ea82b042b1
+msgid "' Displays UPDATING entries of software packages"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:11
+# 32b3366ca2b24469ab38f7ce569656ba
+msgid "Perform the action in the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:20
+# a3a81090460d4e3e845a60b5a85dff55
+msgid "Perform the action in the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:36
+# e325070ee0ff411f9cae00c69cd033ac
+msgid "filedate"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:30
+# dbed2234f98a4a909d3c44cfd7b70a46
+msgid "Only entries newer than date are shown. Use a YYYYMMDD date format."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:44
+# 946358bb14ba40bf984d83dc088852a7
+msgid "filename"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.updating:39
+# 85835e18cca94c469cd86ac729565317
+msgid "Defines an alternative location of the UPDATING file."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:1
+# a2aa428c32e14b12afb6c6592416ce16
+msgid "Upgrade all packages (run a ``pkg upgrade``)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:29
+# 0c5eb76a2755431692b626f6dc12a715
+msgid "Any of the below options can also be used with ``jail`` or ``chroot``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:32
+# 66a3f064380240d9bac5e8b0bd26c812
+msgid "Force reinstalling/upgrading the whole set of packages."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:41
+# 9eb48d1c952c47e5865d87e5ae473edd
+msgid "Do not update the repository catalogues with ``pkg-update(8)``. A value of ``True`` here is equivalent to using the ``-L`` flag with ``pkg upgrade``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.upgrade:52
+# 88158de68d3140928476745842405349
+msgid "Dry-run mode: show what packages have updates available, but do not perform any upgrades. Repository catalogues will be updated as usual unless the local option is also given."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.version:1
+# a34a019f1b3a4030a2bf4d8712aa7eef
+msgid "Returns a string representing the package version or an empty string if not installed. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.version:7
+# abbc0b17168e402bbfd93a6c9c143bed
+msgid "This function can accessed using ``pkg.info`` in addition to ``pkg.version``, to more closely match the CLI usage of ``pkg(8)``."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.version:11
+# 392a7a89189d4d2c8e00e629f1f02d51
+msgid "Get package version information for the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.version:14
+# 02d4edf01d494fcdaa6ce9e85dcfb4f1
+msgid "Get package version information for the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:1
+# a872fda2d5974fc18a07a98b000583ab
+msgid "Displays which package installed a specific file"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:10
+# c502c741349241e785e677379aacff4d
+msgid "Perform the check in the specified jail"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:19
+# 85fda044fabf414983308c75f51181b0
+msgid "Perform the check in the specified chroot (ignored if ``jail`` is specified)"
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:30
+# 1040fc660c1d40ac98096ef33575ee14
+msgid "Shows the origin of the package instead of name-version."
+msgstr ""
+
+#: ../../../salt/modules/pkgng.py:docstring of salt.modules.pkgng.which:39
+# 557a7153375348ab9e995220cdc1ccb5
+msgid "Quiet output."
+msgstr ""
+

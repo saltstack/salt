@@ -1,0 +1,93 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/standalone_minion.rst:6
+# 5e1515c106f64831bee8c94cd29d2eff
+msgid "Standalone Minion"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:8
+# 7448675c8e8845d3a3a77f5484646f9a
+msgid "Since the Salt minion contains such extensive functionality it can be useful to run it standalone. A standalone minion can be used to do a number of things:"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:12
+# c482a5b60b54430fb06650be5157a99f
+msgid "Stand up a master server via States (Salting a Salt Master)"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:13
+# 425fb1a25c9a4467b62a4294beb5c29e
+msgid "Use salt-call commands on a system without connectivity to a master"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:14
+# 9970f2f951854f97a80abb9b190d4ccf
+msgid "Masterless States, run states entirely from files local to the minion"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:17
+# 648f06eef5b54dbea9533da034af7a0a
+msgid "Telling Salt Call to Run Masterless"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:19
+# a6c5928bc695400b92e97c058d57c24f
+msgid "The salt-call command is used to run module functions locally on a minion instead of executing them from the master. Normally the salt-call command checks into the master to retrieve file server and pillar data, but when running standalone salt-call needs to be instructed to not check the master for this data. To instruct the minion to not look for a master when running salt-call the :conf_minion:`file_client` configuration option needs to be set. By default the :conf_minion:`file_client` is set to ``remote`` so that the minion knows that file server and pillar data are to be gathered from the master. When setting the :conf_minion:`file_client` option to ``local`` the minion is configured to not gather this data from the master."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:34
+# 220c2c69f88e499ba2e9e863e876cf8e
+msgid "Now the salt-call command will not look for a master and will assume that the local system has all of the file ad pillar resources."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:40
+# ba60ff32486b41cdab9c4282ce44f17b
+msgid "Running States Masterless"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:42
+# c10375646aef4c15bc30c7cb95cbb387
+msgid "The state system can be easily run without a Salt master, with all needed files local to the minion. To do this the minion configuration file needs to be set up to know how to return file_roots information like the master. The file_roots setting defaults to /srv/salt for the base environment just like on the master:"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:53
+# f4f852225a684aaaacea274db1da24b5
+msgid "Now set up the Salt State Tree, top file, and SLS modules in the same way that they would be set up on a master. Now, with the :conf_minion:`file_client` option set to ``local`` and an available state tree then calls to functions in the state module will use the information in the file_roots on the minion instead of checking in with the master."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:59
+# 996bff5e90094cb58da48d1190359b90
+msgid "Remember that when creating a state tree on a minion there are no syntax or path changes needed, SLS modules written to be used from a master do not need to be modified in any way to work with a minion."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:63
+# f75f8491629a4dd2941d54d7dbe9e286
+msgid "This makes it easy to \"script\" deployments with Salt states without having to set up a master, and allows for these SLS modules to be easily moved into a Salt master as the deployment grows."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:67
+# d7c4330b1da94bab8497017cfdc7b120
+msgid "Now the declared state can now be executed with:"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:73
+# 8e28249d1747416f8a0f11c727644048
+msgid "Or the salt-call command can be executed with the ``--local`` flag, this makes it unnecessary to change the configuration file:"
+msgstr ""
+

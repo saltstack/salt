@@ -1,0 +1,155 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.postgres_user.rst:6
+# 5f94037a8a404f06a85d1fee60314006
+msgid "salt.states.postgres_user"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user:2
+# 58291c721afe484cb06e829acdd903ba
+msgid "Management of PostgreSQL users (roles)."
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user:4
+# 47254ac51e5a41fab0a4c4ce3f3b05cb
+msgid "The postgres_users module is used to create and manage Postgres users."
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.absent:1
+# 7a20de9d329341eaaf5ea61be2a209d1
+msgid "Ensure that the named user is absent"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.absent:4
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:4
+# 6541f2a2e9e54956a72fc2788caaa727
+# 31a53a390fc742daa171a21647d43100
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.absent:4
+# 21126d7d10bc4dfb9284f9004f5fd0fe
+msgid "The username of the user to remove"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.absent:9
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:30
+# a98347affeb14140897cc4178721f8d6
+# 10a1e0ee589a4508baa175c3cb9bf192
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.absent:7
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.absent:12
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:28
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:33
+# b85a0b98b90b4c798f57334965b763f0
+# 733b698f5f724760992025f083d3fa6a
+# 4fe15119c1c34e918ce79a53fe1926a0
+# 2292f219772f4b18a21ed85b27659ffc
+msgid "System user all operations should be performed on behalf of"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.absent:13
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:34
+# f534a9d5caae4c458230d6b2f4c812d2
+# e984a110494942f68997078ee8310d90
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:1
+# f126784ab698439c86ce7f9f90aab2c7
+msgid "Ensure that the named user is present with the specified privileges"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:4
+# 8e1c64f3a6374ec7b51b4c13c83a9ab1
+msgid "The name of the user to manage"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:7
+# 2f3e486259be4e2ca689ad1c2dae5aab
+msgid "createdb"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:7
+# fe55ff69b1f1470680f2e17090712aa4
+msgid "Is the user allowed to create databases?"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:10
+# 8ccb010aa0114507ab219a85fb4a83d8
+msgid "createuser"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:10
+# 18e9263b139b4dac96d71588a05723ff
+msgid "Is the user allowed to create other users?"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:13
+# 46896c586c854d41b4f54f2f18577586
+msgid "encrypted"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:13
+# 76e2d8b417844ee88a7a5a536c1be056
+msgid "Should the password be encrypted in the system catalog?"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:16
+# d07fe29fd8fc43e1979b0c18bf4a4c76
+msgid "superuser"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:16
+# 7acd423025c14ed0bfd2eca2720564d7
+msgid "Should the new user be a \"superuser\""
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:19
+# 03580f27418e42168d3cf132f726514b
+msgid "replication"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:19
+# 21a7e7fb97034ac4aa5e29d6e4d77ad0
+msgid "Should the new user be allowed to initiate streaming replication"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:22
+# d3154f0a378a4d12b6dd73e38379f625
+msgid "password"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:22
+# c33b49cb4b38453485dbd118a6f2c840
+msgid "The user's password"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:25
+# b9b7f4c8259442049dfcd05215cf8552
+msgid "groups"
+msgstr ""
+
+#: ../../../salt/states/postgres_user.py:docstring of salt.states.postgres_user.present:25
+# 3c576667fbbc4f8087e926f3775208d0
+msgid "A string of comma separated groups the user should be in"
+msgstr ""
+

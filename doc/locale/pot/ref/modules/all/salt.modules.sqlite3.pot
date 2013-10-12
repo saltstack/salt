@@ -1,0 +1,80 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.sqlite3.rst:6
+# b4b6afabbef54b40aa6ec9768d04c744
+msgid "salt.modules.sqlite3"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3:1
+# f5df3399745340758884e07c142dfc4e
+msgid "Support for SQLite3"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.fetch:1
+# 495c867316704f11ba442e67702052a3
+msgid "Retrieve data from an sqlite3 db (returns all rows, be careful!)"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.fetch:3
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.indexes:3
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.indices:3
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.modify:4
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.sqlite_version:3
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.tables:3
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.version:3
+# b62ea14fd4294add90093c80cddd8d18
+# a2f9ec3f3e3c42d7be003d3f715b30e8
+# 74dc81ca56094b89bcb697edd5110fa5
+# 3c565b323f954f1cba09a4b11e25aa49
+# fe9d6e0c116e43acab250f779ec0e4cb
+# f90259b0314845b08e1457cfe6879818
+# 5d459de03d704a2e980bb9373945af5d
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.indexes:1
+# 0ab7509e52cf422fa5640115e291fe50
+msgid "Show all indices in the database, for people with poor spelling skills"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.indices:1
+# eca21b23a9ee4c5ba847cb22bc95b4a4
+msgid "Show all indices in the database"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.modify:1
+# 59c1a3a27a6e46b693801deb670ead88
+msgid "Issue an SQL query to sqlite3 (with no return data), usually used to modify the database in some way (insert, delete, create, etc)"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.sqlite_version:1
+# fa9cd2ca93984159a652b29560b92aa9
+msgid "Return version of sqlite"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.tables:1
+# 75652d60702142c08ec1326dddd6a33c
+msgid "Show all tables in the database"
+msgstr ""
+
+#: ../../../salt/modules/sqlite3.py:docstring of salt.modules.sqlite3.version:1
+# 05eef10ad969452e85e2fba34a36c9b5
+msgid "Return version of pysqlite"
+msgstr ""
+

@@ -1,0 +1,232 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.freebsdpkg.rst:6
+# 55dc1c69c73048c78f1abfc29b16f50a
+msgid "salt.modules.freebsdpkg"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg:1
+# 3a8a86966f354c34bf3bd35897bef525
+msgid "Remote package support using ``pkg_add(1)``"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg:5
+# 1541624c812548d08710ee28407bc652
+msgid "This module has been completely rewritten. Up to and including version 0.17.0, it supported ``pkg_add(1)``, but checked for the existence of a pkgng local database and, if found,  would provide some of pkgng's functionality. The rewrite of this module has removed all pkgng support, and moved it to the :mod:`pkgng <salt.modules.pkgng>` execution module. For verisions <= 0.17.0, the documentation here should not be considered accurate. If your Minion is running one of these versions, then the documentation for this module can be viewed using the :mod:`sys.doc <salt.modules.sys.doc>` function:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg:20
+# 01f1b730b2a64f5a821937bf91b8163b
+msgid "This module acts as the default package provider for FreeBSD 9 and newer. If you need to use pkgng on a FreeBSD 9 system, you will need to override the ``pkg`` provider by setting the :conf_minion:`providers` parameter in your Minion config file, in order to use pkgng."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg:30
+# c3c185b9ba244a5aaa02e8e564fdba8a
+msgid "More information on pkgng support can be found in the documentation for the :mod:`pkgng <salt.modules.pkgng>` module."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg:33
+# fd51f2e05e9f455e95b6588420655d5b
+msgid "This module will respect the ``PACKAGEROOT`` and ``PACKAGESITE`` environment variables, if set, but these values can also be overridden in several ways:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg:36
+# 89f41d0e710844dda0dfe88695d5b070
+msgid ":strong:`Salt configuration parameters.` The configuration parameters ``freebsdpkg.PACKAGEROOT`` and ``freebsdpkg.PACKAGESITE`` are recognized. These config parameters are looked up using :mod:`config.get <salt.modules.config.get>` and can thus be specified in the Master config file, Grains, Pillar, or in the Minion config file. Example:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg:47
+# 161e02467b5748bd9be355f07012eeb5
+msgid ":strong:`CLI arguments.` Both the ``packageroot`` (used interchangeably with ``fromrepo`` for API compatibility) and ``packagesite`` CLI arguments are recognized, and override their config counterparts from section 1 above."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.file_dict:1
+# 0b48dd066b9b480ba4f8999b7b8d03a4
+msgid "List the files that belong to a package, grouped by package. Not specifying any packages will return a list of _every_ file on the system's package database (not generally recommended)."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.file_dict:5
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.file_list:5
+# baef1ca6f637406bbf227b360d86772f
+# dff7c552166d4308b2905501e0f58850
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.file_list:1
+# aed414753bbb4adab242d362a381524a
+msgid "List the files that belong to a package. Not specifying any packages will return a list of _every_ file on the system's package database (not generally recommended)."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:1
+# 64827296db7345d2802d3ad538e7427d
+msgid "Install package(s) using ``pkg_add(1)``"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:4
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.remove:5
+# 4390c137a5e54102b9c5c0056866ae6f
+# 4ab2e1d80d414a34978c972df9e1e968
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:4
+# 0be2cc7e0f484cd092f5dd8413b08099
+msgid "The name of the package to be installed."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:7
+# f19d534acda243a28245ab7bdbdc1ada
+msgid "refresh"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:7
+# bd528c9667d4447d9a817c5d65b6ee81
+msgid "Whether or not to refresh the package database before installing."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:11
+# 27fa4846f1824ce091a27c59aab09bcb
+msgid "fromrepo or packageroot"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:10
+# ca336a796bd9443ba31c80c3296a222d
+msgid "Specify a package repository from which to install. Overrides the system default, as well as the PACKAGEROOT environment variable."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:16
+# 3bf84aaf62dc4d04b9df8d01c14328ee
+msgid "packagesite"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:14
+# 952c486d42184b149b701cd6c6a0472d
+msgid "Specify the exact directory from which to install the remote package. Overrides the PACKAGESITE environment variable, if present."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:18
+# 48ef955a8f5942dc848a48e0c5d2b49a
+msgid "Multiple Package Installation Options:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:28
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.remove:11
+# 736bca05a2154dabb7532bcf3227ad8e
+# 43e6c85419db44488f217b9983764ed7
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:21
+# c157b12cd1b4430280872f8b5b2a8637
+msgid "A list of packages to install from a software repository. Must be passed as a python list."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:24
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:35
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:46
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.latest_version:5
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.list_pkgs:5
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.refresh_db:4
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.rehash:5
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.remove:18
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.upgrade:4
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.version:5
+# 2df3cc01fc884fc2ae83b764dfaeb20e
+# fc8776cb13a049a78dceab8aa59ff29f
+# cdc6247c3225476f8c848a94d3225888
+# 30173b509aa143f99a603181a3fd64e1
+# 0627edae3dd2482b96a2a63b534de619
+# a185bcbb915a496a8771088bbc1f995e
+# 0755d41a52df44a19389b805b2af24d4
+# e75a2bf270434dd0b82b24a44c7bceeb
+# 5c714e1a950f427d9910081e62f0bfa7
+# 96f6e085a9c8484daf9e432e325d375b
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:39
+# 615a8ec4de514e9a9cc2d7c97cbbea7a
+msgid "sources"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:31
+# 9ab2d77de13549c293f4e8d502ded542
+msgid "A list of packages to install. Must be passed as a list of dicts, with the keys being package names, and the values being the source URI or local path to the package."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.install:41
+# 8549ae79e2b747fd849abf9209b274c4
+msgid "Return a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.latest_version:1
+# 649b88935155463eb5578910ae32c9e6
+msgid "``pkg_add(1)`` is not capable of querying for remote packages, so this function will always return results as if there is no package available for install or upgrade."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.list_pkgs:1
+# 620b5986577b432885d104a083865f22
+msgid "List the packages currently installed as a dict::"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.refresh_db:1
+# 7af29322c8e7499f8a9947163cbde891
+msgid "``pkg_add(1)`` does not use a local database of available packages, so this function simply returns ``True``. it exists merely for API compatibility."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.rehash:1
+# 29126b230db248f4a70332cee9db6883
+msgid "Recomputes internal hash table for the PATH variable. Use whenever a new command is created during the current session."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.remove:1
+# 4af986b9cc9343fb964bc48e6cafe7a6
+msgid "Remove packages using ``pkg_delete(1)``"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.remove:4
+# a37ff44a94c84fc8a2ca647c93b9e641
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.remove:7
+# e044ecaebbbc4e4bbc5d3ed4dac31d2a
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.remove:10
+# d4113af6de7c4c9d9564c349efdd453f
+msgid "A list of packages to delete. Must be passed as a python list. The ``name`` parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.remove:16
+# 168679b62ce148e29f9fecdb70e4e3c2
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.upgrade:1
+# a6f65d0f0a224750a4aa5fb38ccf56e3
+msgid "Upgrades are not supported with ``pkg_add(1)``. This function is included for API compatibility only and always returns an empty dict."
+msgstr ""
+
+#: ../../../salt/modules/freebsdpkg.py:docstring of salt.modules.freebsdpkg.version:1
+# 92082645bf87453499f47736e7dba42c
+msgid "Returns a string representing the package version or an empty string if not installed. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+

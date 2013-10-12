@@ -1,0 +1,389 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.ebuild.rst:6
+# f64009ec5e3145a88000804c39d92eda
+msgid "salt.modules.ebuild"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild:1
+# eca03b7e3d6042839a83b3bc3efdbef8
+msgid "Support for Portage"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild:3
+# 89f30304570e4bb59b57729cec0ab633
+msgid "portage Python adapter"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild:5
+# 402cb8dbb18544c3ba3fa49d2c85bb86
+msgid "For now all package names *MUST* include the package category, i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.check_db:3
+# 14a95487cd104dbba5dae975baedc721
+msgid "Returns a dict containing the following information for each specified package:"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.check_db:6
+# cc84eceaac734883ba2100319a7bf26f
+msgid "A key ``found``, which will be a boolean value denoting if a match was found in the package database."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.check_db:8
+# f03ca39b4ddc45acb606a1fa959c597e
+msgid "If ``found`` is ``False``, then a second key called ``suggestions`` will be present, which will contain a list of possible matches. This list will be empty if the package name was specified in ``category/pkgname`` format, since the suggestions are only intended to disambiguate ambiguous package names (ones submitted without a category)."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.check_db:14
+# 337b7ceee9e741ffac6aa11da718b011
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.check_extra_requirements:1
+# 45def1c6c5464864977d9d22fc0c288b
+msgid "Check if the installed package already has the given requirements."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.check_extra_requirements:3
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:20
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.ex_mod_init:3
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:11
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:29
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:41
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:51
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:64
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:75
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.latest_version:8
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.list_pkgs:5
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.list_upgrades:3
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:24
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.refresh_db:3
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:22
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.update:16
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.upgrade:8
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.upgrade_available:3
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.version:5
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.version_clean:3
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.version_cmp:5
+# 406e7cbe67c842b1804029b8502856ce
+# 0addd093db7541fa806ee97e38b1db1e
+# bcfd0427a99b414da528956fd560c734
+# fa34ad661fb3419eaf19355de012af75
+# 6d7109db5a2a42edb2d233b2672e0d6e
+# 6ab3656426fe4519a02483cc5680d2ba
+# 68d410d04de14b32bcb7866f00201447
+# 300f06f6b30046afb20d879bd6bdf50a
+# 059ec8e3218646fd8f1622326efe3fa9
+# 21ff6445277140e78ddb8b02614a57ad
+# 69af99ef69f64a15ab71a62b9bebec6e
+# 9e6c99b7f7b14d7591d1603f763f98f1
+# 4b9fd2d90b8848e79f2151f2bb51ef21
+# 93fc7a4af8a94d5e8e350c30fb968f99
+# 2ed0fe669228456aad88ddbe42f51cb0
+# bea7b57a51af4cbab5b7857eb7776859
+# fd9a07b4ec934d5490d7cee0a2ddb8bc
+# cccd0b583a664658816175e8179b9ef3
+# bc414e0e3f3247b0a40f85871a35ee04
+# 0792decd3bed4aac9cddde8cd4a5a3ce
+# f3857f7303d44b4f90291fae300676c9
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:1
+# 248eb7f78444466ca4841626c19d0851
+msgid "Portage has a function to remove unused dependencies. If a package is provided, it will only removed the package if no other package depends on it."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:6
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:15
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:5
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:4
+# 9ea3f208bd8b4c069cf4336c83219d21
+# f418c11aa9ae4836bf1f7ffdec11e832
+# 67f5ec8f40c346aea7e8c7bf68a00dc3
+# 2121f2a3b5184f9d81f6642b5b7d25c3
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:6
+# 5003bfaca78a4a158d4a2d4173a4af89
+msgid "The name of the package to be cleaned."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:9
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:33
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:8
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:7
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.update:5
+# e63a625fe46b4196a6fcdfc6ebe9ce23
+# 1681534e68c541c7b5b8f03e755f3279
+# 4ee2179c3f9f48c0a487e1df0b68f104
+# e96dc9da7af94486a9bdc8aa73af26d7
+# 09d53e0445ba4b2886bc29ce2c97b9d2
+msgid "slot"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:9
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:12
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:11
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:7
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:10
+# fb141501da1d433298ebb3ac1629b93f
+# c334acbc64ea4c0ba2a54b240f0dd558
+# 81d08d0fe1ec455fb9d3285f0fec901e
+# caf0e10197594133aa302c126efba4a6
+# 6920a03f6b8f4ad6af01ffb18738a965
+msgid "Restrict the remove to a specific slot. Ignored if ``name`` is None."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:12
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:45
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:11
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:10
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.update:9
+# df868ae69dfa4e338721ceab21b64427
+# 32ba0d1de29249c58f4fde0d1ce01eea
+# 7002c66c3bd1491c96ea335d0c269afa
+# 70c61a7fbba34052a3bbd7a9aaec0882
+# 8c48163f54dd497c90f58470f67326e5
+msgid "fromrepo"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:16
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:68
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:17
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:16
+# 84b008de974b45fb983140eb8d55a64a
+# 8c1f3c85ac884b5c8088504bb25f5020
+# a66b4d65b0074031a7be7364fbfd460f
+# a28e75e1dbc24e69b078614bc96414f4
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:15
+# 88dfe3219843410d9b923abe8d71a256
+msgid "Clean multiple packages. ``slot`` and ``fromrepo`` arguments are ignored if this argument is present. Must be passed as a python list."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.depclean:18
+# 5cf3c52c743144f9bafbea083e4ae194
+msgid "Return a list containing the removed packages:"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.ex_mod_init:1
+# d94a425ffc67476591c1fc1977f21874
+msgid "Enforce a nice tree structure for /etc/portage/package.* configuration files."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:1
+# 355b01bf002541b6aed5cd11fc46c2c8
+msgid "Install the passed package(s), add refresh=True to sync the portage tree before package is installed."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:5
+# cd13407b49de4d11bfaf737045f3eccf
+msgid "The name of the package to be installed. Note that this parameter is ignored if either \"pkgs\" or \"sources\" is passed. Additionally, please note that this option can only be used to emerge a package from the portage tree. To install a tbz2 package manually, use the \"sources\" option described below."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:18
+# 5bddd386084544039a2664a7c5b8bade
+msgid "refresh"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:18
+# be696e40fbcd48798e4e82f9fdc0419a
+msgid "Whether or not to sync the portage tree before installing."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:22
+# 62e74a722ca74fdea2f0f59635259b6a
+msgid "version"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:21
+# 442d5b7aebb442ccbe359180574b4488
+msgid "Install a specific version of the package, e.g. 1.0.9-r1. Ignored if \"pkgs\" or \"sources\" is passed."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:25
+# a5b395bf47234f2a9a2405c2dc7c7edd
+msgid "Similar to version, but specifies a valid slot to be installed. It will install the latest available version in the specified slot. Ignored if \"pkgs\" or \"sources\" or \"version\" is passed."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:36
+# 100599337cf94d87acbaa65b3e18e410
+msgid "Similar to slot, but specifies the repository from the package will be installed. It will install the latest available version in the specified repository. Ignored if \"pkgs\" or \"sources\" or \"version\" is passed."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:56
+# 05bd1fd792f648d3bba4f9006c8a59ec
+msgid "uses"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:48
+# 3c9119d4f79144adb8fea402ccca46b7
+msgid "Similar to slot, but specifies a list of use flag. Ignored if \"pkgs\" or \"sources\" or \"version\" is passed."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:58
+# ca6d88e821424681849ded8840aaad69
+msgid "Multiple Package Installation Options:"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:61
+# 88925acafb3c4350bc7231555b58411e
+msgid "A list of packages to install from the portage tree. Must be passed as a python list."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:80
+# f61c12218a2849969df9ec071e508b3f
+msgid "sources"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:71
+# 96975ec0502b4f9fa4b231f15eb9f372
+msgid "A list of tbz2 packages to install. Must be passed as a list of dicts, with the keys being package names, and the values being the source URI or local path to the package."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.install:82
+# 1938a35405ec4b3487edf26461dc1ff6
+msgid "Returns a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.latest_version:1
+# b1114109f02b4eca829e56f5364d6892
+msgid "Return the latest version of the named package available for upgrade or installation. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.latest_version:5
+# 8885f51674b24234a0fdf09648e30b37
+msgid "If the latest version of a given package is already installed, an empty string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.list_pkgs:1
+# 72158fb4c9a64a3183370cb6fb10d95a
+msgid "List the packages currently installed in a dict::"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.list_upgrades:1
+# d49e004b93bf41cca13a208afd0ed24a
+msgid "List all available package upgrades."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.porttree_matches:1
+# de6385b5c5ee4064b49803cb26e4b054
+msgid "Returns a list containing the matches for a given package name from the portage tree. Note that the specific version of the package will not be provided for packages that have several versions in the portage tree, but rather the name of the package (i.e. \"dev-python/paramiko\")."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:1
+# a1559f24983b420a93c3ae2d78085a1e
+msgid "Portage does not have a purge, this function calls remove followed by depclean to emulate a purge process"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:5
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:4
+# f53e151428b3485ca3a1672cd38d7672
+# 5869390fc51e43d4abab9eef6aee059b
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:8
+# 11d2d87862444b8bbdd21f1da2c92e43
+msgid "Restrict the remove to a specific slot. Ignored if name is None."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:13
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:12
+# 4694bec2cc9140fca5d7e583416204e6
+# 8604ea70037d4c95b9c6006c44b39ad3
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:16
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:15
+# ded64af2f0914970a15fcb9835ca231a
+# e5e1170863df4e1993e5ddc0af323d87
+msgid "Uninstall multiple packages. ``slot`` and ``fromrepo`` arguments are ignored if this argument is present. Must be passed as a python list."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.purge:22
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:20
+# fadb728983674baba73f22c25ba7d6fc
+# 4ed934a2f2da47e0914d134eb9e1003b
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.refresh_db:1
+# f2ce6face2774aa19077ec7ba928c31d
+msgid "Updates the portage tree (emerge --sync). Uses eix-sync if available."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.remove:1
+# 6ce31bf862e244d6affe0eb1e8b91070
+msgid "Remove packages via emerge --unmerge."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.update:1
+# 0ef237cc24f8420d8f394efef54199ff
+msgid "Updates the passed package (emerge --update package)"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.update:4
+# 3c948d2923894ca3a225ef5659af809b
+msgid "Restrict the update to a particular slot. It will update to the latest version within the slot."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.update:8
+# 7cd999cde21a45acb253bf68d63f3d95
+msgid "Restrict the update to a particular repository. It will update to the latest version within the repository."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.update:11
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.upgrade:3
+# 1d2f583900b74810b77e6a28a6daa6b2
+# ffe94df324844a5e8459e2b07574f4af
+msgid "Return a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.upgrade:1
+# bb8a18f1a5fb4b0e9b7d2285dbbb50fa
+msgid "Run a full system upgrade (emerge --update world)"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.upgrade_available:1
+# ab5e66760fc34093bb996a6be3034c9b
+msgid "Check whether or not an upgrade is available for a given package"
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.version:1
+# 9a62c3a081fc44cebfcaa110809cdaab
+msgid "Returns a string representing the package version or an empty string if not installed. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.version_clean:1
+# 2e0eb4f739fe4250bd6bd63a8a3eb2a8
+msgid "Clean the version string removing extra data."
+msgstr ""
+
+#: ../../../salt/modules/ebuild.py:docstring of salt.modules.ebuild.version_cmp:1
+# efd2db87a995467b9350779d86e4f3c7
+msgid "Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem making the comparison."
+msgstr ""
+

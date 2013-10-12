@@ -1,0 +1,143 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/index.rst:6
+# 3bfae855840c453682b708ab1e9d2219
+msgid "Salt File Server"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:8
+# 8dc031e8f72444e2a3cb033284ea9f7f
+msgid "Salt comes with a simple file server suitable for distributing files to the Salt minions. The file server is a stateless ZeroMQ server that is built into the Salt master."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:12
+# 681bfcb8e00b41a6accb044baa298a49
+msgid "The main intent of the Salt file server is to present files for use in the Salt state system. With this said, the Salt file server can be used for any general file transfer from the master to the minions."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:17
+# b1772281d2334546b8ff341b34e424f2
+msgid "The cp Module"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:19
+# 010baa8defa349daab819968e8f11f87
+msgid "The cp module is the home of minion side file server operations. The cp module is used by the Salt state system, salt-cp and can be used to distribute files presented by the Salt file server."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:24
+# e0afe363cef24263bb12515b105bcea2
+msgid "Environments"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:26
+# 14d4f4c7551b4b1792ff69dd3b22a3af
+msgid "Since the file server is made to work with the Salt state system, it supports environments. The environments are defined in the master config file and when referencing an environment the file specified will be based on the root directory of the environment."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:32
+# 68052208372a4050b550188b97ee85e3
+msgid "get_file"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:34
+# 89f25117db48484b93aa700fac80bde2
+msgid "The cp.get_file function can be used on the minion to download a file from the master, the syntax looks like this:"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:41
+# cdd0cc2c88eb4ecc80b758c4849f6523
+msgid "This will instruct all Salt minions to download the vimrc file and copy it to /etc/vimrc"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:44
+# 7bc41a473b0d4cb39723549fd81bbd8c
+msgid "Template rendering can be enabled on both the source and destination file names like so:"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:51
+# 75a72e2ee3d948049c8e4e3dc511b0d6
+msgid "This example would instruct all Salt minions to download the vimrc from a directory with the same name as their OS grain and copy it to /etc/vimrc"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:54
+# 6c55addbd95b4b3798f9ed22eac69db1
+msgid "For larger files, the cp.get_file module also supports gzip compression. Because gzip is CPU-intensive, this should only be used in scenarios where the compression ratio is very high (e.g. pretty-printed JSON or YAML files)."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:59
+# 0e2d0bc001bf4759863b424a1b99fb17
+msgid "Use the *gzip* named argument to enable it.  Valid values are 1..9, where 1 is the lightest compression and 9 the heaviest.  1 uses the least CPU on the master (and minion), 9 uses the most."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:67
+# 003852c03fc9481b80429490eee2c391
+msgid "Finally, note that by default cp.get_file does *not* create new destination directories if they do not exist.  To change this, use the *makedirs* argument:"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:74
+# 1b0328a94e774958b250058f8536e488
+msgid "In this example, /etc/vim/ would be created if it didn't already exist."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:77
+# 3ec3744398384daf9fa40ef095a4bba7
+msgid "get_dir"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:79
+# 90dc62cbea7044e784dcc5e6e562a67f
+msgid "The cp.get_dir function can be used on the minion to download an entire directory from the master.  The syntax is very similar to get_file:"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:86
+# 896631f8c8f44d3eb4e2becae329bf6d
+msgid "cp.get_dir supports *template* rendering and *gzip* compression arguments just like get_file:"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:95
+# c5e88377cc99409383b3c6abf4e16023
+msgid "File Server Client API"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:97
+# 16a29ff86cd04e35a2b780913251be8a
+msgid "A client API is available which allows for modules and applications to be written which make use of the Salt file server."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:100
+# bb6775965c1c4b81ab28b4f51157c84d
+msgid "The file server uses the same authentication and encryption used by the rest of the Salt system for network communication."
+msgstr ""
+
+#: ../../ref/file_server/index.rst:104
+# 74722309029140fdbddcaa71c8bb2174
+msgid "FileClient Class"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:106
+# 3884277140f142a3a0229718fdb36f85
+msgid "The FileClient class is used to set up the communication from the minion to the master. When creating a FileClient object the minion configuration needs to be passed in. When using the FileClient from within a minion module the built in ``__opts__`` data can be passed:"
+msgstr ""
+
+#: ../../ref/file_server/index.rst:127
+# cc4d9b82694446c3ac0fd8a7613cc0a9
+msgid "Using the FileClient class outside of a minion module where the ``__opts__`` data is not available, it needs to be generated:"
+msgstr ""
+

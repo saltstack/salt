@@ -1,0 +1,53 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/cron.rst:6
+# d9e4772885224b7fa11275a393a053c5
+msgid "Using cron with Salt"
+msgstr ""
+
+#: ../../topics/tutorials/cron.rst:8
+# 142ff2a7781442b08c7656599de47c15
+msgid "The Salt Minion can initiate its own highstate using the ``salt-call`` command."
+msgstr ""
+
+#: ../../topics/tutorials/cron.rst:15
+# 6fb4979b2d5e416b875bc1830c38affa
+msgid "This will cause the minion to check in with the master and ensure it is in the correct 'state'."
+msgstr ""
+
+#: ../../topics/tutorials/cron.rst:20
+# cc7684787eac40b88d08bc335758110a
+msgid "Use cron to initiate a highstate"
+msgstr ""
+
+#: ../../topics/tutorials/cron.rst:22
+# d91405142dc84ba7864646d7a2a41897
+msgid "If you would like the Salt Minion to regularly check in with the master you can use the venerable cron to run the ``salt-call`` command."
+msgstr ""
+
+#: ../../topics/tutorials/cron.rst:31
+# 71addb33be56491aac0555283dab2c12
+msgid "The above cron entry will run a highstate every day at midnight."
+msgstr ""
+
+#: ../../topics/tutorials/cron.rst:34
+# b316ce5d6173414fb4e1bb243bc76da1
+msgid "Be aware that you may need to ensure the PATH for cron includes any scripts or commands that need to be executed."
+msgstr ""
+

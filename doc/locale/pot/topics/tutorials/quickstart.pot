@@ -1,0 +1,93 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/quickstart.rst:6
+# cc6fe0445db5479a88ca8fd6e34a6531
+msgid "Salt Masterless Quickstart"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:12
+# c9e73f0ab86947eebef2d0c62ed78f80
+msgid "Running a masterless salt-minion lets you use salt's configuration management for a single machine. It is also useful for testing out state trees before deploying to a production setup."
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:16
+# 3abfb8207dd444e1a11895bddf7c7a1d
+msgid "The only real difference in using a standalone minion is that instead of issuing commands with ``salt``, we use the ``salt-call`` command, like this:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:24
+# a465ae5fc316415a87107388a51c1020
+msgid "Bootstrap Salt Minion"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:26
+# 35d9da4fb02740ad811712ab55bcb35d
+msgid "First we need to install the salt minion. The `salt-bootstrap`_ script makes this incredibly easy for any OS with a Bourne shell. You can use it like this:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:33
+# 11edee0dfcec401c8d2836a126b496d0
+msgid "Or see the `salt-bootstrap`_ documentation for other one liners. Additionally, if you are using `Vagrant`_ to test out salt, the `salty-vagrant`_ tool will provision the VM for you."
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:38
+# 045c0b3ca8294fb4ac52c0bef33a61e4
+msgid "Create State Tree"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:40
+# 4e0f5b2d0a294f619fa5f4be227ac10f
+msgid "Now we build an example state tree. This is where the configuration is defined. For more in depth directions, see the `tutorial <http://docs.saltstack.org/en/latest/topics/tutorials/states_pt1.html>`_."
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:44
+# ffca9ad5e87749588039b84429d7832c
+msgid "Create the top.sls file:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:46
+# d33550bb8b924d83872c6ea0a2fb2054
+msgid "``/srv/salt/top.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:54
+# 83c71e8edb79456f95989981059144c5
+msgid "Create our webserver state tree:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:56
+# cbc1d6d7869e47279ea8af59d14511c3
+msgid "``/srv/salt/webserver.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:64
+# db035cdd031a40e580347240dc5fb947
+msgid "The only thing left is to provision our minion using the highstate command. Salt-call also gives us an easy way to give us verbose output:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:71
+# 783ade4323b34f838477118e2da823f7
+msgid "The ``--local`` flag tells the salt-minion to look for the state tree in the local file system.  Normally the minion copies the state tree from the master and executes it from there."
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:75
+# 5f369b8f4ba84d98b7daa3ed3c44c4f4
+msgid "That's it, good luck!"
+msgstr ""
+

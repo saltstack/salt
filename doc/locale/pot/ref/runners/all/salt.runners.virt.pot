@@ -1,0 +1,93 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/runners/all/salt.runners.virt.rst:6
+# 6f712afc391a45f895593318dd75adea
+msgid "salt.runners.virt"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt:1
+# 21b64fd040bd4184b772015adfb1036d
+msgid "Control virtual machines via Salt"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.force_off:1
+# 68761464baae420da8d5eeb532b46f99
+msgid "Force power down the named virtual machine"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.hyper_info:1
+# a9f5269a43c243f5b9289ba770e4c2b4
+msgid "Return information about the hypervisors connected to this master"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.init:1
+# a527dbedecee458fa83271196753153c
+msgid "Initialize a new vm"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.list:1
+# 8cb4e78bd17946c5893c2d4f7d582500
+msgid "List the virtual machines on each hyper"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.migrate:1
+# e89b9d696a5545c2870f3c913110919a
+msgid "Migrate a vm from one hypervisor to another. This routine will just start the migration and display information on how to look up the progress"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.next_hyper:1
+# 214a4013379c48b58f568a7c946fce97
+msgid "Return the hypervisor to use for the next autodeployed vm"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.pause:1
+# 802926d12cad4cacbc88555a06cce477
+msgid "Pause the named vm"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.purge:1
+# 8b6b1458fbca4c67a3ff90585246a463
+msgid "Destroy the named vm"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.query:1
+# d79607974b3241d3af723858b8edaef4
+msgid "Query the virtual machines"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.reset:1
+# 57ec6f8039dc4031a5ee69a4774bef62
+msgid "Force power down and restart an existing vm"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.resume:1
+# 46738ed29cb14a2485b6f35a9affd3da
+msgid "Resume a paused vm"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.start:1
+# f9d8846b9d9549bd88960d0fa2a3f118
+msgid "Start a named virtual machine"
+msgstr ""
+
+#: ../../../salt/runners/virt.py:docstring of salt.runners.virt.vm_info:1
+# ff700e63386f41779cf5eb5a8ad26f39
+msgid "Return the information on the named vm"
+msgstr ""
+
