@@ -85,7 +85,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
       fi
       echo "{1}"
       {{0}} $PYTHON $SALT --local --out json -l quiet {{1}}
-EOF\n'''.format(salt.__version__, RSTR)
+EOF'''.format(salt.__version__, RSTR)
 
 log = logging.getLogger(__name__)
 
@@ -203,6 +203,7 @@ class SSH(object):
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
+        return ret
 
     def process(self):
         '''
@@ -565,6 +566,8 @@ class Single(object):
     def categorize_shim_errors(self, stdout, stderr):
         perm_error_fmt = "Permissions problem, target user may need "\
                          "to be root or use sudo:\n {0}"
+        if stderr.startswith('Permission denied'):
+            return None
         errors = [
             ("sudo: no tty present and no askpass program specified",
                 "sudo expected a password, NOPASSWD required"),
