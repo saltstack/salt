@@ -249,5 +249,8 @@ More information about the project
 :doc:`Salt Development </topics/development/index>`
     Information for Hacking on Salt
 
+:doc:`Translate Documentation </topics/translating>`
+    How to help out translating Salt to your language.
+
 .. _`salt-contrib`: https://github.com/saltstack/salt-contrib
 .. _`salt-states`: https://github.com/saltstack/salt-states
