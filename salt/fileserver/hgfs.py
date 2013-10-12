@@ -18,6 +18,7 @@ mapped to ``base``.
 import os
 import glob
 import time
+import shutil
 import hashlib
 import logging
 
@@ -116,8 +117,9 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'hgfs')
     repos = []
-    for ind, opt in enumerate(__opts__['hgfs_remotes']):
-        rp_ = os.path.join(bp_, str(ind))
+    for _, opt in enumerate(__opts__['hgfs_remotes']):
+        repo_hash = hashlib.md5(opt).hexdigest()
+        rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
             hglib.init(rp_)
@@ -134,11 +136,29 @@ def init():
     return repos
 
 
+def purge_cache():
+    bp_ = os.path.join(__opts__['cachedir'], 'hgfs')
+    remove_dirs = os.listdir(bp_)
+    for _, opt in enumerate(__opts__['hgfs_remotes']):
+        repo_hash = hashlib.md5(opt).hexdigest()
+        try:
+            remove_dirs.remove(repo_hash)
+        except ValueError:
+            pass
+    remove_dirs = [os.path.join(bp_, r) for r in remove_dirs if r not in ('hash', 'refs')]
+    if remove_dirs:
+        for r in remove_dirs:
+            shutil.rmtree(r)
+        return True
+    return False
+
+
 def update():
     '''
     Execute a hg pull on all of the repos
     '''
     pid = os.getpid()
+    purge_cache()
     repos = init()
     for repo in repos:
         repo.open()
