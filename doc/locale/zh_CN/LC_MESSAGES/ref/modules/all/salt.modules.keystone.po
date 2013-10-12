@@ -1,0 +1,270 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.keystone.rst:6
+msgid "salt.modules.keystone"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of salt.modules.keystone:1
+msgid "Module for handling openstack keystone calls."
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of salt.modules.keystone:3
+msgid "keystoneclient Python adapter"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of salt.modules.keystone:4
+msgid ""
+"This module is not usable until the following are specified either in a "
+"pillar or in the minion's config file::"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of salt.modules.keystone:18
+msgid ""
+"If configuration for multiple openstack accounts is required, they can be "
+"set up as different configuration profiles: For example::"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of salt.modules.keystone:36
+msgid ""
+"With this configuration in place, any of the keystone functions can make use"
+" of a configuration profile by declaring it explicitly. For example::"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of salt.modules.keystone.auth:1
+msgid "Set up keystone credentials"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of salt.modules.keystone.auth:3
+msgid "Only intended to be used within Keystone-enabled modules"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.ec2_credentials_create:1
+msgid "Create EC2-compatibile credentials for user per tenant"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.ec2_credentials_create:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.ec2_credentials_delete:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.ec2_credentials_get:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.ec2_credentials_list:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.role_delete:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.role_get:3 ../../../salt/modules/keystone.pydocstring
+#: of salt.modules.keystone.service_create:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.service_delete:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.service_get:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_create:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_delete:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_get:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_update:5
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_create:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_delete:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_get:3 ../../../salt/modules/keystone.pydocstring
+#: of salt.modules.keystone.user_password_update:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_role_add:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_role_list:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_role_remove:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_update:5
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_verify_password:3
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.ec2_credentials_delete:1
+msgid "Delete EC2-compatibile credentials"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.ec2_credentials_get:1
+msgid "Return ec2_credentials for a user (keystone ec2-credentials-get)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.ec2_credentials_list:1
+msgid ""
+"Return a list of ec2_credentials for a specific user (keystone ec2"
+"-credentials-list)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.endpoint_get:1
+msgid "Return a specific endpoint (keystone endpoint-get)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.endpoint_get:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.endpoint_list:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.role_list:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.service_list:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_list:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.token_get:3
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_list:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.endpoint_list:1
+msgid "Return a list of available endpoints (keystone endpoints-list)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.role_create:1
+msgid "Create named role"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.role_delete:1
+msgid "Delete a role (keystone role-delete)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.role_get:1
+msgid "Return a specific roles (keystone role-get)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.role_list:1
+msgid "Return a list of available roles (keystone role-list)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.service_create:1
+msgid "Add service to Keystone service catalog"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.service_delete:1
+msgid "Delete a service from Keystone service catalog"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.service_get:1
+msgid "Return a specific services (keystone service-get)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.service_list:1
+msgid "Return a list of available services (keystone services-list)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_create:1
+msgid "Create a keystone tenant"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_delete:1
+msgid "Delete a tenant (keystone tenant-delete)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_get:1
+msgid "Return a specific tenants (keystone tenant-get)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_list:1
+msgid "Return a list of available tenants (keystone tenants-list)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.tenant_update:1
+msgid ""
+"Update a tenant's information (keystone tenant-update) The following fields "
+"may be updated: name, email, enabled. Can only update name if targeting by "
+"ID"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.token_get:1
+msgid "Return the configured tokens (keystone token-get)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_create:1
+msgid "Create a user (keystone user-create)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_delete:1
+msgid "Delete a user (keystone user-delete)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_get:1
+msgid "Return a specific users (keystone user-get)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_list:1
+msgid "Return a list of available users (keystone user-list)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_password_update:1
+msgid "Update a user's password (keystone user-password-update)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_role_add:1
+msgid "Add role for user in tenant (keystone user-role-add)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_role_list:1
+msgid "Return a list of available user_roles (keystone user-roles-list)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_role_remove:1
+msgid "Remove role for user in tenant (keystone user-role-remove)"
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_update:1
+msgid ""
+"Update a user's information (keystone user-update) The following fields may "
+"be updated: name, email, enabled, tenant. Because the name is one of the "
+"fields, a valid user id is required."
+msgstr ""
+
+#: ../../../salt/modules/keystone.pydocstring of
+#: salt.modules.keystone.user_verify_password:1
+msgid "Verify a user's password"
+msgstr ""

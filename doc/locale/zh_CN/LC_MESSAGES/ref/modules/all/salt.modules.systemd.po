@@ -1,0 +1,113 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.systemd.rst:6
+msgid "salt.modules.systemd"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd:1
+msgid "Provide the service module for systemd"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.available:1
+msgid ""
+"Check that the given service is available taking into account template "
+"units."
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.available:4 ../../../salt/modules/systemd.pydocstring
+#: of salt.modules.systemd.disable:3 ../../../salt/modules/systemd.pydocstring
+#: of salt.modules.systemd.disabled:3
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.enable:3
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.enabled:3
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.force_reload:3
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.get_all:3
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.get_disabled:3
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.get_enabled:3
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.reload_:3
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.restart:3
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.start:3
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.status:4
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.stop:3
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.systemctl_reload:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.disable:1
+msgid "Disable the named service to not start when the system boots"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.disabled:1
+msgid "Return if the named service is disabled to start on boot"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.enable:1
+msgid "Enable the named service to start when the system boots"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.enabled:1
+msgid "Return if the named service is enabled to start on boot"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.force_reload:1
+msgid "Force-reload the specified service with systemd"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.get_all:1
+msgid "Return a list of all available services"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.get_disabled:1
+msgid "Return a list of all disabled services"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.get_enabled:1
+msgid "Return a list of all enabled services"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.reload_:1
+msgid "Reload the specified service with systemd"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.restart:1
+msgid "Restart the specified service with systemd"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.start:1
+msgid "Start the specified service with systemd"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.status:1
+msgid ""
+"Return the status for a service via systemd, returns a bool whether the "
+"service is running."
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of salt.modules.systemd.stop:1
+msgid "Stop the specified service with systemd"
+msgstr ""
+
+#: ../../../salt/modules/systemd.pydocstring of
+#: salt.modules.systemd.systemctl_reload:1
+msgid "Reloads systemctl, an action needed whenever unit files are updated."
+msgstr ""

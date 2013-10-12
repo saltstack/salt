@@ -1,0 +1,46 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.keyboard.rst:6
+msgid "salt.modules.keyboard"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.pydocstring of salt.modules.keyboard:1
+msgid "Module for managing keyboards on POSIX-like systems."
+msgstr ""
+
+#: ../../../salt/modules/keyboard.pydocstring of
+#: salt.modules.keyboard.get_sys:1
+msgid "Get current system keyboard setting"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.pydocstring of
+#: salt.modules.keyboard.get_sys:3 ../../../salt/modules/keyboard.pydocstring
+#: of salt.modules.keyboard.get_x:3 ../../../salt/modules/keyboard.pydocstring
+#: of salt.modules.keyboard.set_sys:3
+#: ../../../salt/modules/keyboard.pydocstring of salt.modules.keyboard.set_x:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.pydocstring of salt.modules.keyboard.get_x:1
+msgid "Get current X keyboard setting"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.pydocstring of
+#: salt.modules.keyboard.set_sys:1
+msgid "Set current system keyboard setting"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.pydocstring of salt.modules.keyboard.set_x:1
+msgid "Set current X keyboard setting"
+msgstr ""

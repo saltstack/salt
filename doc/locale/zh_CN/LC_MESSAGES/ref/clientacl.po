@@ -1,0 +1,48 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/clientacl.rst:6
+msgid "Client ACL system"
+msgstr ""
+
+#: ../../ref/clientacl.rst:8
+msgid ""
+"The salt client ACL system is a means to allow system users other than root "
+"to have access to execute select salt commands on minions from the master."
+msgstr ""
+
+#: ../../ref/clientacl.rst:11
+msgid ""
+"The client ACL system is configured in the master configuration file via the"
+" ``client_acl`` configuration option. Under the ``client_acl`` configuration"
+" option the users open to send commands are specified and then a list of "
+"regular expressions which specify the minion functions which will be made "
+"available to specified user. This configuration is much like the ``peer`` "
+"configuration:"
+msgstr ""
+
+#: ../../ref/clientacl.rst:28
+msgid "Permission Issues"
+msgstr ""
+
+#: ../../ref/clientacl.rst:30
+msgid ""
+"Directories required for ``client_acl`` must be modified to be readable by "
+"the users specified:"
+msgstr ""
+
+#: ../../ref/clientacl.rst:37
+msgid ""
+"If you are upgrading from earlier versions of salt you must also remove any "
+"existing user keys and re-start the Salt master:"
+msgstr ""

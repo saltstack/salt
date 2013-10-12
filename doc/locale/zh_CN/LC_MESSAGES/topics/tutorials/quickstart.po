@@ -1,0 +1,91 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/quickstart.rst:6
+msgid "Salt Masterless Quickstart"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:12
+msgid ""
+"Running a masterless salt-minion lets you use salt's configuration "
+"management for a single machine. It is also useful for testing out state "
+"trees before deploying to a production setup."
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:16
+msgid ""
+"The only real difference in using a standalone minion is that instead of "
+"issuing commands with ``salt``, we use the ``salt-call`` command, like this:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:24
+msgid "Bootstrap Salt Minion"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:26
+msgid ""
+"First we need to install the salt minion. The `salt-bootstrap`_ script makes"
+" this incredibly easy for any OS with a Bourne shell. You can use it like "
+"this:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:33
+msgid ""
+"Or see the `salt-bootstrap`_ documentation for other one liners. "
+"Additionally, if you are using `Vagrant`_ to test out salt, the `salty-"
+"vagrant`_ tool will provision the VM for you."
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:38
+msgid "Create State Tree"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:40
+msgid ""
+"Now we build an example state tree. This is where the configuration is "
+"defined. For more in depth directions, see the `tutorial "
+"<http://docs.saltstack.org/en/latest/topics/tutorials/states_pt1.html>`_."
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:44
+msgid "Create the top.sls file:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:46
+msgid "``/srv/salt/top.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:54
+msgid "Create our webserver state tree:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:56
+msgid "``/srv/salt/webserver.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:64
+msgid ""
+"The only thing left is to provision our minion using the highstate command. "
+"Salt-call also gives us an easy way to give us verbose output:"
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:71
+msgid ""
+"The ``--local`` flag tells the salt-minion to look for the state tree in the"
+" local file system.  Normally the minion copies the state tree from the "
+"master and executes it from there."
+msgstr ""
+
+#: ../../topics/tutorials/quickstart.rst:75
+msgid "That's it, good luck!"
+msgstr ""

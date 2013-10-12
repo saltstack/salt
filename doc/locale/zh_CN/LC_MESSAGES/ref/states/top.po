@@ -1,0 +1,228 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/top.rst:6
+msgid "The Top File"
+msgstr ""
+
+#: ../../ref/states/top.rst:8
+msgid ""
+"The top file is used to map what SLS modules get loaded onto what minions "
+"via the state system. The top file creates a few general abstractions. First"
+" it maps what nodes should pull from which environments, next it defines "
+"which matches systems should draw from."
+msgstr ""
+
+#: ../../ref/states/top.rst:14
+msgid "Environments"
+msgstr ""
+
+#: ../../ref/states/top.rst:17
+msgid "Environment"
+msgstr ""
+
+#: ../../ref/states/top.rst:19
+msgid ""
+"A configuration that allows conceptually organizing state tree directories. "
+"Environments can be made to be self-contained or state trees can be made to "
+"bleed through environments."
+msgstr ""
+
+#: ../../ref/states/top.rst:25
+msgid ""
+"Environments in Salt are very flexible, this section defines how the top "
+"file can be used to define what ststates from what environments are to be "
+"used fro specific minions."
+msgstr ""
+
+#: ../../ref/states/top.rst:29
+msgid ""
+"If the intent is to bind minions to specific environments, then the "
+"`environment` option can be set in the minion configuration file."
+msgstr ""
+
+#: ../../ref/states/top.rst:32
+msgid ""
+"The environments in the top file corresponds with the environments defined "
+"in the :conf_master:`file_roots` variable. In a simple, single environment "
+"setup you only have the ``base`` environment, and therefore only one state "
+"tree. Here is a simple example of :conf_master:`file_roots` in the master "
+"configuration:"
+msgstr ""
+
+#: ../../ref/states/top.rst:43
+msgid ""
+"This means that the top file will only have one environment to pull from, "
+"here is a simple, single environment top file:"
+msgstr ""
+
+#: ../../ref/states/top.rst:53
+msgid ""
+"This also means that :file:`/srv/salt` has a state tree. But if you want to "
+"use multiple environments, or partition the file server to serve more than "
+"just the state tree, then the :conf_master:`file_roots` option can be "
+"expanded:"
+msgstr ""
+
+#: ../../ref/states/top.rst:69
+msgid "Then our top file could reference the environments:"
+msgstr ""
+
+#: ../../ref/states/top.rst:89
+msgid ""
+"In this setup we have state trees in three of the four environments, and no "
+"state tree in the ``base`` environment. Notice that the targets for the "
+"minions specify environment data. In Salt the master determines who is in "
+"what environment, and many environments can be crossed together. For "
+"instance, a separate global state tree could be added to the ``base`` "
+"environment if it suits your deployment:"
+msgstr ""
+
+#: ../../ref/states/top.rst:117
+msgid ""
+"In this setup all systems will pull the global SLS from the base "
+"environment, as well as pull from their respective environments. If you "
+"assign only one SLS to a system, as in this example, a shorthand is also "
+"available:"
+msgstr ""
+
+#: ../../ref/states/top.rst:137
+msgid ""
+"The top files from all defined environments will be compiled into a single "
+"top file for all states. Top files are environment agnostic."
+msgstr ""
+
+#: ../../ref/states/top.rst:140
+msgid ""
+"Remember, that since everything is a file in Salt, the environments are "
+"primarily file server environments, this means that environments that have "
+"nothing to do with states can be defined and used to distribute other files."
+msgstr ""
+
+#: ../../ref/states/top.rst:146
+msgid ""
+"A clean and recommended setup for multiple environments would look like "
+"this:"
+msgstr ""
+
+#: ../../ref/states/top.rst:161
+msgid ""
+"Then only place state trees in the dev, qa and prod environments, leaving "
+"the base environment open for generic file transfers. Then the top.sls file "
+"would look something like this:"
+msgstr ""
+
+#: ../../ref/states/top.rst:184
+msgid "Other Ways of Targeting Minions"
+msgstr ""
+
+#: ../../ref/states/top.rst:186
+msgid ""
+"In addition to globs, minions can be specified in top files a few other "
+"ways. Some common ones are :doc:`compound matches "
+"</topics/targeting/compound>` and :doc:`node groups "
+"</topics/targeting/nodegroups>`."
+msgstr ""
+
+#: ../../ref/states/top.rst:190
+msgid ""
+"Here is a slightly more complex top file example, showing the different "
+"types of matches you can perform:"
+msgstr ""
+
+#: ../../ref/states/top.rst:229
+msgid ""
+"In this example ``top.sls``, all minions get the ldap-client, networking and"
+" salt.minion states. Any minion with an id matching the ``salt-master*`` "
+"glob will get the salt.master state. Any minion with ids matching the "
+"regular expression ``^(memcache|web).(qa|prod).loc$`` will get the "
+"nagios.mon.web and apache.server states. All Ubuntu minions will receive the"
+" repos.ubuntu state, while all RHEL and CentOS minions will receive the "
+"repos.epel state. The minions ``foo``, ``bar``, and ``baz`` will receive the"
+" database state. Any minion with a pillar named ``somekey``, having a value "
+"of ``abc`` will receive the xyz state.  Finally, minions with ids matching "
+"the nag1* glob or with a grain named ``role`` equal to ``monitoring`` will "
+"receive the nagios.server state."
+msgstr ""
+
+#: ../../ref/states/top.rst:242
+msgid "How Top Files Are Compiled"
+msgstr ""
+
+#: ../../ref/states/top.rst:244
+msgid ""
+"As mentioned earlier, the top files in the different environments are "
+"compiled into a single set of data. The way in which this is done follows a "
+"few rules, which are important to understand when arranging top files in "
+"different environments. The examples below all assume that the "
+":conf_master:`file_roots` are set as in the :ref:`above multi-environment "
+"example <states-top-file_roots>`."
+msgstr ""
+
+#: ../../ref/states/top.rst:252
+msgid ""
+"The ``base`` environment's top file is processed first. Any environment "
+"which is defined in the ``base`` top.sls as well as another environment's "
+"top file, will use the instance of the environment configured in ``base`` "
+"and ignore all other instances.  In other words, the ``base`` top file is "
+"authoritative when defining environments. Therefore, in the example below, "
+"the ``dev`` section in ``/srv/salt/dev/top.sls`` would be completely "
+"ignored."
+msgstr ""
+
+#: ../../ref/states/top.rst:260
+msgid "``/srv/salt/base/top.sls:``"
+msgstr ""
+
+#: ../../ref/states/top.rst:273 ../../ref/states/top.rst:297
+#: ../../ref/states/top.rst:333
+msgid "``/srv/salt/dev/top.sls:``"
+msgstr ""
+
+#: ../../ref/states/top.rst:286
+msgid ""
+"The rules below assume that the environments being discussed were not "
+"defined in the ``base`` top file."
+msgstr ""
+
+#: ../../ref/states/top.rst:289
+msgid ""
+"If, for some reason, the ``base`` environment is not configured in the "
+"``base`` environment's top file, then the other environments will be checked"
+" in alphabetical order. The first top file found to contain a section for "
+"the ``base`` environment wins, and the other top files' ``base`` sections "
+"are ignored. So, provided there is no ``base`` section in the ``base`` top "
+"file, with the below two top files the ``dev`` environment would win out, "
+"and the ``common.centos`` SLS would not be applied to CentOS hosts."
+msgstr ""
+
+#: ../../ref/states/top.rst:310 ../../ref/states/top.rst:350
+msgid "``/srv/salt/qa/top.sls:``"
+msgstr ""
+
+#: ../../ref/states/top.rst:325
+msgid ""
+"For environments other than ``base``, the top file in a given environment "
+"will be checked for a section matching the environment's name. If one is "
+"found, then it is used. Otherwise, the remaining (non-``base``) environments"
+" will be checked in alphabetical order. In the below example, the ``qa`` "
+"section in ``/srv/salt/dev/top.sls`` will be ignored, but if "
+"``/srv/salt/qa/top.sls`` were cleared or removed, then the states configured"
+" for the ``qa`` environment in ``/srv/salt/dev/top.sls`` will be applied."
+msgstr ""
+
+#: ../../ref/states/top.rst:361
+msgid ""
+"When in doubt, the simplest way to configure your states is with a single "
+"top.sls in the ``base`` environment."
+msgstr ""

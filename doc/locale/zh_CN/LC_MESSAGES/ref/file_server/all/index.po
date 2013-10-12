@@ -1,0 +1,48 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/all/index.rst:8
+msgid "Full list of builtin fileserver modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`gitfs <salt.fileserver.gitfs>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The backend for the git based file server system."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`hgfs <salt.fileserver.hgfs>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The backed for the mercurial based file server system."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`roots <salt.fileserver.roots>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The default file server backend"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`s3fs <salt.fileserver.s3fs>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "The backend for a fileserver based on Amazon S3"
+msgstr ""

@@ -1,0 +1,100 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/vars.rst:6
+msgid "SLS Template Variable Reference"
+msgstr ""
+
+#: ../../ref/states/vars.rst:8
+msgid ""
+"The template engines available to sls files and file templates come loaded "
+"with a number of context variables. These variables contain information and "
+"functions to assist in the generation of templates."
+msgstr ""
+
+#: ../../ref/states/vars.rst:13
+msgid "Salt"
+msgstr ""
+
+#: ../../ref/states/vars.rst:15
+msgid ""
+"The `salt` variable is available to abstract the salt library functions. "
+"This variable is a python dictionary containing all of the functions "
+"available to the running salt minion:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:27
+msgid "Opts"
+msgstr ""
+
+#: ../../ref/states/vars.rst:29
+msgid ""
+"The `opts` variable abstracts the contents of the minion's configuration "
+"file directly to the template. The `opts` variable is a dictionary."
+msgstr ""
+
+#: ../../ref/states/vars.rst:36
+msgid ""
+"The ``config.get`` function also searches for values in the `opts` "
+"dictionary."
+msgstr ""
+
+#: ../../ref/states/vars.rst:39
+msgid "Pillar"
+msgstr ""
+
+#: ../../ref/states/vars.rst:41
+msgid "The `pillar` dictionary can be referenced directly:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:47
+msgid ""
+"Using the ``pillar.get`` function via the `salt` variable is generally "
+"recommended since a default can be safely set in the event that the value is"
+" not available in pillar and dictionaries can be traversed directly:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:57
+msgid "Grains"
+msgstr ""
+
+#: ../../ref/states/vars.rst:59
+msgid "The `grains` dictionary makes the minion's grains directly available:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:65
+msgid ""
+"The ``grains.get`` function can be used to traverse deeper grains and set "
+"defaults:"
+msgstr ""
+
+#: ../../ref/states/vars.rst:73
+msgid "env"
+msgstr ""
+
+#: ../../ref/states/vars.rst:75
+msgid ""
+"The `env` variable is available in sls files when gathering the sls from an "
+"environment."
+msgstr ""
+
+#: ../../ref/states/vars.rst:83
+msgid "sls"
+msgstr ""
+
+#: ../../ref/states/vars.rst:85
+msgid ""
+"The `sls` variable contains the sls reference value. The sls reference value"
+" is the value used to include the sls in top files or via the include "
+"option."
+msgstr ""

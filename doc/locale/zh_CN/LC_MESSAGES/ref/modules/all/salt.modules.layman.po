@@ -1,0 +1,72 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.layman.rst:6
+msgid "salt.modules.layman"
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman:1
+msgid "Support for Layman"
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.add:1
+msgid ""
+"Add the given overlay from the caced remote list to your locally installed "
+"overlays. Specify 'ALL' to add all overlays from the remote list."
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.add:5
+msgid "Return a list of the new overlay(s) added:"
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.add:7
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.delete:6
+#: ../../../salt/modules/layman.pydocstring of
+#: salt.modules.layman.list_local:5 ../../../salt/modules/layman.pydocstring
+#: of salt.modules.layman.sync:7
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.delete:1
+msgid ""
+"Remove the given overlay from the your locally installed overlays. Specify "
+"'ALL' to remove all overlays."
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.delete:4
+msgid "Return a list of the overlays(s) that were removed:"
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of
+#: salt.modules.layman.list_local:1
+msgid "List the locally installed overlays."
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of
+#: salt.modules.layman.list_local:3
+msgid "Return a list of installed overlays:"
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.sync:1
+msgid ""
+"Update the specified overlay. Use 'ALL' to synchronize all overlays. This is"
+" the default if no overlay is specified."
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.sync:5
+msgid "overlay"
+msgstr ""
+
+#: ../../../salt/modules/layman.pydocstring of salt.modules.layman.sync:5
+msgid "Name of the overlay to sync. (Defaults to 'ALL')"
+msgstr ""

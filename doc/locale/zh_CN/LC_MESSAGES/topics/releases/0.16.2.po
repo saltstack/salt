@@ -1,0 +1,456 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.16.2.rst:6
+msgid "Salt 0.16.2 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:8
+msgid ""
+"Version 0.16.2 is a bugfix release for :doc:`0.16.0 "
+"</topics/releases/0.16.0>`, and contains a number of fixes."
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:12
+msgid "Windows"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:14
+msgid ""
+"Only allow Administrator's group and SYSTEM user access to C:\\\\salt. This "
+"eliminates a race condition where a non-admin user could modify a template "
+"or managed file before it is executed by the minion (which is running as an "
+"elevated user), thus avoiding a potential escalation of privileges. "
+"(:issue:`6361`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:21
+msgid "Grains"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:22
+msgid "Fixed detection of ``virtual`` grain on OpenVZ hardware nodes"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:23
+msgid "Gracefully handle lsb_release data when it is enclosed in quotes"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:24
+msgid ""
+"LSB grains are now prefixed with ``lsb_distrib_`` instead of simply "
+"``lsb_``. The old naming is not preserved, so SLS may be affected."
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:26
+msgid "Improved grains detection on MacOS"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:29
+msgid "Pillar"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:30
+msgid ""
+"Don't try to load :doc:`git_pillar </ref/pillar/all/salt.pillar.git_pillar>`"
+" if not enabled in master config (:issue:`6052`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:32
+msgid ""
+"Functions :mod:`pillar.item <salt.modules.pillar.item>` and "
+":mod:`pillar.items <salt.modules.pillar.items>` added for parity with "
+":mod:`grains.item <salt.modules.grains.item>`/:mod:`grains.items "
+"<salt.modules.grains.items>`. The old function ``pillar.data`` is preserved "
+"for backwards compatibility."
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:37
+msgid "Fixed minion traceback when Pillar SLS is malformed (:issue:`5910`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:41
+msgid "Peer Publishing"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:42
+msgid ""
+"More gracefully handle improperly quoted publish commands (:issue:`5958`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:43
+msgid ""
+"Fixed traceback when timeout specified via the CLI fo :mod:`publish.publish "
+"<salt.modules.publish.publish>`, :mod:`publish.full_data "
+"<salt.modules.publish.full_data>` (:issue:`5959`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:46
+msgid ""
+"Fixed unintended change in output of :mod:`publish.publish "
+"<salt.modules.publish.publish>` (:issue:`5928`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:51
+msgid "Minion"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:52
+msgid "Fixed salt-key usage in minionswarm script"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:53
+msgid ""
+"Quieted warning about :strong:`SALT_MINION_CONFIG` environment variable on "
+"minion startup and for CLI commands run via ``salt-call`` (:issue:`5956`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:55
+msgid ""
+"Added minion config parameter :conf_minion:`random_reauth_delay` to stagger "
+"re-auth attempts when the minion is waiting for the master to approve its "
+"public key. This helps prevent SYN flooding in larger environments."
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:61
+msgid "User/Group Management"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:62
+msgid ""
+"Implement previously-ignored ``unique`` option for :mod:`user.present "
+"<salt.states.user.present>` states in FreeBSD"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:64
+msgid ""
+"Report in state output when a :mod:`group.present "
+"<salt.states.group.present>` state attempts to use a gid in use by another "
+"group"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:67
+msgid ""
+"Fixed regression that prevents a :mod:`user.present "
+"<salt.states.user.present>` state to set the password hash to the system "
+"default (i.e. an unset password)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:70
+msgid ""
+"Fixed multiple :mod:`group.present <salt.states.group.present>` states with "
+"the same group (:issue:`6439`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:75
+msgid "File Management"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:76
+msgid "Fixed file.mkdir setting incorrect permissions (:issue:`6033`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:77
+msgid ""
+"Fixed cleanup of source files for templates when ``/tmp`` is in file_roots "
+"(:issue:`6118`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:79
+msgid ""
+"Fixed caching of zero-byte files when a non-empty file was previously cached"
+" at the same path"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:81
+msgid "Added HTTP authentication support to the cp module (:issue:`5641`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:82
+msgid "Diffs are now suppressed when binary files are changed"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:86
+msgid "Package/Repository Management"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:87
+msgid ""
+"Fixed traceback when there is only one target for :mod:`pkg.latest "
+"<salt.states.pkg.latest>` states"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:89
+msgid "Fixed regression in detection of virtual packages (apt)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:90
+msgid ""
+"Limit number of pkg database refreshes to once per :mod:`state.sls "
+"<salt.modules.state.sls>`/:mod:`state.highstate "
+"<salt.modules.state.highstate>`"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:93
+msgid ""
+"YUM: Allow 32-bit packages with arches other than i686 to be managed on "
+"64-bit systems (:issue:`6299`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:95
+msgid "Fixed incorrect reporting in pkgrepo.managed states (:issue:`5517`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:96
+msgid ""
+"Fixed 32-bit binary package installs on 64-bit RHEL-based distros, and added"
+" proper support for 32-bit packages on 64-bit Debian-based distros "
+"(:issue:`6303`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:99
+msgid ""
+"Fixed issue where requisites were inadvertently being put into YUM repo "
+"files (:issue:`6471`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:104
+msgid "Service Management"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:105
+msgid ""
+"Fixed inaccurate reporting of results in :mod:`service.running "
+"<salt.states.service.running>` states when the service fails to start "
+"(:issue:`5894`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:108
+msgid ""
+"Fixed handling of custom initscripts in RHEL-based distros so that they are "
+"immediately available, negating the need for a second state run to manage "
+"the service that the initscript controls"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:114
+msgid "Networking"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:115
+msgid ""
+"Function network.hwaddr renamed to :mod:`network.hw_addr "
+"<salt.modules.network.hw_addr>` to match :mod:`network.ip_addrs "
+"<salt.modules.network.ip_addrs>` and :mod:`network.ip_addrs6 "
+"<salt.modules.network.ip_addrs6>`. All three functions also now work without"
+" the underscore in the name, as well."
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:120
+msgid ""
+"Fixed traceback in :mod:`bridge.show <salt.modules.bridge.show>` when "
+"interface is not present (:issue:`6326`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:125
+msgid "SSH"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:126
+msgid ""
+"Fixed incorrect result reporting for some :mod:`ssh_known_hosts.present "
+"<salt.states.ssh_known_hosts.present>` states"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:128
+msgid ""
+"Fixed inaccurate reporting when :mod:`ssh_auth.present "
+"<salt.states.ssh_auth.present>` states are run with ``test=True``, when "
+"rsa/dss is used for the ``enc`` param instead of ssh-rsa/ssh-dss "
+"(:issue:`5374`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:135
+msgid "pip"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:136
+msgid "Properly handle ``-f`` lines in pip freeze output"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:137
+msgid ""
+"Fixed regression in pip.installed states with specifying a requirements file"
+" (:issue:`6003`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:139
+msgid ""
+"Fixed use of ``editable`` argument in :mod:`pip.installed "
+"<salt.states.pip.installed>` states (:issue:`6025`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:141
+msgid ""
+"Deprecated ``runas`` parameter in execution function calls, in favor of "
+"``user``"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:146
+msgid "MySQL"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:147
+msgid ""
+"Allow specification of :doc:`MySQL </ref/modules/all/salt.modules.mysql>` "
+"connection arguments via the CLI, overriding/bypassing minion config params"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:149
+msgid ""
+"Allow :mod:`mysql_user.present <salt.states.mysql_user.present>` states to "
+"set a passwordless login (:issue:`5550`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:151
+msgid ""
+"Fixed endless loop when :mod:`mysql.processlist "
+"<salt.modules.mysql.processlist>` is run (:issue:`6297`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:156
+msgid "PostgreSQL"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:157
+msgid ""
+"Fixed traceback in :mod:`postgres.user_list "
+"<salt.modules.postgres.user_list>` (:issue:`6352`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:162
+msgid "Miscellaneous"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:163
+msgid ""
+"Don't allow :doc:`npm states </ref/states/all/salt.states.npm>` to be used "
+"if :doc:`npm module </ref/modules/all/salt.modules.npm>` is not available"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:165
+msgid ""
+"Fixed :mod:`alternatives.install <salt.states.alternatives.install>` states "
+"for which the target is a symlink (:issue:`6162`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:167
+msgid ""
+"Fixed traceback in :doc:`sysbench module "
+"</ref/modules/all/salt.modules.sysbench>` (:issue:`6175`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:169
+msgid "Fixed traceback in job cache"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:170
+msgid "Fixed tempfile cleanup for windows"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:171
+msgid ""
+"Fixed issue where SLS files using the :doc:`pydsl renderer "
+"</ref/renderers/all/salt.renderers.pydsl>` were not being run"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:173
+msgid ""
+"Fixed issue where returners were being passed incorrect information "
+"(:issue:`5518`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:175
+msgid ""
+"Fixed traceback when numeric args are passed to :mod:`cmd.script "
+"<salt.states.cmd.script>` states"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:177
+msgid ""
+"Fixed bug causing :mod:`cp.get_dir <salt.modules.cp.get_dir>` to return more"
+" directories than expected (:issue:`6048`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:179
+msgid ""
+"Fixed traceback when :mod:`supervisord.running "
+"<salt.states.supervisord.running>` states are run with ``test=True`` "
+"(:issue:`6053`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:182
+msgid ""
+"Fixed tracebacks when Salt encounters problems running rbenv (:issue:`5888`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:183
+msgid ""
+"Only make the :doc:`monit module </ref/modules/all/salt.modules.monit>` "
+"available if monit binary is present (:issue:`5871`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:185
+msgid ""
+"Fixed incorrect behavior of :mod:`img.mount_image "
+"<salt.modules.img.mount_image>`"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:187
+msgid ""
+"Fixed traceback in :mod:`tomcat.deploy_war <salt.modules.tomcat.deploy_war>`"
+" in Windows"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:189
+msgid "Don't re-write /etc/fstab if mount fails"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:190
+msgid ""
+"Fixed tracebacks when Salt encounters problems running gem (:issue:`5886`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:191
+msgid ""
+"Fixed incorrect behavior of :mod:`selinux.boolean "
+"<salt.states.selinux.boolean>` states (:issue:`5912`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:193
+msgid ""
+":doc:`RabbitMQ </ref/modules/all/salt.modules.rabbitmq>`: Quote passwords to"
+" avoid symbols being interpolated by the shell (:issue:`6338`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:195
+msgid ""
+"Fixed tracebacks in :mod:`extfs.mkfs <salt.modules.extfs.mkfs>` and "
+":mod:`extfs.tune <salt.modules.extfs.tune>` (:issue:`6462`)"
+msgstr ""
+
+#: ../../topics/releases/0.16.2.rst:197
+msgid ""
+"Fixed a regression with the :mod:`module.run <salt.states.module.run>` state"
+" where the ``m_name`` and ``m_fun`` arguments were being ignored "
+"(:issue:`6464`)"
+msgstr ""

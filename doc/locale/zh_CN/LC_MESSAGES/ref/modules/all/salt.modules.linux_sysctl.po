@@ -1,0 +1,66 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.linux_sysctl.rst:6
+msgid "salt.modules.linux_sysctl"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl:1
+msgid "Module for viewing and modifying sysctl parameters"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.assign:1
+msgid "Assign a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.assign:3
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.default_config:6
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.get:3
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.persist:5
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.show:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.default_config:1
+msgid ""
+"Linux hosts using systemd 207 or later ignore ``/etc/sysctl.conf`` and only "
+"load from ``/etc/sysctl.d/*.conf``. This function will do the proper checks "
+"and return a default config file which will be valid for the Minion. Hosts "
+"running systemd >= 207 will use ``/etc/sysctl.d/99-salt.conf``."
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.get:1
+msgid "Return a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.persist:1
+msgid ""
+"Assign and persist a simple sysctl parameter for this minion. If ``config`` "
+"is not specified, a sensible default will be chosen using "
+":mod:`sysctl.default_config <salt.modules.linux_sysctl.default_config>`."
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.pydocstring of
+#: salt.modules.linux_sysctl.show:1
+msgid "Return a list of sysctl parameters for this minion"
+msgstr ""

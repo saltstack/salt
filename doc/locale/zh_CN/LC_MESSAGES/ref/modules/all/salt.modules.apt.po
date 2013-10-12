@@ -1,0 +1,391 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.apt.rst:6
+msgid "salt.modules.apt"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt:1
+msgid "Support for APT (Advanced Packaging Tool)"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.del_repo:1
+msgid "Delete a repo from the sources.list / sources.list.d"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.del_repo:3
+msgid ""
+"If the .list file is in the sources.list.d directory and the file that the "
+"repo exists in does not contain any other repo configuration, the file "
+"itself will be deleted."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.del_repo:7
+msgid ""
+"The repo passed in must be a fully formed repository definition string."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.del_repo:10
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.file_dict:5
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.file_list:5
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.get_repo:5
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.mod_repo:20
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.expand_repo_def:1
+msgid ""
+"Take a repository definition and expand it to the full pkg repository dict "
+"that can be used for comparison.  This is a helper function to make the "
+"Debian/Ubuntu apt sources sane for comparison in the pkgrepo states."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.expand_repo_def:5
+msgid "There is no use to calling this function via the CLI."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.file_dict:1
+msgid ""
+"List the files that belong to a package, grouped by package. Not specifying "
+"any packages will return a list of _every_ file on the system's package "
+"database (not generally recommended)."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.file_list:1
+msgid ""
+"List the files that belong to a package. Not specifying any packages will "
+"return a list of _every_ file on the system's package database (not "
+"generally recommended)."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.get_repo:1
+msgid "Display a repo from the sources.list / sources.list.d"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.get_repo:3
+msgid "The repo passwd in needs to be a complete repo entry."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.get_selections:1
+msgid "View package state from the dpkg database."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.get_selections:3
+msgid "Returns a dict of dicts containing the state, and package names:"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.get_selections:15
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:14
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:46
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:62
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.latest_version:10
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.list_pkgs:13
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.list_repos:3
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.list_upgrades:3
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.purge:19
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.refresh_db:10
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.remove:18
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:30
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.upgrade:8
+#: ../../../salt/modules/apt.pydocstring of
+#: salt.modules.apt.upgrade_available:3 ../../../salt/modules/apt.pydocstring
+#: of salt.modules.apt.version:5 ../../../salt/modules/apt.pydocstring of
+#: salt.modules.apt.version_cmp:5
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:1
+msgid ""
+"Install the passed package, add refresh=True to update the dpkg database."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:18
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.purge:6
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.remove:5
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:4
+msgid ""
+"The name of the package to be installed. Note that this parameter is ignored"
+" if either \"pkgs\" or \"sources\" is passed. Additionally, please note that"
+" this option can only be used to install packages from a software "
+"repository. To install a package file manually, use the \"sources\" option."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:10
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:58
+msgid ""
+"32-bit packages can be installed on 64-bit systems by appending the "
+"architecture designation (``:i386``, etc.) to the end of the package name."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:21
+msgid "refresh"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:21
+msgid "Whether or not to refresh the package database before installing."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:25
+msgid "fromrepo"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:24
+msgid ""
+"Specify a package repository to install from (e.g., ``apt-get -t unstable "
+"install somepackage``)"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:29
+msgid "skip_verify"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:28
+msgid ""
+"Skip the GPG verification check (e.g., ``--allow-unauthenticated``, or "
+"``--force-bad-verify`` for install from package file)."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:33
+msgid "debconf"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:32
+msgid ""
+"Provide the path to a debconf answers file, processed before installation."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:38
+msgid "version"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:36
+msgid ""
+"Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored if "
+"\"pkgs\" or \"sources\" is passed."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:40
+msgid "Multiple Package Installation Options:"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:51
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.purge:12
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.remove:11
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:43
+msgid ""
+"A list of packages to install from a software repository. Must be passed as "
+"a python list."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:67
+msgid "sources"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:54
+msgid ""
+"A list of DEB packages to install. Must be passed as a list of dicts, with "
+"the keys being package names, and the values being the source URI or local "
+"path to the package."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.install:69
+msgid "Returns a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.latest_version:1
+msgid ""
+"Return the latest version of the named package available for upgrade or "
+"installation. If more than one package name is specified, a dict of "
+"name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.latest_version:5
+msgid ""
+"If the latest version of a given package is already installed, an empty "
+"string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.latest_version:8
+msgid ""
+"A specific repo can be requested using the ``fromrepo`` keyword argument."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.list_pkgs:1
+msgid "List the packages currently installed in a dict::"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.list_pkgs:5
+msgid ""
+"If removed is ``True``, then only packages which have been removed (but not "
+"purged) will be returned."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.list_pkgs:8
+msgid "External dependencies::"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.list_repos:1
+msgid "Lists all repos in the sources.list (and sources.lists.d) files"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.list_upgrades:1
+msgid "List all available package upgrades."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.mod_repo:1
+msgid ""
+"Modify one or more values for a repo.  If the repo does not exist, it will "
+"be created, so long as the definition is well formed.  For Ubuntu the "
+"\"ppa:<project>/repo\" format is acceptable. \"ppa:\" format can only be "
+"used to create a new repository."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.mod_repo:6
+msgid "The following options are available to modify a repo definition::"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.purge:1
+msgid ""
+"Remove packages via ``apt-get purge`` along with all configuration files and"
+" unused dependencies."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.purge:5
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.remove:4
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.purge:8
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.remove:7
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.purge:11
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.remove:10
+msgid ""
+"A list of packages to delete. Must be passed as a python list. The ``name`` "
+"parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.purge:17
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.remove:16
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.upgrade:3
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.refresh_db:1
+msgid "Updates the APT database to latest packages based upon repositories"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.refresh_db:3
+msgid ""
+"Returns a dict, with the keys being package databases and the values being "
+"the result of the update attempt. Values can be one of the following:"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.refresh_db:6
+msgid "``True``: Database updated successfully"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.refresh_db:7
+msgid "``False``: Problem updating database"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.refresh_db:8
+msgid "``None``: Database already up-to-date"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.remove:1
+msgid "Remove packages using ``apt-get remove``."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:1
+msgid "Change package state in the dpkg database."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:3
+msgid "The state can be any one of, documented in ``dpkg(1)``:"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:5
+msgid "install"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:6
+msgid "hold"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:7
+msgid "deinstall"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:8
+msgid "purge"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:10
+msgid ""
+"This command is commonly used to mark specific packages to be held from "
+"being upgraded, that is, to be kept at a certain version. When a state is "
+"changed to anything but being held, then it is typically followed by ``apt-"
+"get -u dselect-upgrade``."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:15
+msgid ""
+"Note: Be careful with the ``clear`` argument, since it will start with "
+"setting all packages to deinstall state."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.set_selections:18
+msgid ""
+"Returns a dict of dicts containing the package names, and the new and old "
+"versions:"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.upgrade:1
+msgid "Upgrades all packages via ``apt-get dist-upgrade``"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.upgrade:6
+msgid "{'<package>':  {'old': '<old-version>',"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.upgrade:6
+msgid "'new': '<new-version>'}}"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of
+#: salt.modules.apt.upgrade_available:1
+msgid "Check whether or not an upgrade is available for a given package"
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.version:1
+msgid ""
+"Returns a string representing the package version or an empty string if not "
+"installed. If more than one package name is specified, a dict of "
+"name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/apt.pydocstring of salt.modules.apt.version_cmp:1
+msgid ""
+"Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if "
+"pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem "
+"making the comparison."
+msgstr ""

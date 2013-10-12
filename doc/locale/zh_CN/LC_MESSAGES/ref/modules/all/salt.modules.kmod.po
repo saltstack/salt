@@ -1,0 +1,95 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.kmod.rst:6
+msgid "salt.modules.kmod"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod:1
+msgid "Module to manage Linux kernel modules"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.available:1
+msgid "Return a list of all available kernel modules"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.available:3
+#: ../../../salt/modules/kmod.pydocstring of
+#: salt.modules.kmod.check_available:3 ../../../salt/modules/kmod.pydocstring
+#: of salt.modules.kmod.is_loaded:3 ../../../salt/modules/kmod.pydocstring of
+#: salt.modules.kmod.load:9 ../../../salt/modules/kmod.pydocstring of
+#: salt.modules.kmod.lsmod:3 ../../../salt/modules/kmod.pydocstring of
+#: salt.modules.kmod.mod_list:3 ../../../salt/modules/kmod.pydocstring of
+#: salt.modules.kmod.remove:13
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of
+#: salt.modules.kmod.check_available:1
+msgid "Check to see if the specified kernel module is available"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.is_loaded:1
+msgid "Check to see if the specified kernel module is loaded"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.load:1
+msgid "Load the specified kernel module"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.load:4
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.remove:4
+msgid "mod"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.load:4
+msgid "Name of module to add"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.load:7
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.remove:7
+msgid "persist"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.load:7
+msgid "Write module to /etc/modules to make it load on system reboot"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.lsmod:1
+msgid "Return a dict containing information about currently loaded modules"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.mod_list:1
+msgid "Return a list of the loaded module names"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.remove:1
+msgid "Remove the specified kernel module"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.remove:4
+msgid "Name of module to remove"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.remove:7
+msgid "Also remove module from /etc/modules"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.remove:11
+msgid "comment"
+msgstr ""
+
+#: ../../../salt/modules/kmod.pydocstring of salt.modules.kmod.remove:10
+msgid ""
+"If persist is set don't remove line from /etc/modules but only comment it"
+msgstr ""

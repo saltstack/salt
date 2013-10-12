@@ -1,0 +1,52 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.freebsd_sysctl.rst:6
+msgid "salt.modules.freebsd_sysctl"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl:1
+msgid "Module for viewing and modifying sysctl parameters"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl.assign:1
+msgid "Assign a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl.assign:3
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl.get:3
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl.persist:3
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl.show:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl.get:1
+msgid "Return a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl.persist:1
+msgid "Assign and persist a simple sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/freebsd_sysctl.pydocstring of
+#: salt.modules.freebsd_sysctl.show:1
+msgid "Return a list of sysctl parameters for this minion"
+msgstr ""

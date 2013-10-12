@@ -1,0 +1,136 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.ssh_known_hosts.rst:6
+msgid "salt.states.ssh_known_hosts"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts:2
+msgid "Control of SSH known_hosts entries."
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts:4
+msgid "Manage the information stored in the known_hosts files"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.absent:1
+msgid "Verifies that the specified host is not known by the given user"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.absent:4
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:8
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.absent:4
+msgid "The host name"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.absent:7
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:11
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.absent:7
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:11
+msgid "The user who owns the ssh authorized keys file to modify"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.absent:10
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:27
+msgid "config"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.absent:10
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:26
+msgid ""
+"The location of the authorized keys file relative to the user's home "
+"directory, defaults to \".ssh/known_hosts\""
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:1
+msgid "Verifies that the specified host is known by the specified user"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:3
+msgid ""
+"On many systems, specifically those running with openssh 4 or older, the "
+"``enc`` option must be set, only openssh 5 and above can detect the key "
+"type."
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:8
+msgid "The name of the remote host (e.g. \"github.com\")"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:14
+msgid "enc"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:14
+msgid ""
+"Defines what type of key is being used, can be ecdsa ssh-rsa or ssh-dss"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:18
+msgid "fingerprint"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:17
+msgid ""
+"The fingerprint of the key which must be presented in the known_hosts file"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:23
+msgid "port"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:21
+msgid ""
+"optional parameter, denoting the port of the remote host, which will be used"
+" in case, if the public key will be requested from it. By default the port "
+"22 is used."
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:29
+msgid "hash_hostname : True"
+msgstr ""
+
+#: ../../../salt/states/ssh_known_hosts.pydocstring of
+#: salt.states.ssh_known_hosts.present:30
+msgid "Hash all hostnames and addresses in the output."
+msgstr ""

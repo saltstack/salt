@@ -1,0 +1,104 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.npm.rst:6
+msgid "salt.modules.npm"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm:1
+msgid "Manage and query NPM packages."
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:1
+msgid "Install an NPM package."
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:3
+msgid ""
+"If no directory is specified, the package will be installed globally. If no "
+"package is specified, the dependencies (from package.json) of the package in"
+" the given directory will be installed."
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:8
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.list_:7
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:6
+msgid "pkg"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:8
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:6
+msgid "A package name in any format accepted by NPM"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:12
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.list_:11
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:10
+msgid "dir"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:11
+msgid ""
+"The target directory in which to install the package, or None for global "
+"installation"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:15
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:13
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:15
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:13
+msgid "The user to run NPM with"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.install:17
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.list_:13
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:15
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.list_:1
+msgid "List installed NPM packages."
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.list_:3
+msgid ""
+"If no directory is specified, this will return the list of globally- "
+"installed packages."
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.list_:7
+msgid "Limit package listing by name"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.list_:10
+msgid ""
+"The directory whose packages will be listed, or None for global installation"
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:1
+msgid "Uninstall an NPM package."
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:3
+msgid ""
+"If no directory is specified, the package will be uninstalled globally."
+msgstr ""
+
+#: ../../../salt/modules/npm.pydocstring of salt.modules.npm.uninstall:9
+msgid ""
+"The target directory from which to uninstall the package, or None for global"
+" installation"
+msgstr ""

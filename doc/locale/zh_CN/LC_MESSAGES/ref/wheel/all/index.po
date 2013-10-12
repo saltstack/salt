@@ -1,0 +1,50 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/wheel/all/index.rst:8
+msgid "Full list of builtin wheel modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`config <salt.wheel.config>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Manage the master configuration file"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`file_roots <salt.wheel.file_roots>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Read in files from the file_root and save files to the file root"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`key <salt.wheel.key>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Wheel system wrapper for key system"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pillar_roots <salt.wheel.pillar_roots>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"The `pillar_roots` wheel module is used to manage files under the pillar "
+"roots"
+msgstr ""

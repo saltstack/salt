@@ -1,0 +1,99 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.rbenv.rst:6
+msgid "salt.modules.rbenv"
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv:1
+msgid "Manage ruby installations with rbenv."
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.default:1
+msgid "Returns or sets the currently defined default ruby."
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.default:6
+msgid "ruby=None"
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.default:4
+msgid ""
+"The version to set as the default. Should match one of the versions listed "
+"by :mod:`rbenv.versions <salt.modules.rbenv.versions>`. Leave blank to "
+"return the current default."
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.default:8
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.install:3
+#: ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.install_ruby:7 ../../../salt/modules/rbenv.pydocstring
+#: of salt.modules.rbenv.is_installed:3
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.list_:3
+#: ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.uninstall_ruby:7 ../../../salt/modules/rbenv.pydocstring
+#: of salt.modules.rbenv.update:3 ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.versions:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.install:1
+msgid "Install Rbenv systemwide"
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.install_ruby:1
+msgid "Install a ruby implementation."
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.install_ruby:5 ../../../salt/modules/rbenv.pydocstring
+#: of salt.modules.rbenv.uninstall_ruby:5
+msgid "ruby"
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.install_ruby:4
+msgid ""
+"The version of Ruby to install, should match one of the versions listed by "
+"rbenv.list"
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.is_installed:1
+msgid "Check if Rbenv is installed."
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.list_:1
+msgid "List the installable versions of ruby."
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.uninstall_ruby:1
+msgid "Uninstall a ruby implementation."
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of
+#: salt.modules.rbenv.uninstall_ruby:4
+msgid ""
+"The version of ruby to uninstall. Should match one of the versions listed by"
+" :mod:`rbenv.versions <salt.modules.rbenv.versions>`"
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.update:1
+msgid "Updates the current versions of Rbenv and Ruby-Build"
+msgstr ""
+
+#: ../../../salt/modules/rbenv.pydocstring of salt.modules.rbenv.versions:1
+msgid "List the installed versions of ruby."
+msgstr ""

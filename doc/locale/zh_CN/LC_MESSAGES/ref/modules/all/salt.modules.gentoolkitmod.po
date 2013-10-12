@@ -1,0 +1,188 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.gentoolkitmod.rst:6
+msgid "salt.modules.gentoolkitmod"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod:1
+msgid "Support for Gentoolkit"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:1
+msgid "Clean obsolete portage sources"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:4
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:4
+msgid "destructive"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:4
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:4
+msgid "Only keep minimum for reinstallation"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:8
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:8
+msgid "package_names"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:7
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:7
+msgid ""
+"Protect all versions of installed packages. Only meaningful if used with "
+"destructive=True"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:13
+msgid "size_limit <size>"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:11
+msgid ""
+"Don't delete distfiles bigger than <size>. <size> is a size specification: "
+"\"10M\" is \"ten megabytes\", \"200K\" is \"two hundreds kilobytes\", etc. "
+"Units are: G, M, K and B."
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:19
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:14
+msgid "time_limit <time>"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:16
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:11
+msgid ""
+"Don't delete distfiles files modified since <time> <time> is an amount of "
+"time: \"1y\" is \"one year\", \"2w\" is \"two weeks\", etc. Units are: y "
+"(years), m (months), w (weeks), d (days) and h (hours)."
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:23
+msgid "fetch_restricted"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:22
+msgid ""
+"Protect fetch-restricted files. Only meaningful if used with "
+"destructive=True"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:28
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:19
+msgid "exclude_file"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:26
+msgid ""
+"Path to exclusion file. Default is /etc/eclean/distfiles.exclude This is the"
+" same default eclean-dist uses. Use None if this file exists and you want to"
+" ignore."
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:30
+msgid "Returns a dict containing the cleaned, saved, and deprecated dists:"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_dist:39
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:28
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.glsa_check_list:15
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.revdep_rebuild:8
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:1
+msgid "Clean obsolete binary packages"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:17
+msgid ""
+"Path to exclusion file. Default is /etc/eclean/packages.exclude This is the "
+"same default eclean-pkg uses. Use None if this file exists and you want to "
+"ignore."
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.eclean_pkg:21
+msgid "Returns a dict containing the cleaned binary packages:"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.glsa_check_list:1
+msgid "List the status of Gentoo Linux Security Advisories"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.glsa_check_list:5
+msgid "glsa_list"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.glsa_check_list:4
+msgid ""
+"can contain an arbitrary number of GLSA ids, filenames containing GLSAs or "
+"the special identifiers 'all' and 'affected'"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.glsa_check_list:7
+msgid ""
+"Returns a dict containing glsa ids with a description, status, and CVEs:"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.revdep_rebuild:1
+msgid "Fix up broken reverse dependencies"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.revdep_rebuild:6
+msgid "lib"
+msgstr ""
+
+#: ../../../salt/modules/gentoolkitmod.pydocstring of
+#: salt.modules.gentoolkitmod.revdep_rebuild:4
+msgid ""
+"Search for reverse dependencies for a particular library rather than every "
+"library on the system. It can be a full path to a library or basic regular "
+"expression."
+msgstr ""

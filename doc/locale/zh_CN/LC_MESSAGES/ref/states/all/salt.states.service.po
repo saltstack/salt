@@ -1,0 +1,115 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.service.rst:6
+msgid "salt.states.service"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service:2
+msgid "Starting or restarting of services and daemons."
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service:4
+msgid ""
+"Services are defined as system daemons typically started with system init or"
+" rc scripts, services can be defined as running or dead."
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service:13
+msgid ""
+"The service can also be set to be started at runtime via the enable option:"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service:22
+msgid ""
+"By default if a service is triggered to refresh due to a watch statement the"
+" service is by default restarted. If the desired behaviour is to reload the "
+"service, then set the reload value to True:"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.dead:1
+msgid ""
+"Ensure that the named service is dead by stopping the service if it is "
+"running"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.dead:4
+#: ../../../salt/states/service.pydocstring of salt.states.service.disabled:6
+#: ../../../salt/states/service.pydocstring of salt.states.service.enabled:6
+#: ../../../salt/states/service.pydocstring of salt.states.service.mod_watch:4
+#: ../../../salt/states/service.pydocstring of salt.states.service.running:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.dead:4
+#: ../../../salt/states/service.pydocstring of salt.states.service.disabled:7
+#: ../../../salt/states/service.pydocstring of salt.states.service.enabled:7
+#: ../../../salt/states/service.pydocstring of salt.states.service.mod_watch:4
+#: ../../../salt/states/service.pydocstring of salt.states.service.running:4
+msgid "The name of the init or rc script used to manage the service"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.dead:9
+#: ../../../salt/states/service.pydocstring of salt.states.service.running:9
+msgid "enable"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.dead:7
+msgid ""
+"Set the service to be enabled at boot time, ``True`` sets the service to be "
+"enabled, ``False`` sets the named service to be disabled. The default is "
+"``None``, which does not enable or disable anything."
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.dead:11
+#: ../../../salt/states/service.pydocstring of salt.states.service.mod_watch:6
+#: ../../../salt/states/service.pydocstring of salt.states.service.running:11
+msgid "sig"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.dead:12
+#: ../../../salt/states/service.pydocstring of salt.states.service.mod_watch:7
+#: ../../../salt/states/service.pydocstring of salt.states.service.running:12
+msgid "The string to search for when looking for the service process with ps"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.disabled:1
+msgid ""
+"Verify that the service is disabled on boot, only use this state if you "
+"don't want to manage the running process, remember that if you want to "
+"disable a service to use the enable: False option for the running or dead "
+"function."
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.enabled:1
+msgid ""
+"Verify that the service is enabled on boot, only use this state if you don't"
+" want to manage the running process, remember that if you want to enable a "
+"running service to use the enable: True option for the running or dead "
+"function."
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.mod_watch:1
+msgid "The service watcher, called to invoke the watch command."
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.running:1
+msgid "Verify that the service is running"
+msgstr ""
+
+#: ../../../salt/states/service.pydocstring of salt.states.service.running:7
+msgid ""
+"Set the service to be enabled at boot time, True sets the service to be "
+"enabled, False sets the named service to be disabled. The default is None, "
+"which does not enable or disable anything."
+msgstr ""

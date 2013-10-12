@@ -1,0 +1,123 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/git/index.rst:6
+msgid "Salt Stack Git Policy"
+msgstr ""
+
+#: ../../topics/git/index.rst:8
+msgid ""
+"The Salt Stack team follows a git policy to maintain stability and "
+"consistency with the repository. The git policy has been developed to "
+"encourage contributions and make contributing to Salt as easy as possible. "
+"Code contributors to Salt Stack projects DO NOT NEED TO READ THIS DOCUMENT, "
+"because all contributions come into Salt Stack via a single gateway to make "
+"it as easy as possible for contributors to give us code."
+msgstr ""
+
+#: ../../topics/git/index.rst:15
+msgid ""
+"The primary rule of git management in Salt Stack is to make life easy on "
+"contributors and developers to send in code. Simplicity is always a goal!"
+msgstr ""
+
+#: ../../topics/git/index.rst:19
+msgid "New Code Entry"
+msgstr ""
+
+#: ../../topics/git/index.rst:21
+msgid ""
+"All new Salt Stack code is posted to the `develop` branch, this is the "
+"single point of entry. The only exception here is when a bugfix to develop "
+"cannot be cleanly merged into a release branch and the bugfix needs to be "
+"rewritten for the release branch."
+msgstr ""
+
+#: ../../topics/git/index.rst:27
+msgid "Release Branching"
+msgstr ""
+
+#: ../../topics/git/index.rst:29
+msgid ""
+"Salt Stack maintains two types of releases, `Feature Releases` and `Point "
+"Releases`. A feature release is managed by incrementing the first or second "
+"release point number, so 0.10.5 -> 0.11.0 signifies a feature release and "
+"0.11.0 -> 0.11.1 signifies a point release, also a hypothetical 0.42.7 -> "
+"1.0.0 would also signify a feature release."
+msgstr ""
+
+#: ../../topics/git/index.rst:36
+msgid "Feature Release Branching"
+msgstr ""
+
+#: ../../topics/git/index.rst:38
+msgid ""
+"Each feature release is maintained in a dedicated git branch derived from "
+"the last applicable release commit on develop. All file changes relevant to "
+"the feature release will be completed in the develop branch prior to the "
+"creation of the feature release branch. The feature release branch will be "
+"named after the relevant numbers to the feature release, which constitute "
+"the first two numbers. This means that the release branch for the 0.11.0 "
+"series is named 0.11."
+msgstr ""
+
+#: ../../topics/git/index.rst:46
+msgid "A feature release branch is created with the following command:"
+msgstr ""
+
+#: ../../topics/git/index.rst:54
+msgid "Point Releases"
+msgstr ""
+
+#: ../../topics/git/index.rst:56
+msgid ""
+"Each point release is derived from its parent release branch. Constructing "
+"point releases is a critical aspect of Salt development and is managed by "
+"members of the core development team. Point releases comprise bug and "
+"security fixes which are cherry picked from develop onto the aforementioned "
+"release branch. At the time when a core developer accepts a pull request a "
+"determination needs to be made if the commits in the pull request need to be"
+" backported to the release branch. Some simple criteria are used to make "
+"this determination:"
+msgstr ""
+
+#: ../../topics/git/index.rst:64
+msgid "Is this commit fixing a bug? Backport"
+msgstr ""
+
+#: ../../topics/git/index.rst:66
+msgid "Does this commit change or add new features in any way? Don't backport"
+msgstr ""
+
+#: ../../topics/git/index.rst:68
+msgid "Is this a PEP8 or code cleanup commit? Don't backport"
+msgstr ""
+
+#: ../../topics/git/index.rst:70
+msgid "Does this commit fix a security issue? Backport"
+msgstr ""
+
+#: ../../topics/git/index.rst:73
+msgid ""
+"Determining when a point release is going to be made is up to the project "
+"leader (Thomas Hatch). Generally point releases are made every 1-2 weeks or "
+"if there is a security fix they can be made sooner."
+msgstr ""
+
+#: ../../topics/git/index.rst:77
+msgid ""
+"The point release is only designated by tagging the commit on the release "
+"branch with release number using the existing convention (version 0.11.1 is "
+"tagged with v0.11.1). From the tag point a new source tarball is generated "
+"and published to PyPI, and a release announcement is made."
+msgstr ""

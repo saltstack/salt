@@ -1,0 +1,122 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.mysql_user.rst:6
+msgid "salt.states.mysql_user"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of salt.states.mysql_user:2
+msgid "Management of MySQL users."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of salt.states.mysql_user:4
+msgid "MySQLdb Python module"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of salt.states.mysql_user:5
+msgid "See :py:mod:`salt.modules.mysql` for setup instructions."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of salt.states.mysql_user:15
+msgid "Authentication overrides have been added."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of salt.states.mysql_user:18
+msgid ""
+"The MySQL authentication information specified in the minion config file can"
+" be overidden in states using the following arguments: ``connection_host``, "
+"``connection_port``, ``connection_user``, ``connection_pass``, "
+"``connection_db``, ``connection_unix_socket``, and "
+"``connection_default_file``."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.absent:1
+msgid "Ensure that the named user is absent"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.absent:3 ../../../salt/states/mysql_user.pydocstring
+#: of salt.states.mysql_user.present:6
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.absent:4
+msgid "The name of the user to remove"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:1
+msgid ""
+"Ensure that the named user is present with the specified properties. A "
+"passwordless user can be configured by omitting ``password`` and "
+"``password_hash``, and setting ``allow_passwordless`` to ``True``."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:6
+msgid "The name of the user to manage"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:9
+msgid "host"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:9
+msgid "Host for which this user/password combo applies"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:13
+msgid "password"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:12
+msgid ""
+"The password to use for this user. Will take precedence over the "
+"``password_hash`` option if both are specified."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:26
+msgid "password_hash"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:16
+msgid ""
+"The password in hashed form. Be sure to quote the password because YAML "
+"doesn't like the ``*``. A password hash can be obtained from the mysql "
+"command-line client like so::"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:30
+msgid "allow_passwordless"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:29
+msgid ""
+"If ``True``, then ``password`` and ``password_hash`` can be omitted to "
+"permit a passwordless login."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.pydocstring of
+#: salt.states.mysql_user.present:33
+msgid "The ``allow_passwordless`` option will be available in version 0.16.2."
+msgstr ""

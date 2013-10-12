@@ -1,0 +1,72 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.host.rst:6
+msgid "salt.states.host"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host:2
+msgid "Management of addresses and names in hosts file."
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host:4
+msgid ""
+"The /etc/hosts file can be managed to contain definitions for specific "
+"hosts:"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host:12
+msgid ""
+"Or using the \"names:\" directive, you can put several names for the same "
+"IP. (Do not try one name with space-separated values)."
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host:24
+msgid ""
+"NOTE: changing the name(s) in the present() function does not cause an "
+"update to remove the old entry."
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host.absent:1
+msgid "Ensure that the named host is absent"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host.absent:4
+#: ../../../salt/states/host.pydocstring of salt.states.host.present:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host.absent:4
+msgid "The host to remove"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host.absent:6
+#: ../../../salt/states/host.pydocstring of salt.states.host.present:6
+msgid "ip"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host.absent:7
+msgid "The ip addr of the host to remove"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host.present:1
+msgid "Ensures that the named host is present with the given ip"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host.present:4
+msgid "The host to assign an ip to"
+msgstr ""
+
+#: ../../../salt/states/host.pydocstring of salt.states.host.present:7
+msgid "The ip addr to apply to the host"
+msgstr ""

@@ -1,0 +1,216 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.9.4.rst:6
+msgid "Salt 0.9.4 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:8
+msgid ""
+"Salt 0.9.4 has arrived. This is a critical update that repairs a number of "
+"key bugs found in 0.9.3. But this update is not without feature additions as"
+" well! 0.9.4 adds support for Gentoo portage to the pkg module and state "
+"system. Also there are 2 major new state additions, the failhard option and "
+"the ability to set up finite state ordering with the ``order`` option."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:14
+msgid ""
+"This release also sees our largest increase in community contributions. "
+"These contributors have and continue to be the life blood of the Salt "
+"project, and the team continues to grow. I want to put out a big thanks to "
+"our new and existing contributors."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:20
+msgid "Download!"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:22
+msgid "The Salt source can be downloaded from the salt GitHub site:"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:24
+msgid ":download:`salt-0.9.4.tar.gz`"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:26
+msgid "Or from PyPI:"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:28
+msgid "http://pypi.python.org/packages/source/s/salt/salt-0.9.4.tar.gz"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:30
+msgid ""
+"For instructions on how to set up Salt please see the :ref:`installation` "
+"instructions."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:34
+msgid "New Features"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:37
+msgid "Failhard State Option"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:39
+msgid ""
+"Normally, when a state fails Salt continues to execute the remainder of the "
+"defined states and will only refuse to execute states that require the "
+"failed state."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:43
+msgid ""
+"But the situation may exist, where you would want all state execution to "
+"stop if a single state execution fails. The capability to do this is called "
+"``failing hard``."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:48
+msgid "State Level Failhard"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:50
+msgid ""
+"A single state can have a failhard set, this means that if this individual "
+"state fails that all state execution will immediately stop. This is a great "
+"thing to do if there is a state that sets up a critical config file and "
+"setting a require for each state that reads the config would be cumbersome. "
+"A good example of this would be setting up a package manager early on:"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:68
+msgid ""
+"In this situation, the yum repo is going to be configured before other "
+"states, and if it fails to lay down the config file, than no other states "
+"will be executed."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:73
+msgid "Global Failhard"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:75
+msgid ""
+"It may be desired to have failhard be applied to every state that is "
+"executed, if this is the case, then failhard can be set in the master "
+"configuration file. Setting failhard in the master configuration file will "
+"result in failing hard when any minion gathering states from the master have"
+" a state fail."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:80
+msgid ""
+"This is NOT the default behavior, normally Salt will only fail states that "
+"require a failed state."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:83
+msgid ""
+"Using the global failhard is generally not recommended, since it can result "
+"in states not being executed or even checked. It can also be confusing to "
+"see states failhard if an admin is not actively aware that the failhard has "
+"been set."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:88
+msgid ""
+"To use the global failhard set failhard: True in the master configuration"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:91
+msgid "Finite Ordering of State Execution"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:93
+msgid ""
+"When creating salt sls files, it is often important to ensure that they run "
+"in a specific order. While states will always execute in the same order, "
+"that order is not necessarily defined the way you want it."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:97
+msgid ""
+"A few tools exist in Salt to set up the correct state ordering, these tools "
+"consist of requisite declarations and order options."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:101
+msgid "The Order Option"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:103
+msgid ""
+"Before using the order option, remember that the majority of state ordering "
+"should be done with requisite statements, and that a requisite statement "
+"will override an order option."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:107
+msgid ""
+"The order option is used by adding an order number to a state declaration "
+"with the option `order`:"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:117
+msgid ""
+"By adding the order option to `1` this ensures that the vim package will be "
+"installed in tandem with any other state declaration set to the order `1`."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:120
+msgid ""
+"Any state declared without an order option will be executed after all states"
+" with order options are executed."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:123
+msgid ""
+"But this construct can only handle ordering states from the beginning. "
+"Sometimes you may want to send a state to the end of the line, to do this "
+"set the order to last:"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:134
+msgid ""
+"Substantial testing has gone into the state system and it is ready for real "
+"world usage. A great deal has been added to the documentation for states and"
+" the modules and functions available to states have been cleanly documented."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:138
+msgid ""
+"A number of State System bugs have also been founds and repaired, the output"
+" from the state system has also been refined to be extremely clear and "
+"concise."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:141
+msgid ""
+"Error reporting has also been introduced, issues found in sls files will now"
+" be clearly reported when executing Salt States."
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:146
+msgid "Gentoo Support"
+msgstr ""
+
+#: ../../topics/releases/0.9.4.rst:148
+msgid ""
+"Additional experimental support has been added for Gentoo. This is found in "
+"the contribution from Doug Renn, aka nestegg."
+msgstr ""

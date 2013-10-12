@@ -1,0 +1,76 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/returners/all/salt.returners.smtp_return.rst:6
+msgid "salt.returners.smtp_return"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:1
+msgid "Return salt data via email"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:3
+msgid "The following fields can be set in the minion conf file:"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:5
+msgid ""
+"smtp.from (required) smtp.to (required) smtp.host (required) smtp.port "
+"(optional, defaults to 25) smtp.username (optional) smtp.password (optional)"
+" smtp.tls (optional, defaults to False) smtp.subject (optional, but helpful)"
+" smtp.fields (optional)"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:15
+msgid "There are a few things to keep in mind:"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:17
+msgid "If a username is used, a password is also required."
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:18
+msgid "You should at least declare a subject, but you don't have to."
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:19
+msgid ""
+"smtp.fields lets you include the value(s) of various fields in the subject "
+"line of the email. These are comma-delimited. For instance:"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:22
+msgid "smtp.fields: id,fun"
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return:24
+msgid ""
+"...will display the id of the minion and the name of the function in the "
+"subject line. You may also use 'jid' (the job id), but it is generally "
+"recommended not to use 'return', which contains the entire return data "
+"structure (which can be very large)."
+msgstr ""
+
+#: ../../../salt/returners/smtp_return.pydocstring of
+#: salt.returners.smtp_return.returner:1
+msgid "Send an email with the data"
+msgstr ""

@@ -1,0 +1,102 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/dynamic-modules.rst:6
+msgid "Dynamic Module Distribution"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:10
+msgid ""
+"Salt Python modules can be distributed automatically via the Salt file "
+"server. Under the root of any environment defined via the "
+":conf_master:`file_roots` option on the master server directories "
+"corresponding to the type of module can be used."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:16
+msgid "Module sync"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:18
+msgid ""
+"Automatically transfer and load modules, grains, renderers, returners, "
+"states, etc from the master to the minions."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:21
+msgid "The directories are prepended with an underscore:"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:23
+msgid ":file:`_modules`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:24
+msgid ":file:`_grains`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:25
+msgid ":file:`_renderers`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:26
+msgid ":file:`_returners`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:27
+msgid ":file:`_states`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:29
+msgid ""
+"The contents of these directories need to be synced over to the minions "
+"after Python modules have been created in them. There are a number of ways "
+"to sync the modules."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:34
+msgid "Sync Via States"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:36
+msgid ""
+"The minion configuration contains an option ``autoload_dynamic_modules`` "
+"which defaults to True. This option makes the state system refresh all "
+"dynamic modules when states are run. To disable this behavior set "
+"``autoload_dynamic_modules`` to False in the minion config."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:41
+msgid ""
+"When dynamic modules are autoloaded via states, modules only pertinent to "
+"the environments matched in the master's top file are downloaded."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:44
+msgid ""
+"This is important to remember, because modules can be manually loaded from "
+"any specific environment that environment specific modules will be loaded "
+"when a state run is executed."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:49
+msgid "Sync Via the saltutil Module"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:51
+msgid ""
+"The saltutil module has a number of functions that can be used to sync all "
+"or specific dynamic modules. The saltutil module function "
+"``saltutil.sync_all`` will sync all module types over to a minion. For more "
+"information see: :mod:`salt.modules.saltutil`"
+msgstr ""

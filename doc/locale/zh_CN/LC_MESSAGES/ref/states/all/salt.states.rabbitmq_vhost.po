@@ -1,0 +1,119 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.rabbitmq_vhost.rst:6
+msgid "salt.states.rabbitmq_vhost"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost:1
+msgid "Manage RabbitMQ Virtual Hosts."
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.absent:1
+msgid "Ensure the RabbitMQ Virtual Host is absent"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.absent:3
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:3
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.absent:4
+msgid "Name of the Virtual Host to remove"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.absent:5
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:18
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.absent:6
+msgid "User to run the command"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:1
+msgid "Ensure the RabbitMQ VHost exists."
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:4
+msgid "VHost name"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:6
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:6
+msgid ""
+"Initial user permission to set on the VHost, if present .. deprecated:: "
+"0.17.0"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:8
+msgid "owner"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:9
+msgid "Initial owner permission to set on the VHost, if present"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:10
+msgid "conf"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:11
+msgid "Initial conf string to apply to the VHost and user. Defaults to .*"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:13
+msgid "write"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:13
+msgid ""
+"Initial write permissions to apply to the VHost and user. Defaults to .*"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:16
+msgid "read"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:16
+msgid ""
+"Initial read permissions to apply to the VHost and user. Defaults to .*"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_vhost.pydocstring of
+#: salt.states.rabbitmq_vhost.present:19
+msgid "Name of the user to run the command"
+msgstr ""

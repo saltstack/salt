@@ -1,0 +1,134 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.9.2.rst:6
+msgid "Salt 0.9.2 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:8
+msgid ""
+"Salt 0.9.2 has arrived! 0.9.2 is primarily a bugfix release, the exciting "
+"component in 0.9.2 is greatly improved support for salt states. All of the "
+"salt states interfaces have been more thoroughly tested and the new salt-"
+"states git repo is growing with example of how to use states."
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:13
+msgid ""
+"This release introduces salt states for early developers and testers to "
+"start helping us clean up the states interface and make it ready for the "
+"world!"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:16
+msgid "0.9.2 also fixes a number of bugs found on Python 2.6."
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:19
+msgid "Download!"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:21
+msgid "The Salt source can be downloaded from the salt GitHub site:"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:23
+msgid ":download:`salt-0.9.2.tar.gz`"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:25
+msgid "Or from PyPI:"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:27
+msgid "http://pypi.python.org/packages/source/s/salt/salt-0.9.2.tar.gz"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:29
+msgid ""
+"For instructions on how to set up Salt please see the :ref:`installation` "
+"instructions."
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:33
+msgid "New Features"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:36
+msgid "Salt-Call Additions"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:38
+msgid ""
+"The salt-call command has received an overhaul, it now hooks into the "
+"outputter system so command output looks clean, and the logging system has "
+"been hooked into salt-call, so the -l option allows the logging output from "
+"salt minion functions to be displayed."
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:43
+msgid ""
+"The end result is that the salt-call command can execute the state system "
+"and return clean output:"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:51
+msgid "State System Fixes"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:53
+msgid ""
+"The state system has been tested and better refined. As of this release the "
+"state system is ready for early testers to start playing with. If you are "
+"interested in working with the state system please check out the (still very"
+" small) salt-states GitHub repo:"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:58
+msgid "https://github.com/thatch45/salt-states"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:60
+msgid ""
+"This git repo is the active development branch for determining how a clean "
+"salt-state database should look and act. Since the salt state system is "
+"still very young a lot of help is still needed here. Please fork the salt-"
+"states repo and help us develop a truly large and scalable system for "
+"configuration management!"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:67
+msgid "Notable Bug Fixes"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:70
+msgid "Python 2.6 String Formatting"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:72
+msgid ""
+"Python 2.6 does not support format strings without an index identifier, all "
+"of them have been repaired."
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:76
+msgid "Cython Loading Disabled by Default"
+msgstr ""
+
+#: ../../topics/releases/0.9.2.rst:78
+msgid ""
+"Cython loading requires a development tool chain to be installed on the "
+"minion, requiring this by default can cause problems for most Salt "
+"deployments. If Cython auto loading is desired it will need to be turned on "
+"in the minion config."
+msgstr ""

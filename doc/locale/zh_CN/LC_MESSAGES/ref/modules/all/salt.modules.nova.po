@@ -1,0 +1,202 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.nova.rst:6
+msgid "salt.modules.nova"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova:1
+msgid "Module for handling openstack nova calls."
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova:3
+msgid "novaclient Python module"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova:4
+msgid ""
+"This module is not usable until the user, password, tenant, and auth URL are"
+" specified either in a pillar or in the minion's config file. For example::"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova:15
+msgid ""
+"If configuration for multiple openstack accounts is required, they can be "
+"set up as different configuration profiles: For example::"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova:31
+msgid ""
+"With this configuration in place, any of the nova functions can make use of "
+"a configuration profile by declaring it explicitly. For example::"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.boot:1
+msgid "Boot (create) a new instance"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.boot:3
+msgid ""
+"<name>        Name of the new instance (must be first) <flavor_id>   Unique "
+"integer ID for the flavor <image_id>    Unique integer ID for the image"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.boot:7
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.delete:5
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.flavor_create:10 ../../../salt/modules/nova.pydocstring
+#: of salt.modules.nova.flavor_delete:3 ../../../salt/modules/nova.pydocstring
+#: of salt.modules.nova.flavor_list:3 ../../../salt/modules/nova.pydocstring
+#: of salt.modules.nova.keypair_delete:3
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.keypair_list:3
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.lock:5
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.resume:5
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.secgroup_create:3 ../../../salt/modules/nova.pydocstring
+#: of salt.modules.nova.secgroup_delete:3
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.secgroup_list:3
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.server_list:3
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.server_show:3
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.suspend:5
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.boot:13
+msgid ""
+"The flavor_id and image_id are obtained from nova.flavor_list and "
+"nova.image_list"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.delete:1
+msgid "Delete an instance"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.delete:3
+msgid "<instance_id>        ID of the instance to be deleted"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.flavor_create:1
+msgid ""
+"Add a flavor to nova (nova flavor-create). The following parameters are "
+"required:"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.flavor_create:4
+msgid ""
+"<name>   Name of the new flavor (must be first) <id>     Unique integer ID "
+"for the new flavor <ram>    Memory size in MB <disk>   Disk size in GB "
+"<vcpus>  Number of vcpus"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.flavor_delete:1
+msgid "Delete a flavor from nova by id (nova flavor-delete)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.flavor_list:1
+msgid "Return a list of available flavors (nova flavor-list)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.image_list:1
+msgid ""
+"Return a list of available images (nova images-list + nova image-show) If a "
+"name is provided, only that image will be displayed."
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.image_list:4
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.image_meta_delete:3
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.image_meta_set:3 ../../../salt/modules/nova.pydocstring
+#: of salt.modules.nova.keypair_add:3
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.image_meta_delete:1
+msgid ""
+"Delete a key=value pair from the metadata for an image (nova image-meta set)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.image_meta_set:1
+msgid ""
+"Sets a key=value pair in the metadata for an image (nova image-meta set)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.keypair_add:1
+msgid "Add a keypair to nova (nova keypair-add)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.keypair_delete:1
+msgid "Add a keypair to nova (nova keypair-delete)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.keypair_list:1
+msgid "Return a list of available keypairs (nova keypair-list)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.list_:1
+msgid ""
+"To maintain the feel of the nova command line, this function simply calls "
+"the server_list function."
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.lock:1
+msgid "Lock an instance"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.lock:3
+msgid "<instance_id>        ID of the instance to be locked"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.resume:1
+msgid "Resume an instance"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.resume:3
+msgid "<instance_id>        ID of the instance to be resumed"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.secgroup_create:1
+msgid "Add a secgroup to nova (nova secgroup-create)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of
+#: salt.modules.nova.secgroup_delete:1
+msgid "Delete a secgroup to nova (nova secgroup-delete)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.secgroup_list:1
+msgid "Return a list of available security groups (nova items-list)"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.server_list:1
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.server_show:1
+msgid "Return detailed information for an active server"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.show:1
+msgid ""
+"To maintain the feel of the nova command line, this function simply calls "
+"the server_show function."
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.suspend:1
+msgid "Suspend an instance"
+msgstr ""
+
+#: ../../../salt/modules/nova.pydocstring of salt.modules.nova.suspend:3
+msgid "<instance_id>        ID of the instance to be suspended"
+msgstr ""

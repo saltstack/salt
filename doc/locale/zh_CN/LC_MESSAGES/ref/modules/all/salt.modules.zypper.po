@@ -1,0 +1,195 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.zypper.rst:6
+msgid "salt.modules.zypper"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper:1
+msgid "Package support for openSUSE via the zypper package manager"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:1
+msgid ""
+"Install the passed package(s), add refresh=True to run 'zypper refresh' "
+"before package is installed."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:15
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.purge:6
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.remove:5
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:5
+msgid ""
+"The name of the package to be installed. Note that this parameter is ignored"
+" if either \"pkgs\" or \"sources\" is passed. Additionally, please note that"
+" this option can only be used to install packages from a software "
+"repository. To install a package file manually, use the \"sources\" option."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:11
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:48
+#: ../../../salt/modules/zypper.pydocstring of
+#: salt.modules.zypper.latest_version:8
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.list_pkgs:5
+#: ../../../salt/modules/zypper.pydocstring of
+#: salt.modules.zypper.list_upgrades:3
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.purge:19
+#: ../../../salt/modules/zypper.pydocstring of
+#: salt.modules.zypper.refresh_db:5 ../../../salt/modules/zypper.pydocstring
+#: of salt.modules.zypper.remove:18 ../../../salt/modules/zypper.pydocstring
+#: of salt.modules.zypper.upgrade:8 ../../../salt/modules/zypper.pydocstring
+#: of salt.modules.zypper.upgrade_available:3
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.version:5
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:18
+msgid "refresh"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:18
+msgid "Whether or not to refresh the package database before installing."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:24
+msgid "version"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:21
+msgid ""
+"Can be either a version number, or the combination of a comparison operator "
+"(<, >, <=, >=, =) and a version number (ex. '>1.2.3-4'). This parameter is "
+"ignored if \"pkgs\" or \"sources\" is passed."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:26
+msgid "Multiple Package Installation Options:"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:41
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.purge:12
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.remove:11
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:29
+msgid ""
+"A list of packages to install from a software repository. Must be passed as "
+"a python list. A specific version number can be specified by using a single-"
+"element dict representing the package and its version. As with the "
+"``version`` parameter above, comparison operators can be used to target a "
+"specific version of a package."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:35
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:53
+msgid "sources"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:44
+msgid ""
+"A list of RPM packages to install. Must be passed as a list of dicts, with "
+"the keys being package names, and the values being the source URI or local "
+"path to the package."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.install:55
+msgid "Returns a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of
+#: salt.modules.zypper.latest_version:1
+msgid ""
+"Return the latest version of the named package available for upgrade or "
+"installation. If more than one package name is specified, a dict of "
+"name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of
+#: salt.modules.zypper.latest_version:5
+msgid ""
+"If the latest version of a given package is already installed, an empty "
+"string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.list_pkgs:1
+msgid "List the packages currently installed as a dict::"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of
+#: salt.modules.zypper.list_upgrades:1
+msgid "List all available package upgrades on this system"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.purge:1
+msgid ""
+"Recursively remove a package and all dependencies which were installed with "
+"it, this will call a ``zypper -n remove -u``"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.purge:5
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.remove:4
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.purge:8
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.remove:7
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.purge:11
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.remove:10
+msgid ""
+"A list of packages to delete. Must be passed as a python list. The ``name`` "
+"parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.purge:17
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.remove:16
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of
+#: salt.modules.zypper.refresh_db:1
+msgid "Just run a ``zypper refresh``, return a dict::"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.remove:1
+msgid "Remove packages with ``zypper -n remove``"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.upgrade:1
+msgid "Run a full system upgrade, a zypper upgrade"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.upgrade:3
+msgid "Return a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of
+#: salt.modules.zypper.upgrade_available:1
+msgid "Check whether or not an upgrade is available for a given package"
+msgstr ""
+
+#: ../../../salt/modules/zypper.pydocstring of salt.modules.zypper.version:1
+msgid ""
+"Returns a string representing the package version or an empty string if not "
+"installed. If more than one package name is specified, a dict of "
+"name/version pairs is returned."
+msgstr ""

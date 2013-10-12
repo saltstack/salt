@@ -1,0 +1,156 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/index.rst:6
+msgid "Introduction to Salt"
+msgstr ""
+
+#: ../../topics/index.rst:9
+msgid "We’re not just talking about NaCl."
+msgstr ""
+
+#: ../../topics/index.rst:11
+msgid "The 30 second summary"
+msgstr ""
+
+#: ../../topics/index.rst:13
+msgid "Salt is:"
+msgstr ""
+
+#: ../../topics/index.rst:15
+msgid ""
+"a configuration management system, capable of maintaining remote nodes in "
+"defined states (for example, ensuring that specific packages are installed "
+"and specific services are running)"
+msgstr ""
+
+#: ../../topics/index.rst:19
+msgid ""
+"a distributed remote execution system used to execute commands and query "
+"data on remote nodes, either individually or by arbitrary selection criteria"
+msgstr ""
+
+#: ../../topics/index.rst:23
+msgid ""
+"It was developed in order to bring the best solutions found in the world of "
+"remote execution together and make them better, faster, and more malleable. "
+"Salt accomplishes this through its ability to handle large loads of "
+"information, and not just dozens but hundreds and even thousands of "
+"individual servers quickly through a simple and manageable interface."
+msgstr ""
+
+#: ../../topics/index.rst:30
+msgid "Simplicity"
+msgstr ""
+
+#: ../../topics/index.rst:32
+msgid ""
+"Providing versatility between massive scale deployments and smaller systems "
+"may seem daunting, but Salt is very simple to set up and maintain, "
+"regardless of the size of the project. The architecture of Salt is designed "
+"to work with any number of servers, from a handful of local network systems "
+"to international deployments across different datacenters. The topology is a"
+" simple server/client model with the needed functionality built into a "
+"single set of daemons. While the default configuration will work with little"
+" to no modification, Salt can be fine tuned to meet specific needs."
+msgstr ""
+
+#: ../../topics/index.rst:42
+msgid "Parallel execution"
+msgstr ""
+
+#: ../../topics/index.rst:44
+msgid "The core functions of Salt:"
+msgstr ""
+
+#: ../../topics/index.rst:46
+msgid ""
+"enable commands to remote systems to be called in parallel rather than "
+"serially"
+msgstr ""
+
+#: ../../topics/index.rst:47
+msgid "use a secure and encrypted protocol"
+msgstr ""
+
+#: ../../topics/index.rst:48
+msgid "use the smallest and fastest network payloads possible"
+msgstr ""
+
+#: ../../topics/index.rst:49
+msgid "provide a simple programming interface"
+msgstr ""
+
+#: ../../topics/index.rst:51
+msgid ""
+"Salt also introduces more granular controls to the realm of remote "
+"execution, allowing systems to be targeted not just by hostname, but also by"
+" system properties."
+msgstr ""
+
+#: ../../topics/index.rst:56
+msgid "Building on proven technology"
+msgstr ""
+
+#: ../../topics/index.rst:58
+msgid ""
+"Salt takes advantage of a number of technologies and techniques. The "
+"networking layer is built with the excellent `ZeroMQ`_ networking library, "
+"so the Salt daemon includes a viable and transparent AMQ broker. Salt uses "
+"public keys for authentication with the master daemon, then uses faster "
+"`AES`_ encryption for payload communication; authentication and encryption "
+"are integral to Salt.  Salt takes advantage of communication via `msgpack`_,"
+" enabling fast and light network traffic."
+msgstr ""
+
+#: ../../topics/index.rst:72
+msgid "Python client interface"
+msgstr ""
+
+#: ../../topics/index.rst:74
+msgid ""
+"In order to allow for simple expansion, Salt execution routines can be "
+"written as plain Python modules. The data collected from Salt executions can"
+" be sent back to the master server, or to any arbitrary program. Salt can be"
+" called from a simple Python API, or from the command line, so that Salt can"
+" be used to execute one-off commands as well as operate as an integral part "
+"of a larger application."
+msgstr ""
+
+#: ../../topics/index.rst:82
+msgid "Fast, flexible, scalable"
+msgstr ""
+
+#: ../../topics/index.rst:84
+msgid ""
+"The result is a system that can execute commands at high speed on target "
+"server groups ranging from one to very many servers. Salt is very fast, easy"
+" to set up, amazingly malleable and provides a single remote execution "
+"architecture that can manage the diverse requirements of any number of "
+"servers.  The Salt infrastructure brings together the best of the remote "
+"execution world, amplifies its capabilities and expands its range, resulting"
+" in a system that is as versatile as it is practical, suitable for any "
+"network."
+msgstr ""
+
+#: ../../topics/index.rst:94
+msgid "Open"
+msgstr ""
+
+#: ../../topics/index.rst:96
+msgid ""
+"Salt is developed under the `Apache 2.0 license`_, and can be used for open "
+"and proprietary projects. Please submit your expansions back to the Salt "
+"project so that we can all benefit together as Salt grows. Please feel free "
+"to sprinkle Salt around your systems and let the deliciousness come forth."
+msgstr ""

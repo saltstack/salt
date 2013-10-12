@@ -1,0 +1,71 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/all/salt.fileserver.roots.rst:6
+msgid "salt.fileserver.roots"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of salt.fileserver.roots:1
+msgid "The default file server backend"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of salt.fileserver.roots:3
+msgid ""
+"Based on the environments in the :conf_master:`file_roots` configuration "
+"option."
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of
+#: salt.fileserver.roots.dir_list:1
+msgid "Return a list of all directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of salt.fileserver.roots.envs:1
+msgid "Return the file server environments"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of
+#: salt.fileserver.roots.file_hash:1
+msgid "Return a file hash, the hash type is set in the master config file"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of
+#: salt.fileserver.roots.file_list:1
+msgid ""
+"Return a list of all files on the file server in a specified environment"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of
+#: salt.fileserver.roots.file_list_emptydirs:1
+msgid "Return a list of all empty directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of
+#: salt.fileserver.roots.find_file:1
+msgid "Search the environment for the relative path"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of
+#: salt.fileserver.roots.serve_file:1
+msgid "Return a chunk from a file based on the data received"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of
+#: salt.fileserver.roots.symlink_list:1
+msgid "Return a dict of all symlinks based on a given path on the Master"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.pydocstring of
+#: salt.fileserver.roots.update:1
+msgid "When we are asked to update (regular interval) lets reap the cache"
+msgstr ""

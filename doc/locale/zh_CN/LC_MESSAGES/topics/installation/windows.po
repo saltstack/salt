@@ -1,0 +1,366 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/installation/windows.rst:6
+msgid "Windows"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:8
+msgid "Salt has full support for running the Salt Minion on Windows."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:10
+msgid ""
+"There are no plans for the foreseeable future to develop a Salt Master on "
+"Windows. For now you must run your Salt Master on a supported operating "
+"system to control your Salt Minions on Windows."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:14
+msgid ""
+"Many of the standard Salt modules have been ported to work on Windows and "
+"many of the Salt States currently work on Windows, as well."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:18
+msgid "Windows Installer"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:20
+msgid "A Salt Minion Windows installer can be found here:"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:22
+msgid "Download here"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:24
+msgid "0.17.0"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:25
+msgid "http://saltstack.com/downloads/Salt-Minion-0.17.0-win32-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:26
+msgid "http://saltstack.com/downloads/Salt-Minion-0.17.0-AMD64-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:28
+msgid "0.16.3"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:29
+msgid "http://saltstack.com/downloads/Salt-Minion-0.16.3-win32-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:30
+msgid "http://saltstack.com/downloads/Salt-Minion-0.16.3-AMD64-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:32
+msgid "0.16.2"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:33
+msgid "http://saltstack.com/downloads/Salt-Minion-0.16.2-win32-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:34
+msgid "http://saltstack.com/downloads/Salt-Minion-0.16.2-AMD64-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:36
+msgid "0.16.0"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:37
+msgid "http://saltstack.com/downloads/Salt-Minion-0.16.0-win32-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:38
+msgid "http://saltstack.com/downloads/Salt-Minion-0.16.0-AMD64-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:40
+msgid "0.15.3"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:41
+msgid "http://saltstack.com/downloads/Salt-Minion-0.15.3-win32-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:42
+msgid "http://saltstack.com/downloads/Salt-Minion-0.15.3-AMD64-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:44
+msgid "0.14.1"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:45
+msgid "http://saltstack.com/downloads/Salt-Minion-0.14.1-win32-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:46
+msgid "http://saltstack.com/downloads/Salt-Minion-0.14.1-AMD64-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:48
+msgid "0.14.0"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:49
+msgid "http://saltstack.com/downloads/Salt-Minion-0.14.0-win32-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:50
+msgid "http://saltstack.com/downloads/Salt-Minion-0.14.0-AMD64-Setup.exe"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:53
+msgid ""
+"The 64bit installer has been tested on Windows 7 64bit and Windows Server "
+"2008R2 64bit. The 32bit installer has been tested on Windows 2003 Server "
+"32bit. Please file a bug report on our GitHub repo if issues for other "
+"platforms are found."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:58
+msgid ""
+"The installer asks for 2 bits of information; the master hostname and the "
+"minion name. The installer will update the minion config with these options "
+"and then start the minion."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:62
+msgid ""
+"The `salt-minion` service will appear in the Windows Service Manager and can"
+" be started and stopped there or with the command line program `sc` like any"
+" other Windows service."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:66
+msgid ""
+"If the minion won't start, try installing the Microsoft Visual C++ 2008 x64 "
+"SP1 redistributable. Allow all Windows updates to run salt-minion smoothly."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:69
+msgid "Make sure that the minion config file has the line `ipc_mode: tcp`"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:72
+msgid "Silent Installer option"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:74
+msgid ""
+"The installer can be run silently by providing the `/S` option at the "
+"command line. The options `/master` and `/minion-name` allow for configuring"
+" the master hostname and minion name, respectively. Here's an example of "
+"using the silent installer:"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:84
+msgid "Installer Source"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:86
+msgid ""
+"The Salt Windows installer is built with the open-source NSIS compiler. The "
+"source for the installer is found in the pkg directory of the Salt repo "
+"here: https://github.com/saltstack/salt/blob/develop/pkg/windows/installer"
+"/Salt-Minion-Setup.nsi. To create the installer run ``python setup.py "
+"bdist_esky``, extract the frozen archive from ``dist/`` into "
+"``pkg/windows/buildenv/`` and run NSIS."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:92
+msgid ""
+"The NSIS installer can be found here: http://nsis.sourceforge.net/Main_Page"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:96
+msgid "Installation from source"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:98
+msgid ""
+"To install Salt from source one must install each dependency separately and "
+"configure Salt to run on your Windows host."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:101
+msgid ""
+"Rather than send you on a wild goose chase across the Internet, we've "
+"collected some of the more difficult to find installers in our GitHub repo "
+"for you."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:106
+msgid "Install on Windows XP 32bit"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:107
+msgid "Install `msysgit`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:109
+msgid "Clone the Salt git repository from GitHub"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:115
+msgid ""
+"Install Microsoft Visual Studio 2008 Express. You must use Visual Studio "
+"2008 Express, **not** Visual Studio 2010 Express."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:118
+msgid "Install `Python 2.7.x`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:120
+msgid "Add c:\\\\Python27 to your system path"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:122
+msgid ""
+"Install the Microsoft Visual C++ 2008 SP1 Redistributable, `vcredist_x86`_."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:124
+msgid "Install `Win32OpenSSL-1_0_0e.exe`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:126
+msgid "Choose first option to install in Windows system directory"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:128
+msgid "Install `pyzmq-2.1.11.win32-py2.7.msi`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:130
+msgid "Install `pycrypto-2.3.win32-py2.7.msi`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:132
+msgid "Install `M2Crypto`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:134
+msgid "Install `pywin32`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:136
+msgid "Install `PyYAML-3.10.win32-py2.7.msi`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:138
+msgid "Install `Cython-0.15.1.win32-py2.79.exe`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:140
+msgid "Download and run `distribute_setup.py`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:146
+msgid "Download and run `pip`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:152
+msgid "Add c:\\\\python27\\\\scripts to your path"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:154
+msgid "Close terminal window and open a new terminal window (*cmd*)"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:156
+msgid "Install jinja2"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:162
+msgid "Install wmi"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:168
+msgid "Install Messagepack"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:174
+msgid "Install Salt"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:181
+msgid "Edit c:\\\\etc\\\\salt\\\\minion"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:195
+msgid "Start the salt-minion"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:202
+msgid "On the salt-master accept the new minion's key"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:210
+msgid "Test that your minion is responding"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:212
+msgid "On the salt-master run:"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:219
+msgid "You should get the following response: {'your minion hostname': True}"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:223
+msgid "Single command bootstrap script"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:225
+msgid ""
+"On a 64 bit Windows host the following script makes an unattended install of"
+" salt, including all dependencies:"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:227
+msgid "Not up to date."
+msgstr ""
+
+#: ../../topics/installation/windows.rst:229
+msgid "This script is not up to date. Please use the installer found above"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:237
+msgid ""
+"You can execute the above command remotely from a Linux host using winexe:"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:244
+msgid "For more info check `http://csa-net.dk/salt`_"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:247
+msgid "Packages management under Windows 2003"
+msgstr ""
+
+#: ../../topics/installation/windows.rst:249
+msgid ""
+"On windows server 2003, you need to install optional component \"wmi windows"
+" installer provider\" to have full list of installed packages. If you don't "
+"have this, salt-minion can't report some installed softwares."
+msgstr ""

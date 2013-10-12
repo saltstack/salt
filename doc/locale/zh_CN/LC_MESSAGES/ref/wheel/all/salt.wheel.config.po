@@ -1,0 +1,32 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/wheel/all/salt.wheel.config.rst:6
+msgid "salt.wheel.config"
+msgstr ""
+
+#: ../../../salt/wheel/config.pydocstring of salt.wheel.config:1
+msgid "Manage the master configuration file"
+msgstr ""
+
+#: ../../../salt/wheel/config.pydocstring of salt.wheel.config.apply:1
+msgid "Set a single key"
+msgstr ""
+
+#: ../../../salt/wheel/config.pydocstring of salt.wheel.config.apply:5
+msgid "This will strip comments from your config file"
+msgstr ""
+
+#: ../../../salt/wheel/config.pydocstring of salt.wheel.config.values:1
+msgid "Return the raw values of the config file"
+msgstr ""

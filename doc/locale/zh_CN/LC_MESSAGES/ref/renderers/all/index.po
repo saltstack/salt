@@ -1,0 +1,60 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/renderers/all/index.rst:8
+msgid "Full list of builtin renderer modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`jinja <salt.renderers.jinja>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`json <salt.renderers.json>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mako <salt.renderers.mako>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`py <salt.renderers.py>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Pure python state renderer"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`pydsl <salt.renderers.pydsl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "A Python-based DSL"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`stateconf <salt.renderers.stateconf>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "A flexible renderer that takes a templating engine and a data format"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`wempy <salt.renderers.wempy>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`yaml <salt.renderers.yaml>`\\"
+msgstr ""

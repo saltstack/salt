@@ -1,0 +1,48 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.system.rst:6
+msgid "salt.modules.system"
+msgstr ""
+
+#: ../../../salt/modules/system.pydocstring of salt.modules.system:1
+msgid "Support for reboot, shutdown, etc"
+msgstr ""
+
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.halt:1
+msgid "Halt a running system"
+msgstr ""
+
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.halt:3
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.init:3
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.poweroff:3
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.reboot:3
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.shutdown:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.init:1
+msgid "Change the system runlevel on sysV compatible systems"
+msgstr ""
+
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.poweroff:1
+msgid "Poweroff a running system"
+msgstr ""
+
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.reboot:1
+msgid "Reboot the system using the 'reboot' command"
+msgstr ""
+
+#: ../../../salt/modules/system.pydocstring of salt.modules.system.shutdown:1
+msgid "Shutdown a running system"
+msgstr ""

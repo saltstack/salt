@@ -1,0 +1,246 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/pillar/index.rst:8
+msgid "Pillar of Salt"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:10
+msgid ""
+"Pillar is an interface for Salt designed to offer global values that can be "
+"distributed to all minions. Pillar data is managed in a similar way as the "
+"Salt State Tree."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:14
+msgid "Pillar was added to Salt in version 0.9.8"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:16
+msgid "Storing sensitive data"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:18
+msgid ""
+"Unlike state tree, pillar data is only available for the targeted minion "
+"specified by the matcher type.  This makes it useful for storing sensitive "
+"data specific to a particular minion."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:24
+msgid "Declaring the Master Pillar"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:26
+msgid ""
+"The Salt Master server maintains a pillar_roots setup that matches the "
+"structure of the file_roots used in the Salt file server. Like the Salt file"
+" server the ``pillar_roots`` option in the master config is based on "
+"environments mapping to directories. The pillar data is then mapped to "
+"minions based on matchers in a top file which is laid out in the same way as"
+" the state top file. Salt pillars can use the same matcher types as the "
+"standard top file."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:34
+msgid ""
+"The configuration for the :conf_master:`pillar_roots` in the master config "
+"file is identical in behavior and function as :conf_master:`file_roots`:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:43
+msgid ""
+"This example configuration declares that the base environment will be "
+"located in the ``/srv/pillar`` directory. The top file used matches the name"
+" of the top file used for States, and has the same structure:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:47
+msgid "``/srv/pillar/top.sls``"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:55
+msgid ""
+"This further example shows how to use other standard top matching types "
+"(grain matching is used in this example) to deliver specific salt pillar "
+"data to minions with different ``os`` grains:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:66
+msgid "``/srv/pillar/packages.sls``"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:78
+msgid ""
+"Now this data can be used from within modules, renderers, State SLS files, "
+"and more via the shared pillar :ref:`dict <python2:typesmapping>`:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:97
+msgid "Note that you cannot just list key/value-information in ``top.sls``."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:100
+msgid "Pillar namespace flattened"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:102
+msgid ""
+"The separate pillar files all share the same namespace. Given a ``top.sls`` "
+"of:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:112
+msgid "a ``packages.sls`` file of:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:118
+msgid "and a ``services.sls`` file of:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:124
+msgid ""
+"Then a request for the ``bind`` pillar will only return 'named'; the 'bind9'"
+" value is not available. It is better to structure your pillar files with "
+"more hierarchy. For example your ``package.sls`` file could look like:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:134
+msgid "Including Other Pillars"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:138
+msgid ""
+"Pillar SLS files may include other pillar files, similar to State files. Two"
+" syntaxes are available for this purpose. The simple form simply includes "
+"the additional pillar as if it were part of the same file:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:147
+msgid ""
+"The full include form allows two additional options -- passing default "
+"values to the templating engine for the included pillar file as well as an "
+"optional key under which to nest the results of the included pillar:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:159
+msgid ""
+"With this form, the included file (users.sls) will be nested within the "
+"'users' key of the compiled pillar. Additionally, the 'sudo' value will be "
+"available as a template variable to users.sls."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:165
+msgid "Viewing Minion Pillar"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:167
+msgid ""
+"Once the pillar is set up the data can be viewed on the minion via the "
+"``pillar`` module, the pillar module comes with two functions, "
+":mod:`pillar.items <salt.modules.pillar.items>` and and :mod:`pillar.raw "
+"<salt.modules.pillar.raw>`.  :mod:`pillar.items <salt.modules.pillar.items>`"
+" will return a freshly reloaded pillar and :mod:`pillar.raw "
+"<salt.modules.pillar.raw>` will return the current pillar without a refresh:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:179
+msgid ""
+"Prior to version 0.16.2, this function is named ``pillar.data``. This "
+"function name is still supported for backwards compatibility."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:184
+msgid "Pillar \"get\" Function"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:188
+msgid ""
+"The :mod:`pillar.get <salt.modules.pillar.get>` function works much in the "
+"same way as the ``get`` method in a python dict, but with an enhancement: "
+"nested dict components can be extracted using a `:` delimiter."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:192
+msgid "If a structure like this is in pillar:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:200
+msgid ""
+"Extracting it from the raw pillar in an sls formula or file template is done"
+" this way:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:207
+msgid ""
+"Now, with the new :mod:`pillar.get <salt.modules.pillar.get>` function the "
+"data can be safely gathered and a default can be set, allowing the template "
+"to fall back if the value is not available:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:215
+msgid "This makes handling nested structures much easier."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:219
+msgid "Refreshing Pillar Data"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:221
+msgid ""
+"When pillar data is changed on the master the minions need to refresh the "
+"data locally. This is done with the ``saltutil.refresh_pillar`` function."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:228
+msgid ""
+"This function triggers the minion to asynchronously refresh the pillar and "
+"will always return ``None``."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:232
+msgid "Targeting with Pillar"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:234
+msgid ""
+"Pillar data can be used when targeting minions. This allows for ultimate "
+"control and flexibility when targeting minions."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:241
+msgid ""
+"Like with :doc:`Grains <../targeting/grains>`, it is possible to use "
+"globbing as well as match nested values in Pillar, by adding colons for each"
+" level that is being traversed. The below example would match minions with a"
+" pillar named ``foo``, which is a dict containing a key ``bar``, with a "
+"value beginning with ``baz``:"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:253
+msgid "Master Config In Pillar"
+msgstr ""
+
+#: ../../topics/pillar/index.rst:255
+msgid ""
+"For convenience the data stored in the master configuration file is made "
+"available in all minion's pillars. This makes global configuration of "
+"services and systems very easy but may not be desired if sensitive data is "
+"stored in the master configuration."
+msgstr ""
+
+#: ../../topics/pillar/index.rst:260
+msgid ""
+"To disable the master config from being added to the pillar set "
+"``pillar_opts`` to ``False``:"
+msgstr ""

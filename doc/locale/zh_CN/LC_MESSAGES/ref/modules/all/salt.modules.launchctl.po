@@ -1,0 +1,70 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.launchctl.rst:6
+msgid "salt.modules.launchctl"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of salt.modules.launchctl:1
+msgid "Module for the management of MacOS systems that use launchd/launchctl"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of salt.modules.launchctl:3
+msgid "plistlib Python module"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.available:1
+msgid "Check that the given service is available."
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.available:3
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.get_all:3
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.restart:3
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.start:3 ../../../salt/modules/launchctl.pydocstring
+#: of salt.modules.launchctl.status:4
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.stop:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.get_all:1
+msgid "Return all installed services"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.restart:1
+msgid "Restart the named service"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.start:1
+msgid "Start the specified service"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.status:1
+msgid ""
+"Return the status for a service, returns a bool whether the service is "
+"running."
+msgstr ""
+
+#: ../../../salt/modules/launchctl.pydocstring of
+#: salt.modules.launchctl.stop:1
+msgid "Stop the specified service"
+msgstr ""

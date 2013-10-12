@@ -1,0 +1,163 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.test.rst:6
+msgid "salt.modules.test"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test:1
+msgid "Module for running arbitrary tests"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.arg:1
+msgid ""
+"Print out the data passed into the function ``*args`` and ```kwargs``, this "
+"is used to both test the publication data and cli argument passing, but also"
+" to display the information available within the publication data. Returns "
+"{\"args\": args, \"kwargs\": kwargs}."
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.arg:6
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.arg_repr:6
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.collatz:5
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.conf_test:4
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.cross_test:5
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.echo:3
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.fib:4
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.get_opts:3
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.kwarg:5
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.not_loaded:3
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.opts_pkg:5
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.outputter:3
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.ping:4
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.provider:3
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.providers:3
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.rand_sleep:4
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.retcode:3
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.sleep:4
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.tty:3
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.version:3
+#: ../../../salt/modules/test.pydocstring of
+#: salt.modules.test.versions_information:3
+#: ../../../salt/modules/test.pydocstring of
+#: salt.modules.test.versions_report:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.arg_repr:1
+msgid ""
+"Print out the data passed into the function ``*args`` and ```kwargs``, this "
+"is used to both test the publication data and cli argument passing, but also"
+" to display the information available within the publication data. Returns "
+"{\"args\": repr(args), \"kwargs\": repr(kwargs)}."
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.collatz:1
+msgid ""
+"Execute the collatz conjecture from the passed starting number, returns the "
+"sequence and the time it took to compute. Used for performance tests."
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.conf_test:1
+msgid ""
+"Return the value for test.foo in the minion configuration file, or return "
+"the default value"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.cross_test:1
+msgid ""
+"Execute a minion function via the __salt__ object in the test module, used "
+"to verify that the minion functions can be called via the __salt__ module."
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.echo:1
+msgid "Return a string - used for testing the connection"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.fib:1
+msgid ""
+"Return a Fibonacci sequence up to the passed number, and the timeit took to "
+"compute in seconds. Used for performance tests"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.get_opts:1
+msgid "Return the configuration options passed to this minion"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.kwarg:1
+msgid ""
+"Print out the data passed into the function ``**kwargs``, this is used to "
+"both test the publication data and cli kwarg passing, but also to display "
+"the information available within the publication data."
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.not_loaded:1
+msgid "List the modules that were not loaded by the salt loader system"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.opts_pkg:1
+msgid ""
+"Return an opts package with the grains and opts for this minion. This is "
+"primarily used to create the options used for master side state compiling "
+"routines"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.outputter:1
+msgid "Test the outputter, pass in data to return"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.ping:1
+msgid "Just used to make sure the minion is up and responding Return True"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.provider:1
+msgid "Pass in a function name to discover what provider is being used"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.providers:1
+msgid "Return a dict of the provider names and the files that provided them"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.rand_sleep:1
+msgid ""
+"Sleep for a random number of seconds, used to test long-running commands and"
+" minions returning at differing intervals"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.retcode:1
+msgid "Test that the returncode system is functioning correctly"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.sleep:1
+msgid ""
+"Instruct the minion to initiate a process that will sleep for a given period"
+" of time."
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.tty:1
+msgid "Echo a string to a specific tty"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of salt.modules.test.version:1
+msgid "Return the version of salt on the minion"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of
+#: salt.modules.test.versions_information:1
+msgid "Returns versions of components used by salt as a dict"
+msgstr ""
+
+#: ../../../salt/modules/test.pydocstring of
+#: salt.modules.test.versions_report:1
+msgid "Returns versions of components used by salt"
+msgstr ""

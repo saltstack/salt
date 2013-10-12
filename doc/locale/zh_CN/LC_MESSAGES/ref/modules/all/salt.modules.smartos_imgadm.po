@@ -1,0 +1,80 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.smartos_imgadm.rst:6
+msgid "salt.modules.smartos_imgadm"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm:1
+msgid "Module for running imgadm command on SmartOS"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.avail:1
+msgid "Return a list of available images"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.avail:3
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.delete:3
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.get:3
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.import_image:3
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.list_installed:3
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.show:3
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.update_installed:3
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.version:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.delete:1
+msgid "Remove an installed image"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.get:1
+msgid "Return info on an installed image"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.import_image:1
+msgid "Import an image from the repository"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.list_installed:1
+msgid "Return a list of installed images"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.show:1
+msgid "Show manifest of a given image"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.update_installed:1
+msgid "Gather info on unknown images (locally installed)"
+msgstr ""
+
+#: ../../../salt/modules/smartos_imgadm.pydocstring of
+#: salt.modules.smartos_imgadm.version:1
+msgid "Return imgadm version"
+msgstr ""

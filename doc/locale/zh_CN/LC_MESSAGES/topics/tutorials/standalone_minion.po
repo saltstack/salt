@@ -1,0 +1,105 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/standalone_minion.rst:6
+msgid "Standalone Minion"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:8
+msgid ""
+"Since the Salt minion contains such extensive functionality it can be useful"
+" to run it standalone. A standalone minion can be used to do a number of "
+"things:"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:12
+msgid "Stand up a master server via States (Salting a Salt Master)"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:13
+msgid "Use salt-call commands on a system without connectivity to a master"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:14
+msgid "Masterless States, run states entirely from files local to the minion"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:17
+msgid "Telling Salt Call to Run Masterless"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:19
+msgid ""
+"The salt-call command is used to run module functions locally on a minion "
+"instead of executing them from the master. Normally the salt-call command "
+"checks into the master to retrieve file server and pillar data, but when "
+"running standalone salt-call needs to be instructed to not check the master "
+"for this data. To instruct the minion to not look for a master when running "
+"salt-call the :conf_minion:`file_client` configuration option needs to be "
+"set. By default the :conf_minion:`file_client` is set to ``remote`` so that "
+"the minion knows that file server and pillar data are to be gathered from "
+"the master. When setting the :conf_minion:`file_client` option to ``local`` "
+"the minion is configured to not gather this data from the master."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:34
+msgid ""
+"Now the salt-call command will not look for a master and will assume that "
+"the local system has all of the file ad pillar resources."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:40
+msgid "Running States Masterless"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:42
+msgid ""
+"The state system can be easily run without a Salt master, with all needed "
+"files local to the minion. To do this the minion configuration file needs to"
+" be set up to know how to return file_roots information like the master. The"
+" file_roots setting defaults to /srv/salt for the base environment just like"
+" on the master:"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:53
+msgid ""
+"Now set up the Salt State Tree, top file, and SLS modules in the same way "
+"that they would be set up on a master. Now, with the "
+":conf_minion:`file_client` option set to ``local`` and an available state "
+"tree then calls to functions in the state module will use the information in"
+" the file_roots on the minion instead of checking in with the master."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:59
+msgid ""
+"Remember that when creating a state tree on a minion there are no syntax or "
+"path changes needed, SLS modules written to be used from a master do not "
+"need to be modified in any way to work with a minion."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:63
+msgid ""
+"This makes it easy to \"script\" deployments with Salt states without having"
+" to set up a master, and allows for these SLS modules to be easily moved "
+"into a Salt master as the deployment grows."
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:67
+msgid "Now the declared state can now be executed with:"
+msgstr ""
+
+#: ../../topics/tutorials/standalone_minion.rst:73
+msgid ""
+"Or the salt-call command can be executed with the ``--local`` flag, this "
+"makes it unnecessary to change the configuration file:"
+msgstr ""

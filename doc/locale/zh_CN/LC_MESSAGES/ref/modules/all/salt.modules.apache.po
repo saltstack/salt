@@ -1,0 +1,158 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.apache.rst:6
+msgid "salt.modules.apache"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache:1
+msgid "Support for Apache"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.a2dissite:1
+msgid "Runs a2dissite for the given site."
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.a2dissite:3
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.a2ensite:3
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.check_site_enabled:3
+msgid ""
+"This will only be functional on Debian-based operating systems (Ubuntu, "
+"Mint, etc)."
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.a2dissite:6
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.a2ensite:6
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.check_site_enabled:6
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.server_status:20
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.useradd:10
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.userdel:3
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.a2ensite:1
+msgid "Runs a2ensite for the given site."
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.check_site_enabled:1
+msgid ""
+"Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled."
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.directives:1
+msgid ""
+"Return list of directives together with expected arguments and places where "
+"the directive is valid (``apachectl -L``)"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.directives:4 ../../../salt/modules/apache.pydocstring
+#: of salt.modules.apache.fullversion:3
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.modules:3
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.servermods:3 ../../../salt/modules/apache.pydocstring
+#: of salt.modules.apache.signal:3 ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.version:3 ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.vhosts:6
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.fullversion:1
+msgid "Return server version from apachectl -V"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.modules:1
+msgid "Return list of static and shared modules from apachectl -M"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.server_status:1
+msgid "Get Information from the Apache server-status handler"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.server_status:3
+msgid ""
+"NOTE: the server-status handler is disabled by default. in order for this "
+"function to work it needs to be enabled. "
+"http://httpd.apache.org/docs/2.2/mod/mod_status.html"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.server_status:8
+msgid ""
+"The following configuration needs to exists in pillar/grains each entry "
+"nested in apache.server-status is a profile of a vhost/server this would "
+"give support for multiple apache servers/vhosts"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.server_status:18
+msgid "apache.server-status:"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.server_status:18
+msgid "'default':"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.server_status:14
+msgid ""
+"'url': http://localhost/server-status 'user': someuser 'pass': password "
+"'realm': 'authentication realm for digest passwords' 'timeout': 5"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of
+#: salt.modules.apache.servermods:1
+msgid "Return list of modules compiled into the server (apachectl -l)"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.signal:1
+msgid "Signals httpd to start, restart, or stop."
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.useradd:1
+msgid ""
+"Add an HTTP user using the htpasswd command. If the htpasswd file does not "
+"exist, it will be created. Valid options that can be passed are:"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.useradd:4
+msgid ""
+"n  Don't update file; display results on stdout. m  Force MD5 encryption of "
+"the password (default). d  Force CRYPT encryption of the password. p  Do not"
+" encrypt the password (plaintext). s  Force SHA encryption of the password."
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.userdel:1
+msgid "Delete an HTTP user from the specified htpasswd file."
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.version:1
+msgid "Return server version from apachectl -v"
+msgstr ""
+
+#: ../../../salt/modules/apache.pydocstring of salt.modules.apache.vhosts:1
+msgid ""
+"Show the settings as parsed from the config file (currently only shows the "
+"virtualhost settings). (``apachectl -S``) Because each additional virtual "
+"host adds to the execution time, this command may require a long timeout be "
+"specified."
+msgstr ""

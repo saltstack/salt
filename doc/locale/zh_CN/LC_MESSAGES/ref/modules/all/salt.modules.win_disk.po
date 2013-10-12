@@ -1,0 +1,32 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.win_disk.rst:6
+msgid "salt.modules.win_disk"
+msgstr ""
+
+#: ../../../salt/modules/win_disk.pydocstring of salt.modules.win_disk:1
+msgid "Module for gathering disk information on Windows"
+msgstr ""
+
+#: ../../../salt/modules/win_disk.pydocstring of salt.modules.win_disk:3
+msgid "win32api Python module"
+msgstr ""
+
+#: ../../../salt/modules/win_disk.pydocstring of salt.modules.win_disk.usage:1
+msgid "Return usage information for volumes mounted on this minion"
+msgstr ""
+
+#: ../../../salt/modules/win_disk.pydocstring of salt.modules.win_disk.usage:3
+msgid "CLI Example:"
+msgstr ""

@@ -72,8 +72,13 @@ for mod_name in MOCK_MODULES:
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
+try:
+    docs_basepath = os.path.abspath(os.path.dirname(__file__))
+except NameError:
+    # sphinx-intl and six execute some code which will raise this NameError
+    # assume we're in the doc/ directory
+    docs_basepath = os.path.abspath(os.path.dirname('.'))
 
-docs_basepath = os.path.abspath(os.path.dirname(__file__))
 addtl_paths = (
         os.pardir, # salt itself (for autodoc)
         '_ext', # custom Sphinx extensions
@@ -82,6 +87,8 @@ addtl_paths = (
 for path in addtl_paths:
     sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))
 
+
+# We're now able to import salt
 import salt.version
 
 
@@ -140,6 +147,10 @@ extlinks = {
 }
 
 
+# ----- Localization -------------------------------------------------------->
+locale_dirs = ['locale/']
+gettext_compact = False
+# <---- Localization ---------------------------------------------------------
 ### HTML options
 if on_rtd:
     html_theme = 'default'

@@ -1,0 +1,163 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.archive.rst:6
+msgid "salt.modules.archive"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive:1
+msgid "A module to wrap archive calls"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.gunzip:1
+msgid "Uses the gunzip command to unpack gzip files"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.gunzip:3
+msgid "CLI Example to create ``/tmp/sourcefile.txt``:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.gunzip:9
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.gzip:9
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.rar:10
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.unrar:10
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.unzip:9
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.zip_:9
+msgid ""
+"The template arg can be set to 'jinja' or another supported template engine "
+"to render the command arguments before execution."
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.gunzip:12
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.gzip:12
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.rar:4
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:30
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.unrar:4
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.unzip:3
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.zip_:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.gzip:1
+msgid "Uses the gzip command to create gzip files"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.gzip:3
+msgid "CLI Example to create ``/tmp/sourcefile.txt.gz``:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.rar:1
+msgid ""
+"Uses the rar command to create rar files Uses rar for Linux from "
+"http://www.rarlab.com/"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.rar:13
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.unrar:13
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.unzip:12
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.zip_:12
+msgid "For example:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:3
+msgid ""
+"This function has changed for version 0.17.0. In prior versions, the ``cwd``"
+" and ``template`` arguments must be specified, with the source "
+"directories/files coming as a space-separated list at the end of the "
+"command. Beginning with 0.17.0, ``sources`` must be a comma-separated list, "
+"and the ``cwd`` and ``template`` arguments are optional."
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:9
+msgid "Uses the tar command to pack, unpack, etc tar files"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:13
+msgid "options:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:13
+msgid "Options to pass to the ``tar`` binary."
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:16
+msgid "tarfile:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:16
+msgid "The tar filename to pack/unpack."
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:19
+msgid "sources:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:19
+msgid "Comma delimited list of files to **pack** into the tarfile."
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:22
+msgid "dest:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:22
+msgid "The destination directory to **unpack** the tarfile to."
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:25
+msgid "cwd:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:25
+msgid "The directory in which the tar command should be executed."
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:28
+msgid "template:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:28
+msgid "Template engine name to render the command arguments before execution."
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:37
+msgid ""
+"The template arg can be set to ``jinja`` or another supported template "
+"engine to render the command arguments before execution. For example:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:45
+msgid "To unpack a tarfile, for example:"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:47
+msgid "..code-block:: bash"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.tar:49
+msgid "salt '*' archive.tar foo.tar xf dest=/target/directory"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.unrar:1
+msgid ""
+"Uses the unrar command to unpack rar files Uses rar for Linux from "
+"http://www.rarlab.com/"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.unzip:1
+msgid "Uses the unzip command to unpack zip files"
+msgstr ""
+
+#: ../../../salt/modules/archive.pydocstring of salt.modules.archive.zip_:1
+msgid "Uses the zip command to create zip files"
+msgstr ""

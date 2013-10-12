@@ -1,0 +1,60 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/mine/index.rst:6
+msgid "The Salt Mine"
+msgstr ""
+
+#: ../../topics/mine/index.rst:8
+msgid ""
+"Granted, it took a while for this name to be used in Salt, but version "
+"0.15.0 introduces a new system to Salt called the Salt Mine."
+msgstr ""
+
+#: ../../topics/mine/index.rst:11
+msgid ""
+"The Salt Mine is used to bridge the gap between setting static variables and"
+" gathering live data. The Salt mine is used to collect arbitrary data from "
+"minions and store it on the master. This data is then made available to all "
+"minions via the ``mine`` module."
+msgstr ""
+
+#: ../../topics/mine/index.rst:16
+msgid ""
+"The data is gathered on the minion and sent back to the master where only "
+"the most recent data is maintained (if long term data is required use "
+"returners or the external job cache)."
+msgstr ""
+
+#: ../../topics/mine/index.rst:21
+msgid "Mine Functions"
+msgstr ""
+
+#: ../../topics/mine/index.rst:23
+msgid ""
+"To enable the Salt Mine the `mine_functions` option needs to be applied to a"
+" minion. This option can be applied via the minion's configuration file, or "
+"the minion's pillar. The `mine_functions` option dictates what functions are"
+" being executed and allows for arguments to be passed in:"
+msgstr ""
+
+#: ../../topics/mine/index.rst:35
+msgid "Mine Interval"
+msgstr ""
+
+#: ../../topics/mine/index.rst:37
+msgid ""
+"The Salt Mine functions are executed when the minion starts and at a given "
+"interval by the scheduler. The default interval is every 60 minutes and can "
+"be adjusted for the minion via the `mine_interval` option:"
+msgstr ""

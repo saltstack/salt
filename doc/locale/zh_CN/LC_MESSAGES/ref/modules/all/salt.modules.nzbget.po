@@ -1,0 +1,60 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.nzbget.rst:6
+msgid "salt.modules.nzbget"
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget:1
+msgid "Support for nzbget"
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.list_:1
+msgid "Return list of active downloads using nzbget -L. Default user is root."
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.list_:3
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.pause:3
+#: ../../../salt/modules/nzbget.pydocstring of
+#: salt.modules.nzbget.serverversion:3
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.start:3
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.stop:3
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.unpause:3
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.version:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.pause:1
+msgid "Pause nzbget daemon using -P option. Default user is root."
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of
+#: salt.modules.nzbget.serverversion:1
+msgid "Return server version from ``nzbget -V``. Default user is root."
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.start:1
+msgid "Start nzbget as a daemon using -D option. Default user is root."
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.stop:1
+msgid "Stop nzbget daemon using -Q option. Default user is root."
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.unpause:1
+msgid "Unpause nzbget daemon using -U option. Default user is root."
+msgstr ""
+
+#: ../../../salt/modules/nzbget.pydocstring of salt.modules.nzbget.version:1
+msgid "Return version from nzbget -v."
+msgstr ""

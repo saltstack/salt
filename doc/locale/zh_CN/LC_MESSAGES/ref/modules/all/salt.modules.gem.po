@@ -1,0 +1,180 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.gem.rst:6
+msgid "salt.modules.gem"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem:1
+msgid "Manage ruby gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:1
+msgid "Installs one or several gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:3
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.uninstall:3
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update:3
+msgid "gems"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:4
+msgid "The gems to install"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:5
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.list_:5
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_add:5
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_list:3
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_remove:5
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.uninstall:5
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update:5
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update_system:5
+msgid "ruby : None"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:6
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.list_:6
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_add:6
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_list:4
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_remove:6
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.uninstall:6
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update:6
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update_system:6
+msgid "If RVM is installed, the ruby version and gemset to use."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:7
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.list_:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_add:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_list:6
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_remove:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.uninstall:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update_system:8
+msgid "runas : None"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.list_:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_add:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_list:6
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_remove:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.uninstall:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update_system:8
+msgid "The user to run gem as."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:10
+msgid "version : None"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:10
+msgid ""
+"Specify the version to install for the gem. Doesn't play nice with multiple "
+"gems at once"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:12
+msgid "rdoc : False"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:13
+msgid "Generate RDoc documentation for the gem(s)."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:15
+msgid "ri : False"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:15
+msgid "Generate RI documentation for the gem(s)."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.install:17
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.list_:10
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_add:10
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_list:8
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_remove:10
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.uninstall:10
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update:10
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update_system:10
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.list_:1
+msgid "List locally installed gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.list_:3
+msgid "prefix :"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.list_:4
+msgid "Only list gems when the name matches this prefix."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_add:1
+msgid "Add a gem source."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_add:3
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_remove:3
+msgid "source_uri"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_add:4
+msgid "The source URI to add."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_list:1
+msgid "List the configured gem sources."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_remove:1
+msgid "Remove a gem source."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.sources_remove:4
+msgid "The source URI to remove."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.uninstall:1
+msgid "Uninstall one or several gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.uninstall:4
+msgid "The gems to uninstall."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update:1
+msgid "Update one or several gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update:4
+msgid "The gems to update."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update_system:1
+msgid "Update rubygems."
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update_system:3
+msgid "version : (newest)"
+msgstr ""
+
+#: ../../../salt/modules/gem.pydocstring of salt.modules.gem.update_system:4
+msgid "The version of rubygems to install."
+msgstr ""

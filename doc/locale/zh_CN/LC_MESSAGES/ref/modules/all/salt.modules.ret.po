@@ -1,0 +1,45 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.ret.rst:6
+msgid "salt.modules.ret"
+msgstr ""
+
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret:1
+msgid ""
+"Module to integrate with the returner system and retrieve data sent to a "
+"salt returner"
+msgstr ""
+
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret.get_fun:1
+msgid "Return info about last time fun was called on each minion"
+msgstr ""
+
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret.get_fun:3
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret.get_jid:3
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret.get_jids:3
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret.get_minions:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret.get_jid:1
+msgid "Return the information for a specified job id"
+msgstr ""
+
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret.get_jids:1
+msgid "Return a list of all job ids"
+msgstr ""
+
+#: ../../../salt/modules/ret.pydocstring of salt.modules.ret.get_minions:1
+msgid "Return a list of all minions"
+msgstr ""

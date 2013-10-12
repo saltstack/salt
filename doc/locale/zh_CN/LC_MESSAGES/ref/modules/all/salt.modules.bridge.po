@@ -1,0 +1,82 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.bridge.rst:6
+msgid "salt.modules.bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge:1
+msgid "Module for gathering and managing bridging information"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.add:1
+msgid "Creates a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.add:3
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.addif:3
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.delete:3
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.delif:3
+#: ../../../salt/modules/bridge.pydocstring of
+#: salt.modules.bridge.find_interfaces:3
+#: ../../../salt/modules/bridge.pydocstring of
+#: salt.modules.bridge.interfaces:3 ../../../salt/modules/bridge.pydocstring
+#: of salt.modules.bridge.list_:3 ../../../salt/modules/bridge.pydocstring of
+#: salt.modules.bridge.show:5 ../../../salt/modules/bridge.pydocstring of
+#: salt.modules.bridge.stp:3 ../../../salt/modules/bridge.pydocstring of
+#: salt.modules.bridge.stp:13
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.addif:1
+msgid "Adds an interface to a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.delete:1
+msgid "Deletes a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.delif:1
+msgid "Removes an interface from a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of
+#: salt.modules.bridge.find_interfaces:1
+msgid "Returns the bridge to which the interfaces are bond to"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of
+#: salt.modules.bridge.interfaces:1
+msgid "Returns interfaces attached to a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.list_:1
+msgid "Returns the machine's bridges list"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.show:1
+msgid ""
+"Returns bridges interfaces along with enslaved physical interfaces. If no "
+"interface is given, all bridges are shown, else only the specified bridge "
+"values are returned."
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.stp:1
+msgid "Sets Spanning Tree Protocol state for a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.pydocstring of salt.modules.bridge.stp:10
+msgid ""
+"For the NetBSD operating system, it is required to add the interface on "
+"which to enable the STP."
+msgstr ""
