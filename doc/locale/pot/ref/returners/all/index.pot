@@ -1,0 +1,140 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/returners/all/index.rst:8
+# e83730bc69ba4547804c360707733dd9
+msgid "Full list of builtin returner modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 8eb45e0d8fec43948e809dc17daab165
+msgid ":obj:`carbon_return <salt.returners.carbon_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# f9f8f22dfcaf41b58f5b1c2fb7b55277
+msgid "Take data from salt and \"return\" it into a carbon receiver"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 3013de96b3644752a889c8a42b557a45
+msgid ":obj:`cassandra_return <salt.returners.cassandra_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 2303fcd0206644599f41359d49a9a503
+msgid "Return data to a Cassandra ColumnFamily"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 76734b3ce7d64e1a8b04274ecc801065
+msgid ":obj:`local <salt.returners.local>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6e689a25d8b04e24a24939350b151a08
+msgid "The local returner is used to test the returner interface, it just prints the"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 4e361fec384a4512ab179e062d368a15
+msgid ":obj:`mongo_future_return <salt.returners.mongo_future_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+#: ../../<autosummary>:1
+# defcbe4be3bb4fa589b89350bf9dc4f6
+# 54906a972cdb44f39365f3488cb09daa
+msgid "Return data to a mongodb server"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 438b06f8cefe4dd3b06a7d4c63499ed8
+msgid ":obj:`mongo_return <salt.returners.mongo_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# be450bbeb2944ede9c2610db50b584d9
+msgid ":obj:`mysql <salt.returners.mysql>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 796498f61a8041fca5f56e13f577ceca
+msgid "Return data to a mysql server"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 82153b509a0e40248bb1ec8e7a2dfd50
+msgid ":obj:`postgres <salt.returners.postgres>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 992e233d59d94a1c8fee893fe80506ec
+msgid "Return data to a postgresql server"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 5818f732122344a3827d38f71bc3fa63
+msgid ":obj:`redis_return <salt.returners.redis_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# d0013637439040808071d8a80ce4b082
+msgid "Return data to a redis server"
+msgstr ""
+
+#: ../../<autosummary>:1
+# fa2abe10119a49f69f99e323c3079d83
+msgid ":obj:`sentry_return <salt.returners.sentry_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 856f9a7cdfc54693824a31b6501d04bb
+msgid "Salt returner that report execution results back to sentry."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 75abca76786a40df9556e2c1c75b58fb
+msgid ":obj:`smtp_return <salt.returners.smtp_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# dfb9ba7518774ec3ba26f37f3a6b348e
+msgid "Return salt data via email"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 31c4784359fc4be1b11013c1ceab8f4c
+msgid ":obj:`sqlite3_return <salt.returners.sqlite3_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 45205eef766a46299be6a375488c5895
+msgid "Insert minion return data into a sqlite3 database"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 8c86ac0691944aaab8d64c01c880d384
+msgid ":obj:`syslog_return <salt.returners.syslog_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 1bd3d9a6759b4b4bb6dc71181107dab7
+msgid "Return data to the host operating system's syslog facility"
+msgstr ""
+

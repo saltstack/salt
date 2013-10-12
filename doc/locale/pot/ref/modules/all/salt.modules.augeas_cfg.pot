@@ -1,0 +1,94 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.augeas_cfg.rst:6
+# d8fe188e776e4836884ff1c4ba780ad8
+msgid "salt.modules.augeas_cfg"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg:1
+# d154c3482d2741fda65a5940d57535b9
+msgid "Manages configuration files via augeas"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg:3
+# 5df52054a734429e98428bd06625a6c1
+msgid ":strong:`NOTE:` This state requires the ``augeas`` Python module."
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.get:1
+# a8563cf6ce1e4452b3482349bb6c92d9
+msgid "Get a value for a specific augeas path"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.get:3
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.ls:3
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.match:3
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.remove:3
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.setvalue:3
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.setvalue:11
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.setvalue:20
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.tree:3
+# 1faac150886e4549b0e59ad0b28c238a
+# d5ae6804531440349f1c5ce280c8a51b
+# d9856d12679c4acaa6bf7b922079383e
+# 1cf73c506d824583b10730bdb3100b0e
+# 61c1b98c5a504c7ab289d599d8526732
+# c8cd55b09f474897a3297b3168d1a6db
+# 653e3c19f3af4fbabfd644b3178aad31
+# ba2cf45b8d3d42f5ab3c9a8e108f44ac
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.ls:1
+# de1a2d98b65d4c77b53548ee912bfea7
+msgid "List the direct children of a node"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.match:1
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.remove:1
+# ff917290f6d14363906f0b74e2d2edff
+# 2df29bbbabde434fb52e8563594ad3ff
+msgid "Get matches for path expression"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.setvalue:1
+# 37b0f1044b23451baee2a2a165db7ab3
+msgid "Set a value for a specific augeas path"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.setvalue:9
+# 38b248a318b145c68afd5cd70759fcff
+msgid "This will set the first entry in /etc/hosts to localhost"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.setvalue:18
+# c24293804398477db6e9a9b73511f932
+msgid "Adds a new host to /etc/hosts the ip address 192.168.1.1 and hostname test"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.setvalue:32
+# 417c5a64ddf9449e93e19d1eb5ba598b
+msgid "Ensures that the following line is present in /etc/sudoers::"
+msgstr ""
+
+#: ../../../salt/modules/augeas_cfg.py:docstring of salt.modules.augeas_cfg.tree:1
+# ce7d78ccff8a48949947a5e9ef9756ce
+msgid "Returns recursively the complete tree of a node"
+msgstr ""
+

@@ -1,0 +1,81 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.djangomod.rst:6
+# 7dc371ff4ee3489e90ea4c5b1773d4b2
+msgid "salt.modules.djangomod"
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod:1
+# cae23f38807d4faa9998eb726de421d9
+msgid "Manage Django sites"
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.collectstatic:1
+# 403323b2a4c64cc7842cea38a13dbf6e
+msgid "Collect static files from each of your applications into a single location that can easily be served in production."
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.collectstatic:4
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.command:3
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.createsuperuser:5
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.loaddata:6
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.syncdb:7
+# f3b2183b4413428b8cecf8156ef530c3
+# cb89c5c65d484ac5b47e793548c7c00f
+# 0ff9ada5a4cf418794e3cca6282c486d
+# 9bf96f0f63944ef99e2afd1feaa7f65b
+# d44539fec76247619ded0f6bf1336079
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.command:1
+# 7feb34bc49ac4a52a5b076932f76f9c1
+msgid "Run arbitrary django management command"
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.createsuperuser:1
+# 31206d3d032b4c21923855a87bce06ac
+msgid "Create a super user for the database. This function defaults to use the ``--noinput`` flag which prevents the creation of a password for the superuser."
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.loaddata:1
+# 2cf081097412443aa7360f62659ca31d
+msgid "Load fixture data"
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.loaddata:4
+# 77634e8ea74a4ecf81ba1505ba6c9ec8
+msgid "Fixtures:"
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.loaddata:4
+# 23a50b19b0234574a34052f315763209
+msgid "comma separated list of fixtures to load"
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.syncdb:1
+# aef9b5493b5e4089b5dd9fa933e3267f
+msgid "Run syncdb"
+msgstr ""
+
+#: ../../../salt/modules/djangomod.py:docstring of salt.modules.djangomod.syncdb:3
+# c3829b9aa8574b72b6207d2b9bf107cb
+msgid "Execute the Django-Admin syncdb command, if South is available on the minion the ``migrate`` option can be passed as ``True`` calling the migrations to run after the syncdb completes"
+msgstr ""
+

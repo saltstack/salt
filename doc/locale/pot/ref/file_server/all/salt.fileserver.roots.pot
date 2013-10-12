@@ -1,0 +1,78 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/all/salt.fileserver.roots.rst:6
+# 955eabe938414b48a27ae92a05dcd723
+msgid "salt.fileserver.roots"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots:1
+# c9353b253d884527a2a1d45cd2d15d21
+msgid "The default file server backend"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots:3
+# d2d467ebd1474f41b1d2a49bbe527d74
+msgid "Based on the environments in the :conf_master:`file_roots` configuration option."
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.dir_list:1
+# 3510ea869cfc450fa0f5b3826e23d895
+msgid "Return a list of all directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.envs:1
+# 8727c3836c3b416d8021a34ec7b5abb8
+msgid "Return the file server environments"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.file_hash:1
+# 2e342630ad6b41caa50966ffd5836c61
+msgid "Return a file hash, the hash type is set in the master config file"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.file_list:1
+# b57d29c189b848e6bda3cb6b3304ef86
+msgid "Return a list of all files on the file server in a specified environment"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.file_list_emptydirs:1
+# e08787919d694b6384e869fda3136456
+msgid "Return a list of all empty directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.find_file:1
+# b20f86b4c59b4e78999d9c1057541f50
+msgid "Search the environment for the relative path"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.serve_file:1
+# 76bedf8e7f904f30bf3c3089ce3cba34
+msgid "Return a chunk from a file based on the data received"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.symlink_list:1
+# a98faabeb7ce4b25b1ee5588c21d00c0
+msgid "Return a dict of all symlinks based on a given path on the Master"
+msgstr ""
+
+#: ../../../salt/fileserver/roots.py:docstring of salt.fileserver.roots.update:1
+# 1ba68381103140468dac64713c209058
+msgid "When we are asked to update (regular interval) lets reap the cache"
+msgstr ""
+

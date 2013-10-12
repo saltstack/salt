@@ -1,0 +1,109 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.poudriere.rst:6
+# de5d643d55e64bad84e18d37082d53f4
+msgid "salt.modules.poudriere"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere:1
+# bd3dc6d3ae6b4713b56d76e1ff27d494
+msgid "Support for poudriere"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.bulk_build:1
+# 43bb2a7107c64846a97966050e4689d3
+msgid "Run bulk build on poudriere server."
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.bulk_build:3
+# e32a6aecb1ac4705bdf486881818ca70
+msgid "Return number of pkg builds, failures, and errors, on error dump to CLI"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.bulk_build:5
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.create_jail:5
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.delete_jail:3
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.is_jail:3
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.list_jails:3
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.list_ports:3
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.make_pkgng_aware:3
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.parse_config:3
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.version:3
+# 95577187c39b448d8bcaf73109d7b200
+# 2acccc8b585f4bf389cc39f3e5a40cc7
+# ee10a305ac524317bd9b99e245ef6fc8
+# 073d10ba3ae7441692e24c638208ba0b
+# 72da86757c084188a57715c64240f26c
+# 1dfbc3364d0f413395b6aaeeb3efd98c
+# f121ef1d2d674953b2569147085449e1
+# bb71e71c605f4f1da708ae7716ac79e3
+# 30aa281e8d17401ea4b28df034512ac3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.create_jail:1
+# 4eac67059c7e4fc986018fe39a10d923
+msgid "Creates a new poudriere jail if one does not exist"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.create_jail:3
+# f403b0b2af8b41bcb9c34e30ccb86238
+msgid "*NOTE* creating a new jail will take some time the master is not hanging"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.create_ports_tree:1
+# feb02e5753db491ea1b9615d89507f7f
+msgid "Not working need to run portfetch non interactive"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.delete_jail:1
+# 16c2b9dbf15342329f4b2558780675b6
+msgid "Deletes poudriere jail with `name`"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.is_jail:1
+# ed006119d8c24512a4e1d223a66aaa6f
+msgid "Return True if jail exists False if not"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.list_jails:1
+# 9a914bdd7899465f97d7eb18e8db3558
+msgid "Return a list of current jails managed by poudriere"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.list_ports:1
+# b1259d122288462fba51cce42147ef35
+msgid "Return a list of current port trees managed by poudriere"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.make_pkgng_aware:1
+# 7884a3930ade4d08ac322ee258d95260
+msgid "Make jail ``jname`` pkgng aware"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.parse_config:1
+# 1d1163509f7b4c0aac09fc559a866173
+msgid "Returns a dict of poudriere main configuration definitions"
+msgstr ""
+
+#: ../../../salt/modules/poudriere.py:docstring of salt.modules.poudriere.version:1
+# 9e8ad117d54149e7b8d12d7558984343
+msgid "Return poudriere version"
+msgstr ""
+

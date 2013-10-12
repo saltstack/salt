@@ -1,0 +1,45 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/targeting/index.rst:6
+#: ../../topics/targeting/index.rst:9
+# b4fd6bf350c34e2388b82dfa909d3df0
+# 08e1ee5442ca43578e0005d21e0f4e98
+msgid "Targeting"
+msgstr ""
+
+#: ../../topics/targeting/index.rst:11
+# c2e5ba10cf8b4d87a300830c19f84f6d
+msgid "Specifying which minions should run a command or execute a state by matching against hostnames, or system information, or defined groups, or even combinations thereof."
+msgstr ""
+
+#: ../../topics/targeting/index.rst:15
+# ec1ca7a9cce64175b7a11f685ffdf21c
+msgid "For example the command ``salt web1 apache.signal restart`` to restart the Apache httpd server specifies the machine ``web1`` as the target and the command will only be run on that one minion."
+msgstr ""
+
+#: ../../topics/targeting/index.rst:19
+# 3eda5b4429d14622bfe5e48ab9b4d7c8
+msgid "Similarly when using States, the following :term:`top file` specifies that only the ``web1`` minion should execute the contents of ``webserver.sls``:"
+msgstr ""
+
+#: ../../topics/targeting/index.rst:28
+# 5bc8d7d9f93d4913aa8e9525bdc06534
+msgid "There are many ways to target individual minions or groups of minions in Salt:"
+msgstr ""
+

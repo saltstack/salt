@@ -1,0 +1,136 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.useradd.rst:6
+# dd0f2bb63f6e440caa15235126548ef7
+msgid "salt.modules.useradd"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd:1
+# b6b80d6a91214023a908a13c05989c07
+msgid "Manage users with the useradd command"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.add:1
+# 446ea83533484f65b30b9605a469ad0e
+msgid "Add a user to the minion"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.add:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chfullname:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chgid:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chgroups:4
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chhome:4
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chhomephone:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chroomnumber:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chshell:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chuid:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chworkphone:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.delete:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.getent:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.info:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.list_groups:3
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.list_users:3
+# 60364cf9d3e04fc995b7f50ce01ca544
+# 696152250d2c40ddb2de13f2bb491656
+# cbc99ef50c584584a40d1108cb98fa9e
+# bb3a9fa7614c4f18972559d80228b1dc
+# 6eac78e80ea849eeb02e30a881d956d5
+# 5aedb059136d4de19f7e8c66f2d84f25
+# be202a422d56402baaa4bcbb39205c2d
+# 6de6b1c1e25f4a278f5b676642d3040e
+# b80f724b270243e383359a6a1accf1bf
+# d3928828fbe540ceb0bd963ca3e618a1
+# 709580742eb2495c81cdfcf6c7257a5c
+# a672fd915f13426cba9ca31753c25c99
+# 40e6c6c1e9234999bdd8d1661801f84c
+# 0362c37b588c4b3e9d29b4a51f72f1af
+# fbd67e757f624772b068bab21e5aa048
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chfullname:1
+# 92bf7cf6ecda4dcc94818aa404515299
+msgid "Change the user's Full Name"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chgid:1
+# dfb106e771884c2f9090bad306d3fab7
+msgid "Change the default group of the user"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chgroups:1
+# b0293a0c04864eb49bebb5b85b796eef
+msgid "Change the groups this user belongs to, add append to append the specified groups"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chhome:1
+# 5ef01a20f74045d387a34a0d28402212
+msgid "Change the home directory of the user, pass true for persist to copy files to the new home dir"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chhomephone:1
+# 715ab952cab34cb38d93f5efcf2b9db9
+msgid "Change the user's Home Phone"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chroomnumber:1
+# ddd70b870a9a440ab83a896e2ac7d123
+msgid "Change the user's Room Number"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chshell:1
+# 3c8f4ed405ef408291f6c053c320a796
+msgid "Change the default shell of the user"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chuid:1
+# fe2b3aa1a8e244bf924f9e8e000dc66b
+msgid "Change the uid for a named user"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.chworkphone:1
+# 5359709305d54668881eab730eed36ff
+msgid "Change the user's Work Phone"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.delete:1
+# 551354fb20ac48c3a6715666ef7db1e8
+msgid "Remove a user from the minion"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.getent:1
+# c002bb3cb6864e7f9e61d26d7cb59fbc
+msgid "Return the list of all info for all users"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.info:1
+# 1d05189cd45b41e8acb39e265f30e7fc
+msgid "Return user information"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.list_groups:1
+# 66246e6423af4807bf7158a0b83e72b0
+msgid "Return a list of groups the named user belongs to"
+msgstr ""
+
+#: ../../../salt/modules/useradd.py:docstring of salt.modules.useradd.list_users:1
+# 6b47ddc001d64170a8a71145307f4282
+msgid "Return a list of all users"
+msgstr ""
+

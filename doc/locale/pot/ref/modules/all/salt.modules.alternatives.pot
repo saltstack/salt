@@ -1,0 +1,95 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.alternatives.rst:6
+# 7da33875466d4847b7b79cd8a828f7b5
+msgid "salt.modules.alternatives"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives:1
+# 59fff39ccd054bcea3341234511f0671
+msgid "Support for Alternatives system"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives:3
+# c647c7f85fb94db8a3ed1218f11e42b5
+msgid "Radek Rada <radek.rada@gmail.com>"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives:4
+# 6582e81743e54fc9a19c28f459d521ff
+msgid "© 2012 by the SaltStack Team, see AUTHORS for more details."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives:5
+# 3662c2bc729141e4afc0568363ac8e8d
+msgid "Apache 2.0, see LICENSE for more details."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.auto:1
+# 22de8b075d354d74bea88d850ed4d7ff
+msgid "Trigger alternatives to set the path for <name> as specified by priority."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.auto:4
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.check_installed:4
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.display:3
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.install:3
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.remove:3
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.set_:3
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.show_current:4
+# d0ffd629761446acb6a9384120042b38
+# 0f9de6235fa94622ad069130881ab2b3
+# c2843b6a580041d5bba2124da12b5368
+# 4b68f63177c8455d862581a5585103b0
+# e8b8bed14c13457c9883090d7af287d3
+# 060d4766176c446f8940e99ac28a9abf
+# f93893ecc205465dba348b39d7efe143
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.check_installed:1
+# b2a2df3202bd4d22a9d0784c97202036
+msgid "Check if the current highest-priority match for a given alternatives link is set to the desired path"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.display:1
+# c1c58647a5474c7c94b8b282ed5bb067
+msgid "Display alternatives settings for defined command name"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.install:1
+# 89a247e207634e4a9941dd501fa19c0c
+msgid "Install symbolic links determining default commands"
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.remove:1
+# ead8ec17e43148d29a208a8d42631be1
+msgid "Remove symbolic links determining the default commands."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.set_:1
+# 936b96bb2a0d451ba49284b6574698ed
+msgid "Manually set the alternative <path> for <name>."
+msgstr ""
+
+#: ../../../salt/modules/alternatives.py:docstring of salt.modules.alternatives.show_current:1
+# b196a3e5d95044bcab598613cb5708a8
+msgid "Display the current highest-priority alternative for a given alternatives link"
+msgstr ""
+

@@ -1,0 +1,122 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.smf.rst:6
+# b136664a5f3847f2ace584452cd7fcea
+msgid "salt.modules.smf"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf:1
+# 016645d7297b4aff9788fc52de470894
+msgid "Service support for Solaris 10 and 11, should work with other systems that use SMF also. (e.g. SmartOS)"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.available:1
+# ae55d44782764f9cbe7e62abfb5deaec
+msgid "Return if the specified service is available"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.available:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.disable:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.disabled:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.enable:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.enabled:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.get_all:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.get_disabled:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.get_enabled:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.reload_:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.restart:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.start:3
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.status:4
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.stop:3
+# cb15960299f84d3783b2260dd49abfd8
+# b2f0ad3625d44a34b6d7f04a13154015
+# 4d046217b5884dfca645d54ab3d8847d
+# cb8ee13ae8054fe4920f41190d37e1d8
+# 5ed5e4a70db24fe79526c62bf802178a
+# f0bc105ecd564d93855765c19b6a221d
+# 0d1e38bdc4d340a990a05d2e0a21ad17
+# 6893dd1a5259429181c10af0577c123f
+# a59cf60c39d547878ee3858c4ab7863a
+# bb376b176b4441bb9f5a55c513796091
+# 01195a536f5f49f7980b8a151fc4835c
+# cc80470a806348ef98de448a33cba4cb
+# 1543ab40b8964069b7296aad58ea7052
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.disable:1
+# 5efffb1c81194cea82a21372f952f034
+msgid "Disable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.disabled:1
+# c66d61f6e55f450abc1c13a51cc6809d
+msgid "Check to see if the named service is disabled to start on boot"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.enable:1
+# d13aeac0b6ad4330a5a72ea94c643e77
+msgid "Enable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.enabled:1
+# 54037d32b5b7413d889118b1d06bb66e
+msgid "Check to see if the named service is enabled to start on boot"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.get_all:1
+# d3e79cbfb59e44e68e2438d442a7c590
+msgid "Return all installed services"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.get_disabled:1
+# e065fcf3966c4799bfeec49f06271cec
+msgid "Return the disabled services"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.get_enabled:1
+# fe59a64ec9a14fe699ea4e88191245f8
+msgid "Return the enabled services"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.reload_:1
+# a2d16ce56afe41fc83619035b8522ed4
+msgid "Reload the named service"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.restart:1
+# 7182c964171c4420899a735a74ff6934
+msgid "Restart the named service"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.start:1
+# 3a778e36e14f48389a40e29fc550b0cc
+msgid "Start the specified service"
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.status:1
+# cfa2b2932ef1464bbe4bd2a7fc99d3ef
+msgid "Return the status for a service, returns a bool whether the service is running."
+msgstr ""
+
+#: ../../../salt/modules/smf.py:docstring of salt.modules.smf.stop:1
+# 11e083ba1f0540b7aa4c54a954fbcf6c
+msgid "Stop the specified service"
+msgstr ""
+

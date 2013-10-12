@@ -1,0 +1,45 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.win_ntp.rst:6
+# a762728c9a064055b39504ecda4bddb0
+msgid "salt.modules.win_ntp"
+msgstr ""
+
+#: ../../../salt/modules/win_ntp.py:docstring of salt.modules.win_ntp:1
+# 399d914e16b04a3ab8a32cc8957b4299
+msgid "Management of NTP servers on Windows"
+msgstr ""
+
+#: ../../../salt/modules/win_ntp.py:docstring of salt.modules.win_ntp.get_servers:1
+# 35460262c3ab4effb5825f6e510c6f3f
+msgid "Get list of configured NTP servers"
+msgstr ""
+
+#: ../../../salt/modules/win_ntp.py:docstring of salt.modules.win_ntp.get_servers:3
+#: ../../../salt/modules/win_ntp.py:docstring of salt.modules.win_ntp.set_servers:3
+# 9efa0f61054048bdb024996480944462
+# 42e450191121415d989da728cd6acd0b
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/win_ntp.py:docstring of salt.modules.win_ntp.set_servers:1
+# 1a1c677fc995405cb954084d8e39b5fe
+msgid "Set Windows to use a list of NTP servers"
+msgstr ""
+

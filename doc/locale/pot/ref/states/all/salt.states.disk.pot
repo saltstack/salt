@@ -1,0 +1,38 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.disk.rst:6
+# e648bb9dc0314d93971607c368bb4ec2
+msgid "salt.states.disk"
+msgstr ""
+
+#: ../../../salt/states/disk.py:docstring of salt.states.disk:1
+# 4830ab78434343d3a06380f91192a9f9
+msgid "Disk monitoring state"
+msgstr ""
+
+#: ../../../salt/states/disk.py:docstring of salt.states.disk:3
+# 000a40092b09465e90d2df6960828b51
+msgid "Monitor the state of disk resources"
+msgstr ""
+
+#: ../../../salt/states/disk.py:docstring of salt.states.disk.status:1
+# a89b8bf1809d4939977b995637a5bab6
+msgid "Return the current disk usage stats for the named device"
+msgstr ""
+

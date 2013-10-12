@@ -1,0 +1,43 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/auth/all/salt.auth.keystone.rst:6
+# c322068db6c94e539849df6533dedaee
+msgid "salt.auth.keystone"
+msgstr ""
+
+#: ../../../salt/auth/keystone.py:docstring of salt.auth.keystone:1
+# 5e2e7de4ea444c62a1bf3297f4fb9d98
+msgid "Provide authentication using OpenStack Keystone"
+msgstr ""
+
+#: ../../../salt/auth/keystone.py:docstring of salt.auth.keystone:3
+# 4283b4a34f5940879b81b3d4fffd7431
+msgid "keystoneclient Python module"
+msgstr ""
+
+#: ../../../salt/auth/keystone.py:docstring of salt.auth.keystone.auth:1
+# fc66c389089d4a50aeff38c8a10a3183
+msgid "Try and authenticate"
+msgstr ""
+
+#: ../../../salt/auth/keystone.py:docstring of salt.auth.keystone.get_auth_url:1
+# 4c6b62569df844748db02293a93fa987
+msgid "Try and get the URL from the config, else return localhost"
+msgstr ""
+

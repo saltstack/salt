@@ -1,0 +1,112 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.rabbitmq_user.rst:6
+# e8b36137d63c4480b4cb6f6b9e0ad513
+msgid "salt.states.rabbitmq_user"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user:1
+# 5d8b9e18b5e44d05953120fb3605a306
+msgid "Manage RabbitMQ Users."
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.absent:1
+# 16af55b4ef9c4bba8a2d438d3bc58b6c
+msgid "Ensure the named user is absent"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.absent:3
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:3
+# 50c00eb25456441fbe5dc9478340225d
+# 6296b06dd3b446dba1dccb5ac28902fd
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.absent:4
+# b0b168a7cbdf4054a2d85288d396ce0b
+msgid "The name of the user to remove"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.absent:5
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:13
+# 5620e44f9d52437e98473a431351d975
+# dbb62c79e3cc4d929dadcaa2e89f2cc7
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.absent:6
+# 466219992f0b4dd392c4199fedcb6a59
+msgid "User to run the command"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:1
+# a5f4de77bc344c2ab6d48792be17035e
+msgid "Ensure the RabbitMQ user exists."
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:4
+# 73085e6e542f4c14afcf0cf9188a12b1
+msgid "User name"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:5
+# 7b5265c24ec54480836f8dccec9814da
+msgid "password"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:6
+# e4f6b000b181481b8b84c88b99081f05
+msgid "User's password, if one needs to be set"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:7
+# b122c8ed817b4be3ba5226a6e1ef8267
+msgid "force"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:8
+# 7f39434d9b7f4d5583074017f66aa581
+msgid "If user exists, forcibly change the password"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:9
+# b01a34db338a4494b5af079e83794cfe
+msgid "tags"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:10
+# 6dc6b6b5d5bc482b84abec71e691cf74
+msgid "Optionally set user tags for user"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:11
+# 0c44f5f659954daea27fcf6377ac9a3c
+msgid "permissions"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:12
+# 40c6ddad1a464a71953791a6e5af0ed4
+msgid "A list of dicts with vhost keys and 3-tuple values"
+msgstr ""
+
+#: ../../../salt/states/rabbitmq_user.py:docstring of salt.states.rabbitmq_user.present:14
+# 9d4e8c7faeb84070aab3330d03e7df0b
+msgid "Name of the user to run the command"
+msgstr ""
+

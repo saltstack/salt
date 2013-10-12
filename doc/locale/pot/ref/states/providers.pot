@@ -1,0 +1,470 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/providers.rst:6
+# 39ca578cda164881bfa9dfbb29795015
+msgid "State Providers"
+msgstr ""
+
+#: ../../ref/states/providers.rst:10
+# 50deaef9aede45ba8b53723d75f1bdea
+msgid "Salt predetermines what modules should be mapped to what uses based on the properties of a system. These determinations are generally made for modules that provide things like package and service management."
+msgstr ""
+
+#: ../../ref/states/providers.rst:14
+# fea3c3cb921843678dd284008caa76b2
+msgid "Sometimes in states, it may be necessary to use an alternative module to provide the needed functionality. For instance, an older Arch Linux system may not be running systemd, so instead of using the systemd service module, you can revert to the default service module:"
+msgstr ""
+
+#: ../../ref/states/providers.rst:26
+# 1aa0628657c04fb0b3a2deddb8216401
+msgid "In this instance, the basic :py:mod:`~salt.modules.service` module (which manages :program:`sysvinit`-based services) will replace the :py:mod:`~salt.modules.systemd` module which is used by default on Arch Linux."
+msgstr ""
+
+#: ../../ref/states/providers.rst:30
+# 92f1b76b4b4f4b3587e2583761a44125
+msgid "However, if it is necessary to make this override for most or every service, it is better to just override the provider in the minion config file, as described in the section below."
+msgstr ""
+
+#: ../../ref/states/providers.rst:35
+# f9282fc002a149a4892841b316a5d7a7
+msgid "Setting a Provider in the Minion Config File"
+msgstr ""
+
+#: ../../ref/states/providers.rst:39
+# 4ec535af912740c58511a9e2365ce92c
+msgid "Sometimes, when running Salt on custom Linux spins, or distros that are derived from other distros, Salt does not successfully detect providers. The providers which are most likely to be affected by this are:"
+msgstr ""
+
+#: ../../ref/states/providers.rst:43
+# c47c8980dd314762a80ae3aa8a980401
+msgid "pkg"
+msgstr ""
+
+#: ../../ref/states/providers.rst:44
+#: ../../ref/states/providers.rst:106
+# aee964bbe1ba417d9343393ac33b1852
+# e859917a06a64ebabb2c8784c8c522e5
+msgid "service"
+msgstr ""
+
+#: ../../ref/states/providers.rst:45
+# 5bc1274721864c4f91e725f6ffd08c6c
+msgid "user"
+msgstr ""
+
+#: ../../ref/states/providers.rst:46
+# 8ddc0b17589f42b395f3f5bd3cca98f2
+msgid "group"
+msgstr ""
+
+#: ../../ref/states/providers.rst:48
+# bc4809ef88a5471da68ec242a3ee7bc4
+msgid "When something like this happens, rather than specifying the provider manually in each state, it easier to use the :conf_minion:`providers` parameter in the minion config file to set the provider."
+msgstr ""
+
+#: ../../ref/states/providers.rst:52
+# 04cdd32e10ea40798fcd5a780f294a2d
+msgid "If you end up needing to override a provider because it was not detected, please let us know! File an issue on the `issue tracker`_, and provide the output from the :mod:`grains.items <salt.modules.grains.items>` function, taking care to sanitize any sensitive information."
+msgstr ""
+
+#: ../../ref/states/providers.rst:57
+# 3ec34e764f6849e9bfd76f7798f7b892
+msgid "Below are tables that should help with deciding which provider to use if one needs to be overridden."
+msgstr ""
+
+#: ../../ref/states/providers.rst:62
+# bd37d36272ad471b9000e871e547008c
+msgid "Provider: ``pkg``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:65
+#: ../../ref/states/providers.rst:94
+#: ../../ref/states/providers.rst:118
+#: ../../ref/states/providers.rst:133
+# 138f5e99ef554910a279bcb243d79e9a
+# 28087dd42d6b4fbe8279a6a2b75d181a
+# 843c42bb69524012a2adfa47ab8af611
+# c38701d5032a4058a994519ee2512460
+msgid "Execution Module"
+msgstr ""
+
+#: ../../ref/states/providers.rst:65
+#: ../../ref/states/providers.rst:94
+#: ../../ref/states/providers.rst:118
+#: ../../ref/states/providers.rst:133
+# d18c684594cb4c948e73e5dd600ab421
+# a1e6c2e445ff4b758ddf26309835a3b9
+# dd91b5f7698447bba24aae6cb7347772
+# 4441e0bca81d4e38904edd24913aaaf7
+msgid "Used for"
+msgstr ""
+
+#: ../../ref/states/providers.rst:67
+# 4ff2e0f578db400eab70c09994e28bb2
+msgid "apt"
+msgstr ""
+
+#: ../../ref/states/providers.rst:67
+# 1c1d0bf534c94e819e4a52ca604c63d9
+msgid "Debian/Ubuntu-based distros which use ``apt-get(8)`` for package management"
+msgstr ""
+
+#: ../../ref/states/providers.rst:69
+# d96fa27a464546d09d688a792ffb778d
+msgid "brew"
+msgstr ""
+
+#: ../../ref/states/providers.rst:69
+# 42dee702677243fe8fd4b4fca5adfab3
+msgid "Mac OS software management using `Homebrew`_"
+msgstr ""
+
+#: ../../ref/states/providers.rst:70
+# 058eca886bb44528b5a4c2a529566a03
+msgid "ebuild"
+msgstr ""
+
+#: ../../ref/states/providers.rst:70
+# 3186fae7cbd4494699667e450e8f97b3
+msgid "Gentoo-based systems (utilizes the ``portage`` python module as well as ``emerge(1)``)"
+msgstr ""
+
+#: ../../ref/states/providers.rst:72
+# 4c0d114e88394fcd8b8d345188b685bc
+msgid "freebsdpkg"
+msgstr ""
+
+#: ../../ref/states/providers.rst:72
+# 165b27aa30204d098d8f42b8e2f8ab9f
+msgid "FreeBSD-based OSes using ``pkg_add(1)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:73
+# c161a9b0680a435bbeae77c2f0f5e76a
+msgid "openbsdpkg"
+msgstr ""
+
+#: ../../ref/states/providers.rst:73
+# a6e5acbac5784c0bbf1922ae9a546119
+msgid "OpenBSD-based OSes using ``pkg_add(1)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:74
+# 0da4936c195f4a549a28913b16cca2ab
+msgid "pacman"
+msgstr ""
+
+#: ../../ref/states/providers.rst:74
+# a71cdce8198e46ee85f0eccdfac45678
+msgid "Arch Linux-based distros using ``pacman(8)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:75
+# 19669a2355a348778cef43245b7ac997
+msgid "pkgin"
+msgstr ""
+
+#: ../../ref/states/providers.rst:75
+# 50f6c59633e2437ca0ef32782bcf1dab
+msgid "NetBSD-based OSes using ``pkgin(1)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:76
+# 88305ab84d064979ace2bbe1d1060f51
+msgid "pkgng"
+msgstr ""
+
+#: ../../ref/states/providers.rst:76
+# f1ebfbc57ba74bafa65b802691524d6b
+msgid "FreeBSD-based OSes using ``pkg(8)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:77
+# aca477622b544369bdffd183ec7b6ad4
+msgid "pkgutil"
+msgstr ""
+
+#: ../../ref/states/providers.rst:77
+# c2822e045e30416093f7b37b2a681175
+msgid "Solaris-based OSes using `OpenCSW`_'s ``pkgutil(1)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:78
+# 7a8605c66da24b2ba002e70f0d7740bd
+msgid "solarispkg"
+msgstr ""
+
+#: ../../ref/states/providers.rst:78
+# 929a981ef5fa444b8f4cb9ff22b4b807
+msgid "Solaris-based OSes using ``pkgadd(1M)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:79
+# 3fd018a9552f49f58d1a7448cd0aa4b1
+msgid "win_pkg"
+msgstr ""
+
+#: ../../ref/states/providers.rst:79
+#: ../../ref/states/providers.rst:110
+#: ../../ref/states/providers.rst:125
+#: ../../ref/states/providers.rst:140
+# d8aaf8751532431991f1bbde5f5ca397
+# 0ab24b313f5643c9b46873b2ebe02b90
+# 773a15b8387e4533bccb0ca43e0ed9a3
+# df8b234818f74fe79571b52dab592ae1
+msgid "Windows"
+msgstr ""
+
+#: ../../ref/states/providers.rst:80
+# 58ddfbded8a344bab6b1e7a418f689af
+msgid "yumpkg"
+msgstr ""
+
+#: ../../ref/states/providers.rst:80
+# 1532970e280c4a4f949656eeb76fadcd
+msgid "RedHat-based distros and derivatives (utilizes the ``yum`` and ``rpmUtils`` modules)"
+msgstr ""
+
+#: ../../ref/states/providers.rst:82
+# 14d6061e23554a3cad3f13f0e67603f8
+msgid "yumpkg5"
+msgstr ""
+
+#: ../../ref/states/providers.rst:82
+# ddc5580f3d444514bc1d3dc99d8f59bc
+msgid "RedHat-based distros and derivatives (wraps ``yum(8)``)"
+msgstr ""
+
+#: ../../ref/states/providers.rst:83
+# 104af13419964e03ad6b8fc6ad1d692a
+msgid "zypper"
+msgstr ""
+
+#: ../../ref/states/providers.rst:83
+# 13f3bf07af7045189ca1ce7d48180946
+msgid "SUSE-based distros using ``zypper(8)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:91
+# 5f73e43c797345a88a6fcb0ebbb066d3
+msgid "Provider: ``service``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:96
+# ddd691d287aa47c3bb64bd8bdfc8d2ac
+msgid "debian_service"
+msgstr ""
+
+#: ../../ref/states/providers.rst:96
+# fe14e043a44a41acad640f491bad61b2
+msgid "Debian Linux (non-systemd)"
+msgstr ""
+
+#: ../../ref/states/providers.rst:97
+# ac6dba766a0d4d8fa8bc802250ed2a43
+msgid "freebsdservice"
+msgstr ""
+
+#: ../../ref/states/providers.rst:97
+# 4b49c1af582440edb20b8d270c4f7e46
+msgid "FreeBSD-based OSes using ``service(8)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:98
+# f39bdc9c6dab4092b53b5e935d449033
+msgid "gentoo_service"
+msgstr ""
+
+#: ../../ref/states/providers.rst:98
+# a09cf379e4914a518444794f3b69ecdd
+msgid "Gentoo Linux using :program:`sysvinit` and ``rc-update(8)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:100
+# 2f7811906e694fbba62b41478e698da9
+msgid "launchctl"
+msgstr ""
+
+#: ../../ref/states/providers.rst:100
+# 29ed99e1354e4b6cb66e94f2df7b75f0
+msgid "Mac OS hosts using ``launchctl(1)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:101
+# 1fe3c13217e1420594d1faf2ef909324
+msgid "netbsdservice"
+msgstr ""
+
+#: ../../ref/states/providers.rst:101
+# 2e168f6c29de4a9781d2bf4f5dd1e66e
+msgid "NetBSD-based OSes"
+msgstr ""
+
+#: ../../ref/states/providers.rst:102
+# 172af399837a4c0db0787aaa8d7e42c0
+msgid "openbsdservice"
+msgstr ""
+
+#: ../../ref/states/providers.rst:102
+# d6d4c6c897904478acbe624856b64930
+msgid "OpenBSD-based OSes"
+msgstr ""
+
+#: ../../ref/states/providers.rst:103
+# 0af46175aa1b4d0a97561b164f03b75d
+msgid "rh_service"
+msgstr ""
+
+#: ../../ref/states/providers.rst:103
+# baff0a8696484802a06fda7cd5f24b09
+msgid "RedHat-based distros and derivatives using ``service(8)`` and ``chkconfig(8)``. Supports both pure sysvinit and mixed sysvinit/upstart systems."
+msgstr ""
+
+#: ../../ref/states/providers.rst:106
+# e1b315daffde468d8e14096f5caad6bb
+msgid "Fallback which simply wraps sysvinit scripts"
+msgstr ""
+
+#: ../../ref/states/providers.rst:107
+# 0a2472d091ad45e3b146485c57520525
+msgid "smf"
+msgstr ""
+
+#: ../../ref/states/providers.rst:107
+# 58986065057041b89cfff21ec8666a26
+msgid "Solaris-based OSes which use SMF"
+msgstr ""
+
+#: ../../ref/states/providers.rst:108
+# c9de3a8d62bf4c9faa93f11ac4e42eef
+msgid "systemd"
+msgstr ""
+
+#: ../../ref/states/providers.rst:108
+# 5d49ba9793f2414aa814adb937a6bbd1
+msgid "Linux distros which use systemd"
+msgstr ""
+
+#: ../../ref/states/providers.rst:109
+# b4bd15d05ad14842b555aa3abd6fa722
+msgid "upstart"
+msgstr ""
+
+#: ../../ref/states/providers.rst:109
+# 4414dfda9daa40cfa896d50d326d2ce6
+msgid "Ubuntu-based distros using upstart"
+msgstr ""
+
+#: ../../ref/states/providers.rst:110
+# 5753160daf48416c81c03839a46bba4a
+msgid "win_service"
+msgstr ""
+
+#: ../../ref/states/providers.rst:115
+# 4cc992a00ac145649b3286ddc503ba0d
+msgid "Provider: ``user``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:120
+# 2d4c6dd371fb47b59a5b20abeb33d72e
+msgid "useradd"
+msgstr ""
+
+#: ../../ref/states/providers.rst:120
+# 6aeb39afa61640e2baaa4af87c0b849e
+msgid "Linux, NetBSD, and OpenBSD systems using ``useradd(8)``, ``userdel(8)``, and ``usermod(8)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:122
+# cf2e9ff8206f45098e72d1d94a33bb51
+msgid "pw_user"
+msgstr ""
+
+#: ../../ref/states/providers.rst:122
+#: ../../ref/states/providers.rst:137
+# 246cdf41e5db43d4a941679190cb7b52
+# 6f7fa6dafbfc4b2ebd87215095989e81
+msgid "FreeBSD-based OSes using ``pw(8)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:123
+# 1c8079f662c84d48985916a3ffb6aa8d
+msgid "solaris_user"
+msgstr ""
+
+#: ../../ref/states/providers.rst:123
+# fbb00702810c4a019f62dd59218f588a
+msgid "Solaris-based OSes using ``useradd(1M)``, ``userdel(1M)``, and ``usermod(1M)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:125
+# 571c45298b144026a222026f9fe3c3ee
+msgid "win_useradd"
+msgstr ""
+
+#: ../../ref/states/providers.rst:130
+# 912667a42f1e496ea8a5ab9716c6c713
+msgid "Provider: ``group``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:135
+# 65a7785b6714452cb89877c49c5f86de
+msgid "groupadd"
+msgstr ""
+
+#: ../../ref/states/providers.rst:135
+# 18604ea3eece44c5882fb31a35554219
+msgid "Linux, NetBSD, and OpenBSD systems using ``groupadd(8)``, ``groupdel(8)``, and ``groupmod(8)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:137
+# 1b135e3fcc11464ba6d97a2ef7c5c03e
+msgid "pw_group"
+msgstr ""
+
+#: ../../ref/states/providers.rst:138
+# c303af6837d841fc84b3212b61a9e8c2
+msgid "solaris_group"
+msgstr ""
+
+#: ../../ref/states/providers.rst:138
+# 00f12ad955c84d76b3e4510c244e3b80
+msgid "Solaris-based OSes using ``groupadd(1M)``, ``groupdel(1M)``, and ``groupmod(1M)``"
+msgstr ""
+
+#: ../../ref/states/providers.rst:140
+# 77df0e7582d0446a891f307f89134445
+msgid "win_groupadd"
+msgstr ""
+
+#: ../../ref/states/providers.rst:145
+# 288c9f1e57e149a4acac7168670516ec
+msgid "Arbitrary Module Redirects"
+msgstr ""
+
+#: ../../ref/states/providers.rst:147
+# d974904293f14614a4fd691494e5bc6b
+msgid "The provider statement can also be used for more powerful means, instead of overwriting or extending the module used for the named service an arbitrary module can be used to provide certain functionality."
+msgstr ""
+
+#: ../../ref/states/providers.rst:159
+# c56643b6cb244659a216bcce8be8b727
+msgid "In this example the default :py:mod:`~salt.modules.pkg` module is being redirected to use the :py:mod:`~salt.modules.yumpkg5` module (:program:`yum` via shelling out instead of via the :program:`yum` Python API), but is also using a custom module to invoke commands. This could be used to dramatically change the behavior of a given state."
+msgstr ""
+

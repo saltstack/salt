@@ -1,0 +1,128 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.s3.rst:6
+# bfb80a624a724cdfb6b6a7f96ab13c4d
+msgid "salt.modules.s3"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3:1
+# 1d0ddd85f02e4cc6bee5dd042848918a
+msgid "Connection module for Amazon S3"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3:3
+# 0a452edf33444f3fa45de6757ad7b0b4
+msgid "This module is not usable until the following are specified either in a pillar or in the minion's config file::"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3:9
+# 32c1e416b6584765b8752484ede27dee
+msgid "A service_url may also be specified in the configuration::"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3:13
+# bf19284ba1db4d73aafae12601f5fd5d
+msgid "If a service_url is not specified, the default is s3.amazonaws.com. This may appear in various documentation as an \"endpoint\". A comprehensive list for Amazon S3 may be found at::"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3:19
+# 7059dfa7c8544fe8a11ba21e300a729f
+msgid "The service_url will form the basis for the final endpoint that is used to query the service."
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3:22
+# 2b28cbb564b94a9a823dd435d1e4e8e2
+msgid "This module should be usable to query other S3-like services, such as Eucalyptus."
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.delete:1
+# 5400be0c8bab44a3a4e80d26aaa93620
+msgid "Delete a bucket, or delete an object from a bucket."
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.delete:3
+# 665ee7e76c9f49c2a857f69ec7171a4c
+msgid "CLI Example to delete a bucket::"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.delete:7
+# 4facf48b68944544890e6bd3414ea28b
+msgid "CLI Example to delete an object from a bucket::"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.get:1
+# 8e3cb6181f144fbd8797d6a8e07d1bcd
+msgid "List the contents of a bucket, or return an object from a bucket. Set return_bin to True in order to retrieve an object wholesale. Otherwise, Salt will attempt to parse an XML response."
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.get:5
+# 257d7eea77a7494cbc9ed1e98a4af070
+msgid "CLI Example to list buckets:"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.get:11
+# f84aa3d686674304a67264118c3a2cdc
+msgid "CLI Example to list the contents of a bucket:"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.get:17
+# b00ea8a3a7794f848a68181ee6d1ddeb
+msgid "CLI Example to return the binary contents of an object:"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.get:23
+# 9c5825d3b4db4164bcdc7294931d916a
+msgid "CLI Example to save the binary contents of an object to a local file:"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.get:29
+# a39ca31420d14a59867da703f4a98cce
+msgid "It is also possible to perform an action on a bucket. Currently, S3 supports the following actions::"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.get:45
+# 3f1212e079ac4886a93525c7e07d9038
+msgid "To perform an action on a bucket:"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.head:1
+# 981ed0cc6c9444c0bfcb7e24d4caa042
+msgid "Return the metadata for a bucket, or an object in a bucket."
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.head:3
+# a6c03bfb1a5a4944b338ea2f5e08aceb
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.put:1
+# d781dc26750745cbbcbc40080420f0e0
+msgid "Create a new bucket, or upload an object to a bucket."
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.put:3
+# aef0038673544b648958c2ac7e4d7686
+msgid "CLI Example to create a bucket:"
+msgstr ""
+
+#: ../../../salt/modules/s3.py:docstring of salt.modules.s3.put:9
+# 844644b4c55d4beabc17cbf409ad3cd8
+msgid "CLI Example to upload an object to a bucket:"
+msgstr ""
+

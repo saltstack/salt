@@ -1,0 +1,78 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.launchctl.rst:6
+# 52e3e498a55d4bda8d56bd76f44c5ab7
+msgid "salt.modules.launchctl"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl:1
+# 5f1e047fe6244997b97e29e82ceeb17f
+msgid "Module for the management of MacOS systems that use launchd/launchctl"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl:3
+# 2a4e896b37034d5fa66cc6bb9dff11b7
+msgid "plistlib Python module"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.available:1
+# f783159dff16435c9bd619fdd159b377
+msgid "Check that the given service is available."
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.available:3
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.get_all:3
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.restart:3
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.start:3
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.status:4
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.stop:3
+# ed046e72476044218a4dfea30618230c
+# 8e87260950cd45d4886d52afa09365ef
+# f1ad4c514e344a4abb15537d1f05127d
+# 592851194fdd4454a6e43dc1fefd6b1f
+# 106f4502249442289c84d233542dd170
+# 6183949f996a48cb8eedfbcefe3a4dc4
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.get_all:1
+# 2a1e9693ce0e462eb3ed827fece35db6
+msgid "Return all installed services"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.restart:1
+# f33c7731a2704f2bba88630e4c3d906d
+msgid "Restart the named service"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.start:1
+# 35cb18aa99774909b67fde49e7a3a4e3
+msgid "Start the specified service"
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.status:1
+# e7e4a5e34c164289a2b7e5cba8f351fb
+msgid "Return the status for a service, returns a bool whether the service is running."
+msgstr ""
+
+#: ../../../salt/modules/launchctl.py:docstring of salt.modules.launchctl.stop:1
+# b4ccd80bab8a464289d505e9a00c1382
+msgid "Stop the specified service"
+msgstr ""
+

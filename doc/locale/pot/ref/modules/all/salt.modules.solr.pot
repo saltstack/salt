@@ -1,0 +1,640 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.solr.rst:6
+# eae06d8b0f3d4ea5899bc8060a5a2eaf
+msgid "salt.modules.solr"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:2
+# e33b01d7488d41268ccb643d91b3abbc
+msgid "Apache Solr Salt Module"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:4
+# bb380dabcf50418eb1c331942265f2ff
+msgid "Author: Jed Glazner Version: 0.2.1 Modified: 12/09/2011"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:8
+# 6f6f14ca64c840528cac5af21cf94d41
+msgid "This module uses HTTP requests to talk to the apache solr request handlers to gather information and report errors. Because of this the minion doesn't necessarily need to reside on the actual slave.  However if you want to use the signal function the minion must reside on the physical solr host."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:13
+# f22b50439dbb4c2da6c91ca281b013a9
+msgid "This module supports multi-core and standard setups.  Certain methods are master/slave specific.  Make sure you set the solr.type. If you have questions or want a feature request please ask."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:18
+# 40f174e718204ac69d7a3e3b47585758
+msgid "Coming Features in 0.3"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:20
+# 19d316178c0a4173b7824d3d1e69c9a6
+msgid "Add command for checking for replication failures on slaves"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:21
+# 399ccc3c24bf49ffaeb9a74d06f4f209
+msgid "Improve match_index_versions since it's pointless on busy solr masters"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:22
+# ad27f52100a6452a8a7307bf7f4473ff
+msgid "Add additional local fs checks for backups to make sure they succeeded"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:25
+# 442792da172a43d785bd497e716b9926
+msgid "Override these in the minion config"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:28
+# e1a23b8204c9499596fab508aaea92b1
+msgid "solr.cores"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:28
+# a37c52c18aaf430895c6e4f129eda4ce
+msgid "A list of core names eg ['core1','core2']. An empty list indicates non-multicore setup."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:30
+# 7fd5677d7a1c4a2cadbecb722364bdf6
+msgid "solr.baseurl"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:31
+# 0a304ab297934a0b9c4aeb5a7414fad0
+msgid "The root level URL to access solr via HTTP"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:33
+# a8821122347f49eab0269030866b17a8
+msgid "solr.request_timeout"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:33
+# 74d9aa84682b424da1f64168a51c1170
+msgid "The number of seconds before timing out an HTTP/HTTPS/FTP request. If nothing is specified then the python global timeout setting is used."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:35
+# 81e200c2336f4dab8a7564ea1eea38db
+msgid "solr.type"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:36
+# a7e655e74d33440d8b053a6be4761c91
+msgid "Possible values are 'master' or 'slave'"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:38
+# baf9c55bdd9c41a4b6b55483aeeb7aed
+msgid "solr.backup_path"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:38
+# 4853728b88a149898cb727db266500c6
+msgid "The path to store your backups. If you are using cores and you can specify to append the core name to the path in the backup method."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:41
+# bd9e9957f5a8459e8b5a59ac8f809bbe
+msgid "solr.num_backups"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:41
+# 5ec6a1de75a14c9ab124099202958fab
+msgid "For versions of solr >= 3.5. Indicates the number of backups to keep. This option is ignored if your version is less."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:43
+# 3cd4769eab0248188040f29827893202
+msgid "solr.init_script"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:44
+# 10457caac5c0491cb640cfe1f3b0269e
+msgid "The full path to your init script with start/stop options"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:46
+# 927d49b0293d4efe8d1bd07fd7a04ee4
+msgid "solr.dih.options"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:46
+# 39646be8affd45048cb94c4ad1c1a77a
+msgid "A list of options to pass to the DIH."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:49
+# 67dc0cd418404b009ab949ccd58b8639
+msgid "Required Options for DIH"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:51
+# e253c5daf9314e06a07a6acb7724b023
+msgid "clean : False"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:52
+# 72f6dc131536452086d617aefb642100
+msgid "Clear the index before importing"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:53
+# 3a7d3a6d96e94a37aa635c791b37fb43
+msgid "commit : True"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:54
+# f7940ede5d9647be8316dd0cc3880a7d
+msgid "Commit the documents to the index upon completion"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:55
+# 7aac8a846f434651af956a0daecf1897
+msgid "optimize : True"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:56
+# 7488067b0da14e6982b2c94a2e4eddc7
+msgid "Optimize the index after commit is complete"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:59
+# 96ca0dcf8d04412185e1b6b250386901
+msgid "verbose : True"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr:58
+# 5103dbc4a67641728d7d15030f592f61
+msgid "Get verbose output"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:1
+# 0a440d819ea94eeb8f88e7788dd82e66
+msgid "MASTER ONLY Aborts an existing import command to the specified handler. This command can only be run if the minion is configured with solr.type=master"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:5
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:5
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:5
+# 1b44c5b298924a2ab2da76f343cc7383
+# 3df81fc461d34524916f972563184b9b
+# 5ae580ed0e6543e5ae2a78da7d4dd021
+# 33aa16c1b4df4ab7af761c3718f39910
+# 8968c89b8c6f42a0b0cbbdd04c8f8b08
+msgid "handler : str"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:6
+# 294767bce79b4f328fc318408896c92f
+# 57c294426fdd49e0bb1bd5fc5e5910f5
+# 672cd0787900426894098193df8f954d
+# 5381339165ed4b8ba897455d848cb33a
+# ff044c01408947adbb9abaad63a28887
+msgid "The name of the data import handler."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:8
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.core_status:4
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:8
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.is_replication_enabled:4
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.match_index_versions:8
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.optimize:10
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.ping:3
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_core:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.replication_details:3
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:9
+# cc48cdfe7ee0467b8f260df00678222d
+# cd29670ffb4c4df7a75cc95030e82ac7
+# 739883e7ef5043ab9474d40675d87f08
+# 473dda0ee1a3475284e5a945bf9f7cc4
+# 09ac1e99b1424911878c578f2ca69e45
+# 80f889d315f24029a3bb4a339d333ddc
+# a6a5d4eb8a28409db85a59cf04edd78f
+# ba5914b41ba9455a892996604f7fe555
+# 30875d4803dc459aa56b9ca779f3c3be
+# 01b0e28d90b94ea59a21600aa94eee32
+# 645b53bbef7b41e2852b86e02f56e581
+# 8f3a11189cb74e619fb9b20a24156667
+# 49f3b9100825412d8af384b5a2441efc
+# a8773007101c4df8bed1d4cadd04f403
+# 9c33b9adba6143a89efbaf10fae66989
+msgid "host : str (None)"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.core_status:5
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:8
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:8
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.is_replication_enabled:5
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.match_index_versions:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.optimize:11
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.ping:4
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_core:8
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:8
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.replication_details:4
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:9
+# e5b17687154f4724ac9967251f66ab81
+# e1fe54d56e5d489c9e9c44393e2f6dd9
+# 83fa5a1945d948e5952a073024174a9e
+# 1c13814723794d48a4d35849db9bb5dc
+# 55af62929f1a4f8fbfe4628e330ffb51
+# ecb85711d93d47248c74a01fedef624e
+# d328a781a8bf4b7089940ae9fe3f6c9c
+# 9d68ac2bacf744be81e9dce41913cba0
+# 947b1655554f41bc97d5d0d28d29d292
+# e6cc2396c9df45c0a334556d167213d4
+# dc2fd776b9b940c6a9a8ba7492d0114f
+# 0562b174f0014b9ea8380a923b5ced05
+# cdd8a4b208924d1ba4b9f683da514db4
+# 3498d08c7b4541598ec8132127f02e3e
+# 95e1677541e549529f3f9f8e4081578d
+msgid "The solr host to query. __opts__['host'] is default."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:10
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:10
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:9
+# e3870c42fa7c4912be738096c15fb259
+# 0560281f2b384596956d19e3ad583527
+# 8a37dbe60dc64e339110a4e3fa922d2f
+# 27073a008c96457b942e8d61fb689b18
+# aab7c07130fe4bd597b6514b6670bfd6
+msgid "core : str (None)"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:11
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:10
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:11
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:10
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:10
+# f7fadac70de04f1382453f4a5fe1fbb0
+# 7cdcc5bdf46b4e178c412dbb68834737
+# f1a3792f08054de8ba8d999ea5e9e0d1
+# 5887a81199f74ef4bf85518b2d5035cc
+# 12d38ceec6944c0ebf0076c0f82f61df
+msgid "The core the handler belongs to."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:13
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:12
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:12
+# 010d3bd28b294835b887519fdf3add1d
+# 77bf5f515dcd4976afd65e14b9049f14
+# 3d357ed9aa9f4475a7ae8ac4d5fa5b74
+msgid "verbose : boolean (False)"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:13
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:12
+# 00b698cb5f974d7f8b6fe90e7f0d8dd3
+# e0c41f3f6f78476ea06dd39f0e53daf7
+msgid "Run the command with verbose output."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:15
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:15
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.core_status:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:19
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:19
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:14
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.is_replication_enabled:10
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.match_index_versions:14
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.optimize:16
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.ping:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_core:12
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:14
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.replication_details:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:12
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:15
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.version:9
+# cf2eda7ceef54ee682d98bc520de6fa0
+# 44da14d52b07440cbf5d8cecb46ff896
+# 785941c079bd492496254cde5c48250d
+# 384f8f4ce4e247869f57b6c9293a4261
+# 85d776f6b1994d148cb3da10704e9d45
+# 4ecf059c429446d39f1455065abaea4f
+# b267d85a7ad94c1d896d4d664ea8cd10
+# 4038094624084e04bf59e9ad9e648757
+# 5cb8f37a1c0b49b6bccd0ecb6599e848
+# f7767aa5622c408697c3f32cbed13fee
+# f0fb5f0983e04d93ad80dd90a30e30d2
+# 590a40742baf4cbe937d24ba3e72f1ba
+# f7db94981d5d44b1b8c3f28e8f59fbb8
+# 831f581950a044f4927c5f402ef0a046
+# e9df5aa51a5c41888b30e76e3d49135f
+# 7cd0af45f21546c5b2441836375d11f0
+msgid "Return : dict<str,obj>::"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.abort_import:19
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:19
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.core_status:13
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:23
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:23
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:18
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.is_replication_enabled:14
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.lucene_version:13
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.match_index_versions:18
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.optimize:20
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.ping:13
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_core:16
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:18
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.replication_details:13
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:16
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:19
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.signal:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.version:13
+# e7ec27c028ce46918ae94664569196ad
+# d13ae47a26d34c9b98953a1397d601a4
+# 53ec0beffdbc415c95cefcc1af8d580b
+# f881912dba01462787df63df1e3ebeec
+# 16d0a116de134ae2a5f473aa0820d9b6
+# ecdb0277544449118f5e1be224196b14
+# bde43224a3dc40bf8d64adc35987f6cf
+# 56b39cf0d4b84e51985ca29e61a58917
+# 9ee73d6111d948179b28ec8b81c6bcdb
+# 9c160a90b7c5438fa5700cfe7bc59832
+# 5d52f812d6df4547a1a3a8f59c07128c
+# 9ba81f28cd7445d0b28736ec190273d1
+# 1eadac15d322404cb46c212a100e04f6
+# 78583c73c22d40c29178b4040b620be1
+# 65f3c4d355304ede89aa0752e81e1196
+# 58664b5d48a6465b9d3f99e2c4369ece
+# 4b96524be2404a1087f6e5b291595659
+# d680cd06367b417b9cf458303bdd2bc4
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:1
+# d7c53ee19084472cb282286dcf0751e7
+msgid "Tell solr make a backup.  This method can be mis-leading since it uses the backup API.  If an error happens during the backup you are not notified. The status: 'OK' in the response simply means that solr received the request successfully."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.is_replication_enabled:8
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.lucene_version:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.match_index_versions:12
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.optimize:14
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.ping:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.replication_details:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:10
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:13
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.version:7
+# d7c1083e020c4436be9e4e5a9c906833
+# e13a96a694ac4184a44d41dd3a7488ec
+# 51eeea63393b4def979b513e7fbfb1e6
+# eb7c5d039a5847659250e96f8e38f9df
+# 9e16138e9e7341dba1a910e1731b5917
+# c758495ef5b241fa8e38bff239f3534e
+# f82040479e26456aa4d11cb377348125
+# 5458d5eb4ab74a448328405f03384554
+# 26057a3caf7b482e89038b23b9600b32
+# e6f7896d3b2545fa82d85708474f9131
+msgid "core_name : str (None)"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.is_replication_enabled:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.lucene_version:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.match_index_versions:11
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.optimize:13
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.ping:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.replication_details:6
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:9
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.version:6
+# 674988a229df455e8447eaf492b58294
+# 9f63f9ccd2a84533a26e387d888558fd
+# 4bef5b270ee74bb39dcf42b79078e31f
+# 08d8b6aa7373487ab4ab67a892b1024f
+# 1afffdec8fe54e6882bf74129a23b20d
+# d014c9f168d4486d816dab7aa2ea8d87
+# 4715f0b09228427b84fdad31c7408f2a
+# 81611c28ebb34a09875c6b4058168c70
+# 8fa1efe19bbc474298f547bf9a6f479d
+msgid "The name of the solr core if using cores. Leave this blank if you are not using cores or if you want to check all cores."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:13
+# 1b284c5efbc945a7b771e62068980b42
+msgid "append_core_to_path : boolean (False)"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.backup:12
+# fbe6e0c2271b4273bfd0acf41874a32c
+msgid "If True add the name of the core to the backup path. Assumes that minion backup path is not None."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.core_status:1
+# d5b0a3f923714e529d2f1c7e5b6632c9
+msgid "MULTI-CORE HOSTS ONLY Get the status for a given core or all cores if no core is specified"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.core_status:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_core:10
+# 5a7070dc33c04f19964a03cfe395515e
+# 2119b64d512a4ab79f706caba40b3a64
+msgid "core_name : str"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.core_status:7
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_core:10
+# 5f76e0a4a5ba4bcb9f3dfda3a2e9248d
+# ce8b82daef3745d5a16a3d4f668a6c5e
+msgid "The name of the core to reload"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:1
+# df25e65756964b019b64fbc8152ee018
+msgid "Submits an import command to the specified handler using specified options. This command can only be run if the minion is configured with solr.type=master"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:14
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:14
+# 8a16e1f8942f4325a2f91f7a3cd34e88
+# 1f8c966f294642429881cb4959de73d0
+msgid "options : dict (__opts__)"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:12
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:13
+# 337907babc624421883a0e5513e5c7ae
+# 27ff441b0d324465bdcc11c6ff85a70a
+msgid "A list of options such as clean, optimize commit, verbose, and pause_replication. leave blank to use __opts__ defaults. options will be merged with __opts__"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:17
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:17
+# 3a9b3bd02c22467687bec313c8ec59dc
+# 75448b769d604f0c9653325310f36474
+msgid "extra : dict ([])"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.delta_import:17
+# 9a59d9c5ef61453bb3ef58ed2558dce0
+msgid "Extra name value pairs to pass to the handler. eg [\"name=value\"]"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:1
+# a6d0b369bae54e5ba103d4c4edf07977
+msgid "MASTER ONLY Submits an import command to the specified handler using specified options. This command can only be run if the minion is configured with solr.type=master"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.full_import:17
+# 0792193147a44eabb4bc885e9f9087b9
+msgid "Extra name value pairs to pass to the handler. e.g. [\"name=value\"]"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:1
+# 65622cc1268048c281edf04e50d956d0
+msgid "Submits an import command to the specified handler using specified options. This command can only be run if the minion is configured with solr.type: 'master'"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.import_status:12
+# 97b2a8aa6a0f4758b4cf39d3aced99be
+msgid "Specifies verbose output"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.is_replication_enabled:1
+# 86e9637c6a2449a9beea7521736e1644
+msgid "SLAVE CALL Check for errors, and determine if a slave is replicating or not."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.lucene_version:1
+# a3b8d797c55c40dcb16c4f6539cec858
+msgid "Gets the lucene version that solr is using. If you are running a multi-core setup you should specify a core name since all the cores run under the same servlet container, they will all have the same version."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.lucene_version:9
+# 8f7f79049dc749849d7e16e15bc76852
+msgid "Return: dict<str,obj>::"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.match_index_versions:1
+# 2a4a09b9ebb14499a90c79135a80465d
+msgid "SLAVE CALL Verifies that the master and the slave versions are in sync by comparing the index version. If you are constantly pushing updates the index the master and slave versions will seldom match. A solution to this is pause indexing every so often to allow the slave to replicate and then call this method before allowing indexing to resume."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.optimize:1
+# 9ed8adfbd6cc48acbfcc8993878b1a47
+msgid "Search queries fast, but it is a very expensive operation. The ideal process is to run this with a master/slave configuration.  Then you can optimize the master, and push the optimized index to the slaves. If you are running a single solr instance, or if you are going to run this on a slave be aware than search performance will be horrible while this command is being run. Additionally it can take a LONG time to run and your HTTP request may timeout. If that happens adjust your timeout settings."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.ping:1
+# e2bf9a2cc94d4f979dbd577932632f9f
+msgid "Does a health check on solr, makes sure solr can talk to the indexes."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_core:1
+# a83b59a4d4cc43368975f7b223e0b0b5
+msgid "MULTI-CORE HOSTS ONLY Load a new core from the same configuration as an existing registered core. While the \"new\" core is initializing, the \"old\" one will continue to accept requests. Once it has finished, all new request will go to the \"new\" core, and the \"old\" core will be unloaded."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_core:22
+# 671813016e08493495a68669b44a0d63
+msgid "Return data is in the following format::"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.reload_import_config:1
+# 1df0db60f2424121b612ae2c0aa5359e
+msgid "MASTER ONLY re-loads the handler config XML file. This command can only be run if the minion is a 'master' type"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.replication_details:1
+# 3231c1305fea40fdae197f5334f5c447
+msgid "Get the full replication details."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:1
+# e176b85687a3443584a73dd9401e453a
+msgid "SLAVE CALL Prevent the slaves from polling the master for updates."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:4
+# b262d79ad0154239929fab01cfe5b22e
+msgid "polling : boolean"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_is_polling:5
+# 95c14100609d4d37a069a95867bc0c96
+msgid "True will enable polling. False will disable it."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:1
+# 7abf587672314bd795eed8453860ddba
+msgid "MASTER ONLY Sets the master to ignore poll requests from the slaves. Useful when you don't want the slaves replicating during indexing or when clearing the index."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:6
+# 3563f2184dc841f8841bd288c0cf29f9
+msgid "status : boolean"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:7
+# ec6ca0d5b5f8480b9ff9569cf49aeacf
+msgid "Sets the replication status to the specified state."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.set_replication_enabled:12
+# 337eb9263c38403d8806dcbe93cffa2f
+msgid "The name of the solr core if using cores. Leave this blank if you are not using cores or if you want to set the status on all cores."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.signal:1
+# dfd24fedbf6648dbb2a7c492cfe194d3
+msgid "Signals Apache Solr to start, stop, or restart. Obviously this is only going to work if the minion resides on the solr host. Additionally Solr doesn't ship with an init script so one must be created."
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.signal:7
+# 80c0c559232649a49717e5db19af2997
+msgid "signal : str (None)"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.signal:6
+# 252f21a40f3f46628e02bfce31fc3e7a
+msgid "The command to pass to the apache solr init valid values are 'start', 'stop', and 'restart'"
+msgstr ""
+
+#: ../../../salt/modules/solr.py:docstring of salt.modules.solr.version:1
+# efb4ad7ea2d349119322a013c862c3d6
+msgid "Gets the solr version for the core specified.  You should specify a core here as all the cores will run under the same servlet container and so will all have the same version."
+msgstr ""
+

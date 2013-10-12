@@ -1,0 +1,415 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.makeconf.rst:6
+# 25d70ac1c2e34f65bd365e4229eeb630
+msgid "salt.modules.makeconf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf:1
+# 5f23ca6f6955494e9121d0c8d79d6ddf
+msgid "Support for modifying make.conf under Gentoo"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_cflags:1
+# 2fd091ef112f4d4a9a23e6b6e467ef7f
+msgid "Add to or create a new CFLAGS in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_cflags:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_cxxflags:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_emerge_default_opts:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_features:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_gentoo_mirrors:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_makeopts:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_var:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_cflags:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_chost:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_cxxflags:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_emerge_default_opts:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_gentoo_mirrors:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_makeopts:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_sync:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_var:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_cflags:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_cxxflags:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_emerge_default_opts:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_features:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_gentoo_mirrors:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_makeopts:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_var:3
+# 324ca04cb8de4dd888ccd4830819a87b
+# 259e8dadbcf9436082d9db8bd7ebef00
+# c0fa1578105a48cd8079fd322bfac40a
+# 07515a84231c4463a64bbfc6a28951ff
+# 243cfdae372240f2a369bdc418566a3b
+# c7b26278f5d14ad3bac22154eb959f59
+# 820b3397462c42d7960cd9ccc8febff9
+# 74a56f9185ab4e1bb39f389273788e2e
+# 9a94c70d093c40af89474027f7518f63
+# 207a6b0ff1124203a4a9b9c0353c2c78
+# 7dafd80800ba4779b90d61a30d507e05
+# 2c60403fb794460fab48a7d4f2f09ef4
+# 1e22bc4a833d465897be0d1b3b4fe35f
+# bdfbff15466a4aec8181ac41d1375b2d
+# 17fdd2e1e1e84ca2b5f2be4d62c42bc1
+# c4ccfb6464804a9fa6b306e596ac8882
+# 1d1a13dda9dd4feeb56c29f006b6845c
+# 312c9110fdb14f7bb868313c9a535a3e
+# 1facca91cd5d4640b7618b4d431334a9
+# 494d5e44117141899775771c2f0f45ae
+# 5291c036f98444cf9129500fc53fd3cf
+# 2ef108a053e84087b5dd1b9348aab1bc
+msgid "Return a dict containing the new value for variable::"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_cflags:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_cxxflags:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_emerge_default_opts:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_features:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_gentoo_mirrors:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_makeopts:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_var:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.cflags_contains:5
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.chost_contains:5
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.cxxflags_contains:5
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.emerge_default_opts_contains:5
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.features_contains:5
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.gentoo_mirrors_contains:5
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_cflags:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_chost:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_cxxflags:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_emerge_default_opts:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_features:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_gentoo_mirrors:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_makeopts:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_sync:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_var:6
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.makeopts_contains:5
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.remove_var:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_cflags:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_chost:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_cxxflags:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_emerge_default_opts:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_gentoo_mirrors:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_makeopts:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_sync:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_var:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.sync_contains:5
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_cflags:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_cxxflags:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_emerge_default_opts:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_features:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_gentoo_mirrors:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_makeopts:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_var:8
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.var_contains:5
+# ba304b2c302749a1bbf84001eeae665d
+# 35478e5ebb9f492984d7d80da0495acb
+# dfcf4d55165c4f24b32a0e534ad11eb3
+# 31f4d631f5a146cb94857f3051d385c8
+# 4aae597a990747ebaf3a29ecd480cb65
+# b45976beef454c6d802b4e5ea9f3abf1
+# 3d3966b64892464fad420bda5beb7677
+# 65ecc0a4767a44e8a55383b46bb72a0b
+# 6ca7d5a30281419fa33bae9dde6e806d
+# 014af443213c43aeaa041f9b8410794f
+# f3561f11e2b646c182ed4a057489080e
+# 23ec34c9aa88474081c430bf53db93fd
+# f77d122f8c2a41738d1d8b76133c36c3
+# f2aab68332ef4a698f1a853ade2fdff0
+# bad5592df5ab46139910425dc10fc7df
+# 9e812e4e38fa451480e1ba864dd79cb6
+# 7e510621d0144a2fa8e1f77e9fdd08db
+# 35c70a8f685b49679609f69de107b44b
+# ff84a1c827f44c95878ae4bc9be08167
+# f0f3f8ee0fe845ac8d1e300925de1006
+# 5d38c155ca09454991fe6619504400f0
+# f7501e00e72e4accbb5f3ccd45515235
+# b88fd10a1dfe47639d19888cd348f2f9
+# 04c3751058ff43f08f341829dfa8e084
+# ea7d917f3a424dae9c14de98a3260d87
+# 71e548b0b96747deab6f46aaf84ab659
+# 43807df221294beba4b64168576283fd
+# 2a6a2c33397c48f8b7a4c7abb228f71e
+# 735c778563414dd3a0eea0f0b1f65a0a
+# 024f3c45fc1447408e7bf5c6d3a4ac75
+# 491529140f604303984ff66e1ed4a79b
+# c8e97a063f7147fa9a00915224c04a27
+# 203cd70cb14d449ba91aa2a0033e35aa
+# be5dcd5d730e4b4ebf8c5c36f0d3ce1f
+# 45124604dbe84463843fe724cdb0f23c
+# 8423ca42edc14f5f84e6c68b869b378a
+# 63a800dc005b4d08ba440ad46f8dfd9c
+# cc53c10c130645e9a22f6db31ecdbc67
+# 26f1b0f26f444c48836095824e98cabe
+# ed883b797e50411a8942a1c4a9c62770
+# 03bcb381eaa24eb2b1b6fd36c5504a6e
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_cxxflags:1
+# a4c336346d114fb4a209360c7c37830e
+msgid "Add to or create a new CXXFLAGS in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_emerge_default_opts:1
+# d7aeecb40c5541ffa6fd556f619ebd96
+msgid "Add to or create a new EMERGE_DEFAULT_OPTS in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_features:1
+# 52a81c06f9c64616a050cd00f662ce3d
+msgid "Add to or create a new FEATURES in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_gentoo_mirrors:1
+# ea68405819134cf4a6ace75f1c1ab01f
+msgid "Add to or create a new GENTOO_MIRRORS in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_makeopts:1
+# 5f3b0cd665494c8fa8b6e767283591db
+msgid "Add to or create a new MAKEOPTS in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.append_var:1
+# ace8fec1727a43b38a923c4189c1609f
+msgid "Add to or create a new variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.cflags_contains:1
+# a41d6ae8f99944acb8ec14894d1df495
+msgid "Verify if CFLAGS variable contains a value in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.cflags_contains:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.chost_contains:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.cxxflags_contains:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.emerge_default_opts_contains:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.features_contains:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.gentoo_mirrors_contains:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.makeopts_contains:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.sync_contains:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.var_contains:3
+# 2abf14493edc493291d236deb7850cbd
+# 1cf4cb736f414d939bc04a9bd383ab95
+# c769f0aaf2824417968f996d1e1741ef
+# e183619dd1e64ede8d48527aac289427
+# 64e6ce66d2a6430688000d47d50e4876
+# 5d5f43c5682141628d6b800efff84670
+# 14e0e6f6f40449f593159331a427f8d7
+# b01055ae8eaa48069ab832528bf4509f
+# a44262e2d36341f382927092cb3db658
+msgid "Return True if value is set for var"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.chost_contains:1
+# 103787ecf26a4d19a7e926cc94e9f4e0
+msgid "Verify if CHOST variable contains a value in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.cxxflags_contains:1
+# a439ab18e6324408947c64d52cc865ef
+msgid "Verify if CXXFLAGS variable contains a value in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.emerge_default_opts_contains:1
+# 718d58831408424a8eb376434945ac51
+msgid "Verify if EMERGE_DEFAULT_OPTS variable contains a value in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.features_contains:1
+# d6d7240cad2a481ba6222baa713b2cff
+msgid "Verify if FEATURES variable contains a value in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.gentoo_mirrors_contains:1
+# b58d209b776e44ed82142d5dd65add04
+msgid "Verify if GENTOO_MIRRORS variable contains a value in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_cflags:1
+# 34dcbe964b264a2b991200c6cb53dc64
+msgid "Get the value of CFLAGS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_cflags:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_chost:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_cxxflags:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_emerge_default_opts:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_features:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_gentoo_mirrors:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_makeopts:3
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_sync:3
+# c09963dea818407da44e052be01b04da
+# 403097ec39e04e878bfa1519da374b58
+# 33207f8c6d2040d88e98a0886f6e8fa8
+# 9ad0e2449c534466ba0adee4cabd73b2
+# 13cb68286fd946018c7c1851805ef181
+# 312426d1347b4cc79bc0d94526dea7fc
+# afacd2d3b2f84d65b9448068a3aaaf30
+# 0f85b49b387b4eea8c87dcc1514c56e2
+msgid "Return the value of the variable or None if the variable is not in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_chost:1
+# 7a2a8ffe883b4ea5b0222f1e8dc96bf7
+msgid "Get the value of CHOST variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_cxxflags:1
+# b935482ed81d4dee97dcaa4f77c4318d
+msgid "Get the value of CXXFLAGS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_emerge_default_opts:1
+# ff1e8554a0764309b0b3e6ef8ad93045
+msgid "Get the value of EMERGE_DEFAULT_OPTS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_features:1
+# 27702da74e8d4a77bad7e34484134696
+msgid "Get the value of FEATURES variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_gentoo_mirrors:1
+# 2516093493974384b1c7e70022e6018b
+msgid "Get the value of GENTOO_MIRRORS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_makeopts:1
+# 200e7548ee6840ce9d4c694ce33fb602
+msgid "Get the value of MAKEOPTS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_sync:1
+# a02f0953336c44cd91c9ea8b7cfc280c
+msgid "Get the value of SYNC variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_var:1
+# 18b2aacc387442c495927285efdc696b
+msgid "Get the value of a variable in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.get_var:3
+# 90babffff98a4fbdb01e4a6530a15b35
+msgid "Return the value of the variable or None if the variable is not in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.makeopts_contains:1
+# 56ae4c84bf47409682c18d424c17d2bb
+msgid "Verify if MAKEOPTS variable contains a value in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.remove_var:1
+# ae72cf607ed74fc4b717532dbea047eb
+msgid "Remove a variable from the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.remove_var:3
+# 01401c05078a4c31b6149ca491c58bf8
+msgid "Return a dict containing the new value for the variable::"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_cflags:1
+# e5e177a32af44dff8730173c3a8738db
+msgid "Set the CFLAGS variable"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_chost:1
+# aa9e76dbe5254cbbaaa2960f91d9d27c
+msgid "Set the CHOST variable"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_cxxflags:1
+# f8a41dd742614b869a5a24decc3cf691
+msgid "Set the CXXFLAGS variable"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_emerge_default_opts:1
+# c898f82c06c04cd898903477590f634c
+msgid "Set the EMERGE_DEFAULT_OPTS variable"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_gentoo_mirrors:1
+# 3bc7fbabe9ae4ca493438c071f9c1258
+msgid "Set the GENTOO_MIRRORS variable"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_makeopts:1
+# 7c333afcc9b242caafe7b9b59d94353b
+msgid "Set the MAKEOPTS variable"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_sync:1
+# 0ac162c42a4a4411bb01d2d2bad16859
+msgid "Set the SYNC variable"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.set_var:1
+# a14c25117218473ca0405acc72e1748d
+msgid "Set a variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.sync_contains:1
+# 162ff82d836a426ca6680195e058cb99
+msgid "Verify if SYNC variable contains a value in make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_cflags:1
+# 29eff1dff8ec417dbfa77453545b9f60
+msgid "Remove a value from CFLAGS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_cxxflags:1
+# bf1ca324793d4ecf8def75305441d7aa
+msgid "Remove a value from CXXFLAGS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_emerge_default_opts:1
+# 20d730971c724999b9fa5c995ac55710
+msgid "Remove a value from EMERGE_DEFAULT_OPTS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_features:1
+# 81136de36e4a4aa48dc988817dd249e0
+msgid "Remove a value from FEATURES variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_gentoo_mirrors:1
+# fcdeb05268ae4c23ad976b5cf5cde539
+msgid "Remove a value from GENTOO_MIRRORS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_makeopts:1
+# c8a6f988229141a88f0f0f3cc2dfe074
+msgid "Remove a value from MAKEOPTS variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.trim_var:1
+# 5ac522333e464b748a6db1067fc89073
+msgid "Remove a value from a variable in the make.conf"
+msgstr ""
+
+#: ../../../salt/modules/makeconf.py:docstring of salt.modules.makeconf.var_contains:1
+# 83775947e058433c879f88d7c85324fa
+msgid "Verify if variable contains a value in make.conf"
+msgstr ""
+

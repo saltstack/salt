@@ -1,0 +1,218 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.tomcat.rst:6
+# 997874f8b59346f085f673155be24958
+msgid "salt.states.tomcat"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:1
+# 0bfd2813931d48278d10e5773b8f7f4f
+msgid "This state uses the manager webapp to manage Apache tomcat webapps This state requires the manager webapp to be enabled"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:4
+# 77e0ee300f8346e3b1098330dbd07841
+msgid "The following grains/pillar should be set::"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:9
+# 9a80da4d0a404ce582734eae5fc7cd4b
+msgid "and also configure a user in the conf/tomcat-users.xml file::"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:17
+# 6617faf178604c2f95f9e2376ad80682
+msgid "Notes:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:19
+# dd859fc70fe849ef944fe823be32e108
+msgid "Not supported multiple version on the same context path"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:20
+# ade896d894474e4fa9d9a4d6850e1445
+msgid "More information about tomcat manager:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:21
+# 3bcd3e31146141558842b75b224de43f
+msgid "http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:23
+# f07020115d334364a6146b3ac2ca9759
+msgid "if you use only this module for deployments you might want to restrict"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:23
+# 07d33a5bcb9446d6ab22c9384a1d0728
+msgid "access to the manager so its only accessible via localhost for more info: http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html#Configuring_Manager_Application_Access"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:25
+# f4f048677b1145da99fd0f2604a20d8d
+msgid "Tested on:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:27
+# 10d70b65118d49fa8206d7c4a907f425
+msgid "JVM Vendor:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:28
+# 3f4d61c8ce1d42cdb4ce68b37aaee644
+msgid "Sun Microsystems Inc."
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:29
+# 08b4cbf275db4d6d97d3f1a90511619f
+msgid "JVM Version:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:30
+# f4988d470c54428a907313fa88d6b574
+msgid "1.6.0_43-b01"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:31
+# 6331f3d81aea41078190f82058b9be55
+msgid "OS Architecture:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:32
+# 595a68dfd19c47f8a13093a3b6038646
+msgid "amd64"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:33
+# baa8ac395c7b4c0b96f06960be2fbfad
+msgid "OS Name:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:34
+# 3c9d4d3e0bda4dd896e06e3b39494c7c
+msgid "Linux"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:35
+# d7112649dba6486eaeae1e22ea7670c0
+msgid "OS Version:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:36
+# f5d18729424c47c08ec81a4c5317dd74
+msgid "2.6.32-358.el6.x86_64"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:39
+# 5557927f10a84095bf0f37de4e73d113
+msgid "Tomcat Version:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat:38
+# 0eec7ce45c4a41d188b07997d2a566f6
+msgid "Apache Tomcat/7.0.37"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.mod_watch:1
+# 13380d32aeae4b0ea79dd79b500c3698
+msgid "The tomcat watcher function. When called it will reload the webapp in question"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.wait:1
+# 87088c3f0054426e95e88d499e259e35
+msgid "Wait for the tomcat manager to load"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.wait:3
+# 39a653521de747c88a9df39c2c11eca4
+msgid "Notice that if tomcat is not running we won't wait for it start and the state will fail. This state can be required in the tomcat.war_deployed state to make sure tomcat is running and that the manager is running as well and ready for deployment"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.wait:8
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:12
+# bfbe4f8128ef493f850b3523dd18a32e
+# 9aa746ca385944769acb26321b7a99ca
+msgid "url : http://localhost:8080/manager"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.wait:9
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:13
+# 7525ec659ddd4a08874ecd785e561aaf
+# eeb738d03aeb4fa6b42f33dc481328eb
+msgid "the URL of the server manager webapp"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.wait:11
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:15
+# fee7915ae6b740bb83990e20356a7d7c
+# b2a41c473c5e49b4939c3659619217a1
+msgid "timeout : 180"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.wait:11
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:15
+# 49de02ec6bc949ee893aca4f00f9c929
+# 18bd13c6c5744f33852d18219ce15726
+msgid "timeout for HTTP request to the tomcat manager"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.wait:13
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:17
+# 8083bdceaf6d4a08bd5bfbac82c50b84
+# 30ae71a1ca7b4009b9c5d94466516f81
+msgid "Example::"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:1
+# 3d324cd5c7cd4b80918d0cb72438b22a
+msgid "Enforce that the WAR will be deployed and started in the context path it will make use of WAR versions"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:5
+# 0943de6684f84d14bf6fb3d92280f987
+msgid "for more info:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:5
+# 2c088dccd7b944c88711cc106f763e6d
+msgid "http://tomcat.apache.org/tomcat-7.0-doc/config/context.html#Naming"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:7
+# 00fc1bde5d364145a36480c152ef97a9
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:8
+# bce5154470b245c09bdeef4a1fb2d4db
+msgid "the context path to deploy"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:10
+# 22e4c834c3df4de8b3154efb99a0f61c
+msgid "war"
+msgstr ""
+
+#: ../../../salt/states/tomcat.py:docstring of salt.states.tomcat.war_deployed:10
+# 9cd4536b62cf41aba8ac4831f947b5f2
+msgid "absolute path to WAR file (should be accessible by the user running tomcat) or a path supported by the salt.modules.cp.get_url function"
+msgstr ""
+

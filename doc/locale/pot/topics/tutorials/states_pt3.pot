@@ -1,0 +1,185 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/states_pt3.rst:6
+# 4c30d42753cc4cc3a695ef71c88c2a89
+msgid "States tutorial, part 3"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:10
+# 8a9c2c93319b42ad80bd1e0e6fe542b2
+msgid "This tutorial builds on topics covered in :doc:`part 1 <states_pt1>` and :doc:`part 2 <states_pt2>`. It is recommended that you begin there."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:13
+# 73706d73374f4695a6112d450c562982
+msgid "This part of the tutorial will cover more advanced templating and configuration techniques for ``sls`` files."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:17
+# 9125105f0d1143caad59038ee34185ad
+msgid "Templating SLS modules"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:19
+# b82c8db6b9c34dcb8921347f481f9114
+msgid "SLS modules may require programming logic or inline execution. This is accomplished with module templating. The default module templating system used is `Jinja2`_  and may be configured by changing the :conf_master:`renderer` value in the master config."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:26
+# 6024c1e43578457b98e96ee6060904d1
+msgid "All states are passed through a templating system when they are initially read. To make use of the templating system, simply add some templating markup. An example of an sls module with templating markup may look like this:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:37
+# bdec55f2dd2e4ef79c3448fdb27c43a0
+msgid "This templated sls file once generated will look like this:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:48
+# 47577aa45da54eb8bbcb8f33b80e5fcc
+msgid "Here's a more complex example:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:64
+# ddaddebe5b644c43a9563a9819cb0e01
+msgid "Using Grains in SLS modules"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:66
+# 91ed6398ab5d49849e90e365f2b6934b
+msgid "Often times a state will need to behave differently on different systems. :doc:`Salt grains </topics/targeting/grains>` objects are made available in the template context. The `grains` can be used from within sls modules:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:81
+# 48bc23b9d2ea4a5da8cd2f8fedbbcc20
+msgid "Calling Salt modules from templates"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:83
+# ecb76d3914384e62939b31c0a644c335
+msgid "All of the Salt modules loaded by the minion are available within the templating system. This allows data to be gathered in real time on the target system. It also allows for shell commands to be run easily from within the sls modules."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:88
+# 5e35184767b74a5cb0a051863cff9233
+msgid "The Salt module functions are also made available in the template context as ``salt:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:98
+# ed0977be6d754b0387d383956798e5e1
+msgid "Note that for the above example to work, ``some_group_that_exists`` must exist before the state file is processed by the templating engine."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:101
+# 32b380a7c1264a77b55fed3812951bde
+msgid "Below is an example that uses the ``network.hw_addr`` function to retrieve the MAC address for eth0:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:109
+# f50d433ea6734c61b40a74df8102b580
+msgid "Advanced SLS module syntax"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:111
+# 62e8f5343d6c4ded87e753538309a47c
+msgid "Lastly, we will cover some incredibly useful techniques for more complex State trees."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:115
+# 0bd15b343b9349f8acc888fddf72d513
+msgid ":term:`Include declaration`"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:117
+# 8382daa9c4ec4adebe69e066853a13e4
+msgid "A previous example showed how to spread a Salt tree across several files. Similarly, :doc:`requisites </ref/states/requisites>` span multiple files by using an :term:`include declaration`. For example:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:121
+# a0b1acb4299b482493be37691a1e3f80
+msgid "``python/python-libs.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:128
+# 374754729cbc413b9b3b71e1cac8e816
+msgid "``python/django.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:141
+# df744dd76249491697037e7154e70542
+msgid ":term:`Extend declaration`"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:143
+# b5b07d52a74b495b8cd0bd3bff23ccd7
+msgid "You can modify previous declarations by using an :term:`extend declaration`. For example the following modifies the Apache tree to also restart Apache when the vhosts file is changed:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:147
+# 486e194193c44479917c704dddf4f62b
+msgid "``apache/apache.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:154
+#: ../../topics/tutorials/states_pt3.rst:181
+# 33d445c99ead4bc4ad8108dd1758f008
+# b490c47fbc6a48ee99a7a82e27512edc
+msgid "``apache/mywebsite.sls:``"
+msgstr ""
+
+#: ../../_incl/extend_with_require_watch.rst:1
+# e4ed6f234c1e48c7ac7d728be396c499
+msgid "Using extend with require or watch"
+msgstr ""
+
+#: ../../_incl/extend_with_require_watch.rst:3
+# 56b8fea850554660abaf980507f6f7c6
+msgid "The ``extend`` statement works differently for ``require`` or ``watch``. It appends to, rather than replacing the requisite component."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:175
+# 788953f864ca4fe481f630bdfd5dcdc5
+msgid ":term:`Name declaration`"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:177
+# 85201ae28ff04cab82d7f9a9a034808f
+msgid "You can override the :term:`ID declaration` by using a :term:`name declaration`. For example, the previous example is a bit more maintainable if rewritten as follows:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:202
+# 37ff868cc6d7425391686a72025f2070
+msgid ":term:`Names declaration`"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:204
+# aae36ed04d4b49039f15ee32019317ad
+msgid "Even more powerful is using a :term:`names declaration` to override the :term:`ID declaration` for multiple states at once. This often can remove the need for looping in a template. For example, the first example in this tutorial can be rewritten without the loop:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:219
+# 3e835f5205214b0fa253ab1058e2346c
+msgid "Next steps"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt3.rst:221
+# 40e4bb8bb8974a8eb26fcd02e6503926
+msgid "In :doc:`part 4 <states_pt4>` we will discuss how to use salt's :conf_master:`file_roots` to set up a workflow in which states can be \"promoted\" from dev, to QA, to production."
+msgstr ""
+

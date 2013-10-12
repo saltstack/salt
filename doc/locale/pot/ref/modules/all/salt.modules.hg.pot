@@ -1,0 +1,243 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.hg.rst:6
+# 4c43ac86d87e4896a857da7628a9476e
+msgid "salt.modules.hg"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg:1
+# 5e827023ceae40f5a6da3c7a6d491c7f
+msgid "Support for the Mercurial SCM"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:1
+# 3447d2d868024b8ba5f13a86746089f3
+msgid "Export a tarball from the repository"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.describe:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.pull:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:4
+# 3b5e7da7036941a98257d98a85d6897f
+# 10ac80b0491345c59bae7ed57af4cdf9
+# cfe051e5f4a047d5b0c1d8d8cef64bbe
+# a5f9a1b67f74441093f08a5f766792a0
+# 3fcf46b26a2e437997e652cfe36963d3
+# 62126b31aa444d8ca8453d56c4152bb3
+msgid "cwd"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.describe:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.pull:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:4
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:4
+# c3fae9dfcc594fe5a32301b174eb7bb4
+# 97f78af573d94314bcdcf9ba5ae91e20
+# 12db7d275682484ebfc2ee49786b1493
+# d4feabb8750d4b83b90aae9ec55d5e79
+# b8806ae84e324bb0ab5f5bd6fb72dc1b
+# 192a831e480346afb014f9303fd6ad20
+msgid "The path to the Mercurial repository"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:7
+# 597fdf0c037341d4a051592669e26454
+msgid "output"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:7
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.describe:7
+# 54340bf93ad8456f882229961d72fa8f
+# 0f7592c8feb844f9871e6893d0c04175
+msgid "The path to the archive tarball"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:10
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.describe:7
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:7
+# c67b9fa88aa54ff1ad9153a9d6d7a585
+# 4bfd84431eae4d8ebfe47e9a0497796d
+# 4e364aad460f422193a0c533fdba1fd4
+msgid "rev: tip"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:10
+# 59ddd207dc9a4708ae78d436bd7bd036
+msgid "The revision to create an archive from"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:14
+# a264252ebb9d49d78ce4afeea9697bf9
+msgid "fmt: None"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:13
+# 8bac589149e54e8d925fb26d1ac2d0c7
+msgid "Format of the resulting archive. Mercurial supports: tar, tbz2, tgz, zip, uzip, and files formats."
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:17
+# 985827d742544f09a1779f95106b2f6c
+msgid "prefix : None"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:17
+# 78716a081666418298ed6b533479e320
+msgid "Prepend <prefix>/ to every filename in the archive"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:20
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:13
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.describe:10
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.pull:10
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:13
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:13
+# 43927ae7709647149ce07537a15bef54
+# aaf76abaa29e4806b055d1d50b08d4e6
+# 120aeabb67eb444fb37ab78278cf181c
+# 1e9f16dbb0f24366a8820515dc03cfb9
+# 9caa09c39b994f08997c526f40ae9dd5
+# dca007a9c1414e3b95b4bff5bb187ca8
+msgid "user : None"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:20
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:13
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.describe:10
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.pull:10
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:13
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:13
+# 8a30da7856ad4c128a75ab99246392c3
+# 1fc0283c94e746648fd4f8a0123956a7
+# 93de7436bbeb40d789c04ace35c2a6dc
+# ddd75ec5995a44fca232c7625a0e5beb
+# 1699ff32ed9d4c008e0814030f65a487
+# 1c90fd9f5b8947158ba0be362f6609f5
+msgid "Run hg as a user other than what the minion runs as"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:22
+# 2cf02b6b2fe14294946d1ecb12dfa0fe
+msgid "If ``prefix`` is not specified it defaults to the basename of the repo directory."
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.archive:25
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:15
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.describe:12
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.pull:12
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:15
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:15
+# 40608f2da2ff40d2b134da6849938599
+# af1bba27aa774eb78766a1291941ef42
+# e3cd849a4e41418b9841aa1bbe8b144d
+# 15655d61b9de4aab999ec58d9d1d2fe9
+# 13bc9d3cffce489bb99541a80c47be29
+# edcf94dfc3534fdbb1cb1212b2b5d1b7
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:1
+# 563e0350342246acba33ec86a1238954
+msgid "Clone a new repository"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:7
+# 12e0ba4f513542d78566f9307938d07f
+msgid "repository"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:7
+# 40626efb77b549ed813bd98d1768ebb0
+msgid "The hg URI of the repository"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:10
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.pull:7
+# 6d02bd6f550f4a4598ed59754ef8a652
+# 100e550508044350baf2ab58ef4e6fa1
+msgid "opts : None"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.clone:10
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.pull:7
+# ee01662784814f1c888b0c9ce2a32837
+# 699d486320cd4b2fbddc03e5dec745ad
+msgid "Any additional options to add to the command line"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.describe:1
+# 8e0de842009c48129f3506e7bf2efb5f
+msgid "Mimick git describe and return an identifier for the given revision"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.pull:1
+# 70c5dac35d314cbb9d8e5e43cfecdd2b
+msgid "Perform a pull on the given repository"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:1
+# 138a6a1fd5374a89ad0bb0171e42d826
+msgid "Returns the long hash of a given identifier (hash, branch, tag, HEAD, etc)"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:7
+# fd3209519ec74f1da60d6c73f298eb88
+msgid "The revision"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:10
+# 72371975bb564b27a8ec0cc3e3cbff58
+msgid "short: False"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.revision:10
+# 64b77e0d9d2241ff94a0d9c51cf6d5c0
+msgid "Return an abbreviated commit hash"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:1
+# d7f63813ebd1460683a43d55ca69fd3e
+msgid "Update to a given revision"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:7
+# 5113561fd24142b89e0b7f6389112870
+msgid "rev"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:7
+# 4451b3119ba143f097207afdb4ff5cdd
+msgid "The revision to update to"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:10
+# 9520c20b9c424b80ba9db3bbaff147cc
+msgid "force : False"
+msgstr ""
+
+#: ../../../salt/modules/hg.py:docstring of salt.modules.hg.update:10
+# f3903199a1994a788c2dd1895745b2d0
+msgid "Force an update"
+msgstr ""
+

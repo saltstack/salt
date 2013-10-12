@@ -1,0 +1,403 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/conventions/formulas.rst:8
+# 0d55d37419d34da280c1f4bcaae5c269
+msgid "Salt Formulas"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:10
+# d62faa1364f44f688fde4c68a98339d3
+msgid "Formulas are pre-written Salt States. They are as open-ended as Salt States themselves and can be used for tasks such as installing a package, configuring and starting a service, setting up users or permissions, and many other common tasks."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:15
+# 61be54754b2a4159ac84e1b08dd3ccb5
+msgid "Formulas require Salt 0.17 or later."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:17
+# 64db53f4c2db4e4b85ba1c4ceaa57196
+msgid "More accurately, Formulas are not tested on earlier versions of Salt so your mileage may vary."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:20
+# 9cbf460e892c405c8263ec7edaf4cc02
+msgid "All Formulas require the grains execution module that shipped with Salt 0.16.4. Earlier Salt versions may copy :blob:`salt/modules/grains.py` into the :file:`/srv/salt/_modules` directory and it will be automatically distributed to all minions."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:25
+# 62d8f93998ac499ea77f3e54d5cf6fef
+msgid "Some Formula utilize features added in Salt 0.17 and will not work on earlier Salt versions."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:28
+# f1c486a3fac44f53a8f9a833e1620307
+msgid "All official Salt Formulas are found as separate Git repositories in the \"saltstack-formulas\" organization on GitHub:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:31
+# 886fa310a6b742a88b6906d749ee47ec
+msgid "https://github.com/saltstack-formulas"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:33
+# 4be471d9a6ab473893813ec7e5c39e59
+msgid "As an example, quickly install and configure the popular memcached server using sane defaults simply by including the :formula:`memcached-formula` repository into an existing Salt States tree."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:38
+# b2e6f866b7a343e3a33cb1ecd1816421
+msgid "Installation"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:40
+# c0f1c0e3cab24f9c985f273c03e7977f
+msgid "Each Salt Formula is an individual Git repository designed as a drop-in addition to an existing Salt State tree. Formulas can be installed in the following ways."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:45
+# 57e09175dc7c4fedb904801979a22716
+msgid "Adding a Formula as a GitFS remote"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:47
+# 425258bdf2624bf29e66ff8213fc59c3
+msgid "One design goal of Salt's GitFS fileserver backend was to facilitate reusable States so this is a quick and natural way to use Formulas."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:50
+# 93899b3c4a1044a1a69a142542650519
+msgid ":ref:`Setting up GitFS <tutorial-gitfs>`"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:52
+# 2417ab7cb9764c56af909b6fa722627a
+msgid "Add one or more Formula repository URLs as remotes in the :conf_master:`gitfs_remotes` list in the Salt Master configuration file."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:54
+# b75e67770b6e4702a9bc4428de4a7b47
+msgid "Restart the Salt master."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:57
+# 631760a98f3c4f4899ed0f7f7b8531a6
+msgid "Adding a Formula directory manually"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:59
+# bf0b021bf6b1488eba104fae8589ec94
+msgid "Since Formulas are simply directories they can be copied onto the local file system by using Git to clone the repository or by downloading and expanding a tarball or zip file of the directory."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:63
+# 793ceaade22b4cada6c8fe2ef9672304
+msgid "Clone the repository manually and add a new entry to :conf_master:`file_roots` pointing to the clone's directory."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:66
+# bcbba4f8aceb4a189bdd263e85b75e4c
+msgid "Clone the repository manually and then copy or link the Formula directory into ``file_roots``."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:70
+# d19eaf856d27472b913331d79e617510
+msgid "Usage"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:72
+# f32702d7ab63415eb434b22bf212e5ff
+msgid "Each Formula is intended to be immediately usable with sane defaults without any additional configuration. Many formulas are also configurable by including data in Pillar; see the :file:`pillar.example` file in each Formula repository for available options."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:78
+# 8d5a4a32d7104bda98b375e39685340c
+msgid "Including a Formula in an existing State tree"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:80
+# 0c8906ba9fe14bc8b639bebec8849803
+msgid "Formula may be included in an existing ``sls`` file. This is often useful when a state you are writing needs to ``require`` or ``extend`` a state defined in the formula."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:84
+# 55b75d0a86244bee835b06520ce0ff16
+msgid "Here is an example of a state that uses the :formula:`epel-formula` in a ``require`` declaration which directs Salt to not install the ``python26`` package until after the EPEL repository has also been installed:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:100
+# fba2894984354d11bd28bc80e121e7fe
+msgid "Including a Formula from a Top File"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:102
+# 53374156dce1400fadec290f5b1170ff
+msgid "Some Formula perform completely standalone installations that are not referenced from other state files. It is usually cleanest to include these Formula directly from a Top File."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:106
+# 6f165ffef71741afb7acf3601912334b
+msgid "For example the easiest way to set up an OpenStack deployment on a single machine is to include the :formula:`openstack-standalone-formula` directly from a :file:`top.sls` file:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:116
+# 57cfca4443684c80a67e9db7d39bc852
+msgid "Quickly deploying OpenStack across several dedicated machines could also be done directly from a Top File and may look something like this:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:132
+# bb1e2b16ffec4740b502ccb33b2e5b36
+msgid "Configuring Formula using Pillar"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:134
+# 2ef0967cc85349c1aee26067d5841ceb
+msgid "Salt Formulas are designed to work out of the box with no additional configuration. However, many Formula support additional configuration and customization through :ref:`Pillar <pillar>`. Examples of available options can be found in a file named :file:`pillar.example` in the root directory of each Formula repository."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:141
+# f4b6ac2f49024fd4b77d0c2e6f80d639
+msgid "Modifying default Formula behavior"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:143
+# d38aecf813b54fcd9b7b930bc7fff6f8
+msgid "Remember that Formula are regular Salt States and can be used with all Salt's normal mechanisms for determining execution order. Formula can be required from other States with ``require`` declarations, they can be modified using ``extend``, they can made to watch other states with ``watch_in``, they can be used as templates for other States with ``use``. Don't be shy to read through the source for each Formula!"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:151
+# dad5f2c8173a4b9eba0c9ab14c52e2d8
+msgid "Reporting problems & making additions"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:153
+# 87d779df7d164a7c93036e8d55723b92
+msgid "Each Formula is a separate repository on GitHub. If you encounter a bug with a Formula please file an issue in the respective repository! Send fixes and additions as a pull request. Add tips and tricks to the repository wiki."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:158
+# 3bfc5627901749fc9934e228a083bda5
+msgid "Writing Formulas"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:160
+# c0aedcc881a346339ff6ab97cf102b17
+msgid "Each Formula is a separate repository in the `saltstack-formulas`_ organization on GitHub."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:163
+# bf89efb7e7c94ebaa933fae92c1de6dc
+msgid "Get involved creating new Formulas"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:165
+# 57faa4cb802c4ee1bfde44d6628c5ffd
+msgid "The best way to create new Formula repositories for now is to create a repository in your own account on GitHub and notify a SaltStack employee when it is ready. We will add you as a collaborator on the `saltstack-formulas`_ organization and help you transfer the repository over. Ping a SaltStack employee on IRC (``#salt`` on Freenode) or send an email to the Salt mailing list."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:173
+# 2371c81ca4b142dc9e31f72fb2c01e0e
+msgid "Repository structure"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:175
+# 2f9294d5babc47c9b3b5c4110812cf66
+msgid "A basic Formula repository should have the following layout::"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:189
+# e814f0abb51c4230a446b31732bbe40a
+msgid "``README.rst``"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:191
+# 430e1c2a272142b2bc0a4637f3472c3c
+msgid "The README should detail each available ``.sls`` file by explaining what it does, whether it has any dependencies on other formulas, whether it has a target platform, and any other installation or usage instructions or tips."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:195
+# 24317cc513734a4395e7a6cffd876157
+msgid "A sample skeleton for the ``README.rst`` file:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:218
+# 1bf36028fc834e31a725990526ecdb2f
+msgid "``CHANGELOG.rst``"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:220
+# c6e1545f145a4ada9c7ee10f9de24d1a
+msgid "The ``CHANGELOG.rst`` file should detail the individual versions, their release date and a set of bullet points for each version highlighting the overall changes in a given version of the formula."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:224
+# d85ff14dd5f345778ace359988b2e7a9
+msgid "A sample skeleton for the `CHANGELOG.rst` file:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:226
+# 97ef550ce8cc4ca6a5033c2c6b180f47
+msgid ":file:`CHANGELOG.rst`:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:240
+# c913495fb34a4cff8b712489f1b192b5
+msgid "``map.jinja``"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:242
+# bebabe5e3eb1491e83efcb00e47dbf10
+msgid "It is useful to have a single source for platform-specific or other parameterized information that can be reused throughout a Formula. See \":ref:`conventions-formula-parameterization`\" below for more information. Such a file should be named :file:`map.jinja` and live alongside the state files."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:248
+# 6106040c125e4b1985eaf7b767332b0d
+msgid "The following is an example from the MySQL Formula."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:250
+# 4941b406216a4d6bb8fe6f22a04ab726
+msgid ":file:`map.jinja`:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:275
+# d9d37d194aaf4a0a8cf9ae010e0a7995
+msgid "Any of the values defined above can be fetched for the current platform in any state file using the following syntax:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:301
+# 9e7bab6625264007b0558f3b4a0f8c4d
+msgid "SLS files"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:303
+# 03c5d8ba285f44778d0e395c4e23a613
+msgid "Each state in a Formula should use sane defaults (as much as is possible) and use Pillar to allow for customization."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:306
+# 961ccb947d494d54b72847f4a81b9f8e
+msgid "The root state, in particular, and most states in general, should strive to do no more than the basic expected thing and advanced configuration should be put in child states build on top of the basic states."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:310
+# 25f5950f64f84da894c4cc7b76a4d00b
+msgid "For example, the root Apache should only install the Apache httpd server and make sure the httpd service is running. It can then be used by more advanced states::"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:341
+# 930241817aee4790b86517cdb4c69150
+msgid "Platform agnostic"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:343
+# a2ad4edd98c045f9a804af4c3c7da8c4
+msgid "Each Salt Formula must be able to be run without error on any platform. If the formula is not applicable to a platform it should do nothing. See the :formula:`epel-formula` for an example."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:347
+# 78c061ca0f92409087d0d37d8bb9c6bc
+msgid "Any platform-specific states must be wrapped in conditional statements:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:355
+# 8570281e82b64e71bf23774a01f98651
+msgid "A handy method for using platform-specific values is to create a lookup table using the :py:func:`~salt.modules.grains.filter_by` function:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:373
+# e41b235cdeb9498593e77571c31b5b9c
+msgid "Configuration and parameterization"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:375
+# b35a53f6b0d74c2d806b86f13076baf0
+msgid "Each Formula should strive for sane defaults that can then be customized using Pillar. Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get` and must provide a default value:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:386
+# 79c02581cc0e457ea1dcd3fd9cb738d8
+msgid "Any default values used in the Formula must also be documented in the :file:`pillar.example` file in the root of the repository. Comments should be used liberally to explain the intent of each configuration value. In addition, users should be able copy-and-paste the contents of this file into their own Pillar to make any desired changes."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:393
+# 6786bb1d9f114c63a29a69336e8827bf
+msgid "Scripting"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:395
+# d6c719b1f17b4db0a33280264890efe5
+msgid "Remember that both State files and Pillar files can easily call out to Salt :ref:`execution modules <all-salt.modules>` and have access to all the system grains as well."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:408
+# 1b380bc1f2bd4ccb8ff79c8f8004250d
+msgid "Jinja macros are generally discouraged in favor of adding functions to existing Salt modules or adding new modules. An example of this is the :py:func:`~salt.modules.grains.filter_by` function."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:413
+# 54e89c1ed6e04b0ab058fd04387d3f2c
+msgid "Versioning"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:415
+# 526142e397284b99ae33dc1ab5db62c6
+msgid "Formula are versioned according to Semantic Versioning, http://semver.org/."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:417
+# 42c80ada6b0e4b19a7dc28db8f14948b
+msgid "Given a version number MAJOR.MINOR.PATCH, increment the:"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:419
+# 5d7e6448eccc4050b3ebfeed1dcaab88
+msgid "MAJOR version when you make incompatible API changes,"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:420
+# 0a1f395069f24dcca4d401a3434608eb
+msgid "MINOR version when you add functionality in a backwards-compatible manner, and"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:421
+# 597bd816c8e64c8283eb1cb0c0f50609
+msgid "PATCH version when you make backwards-compatible bug fixes."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:423
+# 33ee8926ad074da6ac2620f8f4b0495b
+msgid "Additional labels for pre-release and build metadata are available as extensions to the MAJOR.MINOR.PATCH format."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:426
+# 4d87f98b53d4440a82ae9d5d808e1b32
+msgid "Formula versions are tracked using Git tags as well as the ``VERSION`` file in the formula repository. The ``VERSION`` file should contain the currently released version of the particular formula."
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:431
+# 9d03b2052a984f25a9b7c2f4c2d5f543
+msgid "Testing Formulas"
+msgstr ""
+
+#: ../../topics/conventions/formulas.rst:433
+# eab527ff4c424e0ca78e1b64664e20d8
+msgid "Salt Formulas are tested by running each ``.sls`` file via :py:func:`state.sls <salt.modules.state.sls>` and checking the output for success or failure. This is done for each supported platform."
+msgstr ""
+

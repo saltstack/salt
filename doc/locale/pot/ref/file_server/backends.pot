@@ -1,0 +1,53 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/backends.rst:6
+# 5d78ada54875492ca2a8d04d3101f43c
+msgid "File Server Backends"
+msgstr ""
+
+#: ../../ref/file_server/backends.rst:8
+# 3f6f85e20e744b4b96b8ca5ae025bd12
+msgid "Salt version 0.12.0 introduced the ability for the Salt Master to integrate different file server backends. File server backends allows the Salt file server to act as a transparent bridge to external resources. The primary example of this is the git backend which allows for all of the Salt formulas and files to be maintained in a remote git repository."
+msgstr ""
+
+#: ../../ref/file_server/backends.rst:14
+# 9afb43ae862b432f8f7af25c2b3571d5
+msgid "The fileserver backend system can accept multiple backends as well. This makes it possible to have the environments listed in the file_roots configuration available in addition to other backends, or the ability to mix multiple backends."
+msgstr ""
+
+#: ../../ref/file_server/backends.rst:19
+# 887b6da27ae046b48790a7ee9c9e0dcd
+msgid "This feature is managed by the `fileserver_backend` option in the master config. The desired backend systems are listed in order of search priority:"
+msgstr ""
+
+#: ../../ref/file_server/backends.rst:28
+# e2aea0c2118b4642883a4fb1210efe88
+msgid "If this configuration the environments and files defined in the `file_roots` configuration will be searched first, if the referenced environment and file is not found then the git backend will be searched."
+msgstr ""
+
+#: ../../ref/file_server/backends.rst:33
+# 3fcf9b3773c24ad788c5f9e7fc99046a
+msgid "Environments"
+msgstr ""
+
+#: ../../ref/file_server/backends.rst:35
+# 626d78b95b8942b080075d85c15131e1
+msgid "The concept of environments is followed in all backend systems. The environments in the classic `roots` backend are defined in the `file_roots` option. Environments map differently based on the backend, for instance the git backend translated branches and tags in git to environments. This makes it easy to define environments in git by just setting a tag or forking a branch."
+msgstr ""
+

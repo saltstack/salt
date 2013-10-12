@@ -1,0 +1,170 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/configuration/logging/index.rst:6
+# 2195ec276d23421d9764f915fdcd1359
+msgid "Logging"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:8
+# 8974217f1ab541cabcb60603d2db0b95
+msgid "The salt project tries to get the logging to work for you and help us solve any issues you might find along the way."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:11
+# 5a8e6e7f8f644744bf1ef2b3e6437948
+msgid "If you want to get some more information on the nitty-gritty of salt's logging system, please head over to the :doc:`logging development document</topics/development/logging>`, if all you're after is salt's logging configurations, please continue reading."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:18
+# 68a5896662544747a711ea60d397fa73
+msgid "Available Configuration Settings"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:23
+# 49ef2578b3f7448aa0dc5ed6f20d101e
+msgid "``log_file``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:25
+# b438f29d0fb64094a8990f59ade62510
+msgid "The log records can be sent to a regular file, local path name, or network location. Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``), with rsyslogd(8) configured for network logging.  The format for remote addresses is: ``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:30
+# a7bf572643174a208b8a6689210c4ac0
+msgid "Default: Dependent of the binary being executed, for example, for ``salt-master``, ``/var/log/salt/master``."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:34
+# 006424df1a2a489ab8a661a4011a8e0f
+msgid "Examples:"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:60
+# 012a351bc4af4f12ae6aafc251528efa
+msgid "``log_level``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:62
+#: ../../ref/configuration/logging/index.rst:79
+# 0fd7ae4ab77e4b92a9b8ecc4efdcf5d7
+# d2cf652bf7604ca29361cb0ac7455451
+msgid "Default: ``warning``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:64
+# bc7073fe397c46828e58867aa18600a8
+msgid "The level of log record messages to send to the console. One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``, ``error``, ``critical``, ``quiet``."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:77
+# 3802c6fae66c45f3a8be035325754c97
+msgid "``log_level_logfile``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:81
+# 7e21721c0a534adf88971a0e4183a69f
+msgid "The level of messages to send to the log file. One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``, ``error``, ``critical``, ``quiet``."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:94
+# d77e3101798e43138830c74244d06533
+msgid "``log_datefmt``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:96
+# c9fed135f9084db4b210c2cbeecb8603
+msgid "Default: ``%H:%M:%S``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:98
+# 0ff5558746834aa0b429c1d3d91f1384
+msgid "The date and time format used in console log messages. Allowed date/time formatting can be seen on :func:`time.strftime <python2:time.strftime>`."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:110
+# a356442cb4c243ceba519918d7b37389
+msgid "``log_datefmt_logfile``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:112
+# df90a6db3d204abe85e01d7434438b48
+msgid "Default: ``%Y-%m-%d %H:%M:%S``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:114
+# 43873df840f647dbab5451b0de825f72
+msgid "The date and time format used in log file messages. Allowed date/time formatting can be seen on :func:`time.strftime <python2:time.strftime>`."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:126
+# 93632f8d5548467da1e43963e7e293e7
+msgid "``log_fmt_console``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:128
+# 9b9da605392344c5976ecc5af48d621f
+msgid "Default: ``[%(levelname)-8s] %(message)s``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:130
+# 5eb832c5c50742fd87aa285ec911fdea
+msgid "The format of the console logging messages. Allowed formatting options can be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:142
+# f705449feb1c429f802fbf6bcb32c713
+msgid "``log_fmt_logfile``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:144
+# 67255dc195ce4d88bbb3b8634b17ae98
+msgid "Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:146
+# b90f8f9e290746a1b72da107e9b5d3a9
+msgid "The format of the log file logging messages. Allowed formatting options can be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`."
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:158
+# e00124145fe64ad69b9b703ab1dcf9dd
+msgid "``log_granular_levels``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:160
+# 3127ebb7b12643ceba38c18d82f20876
+msgid "Default: ``{}``"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:162
+# 41343020e4ed44d4b2ce6e5ab21974d4
+msgid "This can be used to control logging levels more specifically.  The example sets the main salt library at the 'warning' level, but sets ``salt.modules`` to log at the ``debug`` level:"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:174
+# 7a860a4c8cb14d6aac4be76f83550f7a
+msgid "External Logging Handlers"
+msgstr ""
+
+#: ../../ref/configuration/logging/index.rst:176
+# aecec73fa0094d1bb7255f5074a7aefc
+msgid "Besides the internal logging handlers used by salt, there are some external which can be used, see the :doc:`external logging handlers<handlers/index>` document."
+msgstr ""
+

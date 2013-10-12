@@ -1,0 +1,118 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/virt/index.rst:6
+# cf43cb2b7c72443989b5a672735c2e4b
+msgid "Salt Virt - The Salt Stack Cloud Controller"
+msgstr ""
+
+#: ../../topics/virt/index.rst:8
+# 1608b99b498c48aebf91ca9fee847106
+msgid "The Salt Virt cloud controller capability was initial added to Salt in version 0.14.0 as an alpha technology."
+msgstr ""
+
+#: ../../topics/virt/index.rst:11
+# bd4ae2fd1a7849bdab52c46ef28b079e
+msgid "The initial Salt Virt system supports core cloud operations:"
+msgstr ""
+
+#: ../../topics/virt/index.rst:13
+# ae3874ec98e842e69efb0986831f419b
+msgid "Virtual machine deployment"
+msgstr ""
+
+#: ../../topics/virt/index.rst:14
+# de5506fb301741e2a20470fb36da573b
+msgid "Inspection of deployed VMs"
+msgstr ""
+
+#: ../../topics/virt/index.rst:15
+# 7d9515f098964959a1a1921c483fda9a
+msgid "Virtual machine migration"
+msgstr ""
+
+#: ../../topics/virt/index.rst:16
+# f474de1ef9ef449a86c6dfdb70a894a8
+msgid "Network profiling"
+msgstr ""
+
+#: ../../topics/virt/index.rst:17
+# d4a374fd80db42649c8a48c8c732aa2b
+msgid "Automatic VM integration with all aspects of Salt"
+msgstr ""
+
+#: ../../topics/virt/index.rst:18
+# cde399a6444b4db2b5ad0cefee1faf8e
+msgid "Image Pre-seeding"
+msgstr ""
+
+#: ../../topics/virt/index.rst:20
+# 7c212892ae094f59987341ed059f3ec0
+msgid "Many features are currently under development to enhance the capabilities of the Salt Virt systems."
+msgstr ""
+
+#: ../../topics/virt/index.rst:25
+# d4964936959e4dcaa54c802ea2faa388
+msgid "It is noteworthy that Salt was originally developed with the intent of using the Salt communication system as the backbone to a cloud controller. This means that the Salt Virt system is not an afterthought, simply a system that took the back seat to other development. The original attempt to develop the cloud control aspects of Salt was a project called butter. This project never took off, but was functional and proves the early viability of Salt to be a cloud controller."
+msgstr ""
+
+#: ../../topics/virt/index.rst:34
+# a027c5aea6b844febc7eb404caa3ae59
+msgid "Salt Virt Tutorial"
+msgstr ""
+
+#: ../../topics/virt/index.rst:36
+# 96bfe704df8d4736935595a04a9c6669
+msgid "A tutorial about how to get Salt Virt up and running has been added to the tutorial section:"
+msgstr ""
+
+#: ../../topics/virt/index.rst:39
+# 0bc2e3c8dad34db09492a1a92ae79900
+msgid ":doc:`Cloud Controller Tutorial </topics/tutorials/cloud_controller>`"
+msgstr ""
+
+#: ../../topics/virt/index.rst:42
+# 4bdb691574b349f69f2844b1e1e49fa8
+msgid "The Salt Virt Runner"
+msgstr ""
+
+#: ../../topics/virt/index.rst:44
+# 7a09eb3f4d9549669ddc34c2049d660c
+msgid "The point of interaction with the cloud controller is the :strong:`virt` runner. The :strong:`virt` runner comes with routines to execute specific virtual machine routines."
+msgstr ""
+
+#: ../../topics/virt/index.rst:48
+# e26ba5e82f154efb995a7dd0e3f45617
+msgid "Reference documentation for the virt runner is available with the runner module documentation:"
+msgstr ""
+
+#: ../../topics/virt/index.rst:51
+# 73ccc1a2d0454006a9be9e64316ad221
+msgid ":py:mod:`Virt Runner Reference <salt.modules.virt>`"
+msgstr ""
+
+#: ../../topics/virt/index.rst:54
+# e2f255920e65483981f36e8ac4b08c65
+msgid "Based on Live State Data"
+msgstr ""
+
+#: ../../topics/virt/index.rst:56
+# 8a4081e51caf470095d7877aef4be943
+msgid "The Salt Virt system is based on using Salt to query live data about hypervisors and then using the data gathered to make decisions about cloud operations. This means that no external resources are required to run Salt Virt, and that the information gathered about the cloud is live and accurate."
+msgstr ""
+

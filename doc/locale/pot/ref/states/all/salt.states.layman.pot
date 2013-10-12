@@ -1,0 +1,60 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.layman.rst:6
+# 39ee27d3897a4093b011f2b01de49759
+msgid "salt.states.layman"
+msgstr ""
+
+#: ../../../salt/states/layman.py:docstring of salt.states.layman:2
+# a80ac73345d94b78a26159a633573175
+msgid "Management of Gentoo Overlays using layman"
+msgstr ""
+
+#: ../../../salt/states/layman.py:docstring of salt.states.layman:4
+# c4ca25d4432b45ec85796899f1e7e9d2
+msgid "A state module to manage Gentoo package overlays via layman"
+msgstr ""
+
+#: ../../../salt/states/layman.py:docstring of salt.states.layman.absent:1
+# 74b5ff4126bd49a99ea29514ad4babed
+msgid "Verify that the overlay is absent"
+msgstr ""
+
+#: ../../../salt/states/layman.py:docstring of salt.states.layman.absent:3
+#: ../../../salt/states/layman.py:docstring of salt.states.layman.present:3
+# 3d001100ab914f1dbe83aba014360af6
+# 174dbb5c68f9489f85184a46da1586bb
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/layman.py:docstring of salt.states.layman.absent:4
+# 9fcd1607240b443dad607e214165784c
+msgid "The name of the overlay to delete"
+msgstr ""
+
+#: ../../../salt/states/layman.py:docstring of salt.states.layman.present:1
+# c83d28916fdb4df7be93f2af1fa5b856
+msgid "Verify that the overlay is present"
+msgstr ""
+
+#: ../../../salt/states/layman.py:docstring of salt.states.layman.present:4
+# 731c0b9b3b4742f6a4b081fb239d7df7
+msgid "The name of the overlay to add"
+msgstr ""
+

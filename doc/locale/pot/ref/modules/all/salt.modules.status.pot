@@ -1,0 +1,153 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.status.rst:6
+# 4ce5da10e9bb4db2814ebf269ae9442d
+msgid "salt.modules.status"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status:1
+# 3039f4f30e424e19b8f0634eede6a6ac
+msgid "Module for returning various status data about a minion. These data can be useful for compiling into stats later."
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.all_status:1
+# 9a93766abbec4849af94fc8f3e48d135
+msgid "Return a composite of all status data and info for this minion. Warning: There is a LOT here!"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.all_status:4
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.cpuinfo:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.cpustats:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.custom:16
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.diskstats:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.diskusage:7
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.loadavg:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.meminfo:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.netdev:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.netstats:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.pid:4
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.procs:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.uptime:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.vmstats:3
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.w:3
+# 560040b6b6e9465aa3759db2f8e6b87c
+# 6b21041b7dc74c30ad1747beac159a63
+# d5ffb9237abc49db819a4126cfbdafa2
+# e54059786de84ea198fdbc3eaeb82a15
+# 6585ebf3996c4b6fb03b206b4b550276
+# 5d3509228c3b4d1fb4a7da25873af05b
+# 484ca908fa484d5ea39c62d8eb0317ef
+# 022d20a8e036449c857f3629c116959f
+# a8142f4e81da43b1acac80ed7d769441
+# 44974adfdd024cc799eeaeba8c3b51c0
+# 0d006751c3df4549a0ddf72b686b87d0
+# 6fdf97b151a04a0786514f7878882f47
+# e6b6f4e3b69c4c90aca5e0b90ba12a3c
+# 38caa330f1f24b8caaa1e11eca631a62
+# db44b6523b1d4a0d9d0c1216c4ef2ac9
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.cpuinfo:1
+# ff4baf0f5d5c45b19ea83859e1b85723
+msgid "Return the CPU info for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.cpustats:1
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.meminfo:1
+# 900b1fa58df24d75acea2b9d1e16cfe7
+# dd4e7f494eab494f9865a7a5fa0c1ee9
+msgid "Return the CPU stats for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.custom:1
+# 1332ba75ff8540d0adff8c16a0546c39
+msgid "Return a custom composite of status data and info for this minion, based on the minion config file. An example config like might be::"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.custom:6
+# 479383186de64b64a70ea2b84faeb2b9
+msgid "Where status refers to status.py, cpustats is the function where we get our data, and custom is this function It is followed by a list of keys that we want returned."
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.custom:10
+# fdd93a2678464999a0f40ad8256e7cac
+msgid "This function is meant to replace all_status(), which returns anything and everything, which we probably don't want."
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.custom:13
+# e683795aeec740f5954d66eb7ec5d2d3
+msgid "By default, nothing is returned. Warning: Depending on what you include, there can be a LOT here!"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.diskstats:1
+# 008f37a6f15b49569cdb3cfb57519c92
+msgid "Return the disk stats for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.diskusage:1
+# a9ac1b2b30d34fa1b80a6c2e024ca6de
+msgid "Return the disk usage for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.diskusage:3
+# 565605b201d74814a52b7c200f152938
+msgid "Usage::"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.loadavg:1
+# 150966e1095d425e941edfb1bc9efcad
+msgid "Return the load averages for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.netdev:1
+# 0d725afc283a4c88a200eaa0d98dd123
+msgid "Return the network device stats for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.netstats:1
+# 803c9d0db01e4521bef9fda4fe8c4690
+msgid "Return the network stats for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.pid:1
+# cd7bceb1dcd4460498db58ba7d1f84d5
+msgid "Return the PID or an empty string if the process is running or not. Pass a signature to use to find the process via ps."
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.procs:1
+# 6b200ed20bb44786b9ab592620b59274
+msgid "Return the process data"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.uptime:1
+# c481b575258f44c29ceaa2ebcc5192b4
+msgid "Return the uptime for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.vmstats:1
+# be69daeb3c9340248819efe819cb388d
+msgid "Return the virtual memory stats for this minion"
+msgstr ""
+
+#: ../../../salt/modules/status.py:docstring of salt.modules.status.w:1
+# 86359c3f79ff4ff982f71d1968517e7b
+msgid "Return a list of logged in users for this minion, using the w command"
+msgstr ""
+

@@ -1,0 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/output/all/salt.output.no_out.rst:6
+# 9f5436fc631e44bfa12becd65b313fd4
+msgid "salt.output.no_out"
+msgstr ""
+
+#: ../../../salt/output/no_out.py:docstring of salt.output.no_out:1
+# c2c68d3e7a054a35a904bfc61a7d17c4
+msgid "Display no output."
+msgstr ""
+
+#: ../../../salt/output/no_out.py:docstring of salt.output.no_out.output:1
+# 1dfe1008e57a473aa36e518a3ef70d36
+msgid "Don't display data. Used when you only are interested in the return."
+msgstr ""
+

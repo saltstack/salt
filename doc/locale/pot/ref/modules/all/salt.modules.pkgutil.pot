@@ -1,0 +1,172 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.pkgutil.rst:6
+# e578dfca6dfc48129aefd51ee67eb388
+msgid "salt.modules.pkgutil"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil:1
+# 086d44d069eb4d6f8c65cff680b14a85
+msgid "Pkgutil support for Solaris"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.install:1
+# 274097d3328d4b269925d1ecfd142daa
+msgid "Install packages using the pkgutil tool."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.install:3
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.install:17
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.latest_version:8
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.list_pkgs:5
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.list_upgrades:3
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.purge:19
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.refresh_db:3
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.remove:19
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.upgrade:8
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.upgrade_available:3
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.version:3
+# ab568bb4376546e693d6a47406d8f420
+# 5a88bcb3508f4a1ba9aa9f64b1730497
+# 48ffd1cee2304ba2bd3f7c2e73dbeaa5
+# 4164fbc9860f46a7afc63d702384305a
+# 07d69309dd5b4ac3a64ef06d8143ac6a
+# a49ce536c77e4514a2502f53868154c7
+# f3ef318806774dbba6b719414b677795
+# 016fc67336f14f0588b2b3d3acfe6e60
+# 82a87e4f5f58424a950dcb6e65b432dd
+# 183dd17a5b184304b22e462e4ea1086d
+# 807b1a950ab7477fb3e853d861926875
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.install:11
+# 06101a0f1c8b45b3971078c7239eacc7
+msgid "Multiple Package Installation Options:"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.install:23
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.purge:12
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.remove:12
+# 69900f0a2e274caf8920bdad27f5ac33
+# 130ed31f0c184b88b03a9e12d13c6394
+# 4e1d5dc618964aaf9dac0dfac97bce4b
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.install:14
+# 5e493f80204a45efafc09c7d0004e8c4
+msgid "A list of packages to install from OpenCSW. Must be passed as a python list."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.install:25
+# 2502f400998f4d6ba896eba73cab8044
+msgid "Returns a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.latest_version:1
+# be8b74b9901842d78e4ca7b8494d4f4a
+msgid "Return the latest version of the named package available for upgrade or installation. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.latest_version:5
+# 7e58c08e9c0a4ae5aba9ab6991a57947
+msgid "If the latest version of a given package is already installed, an empty string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.list_pkgs:1
+# 2ff31ec1805e47b880a4053c9b15c497
+msgid "List the packages currently installed as a dict::"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.list_upgrades:1
+# 784d0463c0224b799d99d97c59c4d342
+msgid "List all available package upgrades on this system"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.purge:1
+# 9270b9d8d30f4c698ca747ac537b78fb
+msgid "Package purges are not supported, this function is identical to ``remove()``."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.purge:6
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.remove:6
+# 489f0f06d00f4b8491e14bf528373261
+# 65ed1478e9464d1a9674e2cd2a7d6cbb
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.purge:5
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.remove:5
+# baf40756b73e4491a17079836c49693a
+# ddd62f3d6c20421ca09273679ffc8c05
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.purge:8
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.remove:8
+# bc77d29aa21d42988202b1404748bfde
+# ef24c08fd6ea44b2bc1a826154a91dfa
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.purge:11
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.remove:11
+# 707022686efc482cb52bdfab96785a42
+# 0a67cba059de4fab9443953a0b2be5a3
+msgid "A list of packages to delete. Must be passed as a python list. The ``name`` parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.purge:17
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.remove:17
+# 8e7b1e1dff9e4ae383a7e784b7baca2a
+# 902f49e2abd242a4acf3f551cc49fbbf
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.refresh_db:1
+# 033827299e7f4c4b986b6b5105d1388a
+msgid "Updates the pkgutil repo database (pkgutil -U)"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.remove:1
+# aac38c7fd94e4b0884c3ebec350173d0
+msgid "Remove a package and all its dependencies which are not in use by other packages."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.upgrade:1
+# 3e8c949512ff444ba7dc58d1a6c33ba0
+msgid "Upgrade all of the packages to the latest available version."
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.upgrade:3
+# abace0a7ec044ac081149ffe3f823205
+msgid "Returns a dict containing the changes::"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.upgrade_available:1
+# 71bc2c7baf38408aa2af1cfaa7464471
+msgid "Check if there is an upgrade available for a certain package"
+msgstr ""
+
+#: ../../../salt/modules/pkgutil.py:docstring of salt.modules.pkgutil.version:1
+# 617f25e66a0b4f038da2ab45ff537239
+msgid "Returns a version if the package is installed, else returns an empty string"
+msgstr ""
+

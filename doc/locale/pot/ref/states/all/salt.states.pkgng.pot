@@ -1,0 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.pkgng.rst:6
+# 1659a06ae12a405daf9acdc44af336b8
+msgid "salt.states.pkgng"
+msgstr ""
+
+#: ../../../salt/states/pkgng.py:docstring of salt.states.pkgng:2
+# eaa327836d0d41978835499ae0bc9c92
+msgid "Manage package remote repo using FreeBSD pkgng"
+msgstr ""
+
+#: ../../../salt/states/pkgng.py:docstring of salt.states.pkgng:4
+# ee7eb131f6054b639cdd47289ab0d47d
+msgid "Salt can manage the URL pkgng pulls packages from. ATM the state and module are small so use cases are typically rather simple:"
+msgstr ""
+

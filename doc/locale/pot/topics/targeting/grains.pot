@@ -1,0 +1,175 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/targeting/grains.rst:6
+#: ../../topics/targeting/grains.rst:13
+# a9e5efdfa3954a26bfde9a371d31cf3f
+# 1ddaedaa7eb44c3192511f51a137c687
+msgid "Grains"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:8
+# d381394ef88341dbb3ab8e28de65360f
+msgid "Salt comes with an interface to derive information about the underlying system. This is called the grains interface, because it presents salt with grains of information."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:15
+# c828abb1f02e44e1b2b390fc9357d670
+msgid "Static bits of information that a minion collects about the system when the minion first starts."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:18
+# fb202bcbe4d24ea89c928c9f7d171a8d
+msgid "The grains interface is made available to Salt modules and components so that the right salt minion commands are automatically available on the right systems."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:22
+# 3fec298a52e541ebba5f4da982612c47
+msgid "It is important to remember that grains are bits of information loaded when the salt minion starts, so this information is static. This means that the information in grains is unchanging, therefore the nature of the data is static. So grains information are things like the running kernel, or the operating system."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:28
+# 91b69bb86cac4253be662c196720b9cc
+msgid "Match all CentOS minions:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:34
+# a45f44fe5e004e9997e5824230e87903
+msgid "Match all minions with 64-bit CPUs, and return number of CPU cores for each matching minion:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:41
+# 8827b911d4004b3b8277ace27df5264a
+msgid "Additionally, globs can be used in grain matches, and grains that are nested in a :ref:`dictionary <python2:typesmapping>` can be matched by adding a colon for each level that is traversed. For example, the following will match hosts that have a grain called ``ec2_tags``, which itself is a :ref:`dict <python2:typesmapping>` with a key named ``environment``, which has a value that contains the word ``production``:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:54
+# 715072c114ed40a1a9eb98c7f0c13fba
+msgid "Listing Grains"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:56
+# b37fe4272536418ab8bab0ecc9d40a08
+msgid "Available grains can be listed by using the 'grains.ls' module:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:62
+# 6b4448c02387412bb9046dfc9d1d5d3e
+msgid "Grains data can be listed by using the 'grains.items' module:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:72
+# dc41399323144d23a8c8b9dd58b17f92
+msgid "Grains in the Minion Config"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:74
+# aa68db84e0864ceaa17dfcc0709e484d
+msgid "Grains can also be statically assigned within the minion configuration file. Just add the option ``grains`` and pass options to it:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:87
+# 09222c39e92b4fc39287a4cc7f9d0320
+msgid "Then status data specific to your servers can be retrieved via Salt, or used inside of the State system for matching. It also makes targeting, in the case of the example above, simply based on specific data about your deployment."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:93
+# f16fe743f83343108b6800989a452f3b
+msgid "Grains in /etc/salt/grains"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:95
+# 6e1fa2e2c288438a9cfeb2c37393230f
+msgid "If you do not want to place your custom static grains in the minion config file, you can also put them in ``/etc/salt/grains``. They are configured in the same way as in the above example, only without a top-level ``grains:`` key:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:108
+# b0bd0c3596ae47e4a7c98e72574ec0a4
+msgid "Precedece of Custom Static Grains"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:110
+# 9c1886e008264204a57592d426663ed7
+msgid "Be careful when defining grains both in ``/etc/salt/grains`` and within the minion config file. If a grain is defined in both places, the value in the minion config file takes precedence, and will always be used over its counterpart in ``/etc/salt/grains``."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:116
+# 075052cb68c34b23b3c1f7ddc7275d21
+msgid "Grains in Top file"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:118
+# c4b515110dbe4cb0bcdffbd939aeaae6
+msgid "With correctly setup grains on the Minion, the Top file used in Pillar or during Highstate can be made really efficient.  Like for example, you could do:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:138
+# ab116b0f979e462992a56604976aefbd
+msgid "For this example to work, you would need the grain ``node_type`` and the correct value to match on.  This simple example is nice, but too much of the code is similar.  To go one step further, we can place some Jinja template code into the Top file."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:148
+# 7088cee53baf4cc1906e5e8f4ed5a6df
+msgid "The Jinja code simplified the Top file, and allowed SaltStack to work its magic."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:153
+# eb4070a4af8b46a4a12c034c5234ed2b
+msgid "Writing Grains"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:155
+# d12f403b171f4dc19f8db49ffd5ea8cc
+msgid "Grains are easy to write. The grains interface is derived by executing all of the \"public\" functions found in the modules located in the grains package or the custom grains directory. The functions in the modules of the grains must return a Python :ref:`dict <python2:typesmapping>`, where the keys in the :ref:`dict <python2:typesmapping>` are the names of the grains and the values are the values."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:162
+# 6108fca6310f473da60aef4636b92818
+msgid "Custom grains should be placed in a ``_grains`` directory located under the :conf_master:`file_roots` specified by the master config file. They will be distributed to the minions when :mod:`state.highstate <salt.modules.state.highstate>` is run, or by executing the :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:169
+# 345c99a146644f1483b335231f6aaa7b
+msgid "Before adding a grain to Salt, consider what the grain is and remember that grains need to be static data. If the data is something that is likely to change, consider using :doc:`Pillar <../pillar/index>` instead."
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:175
+# 4a466cdf78114063821918462b1a4134
+msgid "Examples of Grains"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:177
+# 25fbf888ac0b4a14a63e5e8709d161ec
+msgid "The core module in the grains package is where the main grains are loaded by the Salt minion and provides the principal example of how to write grains:"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:180
+# cea2297411a647078d633f0a36e3f63b
+msgid ":blob:`salt/grains/core.py`"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:184
+# fc51cc665788459f8810156abd979c71
+msgid "Syncing Grains"
+msgstr ""
+
+#: ../../topics/targeting/grains.rst:186
+# faa7553ef29e433e97aac6316ad88007
+msgid "Syncing grains can be done a number of ways, they are automatically synced when :mod:`state.highstate <salt.modules.state.highstate>` is called, or (as noted above) the grains can be manually synced and reloaded by calling the :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions."
+msgstr ""
+

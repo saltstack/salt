@@ -1,0 +1,177 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.svn.rst:6
+# 58a209be64f8468ea434eaecf252a3dd
+msgid "salt.states.svn"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn:2
+# 0ed45d8f4cb049758717c6a0541892f0
+msgid "Manage SVN repositories"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn:4
+# 3c8ea67914254c2681d14aa3f10faa44
+msgid "Manage repositiry checkouts via the svn vcs system:"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.dirty:1
+# a42df79551724756b0ec04de9b5a0d8e
+msgid "Determine if the working directory has been changed."
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:1
+# 496f0ea18fbd405a98e99e34eb331aa5
+msgid "Export a file or directory from an SVN repository"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:4
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:5
+# b9689c05a1a64db2938f4ab3bc6dcd07
+# d7f8fe2c084a424e8cbd0aef7c70442e
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:4
+# 25d52e3943394c28ae62ac138fa7c4cc
+msgid "Address and path to the file or directory to be exported."
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:8
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:9
+# c23905efb4904fc4a90dd642f1731e8b
+# 029c3d7bc76b4b9391ac7bce5d1fe3a8
+msgid "target"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:7
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:8
+# 6aa98f282f0d4daf930a71f4d1e7f071
+# 92e16c415455476e8e919761fc9162d0
+msgid "Name of the target directory where the checkout will put the working directory"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:12
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:13
+# f747b22ee6fa4c3fab3397740d919efa
+# 6a58239c6664483abcb58a402dcf7b15
+msgid "rev : None"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:11
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:12
+# cc4f2971dc5646918accad6b9f43da71
+# 7fa439b79d6c4fbd8e4a3b9d30a12844
+msgid "The name revision number to checkout. Enable \"force\" if the directory already exists."
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:15
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:16
+# 7f8087dafb8345bb9d662a7bad8d35a1
+# ed530af49b4e4df8a064d65738ee4568
+msgid "user : None"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:15
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:16
+# 50ff9ca78934495287cb61896915ca3d
+# 3ee439171bee43f5840ae930e7008fdc
+msgid "Name of the user performing repository management operations"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:19
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:20
+# fa1bd02e25ff415a9e60cdd61f037915
+# ce2fbb1d578345b7b35e4f19b5d40304
+msgid "username : None"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:18
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:19
+# a6bd1f556ea44b35a878cce5b5ae98ad
+# 13ba9dc936c34ebda9cbe73335cd7680
+msgid "The user to access the name repository with. The svn default is the current user"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:24
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:25
+# f30f90a493ea4393b75fca4a83c08edc
+# 0b3c057b56024a41b3e8a7c2a52d71ee
+msgid "password"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:22
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:23
+# ff0fcd5d0562456ea4a99cc1d66eaf72
+# b659af1025854c368960de9eedba47b6
+msgid "Connect to the Subversion server with this password"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:27
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:28
+# 374a08a3b72a4a1c88f40e1095e632f0
+# a5a274667a234c21bb23fd10ad98d124
+msgid "force : False"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:27
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:28
+# de533a8b759a4339993199b52f1ae857
+# 4d7fe3d2f8604e62982464edc5b7bf61
+msgid "Continue if conflicts are encountered"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:30
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:31
+# a090d371e9f2490e8e0ffce1a1bac579
+# 1d317f17bf0a431f9630571fece60e8c
+msgid "externals : True"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:30
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:31
+# a9097f40215b4914a8195702a2ca62f4
+# 143ba4053a8946c1ace9f4749a214b4a
+msgid "Change to False to not checkout or update externals"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:32
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:33
+# af25e3abeb4a4d269e2af98e0cb49e7e
+# ceaa552a9ae24fdcb180331c0f9d646d
+msgid "trust : False"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.export:33
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:34
+# db9d25e165c34e7791273230f56850dd
+# 4e56b225369641e9a5b240583b669868
+msgid "Automatically trust the remote server. SVN's --trust-server-cert"
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:1
+# a959be5a553744bfad76fdd466891e80
+msgid "Checkout or update the working directory to the latest revision from the remote repository."
+msgstr ""
+
+#: ../../../salt/states/svn.py:docstring of salt.states.svn.latest:5
+# abb059e46e884d4f922e8b5f3af9d591
+msgid "Address of the name repository as passed to \"svn checkout\""
+msgstr ""
+

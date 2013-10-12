@@ -1,0 +1,214 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.solarispkg.rst:6
+# 20d010c7ca374dbebdb0c18602a8ea98
+msgid "salt.modules.solarispkg"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg:1
+# b9b834a7d2d841b685500f915eb979c4
+msgid "Package support for Solaris"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:1
+# 7b62eb01f11e46999a6a7f19cf0689eb
+msgid "Install the passed package. Can install packages from the following sources::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:9
+# 864028a0780f431289cf850e300ddec9
+msgid "Returns a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:14
+# 6220ff582cc24cc98be4999d91cee875
+msgid "CLI Example, installing a datastream pkg that already exists on the minion::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:20
+# 1bc57b26ca4c4e1ebcf901a006a606a6
+msgid "CLI Example, installing a datastream pkg that exists on the salt master::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:25
+# c2c797c461db4596bf169e249b3b6676
+msgid "CLI Example, installing a datastream pkg that exists on a HTTP server::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:30
+# 1992eaa98ccc4267b592eb14f04307df
+msgid "If working with solaris zones and you want to install a package only in the global zone you can pass 'current_zone_only=True' to salt to have the package only installed in the global zone. (Behind the scenes this is passing '-G' to the pkgadd command.) Solaris default when installing a package in the global zone is to install it in all zones. This overrides that and installs the package only in the global."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:37
+# f4a74456b5dc4f03aeee4667000aa4f9
+msgid "CLI Example, installing a datastream package only in the global zone::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:41
+# 764c2fcb1d094b11b17fe99e5320aebc
+msgid "By default salt automatically provides an adminfile, to automate package installation, with these options set::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:56
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:21
+# c4fdf2976bb04c62aaaadb9b18551360
+# 09b3b5011a694485be9d36c490101c39
+msgid "You can override any of these options in two ways. First you can optionally pass any of the options as a kwarg to the module/state to override the default value or you can optionally pass the 'admin_source' option providing your own adminfile to the minions."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:61
+# c9ab50ac20dc45f2bb579775e50a1ec8
+msgid "Note: You can find all of the possible options to provide to the adminfile by reading the admin man page::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:66
+# 177f7f343e9846ce897bd7f5b2f0419f
+msgid "CLI Example - Overriding the 'instance' adminfile option when calling the module directly::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:71
+# c0d8a75691264a1cbb18b8e64394292d
+msgid "CLI Example - Overriding the 'instance' adminfile option when used in a state::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:80
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:96
+# d15b5be2656f414f99122f9200893dda
+# 94eb42cd02b441e6a049a67f22b62191
+msgid "Note: the ID declaration is ignored, as the package name is read from the \"sources\" parameter."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:83
+# 66abe36a4ac14985a1c9bf50f14bfab8
+msgid "CLI Example - Providing your own adminfile when calling the module directly::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.install:88
+# 4c02535e205c4fdebf259e28b05343aa
+msgid "CLI Example - Providing your own adminfile when using states::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.latest_version:1
+# affde5f0fe464a47987ffc07cc965071
+msgid "Return the latest version of the named package available for upgrade or installation. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.latest_version:5
+# b1276f231b004ba6ba8eb5c1ae6096e9
+msgid "If the latest version of a given package is already installed, an empty string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.latest_version:8
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.list_pkgs:5
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.purge:19
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:45
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.upgrade_available:3
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.version:5
+# 6c70dd9e93be4021b0583b306bc085b2
+# 4245e1a87a1b42d59b06ab24fe77aee8
+# 70c481292ea64126aeba77e6a2ce082e
+# fb94c60ad5014a24a84c341e7ffff85a
+# bf8febe876c14627a5a78318d1fa30d2
+# dde5ca5c8e71434bbfb873221b1f6082
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.latest_version:15
+# 2c60beb10d2d46088e40556561e6984c
+msgid "NOTE: As package repositories are not presently supported for Solaris pkgadd, this function will always return an empty string for a given package."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.list_pkgs:1
+# 682b7eb2586c43aeb6d5cc53723ced49
+msgid "List the packages currently installed as a dict::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.purge:1
+# 6d19d4e29ad440ddb19a8d9c71baa3f8
+msgid "Package purges are not supported, this function is identical to ``remove()``."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.purge:6
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:4
+# d503384b862740ef9ada749e31b51304
+# 057dd49b5fc54c749597080a57e0d6ea
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.purge:5
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:4
+# ef07598cba6b4ac497dee309fbdab149
+# a29b21e52d5e43d2a5145ba89e1ee318
+msgid "The name of the package to be deleted"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.purge:8
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:34
+# f1e0d8269cd7407eb341e482da3f06ee
+# 48698d32a4984db79f19818eb102f8ed
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.purge:12
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:38
+# dac7266f73e048c7a74aaa59d0192f06
+# 1f3c13aae4ea4a5e88f8b2dbaa76ab34
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.purge:11
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:37
+# 9ab9c3026a9b4f1eb9fa4e7f428dbf21
+# 21fe183563e8498db014b87722c2a700
+msgid "A list of packages to delete. Must be passed as a python list. The ``name`` parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.purge:17
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:43
+# 8a57488eb8cd4a27b13727a790500744
+# ce71a7b31a2b462ca200b945bbf2455e
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:1
+# 590678a6cf6f485e9a57d16826bb0860
+msgid "Remove packages with pkgrm"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:6
+# 593cd69d59304dc4b9c36cc3249cc822
+msgid "By default salt automatically provides an adminfile, to automate package removal, with these options set::"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.remove:26
+# e7915dc750c1483b9e45c4685f31cba5
+msgid "Note: You can find all of the possible options to provide to the adminfile by reading the admin man page:"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.upgrade_available:1
+# 3b287beb6ef641c6ac34ba9060a2d4c0
+msgid "Check whether or not an upgrade is available for a given package"
+msgstr ""
+
+#: ../../../salt/modules/solarispkg.py:docstring of salt.modules.solarispkg.version:1
+# b8faa06bde5043d58b232643ca04da82
+msgid "Returns a string representing the package version or an empty string if not installed. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+

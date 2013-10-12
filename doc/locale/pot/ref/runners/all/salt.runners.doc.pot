@@ -1,0 +1,52 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/runners/all/salt.runners.doc.rst:6
+# a60aac3ed3ef4cc0b4da639aef0fa730
+msgid "salt.runners.doc"
+msgstr ""
+
+#: ../../../salt/runners/doc.py:docstring of salt.runners.doc:1
+# a5443c8e4d544ea7b35c9341f8f44a17
+msgid "A runner module to collect and display the inline documentation from the various module types"
+msgstr ""
+
+#: ../../../salt/runners/doc.py:docstring of salt.runners.doc.execution:1
+# c0d6ae2f9186420b83c0a9da243b6827
+msgid "Collect all the sys.doc output from each minion and return the aggregate"
+msgstr ""
+
+#: ../../../salt/runners/doc.py:docstring of salt.runners.doc.execution:3
+#: ../../../salt/runners/doc.py:docstring of salt.runners.doc.runner:3
+#: ../../../salt/runners/doc.py:docstring of salt.runners.doc.wheel:3
+# fff532df11e147bf8dead47596844fcc
+# af47b32ed9ab42bfb32d50ef00eef3e5
+# 815e9213dfcc43f389faccff5cc2ddf0
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/runners/doc.py:docstring of salt.runners.doc.runner:1
+# 34f54693284a41e1b15519af05e52832
+msgid "Return all inline documetation for runner modules"
+msgstr ""
+
+#: ../../../salt/runners/doc.py:docstring of salt.runners.doc.wheel:1
+# a73f7dc98f7b468d8e1c39513818ae44
+msgid "Return all inline documentation for wheel modules"
+msgstr ""
+

@@ -1,0 +1,178 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/targeting/compound.rst:6
+# d44af2893fee4e9db0467ddd007639cd
+msgid "Compound matchers"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:9
+# a479e5b49cfa41b0973494563b9c87c0
+msgid "Compound matcher"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:11
+# 52cfc4702ff7412aa2799603e88b481b
+msgid "A combination of many target definitions that can be combined with boolean operators."
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:14
+# 93a464e05c78468382768097ac7247f8
+msgid "Compound matchers allow very granular minion targeting using any of Salt's matchers. The default matcher is a :mod:`glob <python2:fnmatch>` match, just as with CLI and :term:`top file` matching. To match using anything other than a glob, prefix the match string with the appropriate letter from the table below, followed by an ``@`` sign."
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:21
+# 97927147c63647348cfad21796df20c7
+msgid "Letter"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:21
+# f266894e30134976962440759c508514
+msgid "Match Type"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:21
+# 9f2abda06a95465ebe9e8f355e247c1e
+msgid "Example"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:23
+# 639d6f296d3942938a2e46e3dcfeffa5
+msgid "G"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:23
+# 9f5477aadd774a458c7d0a8137425b90
+msgid "Grains glob"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:23
+# 71823b3588ca4010a20371faed427f0a
+msgid "``G@os:Ubuntu``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:24
+# f806edb1a72e43d885b1354137c4461e
+msgid "E"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:24
+# 4d92a80ae92e49f5b040278ad9c6c4d1
+msgid "PCRE Minion ID"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:24
+# 6e9c405fa3aa490295f2176d3aa22241
+msgid "``E@web\\d+\\.(dev|qa|prod)\\.loc``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:25
+# 0b95b58027564ed2b1dfa86ea5bd2ada
+msgid "P"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:25
+# a7fa8f9308a64e769353c6700805db47
+msgid "Grains PCRE"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:25
+# efb3bace0e7d4347a72c51ede89699a2
+msgid "``P@os:(RedHat|Fedora|CentOS)``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:26
+# b74f469dc59e4b2c85ab76dcc07df4e6
+msgid "L"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:26
+# 10cecf00511e454ba396ded5d17a8423
+msgid "List of minions"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:26
+# 0af825a389554212aeede004073db97b
+msgid "``L@minion1.example.com,minion3.domain.com or bl*.domain.com``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:27
+# e7eeee9e43fb48aaad1ff9f9dcced951
+msgid "I"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:27
+# 14d89e87195e4aaaaaa9e15a513c573d
+msgid "Pillar glob"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:27
+# c991bab4109b49bdb67d1fd3bba0615a
+msgid "``I@pdata:foobar``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:28
+# 7a1911df47834fed90c19542f6c376a8
+msgid "S"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:28
+# 2d3ae961697448919e0e8a9483dc5cc4
+msgid "Subnet/IP address"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:28
+# 9278c9ece8304697915350857c006b95
+msgid "``S@192.168.1.0/24`` or ``S@192.168.1.100``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:29
+# 504cc31a3694485bbb733bf55f535e4a
+msgid "R"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:29
+# f2d9eb5dcd1c43879f4ce6d8ccd2fcd5
+msgid "Range cluster"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:29
+# 4814d2e6b3c1463186076c93bbdac120
+msgid "``R@%foo.bar``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:32
+# 50e44cc76f2a44d39ec1590af48551fa
+msgid "Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators."
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:34
+# 75b860de03fd4e0f992a8091476994e0
+msgid "For example, the following string matches all Debian minions with a hostname that begins with ``webserv``, as well as any minions that have a hostname which matches the :mod:`regular expression <python2:re>` ``web-dc1-srv.*``:"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:42
+# 2de028e5824e4e4ebae7af2aab58b3a4
+msgid "That same example expressed in a :term:`top file` looks like the following:"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:51
+# e54b4f4c990641e48a89c7be8c4d3db9
+msgid "Note that a leading ``not`` is not supported in compound matches. Instead, something like the following must be done:"
+msgstr ""
+

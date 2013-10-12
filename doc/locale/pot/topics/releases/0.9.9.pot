@@ -1,0 +1,248 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.9.9.rst:6
+# 82c6cd87c22e44b58716d8b51563fbe7
+msgid "Salt 0.9.9 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:8
+# 9d640232b0c94ceeb4692e121fef707c
+msgid "0.9.9 is out and comes with some serious bug fixes and even more serious features. This release is the last major feature release before 1.0.0 and could be considered the 1.0.0 release candidate."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:12
+# 69d696f726a44160a150924cbf5d623a
+msgid "A few updates include more advanced kwargs support, the ability for salt states to more safely configure a running salt minion, better job directory management and the new state test interface."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:16
+# 45bc971dd776435e97c24f3a04ace066
+msgid "Many new tests have been added as well, including the new minion swarm test that allows for easier testing of Salt working with large groups of minions. This means that if you have experienced stability issues with Salt before, particularly in larger deployments, that these bugs have been tested for, found, and killed."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:23
+# 88309523eaba45edafeb77c848b9b0c7
+msgid "Major Features"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:26
+# 0367445a14ad4a539347d4eda9e7956a
+msgid "State Test Interface"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:28
+# 0e9293f1376b4b68b16a1c9fd41aef0f
+msgid "Until 0.9.9 the only option when running states to see what was going to be changed was to print out the highstate with state.show_highstate and manually look it over. But now states can be run to discover what is going to be changed."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:33
+# ee57c3066dbf41eb85fb864664ce5cbf
+msgid "Passing the option ``test=True`` to many of the state functions will now cause the salt state system to only check for what is going to be changed and report on those changes."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:41
+# b586409f708147a487850fe36ea871c6
+msgid "Now states that would have made changes report them back in yellow."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:44
+# a9036de312ae4b509b12b56e23065eb0
+msgid "State Syntax Update"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:46
+# 2284a8be53894a2683ccef932c269605
+msgid "A shorthand syntax has been added to sls files, and it will be the default syntax in documentation going forward. The old syntax is still fully supported and will not be deprecated, but it is recommended to move to the new syntax in the future. This change moves the state function up into the state name using a dot notation. This is in-line with how state functions are generally referred to as well:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:53
+# 3b8c3c3fc78a40bea1684adb85e461c1
+msgid "The new way:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:64
+# 502094f1052c4a548671685d9aa0e9d9
+msgid "Use and Use_in Requisites"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:66
+# 7955d8fce59245a4b09b07fe363ca641
+msgid "Two new requisite statements are available in 0.9.9. The use and use_in requisite and requisite-in allow for the transparent duplication of data between states. When a state \"uses\" another state it copies the other state's arguments as defaults. This was created in direct response to the new network state, and allows for many network interfaces to be configured in the same way easily. A simple example:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:102
+# b27c1646bfc34b2dabc3e1a2ed4c2515
+msgid "This makes the 2 lower state decs inherit the options from their respectively \"used\" state decs."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:106
+# 915283e7ee6e48dd9a9f0c24165c3377
+msgid "Network State"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:108
+# 7c87482bed3a4d6b833ece00e3b7f6f1
+msgid "The new network state allows for the configuration of network devices via salt states and the ip salt module. This addition has been given to the project by Jeff Hutchins and Bret Palsson from Jive Communications."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:112
+# bf9f8e80470347d5b52e3a50366a298d
+msgid "Currently the only network configuration backend available is for Red Hat based systems, like Red Hat Enterprise, CentOS, and Fedora."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:116
+# 19ed39a292914b1692be31f6464925ff
+msgid "Exponential Jobs"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:118
+# 57eb3b2e372545cf84c66832e78d87d2
+msgid "Originally the jobs executed were stored on the master in the format: ``<cachedir>/jobs/jid/{minion ids}`` But this format restricted the number of jobs in the cache to the number of subdirectories allowed on the filesystem. Ext3 for instance limits subdirectories to 32000. To combat this the new format for 0.9.9 is: ``<cachedir>/jobs/jid_hash[:2]/jid_hash[2:]/{minion ids}`` So that now the number of maximum jobs that can be run before the cleanup cycle hits the job directory is substantially higher."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:128
+# b554765e62024820a5f1559345205baa
+msgid "ssh_auth Additions"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:130
+# 97de89eb92e443139b32602ff50c68d0
+msgid "The original ssh_auth state was limited to accepting only arguments to apply to a public key, and the key itself. This was restrictive due to the way the we learned that many people were using the state, so the key section has been expanded to accept options and arguments to the key that over ride arguments passed in the state. This gives substantial power to using ssh_auth with names:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:156
+# e66fcf266b614a08aceaef2e21572c8c
+msgid "LocalClient Additions"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:158
+# 72095e34d26e4a96b8a866db24ee62b6
+msgid "To follow up the recent additions in 0.9.8 of additional kwargs support, 0.9.9 also adds the capability to send kwargs into commands via a dict. This addition to the LocalClient api can be used like so:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:169
+# cbc38329ff1740d089164d1a1a4a6e82
+msgid "This update has been added to all cmd methods in the LocalClient class."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:172
+# d1aa6cc3aec841d0848a3def3fefc5d4
+msgid "Better Self Salting"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:174
+# 1636ae7521154d408de2ea8193c14d96
+msgid "One problem faced with running Salt states, is that it has been difficult to manage the Salt minion via states, this is due to the fact that if the minion is called to restart while a state run is happening then the state run would be killed. 0.9.9 slightly changes the process scope of the state runs, so now when salt is executing states it can safely restart the salt-minion daemon."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:181
+# 03856c76f3a84bfba5f94ca5d3049001
+msgid "In addition to daemonizing the state run, the apt module also daemonizes. This update makes it possible to cleanly update the salt-minion package on Debian/Ubuntu systems without leaving apt in an inconsistent state or killing the active minion process mid-execution."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:187
+# 360d631b27494ee2bee29179ce1ce2ed
+msgid "Wildcards for SLS Modules"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:189
+# d853c4a7b5434452aae13998168da080
+msgid "Now, when including sls modules in include statements or in the top file, shell globs can be used. This can greatly simplify listing matched sls modules in the top file and include statements:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:207
+# 740e0bff4791433387d9ad6de156fc5a
+msgid "External Pillar"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:209
+# d71b8cfb1a194296880bcc241b992ce5
+msgid "Since the pillar data is just, data, it does not need to come expressly from the pillar interface. The external pillar system allows for hooks to be added making it possible to extract pillar data from any arbitrary external interface. The external pillar interface is configured via the ``ext_pillar`` option. Currently interfaces exist to gather external pillar data via hiera or via a shell command that sends yaml data to the terminal:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:222
+# 6cce893d32124b5a9d5d1c6555d7e0ef
+msgid "The initial external pillar interfaces and extra interfaces can be added to the file salt/pillar.py, it is planned to add more external pillar interfaces. If the need arises a new module loader interface will be created in the future to manage external pillar interfaces."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:228
+# 3dcda50d44a04317946290898d01976d
+msgid "Single State Executions"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:230
+# eb432c87441f4131bbc5e3e544759b05
+msgid "The new state.single function allows for single states to be cleanly executed. This is a great tool for setting up a small group of states on a system or for testing out the behavior of single states:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:238
+# 21fb7a53951c480c82c6cdfe9f72c56e
+msgid "The test interface functions here as well, so changes can also be tested against as:"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:246
+# f14c7ea5d66440bfb84f45273f049bde
+msgid "New Tests"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:248
+# c68b82f5e7c445db98af464c832393e2
+msgid "A few exciting new test interfaces have been added, the minion swarm allows not only testing of larger loads, but also allows users to see how Salt behaves with large groups of minions without having to create a large deployment."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:253
+# 3b4e58dee00e49be9db4288587657a86
+msgid "Minion Swarm"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:255
+# 69f4d67703054926962fa2e65f474b93
+msgid "The minion swarm test system allows for large groups of minions to be tested against easily without requiring large numbers of servers or virtual machines. The minion swarm creates as many minions as a system can handle and roots them in the /tmp directory and connects them to a master."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:260
+# 8ea0055c75be486dae33ffc9676a8865
+msgid "The benefit here is that we were able to replicate issues that happen only when there are large numbers of minions. A number of elusive bugs which were causing stability issues in masters and minions have since been hunted down. Bugs that used to take careful watch by users over several days can now be reliably replicated in minutes, and fixed in minutes."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:266
+# 0fc8723eb0da46c4a625b5042f04338e
+msgid "Using the swarm is easy, make sure a master is up for the swarm to connect to, and then use the minionswarm.py script in the tests directory to spin up as many minions as you want. Remember, this is a fork bomb, don't spin up more than your hardware can handle!"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:277
+# ee73c9c97b984218b1b0c330e017005a
+msgid "Shell Tests"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:279
+# 1752e1bbe659439d8aae375d6d9a6e30
+msgid "The new Shell testing system allows us to test the behavior of commands executed from a high level. This allows for the high level testing of salt runners and commands like salt-key."
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:284
+# cc7f7b438c6848d69968b9e78e14df2d
+msgid "Client Tests"
+msgstr ""
+
+#: ../../topics/releases/0.9.9.rst:286
+# ba07efdf19224b98bb73345ce1b146c8
+msgid "Tests have been added to test the aspects of the client APIs and ensure that the client calls work, and that they manage passed data, in a desirable way."
+msgstr ""
+

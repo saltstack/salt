@@ -1,0 +1,278 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/windows-package-manager.rst:6
+# 2dbecb78933e45c6aaa1026389595df4
+msgid "Windows Software Repository"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:8
+# 9aad8e7f04864d3790ee0a9c07afd90d
+msgid "The Salt Windows Software Repository provides a package manager and software repository similar to what is provided by yum and apt on Linux."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:11
+# 5df0f85c81864770a683cdfd75bc3be7
+msgid "It permits the installation of software using the installers on remote windows machines. In many senses, the operation is similar to that of the other package managers salt is aware of:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:15
+# c1063aabb747445c8caec1a0d2530f4e
+msgid "the ``pkg.installed`` and similar states work on Windows."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:16
+# 1dfcd0076b8648b4aa79b30fb96c4f0e
+msgid "the ``pkg.install`` and similar module functions work on Windows."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:17
+# 1d97deba49f542ada6de3a714589305d
+msgid "each windows machine needs to have ``pkg.refresh_db`` executed against it to pick up the latest version of the package database."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:20
+# 9a10fb1dba8448739e3583d271f6033f
+msgid "High level differences to yum and apt are:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:22
+# 0418ab8a9ae14b54b839ce0dd9337278
+msgid "The repository metadata (sls files) is hosted through either salt or git."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:24
+# 44c8f6f4e862415fbe63e825d75f05e1
+msgid "Packages can be downloaded from within the salt repository, a git repository or from http(s) or ftp urls."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:26
+# 399677f6ae30449b9f9a005877a49489
+msgid "No dependencies are managed. Dependencies between packages needs to be managed manually."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:31
+# d0c2038de80d49c293b1ec78d5be0305
+msgid "Operation"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:33
+# 773ddb176445499f99c448934f12fe8d
+msgid "The install state/module function of the windows package manager works roughly as follows:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:36
+# d07b7b8364514299918cb28bd8e01348
+msgid "Execute ``pkg.list_pkgs`` and store the result"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:37
+# 89764d02ede84cefaded6dcff3ae6dca
+msgid "Check if any action needs to be taken. (ie compare required package and version against ``pkg.list_pkgs`` results)"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:39
+# 50ea9fd398d44e3eb3b3efdfa6aa0a4d
+msgid "If so, run the installer command."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:40
+# 4bd426ca2f854b56a8beaaeb459768bb
+msgid "Execute ``pkg.list_pkgs`` and compare to the result stored from before installation."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:42
+# dca60c67e9754b31bc3f8ae55e2393ee
+msgid "Sucess/Failure/Changes will be reported based on the differences between the original and final ``pkg.list_pkgs`` results."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:45
+# 99e85c07112a4c00b93523014cfbbe39
+msgid "If there are any problems in using the package manager it is likely to be due to the data in your sls files not matching the difference between the pre and post ``pkg.list_pkgs`` results."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:52
+# eb6a7493fd9c4f83b15aaf71b1247ca4
+msgid "Usage"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:54
+# 9022438bcc5b40979391fd8283f36f48
+msgid "By default, the Windows software repository is found at ``/srv/salt/win/repo`` This can be changed in the master config file (default location is ``/etc/salt/master``) by modifying the  ``win_repo`` variable.  Each piece of software should have its own directory which contains the installers and a package definition file. This package definition file is a YAML file named ``init.sls``."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:61
+# a5afcab5da7e4536a0da00d0ba647a7d
+msgid "The package definition file should look similar to this example for Firefox: ``/srv/salt/win/repo/firefox/init.sls``"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:92
+# 41790547176b430594fd4f4d6dd8314b
+msgid "More examples can be found here: https://github.com/saltstack/salt-winrepo"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:94
+# 496edbbec9e248069cfc9624effaf60c
+msgid "The version number and ``full_name`` need to match the output from ``pkg.list_pkgs`` so that the status can be verfied when running highstate. Note: It is still possible to successfully install packages using ``pkg.install`` even if they don't match which can make this hard to troubleshoot."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:123
+# 1aa916d01a7c43fca12490d984d54269
+msgid "If any of these preinstalled packages already exist in winrepo the full_name will be automatically renamed to their package name during the next update (running highstate or installing another package)."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:150
+# 277b6e54de254c4982ca9aecd7a6b463
+msgid "Add ``msiexec: True`` if using an MSI installer requiring the use of ``msiexec /i`` to install and ``msiexec /x`` to uninstall."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:153
+# 7cbbbb2660ae43649c0c8f551168045a
+msgid "The ``install_flags`` and ``uninstall_flags`` are flags passed to the software installer to cause it to perform a silent install. These can often be found by adding ``/?`` or ``/h`` when running the installer from the command line. A great resource for finding these silent install flags can be found on the WPKG project's wiki_:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:174
+# 1df46d249a974210b13290358331cdc9
+msgid "Generate Repo Cache File"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:176
+# 3527f0e3f2dd40f1900a26c5fd072df9
+msgid "Once the sls file has been created, generate the repository cache file with the winrepo runner:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:182
+# 166ce6c6a75b4f76bfd262690f9ac11a
+msgid "Then update the repository cache file on your minions, exactly how it's done for the Linux package managers:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:190
+# aea9763b421f42ec9f748639088c30c5
+msgid "Install Windows Software"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:192
+# f116c408ac3e4f3282cf030e22a63ad1
+msgid "Now you can query the available version of Firefox using the Salt pkg module."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:202
+# 9b3febfacae642eea4538894751873e1
+msgid "As you can see, there are three versions of Firefox available for installation."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:208
+# 8c9cefaa95294ca5b2bfe734cc8f7914
+msgid "The above line will install the latest version of Firefox."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:214
+# 5c96bc73cc554e37b600c9abc14e084a
+msgid "The above line will install version 16.0.2 of Firefox."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:216
+# e6cf5aebdc98432ca2b6f79bf66a99ac
+msgid "If a different version of the package is already installed it will be replaced with the version in winrepo (only if the package itself supports live updating)"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:222
+# a5b4d8fee31f4cf085a9208ede89f348
+msgid "Uninstall Windows Software"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:224
+# 8ff30c37a8ca4e27993054ebc7bbbb67
+msgid "Uninstall software using the pkg module:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:232
+# 4e1308d2ddeb45e88e00a0350274a048
+msgid "``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the future ``pkg.purge`` may direct the installer to remove all configs and settings for software packages that support that option."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:239
+# 6acd052f139345dab13324ee416477fb
+msgid "Standalone Minion Salt Windows Repo Module"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:241
+# a7fa6b8470e841e8b150d7a29a24f513
+msgid "In order to facilitate managing a Salt Windows software repo with Salt on a Standalone Minion on Windows, a new module named winrepo has been added to Salt. wirepo matches what is available in the salt runner and allows you to manage the Windows software repo contents. Example: ``salt '*' winrepo.genrepo``"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:248
+# dcf6c343979444a2909f8c7d3646ec27
+msgid "Git Hosted Repo"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:250
+# 5f57bff9cfc54be5be049e772fc92d2e
+msgid "Windows software package definitions can also be hosted in one or more git repositories. The default repo is one hosted on Github.com by SaltStack,Inc., which includes package definitions for open source software. This repo points to the HTTP or ftp locations of the installer files. Anyone is welcome to send a pull request to this repo to add new package definitions. Browse the repo here: `https://github.com/saltstack/salt-winrepo <https://github.com/saltstack/salt-winrepo>`_ ."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:258
+# d3ab7ab221ed4a06a6682a5cfe44511f
+msgid "Configure which git repos the master can search for package definitions by modifying or extending the ``win_gitrepos`` configuration option list in the master config."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:262
+# 9e0e609e6a054063bd18fc4356866459
+msgid "Checkout each git repo in ``win_gitrepos``, compile your package repository cache and then refresh each minion's package cache:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:276
+# 98f2213aa59c4d52a23fccf3bffb8cc8
+msgid "Troubleshooting"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:280
+# 58410b9f27e246cdba8b9b09a826f7d8
+msgid "Incorrect name/version"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:282
+# 1867d3e1d1a448809bc0db252930efc7
+msgid "If the package seems to install properly, but salt reports a failure then it is likely you have a version or ``full_name`` mismatch."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:285
+# ad76e9d1240347138d8f4ef474734801
+msgid "Check the exact ``full_name`` and version used by the package. Use ``pkg.list_pkgs`` to check that the names and version exactly match what is installed."
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:290
+# b885057fc6c44119aab20524fddfa953
+msgid "Changes to sls files not being picked up"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:292
+# 035b64fa7f4a4f249c7d24821c1938f7
+msgid "Ensure you have (re)generated the repository cache file and then updated the repository cache on the relevant minions:"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:302
+# 6e396367c22a4090a103fd873503875a
+msgid "Packages management under Windows 2003"
+msgstr ""
+
+#: ../../ref/windows-package-manager.rst:304
+# 59d494fada3f40fa8ddefbcaacc9ab62
+msgid "On windows server 2003, you need to install optional windows component \"wmi windows installer provider\" to have full list of installed packages. If you don't have this, salt-minion can't report some installed software."
+msgstr ""
+

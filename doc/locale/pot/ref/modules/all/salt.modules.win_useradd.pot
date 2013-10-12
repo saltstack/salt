@@ -1,0 +1,125 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.win_useradd.rst:6
+# e0d2b8fd004d4a6a81aaf6f4e0c81f67
+msgid "salt.modules.win_useradd"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd:1
+# 93fe50a74eec4ae3b2ed2023d8be507a
+msgid "Manage Windows users with the net user command"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd:3
+# c6d5bce102cc4957be98ab522d5b89f2
+msgid "NOTE: This currently only works with local user accounts, not domain accounts"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.add:1
+# ddcc3a0965a14f46b9f914eb5f2c31e2
+msgid "Add a user to the minion"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.add:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.addgroup:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.chfullname:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.chgroups:4
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.chhome:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.chprofile:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.delete:4
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.getent:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.info:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.list_groups:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.removegroup:3
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.setpassword:3
+# f4e6099c012d4e839a5f038f1b9e2d01
+# 151c2bf797f8462b9d4f552cbb9b4bd5
+# 6a06ba557ac54c38bce3ee4acf7bc396
+# dcfea558fa2848fc9d0e0f94da564113
+# 6841c5aa343647fda63eab5eba043b14
+# d9d5c067bc80467db3cfc73535b6052e
+# 00a35a64b10c4d51995e49ffcf5a78a9
+# 963e98c370ea49538bd4e386dcfc6bf1
+# 59a06d309f83400eb61a832d7ad36f63
+# 1d32af0b2e5646cd90cde59f5092ab89
+# 5cd668b2d64d4a33b6c45c4725818f5e
+# 01ecb316e701449e8dae855eb6e81207
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.addgroup:1
+# 46523355299e46f4a21cb570c346800f
+msgid "Add user to a group"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.chfullname:1
+# 1b9481a6dda64087adc5d5dcdacfdce1
+msgid "Change the full name of the user"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.chgroups:1
+# 4eef7055f8f9448a96475a32ae9ddc6c
+msgid "Change the groups this user belongs to, add append to append the specified groups"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.chhome:1
+# 9bd85e662c76483f96c40c02aa9f6f62
+msgid "Change the home directory of the user"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.chprofile:1
+# 053b3a12043e47bfadca63e621b5fe15
+msgid "Change the profile directory of the user"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.delete:1
+# cdc9913b7ae24e438837f2acc47bd1ca
+msgid "Remove a user from the minion NOTE: purge and force have not been implemented on Windows yet"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.getent:1
+# 135a99aee3344535adb642ed15e4663e
+msgid "Return the list of all info for all users"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.info:1
+# 4dfafc761b9648aab5089562549f1494
+msgid "Return user information"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.list_groups:1
+# d72ec2db99a545ce828fa6d3364d56fa
+msgid "Return a list of groups the named user belongs to"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.list_users:1
+# 2a81412fa36e4b14b54db9f16a4a953d
+msgid "Return a list of users on Windows"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.removegroup:1
+# 8003a386d2f44b48ad0170d6ad885505
+msgid "Remove user from a group"
+msgstr ""
+
+#: ../../../salt/modules/win_useradd.py:docstring of salt.modules.win_useradd.setpassword:1
+# 018c654b6d4b4d0d89bfadc7f51b606d
+msgid "Set a user's password"
+msgstr ""
+

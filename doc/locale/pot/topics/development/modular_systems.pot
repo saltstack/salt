@@ -1,0 +1,173 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/development/modular_systems.rst:6
+# acf6af74f4f04093b818eb7131e29a13
+msgid "Modular Systems"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:8
+# a4e0da2c066a4ae3b6d0157c4e0f5e87
+msgid "When first working with Salt, it is not always clear where all of the modular components are and what they do. Salt comes loaded with more modular systems than many users are aware of, making Salt very easy to extend in many places."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:12
+# 695b694b601d4f2dbd9f07dfb11a9ebb
+msgid "The most commonly used modular systems are execution modules and states. But the modular systems extend well beyond the more easily exposed components and are often added to Salt to make the complete system more flexible."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:17
+# 0ffdbd251e384fc4be6a0292a27ad87f
+msgid "Execution Modules"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:19
+# a1daa6c5a2354d49a3d04674664e1ce9
+msgid "Execution modules make up the core of the functionality used by Salt to interact with client systems. The execution modules create the core system management library used by all Salt systems, including states, which interact with minion systems."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:24
+# f656951f87434bab873475654e8da761
+msgid "Execution modules are completely open ended in their execution. They can be used to do anything required on a minion, from installing packages to detecting information about the system. The only restraint in execution modules is that the defined functions always return a JSON serializable object."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:30
+# e2f52bd3ca7346f39a56aea616687f1d
+msgid "For a list of all built in execution modules, click :doc:`here </ref/modules/all/index>`"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:33
+# 09c04c2177954f149e984765484eb961
+msgid "For information on writing execution modules, see :doc:`this page </ref/modules/index>`."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:37
+# 954aa75f81bb4695a9e5384d0ab19863
+msgid "State Modules"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:39
+# dfca253cc4df4ffa91b75f81e5914b86
+msgid "State modules are used to define the state interfaces used by Salt States. These modules are restrictive in that they must follow a number of rules to function properly."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:45
+# 42c2677ab6d64c71ae2afe79121e9a66
+msgid "State modules define the available routines in sls files. If calling an execution module directly is desired, take a look at the `module` state."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:50
+# 505344e9d8154334bd81225161dadee0
+msgid "Auth"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:52
+# 0153a610ecae476faa33729b0c818588
+msgid "The auth module system allows for external authentication routines to be easily added into Salt. The `auth` function needs to be implemented to satisfy the requirements of an auth module. Use the ``pam`` module as an example."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:57
+# 70f80e41e889410291e1e07e7722cd39
+msgid "Fileserver"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:59
+# 63d3725bb4db4bb7aa4d03d1c1ef5941
+msgid "The fileserver module system is used to create fileserver backends used by the Salt Master. These modules need to implement the functions used in the fileserver subsystem. Use the ``gitfs`` module as an example."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:64
+# 3a5b8795b64a45ea95e32d9ecd713f33
+msgid "Grains"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:66
+# 0147d8b45bf8435b9c10a66dbb60f45d
+msgid "Grain modules define extra routines to populate grains data. All defined public functions will be executed and MUST return a Python dict object. The dict keys will be added to the grains made available to the minion."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:71
+# bc378a041bcb4d678bd176e747f97d62
+msgid "Output"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:73
+# 9b10cd20ffea445abd8ada5c716ff042
+msgid "The output modules supply the outputter system with routines to display data in the terminal. These modules are very simple and only require the `output` function to execute. The default system outputter is the ``nested`` module."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:78
+# 60e7ea3249a943bcba9b2d9dd9671b88
+msgid "Pillar"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:80
+# 5e9e2239a159473eb14e9bf373b549d3
+msgid "Used to define optional external pillar systems. The pillar generated via the filesystem pillar is passed into external pillars. This is commonly used as a bridge to database data for pillar, but is also the backend to the libvirt state used to generate and sign libvirt certificates on the fly."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:86
+# b07fb1248f594a958cc6176d8e314629
+msgid "Renderers"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:88
+# 036fea9527b242bf96a51e099ca8cbdc
+msgid "Renderers are the system used to render sls files into salt highdata for the state compiler. They can be as simple as the ``py`` renderer and as complex as ``stateconf`` and ``pydsl``."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:93
+# cb6985021f7a48608bb81db568ece9e5
+msgid "Returners"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:95
+# 0e8ff47013084ec6aef8efa4ce6b5f69
+msgid "Returners are used to send data from minions to external sources, commonly databases. A full returner will implement all routines to be supported as an external job cache. Use the ``redis`` returner as an example."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:100
+# c7aa39ae1660453a9bd4c222b05ea571
+msgid "Runners"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:102
+# a2d4abd5a723419a823ed7c797484761
+msgid "Runners are purely master-side execution sequences. These range from simple reporting to orchestration engines like the overstate."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:106
+# a54a1098d80c4a4da6bf1acffd9ba507
+msgid "Tops"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:108
+# 2731c68719d54680986019fad6276b11
+msgid "Tops modules are used to convert external data sources into top file data for the state system."
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:112
+# 59b5a4d5f1c44f79860252cb7786dafa
+msgid "Wheel"
+msgstr ""
+
+#: ../../topics/development/modular_systems.rst:114
+# 53ea2fd4ffe74ae7a3cc95e2568127f7
+msgid "The wheel system is used to manage master side management routines. These routines are primarily intended for the API to enable master configuration."
+msgstr ""
+

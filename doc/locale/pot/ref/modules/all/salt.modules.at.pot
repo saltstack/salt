@@ -1,0 +1,69 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.at.rst:6
+# 00b3301b1407486f822697b55e46d20a
+msgid "salt.modules.at"
+msgstr ""
+
+#: ../../../salt/modules/at.py:docstring of salt.modules.at:1
+# a3dfcb9e9f2e47ceb77b6dce14580853
+msgid "Wrapper module for at(1)"
+msgstr ""
+
+#: ../../../salt/modules/at.py:docstring of salt.modules.at:3
+# f2757a50e23b4f23b9931df5e1500b27
+msgid "Also, a 'tag' feature has been added to more easily tag jobs."
+msgstr ""
+
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.at:1
+# 43075d53cacf417a8870239b124126bf
+msgid "Add a job to the queue."
+msgstr ""
+
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.at:3
+# b908a60dee404a21b0409e17983c1f1d
+msgid "The 'timespec' follows the format documented in the at(1) manpage."
+msgstr ""
+
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.at:6
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.atc:5
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.atq:4
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.atrm:3
+# 305f4ec3182d4e2ca178aedb23a08573
+# 7e10592aafec4b61ab6e8a8c88c7bf57
+# db02c9fa2e3444b7a073bf172b41b42a
+# 4b4d1c7215044f0aa4398ea3554cdb05
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.atc:1
+# 6389f11b7d26431b983ac289f3a05011
+msgid "Print the at(1) script that will run for the passed job id. This is mostly for debugging so the output will just be text."
+msgstr ""
+
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.atq:1
+# c4cb3e2b163c44e78084970ea5822c32
+msgid "List all queued and running jobs or only those with an optional 'tag'."
+msgstr ""
+
+#: ../../../salt/modules/at.py:docstring of salt.modules.at.atrm:1
+# 88068af2d970409ba02a4dd0dd4ec718
+msgid "Remove jobs from the queue."
+msgstr ""
+

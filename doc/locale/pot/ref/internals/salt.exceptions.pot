@@ -1,0 +1,105 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/internals/salt.exceptions.rst:6
+# 7700a0520e7147ffb68989361e8f99da
+msgid "salt.exceptions"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions:1
+# 93faa2b0a0a74191a3df3dfd5f413aa2
+msgid "This module is a central location for all salt exceptions"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.AuthenticationError:1
+# 6016db5ab61248e98010b572980c85fb
+msgid "If sha256 signature fails during decryption"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.CommandExecutionError:1
+# b90ebe98a323411e9e7a8dab5aacaa67
+msgid "Used when a module runs a command which returns an error and wants to show the user the output gracefully instead of dying"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.CommandNotFoundError:1
+# f37502c1466e46aea4a718238b52d444
+msgid "Used in modules or grains when a required binary is not available"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.EauthAuthenticationError:1
+# 11385c94aa964b0987298ec34f5f0ebd
+msgid "Thrown when eauth authentication fails"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.LoaderError:1
+# 830b580cc4a94aa9b6a6ad39834ece4c
+msgid "Problems loading the right renderer"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.MasterExit:1
+# 7544618e91354e0aace72e94ea09ac6d
+msgid "Rise when the master exits"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.MinionError:1
+# 8b8ed8b2fab149489c6acdaea089c7db
+msgid "Minion problems reading uris such as salt:// or http://"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.PkgParseError:1
+# 8ab6990c426d49619ad701eef95adfd6
+msgid "Used when of the pkg modules cannot correctly parse the output from the CLI tool (pacman, yum, apt, aptitude, etc)"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.SaltClientError:1
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.SaltMasterError:1
+# 31c0ccf289fc4a75bc1053a21a3d43ca
+# 3ae0e4d0f2e647f083952e2e108b22a5
+msgid "Problem reading the master root key"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.SaltException:1
+# 0cbf530198aa44308f0b84105c014d27
+msgid "Base exception class; all Salt-specific exceptions should subclass this"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.SaltInvocationError:1
+# 0e388c486e1744359155c4dd1b66e036
+msgid "Used when the wrong number of arguments are sent to modules or invalid arguments are specified on the command line"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.SaltRenderError:1
+# 36fd3cfdc445464ea209ad7fda7c68dc
+msgid "Used when a renderer needs to raise an explicit error"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.SaltReqTimeoutError:1
+# 3511880519a942b19fc46f3f97ad81c1
+msgid "Thrown when a salt master request call fails to return within the timeout"
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.SaltSystemExit:1
+# e1f590bf43394a80823636812009e2c7
+msgid "This exception is raised when an unsolvable problem is found. There's nothing else to do, salt should just exit."
+msgstr ""
+
+#: ../../../salt/exceptions.py:docstring of salt.exceptions.TimedProcTimeoutError:1
+# 91b48a90297a44c982e03f9e57e4d251
+msgid "Thrown when a timed subprocess does not terminate within the timeout, or if the specified timeout is not an int or a float"
+msgstr ""
+

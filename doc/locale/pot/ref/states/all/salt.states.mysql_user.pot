@@ -1,0 +1,120 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.mysql_user.rst:6
+# 441c75d8c71149c58d8d32b172e77fa5
+msgid "salt.states.mysql_user"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user:2
+# 98698dda7c51472db692d7cb2c2534df
+msgid "Management of MySQL users."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user:4
+# 495718fcbe0e4f20892a59cd68a3a5f7
+msgid "MySQLdb Python module"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user:5
+# be437fecfdfe43b3a323f93fb03d47e3
+msgid "See :py:mod:`salt.modules.mysql` for setup instructions."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user:15
+# 9e76ca62117c4faab099d1c2365e5e8e
+msgid "Authentication overrides have been added."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user:18
+# c41241f155434ac8809846ea4a364265
+msgid "The MySQL authentication information specified in the minion config file can be overidden in states using the following arguments: ``connection_host``, ``connection_port``, ``connection_user``, ``connection_pass``, ``connection_db``, ``connection_unix_socket``, and ``connection_default_file``."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.absent:1
+# cc37e0ff83e6495ba6bd5ce526538696
+msgid "Ensure that the named user is absent"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.absent:3
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:6
+# eb99d11cda3745c88f483bd0ba92326d
+# bef624e5881944c09f72386d6ea12537
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.absent:4
+# c5bbde3237244396a42d4871e92e9648
+msgid "The name of the user to remove"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:1
+# 60cc1a69cded4f088326e378bd7983ce
+msgid "Ensure that the named user is present with the specified properties. A passwordless user can be configured by omitting ``password`` and ``password_hash``, and setting ``allow_passwordless`` to ``True``."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:6
+# 7604270e1df24b28883d918bc98ab1be
+msgid "The name of the user to manage"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:9
+# e2344959ad9548d79818574013302b1c
+msgid "host"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:9
+# 284aa35cf05b4633aabd826cbff1206f
+msgid "Host for which this user/password combo applies"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:13
+# 334ab6df0c1245e29c2d88a4479b4a1b
+msgid "password"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:12
+# 04c9966fb4b54c19aacf6f2807c664e5
+msgid "The password to use for this user. Will take precedence over the ``password_hash`` option if both are specified."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:26
+# 48b5ee90ac844673a1bb90dce6ef786d
+msgid "password_hash"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:16
+# 1cd83877c9be4e2caaa45520e7fd7d61
+msgid "The password in hashed form. Be sure to quote the password because YAML doesn't like the ``*``. A password hash can be obtained from the mysql command-line client like so::"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:30
+# f8bf630f1fba400599e13219a184695b
+msgid "allow_passwordless"
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:29
+# 71f70aae947f420e83f2a0fcd6c04348
+msgid "If ``True``, then ``password`` and ``password_hash`` can be omitted to permit a passwordless login."
+msgstr ""
+
+#: ../../../salt/states/mysql_user.py:docstring of salt.states.mysql_user.present:33
+# ded415c6afdf47ec8acb2a90782fc480
+msgid "The ``allow_passwordless`` option will be available in version 0.16.2."
+msgstr ""
+

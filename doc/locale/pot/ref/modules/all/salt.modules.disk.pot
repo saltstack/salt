@@ -1,0 +1,45 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.disk.rst:6
+# 18081d5f94404953be41e33c3960e2b0
+msgid "salt.modules.disk"
+msgstr ""
+
+#: ../../../salt/modules/disk.py:docstring of salt.modules.disk:1
+# bdd99b6581c149d19b0c1b4b35a3e53e
+msgid "Module for gathering disk information"
+msgstr ""
+
+#: ../../../salt/modules/disk.py:docstring of salt.modules.disk.inodeusage:1
+# d1a840bb04c5450b85a0564a60348dec
+msgid "Return inode usage information for volumes mounted on this minion"
+msgstr ""
+
+#: ../../../salt/modules/disk.py:docstring of salt.modules.disk.inodeusage:3
+#: ../../../salt/modules/disk.py:docstring of salt.modules.disk.usage:3
+# 36373ecec3f84fdd9c009358a3125635
+# 5f39fc88dfea4706a842c9affcc35cf2
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/disk.py:docstring of salt.modules.disk.usage:1
+# 3d33c82fa34c40ee955159a8dfcb0930
+msgid "Return usage information for volumes mounted on this minion"
+msgstr ""
+

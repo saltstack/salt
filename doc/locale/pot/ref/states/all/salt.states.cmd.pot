@@ -1,0 +1,459 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.cmd.rst:6
+# 931bc9278750453688142e143d81edbc
+msgid "salt.states.cmd"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:2
+# e8e704f59afe46ce8307b5b295369eca
+msgid "Execution of arbitrary commands"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:4
+# 188a75a0828f4cc28cd77d5615b6a7bc
+msgid "The cmd state module manages the enforcement of executed commands, this state can tell a command to run under certain circumstances."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:8
+# 7c9997d8f30f455ca7d2ba7b34160933
+msgid "A simple example to execute a command:"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:15
+# c3e1dc4ae27e43cfa070f24d8a7c9b80
+msgid "Only run if another execution failed, in this case truncate syslog if there is no disk space:"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:24
+# 8faf14cb34564e5bac6d80d4044274c8
+msgid "Note that when executing a command or script, the state (i.e., changed or not) of the command is unknown to Salt's state system. Therefore, by default, the ``cmd`` state assumes that any command execution results in a changed state."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:28
+# b6b390f534424632a9859fd0c2df7bf5
+msgid "This means that if a ``cmd`` state is watched by another state then the state that's watching will always be executed due to the `changed` state in the ``cmd`` state."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:32
+# 54227e5529f14722bb0569771c136f7c
+msgid "Many state functions in this module now also accept a ``stateful`` argument. If ``stateful`` is specified to be true then it is assumed that the command or script will determine its own state and communicate it back by following a simple protocol described below:"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:37
+# dd23e973f643415a837b17a95ce0aee2
+msgid ":strong:`If there's nothing in the stdout of the command, then assume no changes.` Otherwise, the stdout must be either in JSON or its `last` non-empty line must be a string of key=value pairs delimited by spaces (no spaces on either side of ``=``)."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:42
+# 1250acba600b479a96d00956e8729581
+msgid ":strong:`If it's JSON then it must be a JSON object (e.g., {}).` If it's key=value pairs then quoting may be used to include spaces.  (Python's shlex module is used to parse the key=value string)"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:46
+# 99e3392f7cd3499ba617b004da00c789
+msgid "Two special keys or attributes are recognized in the output::"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:51
+# 6d7eb55dbc2a47948eaf783ac4af23a3
+msgid "So, only if ``changed`` is ``True`` then assume the command execution has changed the state, and any other key values or attributes in the output will be set as part of the changes."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:55
+# 726d347a29da4dc2942f70911dbc6057
+msgid ":strong:`If there's a comment then it will be used as the comment of the state.`"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:58
+# 7b1c002c932c4bdd85f3c17944edb7a0
+msgid "Here's an example of how one might write a shell script for use with a stateful command::"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:69
+# 7945bc2fae0b4efdb160d96725f6b5d4
+msgid "And an example SLS file using this module::"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:84
+# a13140010e2842699e228f0687882e08
+msgid "Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can then be watched by some other states as well."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:87
+# 9f7b8c566c354c498fae9c368e9baf84
+msgid "``cmd.wait`` is not restricted to watching only cmd states. For example it can also watch a git state for changes"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:106
+# 442a537b8e5d45469b4b2ad87c74fe23
+msgid "Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states.cmd.wait>`?"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd:108
+# 37db28012db44869ac7258e27f6632a7
+msgid "These two states are often confused. The important thing to remember about them is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS file that contains them is applied. If it is more desirable to have a command that only runs after some other state changes, then :mod:`cmd.wait <salt.states.cmd.wait>` does just that. :mod:`cmd.wait <salt.states.cmd.wait>` is designed to :doc:`watch </ref/states/requisites>` other states, and is executed when the state it is watching changes. Example:"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.call:1
+# 480f03db74f447a8a3c17343290774c3
+msgid "Invoke a pre-defined Python function with arguments specified in the state declaration. This function is mainly used by the :mod:`salt.renderers.pydsl` renderer."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.call:5
+# 260ac3b65ff246449409c367b1c8db78
+msgid "The interpretation of `onlyif` and `unless` arguments are identical to those of :func:`salt.states.cmd.run`, and all other arguments(`cwd`, `runas`, ...) allowed by `cmd.run` are allowed here, except that their effects apply only to the commands specified in `onlyif` and `unless` rather than to the function to be invoked."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.call:11
+# e83cdf2235d640bd93d5b06a403dd215
+msgid "In addition the `stateful` argument has no effects here."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.call:13
+# 7554d1592279443290be85f69b8c3eb4
+msgid "The return value of the invoked function will be interpreted as follows."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.call:15
+# 32ba684558804dca811099b5ecacb13a
+msgid "If it's a dictionary then it will be passed through to the state system, which expects it to have the usual structure returned by any salt state function."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.call:19
+# 42b6d2cbbef9420188e8e0fa86aa8b53
+msgid "Otherwise, the return value(denoted as ``result`` in the code below) is expected to be a JSON serializable object, and this dictionary is returned:"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.mod_watch:1
+# 83ceab285ebe4f8d8088068b4668f117
+msgid "Execute a cmd function based on a watch call"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:1
+# 816c6fd753804e708483c1a553c80fbb
+msgid "Run a command if certain circumstances are met"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:5
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:17
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:5
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:17
+# 835c74c066a34c56ba6630a42836ddce
+# cea784e86dc04092bfa895187636f111
+# 5605d04190cf4f8695dbd0a7b6375419
+# 49b08b781dc9491b8c43b6c9dc77bcbc
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:4
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:16
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:4
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:16
+# 435d31c1222f44eda8126ae90390bc4a
+# 5ba61862066b466fb1cbdea902a39be6
+# bbb6b9c5af0241c793258a13667fd5c5
+# 5292d8c4a09d44c892d5c869fe6c7a25
+msgid "The command to execute, remember that the command will execute with the path and permissions of the salt-minion."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:9
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:21
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:9
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:21
+# e6cea94db05f4ed2a4afa6b153bf8861
+# b037ac0acc0a4791b2440c68466f6c5d
+# d2b8315466144f43a43e2431a6849b21
+# 512c58606f324403a7772d7b57fe8010
+msgid "onlyif"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:8
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:20
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:8
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:20
+# f19da0f77af542abb6ab348bbe7f4a1c
+# e02eec7ec83d459abafe288f1aa9fea8
+# bbb80d8d43b2432684ab4ab7fd5aa98e
+# ea9a1a53e1d64052a8e1c345fe11f00e
+msgid "A command to run as a check, run the named command only if the command passed to the ``onlyif`` option returns true"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:13
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:25
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:13
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:25
+# a2a69a5fda8d4c888025be17183a943d
+# 8b9d380d9177460aac9ee1d421c0ba69
+# 8181ab6a4f1d40b18860d8a4c31f595f
+# 2a4d2e981fac4cf798b31d8d410100c5
+msgid "unless"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:12
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:24
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:12
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:24
+# e095e1d7729143319d783a2e91c71cbf
+# d04e88e0980e4fef876959c18b6b4c9d
+# c7b80200e79a47bf876adafcf93f260c
+# 290720914085460aa477d1fb79cbb11a
+msgid "A command to run as a check, only run the named command if the command passed to the ``unless`` option returns false"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:17
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:29
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:17
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:29
+# bf40e4bda39a45408ff4144d6df1050d
+# 2b68686631f44e1097316e937ed65aa6
+# 47e34a7838d34122b9917d0d1fecf30c
+# 42605b41c2394126a658d16061d139d5
+msgid "cwd"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:16
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:28
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:16
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:28
+# d981e6343ddc429d9dbadaaa916eb559
+# db2db015d99c4436927d2568515b0e15
+# c787a66468364ec09e91b762cf54fe57
+# d2f4e7e165814f1fa94887cd9000c74f
+msgid "The current working directory to execute the command in, defaults to /root"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:20
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:32
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:20
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:32
+# a4c4c132795349639dbc0d21771ec028
+# a43fbf926cfe4202ae8cbb0221efbfae
+# 887486cfbf164d20b8a196af6276777f
+# 621891085e1e4564a79623be3a32b0f1
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:20
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:32
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:20
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:32
+# cee65f385d8745d4962647017de74014
+# 895af5ce72a047bf9a3e8ec428d6ed19
+# 3a90eaca4a4643b39c160047e4807538
+# 384f07f4e801459aa9ce7d12f5b754f8
+msgid "The user name to run the command as"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:23
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:35
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:23
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:35
+# c209dc38ddc241ccae8e2cfb96982a6a
+# 64e2d050fbef492c9a059a9b21f87bd1
+# 36b6a48f292e4840b3eb845de1aea11b
+# 8280054466fe404c8f5d02ed7d60b13e
+msgid "group"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:23
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:35
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:23
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:35
+# ad36563312d045aa8b67bc87bc59b5c0
+# 6cb6caa815c6464ca6e2b2f7ca2bbbfd
+# 136479b78a7940b2a9a99ae6b8bb34e2
+# ba59c7dc48944167a49b49b220ce1645
+msgid "The group context to run the command as"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:26
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:38
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:26
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:38
+# e1336f140b4e4de2a1a1060c1d28e8e8
+# df076cfe52a648fb872b7e930b2f1c4c
+# 3c4982d88dd947c6ab68a59660064487
+# b42108ce2f214f15aa40df7c9eded6bb
+msgid "shell"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:26
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:38
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:38
+# d89f7b4fd4c74d64b4511cd9ce9356c0
+# e942d092120543298dd42ddd7a8a264d
+# 88180535a83b4bfab050fad8e1262742
+msgid "The shell to use for execution, defaults to the shell grain"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:30
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:42
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:42
+# 42237ebdbbdf496e8549294ff2efe482
+# 2e114c39624f4e318b399e67817df980
+# 37ddb84a5cd644e78be85f8f73d9a901
+msgid "env"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:29
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:41
+# a1b88c40bbb64cc6b2bc982b1068b24e
+# 3f0332db7cc34514b9997d32bd73dc54
+msgid "Pass in a list or dict of environment variables to be applied to the command upon execution"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:34
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:49
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:32
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:48
+# b4bfa50bedf648739772d8807178adbe
+# 5ae975bdac9045caae780b30d2c285dc
+# 36d6e117f0784bb8be50de52c59bff50
+# 88e936ab5d4b448093642494274e1cad
+msgid "stateful"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:33
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:48
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:32
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:48
+# e2ae0944d3fe4e908a760573a05926bb
+# deb9b4c2667a43888cb7f157c794c9e9
+# 69099d7465d94d62854af1c33597df17
+# 4485afcd701d4eb0a3a99b8a5b6d38e4
+msgid "The command being executed is expected to return data about executing a state"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:37
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:45
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:29
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:45
+# 2e31d4ec2a6b43768e598237e6f08560
+# 3211b0e67508416185e75360d4ac45c2
+# 49dcf557914c4146bb2f7f4db5d6f53a
+# 16985dcbbfce46b4a8afc00e7508124b
+msgid "umask"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:37
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:45
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:29
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:45
+# f537831a265844f8bf2deceb42129c0e
+# 2fa390aa0578468fa2b598c02e2c18ea
+# fcf60bbc14cc47c490aa32c6c0a1bcad
+# 632eec8bcc4a413dad98d06b8d19285c
+msgid "The umask (in octal) to use when running the command."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:41
+# 71a15d166c3b4f0e8ad490ec358239ff
+msgid "quiet"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:40
+# 07debdbe430e45c4964119a98f9a8868
+msgid "The command will be executed quietly, meaning no log entries of the actual command or its return data"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:44
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:53
+# f3c44d1e282a495bbdbe7ef7a642b72c
+# 80389dafb9fc4dd6a60d680aa5900f9c
+msgid "timeout"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.run:44
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:52
+# 48726dc811c643bbb8e8a3700fbe4f02
+# c9eccfe2dfdc4e248c441412f3cde641
+msgid "If the command has not terminated after timeout seconds, send the subprocess sigterm, and if sigterm is ignored, follow up with sigkill"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:1
+# 47e3971c99774958a9f319daa4cb6e57
+msgid "Download a script from a remote source and execute it. The name can be the source or the source value can be defined."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:8
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:8
+# a371a3f1c1c84a2bb4450f6d300dc9df
+# e64012795f374f5d9d1cccd4ac76fd86
+msgid "source"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:5
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:5
+# 6a2445cab493421cac7209c0ce909425
+# 42f5dab216ae4dbcb61fa693b34d0516
+msgid "The source script being downloaded to the minion, this source script is hosted on the salt master server.  If the file is located on the master in the directory named spam, and is called eggs, the source string is salt://spam/eggs"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:13
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:13
+# 524e872d358849268f45fcbaa5b24df3
+# ea3b3785fce646bdb96fa675642841de
+msgid "template"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:11
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:11
+# 670e3ed0422b414a9ef373d13a3417eb
+# c002d4842e8c4e1786c79c4c52cb30f7
+msgid "If this setting is applied then the named templating engine will be used to render the downloaded file, currently jinja, mako, and wempy are supported"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:57
+# 240cf1f530e242b6a06739a25606cc05
+msgid "args"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:56
+# 58d6af4a7d404198bbd67d797bf48bf4
+msgid "String of command line args to pass to the script.  Only used if no args are specified as part of the `name` argument."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:60
+# e9d8edc2e01b4bd2840b51ea7b5424cd
+msgid "__env__"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.script:60
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:41
+# bdd33b7ac0f340a78b80fe6dd1d7c605
+# 1b0b5f202f7140e68d7a1e4a893805cc
+msgid "The root directory of the environment for the referencing script. The environments are defined in the master config file."
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:1
+# e0d3ccf248d549c181912a4c4e9013e7
+msgid "Run the given command only if the watch statement calls it"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait:26
+# f551fe4732f54dadbc1523fd4ad0be27
+msgid "The shell to use for execution, defaults to /bin/sh"
+msgstr ""
+
+#: ../../../salt/states/cmd.py:docstring of salt.states.cmd.wait_script:1
+# f24f8180e04945b486eaf5ba68215c28
+msgid "Download a script from a remote source and execute it only if a watch statement calls it."
+msgstr ""
+

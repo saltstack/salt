@@ -1,0 +1,162 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/installation/solaris.rst:6
+# 676eb12295394ac98f7d2926d1bf5f38
+msgid "Solaris"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:8
+# 5834c8c4c5674c0dae7dd6e67e694d75
+msgid "Salt was added to the OpenCSW package repository in September of 2012 by Romeo Theriault <romeot@hawaii.edu> at version 0.10.2 of Salt. It has mainly been tested on Solaris 10 (sparc), though it is built for and has been tested minimally on Solaris 10 (x86), Solaris 9 (sparc/x86) and 11 (sparc/x86). (Please let me know if you're using it on these platforms!) Most of the testing has also just focused on the minion, though it has verified that the master starts up successfully on Solaris 10."
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:16
+# 3e6ffc5e3c8c40d88daea5c362dd6144
+msgid "Comments and patches for better support on these platforms is very welcome."
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:18
+# bf5b0d81e25e4457a690e81b2e07cfc0
+msgid "As of version 0.10.4, Solaris is well supported under salt, with all of the following working well:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:21
+# d557f8197bcf4030ad07b7961e7cd566
+msgid "remote execution"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:22
+# ed46b24a01d848269080e64e304658bc
+msgid "grain detection"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:23
+# 36a51dc5816546e2918a7f3c09fc55b3
+msgid "service control with SMF"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:24
+# a5d61e498d6241f0967f7bf517f01491
+msgid "'pkg' states with 'pkgadd' and 'pkgutil' modules"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:25
+# 6c2e4c9a6f3b4d1895df8b9b2d6253e5
+msgid "cron modules/states"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:26
+# 739e27d40a334a89ae3c37e72fd222de
+msgid "user and group modules/states"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:27
+# 2faa7a363eb247f1b9480fbe43a03c3f
+msgid "shadow password management modules/states"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:29
+# 1714d9e880a7461c938596ef5303d71c
+msgid "Salt is dependent on the following additional packages. These will automatically be installed as dependencies of the ``py_salt`` package.::"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:41
+# 4af6df3ce137440fa329dfe6d2e45d12
+msgid "Installation"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:43
+# 5b493aa1296e426fba18322ba727202a
+msgid "To install Salt from the OpenCSW package repository you first need to install `pkgutil`_ assuming you don't already have it installed:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:46
+#: ../../topics/installation/solaris.rst:96
+# ca973a999cf144aab5e0314df3f817fd
+# 4c3dd9889b734f0ebc3cc861dd3bd76a
+msgid "On Solaris 10:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:52
+#: ../../topics/installation/solaris.rst:103
+# 31d5d0229ffa4a7fb2a301a5948c8186
+# fbfd89c08e954d1eacc8b85984360f0d
+msgid "On Solaris 9:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:59
+# 9e7984aeb5ce4abe95f776fc66f8f614
+msgid "Once pkgutil is installed you'll need to edit it's config file ``/etc/opt/csw/pkgutil.conf`` to point it at the unstable catalog:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:67
+# ce0eec3b55584911b925a1a83b6d8b34
+msgid "OK, time to install salt."
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:77
+# d348a38c5adc408bb8ce87ff7645f02c
+msgid "Minion Configuration"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:79
+# 44bd16e646284ef7a2ae838bdf9876e5
+msgid "Now that salt is installed you can find it's configuration files in ``/etc/opt/csw/salt/``."
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:82
+# 2e4b020b187a49ab804e966178fc8e7c
+msgid "You'll want to edit the minion config file to set the name of your salt master server:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:90
+# 94ac22ccee0e4e2885d21c36d3319d38
+msgid "If you would like to use `pkgutil`_ as the default package provider for your Solaris minions, you can do so using the :conf_minion:`providers` option in the minion config file."
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:94
+# bd7553dfa5dd4547b47b6f264f0766f0
+msgid "You can now start the salt minion like so:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:109
+# 38274b5746374df4928a357ab7bfff06
+msgid "You should now be able to log onto the salt master and check to see if the salt-minion key is awaiting acceptance:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:116
+# 6bbd0e12c98946b3a5943caebdac9d2f
+msgid "Accept the key:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:122
+# 3181e560b4ba4241bae9f1a3aaad2a5d
+msgid "Run a simple test against the minion:"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:129
+# 4fff8260f262476e9f011b325d7de4ef
+msgid "Troubleshooting"
+msgstr ""
+
+#: ../../topics/installation/solaris.rst:131
+# 278c206c7dc9485e870762bfa608c440
+msgid "Logs are in ``/var/log/salt``"
+msgstr ""
+

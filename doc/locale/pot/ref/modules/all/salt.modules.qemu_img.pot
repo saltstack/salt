@@ -1,0 +1,48 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.qemu_img.rst:6
+# d1c87e8f6d1f4af28c4c01e593c6d5dc
+msgid "salt.modules.qemu_img"
+msgstr ""
+
+#: ../../../salt/modules/qemu_img.py:docstring of salt.modules.qemu_img:2
+# 547f9a1685d04746bed0342a5ca45dcb
+msgid "Qemu-img Command Wrapper"
+msgstr ""
+
+#: ../../../salt/modules/qemu_img.py:docstring of salt.modules.qemu_img:4
+# c1e72fd3f27a49b7832b52c17fe616ba
+msgid "The qemu img command is wrapped for specific functions"
+msgstr ""
+
+#: ../../../salt/modules/qemu_img.py:docstring of salt.modules.qemu_img:6
+# b3e0d1d2a1e24c658da78a495f87aa88
+msgid "qemu-img"
+msgstr ""
+
+#: ../../../salt/modules/qemu_img.py:docstring of salt.modules.qemu_img.make_image:1
+# 15abaf32067d40a3b012750df4ffe023
+msgid "Create a blank virtual machine image file of the specified size in megabytes. The image can be created in any format supported by qemu"
+msgstr ""
+
+#: ../../../salt/modules/qemu_img.py:docstring of salt.modules.qemu_img.make_image:4
+# 420130b04894491ea8dbc0d774377324
+msgid "CLI Example:"
+msgstr ""
+

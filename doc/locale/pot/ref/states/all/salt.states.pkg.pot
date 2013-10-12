@@ -1,0 +1,221 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.pkg.rst:6
+# 6b6f2ee997534b3a86c39fdf8ca0c6eb
+msgid "salt.states.pkg"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg:2
+# 4c9f661532114aa88ae8a8021c3879f0
+msgid "Installation of packages using OS package managers such as yum or apt-get"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg:4
+# 332e753a248b48269375dd6124c3f7f9
+msgid "Salt can manage software packages via the pkg state module, packages can be set up to be installed, latest, removed and purged. Package management declarations are typically rather simple:"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg:13
+# 29d0a16d27444b11b5b1aa6fa5a0d0c8
+msgid "A more involved example involves pulling from a custom repository. Note that the pkgrepo has a require_in clause. This is necessary and can not be replaced by a require clause in the pkg."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:1
+# d81699317e6341edbdd81abdd056399d
+msgid "Verify that the package is installed, and that it is the correct version (if specified)."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:9
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:10
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.purged:6
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.removed:6
+# 6d446d249e764a2187f0ea88715a196b
+# 94774c68868c4e8cbfd9a633157f5532
+# 8e80ffac2f8a4b58915746c117401ec4
+# 43d0a1521aa349b68545ad7f548df01b
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:5
+# 361401acca0349688251776a1283d5d9
+msgid "The name of the package to be installed. This parameter is ignored if either \"pkgs\" or \"sources\" is used. Additionally, please note that this option can only be used to install packages from a software repository. To install a package file manually, use the \"sources\" option detailed below."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:12
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:13
+# c24f329df70e46e88cf43081e79fcf9c
+# 819687a1545741b2a20a8bb01ff126a7
+msgid "fromrepo"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:12
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:13
+# daef333dfde3444385982adacf15a3b5
+# 7e4873853b0b4bf3939db5bf7154f148
+msgid "Specify a repository from which to install"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:15
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:17
+# 293daf48716642e4827ef65dd73311ca
+# d24871cb01b64c1eb19d411c8cc6f010
+msgid "skip_verify"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:15
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:16
+# ef5e7340953246f188f9d1933ecfaf74
+# c1a9c3cf3c3d421d97ce35cc4d21d950
+msgid "Skip the GPG verification check for the package to be installed"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:25
+# 2898e74c33454aceb0dd828e7d8f3c6a
+msgid "version"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:18
+# e4a9c77c34164177b04c17bb044b8ac8
+msgid "Install a specific version of a package. This option is ignored if either \"pkgs\" or \"sources\" is used. Currently, this option is supported for the following pkg providers: :mod:`apt <salt.modules.apt>`, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`yumpkg5 <salt.modules.yumpkg5>`, and :mod:`zypper <salt.modules.zypper>`."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:27
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:41
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:99
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:27
+# 72daa3294764462588f51cac119b1562
+# 81b48a8afb134d0f94441b5bd013a603
+# c46036ff55d64ea4828222e286d17425
+# aa327ee8076649f1ae98292eec65754a
+msgid "Usage::"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:36
+# 07a69d7b8f124ffcb33f51b623aab044
+msgid "Multiple Package Installation Options: (not supported in Windows or pkgng)"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:39
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:25
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.purged:12
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.removed:12
+# 2596c980845a4e0f8a91a24796d51728
+# a65978f7b98e44ea983c25d374c55f4b
+# 533e7fcdeb7e457fa10711ed7a72122e
+# 3f427f13da4243d882291d2f31a9044b
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:39
+# 8d4fc45ba0a44b938a03598e0f884745
+msgid "A list of packages to install from a software repository."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:50
+# 217e828c8a0247b1a0572f7ca8e9203a
+msgid "``NOTE:`` For :mod:`apt <salt.modules.apt>`, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`yumpkg5 <salt.modules.yumpkg5>`, and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified in the ``pkgs`` argument. Example::"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:64
+# 5805030341cb4bf6b6098e75ee96c0e0
+msgid "Additionally, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman <salt.modules.pacman>` and :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and ``>`` operators for more control over what versions will be installed. Example::"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:77
+# fc49fdbba1624ed2930db77e30397f75
+msgid "``NOTE:`` When using comparison operators, the expression must be enclosed in quotes to avoid a YAML render error."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:80
+# 6f4a7210f3d549a58d1225499e0d63d7
+msgid "With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use flag list and/or if the given packages should be in package.accept_keywords file and/or the overlay from which you want the package to be installed. Example::"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:97
+# ee5ff98ce6444be4bd2d6d1b932b1fac
+msgid "sources"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.installed:93
+# a68634cd374747beb7b4f705c7efe74b
+msgid "A list of packages to install, along with the source URI or local path from which to install each package. In the example below, ``foo``, ``bar``, ``baz``, etc. refer to the name of the package, as it would appear in the output of the ``pkg.version`` or ``pkg.list_pkgs`` salt CLI commands."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:1
+# 67e7649e26de43d28a6a3458949c364b
+msgid "Verify that the named package is installed and the latest available package. If the package can be updated this state function will update the package. Generally it is better for the :mod:`installed <salt.states.pkg.installed>` function to be used, as :mod:`latest <salt.states.pkg.latest>` will update the package whenever a new package is available."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:9
+# f6c09873f1ba4a28aea101069dd8c78a
+msgid "The name of the package to maintain at the latest available version. This parameter is ignored if \"pkgs\" is used."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:19
+# d2f813c38eec443f99c21e031394dac5
+msgid "Multiple Package Installation Options:"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:21
+# 33f4f13b6afa4f69a953e3f8c5dd90e5
+msgid "(Not yet supported for: Windows, FreeBSD, OpenBSD, MacOS, and Solaris pkgutil)"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.latest:25
+# 863ac1f8e1e34425900b88d85b7ec65e
+msgid "A list of packages to maintain at the latest available version."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.purged:1
+# c0493929148c45c0b2abe188a62652f7
+msgid "Verify that a package is not installed, calling ``pkg.purge`` if necessary to purge the package."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.purged:5
+# 223a8966765144eb86dd6fe6a2fd0c6c
+msgid "The name of the package to be purged."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.purged:8
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.removed:8
+# 06343ef90b074c72b7d768dfa8640b32
+# eed59f9e2f004b02b48641b0c1e5436a
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.purged:11
+# 3d056258d3cc4cf4a659b69ab7f77a23
+msgid "A list of packages to purge. Must be passed as a python list. The ``name`` parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.removed:1
+# 5c79933274d248bcbc972651f9bb6871
+msgid "Verify that a package is not installed, calling ``pkg.remove`` if necessary to remove the package."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.removed:5
+# 5b345dd0a9e04fe1a967da1b953234f2
+msgid "The name of the package to be removed."
+msgstr ""
+
+#: ../../../salt/states/pkg.py:docstring of salt.states.pkg.removed:11
+# 5b9a44e5ab5f4c6a84beba37bfe9f1cd
+msgid "A list of packages to remove. Must be passed as a python list. The ``name`` parameter will be ignored if this option is passed."
+msgstr ""
+

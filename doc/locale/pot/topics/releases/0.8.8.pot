@@ -1,0 +1,78 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.8.8.rst:6
+# 32312cfcf0d64d7993afb3b3ed88afce
+msgid "Salt 0.8.8 release notes"
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:8
+# 4004dc9197394f09b5749e828b3ab825
+msgid "Salt 0.8.8 is here! This release adds a great deal of code and some serious new features. The latest release can be downloaded here: :download:`salt-0.8.8.tar.gz`"
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:12
+# ac109a1821734cfc8e5c960b36af0f10
+msgid "Improved Documentation has been set up for salt using sphinx thanks to the efforts of Seth House. This new documentation system will act as the back end to the salt website which is still under heavy development. The new sphinx documentation system has also been used to greatly clean up the salt manpages. The salt 7 manpage in particular now contains extensive information which was previously only in the wiki. The new documentation can be found at: http://thatch45.github.com/salt-www/ We still have a lot to add, and when the domain is set up I will post another announcement."
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:22
+# bf79edaf1a094716814151c67d9c7018
+msgid "More additions have been made to the ZeroMQ setup, particularly in the realm of file transfers. Salt 0.8.8 introduces a built in, stateless, encrypted file server which allows salt minions to download files from the salt master using the same encryption system used for all other salt communications. The main motivation for the salt file server has been to facilitate the new salt state system."
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:29
+# ac0bd25c1fd346b298225989b39e8ad5
+msgid "Much of the salt code has been cleaned up and a new cleaner logging system has been introduced thanks to the efforts of Pedro Algarvio. These additions will allow for much more flexible logging to be executed by salt, and fixed a great deal of my poor spelling in the salt docstrings! Pedro Algarvio has also cleaned up the API, making it easier to embed salt into another application."
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:35
+# 5ebc0c989ed24e6ca44d245ac8ba3334
+msgid "The biggest addition to salt found in 0.8.8 is the new state system. The salt module system has received a new front end which allows salt to be used as a configuration management system. The configuration management system allows for system configuration to be defined in data structures. The configuration management system, or as it is called in salt, the “salt state system” supports many of the features found in other configuration managers, but allows for system states to be written in a far simpler format, executes at blazing speeds, and operates via the salt minion matching system. The state system also operates within the normal scope of salt, and requires no additional configuration to use."
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:46
+# 8990e26afccd4de5acbd4a03758ad2ff
+msgid "The salt state system can enforce the following states with many more to come: Packages Files Services Executing commands Hosts"
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:53
+# d0b5d63470a24a47addd9227adbf51fa
+msgid "The system used to define the salt states is based on a data structure, the data structure used to define the salt states has been made to be as easy to use as possible. The data structure is defined by default using a YAML file rendered via a Jinja template. This means that the state definition language supports all of the data structures that YAML supports, and all of the programming constructs and logic that Jinja supports. If the user does not like YAML or Jinja the states can be defined in yaml-mako, json-jinja, or json-mako. The system used to render the states is completely dynamic, and any rendering system can be added to the capabilities of Salt, this means that a rendering system that renders XML data in a cheetah template, or whatever you can imagine, can be easily added to the capabilities of salt."
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:65
+# 169373f6f8a9419da923949771bbabbf
+msgid "The salt state system also supports isolated environments, as well as matching code from several environments to a single salt minion."
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:68
+# 27a4533e2e9b41bd9c4a2f115de698f7
+msgid "The feature base for Salt has grown quite a bit since my last serious documentation push. As we approach 0.9.0 the goals are becoming very clear, and the documentation needs a lot of work. The main goals for 0.9.0 are to further refine the state system, fix any bugs we find, get Salt running on as many platforms as we can, and get the documentation filled out. There is a lot more to come as Salt moves forward to encapsulate a much larger scope, while maintaining supreme usability and simplicity."
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:76
+# ccb2496350014f5c956fd231bda38554
+msgid "If you would like a more complete overview of Salt please watch the Salt presentation: Flash Video: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182 OGV Video Download: http://blip.tv/file/get/Thatch45-Salt087Presentation416.ogv Slides: :download:`Salt.pdf`"
+msgstr ""
+
+#: ../../topics/releases/0.8.8.rst:85
+# 44c8805f00b44eab8d2ddff344eef436
+msgid "-Thomas S Hatch"
+msgstr ""
+

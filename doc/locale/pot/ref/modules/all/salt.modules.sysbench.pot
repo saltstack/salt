@@ -1,0 +1,104 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.sysbench.rst:6
+# 469daae6782947f1a8cd48046f61daa5
+msgid "salt.modules.sysbench"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench:1
+# b325646ba6ce4845be8cd5a44cfa048a
+msgid "The 'sysbench' module is used to analyse the performance of the minions, right from the master! It measures various system parameters such as CPU, Memory, FileI/O, Threads and Mutex."
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.cpu:1
+# 0ad61158a7d546ccb2d004ae53dce766
+msgid "Tests for the CPU performance of minions."
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.cpu:3
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:14
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.memory:3
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.mutex:3
+# e8094d2868d6473eadd67290f94ea06f
+# d610a01272c541d1bc04ac9ac0922eea
+# eecd7bcf7a6447a29a57ab96718922e6
+# b1796677e76f403d917323c6f2dd8128
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:1
+# 7e6d7003b2fe4e81a7b7d2865460fbe6
+msgid "This tests for the file read and write operations Various modes of operations are"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:4
+# e718ff51de8c4e4ab47fe3a66d0b2bd9
+msgid "sequential write"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:5
+# f79b75514b4b4208a563451ce1ca8772
+msgid "sequential rewrite"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:6
+# 6b765430cfc74e41aed4653ce81072c2
+msgid "sequential read"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:7
+# c70cbc2f8b354724b03e07a017018cbf
+msgid "random read"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:8
+# 1ff2759942eb43c89c592103379d2c29
+msgid "random write"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:9
+# 934e09f224ef40c3ad76d2cfe06192c2
+msgid "random read and write"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.fileio:11
+# c5449bdfd7a84643bc01d0884869bcc0
+msgid "The test works with 32 files with each file being 1Gb in size The test consumes a lot of time. Be patient!"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.memory:1
+# a96e72e7857e454cb574023696264d87
+msgid "This tests the memory for read and write operations."
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.mutex:1
+# 290324fb82c1424592ba440102190e55
+msgid "Tests the implementation of mutex"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.threads:1
+# 867dbc2208a0440b908addb680457f8a
+msgid "This tests the performance of the processor's scheduler"
+msgstr ""
+
+#: ../../../salt/modules/sysbench.py:docstring of salt.modules.sysbench.threads:3
+# 2e6bbfe1f03a475f9e4adea951e468d1
+msgid "CLI Example:"
+msgstr ""
+

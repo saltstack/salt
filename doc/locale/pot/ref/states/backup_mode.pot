@@ -1,0 +1,98 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/backup_mode.rst:6
+# 48891de99d6e4bc8b13ef0ccb10093aa
+msgid "File State Backups"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:8
+# 7acc796267cc4a369283e5e1166ab7ce
+msgid "In 0.10.2 a new feature was added for backing up files that are replaced by the file.managed and file.recurse states. The new feature is called the backup mode. Setting the backup mode is easy, but is can be set in a number of places."
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:13
+# 8785b1ea6e1f4e1788b4860715080e4d
+msgid "The backup_mode can be set in the minion config file:"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:19
+# aea7e64da160415ea579094a78d41b8e
+msgid "Or it can be set for each file:"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:29
+# 79320e04ce8843d8817f658bcb7de3fa
+msgid "Backed-up Files"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:31
+# 9198f6f9cc6948c3924ed06826acec93
+msgid "The files will be saved in the minion cachedir under the directory named ``file_backup``. The files will be in the location relative to where they were under the root filesystem and be appended with a timestamp. This should make them easy to browse."
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:37
+# 359acc5c1bbf406487c57860c9daf350
+msgid "Interacting with Backups"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:39
+# 76d587f0fec0461dac8efab846710709
+msgid "Starting with version 0.17.0, it will be possible to list, restore, and delete previously-created backups."
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:43
+# 59bb102a680945d5938091336b59efc5
+msgid "Listing"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:45
+# d9e913ceba4846d2813a1ade0b24ff6c
+msgid "The backups for a given file can be listed using :mod:`file.list_backups <salt.modules.file.list_backups>`::"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:69
+# 6f6d27610c6d4fb38b5035e598108e0b
+msgid "Restoring"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:71
+# 68247528089944a0817d02679356dec1
+msgid "Restoring is easy using :mod:`file.restore_backup <salt.modules.file.restore_backup>`, just pass the path and the numeric id found with :mod:`file.list_backups <salt.modules.file.list_backups>`::"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:83
+# f1cdfc088e6d43eab261c03c280240f2
+msgid "The existing file will be backed up, just in case, as can be seen if :mod:`file.list_backups <salt.modules.file.list_backups>` is run again::"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:115
+# c91ed9ffea024813a4d4a38dd59b41ea
+msgid "Since no state is being run, restoring a file will not trigger any watches for the file. So, if you are restoring a config file for a service, it will likely still be necessary to run a ``service.restart``."
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:120
+# edd7c7a165314003bcd03171c709297b
+msgid "Deleting"
+msgstr ""
+
+#: ../../ref/states/backup_mode.rst:122
+# 5b0cb916957b40819f1ef971210da13b
+msgid "Deleting backups can be done using mod:`file.delete_backup <salt.modules.file.delete_backup>`::"
+msgstr ""
+

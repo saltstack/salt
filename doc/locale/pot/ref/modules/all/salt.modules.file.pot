@@ -1,0 +1,1000 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.file.rst:6
+# 880e63f88821427f8f397e5175846877
+msgid "salt.modules.file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file:1
+# b41bb3d6bae2431883d247b4a4cc8df4
+msgid "Manage information about regular files, directories, and special files on the minion, set/read user, group, mode, and data"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.append:3
+# dc85bf378afc46439adee8b23ce14edb
+msgid "Append text to the end of a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.append:5
+#: ../../docstring of salt.modules.file.check_file_meta:3
+#: ../../docstring of salt.modules.file.check_hash:12
+#: ../../docstring of salt.modules.file.check_managed:3
+#: ../../docstring of salt.modules.file.check_perms:3
+#: ../../docstring of salt.modules.file.chgrp:3
+#: ../../docstring of salt.modules.file.chown:3
+#: ../../docstring of salt.modules.file.comment:25
+#: ../../docstring of salt.modules.file.contains:6
+#: ../../docstring of salt.modules.file.contains_glob:6
+#: ../../docstring of salt.modules.file.contains_regex:10
+#: ../../docstring of salt.modules.file.contains_regex_multiline:10
+#: ../../docstring of salt.modules.file.copy:3
+#: ../../docstring of salt.modules.file.delete_backup:13
+#: ../../docstring of salt.modules.file.directory_exists:3
+#: ../../docstring of salt.modules.file.file_exists:3
+#: ../../docstring of salt.modules.file.get_devmm:3
+#: ../../docstring of salt.modules.file.get_diff:3
+#: ../../docstring of salt.modules.file.get_gid:3
+#: ../../docstring of salt.modules.file.get_group:3
+#: ../../docstring of salt.modules.file.get_hash:9
+#: ../../docstring of salt.modules.file.get_managed:3
+#: ../../docstring of salt.modules.file.get_mode:3
+#: ../../docstring of salt.modules.file.get_selinux_context:3
+#: ../../docstring of salt.modules.file.get_sum:4
+#: ../../docstring of salt.modules.file.get_uid:3
+#: ../../docstring of salt.modules.file.get_user:3
+#: ../../docstring of salt.modules.file.gid_to_group:3
+#: ../../docstring of salt.modules.file.group_to_gid:3
+#: ../../docstring of salt.modules.file.is_blkdev:3
+#: ../../docstring of salt.modules.file.is_chrdev:3
+#: ../../docstring of salt.modules.file.is_fifo:3
+#: ../../docstring of salt.modules.file.list_backups:12
+#: ../../docstring of salt.modules.file.makedirs:3
+#: ../../docstring of salt.modules.file.makedirs_perms:4
+#: ../../docstring of salt.modules.file.manage_file:4
+#: ../../docstring of salt.modules.file.mkdir:3
+#: ../../docstring of salt.modules.file.mknod_blkdev:3
+#: ../../docstring of salt.modules.file.mknod_chrdev:3
+#: ../../docstring of salt.modules.file.mknod_fifo:3
+#: ../../docstring of salt.modules.file.patch:16
+#: ../../docstring of salt.modules.file.psed:39
+#: ../../docstring of salt.modules.file.remove:3
+#: ../../docstring of salt.modules.file.rename:3
+#: ../../docstring of salt.modules.file.replace:35
+#: ../../docstring of salt.modules.file.restore_backup:13
+#: ../../docstring of salt.modules.file.restorecon:3
+#: ../../docstring of salt.modules.file.search:7
+#: ../../docstring of salt.modules.file.sed:35
+#: ../../docstring of salt.modules.file.sed_contains:9
+#: ../../docstring of salt.modules.file.set_mode:3
+#: ../../docstring of salt.modules.file.set_selinux_context:3
+#: ../../docstring of salt.modules.file.source_list:3
+#: ../../docstring of salt.modules.file.stats:3
+#: ../../docstring of salt.modules.file.symlink:3
+#: ../../docstring of salt.modules.file.touch:11
+#: ../../docstring of salt.modules.file.uid_to_user:3
+#: ../../docstring of salt.modules.file.uncomment:20
+#: ../../docstring of salt.modules.file.user_to_uid:3
+# 8ea50bc409244d908246407ded4d4f02
+# 83cc70dfec584f2cbed16d4a6c88087f
+# f620870872ed43bda4df8d9261023007
+# 758975f8bfb9454387b508d754a81ef3
+# 481a40743388489088c8099d61e1df51
+# 22c151d5845141b9a59aaf5434837301
+# 34c9ca687d2e4f1ea1a657cf92885200
+# 0ff97dd999d1414faac7720e2b9c87f6
+# 6230aa3902fe4a3db6fc298c982c0caa
+# 5acf06b5bc91481b8466b4a3ee2b422a
+# fb1084cf7a924a6094cfee62db5204a1
+# 2c767dc15143442fb807512358665c34
+# e256e383a6804a8c9a2d6773b990f5f0
+# b456db8531ee487c92dba0051377090c
+# 300c269d330e434db67b3ee0b9a50257
+# e34b1215bcf54eb497b86924361d0f21
+# af22f9a770c14e9b8aa40afa7d05878a
+# 1f64965fe2f44853bd6b7376c68a01fc
+# 0e6befbd57c54d64aebcfcb4c0c82db0
+# 011f8652e8814f80a152ad8f099edb0f
+# 63ea7b296a3843a09f244b537663529a
+# 172e70083f794b35bb2435a83b64c6c6
+# 831ea248d45745afa030ffcccdd82876
+# 6a024adf66c7423fbc5573ad6361c0ca
+# d1aa10a45d55443098e0fb6b3783bb46
+# 3c0aa1d64e4d4e8697c30bfcc2259367
+# 5dfd218837814303a2f1f8308f982c54
+# b2953032c80041e4a7e51053f687625a
+# edab15d413534655a62f88cd7b2a9533
+# b8954cc1354442ac903fc8ba61229b35
+# fee6408e9e5a4987a3b254f667b50f94
+# d47b39a64df54bda91a9064bbe011766
+# 1f46eb0896f34df7a799514cfaaef25f
+# 1a7c5a6e639a4f9496ce1c5ea2053cb8
+# 043edbc817cf4cd68b64662743e33514
+# ec50b832a1864061aa41515cc05ccf0a
+# 894a2f131958454e9102b9b6a7646a6a
+# 2e04938473ea4a07aaac563653e005a6
+# 9355cca32db6407fa9beeb7e3d46d016
+# 5e11272a45b8488c9a3f2de7f6f297ff
+# f30d4ceffd85482183e313c03885efa1
+# 09e4774f26614a3ea0f6760e6cb20083
+# 23fb53bc0747406da21a6f68433abe80
+# 279f642992eb494aa3d07037239284ef
+# 24c0d38dc8f64e18a0eeaa4ff2e8e13f
+# 99b7734ad07e4d4b962e208cf74c7055
+# db7f9a25640b45bfaed50c96e6886661
+# ca65e2ac30804ede9b89b8d5f2482b30
+# 3bae633afb1a4264946387575b2a7140
+# ec98172637cd43cc9186e6205393af54
+# 00a26675eec146f6a52dffd994762c66
+# 515a59398c9140468f4913850eb7e051
+# e08fd2e1203a42c79ad1504c4051e97d
+# bd14e82780a74616b3ec3f823a1bf9b3
+# 5159193b9daf478b850ed5b5bb60df5a
+# 5c8140057257485287c8c545dc5c16b5
+# dd2f88b8771841619c98b9e17aedcc5c
+# dda86e3950ea474d9b7c14dc5f1f1ffc
+# 80a704dc2ddf46a1b84e1c1cf63a9cf9
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_file_meta:1
+# 713b3c1427ef48418caafd8b2d9ee89b
+msgid "Check for the changes in the file metadata."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_hash:1
+# 5ddbe08e93fd4318acebe9fb488d61a2
+msgid "Check if a file matches the given hash string"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_hash:3
+# 2d3db4f11744426985ec878cb8b4af2a
+msgid "Returns true if the hash matched, otherwise false. Raises ValueError if the hash was not formatted correctly."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_hash:6
+#: ../../docstring of salt.modules.file.comment:6
+#: ../../docstring of salt.modules.file.delete_backup:7
+#: ../../docstring of salt.modules.file.list_backups:7
+#: ../../docstring of salt.modules.file.psed:10
+#: ../../docstring of salt.modules.file.restore_backup:7
+#: ../../docstring of salt.modules.file.sed:10
+#: ../../docstring of salt.modules.file.uncomment:6
+# 4accfadcd48743eb8ee2d39eeb97fdb9
+# ee5168d8645549569805756caf10f4e6
+# 48fc3f312a7e4168b687fc1897ceb928
+# 932d943eaca54e279b06a24100738f59
+# b11aab38067b424f8d99743642a75712
+# ca529c9ca5d7447cbff14e089e07e33f
+# 7bc8bde568a34d85a8cf770584b14f41
+# a0bbbe6c14844a2a812aa162173cd86f
+msgid "path"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_hash:7
+# 8ada8085e28f49ccaed787eef41fb5be
+msgid "A file path"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_hash:10
+# 9d7aba59910b48f58a6e678ab8a19340
+msgid "hash"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_hash:9
+# a4969798cd1c4305a8ed95c85ea57956
+msgid "A string in the form <hash_type>=<hash_value>. For example: ``md5=e138491e9d5b97023cea823fe17bac22``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_managed:1
+# 85207d68b63b4c95817c91adb44a52ff
+msgid "Check to see what changes need to be made for a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.check_perms:1
+# e6f6adb0d43441ea98dc71babb2cd2a6
+msgid "Check the permissions on files and chown if needed"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.chgrp:1
+# e1aeb1f018054863b9479512f85ec054
+msgid "Change the group of a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.chown:1
+# 3a7858c812984200b72a26d555494809
+msgid "Chown a file, pass the file the desired user and group"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:1
+#: ../../docstring of salt.modules.file.psed:1
+#: ../../docstring of salt.modules.file.sed:1
+#: ../../docstring of salt.modules.file.uncomment:1
+# 2defad1817b841f88ce78494b1b47a4e
+# 048c7257b8d743a982117c029f86ceda
+# c1de48f908ee4117988a3c3e5f8551d1
+# b065e0fd1e2d44da8fb6cf12c49d9dde
+msgid "Use :py:func:`~salt.modules.file.replace` instead."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:4
+# 2ef0538948c147ce97576960f39c73bb
+msgid "Comment out specified lines in a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:7
+#: ../../docstring of salt.modules.file.psed:11
+#: ../../docstring of salt.modules.file.sed:11
+#: ../../docstring of salt.modules.file.uncomment:7
+# 0b815480c041451c80e4eb71cc644715
+# aab1d8c69cc64c2f828d81cc0ce68644
+# 24c3006ad0ea4fb39851a166255f23e3
+# a99bdb79062f40589afc3944858e1f6f
+msgid "The full path to the file to be edited"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:11
+#: ../../docstring of salt.modules.file.uncomment:11
+# 2f80a81735f5431e875d708ed73a1b89
+# c79ec2fada9c4275a4228fe7457db585
+msgid "regex"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:9
+# cbee185b28e84e52b3a21a4d3406398b
+msgid "A regular expression used to find the lines that are to be commented; this pattern will be wrapped in parenthesis and will move any preceding/trailing ``^`` or ``$`` characters outside the parenthesis (e.g., the pattern ``^foo$`` will be rewritten as ``^(foo)$``)"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:14
+#: ../../docstring of salt.modules.file.uncomment:13
+# dc5554d390ce42bc90fbbbe84e36d441
+# 996e279eb17f470b8109edd4f2ea7e19
+msgid "char : ``#``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:14
+# 229a72ae372245d6a4a43f47cd4861d9
+msgid "The character to be inserted at the beginning of a line in order to comment it out"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:23
+#: ../../docstring of salt.modules.file.psed:20
+#: ../../docstring of salt.modules.file.sed:20
+#: ../../docstring of salt.modules.file.uncomment:18
+# 72129e0728ef4c5996cd932393594353
+# e4f20e488f46497bb3b7aa1abcd9c726
+# e5877e53268d4c2690036eb0bf531218
+# 4e9c2a59471a4a9ab3ab786a28025126
+msgid "backup : ``.bak``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:17
+# fd2dfcb475da4feab486faae0a17dcc6
+msgid "The file will be backed up before edit with this file extension"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.comment:21
+# a177bd9ceeb649b5b0599e535a00a327
+msgid "This backup will be overwritten each time ``sed`` / ``comment`` / ``uncomment`` is called. Meaning the backup will only be useful after the first invocation."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.contains:1
+#: ../../docstring of salt.modules.file.contains_glob:1
+#: ../../docstring of salt.modules.file.contains_regex:1
+#: ../../docstring of salt.modules.file.contains_regex_multiline:1
+#: ../../docstring of salt.modules.file.sed_contains:1
+# a59efa1f1b3d42fb9c2f497b8b8188ee
+# 7f2d8666638248a6a4047e49eacadf0f
+# 9978a4328da742d6beb04fef3975c5d1
+# f4774b73b336450eb891baac72d87450
+# 4d709885ac7d4ab99766071c30d48548
+msgid "Use :func:`search` instead."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.contains:4
+# ea0203243d6a47c48ef859491870eb56
+msgid "Return ``True`` if the file at ``path`` contains ``text``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.contains_glob:4
+# dea5e898c797406da84e5f35e7c854c6
+msgid "Return True if the given glob matches a string in the named file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.contains_regex:4
+# 5b98a344ea5443a28d9558bad325d52d
+msgid "Return True if the given regular expression matches on any line in the text of a given file."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.contains_regex:7
+# 5ab60be9300242e6a70a2b2e931335b2
+msgid "If the lchar argument (leading char) is specified, it will strip `lchar` from the left side of each line before trying to match"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.contains_regex_multiline:4
+# a9f8e24e316c4b4cb37815ad3356ac72
+msgid "Return True if the given regular expression matches anything in the text of a given file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.contains_regex_multiline:7
+# 22b4440c759d49d09e24f1d42202aaff
+msgid "Traverses multiple lines at a time, via the salt BufferedReader (reads in chunks)"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.copy:1
+# 0032e788ac6d4575822663436ed97e19
+msgid "Copy a file or directory"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.delete_backup:2
+#: ../../docstring of salt.modules.file.list_backups:2
+#: ../../docstring of salt.modules.file.restore_backup:2
+# 2f79f390f3ad44fd8e8a02600fb38fcc
+# 9cdf45c735da4fb9b2a81fbf53fd873b
+# 065266121ed8470196ca78d00c698461
+msgid "This function will be available in version 0.17.0."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.delete_backup:4
+#: ../../docstring of salt.modules.file.restore_backup:4
+# ce0f8e9b8cbe43d0a8cc2e974e789453
+# d0d2a9ca197647b9a4c448a206cc5788
+msgid "Restore a previous version of a file that was backed up using Salt's :doc:`file state backup </ref/states/backup_mode>` system."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.delete_backup:8
+#: ../../docstring of salt.modules.file.list_backups:8
+#: ../../docstring of salt.modules.file.restore_backup:8
+# 922de8d0c4fb4a319110b9257042fb0a
+# 57b585784bab457db63b8f3f66dd0550
+# 42b1fe1dcc7544e08f8567fa49fc62bd
+msgid "The path on the minion to check for backups"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.delete_backup:11
+#: ../../docstring of salt.modules.file.restore_backup:11
+# ec381992548140f09c0ddc83ca3740c8
+# 41490657a9c84aca9f44e811925a4cac
+msgid "backup_id"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.delete_backup:10
+# cddc539f9c4e4dcc8463619145d330c3
+msgid "The numeric id for the backup you wish to delete, as found using :mod:`file.list_backups <salt.modules.file.list_backups>`"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.directory_exists:1
+# 5d949708130649899a05b8b518d17bf4
+msgid "Tests to see if path is a valid directory.  Returns True/False."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.file_exists:1
+# 2f9eeb4435b44d0ba2aad45fe00f3b90
+msgid "Tests to see if path is a valid file.  Returns True/False."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:1
+# 1f6d2ba8adec4938b20231c016ff0559
+msgid "Approximate the Unix ``find(1)`` command and return a list of paths that meet the specified criteria."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:4
+# 0699f6ab5fd9405199ae21f7a4bba868
+msgid "The options include match criteria::"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:17
+# a30f4ad7d0fe41f6bacf70a4dc472b86
+msgid "and/or actions::"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:23
+# efef38a91c4f4206a825651e620013a4
+msgid "The default action is 'print=path'."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:25
+# aabaa22229e54ff3b835e93b501bd541
+msgid "file-glob::"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:35
+# 6396a4b4234d4bbdad8341262555438f
+msgid "path-regex: a Python re (regular expression) pattern to match pathnames"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:37
+# 656321db9d434e46a122c3a6d87aebe3
+msgid "file-types: a string of one or more of the following::"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:48
+# 8d51030ac4e44c54b6938504428ddf48
+msgid "users: a space and/or comma separated list of user names and/or uids"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:50
+# 299bb9ece9e1444b9830b5565fcb3489
+msgid "groups: a space and/or comma separated list of group names and/or gids"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:52
+# 1d139f807ba64b06b31b46576a6ab34a
+msgid "size-unit::"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:60
+# 441e34430ee947d4a28cc6b774c95327
+msgid "interval::"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:71
+# 3eb415da13e94448a9ae7298550d041b
+msgid "print-opts: a comma and/or space separated list of one or more of the following::"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.find:84
+#: ../../docstring of salt.modules.file.mknod:4
+# 689515b97f3d44629305aa6d39b56d09
+# cb96091869f84bb7924e2f98e9609ce2
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_devmm:1
+# 441325529a144aafbb807fcec17a9518
+msgid "Get major/minor info from a device"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_diff:1
+# f24376df02404364bf210dce31daf32d
+msgid "Return unified diff of file compared to file on master"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_gid:1
+# 3559e38bd1f247968c5a85f02d6c783d
+msgid "Return the id of the group that owns a given file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_gid:9
+#: ../../docstring of salt.modules.file.get_group:9
+#: ../../docstring of salt.modules.file.get_uid:9
+#: ../../docstring of salt.modules.file.get_user:9
+# 8da0f4445e4b433a8e64ec240c1c6bd3
+# 51792cc1862940e6baff3eba5fd93842
+# 11be928cfaa24abdab4d0e46bd6f7fa7
+# a974cefc694240fda316e6464b1ae01c
+msgid "``follow_symlinks`` option added"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_group:1
+# f14962683eee402488244212bfe4e213
+msgid "Return the group that owns a given file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_hash:1
+# bb71ada63fc64759b5ca294a95d13848
+msgid "Get the hash sum of a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_hash:7
+# f87501cd08c14e938b8d2f06cb7c802e
+msgid "This is better than ``get_sum`` for the following reasons:"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_hash:4
+# 552121ff0dad439bb0c11a42346eb5e8
+msgid "It does not read the entire file into memory."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_hash:7
+# 0014fca2438d47d69fa0f5a42121e113
+msgid "It does not return a string on error. The returned value of"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_hash:6
+# 035294f6ce3443a8aa76e3db68c8f854
+msgid "``get_sum`` cannot really be trusted since it is vulnerable to collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_managed:1
+# ddaf6e7b90a94e8c808781b9422d058a
+msgid "Return the managed file data for file.managed"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_mode:1
+# 6e43874ebe6a4722931c3850d14b676b
+msgid "Return the mode of a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_selinux_context:1
+# be093ff25cdc4e0e8bd6dd3dd1548db8
+msgid "Get an SELinux context from a given path"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_sum:1
+# db6824cc149940da8e8323817ed5f45d
+msgid "Return the sum for the given file, default is md5, sha1, sha224, sha256, sha384, sha512 are supported"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_uid:1
+# a3590e12cb6e4771b9a02dc18c4a2652
+msgid "Return the id of the user that owns a given file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.get_user:1
+# 6f6ecc55e38c49f9ad2e71e12df72f7d
+msgid "Return the user that owns a given file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.gid_to_group:1
+# 1ef9e9635d414318a38fa42f9a9b2832
+msgid "Convert the group id to the group name on this system"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.group_to_gid:1
+# 702cbe4027184ba4bf30c5894f6381db
+msgid "Convert the group to the gid on this system"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.is_blkdev:1
+# b7bd651c9c15491fbfb03b65d5fcf6b6
+msgid "Check if a file exists and is a block device."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.is_chrdev:1
+# 2dc1117429c5401aabc2e0f025f5b11b
+msgid "Check if a file exists and is a character device."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.is_fifo:1
+# a9c925d94e7748b0825e9edb815d646a
+msgid "Check if a file exists and is a FIFO."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.list_backups:4
+# ecc54627df07433eb226fb1efc79e7db
+msgid "Lists the previous versions of a file backed up using Salt's :doc:`file state backup </ref/states/backup_mode>` system."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.list_backups:10
+# 693fc64a601b4176a95767e9aebd9dee
+msgid "limit"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.list_backups:10
+# e4bb30db7c7a4feba7e719d440da46b7
+msgid "Limit the number of results to the most recent N backups"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.makedirs:1
+# 25237e1a7c7044279e25f7730c06a701
+msgid "Ensure that the directory containing this path is available."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.makedirs_perms:1
+# 689bc4604e6e4052b6f13730dc55bc16
+msgid "Taken and modified from os.makedirs to set user, group and mode for each directory created."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.manage_file:1
+# a882e22708b44516a86176b64d1477c1
+msgid "Checks the destination against what was retrieved with get_managed and makes the appropriate modifications (if necessary)."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.mkdir:1
+# b07c2f18bb8e486aa24cec2c3ca4a3c6
+msgid "Ensure that a directory is available."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.mknod:1
+# dff9a2cffa7c49fb97e34a89375976f3
+msgid "Create a block device, character device, or fifo pipe. Identical to the gnu mknod."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.mknod_blkdev:1
+# 3adc3328b47747e6b191c467fb07d2e6
+msgid "Create a block device."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.mknod_chrdev:1
+# 9e0c0181aafd4cb0bffe2f6e59678b38
+msgid "Create a character device."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.mknod_fifo:1
+# 8c9fc78d3d454e74b79cef56b873f266
+msgid "Create a FIFO pipe."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.patch:3
+# 93bf94eb1a7c409a8825cc8bbcfcf4dc
+msgid "Apply a patch to a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.patch:5
+#: ../../docstring of salt.modules.file.psed:6
+#: ../../docstring of salt.modules.file.sed:6
+# eec3c59cdd7e49dba520cc81e40f3e15
+# 57895a54ce8a4a25abf9395cf633a134
+# 63482096cc174b72a062c5a04b86a68f
+msgid "Equivalent to::"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.patch:9
+# 48a8ccf5ec6e40b699604bece2de2264
+msgid "originalfile"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.patch:10
+# f1747701236e430a8b2f165635179ebd
+msgid "The full path to the file or directory to be patched"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.patch:11
+# 14090dd90b0c41ae9a9005d8feae7a3b
+msgid "patchfile"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.patch:12
+# 61d8458b311b41f8ae9d8c43391ef1cd
+msgid "A patch file to apply to ``originalfile``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.patch:14
+# 605e29cc43ac4c55a8e67e027dff8e78
+msgid "options"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.patch:14
+# 50dac0d54b3d4583943f9fbc913138c2
+msgid "Options to pass to patch."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:4
+# 632df23544894cd2abce7ce39cf4b7ca
+msgid "Make a simple edit to a file (pure Python version)"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:12
+#: ../../docstring of salt.modules.file.sed:12
+# 617ec7dafc5b458c91979a944b1032c6
+# 31002d42e8ee40abb400f2667c2a1cc6
+msgid "before"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:13
+#: ../../docstring of salt.modules.file.sed:13
+# 46df701e9e2842d5b3186ad51d920531
+# f22f891c65dc47899796230aa3745bb0
+msgid "A pattern to find in order to replace with ``after``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:14
+#: ../../docstring of salt.modules.file.sed:14
+# 98f08bd7cd1648f3acdc337153401608
+# 787d3be368474a68802bb6dfb7b19358
+msgid "after"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:15
+#: ../../docstring of salt.modules.file.sed:15
+# f145b222fd304eddacfa7dceb8e71cef
+# 8ab832b91f104f65a0d17b402fb1ccbb
+msgid "Text that will replace ``before``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:16
+#: ../../docstring of salt.modules.file.sed:16
+# ac99c85fe08749c288021e3be34550ea
+# 4299bfa5b8cf4eddbe278bc6649db032
+msgid "limit : ``''``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:17
+#: ../../docstring of salt.modules.file.sed:17
+# 51a248db6fa34f4bae16f0b8f4339af4
+# 0581cbcbfc454f0aba52acb17e950f5b
+msgid "An initial pattern to search for before searching for ``before``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:19
+#: ../../docstring of salt.modules.file.sed:19
+#: ../../docstring of salt.modules.file.uncomment:16
+# f983593ba6914209a8ed156debc189ff
+# 27d0fa7a9c954d97ad3ed9858ad38e77
+# 29688cf1349244c38b9cbdbb6627e93d
+msgid "The file will be backed up before edit with this file extension; **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will overwrite this backup"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:31
+# 5c3cca3017044d3fafdd526196f3ca18
+msgid "flags : ``gMS``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:31
+# d3af61ccbf024c429c326b9fcd5f9b7b
+msgid "Flags to modify the search. Valid values are:"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:24
+# 52d39fd88b9c4f4789f5ab098d2323e7
+msgid "``g``: Replace all occurrences of the pattern, not just the first."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:25
+# b2443b1731654bd79defe714a324c2dd
+msgid "``I``: Ignore case."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:26
+# 11aa1bb63a954106849a0c68a2f36cf3
+msgid "``L``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\s`` and ``\\S`` dependent on the locale."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:28
+# d723665900004f20a68af5c164609c97
+msgid "``M``: Treat multiple lines as a single line."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:29
+# d6928f1ac63e402c97daf2a13fcd81c7
+msgid "``S``: Make `.` match all characters, including newlines."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:30
+# 31780ae7e4b9405fb1ae6a30573cc641
+msgid "``U``: Make ``\\w``, ``\\W``, ``\\b``, ``\\B``, ``\\d``, ``\\D``, ``\\s`` and ``\\S`` dependent on Unicode."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:32
+# 291d675d1fd745edbbedbe6afc95edd1
+msgid "``X``: Verbose (whitespace is ignored)."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:34
+# 8e2bb06d792d44b29ef7716b1eb20ecd
+msgid "multi: ``False``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:34
+# d8918b330a5249ec9aa56bac90980885
+msgid "If True, treat the entire file as a single line"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.psed:36
+#: ../../docstring of salt.modules.file.sed:32
+# dfcd96b337f54975a7233ba803b3acfb
+# 44aa800201e04414b865894a1e88829e
+msgid "Forward slashes and single quotes will be escaped automatically in the ``before`` and ``after`` patterns."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.remove:1
+# e74066aeabb8408e8fca85d1afff6e5b
+msgid "Remove the named file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.rename:1
+# e7cf92a4ce344232b4b671d8b3f5a6e5
+msgid "Rename a file or directory"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:1
+# 1b2ede059af7438fa95d1103d01afcc0
+msgid "Replace occurances of a pattern in a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:5
+# b93e393a3a59476a998674e2e0aeeede
+msgid "This is a pure Python implementation that wraps Python's :py:func:`~re.sub`."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:7
+# 6743550ffd594141bfcb62ce8987a512
+msgid "Filesystem path to the file to be edited"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:8
+# 4c8e11e5df6f46498661f72929ac56e1
+msgid "The PCRE search"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:9
+# 0b70f00cacb64d3d8bf34b72306b4907
+msgid "The replacement text"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:10
+# bf4bd1e5e8754776911e7bc741b02f7d
+msgid "Maximum number of pattern occurrences to be replaced"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:11
+# 887611e46a3b41cfb91acca947ada7e2
+msgid "A list of flags defined in :ref:`contents-of-module-re`. Each list item should be a string that will correlate to the human-friendly flag name. E.g., ``['IGNORECASE', 'MULTILINE']``. Note: multiline searches must specify ``file`` as the ``bufsize`` argument below."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:16
+# 59739fa5d22140cca7a5aabebed8a44c
+msgid "How much of the file to buffer into memory at once. The default value ``1`` processes one line at a time. The special value ``file`` may be specified which will read the entire file into memory before processing. Note: multiline searches must specify ``file`` buffering."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:22
+# 6974b63aad344dac8301f6e40fe513f0
+msgid "The file extension to use for a backup of the file before editing. Set to ``False`` to skip making a backup."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:24
+# eafd5e29c3624147aed43de894b58c51
+msgid "Don't make any edits to the file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:25
+# 4f94fe3b92364978812bd43223c5a632
+msgid "Just search for the pattern; ignore the replacement; stop on the first match"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:27
+# 884708b9fa624ca4a5cfdef3b0e52497
+msgid "Output a unified diff of the old file and the new file. If ``False`` return a boolean if any changes were made. Note: using this option will store two copies of the file in-memory (the original version and the edited version) in order to generate the diff."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.replace:33
+# 21783ac0f39945ff9621fbde42aa4bdd
+msgid "bool or str"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.restore_backup:10
+# b43380f232cc49808d8c64a8c607bc0d
+msgid "The numeric id for the backup you wish to restore, as found using :mod:`file.list_backups <salt.modules.file.list_backups>`"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.restorecon:1
+# 449e92a4a3c04764987fb01e718e4069
+msgid "Reset the SELinux context on a given path"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.search:1
+# d67678dc45344a98823626b40f928143
+msgid "Search for occurances of a pattern in a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.search:5
+# 498ecf6e83224ef4b0c424878a43fbfc
+msgid "Params are identical to :py:func:`~salt.modules.file.replace`."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed:4
+# e0c98b1fd03e4c579a317de8ffe2ed82
+msgid "Make a simple edit to a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed:22
+# 7b1c7f9cdfdf465d9f2dde4abf351cc5
+msgid "options : ``-r -e``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed:23
+# 95420eb1e5a2444d94ffa9b845c7c013
+msgid "Options to pass to sed"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed:25
+# 27bbbfd3f4164042b11b0fecd483cf08
+msgid "flags : ``g``"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed:25
+# de5e8fde0451430987a2ff32ebc6d239
+msgid "Flags to modify the sed search; e.g., ``i`` for case-insensitve pattern matching"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed:30
+# 27cd5182ae3a4135ac71af12c36ad21a
+msgid "negate_match : False"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed:28
+# a1e4165b72164ed0942ce6b17d6b6532
+msgid "Negate the search command (``!``)"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed_contains:4
+# eefd07e116ec4260a442f8cc6eee0876
+msgid "Return True if the file at ``path`` contains ``text``. Utilizes sed to perform the search (line-wise search)."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.sed_contains:7
+# c9b9c1c70e5d4f1d939f0ff25df3c8c2
+msgid "Note: the ``p`` flag will be added to any flags you pass in."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.set_mode:1
+# 35b7a33c5e454c998d5b9d6019ca9804
+msgid "Set the mode of a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.set_selinux_context:1
+# eb88ea0db47a45b6979274242f58eb9c
+msgid "Set a specific SELinux label on a given path"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.source_list:1
+# 922bcdac616446d998d40e829ec83fd3
+msgid "Check the source list and return the source to use"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.stats:1
+# 006be7a30f2e4a339a86717db6b4b740
+msgid "Return a dict containing the stats for a given file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.symlink:1
+# 90c4565edfe343c6871e9de90cb568f4
+msgid "Create a symbolic link to a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.touch:3
+# 0db958cd39d34ec0afb76bc6ac80d565
+msgid "Just like the ``touch`` command, create a file if it doesn't exist or simply update the atime and mtime if it already does."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.touch:6
+# 6f93fe4ad1c648a4a588c584bafa8d50
+msgid "atime:"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.touch:7
+# a80e055fb4964e639fcd8a43fb6c0a6b
+msgid "Access time in Unix epoch time"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.touch:9
+# 05bbcff055104ce7b2bb9f35c63a324d
+msgid "mtime:"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.touch:9
+# 8f638096a6704bb29677f596ccadc11f
+msgid "Last modification in Unix epoch time"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.uid_to_user:1
+# 602db7ee43e54e02b83fd4d2d34a7891
+msgid "Convert a uid to a user name"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.uncomment:4
+# 35489284c2974e1aa58865ed3524928c
+msgid "Uncomment specified commented lines in a file"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.uncomment:9
+# e852b4db0f534057bc5e9789511311e6
+msgid "A regular expression used to find the lines that are to be uncommented. This regex should not include the comment character. A leading ``^`` character will be stripped for convenience (for easily switching between comment() and uncomment())."
+msgstr ""
+
+#: ../../docstring of salt.modules.file.uncomment:14
+# bced1cb42303465a94ca8f718a641f87
+msgid "The character to remove in order to uncomment a line"
+msgstr ""
+
+#: ../../docstring of salt.modules.file.user_to_uid:1
+# 4c8bcdd7a0bd44fbbbe40e4be394ed31
+msgid "Convert user name to a uid"
+msgstr ""
+

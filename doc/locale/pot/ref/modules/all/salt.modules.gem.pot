@@ -1,0 +1,254 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.gem.rst:6
+# e817765d8845435fb8ebf3cd5dad3567
+msgid "salt.modules.gem"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem:1
+# f04983f7da474f87a294f7b411aba761
+msgid "Manage ruby gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:1
+# 5b3c77a9b5124c94bd102720061e5e8a
+msgid "Installs one or several gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:3
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.uninstall:3
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update:3
+# 525caf278fa64dd6b29761611b1bbec1
+# ee3417580a11408abf059d110226d3b6
+# 8dff9a904d4841c78f5a049a3143576d
+msgid "gems"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:4
+# 44ee53a139dc4a49a80a5002c744a640
+msgid "The gems to install"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:5
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.list_:5
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_add:5
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_list:3
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_remove:5
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.uninstall:5
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update:5
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update_system:5
+# debc34738c8045c9a5b0ce3ed0f9e9e2
+# 283321f612424513b7682fc5b8eae9d5
+# 815e0749e59f49ae999c6a096d48f0e2
+# ad0266b63d5940e0910ad28246775c9c
+# ff372a0355d6408e902d8f5f939cf591
+# fc3e279a8ac94e7cbf9def7ee864f80d
+# 1f3a37cd40b34ae6a2a7639b462eb172
+# 896bf5f013be462d93033de3af6fdf53
+msgid "ruby : None"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:6
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.list_:6
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_add:6
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_list:4
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_remove:6
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.uninstall:6
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update:6
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update_system:6
+# 4da1f003168f40c693f6302aa8602a01
+# 3e57debf65c04533a67d093041f70e1f
+# 42ef060258ec46d8bddf2c7b9977bf15
+# 8953755bad9e4a258b1902a99e938b89
+# 27f4c223169d462a856d9c71410ccfd2
+# b0f27e27904944efbef96c8f2c43d165
+# a6c8e8541a7843a7be4ab96c55fc15b2
+# f6d2bbfc989c485d96015cb875e936ed
+msgid "If RVM is installed, the ruby version and gemset to use."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:7
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.list_:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_add:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_list:6
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_remove:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.uninstall:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update_system:8
+# e3a93a1dcf324747a13f54c3298de1e3
+# e2159f9474fb4a83a92b101e94c9f61b
+# 397728e4c0164359b6512d1fc8dafe84
+# 71bb198f0e3f4fb396cc7bffae8cc885
+# 44510e1bf08746c49f7c2f0a4b2cc068
+# cb54ad0301d145c9932a03fe40e05017
+# 511aa2736fd74a758c0145224b09048d
+# a9252016b8e24be1bf3b1cbe77837694
+msgid "runas : None"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.list_:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_add:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_list:6
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_remove:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.uninstall:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update_system:8
+# ce10949f186843dd8cf788ee458a96b1
+# 3c6bff6af1e74feeaab4b98f9e55f797
+# f0b3eff3cec741ac80371f54d1897ab5
+# 728edc55037b4fe7870600f0d136cc66
+# 7aa3bfffddcd4422a4e5023c7b734a67
+# b3ddc3265e304e5d81690492e5cd686b
+# 0883c81499424d039771a9bdf335046e
+# cb0661a666eb4f5099514b87cbc42418
+msgid "The user to run gem as."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:10
+# 44a112534541454295d0c2d727749e67
+msgid "version : None"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:10
+# 2f5001c180f040e19f7e654f6e3d4654
+msgid "Specify the version to install for the gem. Doesn't play nice with multiple gems at once"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:12
+# 0c5f32896f3340ad8e6aadcfbf278327
+msgid "rdoc : False"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:13
+# 081d8af2dae44bbca03dc8196b3c9d9b
+msgid "Generate RDoc documentation for the gem(s)."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:15
+# da7be95cff7148d29e9c0fcf22ace92f
+msgid "ri : False"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:15
+# 83c419ebdd6e4a1bbe1acb620617e8b1
+msgid "Generate RI documentation for the gem(s)."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.install:17
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.list_:10
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_add:10
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_list:8
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_remove:10
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.uninstall:10
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update:10
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update_system:10
+# cef8ee5a9ac04c4ab39f768797df9012
+# 32b36f276a434559b8aae18e4bc7b9e6
+# 8fc7a6a1793b475291f85cae09a6b029
+# cfebe45f376847c296830fc536287c75
+# 46d20b4c88464faeabdee15b991e8c0e
+# 93623e6587fd495b9d338ef673690f0e
+# 07ac3fdec07a46c694285d4c918ddb37
+# f3c3497392e64186998b5de4afdc5716
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.list_:1
+# 448140011d604eb2a672a30963d54c16
+msgid "List locally installed gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.list_:3
+# 18b99bdd1de1485e81ad2e7ee674da00
+msgid "prefix :"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.list_:4
+# d71282887e5e472c90824e4f1b247a9c
+msgid "Only list gems when the name matches this prefix."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_add:1
+# 38328325a26a412aa6c653526eccdf16
+msgid "Add a gem source."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_add:3
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_remove:3
+# dd9fcab543ad4ada97f3b45dbde41eb0
+# b387dbbe804449708adb9e26baa25731
+msgid "source_uri"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_add:4
+# 7ce172953bc841de8d33201eec8f1c42
+msgid "The source URI to add."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_list:1
+# 7b2af7619b05488e92e42dd4b7d10157
+msgid "List the configured gem sources."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_remove:1
+# 938d7749e3a74fe48d04259e1d393f30
+msgid "Remove a gem source."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.sources_remove:4
+# 5954684812984fc7b037d9673a7e3877
+msgid "The source URI to remove."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.uninstall:1
+# d5437636b0784675a5ca20fc5a5d7935
+msgid "Uninstall one or several gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.uninstall:4
+# af21d7d44b0f46d3a43a3bc048941ef7
+msgid "The gems to uninstall."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update:1
+# c19e79fcaa2442a19c6274003fe3925c
+msgid "Update one or several gems."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update:4
+# 5282087832524a2f873fdedd718048dc
+msgid "The gems to update."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update_system:1
+# ee7c73db447149d485ba74ff5f3350fb
+msgid "Update rubygems."
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update_system:3
+# 6dac9e36d6574ec6a9c5d1b10893cf19
+msgid "version : (newest)"
+msgstr ""
+
+#: ../../../salt/modules/gem.py:docstring of salt.modules.gem.update_system:4
+# d8a50b0b541b49c79ed218e6fdfdf78d
+msgid "The version of rubygems to install."
+msgstr ""
+

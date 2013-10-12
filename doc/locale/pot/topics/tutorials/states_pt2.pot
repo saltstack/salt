@@ -1,0 +1,158 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/states_pt2.rst:6
+# 41656ea13cab48de917e2f403c2c8101
+msgid "States tutorial, part 2"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:10
+# cbec0649cd974afdbdd228bfaef5b133
+msgid "This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`. It is recommended that you begin there."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:13
+# fa916ed7e55d41bab41fde016fdc1553
+msgid "In the :doc:`last part <states_pt1>` of the Salt States tutorial we covered the basics of installing a package. We will now modify our ``webserver.sls`` file to have requirements, and use even more Salt States."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:18
+# 1d1a092ee3a74bad883cfa082ef58089
+msgid "Call multiple States"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:20
+# 372853143bb34bb4bb25e960745eb03d
+msgid "You can specify multiple :term:`state declarations <state declaration>` under an :term:`ID declaration`. For example, a quick modification to our ``webserver.sls`` to also start Apache if it is not running:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:36
+# e6200ee61b0740169af30bafe30a07ae
+msgid "Try stopping Apache before running ``state.highstate`` once again and observe the output."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:40
+# 7b862222c08c41aaa73a4211140341a5
+msgid "Expand the SLS module"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:42
+# e7605660a1c24bad81a2335bdd1d0b5f
+msgid "As you have seen, SLS modules are appended with the file extension ``.sls`` and are referenced by name starting at the root of the state tree. An SLS module can be also defined as a directory. Demonstrate that now by creating a directory named ``webserver`` and moving and renaming ``webserver.sls`` to ``webserver/init.sls``. Your state directory should now look like this::"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:52
+# 128c0139fe90431cac08723039045f61
+msgid "Organizing SLS modules"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:54
+# 83b507efff99401bb6af5785a526b2b1
+msgid "You can place additional ``.sls`` files in a state file directory. This affords much cleaner organization of your state tree on the filesystem. For example, if we created a ``webserver/django.sls`` file that module would be referenced as ``webserver.django``."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:59
+# eb621a179cf24630b1c12ce2d7ee2763
+msgid "In addition, States provide powerful includes and extending functionality which we will cover in :doc:`Part 3 <states_pt3>`."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:63
+# aab77fc234f94eea8325ac050b36e56e
+msgid "Require other states"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:65
+# 1b5de9bd8c0a4552bf75a3f819dd369a
+msgid "We now have a working installation of Apache so let's add an HTML file to customize our website. It isn't exactly useful to have a website without a webserver so we don't want Salt to install our HTML file until Apache is installed and running. Include the following at the bottom of your ``webserver/init.sls`` file:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:90
+# e7eb19f19c2747eb9dd86d10f4ff318e
+msgid "**line 9** is the :term:`ID declaration`. In this example it is the location we want to install our custom HTML file. (**Note:** the default location that Apache serves may differ from the above on your OS or distro. ``/srv/www`` could also be a likely place to look.)"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:95
+# 4f38c5dad4d84db097f15095c9a96f73
+msgid "**Line 10** the :term:`state declaration`. This example uses the Salt :mod:`file state <salt.states.file>`."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:98
+# 5eda809ec96b41e181720f9dd87bd91c
+msgid "**Line 11** is the :term:`function declaration`. The :func:`managed function <salt.states.file.managed>` will download a file from the master and install it in the location specified."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:102
+# df97afebc675491bb7fee51492539707
+msgid "**Line 12** is a :term:`function arg declaration` which, in this example, passes the ``source`` argument to the :func:`managed function <salt.states.file.managed>`."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:106
+# 7b56ea196b884ce68d75895be03202a4
+msgid "**Line 13** is a :term:`requisite declaration`."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:108
+# 26452ae1a66a4c3794e92fb0c06fabc4
+msgid "**Line 14** is a :term:`requisite reference` which refers to a state and an ID. In this example, it is referring to the ``ID declaration`` from our example in :doc:`part 1 <states_pt1>`. This declaration tells Salt not to install the HTML file until Apache is installed."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:113
+# 7695820d47ba4a78b0923a26f24cc1fe
+msgid "Next, create the ``index.html`` file and save it in the ``webserver`` directory:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:125
+# 684cc93760e3442d9198c1714ece164b
+msgid "Last, call :func:`state.highstate <salt.modules.state.highstate>` again and the minion will fetch and execute the highstate as well as our HTML file from the master using Salt's File Server:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:133
+# ed4f8303d40441a5a884aebbffd66e54
+msgid "Verify that Apache is now serving your custom HTML."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:135
+# 202155c2288940fb9cffac1e56040d29
+msgid "``require`` vs. ``watch``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:137
+# 2b4dd1b451c74bbba95907bcc97a271a
+msgid "There are two :term:`requisite declarations <requisite declaration>`, “require” and “watch”. Not every state supports “watch”. The :mod:`service state <salt.states.service>` does support “watch” and will restart a service based on the watch condition."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:142
+# 45e704ae35ad440da8f641a78eb30cbc
+msgid "For example, if you use Salt to install an Apache virtual host configuration file and want to restart Apache whenever that file is changed you could modify our Apache example from earlier as follows:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:164
+# ff813b9d924a41dd8bbf7ca1e5fef3b6
+msgid "If the pkg and service names differ on your OS or distro of choice you can specify each one separately using a :term:`name declaration` which explained in :doc:`Part 3 <states_pt3>`."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:169
+# 68ad87ebe7cf4689aab8db529e6f8ac6
+msgid "Next steps"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt2.rst:171
+# 5ec325d86608494399aca1f21497d87b
+msgid "In :doc:`part 3 <states_pt3>` we will discuss how to use includes, extends and templating to make a more complete State Tree configuration."
+msgstr ""
+

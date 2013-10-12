@@ -1,0 +1,118 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/installation/arch.rst:6
+# 54e782ad9c824977aef3661426d91916
+msgid "Arch Linux"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:9
+# b869012fc993477aab829b6257e0a858
+msgid "Installation"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:11
+# bd7aed9062754e6a9ad014c8ac3e2b00
+msgid "Salt is currently available via the Arch User Repository (AUR). There are currently stable and -git packages available."
+msgstr ""
+
+#: ../../topics/installation/arch.rst:15
+# b1be52c8f879439da08d2e644c4194af
+msgid "Stable Release"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:17
+# 7acde4abeefa4157b36c86e5044dd8fc
+msgid "Install Salt stable releases from the Arch Linux AUR as follows:"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:26
+# fbf326fd8e1943debc1150ccd77a3199
+msgid "A few of Salt's dependencies are currently only found within the AUR, so it is necessary to download and run ``makepkg -is`` on these as well. As a reference, Salt currently relies on the following packages which are only available via the AUR:"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:30
+# 1846b15765a144c99aea831f7477fe27
+msgid "https://aur.archlinux.org/packages/py/python2-msgpack/python2-msgpack.tar.gz"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:31
+# 517f60df9daf40e38eb15efb8018547b
+msgid "https://aur.archlinux.org/packages/py/python2-psutil/python2-psutil.tar.gz"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:33
+# f00b242748f445d488e1b9e35e996cfa
+msgid "yaourt"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:35
+# b29c8f847dc045a48c8448e9fe409868
+msgid "If a tool such as Yaourt_ is used, the dependencies will be gathered and built automatically."
+msgstr ""
+
+#: ../../topics/installation/arch.rst:38
+# 109b35184cb747b4add6686a2a0548c9
+msgid "The command to install salt using the yaourt tool is:"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:47
+# 2355e88b4fa449e88d3c07048d2b07bf
+msgid "Tracking develop"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:49
+# c14faf66153f46c097139e3d955b2dc2
+msgid "To install the bleeding edge version of Salt (**may include bugs!**), use the -git package. Installing the -git package as follows:"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:59
+# 6642f004a6f947eb99f706f4f2d6d6da
+msgid "See the note above about Salt's dependencies."
+msgstr ""
+
+#: ../../topics/installation/arch.rst:62
+# bf13629d1b884c02ae08defc9b1493bf
+msgid "Post-installation tasks"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:64
+# 7d94baeccdc44f918397ea65265b897b
+msgid "**systemd**"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:66
+# b83056fd93b444988a1836374705f2db
+msgid "Activate the Salt Master and/or Minion via ``systemctl`` as follows:"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:73
+# b21e10ae763541aa8430b5cc2b2d76ad
+msgid "**Start the Master**"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:75
+# 3b7c0137e3854be7835d7d7d3aedf5ac
+msgid "Once you've completed all of these steps you're ready to start your Salt Master. You should be able to start your Salt Master now using the command seen here:"
+msgstr ""
+
+#: ../../topics/installation/arch.rst:83
+# b40f083697b34d2eb5ca9f537d020c8e
+msgid "Now go to the :doc:`Configuring Salt</topics/configuration>` page."
+msgstr ""
+

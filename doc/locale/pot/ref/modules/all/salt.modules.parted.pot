@@ -1,0 +1,283 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.parted.rst:6
+# dd5f97fe2b4c4aa3bbcbd144c46652e5
+msgid "salt.modules.parted"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted:1
+# 805bd40c7c0d4cd499dbf4e92384976f
+msgid "Module for managing partitions on POSIX-like systems."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted:3
+# 7d66c0a0123f40409bed8a70437707a4
+msgid "Some functions may not be available, depending on your version of parted."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted:5
+# ffd6066326184f88a3fbdf420b0c5667
+msgid "Check the manpage for ``parted(8)`` for more information, or the online docs at:"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted:8
+# 43ac699537b244c0b97dee3e32cd0dbc
+msgid "http://www.gnu.org/software/parted/manual/html_chapter/parted_2.html"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted:10
+# a25cb9c229d54c0da96906f6a8e3faa9
+msgid "In light of parted not directly supporting partition IDs, some of this module has been written to utilize sfdisk instead. For further information, please reference the man page for ``sfdisk(8)``."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.align_check:1
+# 751e20b18b1f4e92adc8a1cc77eb28a2
+msgid "partition.align_check device part_type partition"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.align_check:3
+# 7debef46fd384767bb8f6956dd64abe6
+msgid "Check if partition satisfies the alignment constraint of part_type. Type must be \"minimal\" or \"optimal\"."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.align_check:6
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.check:5
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.cp:7
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.get_id:10
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkfs:8
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mklabel:7
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkpart:7
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkpartfs:9
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.name:6
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.rescue:7
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.resize:9
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.rm:5
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.set_:7
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.set_id:10
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.toggle:5
+# 05d33a83941541d3a573dc05013f2189
+# d6bd2922b0804afd9b45129554e5241b
+# 044411803eab45bd9236b2f9ef741b54
+# c320093baf834114bbbec641602b82e3
+# e0bd2c0b6db340f5b5b5f5eada6f8ec7
+# b65f8179c8b34dd68067ded7fd5e3155
+# 69d1a22b03844abcb3fe3083a2ef7819
+# 177fec06426e4bbc834e4197633c5ad8
+# 35084b2326fc42d483184c9f91f0fe58
+# 24b8060632c34e8d81778d0cb1efd4a3
+# 31ad5a329a97481090d7a7fc32b958a0
+# f8ca531337bd4559a84d03bce83d6deb
+# b7cb4ba2c1f04f80a5f6f36224589409
+# 5a923b45896441e2b8594befadc683a9
+# 5edc2360bf774882a6c8b086fe622f09
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.check:1
+# e5872b58795a4fffa16b512aced71271
+msgid "partition.check device minor"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.check:3
+# 52576524e47f40febab860ea03590cd7
+msgid "Checks if the file system on partition <minor> has any errors."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.cp:1
+# ccc7482e45b04f48aefb415b0c52d7af
+msgid "partition.check device from_minor to_minor"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.cp:5
+# 04f19ad5dbd842218def3f38997efd1f
+msgid "Copies the file system on the partition <from-minor> to partition"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.cp:4
+# a375d8cde8ae44ec92dd884547ebedf1
+msgid "<to-minor>, deleting the original contents of the destination partition."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.get_id:1
+# 9ab2ac4fff87467b8da0cd414b62658d
+msgid "Prints the system ID for the partition. Some typical values are::"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkfs:1
+# 680525a80eaf43e081ead41fc80a9640
+msgid "partition.mkfs device fs_type"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkfs:6
+# 03f853c187924127b5deaa26c8cf169f
+msgid "Makes a file system <fs_type> on partition <device>, destroying all data"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkfs:4
+# 6179884d4f944f68a7be1d789649c8f9
+msgid "that resides on that partition. <fs_type> must be one of \"ext2\", \"fat32\", \"fat16\", \"linux-swap\" or \"reiserfs\" (if libreiserfs is installed)"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mklabel:1
+# 93600adc30dd4992b4b82daa76500202
+msgid "partition.mklabel device label_type"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mklabel:3
+# f3f76637eafa48d9bc6acb088b129c97
+msgid "Create a new disklabel (partition table) of label_type. Type should be one of \"aix\", \"amiga\", \"bsd\", \"dvh\", \"gpt\", \"loop\", \"mac\", \"msdos\", \"pc98\", or \"sun\"."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkpart:1
+# 4ef123ef87854b65a6332272b49b7968
+msgid "partition.mkpart device part_type fs_type start end"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkpart:5
+# 639f1d053484402b9aca15a9e34bb4fc
+msgid "Make a part_type partition for filesystem fs_type, beginning at start and"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkpart:4
+# cf38268b18a74d34afb88741763a04f6
+msgid "ending at end (by default in megabytes).  part_type should be one of \"primary\", \"logical\", or \"extended\"."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkpartfs:1
+# f57b68524673401e877057a3fb36b642
+msgid "partition.mkpartfs device part_type fs_type start end"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkpartfs:7
+# f7f69803f60349288b3c76b59c8d9872
+msgid "Make a <part_type> partition with a new filesystem of <fs_type>, beginning"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.mkpartfs:4
+# 69476927c6b846b3952e01c8ce9c75c2
+msgid "at <start> and ending at <end> (by default in megabytes).  <part_type> should be one of \"primary\", \"logical\", or \"extended\". <fs_type> must be one of \"ext2\", \"fat32\", \"fat16\", \"linux-swap\" or \"reiserfs\" (if libreiserfs is installed)"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.name:1
+# c89a0887157949c096d4fa0b18a5596e
+msgid "partition.name device partition name"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.name:4
+# 6f1c99016a7f45038178021a8eab815d
+msgid "Set the name of partition to name. This option works only on Mac, PC98,"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.name:4
+# aba78e5d8aac489497e194d8c2c54019
+msgid "and GPT disklabels. The name can be placed in quotes, if necessary."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.part_list:1
+# a4bc98b94c2d494c905ce2fa6a521f5c
+msgid "partition.part_list device unit"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.part_list:3
+# ac7de93abff64fe1811708b816277674
+msgid "Prints partition information of given <device>"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.part_list:5
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.probe:3
+# 720264eba9d345ac8b0356b4857d728e
+# fdb66d6df87a40639abeaf110f4bd27c
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.probe:1
+# 786178ae00ae4ddc8c78e5db581a5fe7
+msgid "Ask the kernel to update its local partition data"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.rescue:1
+# 228176a8c5ac4e6993ea78d7fe625af6
+msgid "partition.rescue device start end"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.rescue:5
+# 926428892bd24aadae215620acc1275b
+msgid "Rescue a lost partition that was located somewhere between start and end."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.rescue:4
+# e142613e791a42bcb6926ce9d2fae46d
+msgid "If a partition is found, parted will ask if you want to create an entry for it in the partition table."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.resize:1
+# 83ca1f5d741940e3bfbd04c057693d8a
+msgid "partition.resize device minor, start, end"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.resize:7
+# 7491e6e7e4c3488c9b10da0f1ca10c7a
+msgid "Resizes the partition with number <minor>. The partition will start <start>"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.resize:4
+# 8678639169574b65896150188216fac8
+msgid "from the beginning of the disk, and end <end> from the beginning of the disk. resize never changes the minor number. Extended partitions can be resized, so long as the new extended partition completely contains all logical partitions."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.rm:1
+# 33076826275343da86d7d58f5039c9b0
+msgid "partition.rm device minor"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.rm:3
+# a3f4402a9e4c435e9183929713a925ec
+msgid "Removes the partition with number <minor>."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.set_:1
+# 2f90933dd3064e919e1876a88435d326
+msgid "partition.set device  minor flag state"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.set_:5
+# 502d2207666a4e95a82e0837db813549
+msgid "Changes a flag on the partition with number <minor>. A flag can be either"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.set_:4
+# 2205939accb140fb941b1d378411d14a
+msgid "\"on\" or \"off\". Some or all of these flags will be available, depending on what disk label you are using."
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.set_id:1
+# 99c40a415076401287c9413fef27dadf
+msgid "Sets the system ID for the partition. Some typical values are::"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.toggle:1
+# 2cf707b2af5c425eb70673ce1967e331
+msgid "partition.toggle device partition flag"
+msgstr ""
+
+#: ../../../salt/modules/parted.py:docstring of salt.modules.parted.toggle:3
+# 3d5bcc11b74e4c0fb84a192cbed6749d
+msgid "Toggle the state of <flag> on <partition>"
+msgstr ""
+
