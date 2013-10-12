@@ -210,59 +210,6 @@ class SSH(object):
                 return {host: 'Bad Return'}
         return ret
 
-    def process(self):
-        '''
-        Execute the desired routine on the specified systems
-        '''
-        running = {}
-        target_iter = self.targets.__iter__()
-        done = set()
-        while True:
-            if len(running) < self.opts.get('ssh_max_procs', 25):
-                try:
-                    host = next(target_iter)
-                except StopIteration:
-                    pass
-                for default in self.defaults:
-                    if not default in self.targets[host]:
-                        self.targets[host][default] = self.defaults[default]
-
-                if host not in running:
-                    single = Single(
-                            self.opts,
-                            self.opts['arg_str'],
-                            host,
-                            **self.targets[host])
-                    running[host] = {'iter': single.cmd(),
-                                     'single': single}
-            for host in running:
-                stdout, stderr = next(running[host]['iter'])
-                if stdout is None and stderr is None:
-                    continue
-                if stdout.startswith('deploy'):
-                    running[host]['single'].deploy()
-                    running[host]['iter'] = single.cmd()
-                else:
-                    # This job is done, yield
-                    id_ = running[host]['single'].id
-                    try:
-                        if not stdout and stderr:
-                            yield {id_: stderr}
-                        else:
-                            data = json.loads(stdout)
-                            if len(data) < 2 and 'local' in data:
-                                yield {id_: data['local']}
-                            else:
-                                yield {id_: data}
-                    except Exception:
-                        yield {id_: 'Bad Return'}
-                    done.add(host)
-            for host in done:
-                if host in running:
-                    running.pop(host)
-            if len(done) >= len(self.targets):
-                break
-
     def handle_routine(self, que, opts, host, target):
         '''
         Run the routine in a "Thread", put a dict on the queue
@@ -286,7 +233,7 @@ class SSH(object):
                 else:
                     ret['ret'] = stderr
             else:
-                data = json.loads(stdout)
+                data = salt.utils.find_json(stdout)
                 if len(data) < 2 and 'local' in data:
                     ret['ret'] = data['local']
                 else:
