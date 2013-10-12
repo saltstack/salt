@@ -1,0 +1,138 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.mount.rst:6
+msgid "salt.states.mount"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount:2
+msgid "Mounting of filesystems."
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount:4
+msgid "Mount any type of mountable filesystem with the mounted function:"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:1
+msgid "Verify that a device is mounted"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:4
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.unmounted:7
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:4
+msgid "The path to the location where the device is to be mounted"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:7
+msgid "device"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:7
+msgid "The device name, typically the device node, such as /dev/sdb1"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:11
+msgid "fstype"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:10
+msgid ""
+"The filesystem type, this will be xfs, ext2/3/4 in the case of classic "
+"filesystems, and fuse in the case of fuse mounts"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:15
+msgid "mkmnt"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:14
+msgid ""
+"If the mount point is not present then the state will fail, set mkmnt to "
+"True to create the mount point if it is otherwise not present"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:18
+msgid "opts"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:18
+msgid "A list object of options or a comma delimited list"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:21
+msgid "dump"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:21
+msgid "The dump value to be passed into the fstab, default to 0"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:24
+msgid "pass_num"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:24
+msgid "The pass value to be passed into the fstab, default to 0"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:27
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.unmounted:10
+msgid "config"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:27
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.unmounted:10
+msgid "Set an alternative location for the fstab, default to /etc/fstab"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:31
+msgid "remount"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:30
+msgid ""
+"Set if the file system can be remounted with the remount option, default to "
+"True"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:33
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.unmounted:12
+msgid "persist"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.mounted:34
+msgid "Set if the mount should be saved in the fstab, default to True"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.swap:1
+msgid "Activates a swap device"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.unmounted:2
+msgid "This state will be available in verion 0.17.0."
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.unmounted:4
+msgid "Verify that a device is not mounted"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.unmounted:7
+msgid "The path to the location where the device is to be unmounted from"
+msgstr ""
+
+#: ../../../salt/states/mount.pydocstring of salt.states.mount.unmounted:13
+msgid "Set if the mount should be purged from the fstab, default to False"
+msgstr ""

@@ -1,0 +1,156 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.modjk.rst:6
+msgid "salt.modules.modjk"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk:1
+msgid ""
+"Control Modjk via the Apache Tomcat \"Status\" worker "
+"(http://tomcat.apache.org/connectors-doc/reference/status.html)"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk:4
+msgid ""
+"Below is an example of the configuration needed for this module. This "
+"configuration data can be placed either in :doc:`grains "
+"</topics/targeting/grains>` or :doc:`pillar </topics/pillar/index>`."
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk:8
+msgid ""
+"If using grains, this can be accomplished :ref:`statically <static-custom-"
+"grains>` or via a :ref:`grain module <writing-grains>`."
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk:11
+msgid ""
+"If using pillar, the yaml configuration can be placed directly into a pillar"
+" SLS file, making this both the easier and more dynamic method of "
+"configuring this module."
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.bulk_activate:1
+msgid "Activate all the given workers in the specific load balancer"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.bulk_activate:3 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.bulk_disable:3
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.bulk_recover:3 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.bulk_stop:3 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.dump_config:3 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.get_running:3 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.lb_edit:6 ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.list_configured_members:3
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.recover_all:3
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.reset_stats:3
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.version:3
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.worker_activate:3
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.worker_disable:3 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.worker_edit:6 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.worker_recover:4
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.worker_status:3 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.worker_stop:3 ../../../salt/modules/modjk.pydocstring
+#: of salt.modules.modjk.workers:3
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.bulk_disable:1
+msgid "Disable all the given workers in the specific load balancer"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.bulk_recover:1
+msgid "Recover all the given workers in the specific load balancer"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.bulk_stop:1
+msgid "Stop all the given workers in the specific load balancer"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.dump_config:1
+msgid "Dump the original configuration that was loaded from disk"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.get_running:1
+msgid "Get the current running config (not from disk)"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.lb_edit:1
+msgid "Edit the loadbalancer settings"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.lb_edit:3
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.worker_edit:3
+msgid ""
+"Note: http://tomcat.apache.org/connectors-doc/reference/status.html Data "
+"Parameters for the standard Update Action"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.list_configured_members:1
+msgid "Return a list of member workers from the configuration files"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.recover_all:1
+msgid ""
+"Set the all the workers in lbn to recover and activate them if they are not"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.reset_stats:1
+msgid "Reset all runtime statistics for the load balancer"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.version:1
+msgid "Return the modjk version"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.worker_activate:1
+msgid "Set the worker to activate state in the lbn load balancer"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.worker_disable:1
+msgid "Set the worker to disable state in the lbn load balancer"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.worker_edit:1
+msgid "Edit the worker settings"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.worker_recover:1
+msgid "Set the worker to recover this module will fail if it is in OK state"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of
+#: salt.modules.modjk.worker_status:1
+msgid "Return the state of the worker"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.worker_stop:1
+msgid "Set the worker to stopped state in the lbn load balancer"
+msgstr ""
+
+#: ../../../salt/modules/modjk.pydocstring of salt.modules.modjk.workers:1
+msgid "Return a list of member workers and their status"
+msgstr ""

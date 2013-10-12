@@ -1,0 +1,97 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/file_roots.rst:6
+msgid "File Server Configuration"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:8
+msgid ""
+"The Salt file server is a high performance file server written in ZeroMQ. It"
+" manages large files quickly and with little overhead, and has been "
+"optimized to handle small files in an extremely efficient manner."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:12
+msgid ""
+"The Salt file server is an environment aware file server. This means that "
+"files can be allocated within many root directories and accessed by "
+"specifying both the file path and the environment to search. The individual "
+"environments can span across multiple directory roots to create overlays and"
+" to allow for files to be organized in many flexible ways."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:20
+msgid "Environments"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:22
+msgid ""
+"The Salt file server defaults to the mandatory ``base`` environment. This "
+"environment **MUST** be defined and is used to download files when no "
+"environment is specified."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:26
+msgid ""
+"Environments allow for files and sls data to be logically separated, but "
+"environments are not isolated from each other. This allows for logical "
+"isolation of environments by the engineer using Salt, but also allows for "
+"information to be used in multiple environments."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:33
+msgid "Directory Overlay"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:35
+msgid ""
+"The ``environment`` setting is a list of directories to publish files from. "
+"These directories are searched in order to find the specified file and the "
+"first file found is returned."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:39
+msgid ""
+"This means that directory data is prioritized based on the order in which "
+"they are listed. In the case of this ``file_roots`` configuration:"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:49
+msgid ""
+"If a file's URI is ``salt://httpd/httpd.conf``, it will first search for the"
+" file at ``/srv/salt/base/httpd/httpd.conf``. If the file is found there it "
+"will be returned. If the file is not found there, then "
+"``/srv/salt/failover/httpd/httpd.conf`` will be used for the source."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:54
+msgid ""
+"This allows for directories to be overlaid and prioritized based on the "
+"order they are defined in the configuration."
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:58
+msgid "Local File Server"
+msgstr ""
+
+#: ../../ref/file_server/file_roots.rst:63
+msgid ""
+"The file server can be rerouted to run from the minion. This is primarily to"
+" enable running Salt states without a Salt master. To use the local file "
+"server interface, copy the file server data to the minion and set the "
+"file_roots option on the minion to point to the directories copied from the "
+"master. Once the minion ``file_roots`` option has been set, change the "
+"``file_client`` option to local to make sure that the local file server "
+"interface is used."
+msgstr ""

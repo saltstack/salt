@@ -1,0 +1,117 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.mdadm.rst:6
+msgid "salt.modules.mdadm"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm:1
+msgid "Salt module to manage RAID arrays with mdadm"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:1
+msgid "Create a RAID device."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:4
+msgid ""
+"Use with CAUTION, as this function can be very destructive if not used "
+"properly!"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:7
+msgid "Use this module just as a regular mdadm command."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:9
+msgid "For more info, read the ``mdadm(8)`` manpage"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:11
+msgid ""
+"NOTE: It takes time to create a RAID array. You can check the progress in "
+"\"resync_status:\" field of the results from the following command:"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:18
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:24
+msgid "Test mode"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:26
+msgid ""
+"Adding ``test_mode=True`` as an argument will print out the mdadm command "
+"that would have been run."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:29
+msgid "The arguments u pass to this function."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:30
+msgid ""
+"arguments['new_array']: The name of the new RAID array that will be created."
+" arguments['opt_val']: Option with Value. Example: raid-devices=2 "
+"arguments['opt_raw']: Option without Value. Example: force "
+"arguments['disks_to_array']: The disks that will be added to the new raid."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:35
+msgid ""
+"test_mode=True:     Prints out the full command. test_mode=False (Default):"
+"     Executes command on remote the host(s) and     Prints out the mdadm "
+"output."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:36
+msgid "test_mode=True:"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:37
+msgid "Prints out the full command."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:39
+msgid "test_mode=False (Default):"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.create:39
+msgid ""
+"Executes command on remote the host(s) and Prints out the mdadm output."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.destroy:1
+msgid "Destroy a RAID device."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.destroy:3
+msgid ""
+"WARNING This will zero the superblock of all members of the RAID array.."
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.destroy:5
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.detail:3
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.list_:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.detail:1
+msgid "Show detail for a specified RAID device"
+msgstr ""
+
+#: ../../../salt/modules/mdadm.pydocstring of salt.modules.mdadm.list_:1
+msgid "List the RAID devices."
+msgstr ""

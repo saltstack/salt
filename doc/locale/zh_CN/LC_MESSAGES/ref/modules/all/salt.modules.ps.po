@@ -1,0 +1,276 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.ps.rst:6
+msgid "salt.modules.ps"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps:1
+msgid ""
+"A salt interface to psutil, a system and process library. See "
+"http://code.google.com/p/psutil."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps:4
+msgid "psutil Python module"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.boot_time:1
+msgid "Return the boot time in number of seconds since the epoch began."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.boot_time:3
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.cached_physical_memory:3
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_percent:9
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_times:8
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.disk_io_counters:3
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.disk_partition_usage:4 ../../../salt/modules/ps.pydocstring
+#: of salt.modules.ps.disk_partitions:8 ../../../salt/modules/ps.pydocstring
+#: of salt.modules.ps.disk_usage:4 ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.get_pid_list:3 ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.network_io_counters:3 ../../../salt/modules/ps.pydocstring
+#: of salt.modules.ps.num_cpus:3 ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.physical_memory_buffers:3
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.total_physical_memory:3
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.virtual_memory_usage:4
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.cached_physical_memory:1
+msgid "Return the amount cached memory."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_percent:1
+msgid "Return the percent of time the CPU is busy."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_percent:3
+msgid "interval"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_percent:4
+msgid "the number of seconds to sample CPU usage over"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_percent:7
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_times:6
+msgid "per_cpu"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_percent:6
+msgid ""
+"if True return an array of CPU percent busy for each CPU, otherwise "
+"aggregate all percents into one number"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_times:1
+msgid ""
+"Return the percent of time the CPU spends in each state, e.g. user, system, "
+"idle, nice, iowait, irq, softirq."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.cpu_times:5
+msgid ""
+"if True return an array of percents for each CPU, otherwise aggregate all "
+"percents into one number"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.disk_io_counters:1
+msgid "Return disk I/O statisitics."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.disk_partition_usage:1
+msgid ""
+"Return a list of disk partitions plus the mount point, filesystem and usage "
+"statistics."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.disk_partitions:1
+msgid ""
+"Return a list of disk partitions and their device, mount point, and "
+"filesystem type."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.disk_partitions:6
+msgid "all"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.disk_partitions:5
+msgid ""
+"if set to False, only return local, physical partitions (hard disk, USB, "
+"CD/DVD partitions).  If True, return all filesystems."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.disk_usage:1
+msgid ""
+"Given a path, return a dict listing the total available space as well as the"
+" free space, and used space."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.get_pid_list:1
+msgid "Return a list of process ids (PIDs) for all running processes."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.kill_pid:1
+msgid "Kill a proccess by PID."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.kill_pid:8
+msgid "pid"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.kill_pid:8
+msgid "PID of process to kill."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.kill_pid:12
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:16
+msgid "signal"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.kill_pid:11
+msgid ""
+"Signal to send to the process. See manpage entry for kill for possible "
+"values. Default: 15 (SIGTERM)."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.kill_pid:14
+msgid "**Example:**"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.kill_pid:16
+msgid "Send SIGKILL to process with PID 2000:"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.network_io_counters:1
+msgid "Return network I/O statisitics."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.num_cpus:1
+msgid "Return the number of CPUs."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:1
+msgid "Return the pids for processes matching a pattern."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:3
+msgid ""
+"If full is true, the full command line is searched for a match, otherwise "
+"only the name of the command is searched."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:11
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:9
+msgid "pattern"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:11
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:9
+msgid "Pattern to search for in the process list."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:14
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:12
+msgid "user"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:14
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:12
+msgid "Limit matches to the given username. Default: All users."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:18
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:20
+msgid "full"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:17
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:19
+msgid ""
+"A boolean value indicating whether only the name of the command or the full "
+"command line should be matched against the pattern."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:20
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:22
+msgid "**Examples:**"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:22
+msgid "Find all httpd processes on all 'www' minions:"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pgrep:28
+msgid "Find all bash processes owned by user 'tom':"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.physical_memory_buffers:1
+msgid "Return the amount of physical memory buffers."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.physical_memory_usage:1
+msgid "Return a dict that describes free and available physical memory."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.physical_memory_usage:3
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.top:5
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:1
+msgid "Kill processes matching a pattern."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:15
+msgid ""
+"Signal to send to the process(es). See manpage entry for kill for possible "
+"values. Default: 15 (SIGTERM)."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:24
+msgid "Send SIGHUP to all httpd processes on all 'www' minions:"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.pkill:30
+msgid "Send SIGKILL to all bash processes owned by user 'tom':"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of salt.modules.ps.top:1
+msgid ""
+"Return a list of top CPU consuming processes during the interval. "
+"num_processes = return the top N CPU consuming processes interval = the "
+"number of seconds to sample CPU usage over"
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.total_physical_memory:1
+msgid "Return the total number of bytes of physical memory."
+msgstr ""
+
+#: ../../../salt/modules/ps.pydocstring of
+#: salt.modules.ps.virtual_memory_usage:1
+msgid ""
+"Return a dict that describes free and available memory, both physical and "
+"virtual."
+msgstr ""

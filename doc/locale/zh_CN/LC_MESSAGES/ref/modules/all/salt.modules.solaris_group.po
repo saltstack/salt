@@ -1,0 +1,59 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.solaris_group.rst:6
+msgid "salt.modules.solaris_group"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group:1
+msgid "Manage groups on Solaris"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.add:1
+msgid "Add the specified group"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.add:3
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.chgid:3
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.delete:3
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.getent:3
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.info:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.chgid:1
+msgid "Change the gid for a named group"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.delete:1
+msgid "Remove the named group"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.getent:1
+msgid "Return info on all groups"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.pydocstring of
+#: salt.modules.solaris_group.info:1
+msgid "Return information about a group"
+msgstr ""

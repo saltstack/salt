@@ -1,0 +1,91 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/syndic.rst:6
+msgid "Salt Syndic"
+msgstr ""
+
+#: ../../ref/syndic.rst:8
+msgid ""
+"The Salt Syndic interface is a powerful tool which allows for the "
+"construction of Salt command topologies. A basic Salt setup has a Salt "
+"Master commanding a group of Salt Minions. The Syndic interface is a special"
+" passthrough minion, it is run on a master and connects to another master, "
+"then the master that the Syndic minion is listening to can control the "
+"minions attached to the master running the syndic."
+msgstr ""
+
+#: ../../ref/syndic.rst:15
+msgid ""
+"The intent for supporting many layouts is not presented with the intent of "
+"supposing the use of any single topology, but to allow a more flexible "
+"method of controlling many systems."
+msgstr ""
+
+#: ../../ref/syndic.rst:20
+msgid "Configuring the Syndic"
+msgstr ""
+
+#: ../../ref/syndic.rst:22
+msgid ""
+"Since the Syndic only needs to be attached to a higher level master the "
+"configuration is very simple. On a master that is running a syndic to "
+"connect to a higher level master the syndic_master option needs to be set in"
+" the master config file. The syndic_master option contains the hostname or "
+"IP address of the master server that can control the master that the syndic "
+"is running on."
+msgstr ""
+
+#: ../../ref/syndic.rst:29
+msgid ""
+"The master that the syndic connects to sees the syndic as an ordinary "
+"minion, and treats it as such. the higher level master will need to accept "
+"the syndic's minion key like any other minion. This master will also need to"
+" set the order_masters value in the configuration to True. The order_masters"
+" option in the config on the higher level master is very important, to "
+"control a syndic extra information needs to be sent with the publications, "
+"the order_masters option makes sure that the extra data is sent out."
+msgstr ""
+
+#: ../../ref/syndic.rst:37
+msgid ""
+"To sum up, you have those configuration options available on the master "
+"side:"
+msgstr ""
+
+#: ../../ref/syndic.rst:39
+msgid "**syndic_master**: MasterOfMaster ip/address"
+msgstr ""
+
+#: ../../ref/syndic.rst:40
+msgid "**syndic_master_port**: MasterOfMaster ret_port"
+msgstr ""
+
+#: ../../ref/syndic.rst:41
+msgid "**syndic_log_file**: path to the logfile (absolute or not)"
+msgstr ""
+
+#: ../../ref/syndic.rst:42
+msgid "**syndic_pidfile**: path to the pidfile (absolute or not)"
+msgstr ""
+
+#: ../../ref/syndic.rst:45
+msgid "Running the Syndic"
+msgstr ""
+
+#: ../../ref/syndic.rst:47
+msgid ""
+"The Syndic is a separate daemon that needs to be started on the master that "
+"is controlled by a higher master. Starting the Syndic daemon is the same as "
+"starting the other Salt daemons."
+msgstr ""

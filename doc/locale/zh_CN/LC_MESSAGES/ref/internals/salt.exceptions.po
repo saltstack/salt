@@ -1,0 +1,100 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/internals/salt.exceptions.rst:6
+msgid "salt.exceptions"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions:1
+msgid "This module is a central location for all salt exceptions"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of
+#: salt.exceptions.AuthenticationError:1
+msgid "If sha256 signature fails during decryption"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of
+#: salt.exceptions.CommandExecutionError:1
+msgid ""
+"Used when a module runs a command which returns an error and wants to show "
+"the user the output gracefully instead of dying"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of
+#: salt.exceptions.CommandNotFoundError:1
+msgid "Used in modules or grains when a required binary is not available"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of
+#: salt.exceptions.EauthAuthenticationError:1
+msgid "Thrown when eauth authentication fails"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.LoaderError:1
+msgid "Problems loading the right renderer"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.MasterExit:1
+msgid "Rise when the master exits"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.MinionError:1
+msgid "Minion problems reading uris such as salt:// or http://"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.PkgParseError:1
+msgid ""
+"Used when of the pkg modules cannot correctly parse the output from the CLI "
+"tool (pacman, yum, apt, aptitude, etc)"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.SaltClientError:1
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.SaltMasterError:1
+msgid "Problem reading the master root key"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.SaltException:1
+msgid ""
+"Base exception class; all Salt-specific exceptions should subclass this"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of
+#: salt.exceptions.SaltInvocationError:1
+msgid ""
+"Used when the wrong number of arguments are sent to modules or invalid "
+"arguments are specified on the command line"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.SaltRenderError:1
+msgid "Used when a renderer needs to raise an explicit error"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of
+#: salt.exceptions.SaltReqTimeoutError:1
+msgid ""
+"Thrown when a salt master request call fails to return within the timeout"
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of salt.exceptions.SaltSystemExit:1
+msgid ""
+"This exception is raised when an unsolvable problem is found. There's "
+"nothing else to do, salt should just exit."
+msgstr ""
+
+#: ../../../salt/exceptions.pydocstring of
+#: salt.exceptions.TimedProcTimeoutError:1
+msgid ""
+"Thrown when a timed subprocess does not terminate within the timeout, or if "
+"the specified timeout is not an int or a float"
+msgstr ""

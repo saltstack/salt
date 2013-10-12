@@ -1,0 +1,172 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.cp.rst:6
+msgid "salt.modules.cp"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp:1
+msgid "Minion side functions for salt-cp"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_dir:1
+msgid "Download and cache everything under a directory from the master"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_dir:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_file:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_files:5
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_local_file:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_master:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_dir:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_file:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_file_str:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_template:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_url:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.hash_file:5
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.is_cached:4
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.list_master:3
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.list_master_dirs:3
+#: ../../../salt/modules/cp.pydocstring of
+#: salt.modules.cp.list_master_symlinks:3 ../../../salt/modules/cp.pydocstring
+#: of salt.modules.cp.list_minion:3 ../../../salt/modules/cp.pydocstring of
+#: salt.modules.cp.list_states:3 ../../../salt/modules/cp.pydocstring of
+#: salt.modules.cp.push:10
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_file:1
+msgid "Used to cache a single file in the local salt-master file cache."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_files:1
+msgid ""
+"Used to gather many files from the master, the gathered files will be saved "
+"in the minion cachedir reflective to the paths retrieved from the master."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_local_file:1
+msgid "Cache a local file on the minion in the localfiles cache"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.cache_master:1
+msgid "Retrieve all of the files on the master and cache them locally"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_dir:1
+msgid "Used to recursively copy a directory from the salt master"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_dir:9
+msgid "get_dir supports the same template and gzip arguments as get_file."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_file:1
+msgid "Used to get a single file from the salt master"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_file:9
+msgid ""
+"Template rendering can be enabled on both the source and destination file "
+"names like so:"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_file:16
+msgid ""
+"This example would instruct all Salt minions to download the vimrc from a "
+"directory with the same name as their os grain and copy it to /etc/vimrc"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_file:19
+msgid ""
+"For larger files, the cp.get_file module also supports gzip compression. "
+"Because gzip is CPU-intensive, this should only be used in scenarios where "
+"the compression ratio is very high (e.g. pretty-printed JSON or YAML files)."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_file:24
+msgid ""
+"Use the *gzip* named argument to enable it.  Valid values are 1..9, where 1 "
+"is the lightest compression and 9 the heaviest.  1 uses the least CPU on the"
+" master (and minion), 9 uses the most."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_file_str:1
+msgid "Return the contents of a file from a URL"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_template:1
+msgid "Render a file as a template before setting it down"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.get_url:1
+msgid "Used to get a single file from a URL."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.hash_file:1
+msgid ""
+"Return the hash of a file, to get the hash of a file on the salt master file"
+" server prepend the path with salt://<file on server> otherwise, prepend the"
+" file with / for a local file."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.is_cached:1
+msgid ""
+"Return a boolean if the given path on the master has been cached on the "
+"minion"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.list_master:1
+msgid "List all of the files stored on the master"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.list_master_dirs:1
+msgid "List all of the directories stored on the master"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of
+#: salt.modules.cp.list_master_symlinks:1
+msgid "List all of the symlinks stored on the master"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.list_minion:1
+msgid "List all of the files cached on the minion"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.list_states:1
+msgid "List all of the available state modules in an environment"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.push:1
+msgid ""
+"Push a file from the minion up to the master, the file will be saved to the "
+"salt master in the master's minion files cachedir (defaults to "
+"``/var/cache/salt/master/minions/minion-id/files``)"
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.push:5
+msgid ""
+"Since this feature allows a minion to push a file up to the master server it"
+" is disabled by default for security purposes. To enable, set ``file_recv`` "
+"to ``True`` in the master configuration file, and restart the master."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.recv:1
+msgid "Used with salt-cp, pass the files dict, and the destination."
+msgstr ""
+
+#: ../../../salt/modules/cp.pydocstring of salt.modules.cp.recv:3
+msgid ""
+"This function receives small fast copy files from the master via salt-cp. It"
+" does not work via the CLI."
+msgstr ""

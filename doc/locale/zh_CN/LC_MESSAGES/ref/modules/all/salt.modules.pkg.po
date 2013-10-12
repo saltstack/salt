@@ -1,0 +1,78 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:6
+msgid "salt.modules.pkg"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:11
+msgid ""
+"``pkg`` is a virtual module that is fulfilled by one of the following "
+"modules:"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:13
+msgid ":mod:`salt.modules.apt`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:14
+msgid ":mod:`salt.modules.brew`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:15
+msgid ":mod:`salt.modules.ebuild`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:16
+msgid ":mod:`salt.modules.freebsdpkg`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:17
+msgid ":mod:`salt.modules.openbsdpkg`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:18
+msgid ":mod:`salt.modules.pacman`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:19
+msgid ":mod:`salt.modules.pkgin`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:20
+msgid ":mod:`salt.modules.pkgng`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:21
+msgid ":mod:`salt.modules.pkgutil`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:22
+msgid ":mod:`salt.modules.solarispkg`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:23
+msgid ":mod:`salt.modules.win_pkg`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:24
+msgid ":mod:`salt.modules.yumpkg`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:25
+msgid ":mod:`salt.modules.yumpkg5`"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.pkg.rst:26
+msgid ":mod:`salt.modules.zypper`"
+msgstr ""

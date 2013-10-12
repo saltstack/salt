@@ -1,0 +1,279 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/states_pt1.rst:6
+msgid "States tutorial, part 1"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:8
+msgid ""
+"The purpose of this tutorial is to demonstrate how quickly you can configure"
+" a system to be managed by Salt States. For detailed information about the "
+"state system please refer to the full :doc:`states reference "
+"</ref/states/index>`."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:12
+msgid ""
+"This tutorial will walk you through using Salt to configure a minion to run "
+"the Apache HTTP server and to ensure the server is running."
+msgstr ""
+
+#: ../../_incl/requisite_incl.rst:1
+msgid ""
+"**Before continuing** make sure you have a working Salt installation by "
+"following the :doc:`installation </topics/installation/index>` and the "
+":doc:`configuration </topics/configuration>` instructions."
+msgstr ""
+
+#: ../../_incl/requisite_incl.rst:5
+msgid "Stuck?"
+msgstr ""
+
+#: ../../_incl/requisite_incl.rst:7
+msgid ""
+"There are many ways to :doc:`get help from the Salt community "
+"</topics/community>` including our `mailing list "
+"<https://groups.google.com/forum/#!forum/salt-users>`_ and our `IRC channel "
+"<http://webchat.freenode.net/?channels=salt>`_ #salt."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:18
+msgid "Setting up the Salt State Tree"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:20
+msgid ""
+"States are stored in text files on the master and transferred to the minions"
+" on demand via the master's File Server. The collection of state files make "
+"up the :term:`State Tree`."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:24
+msgid ""
+"To start using a central state system in Salt, the Salt File Server must "
+"first be set up. Edit the master config file (:conf_master:`file_roots`) and"
+" uncomment the following lines:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:36
+msgid ""
+"If you are deploying on FreeBSD via ports, the ``file_roots`` path defaults "
+"to ``/usr/local/etc/salt/states``."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:39
+msgid "Restart the Salt master in order to pick up this change:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:47
+msgid "Preparing the Top File"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:49
+msgid ""
+"On the master, in the directory uncommented in the previous step, "
+"(``/srv/salt`` by default), create a new file called :conf_master:`top.sls "
+"<state_top>` and add the following:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:59
+msgid ""
+"The :term:`top file` is separated into environments (discussed later). The "
+"default environment is ``base``. Under the ``base`` environment a collection"
+" of minion matches is defined; for now simply specify all hosts (``*``)."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:64
+msgid "Targeting minions"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:66
+msgid ""
+"The expressions can use any of the targeting mechanisms used by Salt — "
+"minions can be matched by glob, PCRE regular expression, or by :doc:`grains "
+"</topics/targeting/grains>`. For example:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:78
+msgid "Create an ``sls`` module"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:80
+msgid ""
+"In the same directory as the :term:`top file`, create an empty file named "
+"``webserver.sls``, containing the following:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:89
+msgid ""
+"The first line, called the :term:`ID declaration`, is an arbitrary "
+"identifier. In this case it defines the name of the package to be installed."
+" **NOTE:** the package name for the Apache httpd web server may differ "
+"depending on OS or distro — for example, on Fedora it is ``httpd`` but on "
+"Debian/Ubuntu it is ``apache2``."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:95
+msgid ""
+"The second line, called the :term:`state declaration`, defines which of the "
+"Salt States we are using. In this example, we are using the :mod:`pkg state "
+"<salt.states.pkg>` to ensure that a given package is installed."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:99
+msgid ""
+"The third line, called the :term:`function declaration`, defines which "
+"function in the :mod:`pkg state <salt.states.pkg>` module to call."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:102
+msgid "Renderers"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:104
+msgid ""
+"States :term:`sls` files can be written in many formats. Salt requires only "
+"a simple data structure and is not concerned with how that data structure is"
+" built. Templating languages and `DSLs`_ are a dime-a-dozen and everyone has"
+" a favorite."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:109
+msgid ""
+"Building the expected data structure is the job of Salt :doc:`renderers "
+"</ref/renderers/index>` and they are dead-simple to write."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:112
+msgid ""
+"In this tutorial we will be using YAML in Jinja2 templates, which is the "
+"default format. The default can be changed by editing "
+":conf_master:`renderer` in the master configuration file."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:119
+msgid "Install the package"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:121
+msgid ""
+"Next, let's run the state we created. Open a terminal on the master and run:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:127
+msgid ""
+"Our master is instructing all targeted minions to run :func:`state.highstate"
+" <salt.modules.state.highstate>`. When a minion executes a highstate call it"
+" will download the :term:`top file` and attempt to match the expressions. "
+"When it does match an expression the modules listed for it will be "
+"downloaded, compiled, and executed."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:133
+msgid ""
+"Once completed, the minion will report back with a summary of all actions "
+"taken and all changes made."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:137
+msgid "SLS File Namespace"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:139
+msgid ""
+"Note that in the :ref:`example <targeting-minions>` above, the SLS file "
+"``webserver.sls`` was referred to simply as ``webserver``. The namespace for"
+" SLS files follows a few simple rules:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:143
+msgid ""
+"The ``.sls`` is discarded (i.e. ``webserver.sls`` becomes ``webserver``)."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:146
+msgid "Subdirectories can be used for better organization."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:146
+msgid "Each subdirectory is represented by a dot."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:147
+msgid "``webserver/dev.sls`` is referred to as ``webserver.dev``."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:148
+msgid ""
+"A file called ``init.sls`` in a subdirectory is referred to by the path of "
+"the directory. So, ``webserver/init.sls`` is referred to as ``webserver``."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:151
+msgid ""
+"If both ``webserver.sls`` and ``webserver/init.sls`` happen to exist, "
+"``webserver/init.sls`` will be ignored and ``webserver.sls`` will be the "
+"file referred to as ``webserver``."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:156
+msgid "Troubleshooting Salt"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:158
+msgid ""
+"If the expected output isn't seen, the following tips can help to narrow "
+"down the problem."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:167
+msgid "Turn up logging"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:162
+msgid ""
+"Salt can be quite chatty when you change the logging setting to ``debug``:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:175
+msgid "Run the minion in the foreground"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:170
+msgid ""
+"By not starting the minion in daemon mode (:option:`-d <salt-minion -d>`) "
+"one can view any output from the minion as it works:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:177
+msgid ""
+"Increase the default timeout value when running :command:`salt`. For "
+"example, to change the default timeout to 60 seconds:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:184
+msgid "For best results, combine all three:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:192
+msgid "Next steps"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt1.rst:194
+msgid ""
+"This tutorial focused on getting a simple Salt States configuration working."
+" :doc:`Part 2 <states_pt2>` will build on this example to cover more "
+"advanced :term:`sls` syntax and will explore more of the states that ship "
+"with Salt."
+msgstr ""

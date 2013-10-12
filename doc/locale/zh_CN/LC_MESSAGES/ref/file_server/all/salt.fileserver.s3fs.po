@@ -1,0 +1,116 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/all/salt.fileserver.s3fs.rst:6
+msgid "salt.fileserver.s3fs"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:1
+msgid "The backend for a fileserver based on Amazon S3"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:3
+msgid ":doc:`/ref/file_server/index`"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:5
+msgid ""
+"This backend exposes directories in S3 buckets as Salt environments.  This "
+"feature is managed by the :conf_master:`fileserver_backend` option in the "
+"Salt Master config."
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:10
+msgid "S3 credentials can be set in the master config file like so:"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:17
+msgid ""
+"Alternatively, if on EC2 these credentials can be automatically loaded from "
+"instance metadata."
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:20
+msgid ""
+"Additionally, ``s3fs`` must be included in the "
+":conf_master:`fileserver_backend` config parameter in the master config "
+"file:"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:28
+msgid "This fileserver supports two modes of operation for the buckets:"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:30
+msgid ":strong:`A single bucket per environment`"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:42
+msgid ":strong:`Multiple environments per bucket`"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:52
+msgid ""
+"Note that bucket names must be all lowercase both in the AWS console and in "
+"Salt, otherwise you may encounter ``SignatureDoesNotMatch`` errors."
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs:55
+msgid ""
+"A multiple-environment bucket must adhere to the following root directory "
+"structure::"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of
+#: salt.fileserver.s3fs.dir_list:1
+msgid "Return a list of all directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs.envs:1
+msgid ""
+"Return a list of directories within the bucket that can be used as "
+"environments."
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of
+#: salt.fileserver.s3fs.file_hash:1
+msgid "Return an MD5 file hash"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of
+#: salt.fileserver.s3fs.file_list:1
+msgid ""
+"Return a list of all files on the file server in a specified environment"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of
+#: salt.fileserver.s3fs.file_list_emptydirs:1
+msgid "Return a list of all empty directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of
+#: salt.fileserver.s3fs.find_file:1
+msgid ""
+"Look through the buckets cache file for a match. If the field is found, it "
+"is retrieved from S3 only if its cached version is missing, or if the MD5 "
+"does not match."
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of
+#: salt.fileserver.s3fs.serve_file:1
+msgid "Return a chunk from a file based on the data received"
+msgstr ""
+
+#: ../../../salt/fileserver/s3fs.pydocstring of salt.fileserver.s3fs.update:1
+msgid "Update the cache file for the bucket."
+msgstr ""

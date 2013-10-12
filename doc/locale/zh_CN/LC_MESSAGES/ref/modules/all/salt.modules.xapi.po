@@ -1,0 +1,244 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.xapi.rst:6
+msgid "salt.modules.xapi"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi:1
+msgid "This module (mostly) uses the XenAPI to manage Xen virtual machines."
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi:3
+msgid ""
+"Big fat warning: the XenAPI used in this file is the one bundled with Xen "
+"Source, NOT XenServer nor Xen Cloud Platform. As a matter of fact it *will* "
+"fail under those platforms. From what I've read, little work is needed to "
+"adapt this code to XS/XCP, mostly playing with XenAPI version, but as XCP is"
+" not taking precedence on Xen Source on many platforms, please keep "
+"compatibility in mind."
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi:10
+msgid "Useful documentation:"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi:12
+msgid ""
+". http://downloads.xen.org/Wiki/XenAPI/xenapi-1.0.6.pdf . "
+"http://docs.vmd.citrix.com/XenServer/6.0.0/1.0/en_gb/api/ . "
+"https://github.com/xen-org/xen-api/tree/master/scripts/examples/python . "
+"http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.create:1
+msgid "Start a defined domain"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.create:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.destroy:4
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.freecpu:4
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.freemem:4
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.full_info:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.get_disks:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.get_macs:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.get_nics:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.is_hyper:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.list_vms:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.node_info:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.pause:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.reboot:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.reset:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.resume:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.setmem:5
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.setvcpus:5
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.shutdown:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.start:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vcpu_pin:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_cputime:17
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_diskstats:17
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_info:6
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_netstats:19
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_state:6
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.destroy:1
+msgid ""
+"Hard power down the virtual machine, this is equivalent to pulling the power"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.freecpu:1
+msgid ""
+"Return an int representing the number of unallocated cpus on this hypervisor"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.freemem:1
+msgid ""
+"Return an int representing the amount of memory that has not been given to "
+"virtual machines on this node"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.full_info:1
+msgid "Return the node_info, vm_info and freemem"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.get_disks:1
+msgid "Return the disks of a named vm"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.get_macs:1
+msgid "Return a list off MAC addresses from the named vm"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.get_nics:1
+msgid "Return info about the network interfaces of a named vm"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.is_hyper:1
+msgid "Returns a bool whether or not this node is a hypervisor of any kind"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.list_vms:1
+msgid "Return a list of virtual machine names on the minion"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:1
+msgid "Migrates the virtual machine to another hypervisor"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:9
+msgid "Optional values:"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:11
+msgid "live"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:12
+msgid "Use live migration"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:13
+msgid "port"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:14
+msgid "Use a specified port"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:15
+msgid "node"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:16
+msgid "Use specified NUMA node on target"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:17
+msgid "ssl"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:18
+msgid "use ssl connection for migration"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:19
+msgid "change_home_server"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.migrate:20
+msgid "change home server for managed domains"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.node_info:1
+msgid "Return a dict with information about this node"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.pause:1
+msgid "Pause the named vm"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.reboot:1
+msgid "Reboot a domain via ACPI request"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.reset:1
+msgid "Reset a VM by emulating the reset button on a physical machine"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.resume:1
+msgid "Resume the named vm"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.setmem:1
+msgid "Changes the amount of memory allocated to VM."
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.setmem:3
+msgid "Memory is to be specified in MB"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.setvcpus:1
+msgid "Changes the amount of vcpus allocated to VM."
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.setvcpus:3
+msgid "vcpus is an int representing the number to be assigned"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.shutdown:1
+msgid "Send a soft shutdown signal to the named vm"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.start:1
+msgid "Alias for the obscurely named 'create' function"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vcpu_pin:1
+msgid "Set which CPUs a VCPU can use."
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_cputime:1
+msgid "Return cputime used by the vms on this hyper in a list of dicts:"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_cputime:14
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_diskstats:14
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_info:3
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_netstats:16
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_state:3
+msgid ""
+"If you pass a VM name in as an argument then it will return info for just "
+"the named VM, otherwise it will return all VMs."
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_diskstats:1
+msgid ""
+"Return disk usage counters used by the vms on this hyper in a list of dicts:"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_info:1
+msgid "Return detailed information about the vms."
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_netstats:1
+msgid ""
+"Return combined network counters used by the vms on this hyper in a list of "
+"dicts:"
+msgstr ""
+
+#: ../../../salt/modules/xapi.pydocstring of salt.modules.xapi.vm_state:1
+msgid "Return list of all the vms and their state."
+msgstr ""

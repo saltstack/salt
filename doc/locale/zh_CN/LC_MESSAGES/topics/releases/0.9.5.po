@@ -1,0 +1,765 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.9.5.rst:6
+msgid "Salt 0.9.5 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:8
+msgid ""
+"Salt 0.9.5 is one of the largest steps forward in the development of Salt."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:10
+msgid ""
+"0.9.5 comes with many milestones, this release has seen the community of "
+"developers grow out to an international team of 46 code contributors and has"
+" many feature additions, feature enhancements, bug fixes and speed "
+"improvements."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:16
+msgid ""
+"Be sure to :ref:`read the upgrade instructions <v0.9.5-msgpack>` about the "
+"switch to msgpack before upgrading!"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:20
+msgid "Community"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:22
+msgid ""
+"Nothing has proven to have more value to the development of Salt that the "
+"outstanding community that has been growing at such a great pace around "
+"Salt. This has proven not only that Salt has great value, but also the "
+"expandability of Salt is as exponential as I originally intended."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:27
+msgid ""
+"0.9.5 has received over 600 additional commits since 0.9.4 with a swath of "
+"new committers. The following individuals have contributed to the "
+"development of 0.9.5:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:31
+msgid "Aaron Bull Schaefer"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:32
+msgid "Antti Kaihola"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:33
+msgid "Bas Tichelaar"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:34
+msgid "Brad Barden"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:35
+msgid "Brian Wagner"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:36
+msgid "Byron Clark"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:37
+msgid "Chris Scheller"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:38
+msgid "Christer Edwards"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:39
+msgid "Clint Savage"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:40
+msgid "Corey Quinn"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:41
+msgid "David Boucha"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:42
+msgid "Eivind Uggedal"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:43
+msgid "Eric Poelke"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:44
+msgid "Evan Borgstrom"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:45
+msgid "Jed Glazner"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:46
+msgid "Jeff Schroeder"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:47
+msgid "Jeffrey C. Ollie"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:48
+msgid "Jonas Buckner"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:49
+msgid "Kent Tenney"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:50
+msgid "Martin Schnabel"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:51
+msgid "Maxim Burgerhout"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:52
+msgid "Mitch Anderson"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:53
+msgid "Nathaniel Whiteinge"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:54
+msgid "Seth House"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:55
+msgid "Thomas S Hatch"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:56
+msgid "Thomas Schreiber"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:57
+msgid "Tor Hveem"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:58
+msgid "lzyeval"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:59
+msgid "syphernl"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:61
+msgid "This makes 21 new developers since 0.9.4 was released!"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:63
+msgid ""
+"To keep up with the growing community follow Salt on Ohloh "
+"(http://www.ohloh.net/p/salt), to join the Salt development community, fork "
+"Salt on Github, and get coding (https://github.com/saltstack/salt)!"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:68
+msgid "Major Features"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:73
+msgid "SPEED! Pickle to msgpack"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:75
+msgid ""
+"For a few months now we have been talking about moving away from Python "
+"pickles for network serialization, but a preferred serialization format had "
+"not yet been found. After an extensive performance testing period involving "
+"everything from JSON to protocol buffers, a clear winner emerged. Message "
+"Pack (http://msgpack.org/) proved to not only be the fastest and most "
+"compact, but also the most \"salt like\". Message Pack is simple, and the "
+"code involved is very small. The msgpack library for Python has been added "
+"directly to Salt."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:84
+msgid ""
+"This move introduces a few changes to Salt. First off, Salt is no longer a "
+"\"noarch\" package, since the msgpack lib is written in C. Salt 0.9.5 will "
+"also have compatibility issues with 0.9.4 with the default configuration."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:88
+msgid ""
+"We have gone through great lengths to avoid backwards compatibility issues "
+"with Salt, but changing the serialization medium was going to create issues "
+"regardless. Salt 0.9.5 is somewhat backwards compatible with earlier "
+"minions. A 0.9.5 master can command older minions, but only if the "
+":conf_master:`serial` config value in the master is set to ``pickle``. This "
+"will tell the master to publish messages in pickle format and will allow the"
+" master to receive messages in both msgpack and pickle formats."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:96
+msgid ""
+"Therefore **the suggested methods for upgrading** are either to just upgrade"
+" everything at once, or:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:99
+msgid "Upgrade the master to 0.9.5"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:100
+msgid "Set :conf_master:`serial` to ``pickle`` in the master config"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:101
+msgid "Upgrade the minions"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:102
+msgid "Remove the ``serial`` option from the master config"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:104
+msgid ""
+"Since pickles can be used as a security exploit the ability for a master to "
+"accept pickles from minions at all will be removed in a future release."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:108
+msgid "C Bindings for YAML"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:110
+msgid ""
+"All of the YAML rendering is now done with the YAML C bindings. This speeds "
+"up all of the sls files when running states."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:114
+msgid "Experimental Windows Support"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:116
+msgid ""
+"David Boucha has worked tirelessly to bring initial support to Salt for "
+"Microsoft Windows operating systems. Right now the Salt Minion can run as a "
+"native Windows service and accept commands."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:120
+msgid ""
+"In the weeks and months to come Windows will receive the full treatment and "
+"will have support for Salt States and more robust support for managing "
+"Windows systems. This is a big step forward for Salt to move entirely "
+"outside of the Unix world, and proves Salt is a viable cross platform "
+"solution. Big Thanks to Dave for his contribution here!"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:127
+msgid "Dynamic Module Distribution"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:129
+msgid ""
+"Many Salt users have expressed the desire to have Salt distribute in-house "
+"modules, states, renderers, returners, and grains. This support has been "
+"added in a number of ways:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:134
+msgid "Modules via States"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:136
+msgid ""
+"Now when salt modules are deployed to a minion via the state system as a "
+"file, then the modules will be automatically loaded into the active running "
+"minion - no restart required - and into the active running state. So custom "
+"state modules can be deployed and used in the same state run."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:142
+msgid "Modules via Module Environment Directories"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:143
+msgid ""
+"Under the file_roots each environment can now have directories that are used"
+" to deploy large groups of modules. These directories sync modules at the "
+"beginning of a state run on the minion, or can be manually synced via the "
+"Salt module :mod:`salt.modules.saltutil.sync_all`."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:148
+msgid "The directories are named:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:150
+msgid "``_modules``"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:151
+msgid "``_states``"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:152
+msgid "``_grains``"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:153
+msgid "``_renderers``"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:154
+msgid "``_returners``"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:156
+msgid "The modules are pushed to their respective scopes on the minions."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:159
+msgid "Module Reloading"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:161
+msgid ""
+"Modules can now be reloaded without restarting the minion, this is done by "
+"calling the :mod:`salt.modules.sys.reload_modules` function."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:164
+msgid ""
+"But wait, there's more! Now when a salt module of any type is added via "
+"states the modules will be automatically reloaded, allowing for modules to "
+"be laid down with states and then immediately used."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:168
+msgid ""
+"Finally, all modules are reloaded when modules are dynamically distributed "
+"from the salt master."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:172
+msgid "Enable / Disable Added to Service"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:174
+msgid ""
+"A great deal of demand has existed for adding the capability to set services"
+" to be started at boot in the service module. This feature also comes with "
+"an overhaul of the service modules and initial systemd support."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:178
+msgid ""
+"This means that the :mod:`service state <salt.states.service.running>` can "
+"now accept ``- enable: True`` to make sure a service is enabled at boot, and"
+" ``- enable: False`` to make sure it is disabled."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:183
+msgid "Compound Target"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:185
+msgid ""
+"A new target type has been added to the lineup, the compound target. In "
+"previous versions the desired minions could only be targeted via a single "
+"specific target type, but now many target specifications can be declared."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:189
+msgid ""
+"These targets can also be separated by and/or operators, so certain "
+"properties can be used to omit a node:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:196
+msgid ""
+"will match all minions with ids starting with webserv via a glob and minions"
+" matching the ``os:Debian`` grain. Or minions that match the ``db.*`` "
+"regular expression."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:202
+msgid "Node Groups"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:204
+msgid ""
+"Often the convenience of having a predefined group of minions to execute "
+"targets on is desired. This can be accomplished with the new nodegroups "
+"feature. Nodegroups allow for predefined compound targets to be declared in "
+"the master configuration file:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:215
+msgid "And then used via the ``-N`` option:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:222
+msgid "Minion Side Data Store"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:224
+msgid ""
+"The data module introduces the initial approach into storing persistent data"
+" on the minions, specific to the minions. This allows for data to be stored "
+"on minions that can be accessed from the master or from the minion."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:228
+msgid ""
+"The Minion datastore is young, and will eventually provide an interface "
+"similar to a more mature key/value pair server."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:232
+msgid "Major Grains Improvement"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:234
+msgid ""
+"The Salt grains have been overhauled to include a massive amount of extra "
+"data. this includes hardware data, os data and salt specific data."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:238
+msgid "Salt -Q is Useful Now"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:240
+msgid ""
+"In the past the salt query system, which would display the data from recent "
+"executions would be displayed in pure Python, and it was unreadable."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:243
+msgid ""
+"0.9.5 has added the outputter system to the ``-Q`` option, thus enabling the"
+" salt query system to return readable output."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:247
+msgid "Packaging Updates"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:249
+msgid ""
+"Huge strides have been made in packaging Salt for distributions. These "
+"additions are thanks to our wonderful community where the work to set up "
+"packages has proceeded tirelessly."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:254
+msgid "FreeBSD"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:256
+msgid "Salt on FreeBSD? There a port for that:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:258
+msgid "http://www.freebsd.org/cgi/cvsweb.cgi/ports/sysutils/salt/pkg-descr"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:260
+msgid ""
+"This port was developed and added by Christer Edwards. This also marks the "
+"first time Salt has been included in an upstream packaging system!"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:264
+msgid "Fedora and Red Hat Enterprise"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:266
+msgid ""
+"Salt packages have been prepared for inclusion in the Fedora Project and in "
+"EPEL for Red Hat Enterprise 5 and 6. These packages are the result of the "
+"efforts made by Clint Savage (herlo)."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:271
+msgid "Debian/Ubuntu"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:273
+msgid ""
+"A team of many contributors have assisted in developing packages for Debian "
+"and Ubuntu. Salt is still actively seeking inclusion in upstream Debian and "
+"Ubuntu and the package data that has been prepared is being pushed through "
+"the needed channels for inclusion."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:278
+msgid "These packages have been prepared with the help of:"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:280
+msgid "Corey"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:281
+msgid "Aaron Toponce"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:282
+msgid "and`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:285
+msgid "More to Come"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:287
+msgid ""
+"We are actively seeking inclusion in more distributions. Primarily getting "
+"Salt into Gentoo, SUSE, OpenBSD and preparing Solaris support are all "
+"turning into higher priorities."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:292
+msgid "Refinement"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:294
+msgid ""
+"Salt continues to be refined into a faster, more stable and more usable "
+"application. 0.9.5 comes with more debug logging, more bug fixes and more "
+"complete support."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:299
+msgid "More Testing, More BugFixes"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:301
+msgid ""
+"0.9.5 comes with more bugfixes due to more testing than any previous "
+"release. The growing community and the introduction a a dedicated QA "
+"environment have unearthed many issues that were hiding under the covers. "
+"This has further refined and cleaned the state interface, taking care of "
+"things from minor visual issues to repairing misleading data."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:308
+msgid "Custom Exceptions"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:310
+msgid ""
+"A custom exception module has been added to throw salt specific exceptions. "
+"This allows Salt to give much more granular error information."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:314
+msgid "New Modules"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:317
+msgid ":mod:`data <salt.modules.data>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:318
+msgid ""
+"The new data module manages a persistent datastore on the minion. Big thanks"
+" to bastichelaar for his help refining this module"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:322
+msgid ":mod:`freebsdkmod <salt.modules.freebsdkmod>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:323
+msgid ""
+"FreeBSD kernel modules can now be managed in the same way Salt handles Linux"
+" kernel modules."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:326
+msgid "This module was contributed thanks to the efforts of Christer Edwards"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:329
+msgid ":mod:`gentoo_service <salt.modules.gentoo_service>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:330
+msgid ""
+"Support has been added for managing services in Gentoo. Now Gentoo services "
+"can be started, stopped, restarted, enabled, disabled and viewed."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:334
+msgid ":mod:`pip <salt.modules.pip>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:335
+msgid ""
+"The pip module introduces management for pip installed applications. Thanks "
+"goes to whitinge for the addition of the pip module"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:339
+msgid ":mod:`rh_service <salt.modules.rh_service>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:340
+msgid ""
+"The rh_service module enables Red Hat and Fedora specific service "
+"management. Now Red Hat like systems come with extensive management of the "
+"classic init system used by Red Hat"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:345
+msgid ":mod:`saltutil <salt.modules.saltutil>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:346
+msgid ""
+"The saltutil module has been added as a place to hold functions used in the "
+"maintenance and management of salt itself. Saltutil is used to salt the salt"
+" minion. The saltutil module is presently used only to sync extension "
+"modules from the master server."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:352
+msgid ":mod:`systemd <salt.modules.systemd>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:353
+msgid ""
+"Systemd support has been added to Salt, now systems using this next "
+"generation init system are supported on systems running systemd."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:357
+msgid ":mod:`virtualenv <salt.modules.virtualenv>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:358
+msgid ""
+"The virtualenv module has been added to allow salt to create virtual Python "
+"environments. Thanks goes to whitinge for the addition of the virtualenv "
+"module"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:363
+msgid ":mod:`win_disk <salt.modules.win_disk>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:364
+msgid ""
+"Support for gathering disk information on Microsoft Windows minions The "
+"windows modules come courtesy of Utah_Dave"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:368
+msgid ":mod:`win_service <salt.modules.win_service>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:369
+msgid ""
+"The win_service module adds service support to Salt for Microsoft Windows "
+"services"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:373
+msgid ":mod:`win_useradd <salt.modules.win_useradd>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:374
+msgid "Salt can now manage local users on Microsoft Windows Systems"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:377
+msgid ":mod:`yumpkg5 <salt.modules.yumpkg5>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:378
+msgid ""
+"The yumpkg module introduces in 0.9.4 uses the yum API to interact with the "
+"yum package manager. Unfortunately, on Red Hat 5 systems salt does not have "
+"access to the yum API because the yum API is running under Python 2.4 and "
+"Salt needs to run under Python 2.6."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:383
+msgid ""
+"The yumpkg5 module bypasses this issue by shelling out to yum on systems "
+"where the yum API is not available."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:387
+msgid "New States"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:390
+msgid ":mod:`mysql_database <salt.states.mysql_database>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:391
+msgid ""
+"The new mysql_database state adds the ability to systems running a mysql "
+"server to manage the existence of mysql databases."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:394
+msgid "The mysql states are thanks to syphernl"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:397
+msgid ":mod:`mysql_user <salt.states.mysql_user>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:398
+msgid "The mysql_user state enables mysql user management."
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:401
+msgid ":mod:`virtualenv <salt.states.virtualenv>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:402
+msgid ""
+"The virtualenv state can manage the state of Python virtual environments. "
+"Thanks to Whitinge for the virtualenv state"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:406
+msgid "New Returners"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:409
+msgid ":mod:`cassandra_returner <salt.returners.cassandra_return>`"
+msgstr ""
+
+#: ../../topics/releases/0.9.5.rst:411
+msgid ""
+"A returner allowing Salt to send data to a cassandra server. Thanks to Byron"
+" Clark for contributing this returner"
+msgstr ""

@@ -1,0 +1,50 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/runners/all/salt.runners.jobs.rst:6
+msgid "salt.runners.jobs"
+msgstr ""
+
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs:1
+msgid "A convenience system to manage jobs, both active and already run"
+msgstr ""
+
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.active:1
+msgid ""
+"Return a report on all actively running jobs from a job id centric "
+"perspective"
+msgstr ""
+
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.active:4
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.list_job:3
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.list_jobs:3
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.lookup_jid:3
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.print_job:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.list_job:1
+msgid "List a specific job given by its jid"
+msgstr ""
+
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.list_jobs:1
+msgid "List all detectable jobs and associated functions"
+msgstr ""
+
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.lookup_jid:1
+msgid "Return the printout from a previously executed job"
+msgstr ""
+
+#: ../../../salt/runners/jobs.pydocstring of salt.runners.jobs.print_job:1
+msgid "Print job available details, including return data."
+msgstr ""

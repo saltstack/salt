@@ -1,0 +1,571 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.solr.rst:6
+msgid "salt.modules.solr"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:2
+msgid "Apache Solr Salt Module"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:4
+msgid "Author: Jed Glazner Version: 0.2.1 Modified: 12/09/2011"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:8
+msgid ""
+"This module uses HTTP requests to talk to the apache solr request handlers "
+"to gather information and report errors. Because of this the minion doesn't "
+"necessarily need to reside on the actual slave.  However if you want to use "
+"the signal function the minion must reside on the physical solr host."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:13
+msgid ""
+"This module supports multi-core and standard setups.  Certain methods are "
+"master/slave specific.  Make sure you set the solr.type. If you have "
+"questions or want a feature request please ask."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:18
+msgid "Coming Features in 0.3"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:20
+msgid "Add command for checking for replication failures on slaves"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:21
+msgid "Improve match_index_versions since it's pointless on busy solr masters"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:22
+msgid "Add additional local fs checks for backups to make sure they succeeded"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:25
+msgid "Override these in the minion config"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:28
+msgid "solr.cores"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:28
+msgid ""
+"A list of core names eg ['core1','core2']. An empty list indicates non-"
+"multicore setup."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:30
+msgid "solr.baseurl"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:31
+msgid "The root level URL to access solr via HTTP"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:33
+msgid "solr.request_timeout"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:33
+msgid ""
+"The number of seconds before timing out an HTTP/HTTPS/FTP request. If "
+"nothing is specified then the python global timeout setting is used."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:35
+msgid "solr.type"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:36
+msgid "Possible values are 'master' or 'slave'"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:38
+msgid "solr.backup_path"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:38
+msgid ""
+"The path to store your backups. If you are using cores and you can specify "
+"to append the core name to the path in the backup method."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:41
+msgid "solr.num_backups"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:41
+msgid ""
+"For versions of solr >= 3.5. Indicates the number of backups to keep. This "
+"option is ignored if your version is less."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:43
+msgid "solr.init_script"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:44
+msgid "The full path to your init script with start/stop options"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:46
+msgid "solr.dih.options"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:46
+msgid "A list of options to pass to the DIH."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:49
+msgid "Required Options for DIH"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:51
+msgid "clean : False"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:52
+msgid "Clear the index before importing"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:53
+msgid "commit : True"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:54
+msgid "Commit the documents to the index upon completion"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:55
+msgid "optimize : True"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:56
+msgid "Optimize the index after commit is complete"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:59
+msgid "verbose : True"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr:58
+msgid "Get verbose output"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:1
+msgid ""
+"MASTER ONLY Aborts an existing import command to the specified handler. This"
+" command can only be run if the minion is configured with solr.type=master"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:6
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:5
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:6
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.import_status:5
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:5
+msgid "handler : str"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:7
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:6
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:7
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.import_status:6
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:6
+msgid "The name of the data import handler."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:8
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:6
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.core_status:4
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:7
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:8
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.import_status:7
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.is_replication_enabled:4
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.match_index_versions:8
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.optimize:10
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.ping:3
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.reload_core:7
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:7
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.replication_details:3
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:6 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.set_replication_enabled:9
+msgid "host : str (None)"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:9
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:7
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.core_status:5
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:8
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:9
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.import_status:8
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.is_replication_enabled:5
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.match_index_versions:9
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.optimize:11
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.ping:4
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.reload_core:8
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:8
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.replication_details:4
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:7 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.set_replication_enabled:9
+msgid "The solr host to query. __opts__['host'] is default."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:10
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:9
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:10
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.import_status:9
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:9
+msgid "core : str (None)"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:11
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:10
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:11
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.import_status:10 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.reload_import_config:10
+msgid "The core the handler belongs to."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:13
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.import_status:12 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.reload_import_config:12
+msgid "verbose : boolean (False)"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:13
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:12
+msgid "Run the command with verbose output."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:15
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:15
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.core_status:9
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:19
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:19
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.import_status:14 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.is_replication_enabled:10
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.match_index_versions:14
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.optimize:16
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.ping:9
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.reload_core:12
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:14
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.replication_details:9
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:12 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.set_replication_enabled:15
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.version:9
+msgid "Return : dict<str,obj>::"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.abort_import:19
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:19
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.core_status:13
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:23
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:23
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.import_status:18 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.is_replication_enabled:14
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.lucene_version:13 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.match_index_versions:18
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.optimize:20
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.ping:13
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.reload_core:16
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:18
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.replication_details:13
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:16 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.set_replication_enabled:19
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.signal:9
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.version:13
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:1
+msgid ""
+"Tell solr make a backup.  This method can be mis-leading since it uses the "
+"backup API.  If an error happens during the backup you are not notified. The"
+" status: 'OK' in the response simply means that solr received the request "
+"successfully."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:9
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.is_replication_enabled:8
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.lucene_version:7 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.match_index_versions:12
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.optimize:14
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.ping:7
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.replication_details:7
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:10 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.set_replication_enabled:13
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.version:7
+msgid "core_name : str (None)"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:9
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.is_replication_enabled:7
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.lucene_version:6 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.match_index_versions:11
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.optimize:13
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.ping:6
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.replication_details:6
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:9 ../../../salt/modules/solr.pydocstring
+#: of salt.modules.solr.version:6
+msgid ""
+"The name of the solr core if using cores. Leave this blank if you are not "
+"using cores or if you want to check all cores."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:13
+msgid "append_core_to_path : boolean (False)"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.backup:12
+msgid ""
+"If True add the name of the core to the backup path. Assumes that minion "
+"backup path is not None."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.core_status:1
+msgid ""
+"MULTI-CORE HOSTS ONLY Get the status for a given core or all cores if no "
+"core is specified"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.core_status:7
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.reload_core:10
+msgid "core_name : str"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.core_status:7
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.reload_core:10
+msgid "The name of the core to reload"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:1
+msgid ""
+"Submits an import command to the specified handler using specified options. "
+"This command can only be run if the minion is configured with "
+"solr.type=master"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:14
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:14
+msgid "options : dict (__opts__)"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:12
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:13
+msgid ""
+"A list of options such as clean, optimize commit, verbose, and "
+"pause_replication. leave blank to use __opts__ defaults. options will be "
+"merged with __opts__"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:17
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:17
+msgid "extra : dict ([])"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.delta_import:17
+msgid "Extra name value pairs to pass to the handler. eg [\"name=value\"]"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:1
+msgid ""
+"MASTER ONLY Submits an import command to the specified handler using "
+"specified options. This command can only be run if the minion is configured "
+"with solr.type=master"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.full_import:17
+msgid "Extra name value pairs to pass to the handler. e.g. [\"name=value\"]"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.import_status:1
+msgid ""
+"Submits an import command to the specified handler using specified options. "
+"This command can only be run if the minion is configured with solr.type: "
+"'master'"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.import_status:12
+msgid "Specifies verbose output"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.is_replication_enabled:1
+msgid ""
+"SLAVE CALL Check for errors, and determine if a slave is replicating or not."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.lucene_version:1
+msgid ""
+"Gets the lucene version that solr is using. If you are running a multi-core "
+"setup you should specify a core name since all the cores run under the same "
+"servlet container, they will all have the same version."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.lucene_version:9
+msgid "Return: dict<str,obj>::"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.match_index_versions:1
+msgid ""
+"SLAVE CALL Verifies that the master and the slave versions are in sync by "
+"comparing the index version. If you are constantly pushing updates the index"
+" the master and slave versions will seldom match. A solution to this is "
+"pause indexing every so often to allow the slave to replicate and then call "
+"this method before allowing indexing to resume."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.optimize:1
+msgid ""
+"Search queries fast, but it is a very expensive operation. The ideal process"
+" is to run this with a master/slave configuration.  Then you can optimize "
+"the master, and push the optimized index to the slaves. If you are running a"
+" single solr instance, or if you are going to run this on a slave be aware "
+"than search performance will be horrible while this command is being run. "
+"Additionally it can take a LONG time to run and your HTTP request may "
+"timeout. If that happens adjust your timeout settings."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.ping:1
+msgid "Does a health check on solr, makes sure solr can talk to the indexes."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.reload_core:1
+msgid ""
+"MULTI-CORE HOSTS ONLY Load a new core from the same configuration as an "
+"existing registered core. While the \"new\" core is initializing, the "
+"\"old\" one will continue to accept requests. Once it has finished, all new "
+"request will go to the \"new\" core, and the \"old\" core will be unloaded."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.reload_core:22
+msgid "Return data is in the following format::"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.reload_import_config:1
+msgid ""
+"MASTER ONLY re-loads the handler config XML file. This command can only be "
+"run if the minion is a 'master' type"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.replication_details:1
+msgid "Get the full replication details."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:1
+msgid "SLAVE CALL Prevent the slaves from polling the master for updates."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:4
+msgid "polling : boolean"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_is_polling:5
+msgid "True will enable polling. False will disable it."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_replication_enabled:1
+msgid ""
+"MASTER ONLY Sets the master to ignore poll requests from the slaves. Useful "
+"when you don't want the slaves replicating during indexing or when clearing "
+"the index."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_replication_enabled:6
+msgid "status : boolean"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_replication_enabled:7
+msgid "Sets the replication status to the specified state."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of
+#: salt.modules.solr.set_replication_enabled:12
+msgid ""
+"The name of the solr core if using cores. Leave this blank if you are not "
+"using cores or if you want to set the status on all cores."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.signal:1
+msgid ""
+"Signals Apache Solr to start, stop, or restart. Obviously this is only going"
+" to work if the minion resides on the solr host. Additionally Solr doesn't "
+"ship with an init script so one must be created."
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.signal:7
+msgid "signal : str (None)"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.signal:6
+msgid ""
+"The command to pass to the apache solr init valid values are 'start', "
+"'stop', and 'restart'"
+msgstr ""
+
+#: ../../../salt/modules/solr.pydocstring of salt.modules.solr.version:1
+msgid ""
+"Gets the solr version for the core specified.  You should specify a core "
+"here as all the cores will run under the same servlet container and so will "
+"all have the same version."
+msgstr ""

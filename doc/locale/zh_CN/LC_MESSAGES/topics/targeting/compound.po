@@ -1,0 +1,154 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/targeting/compound.rst:6
+msgid "Compound matchers"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:9
+msgid "Compound matcher"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:11
+msgid ""
+"A combination of many target definitions that can be combined with boolean "
+"operators."
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:14
+msgid ""
+"Compound matchers allow very granular minion targeting using any of Salt's "
+"matchers. The default matcher is a :mod:`glob <python2:fnmatch>` match, just"
+" as with CLI and :term:`top file` matching. To match using anything other "
+"than a glob, prefix the match string with the appropriate letter from the "
+"table below, followed by an ``@`` sign."
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:21
+msgid "Letter"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:21
+msgid "Match Type"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:21
+msgid "Example"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:23
+msgid "G"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:23
+msgid "Grains glob"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:23
+msgid "``G@os:Ubuntu``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:24
+msgid "E"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:24
+msgid "PCRE Minion ID"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:24
+msgid "``E@web\\d+\\.(dev|qa|prod)\\.loc``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:25
+msgid "P"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:25
+msgid "Grains PCRE"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:25
+msgid "``P@os:(RedHat|Fedora|CentOS)``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:26
+msgid "L"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:26
+msgid "List of minions"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:26
+msgid "``L@minion1.example.com,minion3.domain.com or bl*.domain.com``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:27
+msgid "I"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:27
+msgid "Pillar glob"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:27
+msgid "``I@pdata:foobar``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:28
+msgid "S"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:28
+msgid "Subnet/IP address"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:28
+msgid "``S@192.168.1.0/24`` or ``S@192.168.1.100``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:29
+msgid "R"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:29
+msgid "Range cluster"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:29
+msgid "``R@%foo.bar``"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:32
+msgid ""
+"Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators."
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:34
+msgid ""
+"For example, the following string matches all Debian minions with a hostname"
+" that begins with ``webserv``, as well as any minions that have a hostname "
+"which matches the :mod:`regular expression <python2:re>` ``web-dc1-srv.*``:"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:42
+msgid ""
+"That same example expressed in a :term:`top file` looks like the following:"
+msgstr ""
+
+#: ../../topics/targeting/compound.rst:51
+msgid ""
+"Note that a leading ``not`` is not supported in compound matches. Instead, "
+"something like the following must be done:"
+msgstr ""

@@ -1,0 +1,28 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/installation/gentoo.rst:6
+msgid "Gentoo"
+msgstr ""
+
+#: ../../topics/installation/gentoo.rst:8
+msgid "Salt can be easily installed on Gentoo via Portage:"
+msgstr ""
+
+#: ../../topics/installation/gentoo.rst:15
+msgid "Post-installation tasks"
+msgstr ""
+
+#: ../../topics/installation/gentoo.rst:17
+msgid "Now go to the :doc:`Configuring Salt</topics/configuration>` page."
+msgstr ""

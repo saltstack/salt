@@ -1,0 +1,110 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/cli/salt-syndic.rst:6
+msgid "``salt-syndic``"
+msgstr ""
+
+#: ../../ref/cli/salt-syndic.rst:8
+msgid ""
+"The Salt syndic daemon, a special minion that passes through commands from a"
+" higher master"
+msgstr ""
+
+#: ../../ref/cli/salt-syndic.rst:12
+msgid "Synopsis"
+msgstr ""
+
+#: ../../ref/cli/salt-syndic.rst:14
+msgid "salt-syndic [ options ]"
+msgstr ""
+
+#: ../../ref/cli/salt-syndic.rst:17
+msgid "Description"
+msgstr ""
+
+#: ../../ref/cli/salt-syndic.rst:19
+msgid ""
+"The Salt syndic daemon, a special minion that passes through commands from a"
+" higher master."
+msgstr ""
+
+#: ../../ref/cli/salt-syndic.rst:23
+msgid "Options"
+msgstr ""
+
+#: ../../ref/cli/_includes/common-options.rst:3
+msgid "Print the version of Salt that is running."
+msgstr ""
+
+#: ../../ref/cli/_includes/common-options.rst:7
+msgid "Show program's dependencies and version number, and then exit"
+msgstr ""
+
+#: ../../ref/cli/_includes/common-options.rst:11
+msgid "Show the help message and exit"
+msgstr ""
+
+#: ../../ref/cli/_includes/common-options.rst:15
+msgid ""
+"The location of the Salt configuration directory. This directory contains "
+"the configuration files for Salt master and minions. The default location on"
+" most systems is ``/etc/salt``."
+msgstr ""
+
+#: ../../ref/cli/_includes/daemon-options.rst:3
+msgid "Specify user to run |salt-daemon|"
+msgstr ""
+
+#: ../../ref/cli/_includes/daemon-options.rst:7
+msgid "Run |salt-daemon| as a daemon"
+msgstr ""
+
+#: ../../ref/cli/_includes/daemon-options.rst:11
+msgid ""
+"Specify the location of the pidfile. Default: /var/run/|salt-daemon|.pid"
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:2
+msgid "Logging Options"
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:4
+msgid ""
+"Logging options which override any settings defined on the configuration "
+"files."
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:9
+msgid ""
+"Console logging log level. One of ``all``, ``garbage``, ``trace``, "
+"``debug``, ``info``, ``warning``, ``error``, ``quiet``. Default: |loglevel|."
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:16
+msgid "Log file path. Default: |logfile|."
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:20
+msgid ""
+"Logfile logging log level. One of ``all``, ``garbage``, ``trace``, "
+"``debug``, ``info``, ``warning``, ``error``, ``quiet``. Default: |loglevel|."
+msgstr ""
+
+#: ../../ref/cli/salt-syndic.rst:38
+msgid "See also"
+msgstr ""
+
+#: ../../ref/cli/salt-syndic.rst:40
+msgid ":manpage:`salt(1)` :manpage:`salt-master(1)` :manpage:`salt-minion(1)`"
+msgstr ""

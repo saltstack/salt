@@ -1,0 +1,27 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/pillar/all/salt.pillar.puppet.rst:6
+msgid "salt.pillar.puppet"
+msgstr ""
+
+#: ../../../salt/pillar/puppet.pydocstring of salt.pillar.puppet:1
+msgid ""
+"Execute an unmodified puppet_node_classifier and read the output as YAML. "
+"The YAML data is then directly overlaid onto the minion's pillar data."
+msgstr ""
+
+#: ../../../salt/pillar/puppet.pydocstring of salt.pillar.puppet.ext_pillar:1
+msgid ""
+"Execute an unmodified puppet_node_classifier and read the output as YAML"
+msgstr ""

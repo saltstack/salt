@@ -1,0 +1,241 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tests/integration.rst:6
+msgid "Integration Tests"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:8
+msgid ""
+"The Salt integration tests come with a number of classes and methods which "
+"allow for components to be easily tested. These classes are generally "
+"inherited from and provide specific methods for hooking into the running "
+"integration test environment created by the integration tests."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:13
+msgid ""
+"It is noteworthy that since integration tests validate against a running "
+"environment that they are generally the preferred means to write tests."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:16
+msgid ""
+"The integration system is all located under tests/integration in the Salt "
+"source tree."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:20
+msgid "Integration Classes"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:22
+msgid ""
+"The integration classes are located in tests/integration/__init__.py and can"
+" be extended therein. There are three classes available to extend:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:26
+msgid "ModuleCase"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:28
+msgid ""
+"Used to define executions run via the master to minions and to call single "
+"modules and states."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:31 ../../topics/tests/integration.rst:53
+#: ../../topics/tests/integration.rst:65
+msgid "The available methods are as follows:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:36 ../../topics/tests/integration.rst:58
+msgid "run_function:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:34 ../../topics/tests/integration.rst:56
+msgid ""
+"Run a single salt function and condition the return down to match the "
+"behavior of the raw function call. This will run the command and only return"
+" the results from a single minion to verify."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:39
+msgid "state_result:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:39
+msgid "Return the result data from a single state return"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:45
+msgid "run_state:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:42
+msgid "Run the state.single command and return the state return structure"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:48
+msgid "SyndicCase"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:50
+msgid ""
+"Used to execute remote commands via a syndic, only used to verify the "
+"capabilities of the Syndic."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:61
+msgid "ShellCase"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:63
+msgid "Shell out to the scripts which ship with Salt."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:68
+msgid "run_script:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:68
+msgid "Execute a salt script with the given argument string"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:72
+msgid "run_salt:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:71
+msgid ""
+"Execute the salt command, pass in the argument string as it would be passed "
+"on the command line."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:76
+msgid "run_run:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:75
+msgid ""
+"Execute the salt-run command, pass in the argument string as it would be "
+"passed on the command line."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:80
+msgid "run_run_plus:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:79
+msgid ""
+"Execute Salt run and the salt run function and return the data from each in "
+"a dict"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:84
+msgid "run_key:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:83
+msgid ""
+"Execute the salt-key command, pass in the argument string as it would be "
+"passed on the command line."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:88
+msgid "run_cp:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:87
+msgid ""
+"Execute salt-cp, pass in the argument string as it would be passed on the "
+"command line."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:93
+msgid "run_call:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:91
+msgid ""
+"Execute salt-call, pass in the argument string as it would be passed on the "
+"command line."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:96
+msgid "Examples"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:99
+msgid "Module Example via ModuleCase Class"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:101
+msgid ""
+"Import the integration module, this module is already added to the python "
+"path by the test execution. Inherit from the ``integration.ModuleCase`` "
+"class. The tests that execute against salt modules should be placed in the "
+"`tests/integration/modules` directory so that they will be detected by the "
+"test system."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:107
+msgid ""
+"Now the workhorse method ``run_function`` can be used to test a module:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:132
+msgid ""
+"ModuleCase can also be used to test states, when testing states place the "
+"test module in the `tests/integration/states` directory. The "
+"``state_result`` and the ``run_state`` methods are the workhorse here:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:171
+msgid ""
+"The above example also demonstrates using the integration files and the "
+"integration state tree. The variable `integration.FILES` will point to the "
+"directory used to store files that can be used or added to to help enable "
+"tests that require files. The location `integration.TMP` can also be used to"
+" store temporary files that the test system will clean up when the execution"
+" finishes."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:177
+msgid ""
+"The integration state tree can be found at "
+"`tests/integration/files/file/base`. This is where the referenced "
+"`host.present` sls file resides."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:181
+msgid "Shell Example via ShellCase"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:183
+msgid ""
+"Validating the shell commands can be done via shell tests. Here are some "
+"examples:"
+msgstr ""
+
+#: ../../topics/tests/integration.rst:214
+msgid ""
+"This example verifies that the ``salt-key`` command executes and returns as "
+"expected by making use of the ``run_key`` method."
+msgstr ""
+
+#: ../../topics/tests/integration.rst:217
+msgid ""
+"All shell tests should be placed in the `tests/integraion/shell` directory."
+msgstr ""

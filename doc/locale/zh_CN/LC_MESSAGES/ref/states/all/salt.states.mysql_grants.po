@@ -1,0 +1,173 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.mysql_grants.rst:6
+msgid "salt.states.mysql_grants"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of salt.states.mysql_grants:2
+msgid "Management of MySQL grants (user permissions)."
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of salt.states.mysql_grants:4
+msgid "MySQLdb Python module"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of salt.states.mysql_grants:5
+msgid "See :py:mod:`salt.modules.mysql` for setup instructions."
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of salt.states.mysql_grants:7
+msgid "The mysql_grants module is used to grant and revoke MySQL permissions."
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of salt.states.mysql_grants:9
+msgid ""
+"The ``name`` you pass in purely symbolic and does not have anything to do "
+"with the grant itself."
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants:12
+msgid ""
+"The ``database`` parameter needs to specify a 'priv_level' in the same "
+"specification as defined in the MySQL documentation:"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants:15
+msgid "\\*"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants:16
+msgid "\\*.\\*"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants:17
+msgid "db_name.\\*"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants:18
+msgid "db_name.tbl_name"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants:19
+msgid "etc..."
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:1
+msgid "Ensure that the grant is absent"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:4
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:4
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:4
+msgid "The name (key) of the grant to add"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:7
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:7
+msgid "grant"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:7
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:7
+msgid "The grant priv_type (i.e. select,insert,update OR all privileges)"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:10
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:10
+msgid "database"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:10
+msgid "The database priv_level (i.e. db.tbl OR db.*)"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:13
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:13
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:13
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:13
+msgid "The user to apply the grant to"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:15
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:16
+msgid "host"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.absent:16
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:16
+msgid "The network/host that the grant should apply to"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:1
+msgid "Ensure that the grant is present with the specified properties"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:10
+msgid "The database priv_level (ie. db.tbl OR db.*)"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:19
+msgid "grant_option"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:19
+msgid "Adds the WITH GRANT OPTION to the defined grant. default: False"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:21
+msgid "escape"
+msgstr ""
+
+#: ../../../salt/states/mysql_grants.pydocstring of
+#: salt.states.mysql_grants.present:22
+msgid "Defines if the database value gets escaped or not. default: True"
+msgstr ""

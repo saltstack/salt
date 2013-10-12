@@ -1,0 +1,216 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:6
+msgid "YAML Idiosyncrasies"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:8
+msgid ""
+"One of Salt's strengths, the use of existing serialization systems for "
+"representing SLS data, can also backfire. `YAML`_ is a general purpose "
+"system and there are a number of things that would seem to make sense in an "
+"sls file that cause YAML issues. It is wise to be aware of these issues. "
+"While reports or running into them are generally rare they can still crop up"
+" at unexpected times."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:18
+msgid "Spaces vs Tabs"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:20
+msgid ""
+"`YAML uses spaces`_, period. Do not use tabs in your SLS files! If strange "
+"errors are coming up in rendering SLS files, make sure to check that no tabs"
+" have crept in! In Vim, after enabling search highlighting with: ``:set "
+"hlsearch``,  you can check with the following key sequence in normal "
+"mode(you can hit `ESC` twice to be sure): ``/``, `Ctrl-v`, `Tab`, then hit "
+"`Enter`. Also, you can convert tabs to 2 spaces by these commands in Vim: "
+"``:set tabstop=2 expandtab`` and then ``:retab``."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:31
+msgid "Indentation"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:32
+msgid ""
+"The suggested syntax for YAML files is to use 2 spaces for indentation, but "
+"YAML will follow whatever indentation system that the individual file uses. "
+"Indentation of two spaces works very well for SLS files given the fact that "
+"the data is uniform and not deeply nested."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:38
+msgid "Nested Dicts (key=value)"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:40
+msgid ""
+"When :ref:`dicts <python2:typesmapping>` are more deeply nested, they no "
+"longer follow the same indentation logic. This is rarely something that "
+"comes up in Salt, since deeply nested options like these are discouraged "
+"when making State modules, but some do exist. A good example is the context "
+"and default options in the "
+":doc:`file.managed</ref/states/all/salt.states.file>` state:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:63
+msgid ""
+"Notice that the spacing used is 2 spaces, and that when defining the context"
+" and defaults options there is a 4 space indent. If only a 2 space indent is"
+" used then the information will not be loaded correctly. If using double "
+"spacing is not desirable, then a deeply nested dict can be declared with "
+"curly braces:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:86
+msgid "True/False, Yes/No, On/Off"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:88
+msgid ""
+"PyYAML will load these values as boolean ``True`` or ``False``. Un-"
+"capitalized versions will also be loaded as booleans (``true``, ``false``, "
+"``yes``, ``no``, ``on``, and ``off``). This can be especially problematic "
+"when constructing Pillar data. Make sure that your Pillars which need to use"
+" the string versions of these values are enclosed in quotes."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:95
+msgid "Integers are Parsed as Integers"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:97
+msgid ""
+"NOTE: This has been fixed in salt 0.10.0, as of this release passing an "
+"integer that is preceded by a 0 will be correctly parsed"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:100
+msgid ""
+"When passing :func:`integers <python2:int>` into an SLS file, they are "
+"passed as integers. This means that if a state accepts a string value and an"
+" integer is passed, that an integer will be sent. The solution here is to "
+"send the integer as a string."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:105
+msgid "This is best explained when setting the mode for a file:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:117
+msgid ""
+"Salt manages this well, since the mode is passed as 644, but if the mode is "
+"zero padded as 0644, then it is read by YAML as an integer and evaluated as "
+"an octal value, 0644 becomes 420. Therefore, if the file mode is preceded by"
+" a 0 then it needs to be passed as a string:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:134
+msgid "YAML does not like \"Double Short Decs\""
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:136
+msgid ""
+"If I can find a way to make YAML accept \"Double Short Decs\" then I will, "
+"since I think that double short decs would be awesome. So what is a \"Double"
+" Short Dec\"? It is when you declare a multiple short decs in one ID. Here "
+"is a standard short dec, it works great:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:146
+msgid ""
+"The short dec means that there are no arguments to pass, so it is not "
+"required to add any arguments, and it can save space."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:149
+msgid ""
+"YAML though, gets upset when declaring multiple short decs, for the "
+"record..."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:151
+msgid "THIS DOES NOT WORK:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:159
+msgid ""
+"Similarly declaring a short dec in the same ID dec as a standard dec does "
+"not work either..."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:162
+msgid "ALSO DOES NOT WORK:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:175
+msgid "The correct way is to define them like this:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:193
+msgid ""
+"Alternatively,  they can be defined the \"old way\",  or with multiple "
+"\"full decs\":"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:216
+msgid "YAML support only plain ASCII"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:218
+msgid "According to YAML specification, only ASCII characters can be used."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:220
+msgid ""
+"Within double-quotes, special characters may be represented with C-style "
+"escape sequences starting with a backslash ( \\\\ )."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:223
+msgid "Examples:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:235
+msgid ""
+"List of usable `Unicode characters`_  will help you to identify correct "
+"numbers."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:240
+msgid ""
+"Python can also be used to discover the Unicode number for a character:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:246
+msgid "This shell command can find wrong characters in your SLS files:"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:254
+msgid "Underscores stripped in Integer Definitions"
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:256
+msgid ""
+"If a definition only includes numbers and underscores, it is parsed by YAML "
+"as an integer and all underscores are stripped.  To ensure the object "
+"becomes a string, it should be surrounded by quotes.  `More information "
+"here`_."
+msgstr ""
+
+#: ../../topics/troubleshooting/yaml_idiosyncrasies.rst:262
+msgid "Here's an example:"
+msgstr ""

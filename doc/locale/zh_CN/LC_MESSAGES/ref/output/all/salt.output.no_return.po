@@ -1,0 +1,35 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/output/all/salt.output.no_return.rst:6
+msgid "salt.output.no_return"
+msgstr ""
+
+#: ../../../salt/output/no_return.pydocstring of salt.output.no_return:1
+msgid "Display output for minions that did not return"
+msgstr ""
+
+#: ../../../salt/output/no_return.pydocstring of
+#: salt.output.no_return.NestDisplay:1
+msgid "Create generator for nested output"
+msgstr ""
+
+#: ../../../salt/output/no_return.pydocstring of
+#: salt.output.no_return.NestDisplay.display:1
+msgid "Recursively iterate down through data structures to determine output"
+msgstr ""
+
+#: ../../../salt/output/no_return.pydocstring of
+#: salt.output.no_return.output:1
+msgid "Display ret data"
+msgstr ""

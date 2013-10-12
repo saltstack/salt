@@ -1,0 +1,191 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.git.rst:6
+msgid "salt.states.git"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git:2
+msgid "Interaction with Git repositories."
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git:4
+msgid ""
+"Important: Before using git over ssh, make sure your remote host fingerprint"
+" exists in \"~/.ssh/known_hosts\" file. To avoid requiring password "
+"authentication, it is also possible to pass private keys to use explicitly."
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:1
+msgid ""
+"Make sure the repository is cloned to the given directory and is up to date"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:4
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:4
+msgid "Address of the remote repository as passed to \"git clone\""
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:8
+msgid "rev"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:7
+msgid ""
+"The remote branch, tag, or revision ID to checkout after clone / before "
+"update"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:11
+msgid "target"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:11
+msgid "Name of the target directory where repository is about to be cloned"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:16
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:12
+msgid "runas"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:14
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:19
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:10
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:15
+msgid "Name of the user performing repository management operations"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:21
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:17
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:24
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:20
+msgid "force"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:24
+msgid "Force git to clone into pre-existing directories (deletes contents)"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:28
+msgid "force_checkout"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:27
+msgid ""
+"Force a checkout even if there might be overwritten changes (Default: False)"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:31
+msgid "submodules"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:31
+msgid "Update submodules on clone or branch change (Default: False)"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:35
+msgid "mirror"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:34
+msgid ""
+"True if the repository is to be a mirror of the remote repository. This "
+"implies bare, and thus is incompatible with rev."
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:39
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:7
+msgid "bare"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:38
+msgid ""
+"True if the repository is to be a bare clone of the remote repository. This "
+"is incompatible with rev, as nothing will be checked out."
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:44
+msgid "remote_name"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:42
+msgid ""
+"defines a different remote name. For the first clone the given name is set "
+"to the default remote, else it is just a additional remote. (Default: "
+"'origin')"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:49
+msgid "always_fetch"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:47
+msgid ""
+"If a tag or branch name is used as the rev a fetch will not occur until the "
+"tag or branch name changes. Setting this to true will force a fetch to "
+"occur. Only applies when rev is set. (Default: False)"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:52
+msgid "identity"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:52
+msgid "A path to a private key to use over SSH"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:56
+msgid "onlyif"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:55
+msgid ""
+"A command to run as a check, run the named command only if the command "
+"passed to the ``onlyif`` option returns true"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:59
+msgid "unless"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.latest:59
+msgid ""
+"A command to run as a check, only run the named command if the command "
+"passed to the ``unless`` option returns false"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:1
+msgid "Make sure the repository is present in the given directory"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:4
+msgid "Name of the directory where the repository is about to be created"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:7
+msgid "Create a bare repository (Default: True)"
+msgstr ""
+
+#: ../../../salt/states/git.pydocstring of salt.states.git.present:20
+msgid ""
+"Force-create a new repository into an pre-existing non-git directory "
+"(deletes contents)"
+msgstr ""

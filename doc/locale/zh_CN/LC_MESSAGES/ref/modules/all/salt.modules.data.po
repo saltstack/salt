@@ -1,0 +1,62 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.data.rst:6
+msgid "salt.modules.data"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data:1
+msgid ""
+"Manage a local persistent data structure that can hold any arbitrary data "
+"specific to the minion"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.cas:1
+msgid "Check and set a value in the minion datastore"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.cas:3
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.clear:4
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.dump:3
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.getval:3
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.getvals:3
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.load:3
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.update:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.clear:1
+msgid ""
+"Clear out all of the data in the minion datastore, this function is "
+"destructive!"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.dump:1
+msgid "Replace the entire datastore with a passed data structure"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.getval:1
+msgid "Get a value from the minion datastore"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.getvals:1
+msgid "Get values from the minion datastore"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.load:1
+msgid "Return all of the data in the minion datastore"
+msgstr ""
+
+#: ../../../salt/modules/data.pydocstring of salt.modules.data.update:1
+msgid "Update a key with a value in the minion datastore"
+msgstr ""

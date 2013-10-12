@@ -1,0 +1,67 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../salt/log/handlers/sentry_mod.pydocstring of
+#: salt.log.handlers.sentry_mod:7
+msgid "Sentry Logging Handler"
+msgstr ""
+
+#: ../../../salt/log/handlers/sentry_mod.pydocstring of
+#: salt.log.handlers.sentry_mod:11
+msgid ""
+"Configuring the python `Sentry`_ client, `Raven`_, should be done under the "
+"``sentry_handler`` configuration key. At the bare minimum, you need to "
+"define the `DSN`_. As an example:"
+msgstr ""
+
+#: ../../../salt/log/handlers/sentry_mod.pydocstring of
+#: salt.log.handlers.sentry_mod:21
+msgid "More complex configurations can be achieved, for example:"
+msgstr ""
+
+#: ../../../salt/log/handlers/sentry_mod.pydocstring of
+#: salt.log.handlers.sentry_mod:34
+msgid ""
+"All the client configuration keys are supported, please see the `Raven "
+"client documentation`_."
+msgstr ""
+
+#: ../../../salt/log/handlers/sentry_mod.pydocstring of
+#: salt.log.handlers.sentry_mod:37
+msgid ""
+"The default logging level for the sentry handler is ``ERROR``. If you wish "
+"to define a different one, define ``log_level`` under the ``sentry_handler``"
+" configuration key:"
+msgstr ""
+
+#: ../../../salt/log/handlers/sentry_mod.pydocstring of
+#: salt.log.handlers.sentry_mod:48
+msgid ""
+"The available log levels are those also available for the salt ``cli`` tools"
+" and configuration; ``salt --help`` should give you the required "
+"information."
+msgstr ""
+
+#: ../../../salt/log/handlers/sentry_mod.pydocstring of
+#: salt.log.handlers.sentry_mod:54
+msgid "Threaded Transports"
+msgstr ""
+
+#: ../../../salt/log/handlers/sentry_mod.pydocstring of
+#: salt.log.handlers.sentry_mod:56
+msgid ""
+"Raven's documents rightly suggest using its threaded transport for critical "
+"applications. However, don't forget that if you start having troubles with "
+"Salt after enabling the threaded transport, please try switching to a non-"
+"threaded transport to see if that fixes your problem."
+msgstr ""

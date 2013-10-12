@@ -1,0 +1,118 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.6.0.rst:6
+msgid "Salt 0.6.0 release notes"
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:8
+msgid ""
+"The Salt remote execution manager has reached initial functionality! Salt is"
+" a management application which can be used to execute commands on remote "
+"sets of servers."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:12
+msgid ""
+"The whole idea behind Salt is to create a system where a group of servers "
+"can be remotely controlled from a single master, not only can commands be "
+"executed on remote systems, but salt can also be used to gather information "
+"about your server environment."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:17
+msgid ""
+"Unlike similar systems, like Func and MCollective, Salt is extremely simple "
+"to setup and use, the entire application is contained in a single package, "
+"and the master and minion daemons require no running dependencies in the way"
+" that Func requires Certmaster and MCollective requires activeMQ."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:22
+msgid ""
+"Salt also manages authentication and encryption. Rather than using SSL for "
+"encryption, salt manages encryption on a payload level, so the data sent "
+"across the network is encrypted with fast AES encryption, and authentication"
+" uses RSA keys. This means that Salt is fast, secure, and very efficient."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:27
+msgid ""
+"Messaging in Salt is executed with ZeroMQ, so the message passing interface "
+"is built into salt and does not require an external ZeroMQ server. This also"
+" adds speed to Salt since there is no additional bloat on the networking "
+"layer, and ZeroMQ has already proven itself as a very fast networking "
+"system."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:32
+msgid ""
+"The remote execution in Salt is \"Lazy Execution\", in that once the command"
+" is sent the requesting network connection is closed. This makes it easier "
+"to detach the execution from the calling process on the master, it also "
+"means that replies are cached, so that information gathered from historic "
+"commands can be queried in the future."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:38
+msgid ""
+"Salt also allows users to make execution modules in Python. Writers of these"
+" modules should also be pleased to know that they have access to the "
+"impressive information gathered from PuppetLabs' Facter application, making "
+"Salt module more flexible. In the future I hope to also allow Salt to group "
+"servers based on Facter information as well."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:44
+msgid ""
+"All in all Salt is fast, efficient and clean, can be used from a simple "
+"command line client or through an API, uses message queue technology to make"
+" network execution extremely fast, and encryption is handled in a very fast "
+"and efficient manner. Salt is also VERY easy to use and VERY easy to extend."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:49
+msgid ""
+"You can find the source code for Salt on my GitHub page, I have also set up "
+"a few wiki pages explaining how to use and set up Salt. If you are using "
+"Arch Linux there is a package available in the Arch Linux AUR."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:53
+msgid "Salt 0.6.0 Source: :download:`salt-0.6.0.tar.gz`"
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:55
+msgid "GitHub page: |saltrepo|"
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:57
+msgid "Wiki: https://github.com/saltstack/salt/wiki"
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:59
+msgid "Arch Linux Package: https://aur.archlinux.org/packages.php?ID=47512"
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:61
+msgid ""
+"I am very open to contributions, for instance I need packages for more Linux"
+" distributions as well as BSD packages and testers."
+msgstr ""
+
+#: ../../topics/releases/0.6.0.rst:64
+msgid ""
+"Give Salt a try, this is the initial release and is not a 1.0 quality "
+"release, but it has been working well for me! I am eager to get your "
+"feedback!"
+msgstr ""

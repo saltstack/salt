@@ -1,0 +1,52 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.quota.rst:6
+msgid "salt.states.quota"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota:2
+msgid "Management of POSIX Quotas"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota:4
+msgid "The quota can be managed for the system:"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota.mode:1
+msgid "Set the quota for the system"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota.mode:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota.mode:4
+msgid "The filesystem to set the quota mode on"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota.mode:7
+msgid "mode"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota.mode:7
+msgid "Whether the quota system is 'on' or 'off'"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota.mode:9
+msgid "quotatype"
+msgstr ""
+
+#: ../../../salt/states/quota.pydocstring of salt.states.quota.mode:10
+msgid "Need to be 'user' or 'group'"
+msgstr ""

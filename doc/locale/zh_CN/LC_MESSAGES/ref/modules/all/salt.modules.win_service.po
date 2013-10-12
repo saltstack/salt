@@ -1,0 +1,144 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.win_service.rst:6
+msgid "salt.modules.win_service"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of salt.modules.win_service:1
+msgid "Windows Service module."
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.available:1
+msgid ""
+"Returns ``True`` if the specified service is available, otherwise returns "
+"``False``."
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.available:4
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.disable:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.disabled:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.enable:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.enabled:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_all:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_disabled:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_enabled:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_service_name:12
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.getsid:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.restart:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.start:3
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.status:5
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.stop:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.disable:1
+msgid "Disable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.disabled:1
+msgid "Check to see if the named service is disabled to start on boot"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.enable:1
+msgid "Enable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.enabled:1
+msgid "Check to see if the named service is enabled to start on boot"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_all:1
+msgid "Return all installed services"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_disabled:1
+msgid "Return the disabled services"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_enabled:1
+msgid "Return the enabled services"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_service_name:1
+msgid ""
+"The Display Name is what is displayed in Windows when services.msc is "
+"executed.  Each Display Name has an associated Service Name which is the "
+"actual name of the service.  This function allows you to discover the "
+"Service Name by returning a dictionary of Display Names and Service Names, "
+"or filter by adding arguments of Display Names."
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_service_name:7
+msgid ""
+"If no args are passed, return a dict of all services where the keys are the "
+"service Display Names and the values are the Service Names."
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.get_service_name:10
+msgid ""
+"If arguments are passed, create a dict of Display Names and Service Names"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.getsid:1
+msgid "Return the sid for this windows service"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.restart:1
+msgid "Restart the named service"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.start:1
+msgid "Start the specified service"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.status:1
+msgid ""
+"Return the status for a service, returns the PID or an empty string if the "
+"service is running or not, pass a signature to use to find the service via "
+"ps"
+msgstr ""
+
+#: ../../../salt/modules/win_service.pydocstring of
+#: salt.modules.win_service.stop:1
+msgid "Stop the specified service"
+msgstr ""

@@ -1,0 +1,376 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.9.3.rst:6
+msgid "Salt 0.9.3 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:8
+msgid ""
+"Salt 0.9.3 is finally arrived. This is another big step forward for Salt, "
+"new features range from proper FreeBSD support to fixing issues seen when "
+"attaching a minion to a master over the Internet."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:12
+msgid ""
+"The biggest improvements in 0.9.3 though can be found in the state system, "
+"it has progressed from something ready for early testers to a system ready "
+"to compete with platforms such as Puppet and Chef. The backbone of the state"
+" system has been greatly refined and many new features are available."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:18
+msgid "Download!"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:20
+msgid "The Salt source can be downloaded from the salt GitHub site:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:22
+msgid ":download:`salt-0.9.3.tar.gz`"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:24
+msgid "Or from PyPI:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:26
+msgid "http://pypi.python.org/packages/source/s/salt/salt-0.9.3.tar.gz"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:28
+msgid ""
+"For instructions on how to set up Salt please see the :ref:`installation` "
+"instructions."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:32
+msgid "New Features"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:35
+msgid "WAN Support"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:37
+msgid ""
+"Recently more people have been testing Salt minions connecting to Salt "
+"Masters over the Internet. It was found that Minions would commonly loose "
+"their connection to the master when working over the internet. The minions "
+"can now detect if the connection has been lost and reconnect to the master, "
+"making WAN connections much more reliable."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:44
+msgid "State System Fixes"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:46
+msgid ""
+"Substantial testing has gone into the state system and it is ready for real "
+"world usage. A great deal has been added to the documentation for states and"
+" the modules and functions available to states have been cleanly documented."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:50
+msgid ""
+"A number of State System bugs have also been founds and repaired, the output"
+" from the state system has also been refined to be extremely clear and "
+"concise."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:53
+msgid ""
+"Error reporting has also been introduced, issues found in sls files will now"
+" be clearly reported when executing Salt States."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:57
+msgid "Extend Declaration"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:59
+msgid ""
+"The Salt States have also gained the ``extend`` declaration. This "
+"declaration allows for states to be cleanly modified in a post environment. "
+"Simply said, if there is an apache.sls file that declares the apache "
+"service, then another sls can include apache and then extend it:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:79
+msgid ""
+"The notable behavior with the extend functionality is that it literally "
+"extends or overwrites a declaration set up in another sls module. This means"
+" that Salt will behave as though the modifications were made directly to the"
+" apache sls. This ensures that the apache service in this example is "
+"directly tied to all requirements."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:86
+msgid "Highstate Structure Specification"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:88
+msgid ""
+"This release comes with a clear specification of the Highstate data "
+"structure that is used to declare Salt States. This specification explains "
+"everything that can be declared in the Salt SLS modules."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:92
+msgid ""
+"The specification is extremely simple, and illustrates how Salt has been "
+"able to fulfill the requirements of a central configuration manager within a"
+" simple and easy to understand format and specification."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:97
+msgid "SheBang Renderer Switch"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:99
+msgid ""
+"It came to our attention that having many renderers means that there may be "
+"a situation where more than one State Renderer should be available within a "
+"single State Tree."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:103
+msgid ""
+"The method chosen to accomplish this was something already familiar to "
+"developers and systems administrators, a SheBang. The Python State Renderer "
+"displays this new capability."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:108
+msgid "Python State Renderer"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:110
+msgid ""
+"Until now Salt States could only be declared in yaml or json using Jinja or "
+"Mako. A new, very powerful, renderer has been added, making it possible to "
+"write Salt States in pure Python:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:125
+msgid ""
+"This renderer is used by making a run function that returns the Highstate "
+"data structure. Any capabilities of Python can be used in pure Python sls "
+"modules."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:128
+msgid ""
+"This example of a pure Python sls module is the same as this example in "
+"yaml:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:140
+msgid "FreeBSD Support"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:142
+msgid ""
+"Additional support has been added for FreeBSD, this is Salt's first branch "
+"out of the Linux world and proves the viability of Salt on non-Linux "
+"platforms."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:145
+msgid ""
+"Salt remote execution already worked on FreeBSD, and should work without "
+"issue on any Unix-like platform. But this support comes in the form of "
+"package management and user support, so Salt States also work on FreeBSD "
+"now."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:149
+msgid ""
+"The new freebsdpkg module provides package management support for FreeBSD "
+"and the new pw_user and pw_group provide user and group management."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:153
+msgid "Module and State Additions"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:156
+msgid "Cron Support"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:158
+msgid ""
+"Support for managing the system crontab has been added, declaring a cron "
+"state can be done easily:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:171
+msgid "File State Additions"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:173
+msgid ""
+"The file state has been given a number of new features, primarily the "
+"directory, recurse, symlink and absent functions."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:186
+msgid "file.directory"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:177
+msgid "Make sure that a directory exists and has the right permissions."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:197
+msgid "file.symlink"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:189
+msgid "Make a symlink."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:210
+msgid "file.recurse"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:200
+msgid ""
+"The recurse state function will recursively download a directory on the "
+"master file server and place it on the minion. Any change in the files on "
+"the master will be pushed to the minion. The recurse function is very "
+"powerful and has been tested by pushing out the full Linux kernel source."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:220
+msgid "file.absent"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:213
+msgid ""
+"Make sure that the file is not on the system, recursively deletes "
+"directories, files and symlinks."
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:223
+msgid "Sysctl Module and State"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:225
+msgid ""
+"The sysctl module and state allows for sysctl components in the kernel to be"
+" managed easily. the sysctl module contains the following functions:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:229
+msgid "sysctl.show"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:229
+msgid "Return a list of sysctl parameters for this minion"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:232
+msgid "sysctl.get"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:232
+msgid "Return a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:235
+msgid "sysctl.assign"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:235
+msgid "Assign a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:238
+msgid "sysctl.persist"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:238
+msgid "Assign and persist a simple sysctl parameter for this minion"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:240
+msgid "The sysctl state allows for sysctl parameters to be assigned:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:250
+msgid "Kernel Module Management"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:252
+msgid ""
+"A module for managing Linux kernel modules has been added. The new functions"
+" are as follows:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:256
+msgid "kmod.available"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:256
+msgid "Return a list of all available kernel modules"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:259
+msgid "kmod.check_available"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:259
+msgid "Check to see if the specified kernel module is available"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:262
+msgid "kmod.lsmod"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:262
+msgid "Return a dict containing information about currently loaded modules"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:265
+msgid "kmod.load"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:265
+msgid "Load the specified kernel module"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:268
+msgid "kmod.remove"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:268
+msgid "Unload the specified kernel module"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:270
+msgid "The kmod state can enforce modules be either present or absent:"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:279
+msgid "Ssh Authorized Keys"
+msgstr ""
+
+#: ../../topics/releases/0.9.3.rst:280
+msgid ""
+"The ssh_auth state can distribute ssh authorized keys out to minions. Ssh "
+"authorized keys can be present or absent."
+msgstr ""

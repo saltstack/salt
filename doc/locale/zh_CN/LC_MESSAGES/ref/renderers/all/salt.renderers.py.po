@@ -1,0 +1,41 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/renderers/all/salt.renderers.py.rst:6
+msgid "salt.renderers.py"
+msgstr ""
+
+#: ../../../salt/renderers/py.pydocstring of salt.renderers.py:1
+msgid "Pure python state renderer"
+msgstr ""
+
+#: ../../../salt/renderers/py.pydocstring of salt.renderers.py:3
+msgid ""
+"The sls file should contain a function called ``run`` which returns high "
+"state data"
+msgstr ""
+
+#: ../../../salt/renderers/py.pydocstring of salt.renderers.py:6
+msgid ""
+"In this module, a few objects are defined for you, including the usual "
+"(with``__`` added) ``__salt__`` dictionary, ``__grains__``, ``__pillar__``, "
+"``__opts__``, ``__env__``, and ``__sls__``."
+msgstr ""
+
+#: ../../../salt/renderers/py.pydocstring of salt.renderers.py.render:1
+msgid "Render the python module's components"
+msgstr ""
+
+#: ../../../salt/renderers/py.pydocstring of salt.renderers.py.render:3
+msgid "string"
+msgstr ""

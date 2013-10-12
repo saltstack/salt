@@ -1,0 +1,110 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/returners/all/index.rst:8
+msgid "Full list of builtin returner modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`carbon_return <salt.returners.carbon_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Take data from salt and \"return\" it into a carbon receiver"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`cassandra_return <salt.returners.cassandra_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Return data to a Cassandra ColumnFamily"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`local <salt.returners.local>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ""
+"The local returner is used to test the returner interface, it just prints "
+"the"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mongo_future_return <salt.returners.mongo_future_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1 ../../<autosummary>:1
+msgid "Return data to a mongodb server"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mongo_return <salt.returners.mongo_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`mysql <salt.returners.mysql>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Return data to a mysql server"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`postgres <salt.returners.postgres>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Return data to a postgresql server"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`redis_return <salt.returners.redis_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Return data to a redis server"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`sentry_return <salt.returners.sentry_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Salt returner that report execution results back to sentry."
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`smtp_return <salt.returners.smtp_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Return salt data via email"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`sqlite3_return <salt.returners.sqlite3_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Insert minion return data into a sqlite3 database"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid ":obj:`syslog_return <salt.returners.syslog_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+msgid "Return data to the host operating system's syslog facility"
+msgstr ""

@@ -1,0 +1,74 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/startup.rst:6
+msgid "Startup States"
+msgstr ""
+
+#: ../../ref/states/startup.rst:8
+msgid ""
+"Sometimes it may be desired that the salt minion execute a state run when it"
+" is started. This alleviates the need for the master to initiate a state run"
+" on a new minion and can make provisioning much easier."
+msgstr ""
+
+#: ../../ref/states/startup.rst:12
+msgid ""
+"As of Salt 0.10.3 the minion config reads options that allow for states to "
+"be executed at startup. The options are `startup_states`, `sls_list` and "
+"`top_file`."
+msgstr ""
+
+#: ../../ref/states/startup.rst:16
+msgid ""
+"The `startup_states` option can be passed one of a number of arguments to "
+"define how to execute states. The available options are:"
+msgstr ""
+
+#: ../../ref/states/startup.rst:20
+msgid "highstate"
+msgstr ""
+
+#: ../../ref/states/startup.rst:20
+msgid "Execute ``state.highstate``"
+msgstr ""
+
+#: ../../ref/states/startup.rst:23
+msgid "sls"
+msgstr ""
+
+#: ../../ref/states/startup.rst:23
+msgid "Read in the ``sls_list`` option and execute the named sls files"
+msgstr ""
+
+#: ../../ref/states/startup.rst:27
+msgid "top"
+msgstr ""
+
+#: ../../ref/states/startup.rst:26
+msgid ""
+"Read in the ``top_file`` option and execute states based on that top file on"
+" the Salt Master"
+msgstr ""
+
+#: ../../ref/states/startup.rst:30
+msgid "Examples:"
+msgstr ""
+
+#: ../../ref/states/startup.rst:32
+msgid "Execute ``state.highstate`` when starting the minion:"
+msgstr ""
+
+#: ../../ref/states/startup.rst:39
+msgid "Execute the sls files `edit.vim` and `hyper`:"
+msgstr ""

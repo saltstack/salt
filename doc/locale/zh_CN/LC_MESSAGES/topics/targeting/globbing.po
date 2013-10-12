@@ -1,0 +1,114 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/targeting/globbing.rst:6
+msgid "Matching the ``minion id``"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:9
+msgid "minion id"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:11
+msgid ""
+"A unique identifier for a given minion. By default the minion id is the FQDN"
+" of that host but this can be overridden."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:14
+msgid ""
+"Each minion needs a unique identifier. By default when a minion starts for "
+"the first time it chooses its :abbr:`FQDN (fully qualified domain name)` as "
+"that identifier. The minion id can be overridden via the minion's "
+":conf_minion:`id` configuration setting."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:19
+msgid "minion id and minion keys"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:21
+msgid ""
+"The :term:`minion id` is used to generate the minion's public/private keys "
+"and if it ever changes the master must then accept the new key as though the"
+" minion was a new host."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:26
+msgid "Globbing"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:28
+msgid ""
+"The default matching that Salt utilizes is :py:mod:`shell-style globbing "
+"<python2:fnmatch>` around the :term:`minion id`. This also works for states "
+"in the :term:`top file`."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:34
+msgid ""
+"You must wrap :command:`salt` calls that use globbing in single-quotes to "
+"prevent the shell from expanding the globs before Salt is invoked."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:37
+msgid "Match all minions:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:43
+msgid ""
+"Match all minions in the example.net domain or any of the example domains:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:50
+msgid ""
+"Match all the ``webN`` minions in the example.net domain "
+"(``web1.example.net``, ``web2.example.net`` … ``webN.example.net``):"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:57
+msgid "Match the ``web1`` through ``web5`` minions:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:63
+msgid "Match the ``web-x``, ``web-y``, and ``web-z`` minions:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:71
+msgid "Regular Expressions"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:73
+msgid ""
+"Minions can be matched using Perl-compatible :py:mod:`regular expressions "
+"<python2:re>` (which is globbing on steroids and a ton of caffeine)."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:76
+msgid "Match both ``web1-prod`` and ``web1-devel`` minions:"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:82
+msgid ""
+"When using regular expressions in a State's :term:`top file`, you must "
+"specify the matcher as the first option. The following example executes the "
+"contents of ``webserver.sls`` on the above-mentioned minions."
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:95
+msgid "Lists"
+msgstr ""
+
+#: ../../topics/targeting/globbing.rst:97
+msgid "At the most basic level, you can specify a flat list of minion IDs:"
+msgstr ""

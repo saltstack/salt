@@ -1,0 +1,159 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.grains.rst:6
+msgid "salt.modules.grains"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains:1
+msgid "Return/control aspects of the grains data"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.append:3
+msgid "Append a value to a list in the grains config file"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.append:5
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.delval:5
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.filter_by:60 ../../../salt/modules/grains.pydocstring
+#: of salt.modules.grains.get:14 ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.get_or_set_hash:17
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.item:3
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.items:3
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.ls:3
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.remove:5
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.setval:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.delval:3
+msgid "Delete a grain from the grains config file"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.filter_by:3
+msgid ""
+"Look up the given grain in a given dictionary for the current OS and return "
+"the result"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.filter_by:6
+msgid ""
+"Although this may occasionally be useful at the CLI, the primary intent of "
+"this function is for use in Jinja to make short work of creating lookup "
+"tables for OS-specific data. For example:"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.filter_by:25
+msgid ""
+"Values in the lookup table may be overridden by values in Pillar. An example"
+" Pillar to override values in the example above could be as follows:"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.filter_by:35
+msgid ""
+"The call to ``filter_by()`` would be modified as follows to reference those "
+"Pillar values:"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.filter_by:45
+msgid ""
+"A dictionary, keyed by a grain, containing a value or values relevant to "
+"systems matching that grain. For example, a key could be the grain for an OS"
+" and the value could the name of a package on that particular OS."
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.filter_by:49
+msgid ""
+"The name of a grain to match with the current system's grains. For example, "
+"the value of the \"os_family\" grain for the current system could be used to"
+" pull values from the ``lookup_dict`` dictionary."
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.filter_by:53
+msgid ""
+"A dictionary to merge with the ``lookup_dict`` before doing the lookup. This"
+" allows Pillar to override the values in the ``lookup_dict``. This could be "
+"useful, for example, to override the values for non-standard package names "
+"such as when using a different Python version from the default Python "
+"version provided by the OS (e.g., ``python26-mysql`` instead of ``python-"
+"mysql``)."
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.get:1
+msgid ""
+"Attempt to retrieve the named value from grains, if the named value is not "
+"available return the passed default. The default return is an empty string."
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.get:4
+msgid ""
+"The value can also represent a value in a nested dict using a \":\" "
+"delimiter for the dict. This means that if a dict in grains looks like "
+"this::"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.get:9
+msgid ""
+"To retrieve the value associated with the apache key in the pkg dict this "
+"key can be passed::"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.get_or_set_hash:1
+msgid ""
+"Perform a one-time generation of a hash and write it to the local grains. If"
+" that grain has already been set return the value instead."
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.get_or_set_hash:4
+msgid ""
+"This is useful for generating passwords or keys that are specific to a "
+"single minion that don't need to be stored somewhere centrally."
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of
+#: salt.modules.grains.get_or_set_hash:7
+msgid "State Example:"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.item:1
+msgid "Return one or more grains"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.item:10
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.items:9
+msgid "Sanitized CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.items:1
+msgid "Return all of the minion's grains"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.ls:1
+msgid "Return a list of all available grains"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.remove:3
+msgid "Remove a value from a list in the grains config file"
+msgstr ""
+
+#: ../../../salt/modules/grains.pydocstring of salt.modules.grains.setval:1
+msgid "Set a grains value in the grains config file"
+msgstr ""

@@ -1,0 +1,66 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/virt/nic.rst:6
+msgid "Virtual Machine Network Profiles"
+msgstr ""
+
+#: ../../topics/virt/nic.rst:8
+msgid ""
+"Salt Virt allows for the network devices created for deployed virtual "
+"machines to be finely configured. The configuration is a simple data "
+"structure which is read from the ``config.option`` function, meaning that "
+"the configuration can be stored in the minion config file, the master config"
+" file, or the minion's pillar."
+msgstr ""
+
+#: ../../topics/virt/nic.rst:14
+msgid ""
+"This configuration option is called ``virt.nic``. By default the "
+"``virt.nic`` option is empty but defaults to a data structure which looks "
+"like this:"
+msgstr ""
+
+#: ../../topics/virt/nic.rst:27
+msgid ""
+"The model does not need to be defined, Salt will default to the optimal "
+"model used by the underlying hypervisor, in the case of kvm this model is "
+":strong:`virtio`"
+msgstr ""
+
+#: ../../topics/virt/nic.rst:31
+msgid ""
+"This configuration sets up a network profile called default. The default "
+"profile creates a single Ethernet device on the virtual machine that is "
+"bridged to the hypervisor's :strong:`br0` interface. This default setup does"
+" not require setting up the ``virt.nic`` configuration, and is the reason "
+"why a default install only requires setting up the :strong:`br0` bridge "
+"device on the hypervisor."
+msgstr ""
+
+#: ../../topics/virt/nic.rst:39
+msgid "Define More Profiles"
+msgstr ""
+
+#: ../../topics/virt/nic.rst:41
+msgid ""
+"Many environments will require more complex network profiles and may require"
+" more than one profile, this can be easily accomplished:"
+msgstr ""
+
+#: ../../topics/virt/nic.rst:82
+msgid ""
+"This configuration allows for one of six profiles to be selected, allowing "
+"virtual machines to be created which attach to different network depending "
+"on the needs of the deployed vm."
+msgstr ""

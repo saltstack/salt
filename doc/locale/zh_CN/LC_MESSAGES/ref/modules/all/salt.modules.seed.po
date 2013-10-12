@@ -1,0 +1,77 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.seed.rst:6
+msgid "salt.modules.seed"
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed:1
+msgid "Virtual machine image management tools"
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:1
+msgid ""
+"Seed a location (disk image, directory, or block device) with the minion "
+"config, approve the minion's key, and/or install salt-minion."
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:4
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:14
+msgid "path"
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:13
+msgid ""
+"Full path to the directory, device, or disk image  on the target minion's "
+"file system."
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:17
+msgid "id"
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:17
+msgid "Minion id with which to seed the path."
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:21
+msgid "config"
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:20
+msgid ""
+"Minion configuration options. By default, the 'master' option is set to the "
+"target host's 'master'."
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:26
+msgid "approve_key"
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:24
+msgid ""
+"Request a pre-approval of the generated minion key. Requires that the salt-"
+"master be configured to either auto-accept all keys or expect a signing "
+"request from the target host. Default: true."
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:28
+msgid "install"
+msgstr ""
+
+#: ../../../salt/modules/seed.pydocstring of salt.modules.seed.apply_:29
+msgid "Install salt-minion, if absent. Default: true."
+msgstr ""

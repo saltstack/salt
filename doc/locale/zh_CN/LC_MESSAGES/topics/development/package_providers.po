@@ -1,0 +1,357 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/development/package_providers.rst:6
+msgid "Package Providers"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:8
+msgid "This page contains guidelines for writing package providers."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:11
+msgid "Package Functions"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:13
+msgid ""
+"One of the most important features of Salt is package management. There is "
+"no shortage of package managers, so in the interest of providing a "
+"consistent experience in :mod:`pkg <salt.states.pkg>` states, there are "
+"certain functions that should be present in a package provider. Note that "
+"these are subject to change as new features are added or existing features "
+"are enhanced."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:21
+#: ../../topics/development/package_providers.rst:251
+msgid "list_pkgs"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:23
+msgid ""
+"This function should declare an empty dict, and then add packages to it by "
+"calling :mod:`pkg_resource.add_pkg <salt.modules.pkg_resource.add_pkg>`, "
+"like so:"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:31
+msgid ""
+"The last thing that should be done before returning is to execute "
+":mod:`pkg_resource.sort_pkglist <salt.modules.pkg_resource.sort_pkglist>`. "
+"This function does not presently do anything to the return dict, but will be"
+" used in future versions of Salt."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:41
+msgid ""
+"``list_pkgs`` returns a dictionary of installed packages, with the keys "
+"being the package names and the values being the version installed. Example "
+"return data:"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:52
+msgid "latest_version"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:54
+msgid ""
+"Accepts an arbitrary number of arguments. Each argument is a package name. "
+"The return value for a package will be an empty string if the package is not"
+" found or if the package is up-to-date. The only case in which a non-empty "
+"string is returned is if the package is available for new installation (i.e."
+" not already installed) or if there is an upgrade available."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:60
+msgid ""
+"If only one argument was passed, this function return a string, otherwise a "
+"dict of name/version pairs is returned."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:63
+msgid ""
+"This function must also accept ``**kwargs``, in order to receive the "
+"``fromrepo`` and ``repo`` keyword arguments from pkg states. Where "
+"supported, these arguments should be used to find the install/upgrade "
+"candidate in the specified repository. The ``fromrepo`` kwarg takes "
+"precedence over ``repo``, so if both of those kwargs are present, the "
+"repository specified in ``fromrepo`` should be used. However, if ``repo`` is"
+" used instead of ``fromrepo``, it should still work, to preserve backwards "
+"compatibility with older versions of Salt."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:73
+msgid "version"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:75
+msgid ""
+"Like ``latest_version``, accepts an arbitrary number of arguments and "
+"returns a string if a single package name was passed, or a dict of "
+"name/value pairs if more than one was passed. The only difference is that "
+"the return values are the currently-installed versions of whatever packages "
+"are passed. If the package is not installed, an empty string is returned for"
+" that package."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:83
+msgid "upgrade_available"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:85
+msgid ""
+"Deprecated and destined to be removed. For now, should just do the "
+"following:"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:93
+msgid "install"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:95
+msgid "The following arguments are required and should default to ``None``:"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:97
+msgid "name (for single-package pkg states)"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:98
+msgid "pkgs (for multiple-package pkg states)"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:99
+msgid "sources (for binary package file installation)"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:101
+msgid ""
+"The first thing that this function should do is call "
+":mod:`pkg_resource.parse_targets <salt.modules.pkg_resource.parse_targets>` "
+"(see below). This function will convert the SLS input into a more easily "
+"parsed data structure. :mod:`pkg_resource.parse_targets "
+"<salt.modules.pkg_resource.parse_targets>` may need to be modified to "
+"support your new package provider, as it does things like parsing package "
+"metadata which cannot be done for every package management system."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:116
+msgid ""
+"Two values will be returned to the :strong:`install` function. The first of "
+"them will be a dictionary. The keys of this dictionary will be package "
+"names, though the values will differ depending on what kind of installation "
+"is being done:"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:121
+msgid ""
+"If :strong:`name` was provided (and :strong:`pkgs` was not), then there will"
+" be a single key in the dictionary, and its value will be ``None``. Once the"
+" data has been returned, if the :strong:`version` keyword argument was "
+"provided, then it should replace the ``None`` value in the dictionary."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:126
+msgid ""
+"If :strong:`pkgs` was provided, then :strong:`name` is ignored, and the "
+"dictionary will contain one entry for each package in the :strong:`pkgs` "
+"list. The values in the dictionary will be ``None`` if a version was not "
+"specified for the package, and the desired version if specified. See the "
+":strong:`Multiple Package Installation Options` section of the "
+":mod:`pkg.installed <salt.states.pkg.installed>` state for more info."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:133
+msgid ""
+"If :strong:`sources` was provided, then :strong:`name` is ignored, and the "
+"dictionary values will be the path/URI for the package."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:137
+msgid ""
+"The second return value will be a string with two possible values: "
+"``repository`` or ``file``. The :strong:`install` function can use this "
+"value (if necessary) to build the proper command to install the targeted "
+"package(s)."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:141
+msgid ""
+"Both before and after the installing the target(s), you should run "
+":strong:`list_pkgs` to obtain a list of the installed packages. You should "
+"then return the output of :mod:`pkg_resource.find_changes "
+"<salt.modules.pkg_resource.find_changes>`:"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:152
+msgid "remove"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:154
+msgid "Removes the passed package and return a list of the packages removed."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:158
+msgid "Package Repo Functions"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:159
+msgid ""
+"There are some functions provided by ``pkg`` which are specific to package "
+"repositories, and not to packages themselves. When writing modules for new "
+"package managers, these functions should be made available as stated below, "
+"in order to provide compatibility with the ``pkgrepo`` state."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:164
+msgid ""
+"All repo functions should accept a basedir option, which defines which "
+"directory repository configuration should be found in. The default for this "
+"is dictated by the repo manager that is being used, and rarely needs to be "
+"changed."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:175
+msgid "list_repos"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:176
+msgid "Lists the repositories that are currently configured on this system."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:182
+msgid "Returns a dictionary, in the following format:"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:192
+msgid "get_repo"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:193
+msgid "Displays all local configuration for a specific repository."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:199
+msgid ""
+"The information is formatted in much the same way as list_repos, but is "
+"specific to only one repo."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:210
+msgid "del_repo"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:211
+msgid ""
+"Removes the local configuration for a specific repository. Requires a `repo`"
+" argument, which must match the locally configured name. This function "
+"returns a string, which informs the user as to whether or not the operation "
+"was a success."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:221
+msgid "mod_repo"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:222
+msgid ""
+"Modify the local configuration for one or more option for a configured repo."
+" This is also the way to create new repository configuration on the local "
+"system; if a repo is specified which does not yet exist, it will be created."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:226
+msgid ""
+"The options specified for this function are specific to the system; please "
+"refer to the documentation for your specific repo manager for specifics."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:235
+msgid "Low-Package Functions"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:236
+msgid ""
+"In general, the standard package functions as describes above will meet your"
+" needs. These functions use the system's native repo manager (for instance, "
+"yum or the apt tools). In most cases, the repo manager is actually separate "
+"from the package manager. For instance, yum is usually a front-end for rpm, "
+"and apt is usually a front-end for dpkg. When possible, the package "
+"functions that use those package managers directly should do so through the "
+"low package functions."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:244
+msgid ""
+"It is normal and sane for ``pkg`` to make calls to ``lowpkgs``, but "
+"``lowpkg`` must never make calls to ``pkg``. This is affects functions which"
+" are required by both ``pkg`` and ``lowpkg``, but the technique in ``pkg`` "
+"is more performant than what is available to ``lowpkg``. When this is the "
+"case, the ``lowpkg`` function that requires that technique must still use "
+"the ``lowpkg`` version."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:252
+msgid ""
+"Returns a dict of packages installed, including the package name and "
+"version. Can accept a list of packages; if none are specified, then all "
+"installed packages will be listed."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:260
+#: ../../topics/development/package_providers.rst:278
+msgid "Example output:"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:268
+msgid "verify"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:269
+msgid ""
+"Many (but not all) package management systems provide a way to verify that "
+"the files installed by the package manager have or have not changed. This "
+"function accepts a list of packages; if none are specified, all packages "
+"will be included."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:286
+msgid "file_list"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:287
+#: ../../topics/development/package_providers.rst:309
+msgid ""
+"Lists all of the files installed by all packages specified. If not packages "
+"are specified, then all files for all known packages are returned."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:294
+msgid ""
+"This function does not return which files belong to which packages; all "
+"files are returned as one giant list (hence the `file_list` function name. "
+"However, This information is still returned inside of a dict, so that it can"
+" provide any errors to the user in a sane manner."
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:308
+msgid "file_dict"
+msgstr ""
+
+#: ../../topics/development/package_providers.rst:316
+msgid ""
+"Unlike `file_list`, this function will break down which files belong to "
+"which packages. It will also return errors in the same manner as "
+"`file_list`."
+msgstr ""

@@ -1,0 +1,362 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/conventions/packaging.rst:6
+msgid "SaltStack Packaging Guide"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:8
+msgid ""
+"Since Salt provides a powerful toolkit for system management and automation,"
+" the package can be spit into a number of sub-tools. While packaging Salt as"
+" a single package containing all components is perfectly acceptable, the "
+"split packages should follow this convention."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:14
+msgid "Source Files"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:16
+msgid ""
+"Release packages should always be built from the source tarball distributed "
+"via pypi. Release packages should *NEVER* use a git checkout as the source "
+"for distribution."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:21
+msgid "Single Package"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:23
+msgid ""
+"Shipping Salt as a single package, where the minion, master and all tools "
+"are together is perfectly acceptable and practiced by distributions such as "
+"FreeBSD."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:28
+msgid "Split Package"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:30
+msgid ""
+"Salt Should always be split in a standard way, with standard dependencies, "
+"this lowers cross distribution confusion about what components are going to "
+"be shipped with specific packages. These packages can be defined from the "
+"Salt Source as of Salt 0.17.0:"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:36
+msgid "Salt Common"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:38
+msgid ""
+"The `salt-common` or `salt` package should contain the files provided by the"
+" salt python package, or all files distributed from the ``salt/`` directory "
+"in the source distribution packages. The documentation contained under the "
+"``doc/`` directory can be a part of this package but splitting out a doc "
+"package is preferred. Since salt-call is the entry point to utilize the libs"
+" and is useful for all salt packages it is included in the salt-common "
+"package."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:47
+#: ../../topics/conventions/packaging.rst:74
+#: ../../topics/conventions/packaging.rst:116
+#: ../../topics/conventions/packaging.rst:145
+#: ../../topics/conventions/packaging.rst:174
+#: ../../topics/conventions/packaging.rst:200
+msgid "Name"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:49
+msgid "`salt` OR `salt-common`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:52
+#: ../../topics/conventions/packaging.rst:79
+#: ../../topics/conventions/packaging.rst:121
+#: ../../topics/conventions/packaging.rst:150
+#: ../../topics/conventions/packaging.rst:179
+#: ../../topics/conventions/packaging.rst:205
+msgid "Files"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:54
+msgid "`salt/*`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:55
+msgid "`man/salt.7`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:56
+msgid "`scripts/salt-call`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:57
+msgid "`tests/*`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:58
+msgid "`man/salt-call.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:61
+#: ../../topics/conventions/packaging.rst:95
+#: ../../topics/conventions/packaging.rst:128
+#: ../../topics/conventions/packaging.rst:158
+#: ../../topics/conventions/packaging.rst:185
+msgid "Depends"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:63
+msgid "`Python 2.6-2.7`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:64
+msgid "`PyYAML`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:65
+msgid "`Jinja2`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:68
+msgid "Salt Master"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:70
+msgid ""
+"The `salt-master` package contains the applicable scripts, related man pages"
+" and init information for the given platform."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:76
+msgid "`salt-master`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:81
+msgid "`scripts/salt-master`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:82
+msgid "`scripts/salt`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:83
+msgid "`scripts/salt-run`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:84
+msgid "`scripts/salt-key`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:85
+msgid "`scripts/salt-cp`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:86
+msgid "`pkg/<master init data>`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:87
+msgid "`man/salt.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:88
+msgid "`man/salt-master.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:89
+msgid "`man/salt-run.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:90
+msgid "`man/salt-key.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:91
+msgid "`man/salt-cp.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:92
+msgid "`conf/master`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:97
+#: ../../topics/conventions/packaging.rst:130
+#: ../../topics/conventions/packaging.rst:160
+#: ../../topics/conventions/packaging.rst:187
+#: ../../topics/conventions/packaging.rst:212
+msgid "`Salt Common`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:98
+#: ../../topics/conventions/packaging.rst:132
+#: ../../topics/conventions/packaging.rst:161
+msgid "`ZeroMQ` >= 3.2"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:99
+#: ../../topics/conventions/packaging.rst:133
+#: ../../topics/conventions/packaging.rst:162
+msgid "`PyZMQ` >= 2.10"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:100
+#: ../../topics/conventions/packaging.rst:134
+#: ../../topics/conventions/packaging.rst:163
+msgid "`PyCrypto`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:101
+#: ../../topics/conventions/packaging.rst:135
+#: ../../topics/conventions/packaging.rst:164
+msgid "`M2Crypto`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:102
+#: ../../topics/conventions/packaging.rst:136
+#: ../../topics/conventions/packaging.rst:165
+msgid "`Python MessagePack` (Messagepack C lib, or msgpack-pure)"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:105
+msgid "Salt Syndic"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:107
+msgid ""
+"The Salt Syndic package can be rolled completely into the Salt Master "
+"package. Platforms which start services as part of the package deployment "
+"need to maintain a separate `salt-syndic` package (primarily Debian based "
+"platforms)."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:111
+msgid ""
+"The Syndic may optionally not depend on the anything more than the Salt "
+"Master since the master will bring in all needed dependencies, but fall back"
+" to the platform specific packaging guidelines."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:118
+msgid "`salt-syndic`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:123
+msgid "`scripts/salt-syndic`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:124
+msgid "`pkg/<syndic init data>`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:125
+msgid "`man/salt-syndic.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:131
+msgid "`Salt Master`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:139
+msgid "Salt Minion"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:141
+msgid ""
+"The Minion is a standalone package and should not be split beyond the `salt-"
+"minion` and `salt-common` packages."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:147
+msgid "`salt-minion`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:152
+msgid "`scripts/salt-minion`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:153
+msgid "`pkg/<minion init data>`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:154
+msgid "`man/salt-minion.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:155
+msgid "`conf/minion`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:168
+msgid "Salt SSH"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:170
+msgid ""
+"Since Salt SSH does not require the same dependencies as the minion and "
+"master, it should be split out."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:176
+msgid "`salt-ssh`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:181
+msgid "`scripts/salt-ssh`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:182
+msgid "`man/salt-ssh.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:188
+msgid "`sshpass`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:191
+msgid "Salt Doc"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:193
+msgid ""
+"The documentation package is very distribution optional. A completely split "
+"package will split out the documentation, but some platform conventions do "
+"not prefer this. If the documentation is not split out, it should be "
+"included with the `Salt Common` package."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:202
+msgid "`salt-doc`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:207
+msgid "`doc/*`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:210
+msgid "Optional Depends"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:213
+msgid "`Python Sphinx`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:214
+msgid "`Make`"
+msgstr ""

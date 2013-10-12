@@ -1,0 +1,231 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/conventions/style.rst:6
+msgid "Salt Coding Style"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:8
+msgid ""
+"Salt is developed with a certain coding style, while the style is dominantly"
+" PEP 8 it is not completely PEP 8. It is also noteworthy that a few "
+"development techniques are also employed which should be adhered to. In the "
+"end, the code is made to be \"Salty\"."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:13
+msgid ""
+"Most importantly though, we will accept code that violates the coding style "
+"and KINDLY ask the contributor to fix it, or go ahead and fix the code on "
+"behalf of the contributor. Coding style is NEVER grounds to reject code "
+"contributions, and is never grounds to talk down to another member of the "
+"community (There are no grounds to treat others without respect, especially "
+"people working to improve Salt)!!"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:22
+msgid "Strings"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:24
+msgid "Salt follows a few rules when formatting strings:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:27
+msgid "Single Quotes"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:29
+msgid ""
+"In Salt, all strings use single quotes unless there is a good reason not to."
+" This means that docstrings use single quotes, standard strings use single "
+"quotes etc.:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:43
+msgid "Formatting Strings"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:45
+msgid ""
+"All strings which require formatting should use the `.format` string method:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:52
+msgid ""
+"Make sure to use indices or identifiers in the format brackets, since empty "
+"brackets are not supported by python 2.6."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:55
+msgid "Please do NOT use printf formatting."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:58
+msgid "Docstring Conventions"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:60
+msgid ""
+"Docstrings should always add a newline, docutils takes care of the new line "
+"and it makes the code cleaner and more vertical:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:63
+msgid "`GOOD`:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:74
+msgid "`BAD`:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:83
+msgid "Imports"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:85
+msgid ""
+"Salt code prefers importing modules and not explicit functions. This is both"
+" a style and functional preference. The functional preference originates "
+"around the fact that the module import system used by pluggable modules will"
+" include callable objects (functions) that exist in the direct module "
+"namespace. This is not only messy, but may unintentionally expose code "
+"python libs to the Salt interface and pose a security problem."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:92
+msgid "To say this more directly with an example, this is `GOOD`:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:102
+msgid "This on the other hand is `DISCOURAGED`:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:112
+msgid ""
+"The time when this is changed is for importing exceptions, generally "
+"directly importing exceptions is preferred:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:115
+msgid "This is a good way to import exceptions:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:123
+msgid "Absolute Imports"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:125
+msgid ""
+"Although `absolute imports`_ seems like an awesome idea, please do not use "
+"it. Extra care would be necessary all over salt's code in order for absolute"
+" imports to work as supposed. Believe it, it has been tried before and, as a"
+" tried example, by renaming ``salt.modules.sysmod`` to ``salt.modules.sys``,"
+" all other salt modules which needed to import :mod:`sys<python2:sys>` would"
+" have to also import :mod:`absolute_import<python2:__future__>`, which "
+"should be avoided."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:137
+msgid "Vertical is Better"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:139
+msgid ""
+"When writing Salt code, vertical code is generally preferred. This is not a "
+"hard rule but more of a guideline. As PEP 8 specifies, Salt code should not "
+"exceed 79 characters on a line, but it is preferred to separate code out "
+"into more newlines in some cases for better readability:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:154
+msgid ""
+"Where there are more line breaks, this is also apparent when constructing a "
+"function with many arguments, something very common in state functions for "
+"instance:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:177
+msgid ""
+"Making function and class definitions vertical is only required if the "
+"arguments are longer then 80 characters. Otherwise, the formatting is "
+"optional and both are acceptable."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:182
+msgid "Indenting"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:184
+msgid ""
+"Some confusion exists in the python world about indenting things like "
+"function calls, the above examples use 8 spaces when indenting comma-"
+"delimited constructs."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:188
+msgid ""
+"The confusion arises because the pep8 program INCORRECTLY flags this as "
+"wrong, where PEP 8, the document, cites only using 4 spaces here as wrong, "
+"as it doesn't differentiate from a new indent level."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:192
+msgid "Right:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:201
+msgid "WRONG:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:210
+msgid "Lining up the indent is also correct:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:219
+msgid "This also applies to function calls and other hanging indents."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:221
+msgid ""
+"pep8 and Flake8 (and, by extension, the vim plugin Syntastic) will complain "
+"about the double indent for hanging indents.  This is a `known conflict "
+"<https://github.com/jcrocholl/pep8/issues/167#issuecomment-15936564>`_ "
+"between pep8 (the script) and the actual PEP 8 standard.  It is recommended "
+"that this particular warning be ignored with the following lines in "
+"``~/.config/flake8``:"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:233
+msgid ""
+"Make sure your Flake8/pep8 are up to date.  The first three errors are "
+"ignored by default and are present here to keep the behavior the same.  This"
+" will also work for pep8 without the Flake8 wrapper -- just replace all "
+"instances of 'flake8' with 'pep8', including the filename."
+msgstr ""
+
+#: ../../topics/conventions/style.rst:239
+msgid "Code Churn"
+msgstr ""
+
+#: ../../topics/conventions/style.rst:241
+msgid ""
+"Many pull requests have been submitted that only churn code in the name of "
+"PEP 8. Code churn is a leading source of bugs and is strongly discouraged. "
+"While style fixes are encouraged they should be isolated to a single file "
+"per commit, and the changes should be legitimate, if there are any questions"
+" about whether a style change is legitimate please reference this document "
+"and the official PEP 8 (http://www.python.org/dev/peps/pep-0008/) document "
+"before changing code. Many claims that a change is PEP 8 have been invalid, "
+"please double check before committing fixes."
+msgstr ""

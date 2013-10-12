@@ -1,0 +1,191 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/index.rst:6
+msgid "Introduction to Extending Salt"
+msgstr ""
+
+#: ../../ref/index.rst:8
+msgid ""
+"Salt is made to be used, and made to be extended. The primary goal of Salt "
+"is to provide a foundation which can be used to solve problems without "
+"assuming what those problems might be."
+msgstr ""
+
+#: ../../ref/index.rst:12
+msgid ""
+"One of the greatest benefit of developing Salt has been the vast array of "
+"ways in which people have wanted to use it, while the original intention was"
+" as a communication layer for a cloud controller Salt has been extended to "
+"facilitate so much more."
+msgstr ""
+
+#: ../../ref/index.rst:18
+msgid "Client API"
+msgstr ""
+
+#: ../../ref/index.rst:20
+msgid ""
+"The primary interface used to extend Salt, is to simply use it. Salt "
+"executions can be called via the Salt client API, making programming master "
+"side solutions with Salt is easy."
+msgstr ""
+
+#: ../../ref/index.rst:24
+msgid ":ref:`client-apis`"
+msgstr ""
+
+#: ../../ref/index.rst:27
+msgid "Adding Loadable Plugins"
+msgstr ""
+
+#: ../../ref/index.rst:29
+msgid ""
+"Salt is comprised of a core platform that loads many types of easy to write "
+"plugins. The idea is to enable all of the breaking points in the Salt "
+"processes to have a point of pluggable interaction. This means that all of "
+"the main features of Salt can be extended, modified or used."
+msgstr ""
+
+#: ../../ref/index.rst:34
+msgid ""
+"The breaking points and helping interfaces span from convenience master side"
+" executions to manipulating the flow of how data is handled by Salt."
+msgstr ""
+
+#: ../../ref/index.rst:38
+msgid "Minion Execution Modules"
+msgstr ""
+
+#: ../../ref/index.rst:40
+msgid ""
+"The minion execution modules or just ``modules`` are the core to what Salt "
+"is and does. These modules are found in:"
+msgstr ""
+
+#: ../../ref/index.rst:43
+msgid ":blob:`salt/modules`"
+msgstr ""
+
+#: ../../ref/index.rst:45
+msgid ""
+"These modules are what is called by the Salt command line and the salt "
+"client API. Adding modules is done by simply adding additional Python "
+"modules to the *modules* directory and restarting the minion."
+msgstr ""
+
+#: ../../ref/index.rst:50
+msgid "Grains"
+msgstr ""
+
+#: ../../ref/index.rst:52
+msgid ""
+"Salt grains, or \"grains of truth\" are bits of static information that are "
+"generated when the minion starts. This information is useful when "
+"determining what package manager to default to, or where certain "
+"configuration files are stored on the minion."
+msgstr ""
+
+#: ../../ref/index.rst:57
+msgid ""
+"The Salt grains are the interface used for auto detection and dynamic "
+"assignment of execution modules and types to specific Salt minions."
+msgstr ""
+
+#: ../../ref/index.rst:60
+msgid "The code used to generate the Salt grains can be found here:"
+msgstr ""
+
+#: ../../ref/index.rst:62
+msgid ":blob:`salt/grains`"
+msgstr ""
+
+#: ../../ref/index.rst:65
+msgid "States"
+msgstr ""
+
+#: ../../ref/index.rst:67
+msgid ""
+"Salt supports state enforcement, this makes Salt a high speed and very "
+"efficient solution for system configuration management."
+msgstr ""
+
+#: ../../ref/index.rst:70
+msgid "States can be easily added to Salt by dropping a new state module in:"
+msgstr ""
+
+#: ../../ref/index.rst:72
+msgid ":blob:`salt/states`"
+msgstr ""
+
+#: ../../ref/index.rst:75
+msgid "Renderers"
+msgstr ""
+
+#: ../../ref/index.rst:77
+msgid ""
+"Salt states are controlled by simple data structures, these structures can "
+"be abstracted in a number of ways. While the default is to be in a YAML file"
+" wrapped in a jinja template, any abstraction can be used. This means that "
+"any format that can be dreamed is possible, so long as a renderer is written"
+" for it."
+msgstr ""
+
+#: ../../ref/index.rst:83
+msgid "The existing renderers can be found here:"
+msgstr ""
+
+#: ../../ref/index.rst:85
+msgid ":blob:`salt/renderers`"
+msgstr ""
+
+#: ../../ref/index.rst:88
+msgid "Returners"
+msgstr ""
+
+#: ../../ref/index.rst:90
+msgid ""
+"The Salt commands all produce a return value, that return value is sent to "
+"the Salt master by default, but it can be sent anywhere. The returner "
+"interface makes it programmatically possible for the information to be sent "
+"to anything from an SQL or NoSQL database, to a custom application made to "
+"use Salt."
+msgstr ""
+
+#: ../../ref/index.rst:95
+msgid "The existing returners can be found here:"
+msgstr ""
+
+#: ../../ref/index.rst:97
+msgid ":blob:`salt/returners`"
+msgstr ""
+
+#: ../../ref/index.rst:100
+msgid "Runners"
+msgstr ""
+
+#: ../../ref/index.rst:102
+msgid ""
+"Sometimes a certain application can be made to execute and run from the "
+"existing Salt command line. This is where the Salt runners come into play. "
+"The Salt Runners what is called by the Salt-run command and are meant to act"
+" as a generic interface for encapsulating master side executions."
+msgstr ""
+
+#: ../../ref/index.rst:107
+msgid "Existing Salt runners are located here:"
+msgstr ""
+
+#: ../../ref/index.rst:109
+msgid ":blob:`salt/runners`"
+msgstr ""

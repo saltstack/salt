@@ -1,0 +1,178 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.win_pkg.rst:6
+msgid "salt.modules.win_pkg"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg:1
+msgid "A module to manage software on Windows"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg:3
+msgid "pythoncom"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg:4
+msgid "win32com"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg:5
+msgid "win32con"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg:6
+msgid "win32api"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg:7
+msgid "pywintypes"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.get_repo_data:1
+msgid "Returns the cached winrepo data"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.get_repo_data:3
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.install:8
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.latest_version:8
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.list_available:3
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.list_pkgs:5 ../../../salt/modules/win_pkg.pydocstring
+#: of salt.modules.win_pkg.list_upgrades:3
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:24
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.refresh_db:5 ../../../salt/modules/win_pkg.pydocstring
+#: of salt.modules.win_pkg.remove:22 ../../../salt/modules/win_pkg.pydocstring
+#: of salt.modules.win_pkg.upgrade:8 ../../../salt/modules/win_pkg.pydocstring
+#: of salt.modules.win_pkg.upgrade_available:3
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.version:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.install:1
+msgid "Install the passed package"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.install:3
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.upgrade:3
+msgid "Return a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.latest_version:1
+msgid ""
+"Return the latest version of the named package available for upgrade or "
+"installation. If more than one package name is specified, a dict of "
+"name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.latest_version:5
+msgid ""
+"If the latest version of a given package is already installed, an empty "
+"string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.list_available:1
+msgid "Return a list of available versions of the specified package."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.list_pkgs:1
+msgid "List the packages currently installed in a dict::"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.list_upgrades:1
+msgid "List all available package upgrades on this system"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:1
+msgid ""
+"Package purges are not supported, this function is identical to "
+"``remove()``."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:5
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:5
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:4
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:11
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:9
+msgid "version"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:8
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:7
+msgid ""
+"The version of the package to be deleted. If this option is used in "
+"combination with the ``pkgs`` option below, then this version will be "
+"applied to all targeted packages."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:13
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:11
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:17
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:15
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:16
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:14
+msgid ""
+"A list of packages to delete. Must be passed as a python list. The ``name`` "
+"parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.purge:22
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:20
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.refresh_db:1
+msgid "Just recheck the repository and return a dict::"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.remove:1
+msgid "Remove packages."
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.upgrade:1
+msgid "Run a full system upgrade"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of
+#: salt.modules.win_pkg.upgrade_available:1
+msgid "Check whether or not an upgrade is available for a given package"
+msgstr ""
+
+#: ../../../salt/modules/win_pkg.pydocstring of salt.modules.win_pkg.version:1
+msgid ""
+"Returns a version if the package is installed, else returns an empty string"
+msgstr ""

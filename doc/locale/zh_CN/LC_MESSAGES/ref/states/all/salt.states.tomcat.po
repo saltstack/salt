@@ -1,0 +1,196 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.tomcat.rst:6
+msgid "salt.states.tomcat"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:1
+msgid ""
+"This state uses the manager webapp to manage Apache tomcat webapps This "
+"state requires the manager webapp to be enabled"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:4
+msgid "The following grains/pillar should be set::"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:9
+msgid "and also configure a user in the conf/tomcat-users.xml file::"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:17
+msgid "Notes:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:19
+msgid "Not supported multiple version on the same context path"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:20
+msgid "More information about tomcat manager:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:21
+msgid "http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:23
+msgid "if you use only this module for deployments you might want to restrict"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:23
+msgid ""
+"access to the manager so its only accessible via localhost for more info: "
+"http://tomcat.apache.org/tomcat-7.0-doc/manager-"
+"howto.html#Configuring_Manager_Application_Access"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:25
+msgid "Tested on:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:27
+msgid "JVM Vendor:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:28
+msgid "Sun Microsystems Inc."
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:29
+msgid "JVM Version:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:30
+msgid "1.6.0_43-b01"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:31
+msgid "OS Architecture:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:32
+msgid "amd64"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:33
+msgid "OS Name:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:34
+msgid "Linux"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:35
+msgid "OS Version:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:36
+msgid "2.6.32-358.el6.x86_64"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:39
+msgid "Tomcat Version:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat:38
+msgid "Apache Tomcat/7.0.37"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat.mod_watch:1
+msgid ""
+"The tomcat watcher function. When called it will reload the webapp in "
+"question"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat.wait:1
+msgid "Wait for the tomcat manager to load"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat.wait:3
+msgid ""
+"Notice that if tomcat is not running we won't wait for it start and the "
+"state will fail. This state can be required in the tomcat.war_deployed state"
+" to make sure tomcat is running and that the manager is running as well and "
+"ready for deployment"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat.wait:8
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:12
+msgid "url : http://localhost:8080/manager"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat.wait:9
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:13
+msgid "the URL of the server manager webapp"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat.wait:11
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:15
+msgid "timeout : 180"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat.wait:11
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:15
+msgid "timeout for HTTP request to the tomcat manager"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of salt.states.tomcat.wait:13
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:17
+msgid "Example::"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:1
+msgid ""
+"Enforce that the WAR will be deployed and started in the context path it "
+"will make use of WAR versions"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:5
+msgid "for more info:"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:5
+msgid "http://tomcat.apache.org/tomcat-7.0-doc/config/context.html#Naming"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:7
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:8
+msgid "the context path to deploy"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:10
+msgid "war"
+msgstr ""
+
+#: ../../../salt/states/tomcat.pydocstring of
+#: salt.states.tomcat.war_deployed:10
+msgid ""
+"absolute path to WAR file (should be accessible by the user running tomcat) "
+"or a path supported by the salt.modules.cp.get_url function"
+msgstr ""

@@ -1,0 +1,66 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.ldapmod.rst:6
+msgid "salt.modules.ldapmod"
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod:1
+msgid "Salt interface to LDAP commands"
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod:3
+msgid "ldap Python module"
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod:4
+msgid ""
+"In order to connect to LDAP, certain configuration is required in the minion"
+" config on the LDAP server. The minimum configuration items that must be set"
+" are::"
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod:10
+msgid "If your LDAP server requires authentication then you must also set::"
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod:15
+msgid "In addition, the following optional values may be set::"
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod:25
+msgid ""
+"At the moment this module only recommends connection to LDAP services "
+"listening on ``localhost``. This is deliberate to avoid the potentially "
+"dangerous situation of multiple minions sending identical update commands to"
+" the same LDAP server. It's easy enough to override this behaviour, but "
+"badness may ensue - you have been warned."
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod.search:1
+msgid "Run an arbitrary LDAP query and return the results."
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod.search:3
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod.search:9
+msgid "Return data:"
+msgstr ""
+
+#: ../../../salt/modules/ldapmod.pydocstring of salt.modules.ldapmod.search:20
+msgid ""
+"Search and connection options can be overridden by specifying the relevant "
+"option as key=value pairs, for example:"
+msgstr ""

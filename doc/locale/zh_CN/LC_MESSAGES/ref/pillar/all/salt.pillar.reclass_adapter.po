@@ -1,0 +1,67 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/pillar/all/salt.pillar.reclass_adapter.rst:6
+msgid "salt.pillar.reclass_adapter"
+msgstr ""
+
+#: ../../../salt/pillar/reclass_adapter.pydocstring of
+#: salt.pillar.reclass_adapter:3
+msgid ""
+"This ``ext_pillar`` plugin provides access to the |reclass| database, such "
+"that Pillar data for a specific minion are fetched using |reclass|."
+msgstr ""
+
+#: ../../../salt/pillar/reclass_adapter.pydocstring of
+#: salt.pillar.reclass_adapter:6
+msgid ""
+"You can find more information about |reclass| at "
+"http://reclass.pantsfullofunix.net."
+msgstr ""
+
+#: ../../../salt/pillar/reclass_adapter.pydocstring of
+#: salt.pillar.reclass_adapter:9
+msgid ""
+"To use the plugin, add it to the ``ext_pillar`` list in the Salt master "
+"config and tell |reclass| by way of a few options how and where to find the "
+"inventory:"
+msgstr ""
+
+#: ../../../salt/pillar/reclass_adapter.pydocstring of
+#: salt.pillar.reclass_adapter:20
+msgid ""
+"This would cause |reclass| to read the inventory from YAML files in "
+"``/srv/salt/nodes`` and ``/srv/salt/classes``."
+msgstr ""
+
+#: ../../../salt/pillar/reclass_adapter.pydocstring of
+#: salt.pillar.reclass_adapter:23
+msgid ""
+"If you are also using |reclass| as ``master_tops`` plugin, and you want to "
+"avoid having to specify the same information for both, use YAML anchors "
+"(take note of the differing data types for ``ext_pillar`` and "
+"``master_tops``):"
+msgstr ""
+
+#: ../../../salt/pillar/reclass_adapter.pydocstring of
+#: salt.pillar.reclass_adapter:40
+msgid ""
+"If you want to run reclass from source, rather than installing it, you can "
+"either let the master know via the ``PYTHONPATH`` environment variable, or "
+"by setting the configuration option, like in the example above."
+msgstr ""
+
+#: ../../../salt/pillar/reclass_adapter.pydocstring of
+#: salt.pillar.reclass_adapter.ext_pillar:1
+msgid "Obtain the Pillar data from **reclass** for the given ``minion_id``."
+msgstr ""

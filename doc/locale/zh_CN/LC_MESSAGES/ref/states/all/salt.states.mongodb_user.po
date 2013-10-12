@@ -1,0 +1,126 @@
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-799-g9ccf089\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-11 21:20\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.mongodb_user.rst:6
+msgid "salt.states.mongodb_user"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of salt.states.mongodb_user:2
+msgid "Management of Mongodb users"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:1
+msgid "Ensure that the named user is absent"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:4
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:4
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:4
+msgid "The name of the user to remove"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:7
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:10
+msgid "user"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:7
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:10
+msgid "The user to connect as (must be able to create the user)"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:10
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:13
+msgid "password"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:10
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:7
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:13
+msgid "The password of the user"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:13
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:16
+msgid "host"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:13
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:16
+msgid "The host to connect to"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:16
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:19
+msgid "port"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:16
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:19
+msgid "The port to connect to"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:18
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:21
+msgid "database"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.absent:19
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:22
+msgid ""
+"The database to create the user in (if the db doesn't exist, it will be "
+"created)"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:1
+msgid "Ensure that the user is present with the specified properties"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:4
+msgid "The name of the user to manage"
+msgstr ""
+
+#: ../../../salt/states/mongodb_user.pydocstring of
+#: salt.states.mongodb_user.present:7
+msgid "passwd"
+msgstr ""
