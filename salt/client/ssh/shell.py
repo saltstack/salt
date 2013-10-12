@@ -29,6 +29,7 @@ class Shell(object):
     '''
     def __init__(
             self,
+            opts,
             host,
             user=None,
             port=None,
@@ -37,6 +38,7 @@ class Shell(object):
             timeout=None,
             sudo=False,
             tty=False):
+        self.opts = opts
         self.host = host
         self.user = user
         self.port = port
