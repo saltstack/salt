@@ -51,8 +51,9 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'svnfs')
     repos = []
-    for ind, opt in enumerate(__opts__['svnfs_remotes']):
-        rp_ = os.path.join(bp_, str(ind))
+    for _, opt in enumerate(__opts__['svnfs_remotes']):
+        repo_hash = hashlib.md5(opt).hexdigest()
+        rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
         try:
@@ -63,11 +64,29 @@ def init():
     return repos
 
 
+def purge_cache():
+    bp_ = os.path.join(__opts__['cachedir'], 'svnfs')
+    remove_dirs = os.listdir(bp_)
+    for _, opt in enumerate(__opts__['svnfs_remotes']):
+        repo_hash = hashlib.md5(opt).hexdigest()
+        try:
+            remove_dirs.remove(repo_hash)
+        except ValueError:
+            pass
+    remove_dirs = [os.path.join(bp_, r) for r in remove_dirs if r not in ('hash', 'refs')]
+    if remove_dirs:
+        for r in remove_dirs:
+            shutil.rmtree(r)
+        return True
+    return False
+
+
 def update():
     '''
     Execute a svn update on all repos
     '''
     pid = os.getpid()
+    purge_cache()
     repos = init()
     for repo in repos:
         lk_fn = os.path.join(repo, 'update.lk')
