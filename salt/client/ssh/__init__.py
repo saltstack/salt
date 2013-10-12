@@ -202,7 +202,7 @@ class SSH(object):
                     **target)
             stdout, stderr = single.cmd_block()
             try:
-                data = json.loads(stdout)
+                data = salt.utils.find_json(stdout)
                 return {host: data.get('local', data)}
             except Exception:
                 if stderr:
