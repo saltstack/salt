@@ -12,6 +12,7 @@ import fnmatch
 import hashlib
 import imp
 import inspect
+import json
 import logging
 import os
 import random
@@ -1697,6 +1698,25 @@ def decode_dict(data):
             value = decode_dict(value)
         rv[key] = value
     return rv
+
+
+def find_json(raw):
+    '''
+    Pass in a ras string and load the json when is starts. This allows for a
+    string to start with garbage and end with json but be cleanly loaded
+    '''
+    ret = {}
+    for ind in range(len(raw)):
+        working = '\n'.join(raw.splitlines()[ind:])
+        try:
+            ret = json.loads(working, object_hook=decode_dict)
+        except ValueError:
+            continue
+        if ret:
+            return ret
+    if not ret:
+        # Not json, rais an error
+        raise ValueError
 
 
 def is_bin_file(path):
