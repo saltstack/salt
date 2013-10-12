@@ -64,6 +64,7 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
+	find locale/ -name *.mo -exec rm {} \;
 
 translations:
 	
