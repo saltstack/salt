@@ -95,9 +95,18 @@ def inodeusage(args=None):
 
         salt '*' disk.inodeusage
     '''
+    flags = ''
+    allowed = ('a', 'B', 'h', 'H', 'i', 'k', 'l', 'P', 't', 'T', 'x', 'v')
+    for flag in args:
+        if flag in allowed:
+            flags += flag
+        else:
+            raise CommandExecutionError(
+                'Invalid flag passed to disk.inodeusage'
+            )
     cmd = 'df -i'
     if args is not None:
-        cmd = cmd + ' -' + args
+        cmd += ' -{0}'.format(flags)
     ret = {}
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
