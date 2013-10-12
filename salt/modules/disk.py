@@ -9,6 +9,8 @@ import logging
 # Import salt libs
 import salt.utils
 
+from salt.exceptions import CommandExecutionError
+
 log = logging.getLogger(__name__)
 
 
@@ -37,7 +39,7 @@ def usage(args=None):
         if flag in allowed:
             flags += flag
         else:
-            break
+            raise CommandExecutionError('Invalid flag passed to disk.usage')
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD':
