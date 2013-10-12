@@ -53,9 +53,10 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
             chunks,
             file_refs)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1}'.format(
+    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,
-            trans_tar_sum)
+            trans_tar_sum,
+            __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
@@ -89,8 +90,9 @@ def low(data):
             chunks,
             file_refs)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz pkg_sum={0}'.format(
-            trans_tar_sum)
+    cmd = 'state.pkg /tmp/.salt/salt_state.tgz pkg_sum={0} hash_type={1}'.format(
+            trans_tar_sum,
+            __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
@@ -121,8 +123,9 @@ def high(data):
             chunks,
             file_refs)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz pkg_sum={0}'.format(
-            trans_tar_sum)
+    cmd = 'state.pkg /tmp/.salt/salt_state.tgz pkg_sum={0} hash_type={1}'.format(
+            trans_tar_sum,
+            __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
@@ -155,9 +158,10 @@ def highstate(test=None, **kwargs):
             chunks,
             file_refs)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1}'.format(
+    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,
-            trans_tar_sum)
+            trans_tar_sum,
+            __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
@@ -194,9 +198,10 @@ def top(topfn, test=None, **kwargs):
             chunks,
             file_refs)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1}'.format(
+    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,
-            trans_tar_sum)
+            trans_tar_sum,
+            __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
