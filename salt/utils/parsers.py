@@ -1586,6 +1586,14 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'time to manage connections, the more running processes the '
                  'faster communication should be, default is 25')
         self.add_option(
+            '-i',
+            '--ignore-host-keys',
+            dest='ignore_host_keys',
+            default=False,
+            action='store_true',
+            help='By default ssh host keys are honored and connections will '
+                 'ask for approval')
+        self.add_option(
             '--passwd',
             dest='ssh_passwd',
             default='',
