@@ -31,6 +31,13 @@ def usage(args=None):
 
         salt '*' disk.usage
     '''
+    flags = ''
+    allowed = ('a', 'B', 'h', 'H', 'i', 'k', 'l', 'P', 't', 'T', 'x', 'v')
+    for flag in args:
+        if flag in allowed:
+            flags += flag
+        else:
+            break
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD':
@@ -38,7 +45,7 @@ def usage(args=None):
     else:
         cmd = 'df'
     if args:
-        cmd = cmd + ' -' + args
+        cmd += ' -{0}'.format(flags)
     ret = {}
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
