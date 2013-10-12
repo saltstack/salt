@@ -70,7 +70,7 @@ def present(name,
     if user:
         # Warn users about the deprecation
         ret.setdefault('warnings', []).append(
-            'The \'user\' argument is being deprecated in favor or \'owner\', '
+            'The \'user\' argument is being deprecated in favor of \'owner\', '
             'please update your state files.'
         )
     if user is not None and owner is not None:
