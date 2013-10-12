@@ -72,7 +72,7 @@ def managed(name,
     if runas:
         # Warn users about the deprecation
         ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'The \'runas\' argument is being deprecated in favor of \'user\', '
             'please update your state files.'
         )
     if user is not None and runas is not None:

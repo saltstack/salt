@@ -134,7 +134,7 @@ def latest(name,
     if runas:
         # Warn users about the deprecation
         ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'The \'runas\' argument is being deprecated in favor of \'user\', '
             'please update your state files.'
         )
     if user is not None and runas is not None:
@@ -358,7 +358,7 @@ def present(name, bare=True, runas=None, user=None, force=False):
     if runas:
         # Warn users about the deprecation
         ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor or \'user\', '
+            'The \'runas\' argument is being deprecated in favor of \'user\', '
             'please update your state files.'
         )
     if user is not None and runas is not None:
