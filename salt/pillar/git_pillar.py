@@ -2,11 +2,13 @@
 '''
 Clone a remote git repository and use the filesystem as a pillar directory.
 
-This looks like:
+This external pillar source can be configured in the master config file like
+so:
 
-ext_pillar:
-    - git: master git://gitserver/git-pillar.git
+.. code-block:: yaml
 
+    ext_pillar:
+      - git: master git://gitserver/git-pillar.git
 '''
 
 # Import python libs
