@@ -1733,3 +1733,17 @@ def is_bin_str(data):
     if len(text) / len(data) > 0.30:
         return True
     return False
+
+
+def valid_mac(mac):
+    '''
+    Validates a mac address
+    '''
+    valid = re.compile(r'''
+                      (^([0-9A-F]{2}[-]){5}([0-9A-F]{2})$
+                      |^([0-9A-F]{2}[:]){5}([0-9A-F]{2})$)
+                      ''',
+                      re.VERBOSE|re.IGNORECASE)
+    if valid.match(mac) is None:
+            return False
+    return True
