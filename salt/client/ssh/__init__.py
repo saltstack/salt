@@ -80,7 +80,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          fi
          if [ -f /tmp/.salt/salt-thin.tgz ]
          then
-             [ $({{1}} /etc/fstab | cut -f1 -d' ') == {{2}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
+             [ $({{2}}sum /tmp/.salt/salt-thin.tgz | cut -f1 -d' ') == {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
          else
              install -m 1700 -d /tmp/.salt
              echo "{1}"
@@ -536,7 +536,14 @@ class Single(object):
                     self.sls_seed, self.arg)
             self.sls_seed(*args, **kwargs)
         sudo = 'sudo' if self.target['sudo'] else ''
-        cmd = SSH_SHIM.format(sudo, self.arg_str)
+        thin_sum = salt.utils.thin.thin_sum(
+                self.opts['cachedir'],
+                self.opts['hash_type'])
+        cmd = SSH_SHIM.format(
+                sudo,
+                self.arg_str,
+                self.opts['hash_type'],
+                thin_sum)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             yield stdout, stderr
 
@@ -549,7 +556,14 @@ class Single(object):
         # 3. deploy salt-thin
         # 4. execute command
         sudo = 'sudo' if self.target['sudo'] else ''
-        cmd = SSH_SHIM.format(sudo, self.arg_str)
+        thin_sum = salt.utils.thin.thin_sum(
+                self.opts['cachedir'],
+                self.opts['hash_type'])
+        cmd = SSH_SHIM.format(
+                sudo,
+                self.arg_str,
+                self.opts['hash_type'],
+                thin_sum)
         log.debug("Performing shimmed command as follows:\n{0}".format(cmd))
         stdout, stderr = self.shell.exec_cmd(cmd)
 
