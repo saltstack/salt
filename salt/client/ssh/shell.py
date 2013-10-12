@@ -115,7 +115,7 @@ class Shell(object):
             ret.append('-o {0} '.format(option))
         return ''.join(ret)
 
-    def _copy_id_str(self):
+    def _copy_id_str_old(self):
         '''
         Return the string to execute ssh-copy-id
         '''
@@ -130,11 +130,29 @@ class Shell(object):
                     self.host)
         return None
 
+    def _copy_id_str_new(self):
+        '''
+        Since newer ssh-copy-id commands ingest option differently we need to
+        have two commands
+        '''
+        if self.passwd and salt.utils.which('sshpass'):
+            return 'sshpass -p "{0}" {1} {2} {3} -p {4} {5}@{6}'.format(
+                    self.passwd,
+                    'ssh-copy-id',
+                    '-i {0}.pub'.format(self.priv),
+                    self._passwd_opts(),
+                    self.port,
+                    self.user,
+                    self.host)
+        return None
+
     def copy_id(self):
         '''
         Execute ssh-copy-id to plant the id file on the target
         '''
-        self._run_cmd(self._copy_id_str())
+        stdout, stderr = self._run_cmd(self._copy_id_str_old())
+        if stderr.startswith('Usage'):
+            self._run_cmd(self._copy_id_str_new())
 
     def _cmd_str(self, cmd, ssh='ssh'):
         '''
@@ -146,7 +164,7 @@ class Shell(object):
 
         if self.passwd and salt.utils.which('sshpass'):
             opts = self._passwd_opts()
-            return "sshpass -p '{0}' {1} {2} {3} {4} '{5}'".format(
+            return "sshpass -p '{0}' {1} {2} {3} {4} {5}".format(
                     self.passwd,
                     ssh,
                     '' if ssh == 'scp' else self.host,
@@ -155,7 +173,7 @@ class Shell(object):
                     cmd)
         if self.priv:
             opts = self._key_opts()
-            return "{0} {1} {2} {3} '{4}'".format(
+            return "{0} {1} {2} {3} {4}".format(
                     ssh,
                     '' if ssh == 'scp' else self.host,
                     '-t -t' if self.tty else '',
