@@ -32,7 +32,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-
+import salt.fileserver
+from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
@@ -157,20 +158,42 @@ def update():
     '''
     Execute a hg pull on all of the repos
     '''
+    # data for the fileserver event
+    data = {'changed': False,
+            'backend': 'hgfs'}
     pid = os.getpid()
-    purge_cache()
+    data['changed'] = purge_cache()
     repos = init()
     for repo in repos:
         repo.open()
         lk_fn = os.path.join(repo.root(), 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
-        repo.pull()
+        curtip = repo.tip()
+        if repo.pull():
+            newtip = repo.tip()
+            if curtip[1] != newtip[1]:
+                data['changed'] = True
+        else:
+            log.warning('Failed to pull changes to repo: '
+                        '{0}'.format(repo.root()))
         repo.close()
         try:
             os.remove(lk_fn)
         except (OSError, IOError):
             pass
+
+    # if there is a change, fire an event
+    event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+    event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
+    try:
+        salt.fileserver.reap_fileserver_cache_dir(
+            os.path.join(__opts__['cachedir'], 'hgfs/hash'),
+            find_file
+        )
+    except (IOError, OSError):
+        # Hash file won't exist if no files have yet been served up
+        pass
 
 
 def envs():
