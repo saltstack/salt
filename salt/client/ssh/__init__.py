@@ -560,6 +560,11 @@ class Single(object):
 
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
+        if stdout.startswith('deploy'):
+            self.deploy()
+            stdout, stderr = self.shell.exec_cmd(cmd)
+            if RSTR in stdout:
+                stdout = stdout.split(RSTR)[1].strip()
 
         return stdout, stderr
 
