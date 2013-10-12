@@ -63,7 +63,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
       then
          if [ $(cat /tmp/.salt/version) != {0} ]
          then
-            {{0}} rm -rf /tmp/.salt && {{0}} install -m 1777 -d /tmp/.salt
+            {{0}} rm -rf /tmp/.salt && install -m 1700 -d /tmp/.salt
             if [ $? -ne 0 ]; then
                 exit 1
             fi
@@ -78,10 +78,15 @@ SSH_SHIM = '''/bin/sh << 'EOF'
             echo "Python too old" >&2
             exit 1
          fi
-         echo "{1}"
-         install -m 1700 -d /tmp/.salt
-         echo "deploy"
-         exit 1
+         if [ -f /tmp/.salt/salt-thin.tgz ]
+         then
+             [ $({{1}} /etc/fstab | cut -f1 -d' ') == {{2}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
+         else
+             install -m 1700 -d /tmp/.salt
+             echo "{1}"
+             echo "deploy"
+             exit 1
+         fi
       fi
       echo "{1}"
       {{0}} $PYTHON $SALT --local --out json -l quiet {{1}}
@@ -424,9 +429,6 @@ class Single(object):
         self.shell.send(
                 thin,
                 '/tmp/.salt/salt-thin.tgz')
-        self.shell.exec_cmd(
-                'tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt'
-                )
         return True
 
     def run(self, deploy_attempted=False):
