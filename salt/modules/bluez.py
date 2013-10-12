@@ -13,13 +13,17 @@ The following packages are required packages for this module:
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+from salt.exceptions import CommandExecutionError
+
 log = logging.getLogger(__name__)
 HAS_PYBLUEZ = False
 try:
     import bluetooth
     HAS_PYBLUEZ = True
 except Exception as exc:
-    HAS_PYBLUEZ = False
+    pass
 
 __func_alias__ = {
     'address_': 'address'
@@ -99,6 +103,9 @@ def power(dev, mode):
         salt '*' bluetooth.power hci0 on
         salt '*' bluetooth.power hci0 off
     '''
+    if dev not in address_():
+        raise CommandExecutionError('Invalid dev passed to bluetooth.power')
+
     if mode == 'on' or mode is True:
         state = 'up'
         mode = 'on'
@@ -115,7 +122,7 @@ def power(dev, mode):
 
 def discoverable(dev):
     '''
-    Enable this bluetooth device to be discovrable.
+    Enable this bluetooth device to be discoverable.
 
     CLI Example:
 
@@ -123,6 +130,11 @@ def discoverable(dev):
 
         salt '*' bluetooth.discoverable hci0
     '''
+    if dev not in address_():
+        raise CommandExecutionError(
+            'Invalid dev passed to bluetooth.discoverable'
+        )
+
     cmd = 'hciconfig {0} iscan'.format(dev)
     __salt__['cmd.run'](cmd).splitlines()
     cmd = 'hciconfig {0}'.format(dev)
@@ -142,6 +154,9 @@ def noscan(dev):
 
         salt '*' bluetooth.noscan hci0
     '''
+    if dev not in address_():
+        raise CommandExecutionError('Invalid dev passed to bluetooth.noscan')
+
     cmd = 'hciconfig {0} noscan'.format(dev)
     __salt__['cmd.run'](cmd).splitlines()
     cmd = 'hciconfig {0}'.format(dev)
@@ -178,6 +193,11 @@ def block(bdaddr):
 
         salt '*' bluetooth.block DE:AD:BE:EF:CA:FE
     '''
+    if not salt.utils.valid_mac(bdaddr):
+        raise CommandExecutionError(
+            'Invalid BD address passed to bluetooth.block'
+        )
+
     cmd = 'hciconfig {0} block'.format(bdaddr)
     __salt__['cmd.run'](cmd).splitlines()
 
@@ -192,6 +212,11 @@ def unblock(bdaddr):
 
         salt '*' bluetooth.unblock DE:AD:BE:EF:CA:FE
     '''
+    if not salt.utils.valid_mac(bdaddr):
+        raise CommandExecutionError(
+            'Invalid BD address passed to bluetooth.unblock'
+        )
+
     cmd = 'hciconfig {0} unblock'.format(bdaddr)
     __salt__['cmd.run'](cmd).splitlines()
 
@@ -212,6 +237,18 @@ def pair(address, key):
     TODO: This function is currently broken, as the bluez-simple-agent program
     no longer ships with BlueZ >= 5.0. It needs to be refactored.
     '''
+    if not salt.utils.valid_mac(address):
+        raise CommandExecutionError(
+            'Invalid BD address passed to bluetooth.pair'
+        )
+
+    try:
+        int(key)
+    except Exception:
+        raise CommandExecutionError(
+            'bluetooth.pair requires a numerical key to be used'
+        )
+
     addy = address_()
     cmd = 'echo "{0}" | bluez-simple-agent {1} {2}'.format(
         addy['device'], address, key
@@ -235,6 +272,11 @@ def unpair(address):
     TODO: This function is currently broken, as the bluez-simple-agent program
     no longer ships with BlueZ >= 5.0. It needs to be refactored.
     '''
+    if not salt.utils.valid_mac(address):
+        raise CommandExecutionError(
+            'Invalid BD address passed to bluetooth.unpair'
+        )
+
     cmd = 'bluez-test-device remove {0}'.format(address)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
