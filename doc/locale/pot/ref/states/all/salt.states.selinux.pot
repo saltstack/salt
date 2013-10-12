@@ -1,0 +1,85 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.selinux.rst:6
+# 8fab8a321b7a48bca3340761f60d4906
+msgid "salt.states.selinux"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux:2
+# f2ceb99bf496484fb7dc9f8641a4315a
+msgid "Management of SELinux rules."
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux:4
+# c0f5fdb9ec6247e898c59de553fd1672
+msgid "If SELinux is available for the running system, the mode can be managed and booleans can be set."
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux:18
+# c41d19bcfadb4c8faa384a5130bbdb60
+msgid "Use of these states require that the :mod:`selinux <salt.modules.selinux>` execution module is available."
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.boolean:1
+# c5d18b9d2acb42f282a6ddb3f0745c5a
+msgid "Set up an SELinux boolean"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.boolean:4
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.mode:4
+# 6ad5c702c75f425cbb667d8853c30957
+# 35d3e88a33ab483cbf83b8154f918e29
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.boolean:4
+# 67f9db0165384f98b3942e047afb4718
+msgid "The name of the boolean to set"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.boolean:7
+# befcf99a66884d8c9fc4363507c41992
+msgid "value"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.boolean:7
+# 51b5fd3c22804e8180b1d386f6771f16
+msgid "The value to set on the boolean"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.boolean:10
+# 94edca0b44794843959805bc47185951
+msgid "persist"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.boolean:10
+# 9fb697ff93124a6989a3b0e3cf82de93
+msgid "Defaults to False, set persist to true to make the boolean apply on a reboot"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.mode:1
+# 35c66d09c1c742a98bc4a94ee14509a3
+msgid "Verifies the mode SELinux is running in, can be set to enforcing or permissive"
+msgstr ""
+
+#: ../../../salt/states/selinux.py:docstring of salt.states.selinux.mode:5
+# 3cc42cc77a2a489590edc0a830f9f074
+msgid "The mode to run SELinux in, permissive or enforcing"
+msgstr ""
+

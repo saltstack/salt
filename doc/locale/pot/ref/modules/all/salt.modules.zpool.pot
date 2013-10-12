@@ -1,0 +1,106 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.zpool.rst:6
+# 35c2742f79cc4e5fb3f502cb8af633f9
+msgid "salt.modules.zpool"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool:1
+# 238dc510fa18418c99db96e22764eee1
+msgid "Module for running ZFS zpool command"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.add:1
+# ad5ee1b30c454a6cbbd21a8972eb4756
+msgid "Add the specified vdev to the given pool"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.add:3
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.create:3
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.create_file_vdev:5
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.destroy:3
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.exists:3
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.iostat:3
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.replace:3
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.scrub:3
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.status:3
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.zpool_list:3
+# 7187cef94b7a492d90ef0f1f6c47d83d
+# 75866c1715f8409eabbf4f8f86af86b9
+# 30fb7a5e14d1474a9cdce6622d330292
+# 975561872038472489f584309b5b4aa6
+# aafd2fdc2c384653ac98a4f4ddd125b5
+# 5f66f248958b495789d018b01cd72044
+# e1e512c3beb448769250734b99a0ab28
+# 8c35c5982dfe4f25a8e44381e82eb959
+# e5f684fff51a449fbfca404d2ed42868
+# a239211a574b4f5cab44fc862c695c1f
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.create:1
+# c86404eba1b04c1996e0f8e83329fff4
+msgid "Create a new storage pool"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.create_file_vdev:1
+# b21eacc1bbf94f1fa289fbd0191908d4
+msgid "Creates file based ``virtual devices`` for a zpool"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.create_file_vdev:3
+# eae3fdf634eb4507a2ac9d2882ce0537
+msgid "``*vdevs`` is a list of full paths for mkfile to create"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.destroy:1
+# 2b02c8e6eba34d3c90ed56e898b26ba5
+msgid "Destroys a storage pool"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.exists:1
+# adb57fc86e8447eca8b2bb399c876623
+msgid "Check if a ZFS storage pool is active"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.iostat:1
+# e744dac289524341a35f39faaee6aee6
+msgid "Display I/O statistics for the given pools"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.replace:1
+# 098eee391fdd4a82bf93d8e820dc3010
+msgid "Replaces old device with new device."
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.scrub:1
+# f5c8fa1864e34d59af17a86f1b8dc590
+msgid "Begin a scrub"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.status:1
+# f840172b1fa5406b9bce310708587119
+msgid "Return the status of the named zpool"
+msgstr ""
+
+#: ../../../salt/modules/zpool.py:docstring of salt.modules.zpool.zpool_list:1
+# a53101fec7f9473e8d87023d3b572619
+msgid "Return a list of all pools in the system with health status and space usage"
+msgstr ""
+

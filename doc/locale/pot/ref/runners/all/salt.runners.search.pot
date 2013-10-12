@@ -1,0 +1,38 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/runners/all/salt.runners.search.rst:6
+# 183599ead48f47d1853c2a7fdf4356d6
+msgid "salt.runners.search"
+msgstr ""
+
+#: ../../../salt/runners/search.py:docstring of salt.runners.search:1
+# 98ae17c66033484780de526c33d5108f
+msgid "Runner frontend to search system"
+msgstr ""
+
+#: ../../../salt/runners/search.py:docstring of salt.runners.search.query:1
+# 3c0d78401b0345468248ea4b3ab57623
+msgid "Query the search system"
+msgstr ""
+
+#: ../../../salt/runners/search.py:docstring of salt.runners.search.query:3
+# 23d5a2d4f71443f49cf3f4bd82500987
+msgid "CLI Example:"
+msgstr ""
+

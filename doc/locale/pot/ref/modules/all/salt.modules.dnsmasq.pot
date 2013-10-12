@@ -1,0 +1,67 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.dnsmasq.rst:6
+# 89b55ffc45a243cc9e629bcaf8f38252
+msgid "salt.modules.dnsmasq"
+msgstr ""
+
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq:1
+# 46365ed5c5f34cc6a68ff23711b50e98
+msgid "Module for managing dnqmasq"
+msgstr ""
+
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.fullversion:1
+# 28e805df535e4c9c818e6e7e1e9337a1
+msgid "Shows installed version of dnsmasq, and compile options"
+msgstr ""
+
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.fullversion:3
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.version:3
+# ce5069b4494e406683cafc000e8fb53f
+# a3fc64c4b31040d7a2c47fb871c515cd
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.get_config:1
+# ee20165794ac462281d1ed1ccab86e1f
+msgid "Dumps all options from the config file"
+msgstr ""
+
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.get_config:3
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.set_config:12
+# ed7a576b39a94460906305fc282f1c4c
+# 170e0659e7934617aa885d7af329d2fb
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.set_config:1
+# 6046c01e44ff4c199cbf35686a4cc7f6
+msgid "Sets a value or a set of values in the specified file. By default, if conf-dir is configured in this file, salt will attempt to set the option in any file inside the conf-dir where it has already been enabled. If it does not find it inside any files, it will append it to the main config file. Setting follow to False will turn off this behavior."
+msgstr ""
+
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.set_config:7
+# c04bdfee0a164de5a3fd4bc3490facbe
+msgid "If a config option currently appears multiple times (such as dhcp-host, which is specified at least once per host), the new option will be added to the end of the main config file (and not to any includes). If you need an option added to a specific include file, specify it as the config_file."
+msgstr ""
+
+#: ../../../salt/modules/dnsmasq.py:docstring of salt.modules.dnsmasq.version:1
+# add94c0a3c3d4184aa505c3715c62169
+msgid "Shows installed version of dnsmasq"
+msgstr ""
+

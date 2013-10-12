@@ -1,0 +1,129 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.openbsdpkg.rst:6
+# 6e1e761cf8734e2f8c0a7e1255930084
+msgid "salt.modules.openbsdpkg"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg:1
+# 645d9f19c5964384a412d2cba8826bc6
+msgid "Package support for OpenBSD"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.install:1
+# 192027f731d64065a1cee7d94ffdc350
+msgid "Install the passed package"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.install:3
+# fcb0fff50a2245fea68bed8e9c8bce74
+msgid "Return a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.install:8
+# 887ea281927d47e79199043d93c27a07
+msgid "CLI Example, Install one package:"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.install:14
+# 08f45b6556de4483896724b245ab42c7
+msgid "CLI Example, Install more than one package:"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.install:20
+# 99dff0e3952d4bbcb4a773406431299b
+msgid "CLI Example, Install more than one package from a alternate source (e.g. salt file-server, HTTP, FTP, local filesystem):"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.latest_version:1
+# d1c1519c19fd48c792426a7b908bcc90
+msgid "The available version of the package in the repository"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.latest_version:3
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.list_pkgs:5
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.purge:19
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.remove:14
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.version:5
+# 7ed7bc3a95aa43e084208b9210883a23
+# 27696c223239415d91887dd36dd91983
+# 5d2f09d6d71f4fdda44c8a1cf87ffd0c
+# c9024ab8d6de41f7ae10c3ca0a22a0a5
+# fb729156a95545228a397cc2e07e66aa
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.list_pkgs:1
+# db89b70c7a3f44b2bb6029af6e8d5633
+msgid "List the packages currently installed as a dict::"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.purge:1
+# 0acb8c3423bb4359b9ad3d466f046d87
+msgid "Package purges are not supported, this function is identical to ``remove()``."
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.purge:6
+# 6586836eefaa471a872662417c7e5047
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.purge:5
+# fc588426cce647909704232ea0244d9b
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.purge:8
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.remove:3
+# 668fcad9ba674a46b86e04ef01d04f72
+# b6b6ca984a674d07b31146998a9e545b
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.purge:12
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.remove:7
+# 47494015f9d44b09be317556b4968a95
+# fe3a620b92d24d7e85a957d56f41ea3b
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.purge:11
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.remove:6
+# 0dc87eaea1d84f92abce20891342036a
+# 24d063e1e6d74aee90dd1f587c5d357c
+msgid "A list of packages to delete. Must be passed as a python list. The ``name`` parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.purge:17
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.remove:12
+# 747f59668b134e22a1842f5a633506c8
+# 63745fdc693647558479265686cd76a9
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.remove:1
+# bbc781b421284945821f2f3f0c2c2cbb
+msgid "Remove a single package with pkg_delete"
+msgstr ""
+
+#: ../../../salt/modules/openbsdpkg.py:docstring of salt.modules.openbsdpkg.version:1
+# 244f9a2f007e483dad28b7ece23764ce
+msgid "Returns a string representing the package version or an empty string if not installed. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+

@@ -1,0 +1,153 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/output/all/index.rst:8
+# 12552f53c24c4e46b5598fcb079aa8ce
+msgid "Full list of builtin output modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+# bdf3e792fb8a490cb8089ac9bb9a139a
+msgid ":obj:`grains <salt.output.grains>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# fb2f6568ab31483f97ccbd8e5e4de740
+msgid "Special outputter for grains"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 0ec0f4b07b0241909a007dd23e54c801
+msgid ":obj:`highstate <salt.output.highstate>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 0097600c7c9343a9976a1a7d10995e0d
+msgid "The return data from the Highstate command is a standard data structure"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 77cd7f9a1b6344989a057057e5eb6a35
+msgid ":obj:`json_out <salt.output.json_out>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# cdeac85d69b640cf808292bc0ff9a30d
+msgid "The JSON output module converts the return data into JSON."
+msgstr ""
+
+#: ../../<autosummary>:1
+# d1aa98161e11405a8a4c66ca41b7fa42
+msgid ":obj:`key <salt.output.key>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7549966a5bdc4d4a853ff26642292025
+msgid "Salt Key makes use of the outputter system to format information sent to the"
+msgstr ""
+
+#: ../../<autosummary>:1
+# baeefad94f874e078c3f19db65f20da9
+msgid ":obj:`nested <salt.output.nested>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 2f4225a3f4ef4fe0b53c7854c710abb7
+msgid "Recursively display nested data, this is the default outputter."
+msgstr ""
+
+#: ../../<autosummary>:1
+# a90ef95a80c44e2ea4f92bcf4aa81c12
+msgid ":obj:`no_out <salt.output.no_out>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6b84ad85f775448ca58ee3d886995949
+msgid "Display no output."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 999250a68ae44d1aa314409030454123
+msgid ":obj:`no_return <salt.output.no_return>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e2dea302cb5d4e648d01377691906ef2
+msgid "Display output for minions that did not return"
+msgstr ""
+
+#: ../../<autosummary>:1
+# a01ba6d5a7694e3a872b81027cd75a2e
+msgid ":obj:`overstatestage <salt.output.overstatestage>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 2a788ee54d894c5595896a9f80db4d68
+msgid "Display clean output of an overstate stage"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 07902bd5ab5e47269a0c6571094fc42b
+msgid ":obj:`pprint_out <salt.output.pprint_out>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 9fa02b3e57504c42a49ecfecf2d7d4ad
+msgid "The python pretty print system was the default outputter."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6379e2a3af814856b0356e8af1fc3661
+msgid ":obj:`raw <salt.output.raw>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 70cccd1e9a2c475a866717fc2c1ec5f4
+msgid "The raw outputter outputs the data via the python print function and is shown in a raw state."
+msgstr ""
+
+#: ../../<autosummary>:1
+# ec443fd9761441bea49168a2dcaaf8b0
+msgid ":obj:`txt <salt.output.txt>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 014c0cd81e6449fb966d45357954ec5f
+msgid "The txt outputter has been developed to make the output from shell"
+msgstr ""
+
+#: ../../<autosummary>:1
+# b60bf40529024378923ba9ec69d5fca3
+msgid ":obj:`virt_query <salt.output.virt_query>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# faf2573079bf4c0ea10918ff6e452e91
+msgid "virt.query outputter"
+msgstr ""
+
+#: ../../<autosummary>:1
+# c22365ff53e94aca8ae07735c076b3e2
+msgid ":obj:`yaml_out <salt.output.yaml_out>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# d78a95f7ac3c4d408abbe8d085b61b15
+msgid "Output data in YAML, this outputter defaults to printing in YAML block mode"
+msgstr ""
+

@@ -1,0 +1,128 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/pillar/all/index.rst:8
+# cda843db783846339fbb05f386a07fe8
+msgid "Full list of builtin pillar modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 508d411d67df421f802dee307fada620
+msgid ":obj:`cmd_json <salt.pillar.cmd_json>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 1ba663daeef04f029dda7e864542d655
+msgid "Execute a command and read the output as JSON. The JSON data is then directly"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 3eeae49c2c8d48d38ab5a7c9a5560a4d
+msgid ":obj:`cmd_yaml <salt.pillar.cmd_yaml>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 8d5b35f6e7534932a6ed0ed96420d3a9
+msgid "Execute a command and read the output as YAML. The YAML data is then directly"
+msgstr ""
+
+#: ../../<autosummary>:1
+# c792609c9bf14e6bbca2d5a44db21b4a
+msgid ":obj:`cobbler <salt.pillar.cobbler>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 5689f4d75ae0448e8fd6a265afa4d7f8
+msgid "Cobbler Pillar"
+msgstr ""
+
+#: ../../<autosummary>:1
+# dd156798563845899c148affdf24b1c7
+msgid ":obj:`django_orm <salt.pillar.django_orm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 61a3728d76b842bfaa2d674de99f7bff
+msgid "Generate pillar data from Django models through the Django ORM"
+msgstr ""
+
+#: ../../<autosummary>:1
+# bfa0ea27152c4f8ebf6e4875d3542ab8
+msgid ":obj:`git_pillar <salt.pillar.git_pillar>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 2762abff7b104b189b0656b8a0f12ae2
+msgid "Clone a remote git repository and use the filesystem as a pillar directory."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 14f5ae4f57f243fe970833a441b21b27
+msgid ":obj:`hiera <salt.pillar.hiera>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# beb702659bdd485388fb6636ac76a2e6
+msgid "Take in a hiera configuration file location and execute it."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 340cb9f2d3614391abff1c6c3b35e54f
+msgid ":obj:`libvirt <salt.pillar.libvirt>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e1c9b7cf5fd642d29285a9750499aaf9
+msgid "Load up the libvirt keys into pillar for a given minion if said keys have"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7a5c5d829c4d43c9b364b0a0a298d05c
+msgid ":obj:`mongo <salt.pillar.mongo>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6f65e6b590ad47588f760494f4f231d1
+msgid "Read pillar data from a mongodb collection."
+msgstr ""
+
+#: ../../<autosummary>:1
+# a8ba10e5f1e34080abe9766a083218b1
+msgid ":obj:`pillar_ldap <salt.pillar.pillar_ldap>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6b94ace8a3ff42ae8e426e7dbc5bd3f3
+msgid "This pillar module parses a config file (specified in the salt master config),"
+msgstr ""
+
+#: ../../<autosummary>:1
+# d751661057124827be04255a90302bf2
+msgid ":obj:`puppet <salt.pillar.puppet>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 723729e298d049eab9f0771a10b1abfc
+msgid "Execute an unmodified puppet_node_classifier and read the output as YAML."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 148a60cdec6b41b4bb5c5e7615cdac92
+msgid ":obj:`reclass_adapter <salt.pillar.reclass_adapter>`\\"
+msgstr ""
+

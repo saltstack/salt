@@ -1,0 +1,85 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.timezone.rst:6
+# daf27357457f425eae547ef6c61148f6
+msgid "salt.modules.timezone"
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone:1
+# 05ff497eaa8f4add9af97ea344aca634
+msgid "Module for managing timezone on POSIX-like systems."
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.get_hwclock:1
+# 161a8689cf75494c84e7a74da3c2a509
+msgid "Get current hardware clock setting (UTC or localtime)"
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.get_hwclock:3
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.get_offset:3
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.get_zone:3
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.get_zonecode:3
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.set_hwclock:3
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.set_zone:7
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.zone_compare:5
+# c2deb9ce23de44c0b4f9df5b9fc80a11
+# d73a0efa20df43299996f1c6963612cf
+# 496d8d903b0c42a288ef851902f9884b
+# 8d8b44d6ee7b4a7abe9d64988ccbcaf1
+# 183a3445ffe648d39c1efbf086b4d2c1
+# 0b66b7ae116446f1b0c36f882b019b60
+# 6ad5cb031fd941858ad50011f2de2ac0
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.get_offset:1
+# 2ad0007516864239a6d876645a150c84
+msgid "Get current numeric timezone offset from UCT (i.e. -0700)"
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.get_zone:1
+# b376d84c3267448485966c3117c2c350
+msgid "Get current timezone (i.e. America/Denver)"
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.get_zonecode:1
+# ded02ef9a7024777be62de07f6116065
+msgid "Get current timezone (i.e. PST, MDT, etc)"
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.set_hwclock:1
+# 5265aad7a570471fb8250b5fa34ee50a
+msgid "Sets the hardware clock to be either UTC or localtime"
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.set_zone:1
+# e90eb6de83c54b9592aba3cb0fc46d77
+msgid "Unlinks, then symlinks /etc/localtime to the set timezone."
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.set_zone:3
+# 69999db9d4fd449cbb62c2cde9678d63
+msgid "The timezone is crucial to several system processes, each of which SHOULD be restarted (for instance, whatever you system uses as its cron and syslog daemons). This will not be magically done for you!"
+msgstr ""
+
+#: ../../../salt/modules/timezone.py:docstring of salt.modules.timezone.zone_compare:1
+# 85b6ebb4837841f4ac3e000833ab626d
+msgid "Checks the md5sum between the given timezone, and the one set in /etc/localtime. Returns True if they match, and False if not. Mostly useful for running state checks."
+msgstr ""
+

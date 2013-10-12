@@ -1,0 +1,226 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.pkgin.rst:6
+# 309cf091582b4f24811c8a29e73c726e
+msgid "salt.modules.pkgin"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin:1
+# 50a3992f0e494017a20e4c5980651da8
+msgid "Package support for pkgin based systems, inspired from freebsdpkg module"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.available_version:1
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.latest_version:1
+# efa78e38cd954fa5990ce703227a04ba
+# e06cf4757a5645898962b92565abfd35
+msgid "Return the latest version of the named package available for upgrade or installation."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.available_version:4
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.latest_version:4
+# 11b90ef989ed40baad8169d997ae6952
+# a8e07828cf7643bdb37874c812e65a17
+msgid "If the latest version of a given package is already installed, an empty string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.available_version:7
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:19
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:30
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:41
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.latest_version:7
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.list_pkgs:5
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.purge:19
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.refresh_db:3
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.rehash:5
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.remove:16
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.search:3
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.upgrade:8
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.version:5
+# c89c656ac3e443f5ab06f68081b5837a
+# 2505e9055bd64b579fe6441ba1ce406b
+# 4472dd59c42e4e15bdbcab6260b61ae0
+# 5337c461fef74878856f159e22b5879d
+# 2916b26a3a79455d811263737aa2fc2a
+# 7d31d589ff5c4f98b6cf4cf7015909a5
+# af8ee78ea9ee4da7bec601ab42a7c43e
+# f9b96ecfd91c4e85aeb3a7c59d3e20a8
+# aa3f7c28c4ba4da1a888a0cb31a81acc
+# 6f76d74d473a470586707b99e36f6869
+# 8faddf5c2f1d4b7e8d08aae39c62b10f
+# 35a9af73ae1b4a7281f024669c9b5c36
+# 5ca1a997b76c460f9d0bee4295deebc9
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.file_dict:1
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.file_list:1
+# 811ad9ba9fe64509841299942f073a4f
+# 9795739cf3d040f2bca1e0a3bbf0507a
+msgid "List the files that belong to a package."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.file_dict:3
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.file_list:3
+# 3a9ac57fd8ed4cc584ca59b29d26248d
+# cceee4845a784fca9f4fd8bfc203a10f
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:1
+# 0ec57912041648c7ba94bd97b81b2b38
+msgid "Install the passed package"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:4
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.purge:6
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.remove:3
+# 3fde0d84eeda46e483ef178697b1a4c3
+# 13bb5fbb7625414584990aedcb87b752
+# 1a38c86210eb4f5797f92167ccdd4e6a
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:4
+# 549109528da14ad08e5a344b19548e1b
+msgid "The name of the package to be installed."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:7
+# 8d4230b468794fa190e7b2838b3f63d9
+msgid "refresh"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:7
+# c20daabd777a4d3584cf3177ca2bd9f0
+msgid "Whether or not to refresh the package database before installing."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:11
+# de8fcbc7116943de83798be2b8049de6
+msgid "fromrepo"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:10
+# a11e654173dd4be2b6f6dff69dbaf0ce
+msgid "Specify a package repository to install from."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:13
+# 3fe7841108e341e59de9714b9dc87bfc
+msgid "Multiple Package Installation Options:"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:23
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.purge:12
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.remove:9
+# 6fb58102d2e84b7785d5bce41d19e1c7
+# d989b4cff3004c1d9a8f5020cf266660
+# fee9b7272f8d4a8c8427aac232603c17
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:16
+# 3c57c7bb6edd485ca73c9ff020c70318
+msgid "A list of packages to install from a software repository. Must be passed as a python list."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:34
+# 1110ea8e2ef2446281ba501c8ad71a6f
+msgid "sources"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:26
+# 978f94879d92474381bb844b887174bb
+msgid "A list of packages to install. Must be passed as a list of dicts, with the keys being package names, and the values being the source URI or local path to the package."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.install:36
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.upgrade:3
+# 20fd934216204a1fa2a19556707d7692
+# cfacd75e135d4a7aa020e9a01b71a00e
+msgid "Return a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.list_pkgs:1
+# 7caa6ce7e7d84390a6e0028c2639cd4e
+msgid "List the packages currently installed as a dict::"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.purge:1
+# ac34fe6904dd4ae2a75965c3ecc66dd8
+msgid "Package purges are not supported, this function is identical to ``remove()``."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.purge:5
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.remove:2
+# 1baa6c22fbf643cd90295669e6f2ec01
+# 309089b16728479a8632d87df88db9a3
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.purge:8
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.remove:5
+# d4cb034e2163430e83e42b37c3a67a0b
+# 62944d70a1a342b793b8a65f1d898112
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.purge:11
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.remove:8
+# 6d57e66bb4bf413f93d90d1ca19558d8
+# 54a2614f121743c3b1ee57f560995d3a
+msgid "A list of packages to delete. Must be passed as a python list. The ``name`` parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.purge:17
+# 7d5ceba814a9488eb466f3a71e93d2b4
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.refresh_db:1
+# 904fbb14515d47dea3ffc70045ea1fbd
+msgid "Use pkg update to get latest pkg_summary"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.rehash:1
+# 50906dfbe3154cf79f9b5975eba3453d
+msgid "Recomputes internal hash table for the PATH variable. Use whenever a new command is created during the current session."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.remove:14
+# 349b716a997746a996e97c22d847ca20
+msgid "Returns a list containing the removed packages."
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.search:1
+# fa976a4ddcc7443fbb6d751ad1568ee7
+msgid "Searches for an exact match using pkgin ^package$"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.upgrade:1
+# c9fb9dfc79814ed7b795d1233119a6e7
+msgid "Run pkg upgrade, if pkgin used. Otherwise do nothing"
+msgstr ""
+
+#: ../../../salt/modules/pkgin.py:docstring of salt.modules.pkgin.version:1
+# e170ec624be64d1ba60c54f927502dff
+msgid "Returns a string representing the package version or an empty string if not installed. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+

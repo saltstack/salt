@@ -1,0 +1,105 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.rbenv.rst:6
+# a0e2cbcd0ac94870b4cd254cb78568c2
+msgid "salt.states.rbenv"
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv:2
+# 7ebaa476aae845f4894f473541e1733f
+msgid "Managing Ruby installations with rbenv."
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv:4
+# 8460d6079ca547c5b53e25be3ae8a0ee
+msgid "This module is used to install and manage ruby installations with rbenv. Different versions of ruby can be installed, and uninstalled. Rbenv will be installed automatically the first time it is needed and can be updated later. This module will *not* automatically install packages which rbenv will need to compile the versions of ruby."
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv:10
+# 65d45d96513b430ba659efdb3da1480c
+msgid "If rbenv is run as the root user then it will be installed to /usr/local/rbenv, otherwise it will be installed to the users ~/.rbenv directory. To make rbenv available in the shell you may need to add the rbenv/shims and rbenv/bin directories to the users PATH. If you are installing as root and want other users to be able to access rbenv then you will need to add RBENV_ROOT to their environment."
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv:17
+# 6ad20732f6af4b59bb036ed5bd00950a
+msgid "This is how a state configuration could look like:"
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.absent:1
+# 2cd27b65c0344823873bbce14406b913
+msgid "Verify that the specified ruby is not installed with rbenv. Rbenv is installed if necessary."
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.absent:5
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:5
+# 235f1ee0e29e43cfb64747e3c04cff95
+# aa1836048285449a9b1f120993b323c2
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.absent:5
+# f4490cc74f5d4db4ac1229daff706840
+msgid "The version of ruby to uninstall"
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.absent:10
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:13
+# effa484777ac4fc3bb18377547d9392d
+# 23baaa0282bf4d20a450fc18184bb6bc
+msgid "runas: None"
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.absent:8
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.absent:13
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:11
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:16
+# 1c27303272a6433e979c5f837c85487e
+# 79650bcc5a6240bfa3948cf642eaa6cd
+# 663de6e1a4694a03b6d953f48a809f77
+# 6d7de5ca24024567a20e176cfe0b0558
+msgid "The user to run rbenv as."
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.absent:15
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:18
+# 4d41ac8732984ca59b5f196313c4ce1f
+# 74c7637792224f30b663cdafbbd40d1a
+msgid "user: None"
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:1
+# e4f4c4f7d1ea46bd9710da506027b418
+msgid "Verify that the specified ruby is installed with rbenv. Rbenv is installed if necessary."
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:5
+# a25cebc756be46e1895113e1c93a2034
+msgid "The version of ruby to install"
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:8
+# 356deb97cfe344d2b0d343d1f49b8a12
+msgid "default : False"
+msgstr ""
+
+#: ../../../salt/states/rbenv.py:docstring of salt.states.rbenv.installed:8
+# bafda5c123ca4918b6d96d9c031b4583
+msgid "Whether to make this ruby the default."
+msgstr ""
+

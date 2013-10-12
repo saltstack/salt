@@ -1,0 +1,173 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/states_pt4.rst:6
+# 6a51d3f4874f4b3c837af78238589de7
+msgid "States tutorial, part 4"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:10
+# 399eb48acfa64bfeb3282abc5fc14b1c
+msgid "This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`, :doc:`part 2 <states_pt2>` and :doc:`part 3 <states_pt3>`. It is recommended that you begin there."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:14
+# f0ff09afa40f4e8bad567b674be3ab03
+msgid "This part of the tutorial will show how to use salt's :conf_master:`file_roots` to set up a workflow in which states can be \"promoted\" from dev, to QA, to production."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:19
+# b2e653b3d9774d1aa0be86835520189d
+msgid "Salt fileserver path inheritance"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:21
+# 0b6ab8c0656e431fbbe142127dcb7efd
+msgid "Salt's fileserver allows for more than one root directory per environment, like in the below example, which uses both a local directory and a secondary location shared to the salt master via NFS:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:33
+# f80a2997adac4c4c80c443d97da7647c
+msgid "Salt's fileserver collapses the list of root directories into a single virtual environment containing all files from each root. If the same file exists at the same relative path in more than one root, then the top-most match \"wins\". For example, if ``/srv/salt/foo.txt`` and ``/mnt/salt-nfs/base/foo.txt`` both exist, then ``salt://foo.txt`` will point to ``/srv/salt/foo.txt``."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:40
+# 6ca91487552b4b8cad177f9cf6d6416c
+msgid "Environment configuration"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:42
+# d0e38d4d54ec4df4aeaf40d5baf4185d
+msgid "Configure a multiple-environment setup like so:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:57
+# 3d3bb42f84d342c897796d7a6eaf4aae
+msgid "Given the path inheritance described above, files within ``/srv/salt/prod`` would be available in all environments. Files within ``/srv/salt/qa`` would be available in both ``qa``, and ``dev``. Finally, the files within ``/srv/salt/dev`` would only be available within the ``dev`` environment."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:62
+# ff586c1d4aae4263954c509c02375951
+msgid "Based on the order in which the roots are defined, new files/states can be placed within ``/srv/salt/dev``, and pushed out to the dev hosts for testing."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:65
+# f68d945bf831414abf9db988eacd966b
+msgid "Those files/states can then be moved to the same relative path within ``/srv/salt/qa``, and they are now available only in the ``dev`` and ``qa`` environments, allowing them to be pushed to QA hosts and tested."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:69
+# 7ce8969c4a7d4e0f847e33ea2fe34fb9
+msgid "Finally, if moved to the same relative path within ``/srv/salt/prod``, the files are now available in all three environments."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:73
+# 7903e3801c2a4992851c5c7f33f2c0ac
+msgid "Practical Example"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:75
+# a21d85fa712543e39a1203b009b7a93e
+msgid "As an example, consider a simple website, installed to ``/var/www/foobarcom``. Below is a top.sls that can be used to deploy the website:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:78
+# 01757a83fa184cbe9dc5e6ea69e005b8
+msgid "``/srv/salt/prod/top.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:93
+# d2e88662ca954ed4899d872d62529464
+msgid "Using pillar, roles can be assigned to the hosts:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:95
+# c3202f1bafb7465bbb107f0268a38332
+msgid "``/srv/pillar/top.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:107
+# 5e22bb26c0f0451799049051688e4a8f
+msgid "``/srv/pillar/webserver/prod.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:113
+# d42c3e993207489bbfb4543b4c34deb5
+msgid "``/srv/pillar/webserver/qa.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:119
+# 60ec5b6d96fa4be19bcebd5164d31eaf
+msgid "``/srv/pillar/webserver/dev.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:126
+# a56739d1eb4947b78fcea7f11418d04f
+msgid "And finally, the SLS to deploy the website:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:128
+# 690097d735a845f997f609435e26cc2a
+msgid "``/srv/salt/prod/webserver/foobarcom.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:143
+# ea1b5ba98cea4b78b63e469a362a2d5b
+msgid "Given the above SLS, the source for the website should initially be placed in ``/srv/salt/dev/webserver/src/foobarcom``."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:146
+# d6884e0721b14ec294bf53e2b46563b8
+msgid "First, let's deploy to dev. Given the configuration in the top file, this can be done using :mod:`state.highstate <salt.modules.state.highstate>`:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:153
+# 1dd19507f52d470cac017be9b48ad711
+msgid "However, in the event that it is not desirable to apply all states configured in the top file (which could be likely in more complex setups), it is possible to apply just the states for the ``foobarcom`` website, using :mod:`state.sls <salt.modules.state.sls>`:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:162
+# 2462492a581f4a5592989f2e3e3e9da5
+msgid "Once the site has been tested in dev, then the files can be moved from ``/srv/salt/dev/webserver/src/foobarcom`` to ``/srv/salt/qa/webserver/src/foobarcom``, and deployed using the following:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:170
+# 1cfe264a1e134ac8aa8dc1b8c5766388
+msgid "Finally, once the site has been tested in qa, then the files can be moved from ``/srv/salt/qa/webserver/src/foobarcom`` to ``/srv/salt/prod/webserver/src/foobarcom``, and deployed using the following:"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:178
+# e33f2f397c944694a08844c0ec0cfbc3
+msgid "Thanks to Salt's fileserver inheritance, even though the files have been moved to within ``/srv/salt/prod``, they are still available from the same ``salt://`` URI in both the qa and dev environments."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:184
+# ee6fee12c6bd4b028f4f248c458f2976
+msgid "Continue learning"
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:186
+# d35b23ed7dc342b8a3d2c2dba41944fd
+msgid "The best way to continue learning about Salt States is to read through the :doc:`reference documentation </ref/states/index>` and to look through examples of existing :term:`state trees <state tree>`. Many pre-configured state trees can be found on Github in the `saltstack-formulas`_ collection of repositories."
+msgstr ""
+
+#: ../../topics/tutorials/states_pt4.rst:193
+# d366ae770ba043e49a509a5fd887dd97
+msgid "If you have any questions, suggestions, or just want to chat with other people who are using Salt, we have a very :doc:`active community </topics/community>` and we'd love to hear from you."
+msgstr ""
+

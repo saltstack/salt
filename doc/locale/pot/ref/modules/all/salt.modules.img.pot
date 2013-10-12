@@ -1,0 +1,86 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.img.rst:6
+# 3e91229352624962b24f93e616c6da3f
+msgid "salt.modules.img"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img:1
+# 4c45a905d2774593bd32fa4e8fa91529
+msgid "Virtual machine image management tools"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.bootstrap:1
+# 9510528deaad464095bbb434207f8568
+msgid "HIGHLY EXPERIMENTAL Bootstrap a virtual machine image"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.bootstrap:5
+# 2c0bd313b97243a48cf1fdb7e3d3ccc9
+msgid "location:"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.bootstrap:5
+# b1e8ff9fe16045ecbc0a7350bd5d6bee
+msgid "The location to create the image"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.bootstrap:8
+# fc3cf54a69264bb08714d4b4d68db693
+msgid "size:"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.bootstrap:8
+# 0fde706325fb42b4a8c0a17360bd9203
+msgid "The size of the image to create in megabytes"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.bootstrap:11
+# 61093d7f98a64f6da3c36d30696dc765
+msgid "fmt:"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.bootstrap:11
+# 013d15872f294bb6ade006400156e701
+msgid "The image format, raw or qcow2"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.bootstrap:13
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.mnt_image:3
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.mount_image:3
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.umount_image:3
+# f805f2b01f9f429fa61e6c23f39f8ad6
+# 7a97117715ea4c2fac0165ad042a7caa
+# 5fafeb43280148cfa820e1b665afbede
+# 6281b26b21794f74b9e7a2979563ed97
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.mnt_image:1
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.mount_image:1
+# 8f26c412b3104fff9a00d56d79c5acd6
+# ad66836b84234add886e721a9421e443
+msgid "Mount the named image and return the mount point"
+msgstr ""
+
+#: ../../../salt/modules/img.py:docstring of salt.modules.img.umount_image:1
+# e003f8cbd44f4b9da4513ab9995390f4
+msgid "Unmount an image mountpoint"
+msgstr ""
+

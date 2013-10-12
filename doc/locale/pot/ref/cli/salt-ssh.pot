@@ -1,0 +1,233 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/cli/salt-ssh.rst:6
+# 96625ed9737f45d98ad2da1758566024
+msgid "``salt-ssh``"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:9
+# a7457247d797446da10a784a96be5290
+msgid "Synopsis"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:11
+# f93830c14d634b788e7641f7a250814c
+msgid "salt-ssh '*' [ options ] sys.doc"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:13
+# d1abdcf7445643ffb6577830be9482dc
+msgid "salt-ssh -E '.*' [ options ] sys.doc cmd"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:16
+# a290b2db1e884ebeb022b1fb21f9f824
+msgid "Description"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:18
+# aeb7e2a681a743d29e48d394ad2a0fa1
+msgid "Salt ssh allows for salt routines to be executed using only ssh for transport"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:21
+# f88f5507c20e4d8e95436dade8b33b58
+msgid "Options"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:25
+# bef5d4efb1fb456884ff81d7266c0241
+msgid "Execute a raw shell command."
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:29
+# 3a39365e90a24212a1d12188ed418efd
+msgid "Define which roster system to use, this defines if a database backend, scanner, or custom roster system is used. Default is the flat file roster."
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:34
+# 639a2dbeee884ba383ddf86baffd8d8b
+msgid "Force a refresh of the master side data cache of the target's data. This is needed if a target's grains have been changed and the auto refresh timeframe has not been reached."
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:40
+# cf55e86bdf624c0394335f6d845cfa81
+msgid "Set the number of concurrent minions to communicate with. This value defines how many processes are opened up at a time to manage connections, the more running process the faster communication should be, default is 25."
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:47
+# 350d9268bfe24b1491f6c11f9e2ade96
+msgid "Set te default password to attempt to use when authenticating."
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:51
+# 2c569b5cb90a49269120cc710a7469c6
+msgid "Set this flag to attempt to deploy the authorized ssh key with all minions. This combined with --passwd can make initial deployment of keys very fast and easy."
+msgstr ""
+
+#: ../../ref/cli/_includes/common-options.rst:3
+# 4d6f0625840d427c82bc771e5c4b8d43
+msgid "Print the version of Salt that is running."
+msgstr ""
+
+#: ../../ref/cli/_includes/common-options.rst:7
+# 95787aef804144a79b61d5db66bcc068
+msgid "Show program's dependencies and version number, and then exit"
+msgstr ""
+
+#: ../../ref/cli/_includes/common-options.rst:11
+# a55a401b58f64cc99e7dcef29d2f7616
+msgid "Show the help message and exit"
+msgstr ""
+
+#: ../../ref/cli/_includes/common-options.rst:15
+# f8eb3c1a4ebf4e1fb07f6c56176b93c3
+msgid "The location of the Salt configuration directory. This directory contains the configuration files for Salt master and minions. The default location on most systems is ``/etc/salt``."
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:2
+# 9403faf9b2394c0393878179f4681b48
+msgid "Target Selection"
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:6
+# 940b5e4fcb3c4721829e60e231f7208e
+msgid "The target expression will be interpreted as a PCRE regular expression rather than a shell glob."
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:11
+# bccce2b24434445e9cc38244c5fb361b
+msgid "The target expression will be interpreted as a comma-delimited list; example: server1.foo.bar,server2.foo.bar,example7.quo.qux"
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:16
+# f47ebd3a94d542c69a1c6ec9c5de34c4
+msgid "The target expression matches values returned by the Salt grains system on the minions. The target expression is in the format of '<grain value>:<glob expression>'; example: 'os:Arch*'"
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:20
+# 850f7bb490d34cf2945f84790ecf189f
+msgid "This was changed in version 0.9.8 to accept glob expressions instead of regular expression. To use regular expression matching with grains, use the --grain-pcre option."
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:26
+# 79d94d87407f4ab19f373af59d81a712
+msgid "The target expression matches values returned by the Salt grains system on the minions. The target expression is in the format of '<grain value>:< regular expression>'; example: 'os:Arch.*'"
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:32
+# 620a79fa9f8d4382aa054f469b2a4205
+msgid "Use a predefined compound target defined in the Salt master configuration file."
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:37
+# 153e0535067e449484695918faa10386
+msgid "Instead of using shell globs to evaluate the target, use a range expression to identify targets. Range expressions look like %cluster."
+msgstr ""
+
+#: ../../ref/cli/_includes/target-selection.rst:40
+# 42ed0d8e441845788e68dde82328101a
+msgid "Using the Range option requires that a range server is set up and the location of the range server is referenced in the master configuration file."
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:2
+# a9a1b86f85a64ba4b05cd36658a2c9ed
+msgid "Logging Options"
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:4
+# cf0a05db950340a8b28d76382eb20a3e
+msgid "Logging options which override any settings defined on the configuration files."
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:9
+# 7ea7cee93d494bd888254a8301b4cf6c
+msgid "Console logging log level. One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``, ``error``, ``quiet``. Default: |loglevel|."
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:16
+# 396121c8ecc2451ab4a8e7fb154c8090
+msgid "Log file path. Default: |logfile|."
+msgstr ""
+
+#: ../../ref/cli/_includes/logging-options.rst:20
+# 8c3aea9c476748adb4331a6cc23d82bf
+msgid "Logfile logging log level. One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``, ``error``, ``quiet``. Default: |loglevel|."
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:2
+# a461de796b9e449988c247e2bd36182e
+msgid "Output Options"
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:6
+# 0e27832a7a864c5bbff7ed5b230ffeed
+msgid "Pass in an alternative outputter to display the return of data. This outputter can be any of the available outputters:"
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:9
+# 98f06ea657ab432cbac8a094a6989139
+msgid "``grains``, ``highstate``, ``json``, ``key``, ``overstatestage``, ``pprint``, ``raw``, ``txt``, ``yaml``"
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:11
+# 0167eeb91be44a61aadb9b2816d5755b
+msgid "Some outputters are formatted only for data returned from specific functions; for instance, the ``grains`` outputter will not work for non-grains data."
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:15
+# 819527aaa37049cc9741e0c8c01a7d2d
+msgid "If an outputter is used that does not support the data passed into it, then Salt will fall back on the ``pprint`` outputter and display the return data using the Python ``pprint`` standard library module."
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:20
+# 5c62d0950cfb48acb59ebfcd1fe3c805
+msgid "If using ``--out=json``, you will probably want ``--static`` as well. Without the static option, you will get a JSON string for each minion. This is due to using an iterative outputter. So if you want to feed it to a JSON parser, use ``--static`` as well."
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:27
+# bb3a22fda4d34676a7fe8e97d6b5349c
+msgid "Print the output indented by the provided value in spaces. Negative values disable indentation. Only applicable in outputters that support indentation."
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:33
+# d37cfa4159d24713a1cb8167f010bc50
+msgid "Write the output to the specified file."
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:37
+# 78bf27bde923422cb1c664497c53fd8a
+msgid "Disable all colored output"
+msgstr ""
+
+#: ../../ref/cli/_includes/output-options.rst:41
+# 5b72ae4be51047f3abd5f2288d2e2a75
+msgid "Force colored output"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:69
+# dae4b5c595584c2bbf82bed27a181657
+msgid "See also"
+msgstr ""
+
+#: ../../ref/cli/salt-ssh.rst:71
+# 31441cf6919649ffac9ea572ea2b8652
+msgid ":manpage:`salt(7)` :manpage:`salt-master(1)` :manpage:`salt-minion(1)`"
+msgstr ""
+

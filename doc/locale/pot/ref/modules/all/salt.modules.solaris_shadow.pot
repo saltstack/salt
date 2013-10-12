@@ -1,0 +1,73 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.solaris_shadow.rst:6
+# a565e54707e8411ea814cf4192e055c0
+msgid "salt.modules.solaris_shadow"
+msgstr ""
+
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow:1
+# f3f2fd8d7038492daf986ef83a6ac4cc
+msgid "Manage the password database on Solaris systems"
+msgstr ""
+
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.default_hash:1
+# c427839750874f33957858a3033fa1f6
+msgid "Returns the default hash used for unset passwords"
+msgstr ""
+
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.default_hash:3
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.info:3
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.set_maxdays:4
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.set_mindays:3
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.set_password:5
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.set_warndays:4
+# 954274f1519b47c9943e78e2aa0c4fdf
+# 8b8c66c72f9048ffae74892e617f9882
+# c8a91bfd827e4ebbbaf8c17e19f153ad
+# 0441c542c82d4dafb2ce3b0100ec9832
+# 90b6ef1693214dcda17153ff9f86c19f
+# 89ab5cb6954442f7bff726282b0f098e
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.info:1
+# b69e7b927ec44ca185411e70ceacce30
+msgid "Return information for the specified user"
+msgstr ""
+
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.set_maxdays:1
+# 2bd0ea2aaf674983a997297e6408c1cf
+msgid "Set the maximum number of days during which a password is valid. See man passwd."
+msgstr ""
+
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.set_mindays:1
+# cd4acc4ab3ef4f20a5ecbc0362ad7480
+msgid "Set the minimum number of days between password changes. See man passwd."
+msgstr ""
+
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.set_password:1
+# f85932a5a0134b93917fc2392feec25d
+msgid "Set the password for a named user. The password must be a properly defined hash, the password hash can be generated with this command: ``openssl passwd -1 <plaintext password>``"
+msgstr ""
+
+#: ../../../salt/modules/solaris_shadow.py:docstring of salt.modules.solaris_shadow.set_warndays:1
+# 92ce125f883344b1ac23d9db5b4730ec
+msgid "Set the number of days of warning before a password change is required. See man passwd."
+msgstr ""
+

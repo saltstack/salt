@@ -1,0 +1,270 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.user.rst:6
+# be32e953f3ad42e0939bb817f02f40e3
+msgid "salt.states.user"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user:2
+# 54539ffbb7874d6b942db30949c0e1bd
+msgid "Management of user accounts."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user:4
+# 4441bab35cc0472484a0daa13aa34486
+msgid "The user module is used to create and manage user settings, users can be set as either absent or present"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.absent:1
+# 9a169c5710a2482ba18a9edbb9554aac
+msgid "Ensure that the named user is absent"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.absent:4
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:4
+# 821d29291dcb4960a72a5b505be2fd7f
+# a5aa7323d0a74feebd0052ed7bc61b61
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.absent:4
+# b880288b2a9841e09eeb6aae72f85490
+msgid "The name of the user to remove"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.absent:7
+# a1a56c8e3d2243e3abe2918f27b84134
+msgid "purge"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.absent:7
+# 3a5ea2df1a4e43138eb9ea426f3c8c29
+msgid "Set purge to delete all of the user's files as well as the user"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.absent:11
+# d537ff6e93744021b5bb3bca1eed045c
+msgid "force"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.absent:10
+# 1d310018fe874582bb368b32efa86024
+msgid "If the user is logged in the absent state will fail, set the force option to True to remove the user even if they are logged in. Not supported in FreeBSD and Solaris."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:1
+# 6b8224fb44544ca0814b9c7539d3f412
+msgid "Ensure that the named user is present with the specified properties"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:4
+# a82aa68eed8f40918ccdda308853542b
+msgid "The name of the user to manage"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:8
+# 09170cca7d9f4a60ba7c1583f8838eb6
+msgid "uid"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:7
+# fbc23cc7174246a19fe3ae51d2124eb5
+msgid "The user id to assign, if left empty then the next available user id will be assigned"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:11
+# 6afb645d3c714fe99aabace9b7f04555
+msgid "gid"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:11
+# 79d9337e5b8240b1910e61fa206e8985
+msgid "The default group id"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:15
+# 4b89eb951d164297a2555029586b949c
+msgid "gid_from_name"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:14
+# 79039479bd3c45228d7e38e854de555d
+msgid "If True, the default group id will be set to the id of the group with the same name as the user."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:21
+# 58891c82e838472fb93c79866d313c01
+msgid "groups"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:18
+# 578eb72b3baf47dba54192c4df24163e
+msgid "A list of groups to assign the user to, pass a list object. If a group specified here does not exist on the minion, the state will fail. If set to the empty list, the user will be removed from all groups except the default group."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:26
+# b096d55337e74977b57536a4f02f2b06
+msgid "optional_groups"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:24
+# fa4bf4a702e44fc39fe562ecbb5375a4
+msgid "A list of groups to assign the user to, pass a list object. If a group specified here does not exist on the minion, the state will silently ignore it."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:28
+# 22e3908077644a9fbe4536a3f1d49ff1
+msgid "NOTE: If the same group is specified in both \"groups\" and \"optional_groups\", then it will be assumed to be required and not optional."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:33
+# f954275f2ef240438d2a389975fccf54
+msgid "remove_groups"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:32
+# dc48b630eba24b12935c588a35cb6cf7
+msgid "Remove groups that the user is a member of that weren't specified in the state, True by default"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:36
+# 2338a81fb8ea469ebb8f2a8c552efa57
+msgid "home"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:36
+# f37e78e978d344958e162f64dff20e09
+msgid "The location of the home directory to manage"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:41
+# 556f615ec6a44f9b95391c694f94a6ef
+msgid "createhome"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:39
+# 5eadb6aaaf404c94ab11c8b449983795
+msgid "If True, the home directory will be created if it doesn't exist. Please note that directories leading up to the home directory will NOT be created."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:45
+# 6745eb43a880471e994ede667dd1d06c
+msgid "password"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:44
+# 5f8dc8ff1c1c4d4bbba2dc07cc78a979
+msgid "A password hash to set for the user. This field is only supported on Linux, FreeBSD, NetBSD, OpenBSD, and Solaris."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:47
+# 8772d9a1f1244b1183b243774d65bfac
+msgid "BSD support added."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:54
+# d7bf5448396240fca345b55801f0dff7
+msgid "enforce_password"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:51
+# 4d9e6a41bd724358aada52cd70710128
+msgid "Set to False to keep the password from being changed if it has already been set and the password hash differs from what is specified in the \"password\" field. This option will be ignored if \"password\" is not specified."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:57
+# ea0a6e3f22ef46d4bef4b33e65e8a184
+msgid "shell"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:57
+# e02f6e43b0264fa7bdb3821ec320b1cd
+msgid "The login shell, defaults to the system default shell"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:60
+# caff3c1f688e4de59669e7b2b82357e3
+msgid "unique"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:60
+# 6377d459b9894f17b46d64b63cd8662e
+msgid "Require a unique UID, True by default"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:64
+# 0e169980dd9e42ba959bc3ca8c4e8c57
+msgid "system"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:63
+# 7493677be2ff4db1a0087c9d895fc834
+msgid "Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID."
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:66
+# cb135966f70c4a44b5c2c1ba1a880193
+msgid "User comment field (GECOS) support (currently Linux, FreeBSD, and MacOS only):"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:69
+# 1ba27ee05bc44060b994dab3f9473fdb
+msgid "The below values should be specified as strings to avoid ambiguities when the values are loaded. (Especially the phone and room number fields which are likely to contain numeric data)"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:74
+# e4a028c2fdb64915be175f2e400d072e
+msgid "fullname"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:74
+# 249924c4f0e7431abfe03decb046f984
+msgid "The user's full name"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:77
+# cc16e8353f794afe80fcd9aa5a7220fb
+msgid "roomnumber"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:77
+# 3f2adf038b994db082816d2ba5619f57
+msgid "The user's room number (not supported in MacOS)"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:80
+# 7a68038c98454755819cf3c334a64705
+msgid "workphone"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:80
+# 015ce85053884941b3f62af56349f364
+msgid "The user's work phone number (not supported in MacOS)"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:82
+# 17c188664ee04f08a4ea7b3c5e8854d0
+msgid "homephone"
+msgstr ""
+
+#: ../../../salt/states/user.py:docstring of salt.states.user.present:83
+# 88cdbe5b4eed40b99c4b1d3e4ef939ca
+msgid "The user's home phone number (not supported in MacOS)"
+msgstr ""
+

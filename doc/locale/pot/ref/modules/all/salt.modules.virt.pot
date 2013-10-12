@@ -1,0 +1,410 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.virt.rst:6
+# 9312d298073946b885f5eada001f2f93
+msgid "salt.modules.virt"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt:1
+# d395a9195d61467d9805177745738223
+msgid "Work with virtual machines managed by libvirt"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt:3
+# c31cf71c36154da7b5b02f941ad2bede
+msgid "libvirt Python module"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.create:1
+# 796aaa60de7b412a8561b970e6782bbf
+msgid "Start a defined domain"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.create:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.create_xml_path:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.create_xml_str:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.ctrl_alt_del:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.define_vol_xml_path:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.define_vol_xml_str:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.define_xml_path:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.define_xml_str:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.destroy:4
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.freecpu:4
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.freemem:4
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.full_info:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_disks:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_graphics:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_macs:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_nics:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_xml:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.init:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.is_hyper:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.is_kvm_hyper:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.is_xen_hyper:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.list_active_vms:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.list_inactive_vms:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.list_vms:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.migrate:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.migrate_non_shared:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.migrate_non_shared_inc:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.node_info:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.pause:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.purge:5
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.reboot:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.reset:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.resume:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.seed_non_shared_migrate:5
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.set_autostart:4
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.setmem:7
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.setvcpus:7
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.shutdown:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.start:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.stop:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.undefine:4
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.virt_type:3
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_cputime:17
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_diskstats:20
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_info:20
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_netstats:23
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_state:6
+# 2dde3e2d0b954d139023a713e9b74a82
+# 1af99b9c3d5a43d4af533d77a1afc667
+# 69c9420d19a649ab815fa042691de2aa
+# 8ec0b4d92cfc43c98ddab544e34c855b
+# de96b0e3b7c549e39ebdc26f00e59f80
+# 42da4e55202342a0aaf0fa62d5fcb4da
+# c61eff479d7a4a4ba200556988697642
+# 1de06568d124403a8f05b5f30b056c89
+# 09fa1966987846199ce20f97595c7958
+# 18b46fea17ca4c19a0a7356bf3bd0828
+# 277d6b3891744f55915aa9de9647d084
+# 6a5a5815220a49cf95a217b9223bd89a
+# 47d182ff3ca44f6da703c587f78c9b34
+# 0d1e4eb0effb40988164dfec46c794f4
+# d32f258e34a04ed8831079d06a7f9881
+# 581243ed874d48e4a3cc0381e191467b
+# 866691b74cde40e89859b5e96ec161e6
+# 23a2e1e9aa604382ac0845306f9074ca
+# d5639458d83f43a2823b4b44cafd82fd
+# 0c0b7bd441e14dc388bfd429a78db116
+# d4aae518ebc3405f871d72c6503065f4
+# 29e8032415804481bef98f0913b006ef
+# 28973472572d4b969e2af4ef35c42eb0
+# 45a257ed19544beaa2981e188c845b2a
+# d3cd607da6c34be1afcc439286b1a5e7
+# 6cc6525f73bf4a7a9a0cdf9797842275
+# e4da6a81d91f4db3a0189eaed78941e4
+# 31381d25dd8f464ca8f769d3a150bbce
+# aaf4fdd3034446feb1eceb05d7524289
+# 883ed6e8c36e481daed5be6d3166aa82
+# 85c9d7d70c604d1b8e1681b05eaab0d5
+# f67e7a8f44e4431b84b8c357f0ed565a
+# 5e8328aa27984720a37514bc9400d01e
+# a7db99d311824edaa0183afe6bbe4952
+# 1144abb664b1429385fa9091b05d89c6
+# 75756bb4f7f148bf963a751972b76e2c
+# bd8f44cb544d468a9e4e8bb8cd95636d
+# e7b84328ca224e869ed71a3fa996628f
+# 65b4e19b1c89468587e45419a15a9892
+# 36e56763d90e4a2c95cf375de6819e38
+# 0d2cbb2c6cd842faa72c6aa79afe9af9
+# ba4e118bfe1044fdaec43b1cf94bfe44
+# 93b487ff30394921b83461cd1d0286d7
+# 6335fa096bb44c268c9c78c5e906cd31
+# c2af7ca4b46c4d84933f5c2781d503ae
+# 0b80c5c4a41a43848d2a19f4e8c9316e
+# 3d12542812374f1482d771b9661e0e19
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.create_xml_path:1
+# a9a4ed92277e4fb480630a9a5ec02700
+msgid "Start a domain based on the XML-file path passed to the function"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.create_xml_str:1
+# 634204a1199d4f2191fa097bff43c2a0
+msgid "Start a domain based on the XML passed to the function"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.ctrl_alt_del:1
+# c95fca469f8e4d4e956be31681d588d8
+msgid "Sends CTRL+ALT+DEL to a VM"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.define_vol_xml_path:1
+# d057f21c1cd447809ae4da02e542b60f
+msgid "Define a volume based on the XML-file path passed to the function"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.define_vol_xml_str:1
+# 2eb349a6f91f4ada944a0f0932550fa7
+msgid "Define a volume based on the XML passed to the function"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.define_xml_path:1
+# ce4e32e48d2b4305a8ca8e94ab61862e
+msgid "Define a domain based on the XML-file path passed to the function"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.define_xml_str:1
+# bbe09423cd424bf39fa09fa09505ee1f
+msgid "Define a domain based on the XML passed to the function"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.destroy:1
+# 0bd3bdb5654c48df977362aef979d94b
+msgid "Hard power down the virtual machine, this is equivalent to pulling the power"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.freecpu:1
+# 3fbb1081883943249619f62fc9b53f59
+msgid "Return an int representing the number of unallocated cpus on this hypervisor"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.freemem:1
+# 22dcb2fb5d4e4732a940b83c3d59f33f
+msgid "Return an int representing the amount of memory that has not been given to virtual machines on this node"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.full_info:1
+# d7c018eca12746b4b9c4e373798db902
+msgid "Return the node_info, vm_info and freemem"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_disks:1
+# 934b467ba7f54eabaa510ee2f4e0804e
+msgid "Return the disks of a named vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_graphics:1
+# d06e7e0af90947a28cbf8aac786d7a5e
+msgid "Returns the information on vnc for a given vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_macs:1
+# f67f4121089e4c2ab4e27bafbab1b115
+msgid "Return a list off MAC addresses from the named vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_nics:1
+# c65b237dca2e4be2adb42305d03061da
+msgid "Return info about the network interfaces of a named vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_profiles:1
+# e5dc5de1aff24b299d221801c83d0a9d
+msgid "Return the virt profiles for hypervisor."
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_profiles:3
+# 5232ec9e882046f6a8eb0a6895276e30
+msgid "Currently there are profiles for:"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_profiles:5
+# 6b47c433a100412881bfa1f210a18ef0
+msgid "nic"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_profiles:6
+# bcdb6a7c19c144ab992990df61050ac0
+msgid "disk"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_profiles:8
+# 198b813aa0f9462f8239fa472e04afdd
+msgid "CLI Example::"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.get_xml:1
+# 0286a3fd61314947a9c9b6e373d5c587
+msgid "Returns the XML for a given vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.init:1
+# feade682a6a84d9fbd7c1b9fc2ac680e
+msgid "Initialize a new vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.is_hyper:1
+# 61c9f312ad5e469583778b1c998b2d4d
+msgid "Returns a bool whether or not this node is a hypervisor of any kind"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.is_kvm_hyper:1
+# 1f580c3b2e9c440393d55954f0eaf657
+msgid "Returns a bool whether or not this node is a KVM hypervisor"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.is_xen_hyper:1
+# 1aec1b6b26d9418290767acfd16e5d67
+msgid "Returns a bool whether or not this node is a XEN hypervisor"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.list_active_vms:1
+# 9db25038ff8c4b659b9b9213814f55af
+msgid "Return a list of names for active virtual machine on the minion"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.list_inactive_vms:1
+# 357deefcf15940bca7072251bdf85ed7
+msgid "Return a list of names for inactive virtual machine on the minion"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.list_vms:1
+# e547ef94ac564ce9b9b94c4b015e4ef0
+msgid "Return a list of virtual machine names on the minion"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.migrate:1
+# 1672b5aaca3b47c7a6058f69547a9b78
+msgid "Shared storage migration"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.migrate_non_shared:1
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.migrate_non_shared_inc:1
+# 78eddd322740475b95fd44f1673df3ad
+# 4798c85200134aa8bac3cf51e5787d82
+msgid "Attempt to execute non-shared storage \"all\" migration"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.node_info:1
+# 4f5e9dacf08045fe84392b8a7069cd91
+msgid "Return a dict with information about this node"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.pause:1
+# 1d31de5c26734f9199bff4e8cb96a773
+msgid "Pause the named vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.purge:1
+# c66cc66ff850419b8c8977169e80af61
+msgid "Recursively destroy and delete a virtual machine, pass True for dir's to also delete the directories containing the virtual machine disk images - USE WITH EXTREME CAUTION!"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.reboot:1
+# c062e859eece4aefb4e7fb7f177d43a0
+msgid "Reboot a domain via ACPI request"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.reset:1
+# 33a51255ad074e508ba53e96b544e97a
+msgid "Reset a VM by emulating the reset button on a physical machine"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.resume:1
+# ac6a7ee6d7e947e3a8885152e4adfe57
+msgid "Resume the named vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.seed_non_shared_migrate:1
+# e8b26c50ec314e32a10ad88bbec47d96
+msgid "Non shared migration requires that the disks be present on the migration destination, pass the disks information via this function, to the migration destination before executing the migration."
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.set_autostart:1
+# 888474f1f22448849de048de05d44b4e
+msgid "Set the autostart flag on a VM so that the VM will start with the host system on reboot."
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.setmem:1
+# ac8007895c15466fa49459a93d0a9016
+msgid "Changes the amount of memory allocated to VM. The VM must be shutdown for this to work."
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.setmem:4
+# 0d4432ed81ae4579bfb340833c9e4fb4
+msgid "memory is to be specified in MB If config is True then we ask libvirt to modify the config as well"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.setvcpus:1
+# 5fd0f5e897d0486b8d588a704ee261b5
+msgid "Changes the amount of vcpus allocated to VM. The VM must be shutdown for this to work."
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.setvcpus:4
+# 3fbb594b90f04f23a69b5667b93f5481
+msgid "vcpus is an int representing the number to be assigned If config is True then we ask libvirt to modify the config as well"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.shutdown:1
+# febbd6c66ba84415803f5c6affba5232
+msgid "Send a soft shutdown signal to the named vm"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.start:1
+# 2a0f0c809f934740b18cbb9d2ec2c95e
+msgid "Alias for the obscurely named 'create' function"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.stop:1
+# 04622236d55749ff9345399b5040c63c
+msgid "Alias for the obscurely named 'destroy' function"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.undefine:1
+# 135644b2098f48e4976a96cd1a8ddd27
+msgid "Remove a defined vm, this does not purge the virtual machine image, and this only works if the vm is powered down"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.virt_type:1
+# eb2a3b7e60be468c94883bedff32cd50
+msgid "Returns the virtual machine type as a string"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_cputime:1
+# fc1f48a7708b4a16b05f51822a9d2bb7
+msgid "Return cputime used by the vms on this hyper in a list of dicts:"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_cputime:14
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_diskstats:17
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_info:17
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_netstats:20
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_state:3
+# 25728a2b7bc2462c92b04e704a8dac92
+# 32d91a8197164642aad2a37e909ccbed
+# c72682586da74d95aa523eb9e265ce2d
+# f4d397d59d9147d9a59cf6157574f091
+# c97de0b45c924acd81b177421828a662
+msgid "If you pass a VM name in as an argument then it will return info for just the named VM, otherwise it will return all VMs."
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_diskstats:1
+# 9489cb61d37c426b9f1a572154c1e79d
+msgid "Return disk usage counters used by the vms on this hyper in a list of dicts:"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_info:1
+# ed7eee31807342ec9360eee51a194480
+msgid "Return detailed information about the vms on this hyper in a list of dicts:"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_netstats:1
+# 96a0852b185a4ceab8bd106f497c0970
+msgid "Return combined network counters used by the vms on this hyper in a list of dicts:"
+msgstr ""
+
+#: ../../../salt/modules/virt.py:docstring of salt.modules.virt.vm_state:1
+# 3742f227baec405a8014dcae6dc55285
+msgid "Return list of all the vms and their state."
+msgstr ""
+

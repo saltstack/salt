@@ -1,0 +1,170 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.lvm.rst:6
+# 0c1089b8b0c84b0ab712ba334db74f76
+msgid "salt.states.lvm"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm:2
+# eb3c84c64b9e4ab2aa620300344506c5
+msgid "Management of Linux logical volumes"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm:4
+# d3b3b407de744b90bf832973c7e583ff
+msgid "A state module to manage LVMs"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_absent:1
+# 1eaf01f745f247e1a42c8a17d026e71f
+msgid "Remove a given existing logical volume from a named existing volume group"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_absent:4
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:4
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.pv_present:4
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_absent:3
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_present:4
+# c916474e1dc448afa08945854bc3979b
+# 1237ce42b2194804a62c39d70cb25613
+# 463fbdb7f87e4143ae695aba1684a05e
+# 34dcc1a7a5664952838f22f334b147df
+# 65427f40af2a4783a4193722a46034b2
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_absent:4
+# bd1f92a21d9c45ed97eec53b27e0c4d5
+msgid "The logical volume to remove"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_absent:6
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:7
+# 8c0bf4e11eb24e529e2f8855a448362e
+# b08c5454f21b4dcda9da33a0d7557a09
+msgid "vgname"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_absent:7
+# 7cfbcd74d21c46e286783dce217fa048
+msgid "The volume group name"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:1
+# e756595e4dac4bb38e80ae6567626501
+msgid "Create a new logical volume"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:4
+# 5cc44edfdac24d629fd8be6d807b2171
+msgid "The name of the logical volume"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:7
+# 3fbc6a8d7c2b4a849e63434f20b1db4f
+msgid "The volume group name for this logical volume"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:10
+# 709652b1334d4d24b92ef64a349a5617
+msgid "size"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:10
+# cd164e744b6647008d9fa04bc78498de
+msgid "The initial size of the logical volume"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:13
+# f2b357307a5044cbb9098fdc85abe1ae
+msgid "extents"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:13
+# 951e7718ece84e6b8921139e2ad875e3
+msgid "The number of logical extents to allocate"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:15
+# 2b45381f7b784f49add2a46fd2d225ad
+msgid "pv"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.lv_present:16
+# 67087e1138044af4ba2e2bc26ae9c38b
+msgid "The physical volume to use"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.pv_present:1
+# 8cbfe5c0d89844c98e71b3db07428d5a
+msgid "Set a physical device to be used as an LVM physical volume"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.pv_present:4
+# 8fdf44b287184e009085293f50d3e112
+msgid "The device name to initialize."
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.pv_present:7
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_present:10
+# 9e4d051050804d11b1e401b60f34979f
+# 63a6ce023be64d40a36dce86585b29c9
+msgid "kwargs"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.pv_present:7
+# dac8aebecab246d49ebfb6f3e1c00e1e
+msgid "Any supported options to pvcreate. See :mod:`linux_lvm <salt.modules.linux_lvm>` for more details."
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_absent:1
+# a07c7cac52f54e24842972346335b541
+msgid "Remove an LVM volume group"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_absent:4
+# d9d4f4b482104ead98607bff0e6f45ac
+msgid "The volume group to remove"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_present:1
+# 8c7a6fd0f4f74c7b8ba24a49f1fc6f2e
+msgid "Create an LVM volume group"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_present:4
+# a517d2bc86954d9a9db539e97e103140
+msgid "The volume group name to create"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_present:7
+# d2fe33ab16574529b511f0379a58438e
+msgid "devices"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_present:7
+# 796436dd628c4be7adfea24dd4a2416e
+msgid "A list of devices that will be added to the volume group"
+msgstr ""
+
+#: ../../../salt/states/lvm.py:docstring of salt.states.lvm.vg_present:10
+# 28e066b6d5f1468e977d74617a503551
+msgid "Any supported options to vgcreate. See :mod:`linux_lvm <salt.modules.linux_lvm>` for more details."
+msgstr ""
+

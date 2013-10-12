@@ -1,0 +1,66 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.linux_sysctl.rst:6
+# db0eae60136942b785fe3b973326bc9f
+msgid "salt.modules.linux_sysctl"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl:1
+# 0a9cdd8f4d7a44d4a6ffc7b3e61032c7
+msgid "Module for viewing and modifying sysctl parameters"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.assign:1
+# 36687706d2824ae784f0c9cf52a9402a
+msgid "Assign a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.assign:3
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.default_config:6
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.get:3
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.persist:5
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.show:3
+# c965bc7da74642b1aaa04fa7f0dc1fb3
+# 92af03cbc4584d9baf1ae83e1aa1ed6f
+# 996f86e0fb0a4c34a90f0536c2d80764
+# cc496476d2924b1081ce68a55da27e34
+# 7fc3b56c8ac04c659fcea21c8971fa71
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.default_config:1
+# fbc2d7ba050549079e4954304f204ac9
+msgid "Linux hosts using systemd 207 or later ignore ``/etc/sysctl.conf`` and only load from ``/etc/sysctl.d/*.conf``. This function will do the proper checks and return a default config file which will be valid for the Minion. Hosts running systemd >= 207 will use ``/etc/sysctl.d/99-salt.conf``."
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.get:1
+# 2699daae0fe34c2b99a7e5e3c3cab1b7
+msgid "Return a single sysctl parameter for this minion"
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.persist:1
+# de619ff869b4422799016822ed94bc2f
+msgid "Assign and persist a simple sysctl parameter for this minion. If ``config`` is not specified, a sensible default will be chosen using :mod:`sysctl.default_config <salt.modules.linux_sysctl.default_config>`."
+msgstr ""
+
+#: ../../../salt/modules/linux_sysctl.py:docstring of salt.modules.linux_sysctl.show:1
+# 8c1e775d2aba4612bec6ac578378da30
+msgid "Return a list of sysctl parameters for this minion"
+msgstr ""
+

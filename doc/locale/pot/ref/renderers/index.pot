@@ -1,0 +1,158 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/renderers/index.rst:6
+# 213479bcb1174f30b7d701cb1f46000f
+msgid "Renderers"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:8
+# 281a5d710d1f41a583cdb0043b4883c4
+msgid "The Salt state system operates by gathering information from simple data structures. The state system was designed in this way to make interacting with it generic and simple. This also means that state files (SLS files) can be one of many formats."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:13
+# 38c8eb36fac54528ab93a27e0b73319d
+msgid "By default SLS files are rendered as Jinja templates and then parsed as YAML documents. But since the only thing the state system cares about is raw data, the SLS files can be any structured format that can be dreamed up."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:17
+# 0e457edba6b4427493351c8affb9b685
+msgid "Currently there is support for ``Jinja + YAML``, ``Mako + YAML``, ``Wempy + YAML``, ``Jinja + json`` ``Mako + json`` and ``Wempy + json``. But renderers can be written to support anything. This means that the Salt states could be managed by XML files, HTML files, puppet files, or any format that can be translated into the data structure used by the state system."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:24
+# bca26213e9ff4540bbedc9e65316cecf
+msgid "Multiple Renderers"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:26
+# 06a37a5855264c4ba82f322774af4d2a
+msgid "When deploying a state tree a default renderer is selected in the master configuration file with the renderer option. But multiple renderers can be used inside the same state tree."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:30
+# 77787a1d0fa74dd08dfffacd6a96343b
+msgid "When rendering SLS files Salt checks for the presence of a Salt specific shebang line. The shebang line syntax was chosen because it is familiar to the target audience, the systems admin and systems engineer."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:34
+# 6af53b0e2adb4d2ab1a7afe04af24b70
+msgid "The shebang line directly calls the name of the renderer as it is specified within Salt. One of the most common reasons to use multiple renderers in to use the Python or ``py`` renderer:"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:49
+# d64b9c28128046c3b569bc1121f451c8
+msgid "The first line is a shebang that references the ``py`` renderer."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:52
+# d7ceecd9232544b8a1a9ba3036705d13
+msgid "Composing Renderers"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:53
+# 812084381c2f4c4e88a8662f4af720bd
+msgid "A renderer can be composed from other renderers by connecting them in a series of pipes(``|``). In fact, the default ``Jinja + YAML`` renderer is implemented by combining a YAML renderer and a Jinja renderer. Such renderer configuration is specified as: ``jinja | yaml``."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:58
+# 298d0b9251db4f8abe5691e8158e3159
+msgid "Other renderer combinations are possible, here's a few examples:"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:61
+# fd2ab6d6c66d4a54a4991db049d9aa12
+msgid "``yaml``"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:61
+# d1a0244480f741028609340ec95caa1f
+msgid "i.e, just YAML, no templating."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:65
+# ee236f5cd24940d4a683179f7c46c15c
+msgid "``mako | yaml``"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:64
+# dd71e268b99c4805bedd17b75fb81798
+msgid "pass the input to the ``mako`` renderer, whose output is then fed into the ``yaml`` renderer."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:69
+# c0fad0cdf3184623a8ae4fd40a55cba7
+msgid "``jinja | mako | yaml``"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:68
+# b8f03e1995264451ad4eb8477426f5f1
+msgid "This one allows you to use both jinja and mako templating syntax in the input and then parse the final rendered output as YAML."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:71
+# 40ccb380a9484e72b11fe35d9ec411a6
+msgid "And here's a contrived example sls file using the ``jinja | mako | yaml`` renderer:"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:87
+# 87295aed70314d1c94daa84e6fdfd983
+msgid "For backward compatibility, ``jinja | yaml``  can also be written as ``yaml_jinja``, and similarly, the ``yaml_mako``, ``yaml_wempy``, ``json_jinja``, ``json_mako``, and ``json_wempy`` renderers are all supported as well."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:92
+# fd7e43cbc71e4a48885de704f5c41c57
+msgid "Keep in mind that not all renderers can be used alone or with any other renderers. For example, the template renderers shouldn't be used alone as their outputs are just strings, which still need to be parsed by another renderer to turn them into highstate data structures. Also, for example, it doesn't make sense to specify ``yaml | jinja`` either, because the output of the yaml renderer is a highstate data structure(a dict in Python), which cannot be used as the input to a template renderer. Therefore, when combining renderers, you should know what each renderer accepts as input and what it returns as output."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:102
+# abebee0335c74436820a2aa6d7859360
+msgid "Writing Renderers"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:104
+# ee21fd74c5ef4de7a581919ec233e70a
+msgid "Writing a renderer is easy, all that is required is that a Python module is placed in the rendered directory and that the module implements the ``render`` function. The ``render`` function will be passed the path of the SLS file.  In the ``render`` function, parse the passed file and return the data structure derived from the file. You can place your custom renderers in a ``_renderers`` directory within the :conf_master:`file_roots` specified by the master config file. These custom renderers are distributed when :mod:`state.highstate <salt.modules.state.highstate>` is run, or by executing the :mod:`saltutil.sync_renderers <salt.modules.saltutil.sync_renderers>` or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:115
+# 5b927b4963a94a6b98a0851b1fe229bd
+msgid "Any custom renderers which have been synced to a minion, that are named the same as one of Salt's default set of renderers, will take the place of the default renderer with the same name."
+msgstr ""
+
+#: ../../ref/renderers/index.rst:121
+# 4d61bb5a4ca7417680b9732fd61dd392
+msgid "Examples"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:123
+# 97bb342ea19d4459b804bfc0abd0a9b8
+msgid "The best place to find examples of renderers is in the Salt source code. The renderers included with Salt can be found here:"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:126
+# 9dab37961f7f444fbec547c69cad8cce
+msgid ":blob:`salt/renderers`"
+msgstr ""
+
+#: ../../ref/renderers/index.rst:128
+# 56a9a196ec1140dea01c1f653da1cf02
+msgid "Here is a simple YAML renderer example:"
+msgstr ""
+

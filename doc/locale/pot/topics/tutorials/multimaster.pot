@@ -1,0 +1,193 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/multimaster.rst:6
+# a0e5ef1cea83432e9acb09f7f3c18761
+msgid "Multi Master Tutorial"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:8
+# e0d3ce51777d4b6195779a0c46c2be9c
+msgid "As of Salt 0.16.0, the ability to connect minions to multiple masters has been made available. The multi-master system allows for redundancy of Salt masters and facilitates multiple points of communication out to minions. When using a multi-master setup, all masters are running hot, and any active master can be used to send commands out to the minions."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:14
+# 2584855eb83c48f286537ac9df999d35
+msgid "In 0.16.0, the masters do not share any information, keys need to be accepted on both masters, and shared files need to be shared manually or use tools like the git fileserver backend to ensure that the :conf_master:`file_roots` are kept consistent."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:20
+# 7754de0b5f9f4fc099337e77f0761e2f
+msgid "Summary of Steps"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:22
+# a17e039629c641d6b679d9b41a04d44f
+msgid "Create a redundant master server"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:23
+# 7e977859c171462d881022784a2cc002
+msgid "Copy primary master key to redundant master"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:24
+# 5948d4fe75f540f794f1a0dd8aed903d
+msgid "Start redundant master"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:25
+# 63b3e831e9d3495dba2a106743b0b6ba
+msgid "Configure minions to connect to redundant master"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:26
+# bab1749b473b486991b33f9446df076e
+msgid "Restart minions"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:27
+# 96ce370667cc4b17b906265a92b5df11
+msgid "Accept keys on redundant master"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:30
+# e47d54af9ef0460ab8385f69f45abf63
+msgid "Prepping a Redundant Master"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:32
+# f1a5470a73454b779ae673bd60f15ce4
+msgid "The first task is to prepare the redundant master. There is only one requirement when preparing a redundant master, which is that masters share the same private key. When the first master was created, the master's identifying key was generated and placed in the master's ``pki_dir``. The default location of the key is ``/etc/salt/pki/master/master.pem``. Take this key and copy it to the same location on the redundant master. Assuming that no minions have yet been connected to the new redundant master, it is safe to delete any existing key in this location and replace it."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:42
+# 147bacbf24da45d6adce455de4123a13
+msgid "There is no logical limit to the number of redundant masters that can be used."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:45
+# c21784096ec54c07bb2eb331d69f175f
+msgid "Once the new key is in place, the redundant master can be safely started."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:48
+# aebc6b710c594494952e51018552472c
+msgid "Configure Minions"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:50
+# 7ec3630478a94e3ca0b331584cf71212
+msgid "Since minions need to be master-aware, the new master needs to be added to the minion configurations. Simply update the minion configurations to list all connected masters:"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:60
+# 5870745d78a444bd8b3086d6beea40b9
+msgid "Now the minion can be safely restarted."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:62
+# 51905b179d514a7aa39cd399b7bc69e9
+msgid "Now the minions will check into the original master and also check into the new redundant master. Both masters are first-class and have rights to the minions."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:66
+# 1ee3cab5ef674367b8265a073d9a192b
+msgid "Sharing Files Between Masters"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:68
+# 0dc88dc9a1fc4c938272a7e35fe5fb10
+msgid "Salt does not automatically share files between multiple masters. A number of files should be shared or sharing of these files should be strongly considered."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:72
+# 512c6b5cdb2048168965c1ff846cdcbc
+msgid "Minion Keys"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:74
+# 9f19830ec4b74170b24a4079ce7a6dbd
+msgid "Minion keys can be accepted the normal way using :strong:`salt-key` on both masters.  Keys accepted, deleted, or rejected on one master will NOT be automatically managed on redundant masters; this needs to be taken care of by running salt-key on both masters or sharing the ``/etc/salt/pki/master/{minions,minions_pre,minions_rejected}`` directories between masters."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:83
+# 720f8f74e491435c8db15bca4fc0ae4b
+msgid "While sharing the :strong:`/etc/salt/pki/master` directory will work, it is strongly discouraged, since allowing access to the :strong:`master.pem` key outside of Salt creates a *SERIOUS* security risk."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:88
+# eebbb69ec47045ddab03ac0ac9559fe3
+msgid "File_Roots"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:90
+# 1a17c16c58c340d092dd06366d3418d9
+msgid "The :conf_master:`file_roots` contents should be kept consistent between masters. Otherwise state runs will not always be consistent on minions since instructions managed by one master will not agree with other masters."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:94
+# 2738e0d985124dc5863a74189d528095
+msgid "The recommended way to sync these is to use a fileserver backend like gitfs or to keep these files on shared storage."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:98
+# cb5683af20b34ce184844bd3bc3ed9b6
+msgid "Pillar_Roots"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:100
+# 617247d698834720a36955d0c3ec60cf
+msgid "Pillar roots should be given the same considerations as :conf_master:`file_roots`."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:104
+# 252d5d96b1024b4eb416e0ff5f578624
+msgid "Master Configurations"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:106
+# c121bf8fe79f496cb6e0c4ebd59cd242
+msgid "While reasons may exist to maintain separate master configurations, it is wise to remember that each master maintains independent control over minions. Therefore, access controls should be in sync between masters unless a valid reason otherwise exists to keep them inconsistent."
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:111
+# ac2ac0191fe84f4d9e6604e0fa18782a
+msgid "These access control options include but are not limited to:"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:113
+# 8b565fa004d349a897916e4eff780c5c
+msgid "external_auth"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:114
+# a7a586e343134980b9489e7a0a957db9
+msgid "client_acl"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:115
+# 4390ea34a1574abdae6f88ed11d5f634
+msgid "peer"
+msgstr ""
+
+#: ../../topics/tutorials/multimaster.rst:116
+# d6ce041c46844503b86749330c6152d3
+msgid "peer_run"
+msgstr ""
+

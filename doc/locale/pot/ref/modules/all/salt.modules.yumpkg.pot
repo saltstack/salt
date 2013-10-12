@@ -1,0 +1,500 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.yumpkg.rst:6
+# 4f7200f9e5864a95954cfde4fd3507f3
+msgid "salt.modules.yumpkg"
+msgstr ""
+
+#: ../../ref/modules/all/salt.modules.yumpkg.rst:8
+# 2dd6a3424dd64128a7001bd73909bef0
+msgid "This module replaces the \"yum\" module in previous releases. It is backward compatible and uses the native yum Python interface instead of the CLI interface."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg:1
+# de81cf94b2c1479a9d702030962a67ec
+msgid "Support for YUM"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg:3
+# 96b0770467454723930b2604a951c4ab
+msgid "yum Python module"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg:4
+# 71b93461a6cf4b568971f963dcc4afc0
+msgid "rpmUtils Python module"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg:6
+# e18ac9dd979449e59f48fc6c128cf782
+msgid "This module uses the python interface to YUM. Note that with a default /etc/yum.conf, this will cause messages to be sent to sent to syslog on /dev/log, with a log facility of :strong:`LOG_USER`. This is in addition to whatever is logged to /var/log/yum.log. See the manpage for ``yum.conf(5)`` for information on how to use the ``syslog_facility`` and ``syslog_device`` config parameters to configure how syslog is handled, or take the above defaults into account when configuring your syslog daemon."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.check_db:3
+# b7206b23993541bbb8ec8970228b8b94
+msgid "Returns a dict containing the following information for each specified package:"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.check_db:6
+# 266949e512724c1a9102eca1506a8a39
+msgid "A key ``found``, which will be a boolean value denoting if a match was found in the package database."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.check_db:8
+# 6d7303fe90524676933a75ff0b70ba15
+msgid "If ``found`` is ``False``, then a second key called ``suggestions`` will be present, which will contain a list of possible matches."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.check_db:11
+# 7cab201bd24c4a05bbd5e32f63d69a4a
+msgid "The ``fromrepo``, ``enablerepo``, and ``disablerepo`` arguments are supported, as used in pkg states."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.check_db:14
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.del_repo:6
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.file_dict:5
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.file_list:5
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.get_repo:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:24
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:36
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:55
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:17
+# df8a381d229c4332bb9768bdc8daf983
+# 92b595df226643aa8f447e12ab74b670
+# 96a764da1068463eb42668340de0540f
+# 677b66fa1fcc4162ad4e74dd84345ce5
+# 36bcdbdedaf2459eb966f9fa3e02d6d7
+# c1c194e1aef542c68f97564ae5ab248b
+# 306a4a30ea834d9ba2d075719c7bdad9
+# 7561e45e06254948824396cb1d20ac6c
+# d9c1a1ea4b3e4d9e97003a0b53b05e9f
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.clean_metadata:1
+# f341ee0f74ea402c91ae7348e81c7f8f
+msgid "Cleans local yum metadata."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.clean_metadata:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_diff:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_info:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:13
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_list:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:15
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:67
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.latest_version:10
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.list_pkgs:5
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.list_repos:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.list_upgrades:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.purge:19
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.refresh_db:4
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.remove:18
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.upgrade:8
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.upgrade_available:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.verify:3
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.version:5
+# cf795eed93b94951995880a9c9125c99
+# ff2bedb428de469fb982bee7710b6ccf
+# c44d969dfdaf4883ab5ed2a23e196cf0
+# fb56b6c2dcca453b90fa574bcf4b5b74
+# 8120d72486d943fb959a68a9be693865
+# c0a738ae1e3a4d07aebbc7a0a3241d19
+# 5dd6c312ba5946ca8b31314cafa655ff
+# e440de3212834dd58edce16483f35eae
+# 243a3537793e42aaaa4c7b10c4af78c5
+# 44897da075264ca6827869dd0516da9b
+# 1e0b33739e824e12a2acb01594966fbc
+# 53f1b0713d2648b988ea7cf77b77a437
+# c1eb97e26dfe433f8fbdafcb6c054972
+# cf358d1477e24738a5ba505cf2527679
+# 5aaca88c6c3741248afd5b766b585bea
+# 3eb78dcc582c4b60a5f4ef45be2a52a8
+# a627a14dabb345f39fb29e828f12cd44
+# 07b8aa9dc93742a09c6f903ff09706fd
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.del_repo:1
+# 6e623ffc728f4a188b66b6ff3a02a956
+msgid "Delete a repo from <basedir> (default basedir: /etc/yum.repos.d)."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.del_repo:3
+# 5d9f7b8e9118402cb57e29fae4cfcca6
+msgid "If the .repo file that the repo exists in does not contain any other repo configuration, the file itself will be deleted."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.expand_repo_def:1
+# e8175a936bca465ea6fd1e084390b56b
+msgid "Take a repository definition and expand it to the full pkg repository dict that can be used for comparison.  This is a helper function to make certain repo managers sane for comparison in the pkgrepo states."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.expand_repo_def:5
+# dade436c5c6d4050b063919a928b2723
+msgid "There is no use to calling this function via the CLI."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.file_dict:1
+# 61636b7899a648c4898ad5c1f8326e0c
+msgid "List the files that belong to a package, grouped by package. Not specifying any packages will return a list of _every_ file on the system's rpm database (not generally recommended)."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.file_list:1
+# 9aa5d3f00dfc45e8b09990f87d3d9626
+msgid "List the files that belong to a package. Not specifying any packages will return a list of _every_ file on the system's rpm database (not generally recommended)."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.get_repo:1
+# 17f2870e4ddf4ec3911401c5aecaa556
+msgid "Display a repo from <basedir> (default basedir: /etc/yum.repos.d)."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_diff:1
+# 7f624bf409da46778b579f4c1eeb0816
+msgid "Lists packages belonging to a certain group, and which are installed"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_info:1
+# 929e813a28e74ea79b691fdbfe7efe24
+msgid "Lists packages belonging to a certain group"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:1
+# 3e3198a9b8444f3393dcdf9c3e7a5cee
+msgid "Install the passed package group(s). This is basically a wrapper around pkg.install, which performs package group resolution for the user. This function is currently considered \"experimental\", and should be expected to undergo changes before it becomes official."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:8
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:19
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:6
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.purge:6
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.remove:5
+# f3496f4bbf1147d8a3f8f4aae55cb7ee
+# dd634292dd10470982bde01f6ce7ed83
+# 4ab48ef81a184bebaa34474ed948781d
+# b14d616677d04b0197c917bba4d8eeaa
+# 9316d21df27b452cae8f3587c7b5665e
+msgid "name"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:7
+# a4505f659e614527ab3e163022dcdd7e
+msgid "The name of a single package group to install. Note that this option is ignored if \"groups\" is passed."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:17
+# 19151f1f770947fb89529e0f0dee0bb5
+msgid "groups"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:11
+# 22854beba0734de7bc181bbe90e1ca21
+msgid "The names of multiple packages which are to be installed."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:28
+# 75b6e85e6e8b47ab8315102f7566b779
+msgid "skip"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:20
+# b7f6c1151ed5465bae83ca8f159cebc4
+msgid "The name(s), in a list, of any packages that would normally be installed by the package group (\"default\" packages), which should not be installed."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:40
+# 196d648a3c4d47df9134333e4d29165f
+msgid "include"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:31
+# 46a33d939d2a4e969b5857e694fad33a
+msgid "The name(s), in a list, of any packages which are included in a group, which would not normally be installed (\"optional\" packages). Note that this will nor enforce group membership; if you include packages which are not members of the specified groups, they will still be installed."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:44
+# e8d5c4eff9d7468e91d61845231dc92c
+msgid "other arguments"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_install:43
+# dad4110ed44d4bbea39d2ebdb2521f94
+msgid "Because this is essentially a wrapper around pkg.install, any argument which can be passed to pkg.install may also be included here, and it will be passed along wholesale."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.group_list:1
+# 6c6b72a095174c1aab5f44221252f270
+msgid "Lists all groups known by yum on this system"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:1
+# 11caf8ca0ce446618ddf5d79204fbf9e
+msgid "Install the passed package(s), add refresh=True to clean the yum database before package is installed."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:5
+# b15a3f4abaf249c9a3155710f02742a5
+msgid "The name of the package to be installed. Note that this parameter is ignored if either \"pkgs\" or \"sources\" is passed. Additionally, please note that this option can only be used to install packages from a software repository. To install a package file manually, use the \"sources\" option."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:11
+# 9b9e36af41124639a7da60302eff8ce8
+msgid "32-bit packages can be installed on 64-bit systems by appending the architecture designation (``.i686``, ``.i586``, etc.) to the end of the package name."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:22
+# 2fcb6fbe166e48acac1cfd47842f57a1
+msgid "refresh"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:22
+# 5611fa0d478f43358ed169d9ee9c4534
+msgid "Whether or not to update the yum database before executing."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:25
+# c342e8098c99460e88cbba429e30c9d1
+msgid "skip_verify"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:25
+# 82d47c2fe66347648ff9f1d8cbf14572
+msgid "Skip the GPG verification check. (e.g., ``--nogpgcheck``)"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:30
+# f167ed63e5de40459c8f53161712850f
+msgid "version"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:28
+# 933e66cbb7aa40b8b859d45e46f4e479
+msgid "Install a specific version of the package, e.g. 1.2.3-4.el6. Ignored if \"pkgs\" or \"sources\" is passed."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:32
+# bc5ba2d9b58c4f11b96a34d56ca08e9f
+msgid "Repository Options:"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:36
+# 7e3b75944e2943cfb6c646b9c10bffaa
+msgid "fromrepo"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:35
+# cdba213e8ba44ec18ad4b9e523d84543
+msgid "Specify a package repository (or repositories) from which to install. (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:40
+# 5d44d65ef5ff4d778e2d543b7f6ef0fe
+msgid "enablerepo"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:39
+# 3da8f7ff313d4b788eb7d96d6cad38e2
+msgid "Specify a disabled package repository (or repositories) to enable. (e.g., ``yum --enablerepo='somerepo'``)"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:45
+# 4a2d4d3228ab43d6b93cb23bcd9a60f4
+msgid "disablerepo"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:43
+# 262235572259416597a38fbc52bcba84
+msgid "Specify an enabled package repository (or repositories) to disable. (e.g., ``yum --disablerepo='somerepo'``)"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:47
+# c303f01940b14036ac86a127afde9e72
+msgid "Multiple Package Installation Options:"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:60
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.purge:12
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.remove:11
+# c6e51abd32d24be5b363299bbc914901
+# 442dde3f612143718172e3f022bb08a8
+# 841e1a7a14d0483fab051fefe3a6e2c2
+msgid "pkgs"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:50
+# e91a68345bff421fadd52644954f44df
+msgid "A list of packages to install from a software repository. Must be passed as a python list. A specific version number can be specified by using a single-element dict representing the package and its version."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:72
+# ba98029360b847398579665dc4d0ca21
+msgid "sources"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:63
+# 4f4af84375ad4e128b147358493f42d4
+msgid "A list of RPM packages to install. Must be passed as a list of dicts, with the keys being package names, and the values being the source URI or local path to the package."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.install:74
+# 4ab042a0971e4c5295d386344d0f1f4c
+msgid "Returns a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.latest_version:1
+# 3b207aac6cef4666892fca3c9e419d79
+msgid "Return the latest version of the named package available for upgrade or installation. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.latest_version:5
+# 1e3c07087c8a44d0991d47b87b60ba06
+msgid "If the latest version of a given package is already installed, an empty string will be returned for that package."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.latest_version:8
+# f4d4023ccf114a0da40950236d79059e
+msgid "A specific repo can be requested using the ``fromrepo`` keyword argument."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.list_pkgs:1
+# d17a48953c614af8b81ba66e342e8912
+msgid "List the packages currently installed in a dict::"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.list_repos:1
+# 64d8e050b4944d849cf88a5bd5047930
+msgid "Lists all repos in <basedir> (default: /etc/yum.repos.d/)."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.list_upgrades:1
+# afa7de8e8dd1491fa94d75507ce00adc
+msgid "Check whether or not an upgrade is available for all packages"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:1
+# 1a821db33d8045069364d8eda0587801
+msgid "Modify one or more values for a repo. If the repo does not exist, it will be created, so long as the following values are specified:"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:4
+# a42a31199ca04317b94491c5a7ea9b58
+msgid "repo"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:5
+# ab5cc7e3abc3427b9eb1d20df8ac8cff
+msgid "name by which the yum refers to the repo"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:7
+# 045fb5c109064aec83a7657ca4e4c70a
+msgid "a human-readable name for the repo"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:8
+# 173c42ad1b4a4c3baf842d4dfc584fa0
+msgid "baseurl"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:9
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:11
+# d5728332906b40558203904ccde4dc1f
+# 0fde1fdf24374a0cb4686f25fda7204f
+msgid "the URL for yum to reference"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:11
+# 9ee7ecd5c4e74f5a909df824949284cc
+msgid "mirrorlist"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.mod_repo:13
+# 80f8e85cda734ad7b27a5a7366bcd835
+msgid "Key/Value pairs may also be removed from a repo's configuration by setting a key to a blank value. Bear in mind that a name cannot be deleted, and a baseurl can only be deleted if a mirrorlist is specified (or vice versa)."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.purge:1
+# c96075645bd74f40b740dd552b818987
+msgid "Package purges are not supported by yum, this function is identical to :mod:`pkg.remove <salt.modules.yumpkg.remove>`."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.purge:5
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.remove:4
+# 70e3c429d83f4ede9c5232dcf5dce85e
+# 8f09e70f8ef84e40b7789ca2d78df1b6
+msgid "The name of the package to be deleted."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.purge:8
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.remove:7
+# 2378d01e869f43bcb90a54f2e7abb804
+# a3424f10e0d444c8aa859b803d6f5e6a
+msgid "Multiple Package Options:"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.purge:11
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.remove:10
+# 4f1df7c9ece34f978d8080f11565c8bb
+# b30c3d2363b14eeda92bfe4de5e47404
+msgid "A list of packages to delete. Must be passed as a python list. The ``name`` parameter will be ignored if this option is passed."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.purge:17
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.remove:16
+# 24b8fb308f41424aa3ef855576fc9666
+# e50171c8a0cd4704b227af52d7497d7f
+msgid "Returns a dict containing the changes."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.refresh_db:1
+# a715abf4f4154da6af0bef62faf2ffc6
+msgid "Since yum refreshes the database automatically, this runs a yum clean, so that the next yum operation will have a clean database"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.remove:1
+# e3205de40c0c4448a9e0894d6e4d7dda
+msgid "Removes packages using python API for yum."
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.upgrade:1
+# d8b0ee3922304586b8b8fd55f1df2ed1
+msgid "Run a full system upgrade, a yum upgrade"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.upgrade:3
+# 14e8d418d3364323b1b21f3dbe52a5df
+msgid "Return a dict containing the new package names and versions::"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.upgrade_available:1
+# 8778babc9aaf44bba250af9eb3323858
+msgid "Check whether or not an upgrade is available for a given package"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.verify:1
+# 39f58f729b174401b982aab94e776cbd
+msgid "Runs an rpm -Va on a system, and returns the results in a dict"
+msgstr ""
+
+#: ../../../salt/modules/yumpkg.py:docstring of salt.modules.yumpkg.version:1
+# 40615967b17b4002b8df8f6239d8f811
+msgid "Returns a string representing the package version or an empty string if not installed. If more than one package name is specified, a dict of name/version pairs is returned."
+msgstr ""
+

@@ -1,0 +1,53 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/development/deprecations.rst:6
+# 179011c212d14585a1672883cc50084e
+msgid "Deprecating Code"
+msgstr ""
+
+#: ../../topics/development/deprecations.rst:8
+# 7434c42c7421426d8fbec9d68ab0c296
+msgid "Salt should remain backwards compatible, though sometimes, this backwards compatibility needs to be broken because a specific feature and/or solution is no longer necessary or required.  At first one might think, let me change this code, it seems that it's not used anywhere else so it should be safe to remove. Then, once there's a new release, users complain about functionality which was removed and they where using it, etc. This should, at all costs, be avoided, and, in these cases, *that* specific code should be deprecated."
+msgstr ""
+
+#: ../../topics/development/deprecations.rst:16
+# d648be1f0392462c9415447e4d6ef002
+msgid "Depending on the complexity and usage of a specific piece of code, the deprecation time frame should be properly evaluated. As an example, a deprecation warning which is shown for 2 major releases, for example `0.17.0` and `0.18.0`, gives users enough time to stop using the deprecated code and adapt to the new one."
+msgstr ""
+
+#: ../../topics/development/deprecations.rst:22
+# b43299609ea94da68802994d56d55cb1
+msgid "For example, if you're deprecating the usage of a keyword argument to a function, that specific keyword argument should remain in place for the full deprecation time frame and if that keyword argument is used, a deprecation warning should be shown to the user."
+msgstr ""
+
+#: ../../topics/development/deprecations.rst:27
+# 53629f73acd94369acab51d08c260756
+msgid "To help in this deprecation task, salt provides :func:`salt.utils.warn_until <salt.utils.warn_until>`. The idea behind this helper function is to show the deprecation warning until salt reaches the provided version. Once that provided version is equaled :func:`salt.utils.warn_until <salt.utils.warn_until>` will raise a :py:exc:`RuntimeError` making salt stop its execution. This stoppage is unpleasant and will remind the developer that the deprecation limit has been reached and that the code can then be safely removed."
+msgstr ""
+
+#: ../../topics/development/deprecations.rst:35
+# ca6e336ab9a4418ca53552e80a3f09c5
+msgid "Consider the following example:"
+msgstr ""
+
+#: ../../topics/development/deprecations.rst:48
+# 90ff039b495e41b8beea2a1a5f2cc2b7
+msgid "Consider that the current salt release is ``0.16.0``. Whenever ``foo`` is passed a value different from ``None`` that warning will be shown to the user. This will happen in versions ``0.16.2`` to ``0.18.0``, after which a :py:exc:`RuntimeError` will be raised making us aware that the deprecated code should now be removed."
+msgstr ""
+

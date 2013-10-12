@@ -1,0 +1,52 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.nginx.rst:6
+# a43c4549ec3245d6a5c69e74d92b90ea
+msgid "salt.modules.nginx"
+msgstr ""
+
+#: ../../../salt/modules/nginx.py:docstring of salt.modules.nginx:1
+# d9f1c23686d14ff0bc585d4618aeafa8
+msgid "Support for nginx"
+msgstr ""
+
+#: ../../../salt/modules/nginx.py:docstring of salt.modules.nginx.configtest:1
+# e7ede9c356164a8e9304a513631c5fc2
+msgid "test configuration and exit"
+msgstr ""
+
+#: ../../../salt/modules/nginx.py:docstring of salt.modules.nginx.configtest:3
+#: ../../../salt/modules/nginx.py:docstring of salt.modules.nginx.signal:3
+#: ../../../salt/modules/nginx.py:docstring of salt.modules.nginx.version:3
+# 90e99db918cc4f8982fb57b027b566aa
+# 1d82ee1dca7248d3ba9d4a883a317451
+# 0bcc14f1f99740ffa69f5f44e9c68c03
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/nginx.py:docstring of salt.modules.nginx.signal:1
+# 2a65826d6f304113adfa822980bf5708
+msgid "Signals nginx to start, reload, reopen or stop."
+msgstr ""
+
+#: ../../../salt/modules/nginx.py:docstring of salt.modules.nginx.version:1
+# 90ec9a0b732242d089493c4f0d3222d9
+msgid "Return server version from nginx -v"
+msgstr ""
+

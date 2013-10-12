@@ -1,0 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/pillar/all/salt.pillar.pillar_ldap.rst:6
+# f4138ecb7193464589075a223357e9aa
+msgid "salt.pillar.pillar_ldap"
+msgstr ""
+
+#: ../../../salt/pillar/pillar_ldap.py:docstring of salt.pillar.pillar_ldap:1
+# f9d5649ca3fe4fd3976700b79af67ca8
+msgid "This pillar module parses a config file (specified in the salt master config), and executes a series of LDAP searches based on that config.  Data returned by these searches is aggregated, with data items found later in the LDAP search order overriding data found earlier on. The final result set is merged with the pillar data."
+msgstr ""
+
+#: ../../../salt/pillar/pillar_ldap.py:docstring of salt.pillar.pillar_ldap.ext_pillar:1
+# 978607d557c640e1a30861248e8ad0e6
+msgid "Execute LDAP searches and return the aggregated data"
+msgstr ""
+

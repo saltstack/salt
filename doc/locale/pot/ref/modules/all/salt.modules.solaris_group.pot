@@ -1,0 +1,66 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.solaris_group.rst:6
+# dc3a4a761c184b08b5814435c8dc61c0
+msgid "salt.modules.solaris_group"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group:1
+# 2fa08ee4c4384acab45f3d6789d41f9f
+msgid "Manage groups on Solaris"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.add:1
+# d030cc0782c14bd4ab010bc999f30317
+msgid "Add the specified group"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.add:3
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.chgid:3
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.delete:3
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.getent:3
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.info:3
+# a6a885e1e3c1480fb643221e6a3f4553
+# 340b2b10eddf4ac9ac0059921332e6ed
+# fce1bb8ae71242acbaf981fccca7b4b5
+# 56201b92ee6640bb9c0ad1adb72a16af
+# 5a30622c7c424c19a9d7c7457f2dcb70
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.chgid:1
+# 428ef68ba728441f9ce31029782bef50
+msgid "Change the gid for a named group"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.delete:1
+# 39c11c57bb5c4e7fb52ba4edaddfbb46
+msgid "Remove the named group"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.getent:1
+# e1ddd99e7bc9499097f649ee5d8865fc
+msgid "Return info on all groups"
+msgstr ""
+
+#: ../../../salt/modules/solaris_group.py:docstring of salt.modules.solaris_group.info:1
+# 2bdf510a108c43a7be58b7b5cde3303d
+msgid "Return information about a group"
+msgstr ""
+

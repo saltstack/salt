@@ -1,0 +1,52 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/runners/all/salt.runners.state.rst:6
+# 03c036cfd81f4abe982740fbcf552605
+msgid "salt.runners.state"
+msgstr ""
+
+#: ../../../salt/runners/state.py:docstring of salt.runners.state:1
+# 671a59b3a37a47268a62c08bb7abf343
+msgid "Execute overstate functions"
+msgstr ""
+
+#: ../../../salt/runners/state.py:docstring of salt.runners.state.over:1
+# d9082ccbdcce40f6a00bc1b2da5cc320
+msgid "Execute an overstate sequence to orchestrate the executing of states over a group of systems"
+msgstr ""
+
+#: ../../../salt/runners/state.py:docstring of salt.runners.state.over:4
+#: ../../../salt/runners/state.py:docstring of salt.runners.state.show_stages:3
+#: ../../../salt/runners/state.py:docstring of salt.runners.state.sls:4
+# 9493bdea6a604b2c937e74dec78b3234
+# 01a6cdc14a1045f69c49415054204d00
+# 471589c6a2f14be1b0be9b7146834b1c
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/runners/state.py:docstring of salt.runners.state.show_stages:1
+# bd16226f8f44438895bf0f10b7f26a2a
+msgid "Display the stage data to be executed"
+msgstr ""
+
+#: ../../../salt/runners/state.py:docstring of salt.runners.state.sls:1
+# dd0bfd81b06d4fa88ee5f6dc7321434d
+msgid "Execute a state run from the master, used as a powerful orchestration system."
+msgstr ""
+

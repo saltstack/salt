@@ -1,0 +1,253 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/index.rst:6
+# 2c68134dea3840b8af85676bd7e180b9
+msgid "State Enforcement"
+msgstr ""
+
+#: ../../ref/states/index.rst:8
+# 700cf34a7abd453bbbf76e8fda53abdc
+msgid "Salt offers an optional interface to manage the configuration or \"state\" of the Salt minions. This interface is a fully capable mechanism used to enforce the state of systems from a central manager."
+msgstr ""
+
+#: ../../ref/states/index.rst:12
+# 2ab3635427814ebfb3a737397cd9db7e
+msgid "The Salt state system is made to be accurate, simple, and fast. And like the rest of the Salt system, Salt states are highly modular."
+msgstr ""
+
+#: ../../ref/states/index.rst:16
+# 1eebbd0ab71e4e6f9c3163d0bc40f3e6
+msgid "State management"
+msgstr ""
+
+#: ../../ref/states/index.rst:18
+# 53b6cfdf24484b4da9a37e32b8ae4d45
+msgid "State management, also frequently called software configuration management (SCM), is a program that puts and keeps a system into a predetermined state. It installs software packages, starts or restarts services, or puts configuration files in place and watches them for changes."
+msgstr ""
+
+#: ../../ref/states/index.rst:23
+# b262db6ba91a4a99ab95bf0ae157338a
+msgid "Having a state management system in place allows you to easily and reliably configure and manage a few servers or a few thousand servers. It allows you to keep that configuration under version control."
+msgstr ""
+
+#: ../../ref/states/index.rst:27
+# ac25531a8e3946088467cf4508a939b0
+msgid "Salt States is an extension of the Salt Modules that we discussed in the previous :doc:`remote execution </topics/tutorials/modules>` tutorial. Instead of calling one-off executions the state of a system can be easily defined and then enforced."
+msgstr ""
+
+#: ../../ref/states/index.rst:33
+# 0565354e34a8403ea78801d88f73f9d1
+msgid "Understanding the Salt State System Components"
+msgstr ""
+
+#: ../../ref/states/index.rst:35
+# 889c347f10e24652a83ed940222af579
+msgid "The Salt state system is comprised of a number of components. As a user, an understanding of the SLS and renderer systems are needed. But as a developer, an understanding of Salt states and how to write the states is needed as well."
+msgstr ""
+
+#: ../../ref/states/index.rst:42
+# c94692a55b2e4b8fb47143e8f2bd3f0a
+msgid "Salt SLS System"
+msgstr ""
+
+#: ../../ref/states/index.rst:45
+# a7ca8eb053f246d7a72176e967760971
+msgid "SLS"
+msgstr ""
+
+#: ../../ref/states/index.rst:47
+# da0200652c05458a86fbea8725e106b0
+msgid "The primary system used by the Salt state system is the SLS system. SLS stands for **S**\\ a\\ **L**\\ t **S**\\ tate."
+msgstr ""
+
+#: ../../ref/states/index.rst:50
+# b25d009c424741f78ae92d6a7ca2d9d4
+msgid "The Salt States are files which contain the information about how to configure Salt minions. The states are laid out in a directory tree and can be written in many different formats."
+msgstr ""
+
+#: ../../ref/states/index.rst:54
+# b9c886eee24643ad9a61869f5bc53b8f
+msgid "The contents of the files and they way they are laid out is intended to be as simple as possible while allowing for maximum flexibility. The files are laid out in states and contains information about how the minion needs to be configured."
+msgstr ""
+
+#: ../../ref/states/index.rst:60
+# 37ab370520ce4c08b2426a6a1e245aa4
+msgid "SLS File Layout"
+msgstr ""
+
+#: ../../ref/states/index.rst:62
+# c8db5d992a624678bff58addf66b8a80
+msgid "SLS files are laid out in the Salt file server. A simple layout can look like this:"
+msgstr ""
+
+#: ../../ref/states/index.rst:75
+# ee18d1b371ad4958933cfdddf9314aa4
+msgid "This example shows the core concepts of file layout. The top file is a key component and is used with Salt matchers to match SLS states with minions. The ``.sls`` files are states. The rest of the files are seen by the Salt master as just files that can be downloaded."
+msgstr ""
+
+#: ../../ref/states/index.rst:80
+# 6b5f053994ab4fa48b774e343fa3df0c
+msgid "The states are translated into dot notation, so the ``ssh.sls`` file is seen as the ssh state, the ``users/admin.sls`` file is seen as the users.admin states."
+msgstr ""
+
+#: ../../ref/states/index.rst:84
+# b07fb0d2e2b440d98a632b46bbe90032
+msgid "The init.sls files are translated to be the state name of the parent directory, so the ``salt/init.sls`` file translates to the Salt state."
+msgstr ""
+
+#: ../../ref/states/index.rst:87
+# 10bbe64d85bc4de1b09f15f74dbe8bce
+msgid "The plain files are visible to the minions, as well as the state files. In Salt, everything is a file; there is no \"magic translation\" of files and file types. This means that a state file can be distributed to minions just like a plain text or binary file."
+msgstr ""
+
+#: ../../ref/states/index.rst:93
+# 5ff2fdeae80648f3b4b50d807699db3b
+msgid "SLS Files"
+msgstr ""
+
+#: ../../ref/states/index.rst:95
+# e6aaae0b03614e06929f83ff982049a3
+msgid "The Salt state files are simple sets of data. Since the SLS files are just data they can be represented in a number of different ways. The default format is yaml generated from a Jinja template. This allows for the states files to have all the language constructs of Python and the simplicity of yaml. State files can then be complicated Jinja templates that translate down to yaml, or just plain and simple yaml files!"
+msgstr ""
+
+#: ../../ref/states/index.rst:102
+# 0ecf53f0202147fc99a216d67c00c1c1
+msgid "The State files are constructed data structures in a simple format. The format allows for many real activates to be expressed in very little text, while maintaining the utmost in readability and usability."
+msgstr ""
+
+#: ../../ref/states/index.rst:106
+# 6632d0b4e6af4cf2a6336543898028f9
+msgid "Here is an example of a Salt State:"
+msgstr ""
+
+#: ../../ref/states/index.rst:136
+# 3318d55c7de7427da835473ab3037961
+msgid "This short stanza will ensure that vim is installed, Salt is installed and up to date, the salt-master and salt-minion daemons are running and the Salt minion configuration file is in place. It will also ensure everything is deployed in the right order and that the Salt services are restarted when the watched file updated."
+msgstr ""
+
+#: ../../ref/states/index.rst:143
+# 1f951ce16a8342628bf906440e121fe4
+msgid "The Top File"
+msgstr ""
+
+#: ../../ref/states/index.rst:145
+# e0ee41daf75e419b9c03c433416ffcd3
+msgid "The top file is the mapping for the state system. The top file specifies which minions should have which modules applied and which environments they should draw the states from."
+msgstr ""
+
+#: ../../ref/states/index.rst:149
+# de2a4aa54e624d9babb85c6bbf4f4861
+msgid "The top file works by specifying the environment, containing matchers with lists of Salt states sent to the matching minions:"
+msgstr ""
+
+#: ../../ref/states/index.rst:163
+# 00e6fbd455ed4c79a85b6a84a1e7b52c
+msgid "This simple example uses the base environment, which is built into the default Salt setup, and then all minions will have the modules salt, users and users.admin since '*' will match all minions. Then the regular expression matcher will match all minions' with an id matching saltmaster.* and add the salt.master state."
+msgstr ""
+
+#: ../../ref/states/index.rst:170
+# 6c9b09fd53dd40fc9609016704ba5381
+msgid "Renderer System"
+msgstr ""
+
+#: ../../ref/states/index.rst:172
+# 16f0a76950614e9fb74576d8294f418b
+msgid "The Renderer system is a key component to the state system. SLS files are representations of Salt \"high data\" structures. All Salt cares about when reading an SLS file is the data structure that is produced from the file."
+msgstr ""
+
+#: ../../ref/states/index.rst:176
+# f565a060ac7845debcbe6561764ed16f
+msgid "This allows Salt states to be represented by multiple types of files. The Renderer system can be used to allow different formats to be used for SLS files."
+msgstr ""
+
+#: ../../ref/states/index.rst:180
+# 1ea1d5cfb9124891858f6be3eeff6cc7
+msgid "The available renderers can be found in the renderers directory in the Salt source code:"
+msgstr ""
+
+#: ../../ref/states/index.rst:183
+# 92e4b8f6cefd4459aa1d25bd98467e27
+msgid ":blob:`salt/renderers`"
+msgstr ""
+
+#: ../../ref/states/index.rst:185
+# 2967552f95534eec8cccd2e70bfe7c20
+msgid "By default SLS files are rendered using Jinja as a templating engine, and yaml as the serialization format. Since the rendering system can be extended simply by adding a new renderer to the renderers directory, it is possible that any structured file could be used to represent the SLS files."
+msgstr ""
+
+#: ../../ref/states/index.rst:190
+# c05c120d35554dbeb09eeb9ed9b18362
+msgid "In the future XML will be added, as well as many other formats."
+msgstr ""
+
+#: ../../ref/states/index.rst:194
+# 085e22f03adb46b1be1470dad133cb79
+msgid "Reloading Modules"
+msgstr ""
+
+#: ../../ref/states/index.rst:196
+# 225ac41b91f94d6ba11877d5612162ae
+msgid "Some salt states require specific packages to be installed in order for the module to load, as an example the :mod:`pip <salt.states.pip_state>` state module requires the `pip`_ package for proper name and version parsing.  On most of the common cases, salt is clever enough to transparently reload the modules, for example, if you install a package, salt reloads modules because some other module or state might require just that package which was installed. On some edge-cases salt might need to be told to reload the modules. Consider the following state file which we'll call ``pep8.sls``:"
+msgstr ""
+
+#: ../../ref/states/index.rst:219
+# aacfdff6026a4e929efa5d1f4fc22d2c
+msgid "The above example installs `pip`_ using ``easy_install`` from `setuptools`_ and installs `pep8`_ using :mod:`pip <salt.states.pip_state>`, which, as told earlier, requires `pip`_ to be installed system-wide. Let's execute this state:"
+msgstr ""
+
+#: ../../ref/states/index.rst:227
+# c6f4ce7ebb1c41a5ad9e87004ac487bd
+msgid "The execution output would be something like:"
+msgstr ""
+
+#: ../../ref/states/index.rst:248
+# 998720f430a84951a795cf47a262fa5b
+msgid "If we executed the state again the output would be:"
+msgstr ""
+
+#: ../../ref/states/index.rst:268
+# 65c57c60ff4b4ae28b3dafff282f35da
+msgid "Since we installed `pip`_ using :mod:`cmd <salt.states.cmd>`, salt has no way to know that a system-wide package was installed. On the second execution, since the required `pip`_ package was installed, the state executed perfectly."
+msgstr ""
+
+#: ../../ref/states/index.rst:272
+# c150818901e440e692dcd9ad96c6487f
+msgid "To those thinking, couldn't salt reload modules on every state step since it already does for some cases?  It could, but it should not since it would greatly slow down state execution."
+msgstr ""
+
+#: ../../ref/states/index.rst:276
+# daf4fc1142e0462b9046c28534e6eaa3
+msgid "So how do we solve this *edge-case*? ``reload_modules``!"
+msgstr ""
+
+#: ../../ref/states/index.rst:278
+# 5f95c826d88d4f63a3e8bf4495ec407c
+msgid "``reload_modules`` is a boolean option recognized by salt on **all** available states which, does exactly what it tells use, forces salt to reload it's modules once that specific state finishes. The fixed state file would now be:"
+msgstr ""
+
+#: ../../ref/states/index.rst:297
+# 04840255261b42b2941f9419f55a213f
+msgid "Let's run it, once:"
+msgstr ""
+
+#: ../../ref/states/index.rst:303
+# dcac9321d444462b8c480c74cce9bee8
+msgid "And it's output now is:"
+msgstr ""
+

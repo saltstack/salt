@@ -1,0 +1,108 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/event/index.rst:6
+# 754abfbdbe6246dab12bef0e952ee796
+msgid "Salt Event System"
+msgstr ""
+
+#: ../../topics/event/index.rst:8
+# a5d72dee3c0d4f49a1a7964a5fdaa8be
+msgid "Salt 0.9.10 introduced the Salt Event System. This system is used to fire off events enabling third party applications or external processes to react to behavior within Salt."
+msgstr ""
+
+#: ../../topics/event/index.rst:12
+# adbd2c8bedcf42b5866a7de2654e6820
+msgid "The event system is comprised of a few components, the event sockets which publish events, and the event library which can listen to events and send events into the salt system."
+msgstr ""
+
+#: ../../topics/event/index.rst:17
+# 1c1dae6a1b324b86a090cb531bd5c995
+msgid "Listening for Events"
+msgstr ""
+
+#: ../../topics/event/index.rst:19
+# a62e5b99be9044c282b1ef48be5f4efc
+msgid "The event system is accessed via the event library and can only be accessed by the same system user that Salt is running as. To listen to events a SaltEvent object needs to be created and then the get_event function needs to be run. The SaltEvent object needs to know the location that the Salt Unix sockets are kept. In the configuration this is the ``sock_dir`` option. The ``sock_dir`` option defaults to \"/var/run/salt/master\" on most systems."
+msgstr ""
+
+#: ../../topics/event/index.rst:26
+# ac171f0ab66a487081b6ff10f30fd86e
+msgid "The following code will check for a single event:"
+msgstr ""
+
+#: ../../topics/event/index.rst:36
+# 05b9ef8f4ccb4c5eae20b6152c2a3fc3
+msgid "Events will also use a \"tag\". A \"tag\" allows for events to be filtered. By default all events will be returned, but if only authentication events are desired, then pass the tag \"auth\". Also, the get_event method has a default poll time assigned of 5 seconds, to change this time set the \"wait\" option. This example will only listen for auth events and will wait for 10 seconds instead of the default 5."
+msgstr ""
+
+#: ../../topics/event/index.rst:51
+# 68b7343927bb41f5b3b119d4eee6bfc2
+msgid "Instead of looking for a single event, the iter_events method can be used to make a generator which will continually yield salt events. The iter_events method also accepts a tag, but not a wait time:"
+msgstr ""
+
+#: ../../topics/event/index.rst:66
+# 28f186a9bd7d4b90afb9e5e579e6aef3
+msgid "Firing Events"
+msgstr ""
+
+#: ../../topics/event/index.rst:68
+# 9dee19a2171d4a8bad94c700b35e875e
+msgid "It is possible to fire events on either the minion's local bus, or to fire events intended for the master. To fire a local event from the minion, on the command line:"
+msgstr ""
+
+#: ../../topics/event/index.rst:76
+# ccfd147ef7224569b0229909c22c295a
+msgid "To fire an event to be sent to the master, from the minion:"
+msgstr ""
+
+#: ../../topics/event/index.rst:82
+# 37617d0a16194cb1aebff5aec3132b38
+msgid "If a process is listening on the minion, it may be useful for a user on the master to fire an event to it:"
+msgstr ""
+
+#: ../../topics/event/index.rst:91
+# 87cbae24883441799e4b7623492174b1
+msgid "Firing Events From Code"
+msgstr ""
+
+#: ../../topics/event/index.rst:93
+# 0ae7b22d0a6d4fa4bb42ec38800db730
+msgid "Events can be very useful when writing execution modules, in order to inform various processes on the master when a certain task has taken place. In Salt versions previous to 0.17.0, the basic code looks like:"
+msgstr ""
+
+#: ../../topics/event/index.rst:106
+# 1711a7f2af3046cfa86ee1ba4725611b
+msgid "In Salt version 0.17.0, the ability to send a payload with a more complex data structure than a string was added. When using this interface, a Python dictionary should be sent instead."
+msgstr ""
+
+#: ../../topics/event/index.rst:121
+# d1af9eec3aab4a8dbd6de98807014810
+msgid "It should be noted that this code can be used in 3rd party applications as well. So long as the salt-minion process is running, the minion socket can be used:"
+msgstr ""
+
+#: ../../topics/event/index.rst:128
+# 40bcf3d8ee814f1b82ce16db1c8a4c1e
+msgid "So long as the salt-master process is running, the master socket can be used:"
+msgstr ""
+
+#: ../../topics/event/index.rst:134
+# dc08bf056c72424eb8b9fe9e64b01745
+msgid "This allows 3rd party applications to harness the power of the Salt event bus programmatically, without having to make other calls to Salt. A 3rd party process can listen to the event bus on the master, and another 3rd party process can fire events to the process on the master, which Salt will happily pass along."
+msgstr ""
+

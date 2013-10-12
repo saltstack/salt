@@ -1,0 +1,429 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/conventions/packaging.rst:6
+# 0da266a0b37c421baf22a5a80a1ed8e1
+msgid "SaltStack Packaging Guide"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:8
+# 1f2604a784e0405e8319543f19baec47
+msgid "Since Salt provides a powerful toolkit for system management and automation, the package can be spit into a number of sub-tools. While packaging Salt as a single package containing all components is perfectly acceptable, the split packages should follow this convention."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:14
+# a844834c3c9747c28f16a41c184fc24e
+msgid "Source Files"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:16
+# aafe9a9b78f44dad843c2ffa726e2f95
+msgid "Release packages should always be built from the source tarball distributed via pypi. Release packages should *NEVER* use a git checkout as the source for distribution."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:21
+# 4877560c988c4202bf8c4da2427ca928
+msgid "Single Package"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:23
+# 540dc10264af4eefa98c34920d97f529
+msgid "Shipping Salt as a single package, where the minion, master and all tools are together is perfectly acceptable and practiced by distributions such as FreeBSD."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:28
+# a29f8976f1454b90b3e4d3664b945276
+msgid "Split Package"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:30
+# 1bbf55cceb9e464ba73ce2327b85c9b6
+msgid "Salt Should always be split in a standard way, with standard dependencies, this lowers cross distribution confusion about what components are going to be shipped with specific packages. These packages can be defined from the Salt Source as of Salt 0.17.0:"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:36
+# 868b29dde6514a4da5b4e0dbb69b8d19
+msgid "Salt Common"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:38
+# 0b629ba172de4f1787677e6d6016fa04
+msgid "The `salt-common` or `salt` package should contain the files provided by the salt python package, or all files distributed from the ``salt/`` directory in the source distribution packages. The documentation contained under the ``doc/`` directory can be a part of this package but splitting out a doc package is preferred. Since salt-call is the entry point to utilize the libs and is useful for all salt packages it is included in the salt-common package."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:47
+#: ../../topics/conventions/packaging.rst:74
+#: ../../topics/conventions/packaging.rst:116
+#: ../../topics/conventions/packaging.rst:145
+#: ../../topics/conventions/packaging.rst:174
+#: ../../topics/conventions/packaging.rst:200
+# 42b60e0bcab14463af7978bfec28eae7
+# c7b544b6865f4e749582c3cffcca312c
+# 8e36be4e4fd14e9c920c9b8169864721
+# f5fd317858e14983919ad26b953a06fb
+# 93a21c2666434630a7a0cae298ebddb2
+# 16db7c2e774e419aa986655c182b3bc9
+msgid "Name"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:49
+# ba783e2097964da2a9d3b90ccaee9d6b
+msgid "`salt` OR `salt-common`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:52
+#: ../../topics/conventions/packaging.rst:79
+#: ../../topics/conventions/packaging.rst:121
+#: ../../topics/conventions/packaging.rst:150
+#: ../../topics/conventions/packaging.rst:179
+#: ../../topics/conventions/packaging.rst:205
+# f9fbc80c634046ccad5c1eae877f0df5
+# 32b0317d51e644f5b34324f5b56e7845
+# 685bc68b37e94a79b6b8b717b124d539
+# 1d9b4480b4d24e99a7ba4731c0c79e1d
+# 97c30d58206143fd9643699ee3d8ace3
+# cf0680047d874ddaa358cc09e0c5c37c
+msgid "Files"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:54
+# 1ddb6d3872fe4c508b78cb8cba1474b5
+msgid "`salt/*`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:55
+# 48625d2a7f424451b2918e0f9cc0ea35
+msgid "`man/salt.7`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:56
+# 966b603be54c432393f5eb0ff13f27ef
+msgid "`scripts/salt-call`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:57
+# 6d465c6ceadd45978e848011074cc260
+msgid "`tests/*`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:58
+# 4ff4e5b93a444b69b7dce722cf3700fa
+msgid "`man/salt-call.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:61
+#: ../../topics/conventions/packaging.rst:95
+#: ../../topics/conventions/packaging.rst:128
+#: ../../topics/conventions/packaging.rst:158
+#: ../../topics/conventions/packaging.rst:185
+# d41312d0ebad4870a0d57a5c39b4f230
+# 1c8951d28dae4d198124e8fff356106a
+# 560532c4e0d94f2186219b74628b1eee
+# ea796cefdb72488ea23d0c106323a137
+# e4dc8c6328af44319d58391f839d68d7
+msgid "Depends"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:63
+# f207f965563541cba1fbfe6fbc456d26
+msgid "`Python 2.6-2.7`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:64
+# b517032fd11243a6883f5b748faf85d4
+msgid "`PyYAML`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:65
+# 94bfaa9678ef4f1abcf5f4c0fc23253a
+msgid "`Jinja2`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:68
+# e961794af1e84eceb4a8a871199518db
+msgid "Salt Master"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:70
+# 2793b704b0bd4df690a3ce763a1e7c35
+msgid "The `salt-master` package contains the applicable scripts, related man pages and init information for the given platform."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:76
+# 6e0414c5a6ae4967a15e55bf10ffde14
+msgid "`salt-master`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:81
+# ba400976793d4f67add7b985099e168c
+msgid "`scripts/salt-master`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:82
+# cf531212d1b6429499c99a3728b0c957
+msgid "`scripts/salt`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:83
+# 1606ec5c848b499fb99ac3ac89f0d22a
+msgid "`scripts/salt-run`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:84
+# 14d2b3907527417e9765baf9442646e3
+msgid "`scripts/salt-key`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:85
+# 141e49df45054374ba5ce06cd1c7529d
+msgid "`scripts/salt-cp`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:86
+# 44b4286bf0a5477c99dde068afe1743c
+msgid "`pkg/<master init data>`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:87
+# bb59bd2bef034a859f053bfee52ce5f9
+msgid "`man/salt.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:88
+# f8f08880c8f54b08b02c438b5b9584c0
+msgid "`man/salt-master.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:89
+# 570930156b0647569995e8e2386bc3ad
+msgid "`man/salt-run.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:90
+# 2862164d021d4a3cad9c4859f7ef064b
+msgid "`man/salt-key.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:91
+# 8914de2399d840d985d43086300d0568
+msgid "`man/salt-cp.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:92
+# 5f349fc4bc4c4ede935937406cf3110f
+msgid "`conf/master`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:97
+#: ../../topics/conventions/packaging.rst:130
+#: ../../topics/conventions/packaging.rst:160
+#: ../../topics/conventions/packaging.rst:187
+#: ../../topics/conventions/packaging.rst:212
+# 11b06ec3c2af47ef89f3dc3d22de4781
+# 092db5b6bc3a4f8088c14c97a0e63c1f
+# 4d6a5ea3b6754df9adc1ecf4a11454b6
+# 34e88c4d4b8143c1abfb861643056edf
+# 96c64728b88b4e54ac51e9ad7ce5e4f7
+msgid "`Salt Common`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:98
+#: ../../topics/conventions/packaging.rst:132
+#: ../../topics/conventions/packaging.rst:161
+# c7df1da70f9f459d98aae77dd24ff2e3
+# 27bca7ed11454e7d84303eaae0e9acc0
+# 8004cf33a1c54d87bb24b6c6ef0a6be6
+msgid "`ZeroMQ` >= 3.2"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:99
+#: ../../topics/conventions/packaging.rst:133
+#: ../../topics/conventions/packaging.rst:162
+# aecae3c7e05c45e3b21bcd9b41a7e39c
+# b26e3ae5c9ff472d999df30dc4d3ba24
+# 9e7a4027b2af45ffa7a05e561315f106
+msgid "`PyZMQ` >= 2.10"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:100
+#: ../../topics/conventions/packaging.rst:134
+#: ../../topics/conventions/packaging.rst:163
+# 386e83b6f34447fe88926bb6362e265a
+# e01d448a709f4c3c94762073cdbd63cd
+# 988e48637114407394d3a0508878a372
+msgid "`PyCrypto`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:101
+#: ../../topics/conventions/packaging.rst:135
+#: ../../topics/conventions/packaging.rst:164
+# 7afacb03ac0f492e9c6ea9171cc2a2e6
+# 7f6e70c96e0341b9a08ed77d71f6ca90
+# d0180fd3ce7a487b98998c9bcf553818
+msgid "`M2Crypto`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:102
+#: ../../topics/conventions/packaging.rst:136
+#: ../../topics/conventions/packaging.rst:165
+# 40203b8d158d4136a74c68aabd2fa95c
+# 849d0dc4d9a44e5da0d3351b41ead153
+# 866ce05ea6c94e9fab07ae629738200e
+msgid "`Python MessagePack` (Messagepack C lib, or msgpack-pure)"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:105
+# 822d545c94e54ff7803cf52af0715bf3
+msgid "Salt Syndic"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:107
+# 742a2945785d4cb49c5ffaada4c1c5ce
+msgid "The Salt Syndic package can be rolled completely into the Salt Master package. Platforms which start services as part of the package deployment need to maintain a separate `salt-syndic` package (primarily Debian based platforms)."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:111
+# 271c44b4edd34ab4833456c63ef5b872
+msgid "The Syndic may optionally not depend on the anything more than the Salt Master since the master will bring in all needed dependencies, but fall back to the platform specific packaging guidelines."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:118
+# e7f850d88a284f70a278ac35c5be3416
+msgid "`salt-syndic`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:123
+# 6a5fd4c9af7640ffbdfe17aaa3caefbc
+msgid "`scripts/salt-syndic`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:124
+# 8959b012d6c34d62a56a7b0cb211725c
+msgid "`pkg/<syndic init data>`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:125
+# c92b9b3de8c34a8db06f130fd5ef2f0b
+msgid "`man/salt-syndic.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:131
+# f6a3072dc37a43cca1ced2faf05bb4cd
+msgid "`Salt Master`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:139
+# 4d9530da8708459db1bb1025f8ba91d1
+msgid "Salt Minion"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:141
+# af16fded7d8c4767b0bec201353f6e73
+msgid "The Minion is a standalone package and should not be split beyond the `salt-minion` and `salt-common` packages."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:147
+# 9113456b0af74e5798ca97e1da444250
+msgid "`salt-minion`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:152
+# 377555f308ef463b9e9c8c4be6c3035f
+msgid "`scripts/salt-minion`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:153
+# 3a085379173f41688d340dbdd18ff5fa
+msgid "`pkg/<minion init data>`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:154
+# 260f5a33b359416c9866307e96d75da1
+msgid "`man/salt-minion.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:155
+# c9997db76365446fb119b191f037e183
+msgid "`conf/minion`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:168
+# 7dfa6c8a310341f494d16e4b5ed35e5a
+msgid "Salt SSH"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:170
+# 300fbbf8644d49199f68a54c3e511b7c
+msgid "Since Salt SSH does not require the same dependencies as the minion and master, it should be split out."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:176
+# 8be4b7bb6eaa462a816c434baded9a69
+msgid "`salt-ssh`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:181
+# dcbf20800b424332acca5508ff056d72
+msgid "`scripts/salt-ssh`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:182
+# e7a38a783e6c4ca4ae844dc17ca1ae15
+msgid "`man/salt-ssh.1`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:188
+# 5614a31f89bf422a91916bb19413de15
+msgid "`sshpass`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:191
+# a6763a652029426a8e6459e019d66454
+msgid "Salt Doc"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:193
+# 0626134b0f9c4a92b64e7efce7ccf684
+msgid "The documentation package is very distribution optional. A completely split package will split out the documentation, but some platform conventions do not prefer this. If the documentation is not split out, it should be included with the `Salt Common` package."
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:202
+# f3ac1c0b639e4741831e73bacc21c910
+msgid "`salt-doc`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:207
+# 9bd26d64c42a4a098defb93f0398c37e
+msgid "`doc/*`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:210
+# 36b3096c907d49ebb57ab0c0418a6f25
+msgid "Optional Depends"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:213
+# fc092fda84f943a49ada1e2ed1613319
+msgid "`Python Sphinx`"
+msgstr ""
+
+#: ../../topics/conventions/packaging.rst:214
+# bf53575aee5a4398a1d1c7b722eb6d81
+msgid "`Make`"
+msgstr ""
+

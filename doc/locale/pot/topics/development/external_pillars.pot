@@ -1,0 +1,178 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/development/external_pillars.rst:6
+# d1d9a09cf74a4c36beb1dc386a62a8cb
+msgid "External Pillars"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:8
+# 1c487baf77324194970ecc230d4e6e37
+msgid "Salt provides a mechanism for generating pillar data by calling external pillar interfaces. This document will describe an outline of an ext_pillar module."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:13
+# c6b64750edeb4c53ae314cc21d9071c5
+msgid "Location"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:15
+# 2a74fafaec56483c848ff073b4df0ec7
+msgid "Salt expects to find your ``ext_pillar`` module in the same location where it looks for other python modules. If the ``extension_modules`` option in your Salt master configuration is set, Salt will look for a ``pillar`` directory under there and load all the modules it finds. Otherwise, it will look in your Python site-packages ``salt/pillar`` directory."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:22
+# d2838c6d05c247b08990bef2c96cd2c4
+msgid "Configuration"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:24
+# 20712521d5f54c008a5a67ecbdb81603
+msgid "The external pillars that are called when a minion refreshes its pillars is controlled by the ``ext_pillar`` option in the Salt master configuration. You can pass a single argument, a list of arguments or a dictionary of arguments to your pillar:"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:42
+# 67806b21ad174e9297862f15eab4bbde
+msgid "The Module"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:45
+# e2e2b7e1defe40259eb46abcddebefd8
+msgid "Imports and Logging"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:47
+# 5547d1a74fbe495a99456f0c593f630e
+msgid "Import modules your external pillar module needs. You should first include generic modules that come with stock Python:"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:55
+# a1eefff989d8483f96ae8f5e2b1933d7
+msgid "And then start logging. This is an idiomatic way of setting up logging in Salt:"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:62
+# 2af868a5123f407b93c07a1d2b00f326
+msgid "Finally, load modules that are specific to what you are doing. You should catch import errors and set a flag that the the ``__virtual__`` function can use later."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:75
+# 0fa4717ce15e451f8b2292fb1acd12db
+msgid "Options"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:77
+# c7bc9d707de34eccb4313aa2ab76287b
+msgid "If you define an ``__opts__`` dictionary, it will be merged into the ``__opts__`` dictionary handed to the ``ext_pillar`` function later. This is a good place to put default configuration items. The convention is to name things ``modulename.option``."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:88
+# ccfe909155434378bc4cb6495e0d307e
+msgid "Initialization"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:90
+# 682b41bc84e04d558b6cda390b094ce4
+msgid "If you define an ``__init__`` function, it will be called with the following signature:"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:99
+# 3de28e87062244fa901109803e724a42
+msgid "**Note**: The ``__init__`` function is ran every time a particular minion causes the external pillar to be called, so don't put heavy initialization code here. The ``__init__`` functionality is a side-effect of the Salt loader, so it may not be as useful in pillars as it is in other Salt items."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:105
+# 1ce3dbfacec4449ba840ddf4c8ef6edb
+msgid "__virtual__"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:107
+# 79dc9850b49a46399aa869b09aa8a99f
+msgid "If you define a ``__virtual__`` function, you can control whether or not this module is visible. If it returns ``False`` then Salt ignores this module. If it returns a string, then that string will be how Salt identifies this external pillar in its ``ext_pillar`` configuration. If this function does not exist, then the name Salt's ``ext_pillar`` will use to identify this module is its conventional name in Python."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:114
+# 089ab7fdad6b4d8fa34627cec75c1634
+msgid "This is useful to write modules that can be installed on all Salt masters, but will only be visible if a particular piece of software your module requires is installed."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:139
+# d16a8fb4db064807b9c957e0a3bdf9d8
+msgid "ext_pillar"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:141
+# 1963a646039043868ca5652b8a3d42b9
+msgid "This is where the real work of an external pillar is done. If this module is active and has a function called ``ext_pillar``, whenever a minion updates its pillar this function is called."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:145
+# 44e1fb9025e6475ab1c1c42f5e86f6b5
+msgid "How it is called depends on how it is configured in the Salt master configuration. The first argument is always the current pillar dictionary, this contains pillar items that have already been added, starting with the data from ``pillar_roots``, and then from any already-ran external pillars."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:150
+# 963b3007e9b7417b9ec1d6f21304a333
+msgid "Using our example above:"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:159
+# 0938437f55004f51b94395a56ef07dc1
+msgid "In the ``example_a`` case, ``pillar`` will contain the items from the ``pillar_roots``, in ``example_b`` ``pillar``  will contain that plus the items added by ``example_a``, and in ``example_c`` ``pillar`` will contain that plus the items added by ``example_b``."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:164
+# b75f39caf1824cb3ba7ef7d77d26f229
+msgid "This function should return a dictionary, the contents of which are merged in with all of the other pillars and returned to the minion. **Note**: this function is called once for each minion that fetches its pillar data."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:179
+# aa52e8ae24b6423baee562b1934cd9e6
+msgid "You shouldn't just add items to ``pillar`` and return that, since that will cause Salt to merge data that already exists. Rather, just return the items you are adding or changing. You could, however, use ``pillar`` in your module to make some decision based on pillar data that already exists."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:184
+# 36933df63f3e466f91c63ad0148bcd6b
+msgid "This function has access to some useful globals:"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:187
+# aec4861a85354b9fa2f0709d14664d82
+msgid "A dictionary of mostly Salt configuration options. If you had an ``__opts__`` dictionary defined in your module, those values will be included. Also included and most useful is ``__opts__['id']``, which is the minion id of the minion asking for pillar data."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:193
+# f41ea9db98ce49fbb5b64c1531fad70d
+msgid "A dictionary of Salt module functions, useful so you don't have to duplicate functions that already exist. E.g. ``__salt__['cmd.run']( 'ls -l' )`` **Note**, runs on the *master*"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:198
+# eaa6bf3288ec4cb79c6e783c65a05037
+msgid "A dictionary of the grains of the minion making this pillar call."
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:203
+# db558fe1a79b418ab6ff53ff89d817bf
+msgid "Example configuration"
+msgstr ""
+
+#: ../../topics/development/external_pillars.rst:205
+# 00aab40aa6d7402a9a4a0b0a5db5c203
+msgid "As an example, if you wanted to add external pillar via the ``cmd_json`` external pillar, add something like this to your master config:"
+msgstr ""
+

@@ -1,0 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/renderers/all/salt.renderers.json.rst:6
+# f44fa11c95814192ae64c8ed46cce808
+msgid "salt.renderers.json"
+msgstr ""
+
+#: ../../../salt/renderers/json.py:docstring of salt.renderers.json.render:1
+# 49072fc57db24e928195652ed5854bd8
+msgid "Accepts JSON as a string or as a file object and runs it through the JSON parser."
+msgstr ""
+
+#: ../../../salt/renderers/json.py:docstring of salt.renderers.json.render:4
+# ddfeb5dfea4145ef9d6261c696721ce6
+msgid "A Python data structure"
+msgstr ""
+

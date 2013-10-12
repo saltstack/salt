@@ -1,0 +1,693 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/index.rst:8
+# 0c4f31321a2548e6bfae633ee0b429ce
+msgid "Full list of builtin state modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+# caf0e95e3deb4a3892ee31c6eafc95cc
+msgid ":obj:`alias <salt.states.alias>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# a0fedfbad2944ce0a0649dcf5040f74f
+msgid "Configuration of email aliases."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7e69841a40e04ad2949d8e3df7b27a7f
+msgid ":obj:`alternatives <salt.states.alternatives>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7f9ea3a73cfc49b49fbb919264e93b2a
+msgid "Configuration of the alternatives system"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 129fa1b5338e460cab6e722a75f7142b
+msgid ":obj:`apt <salt.states.apt>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 0a554706f4f04d8b9ee76bfce61a41c6
+msgid "Package management operations specific to APT- and DEB-based systems"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 5b01819447f745fab8a2a111966d0e88
+msgid ":obj:`augeas <salt.states.augeas>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7bb9955c8c0149fdb8093aae680eae6f
+msgid "Configuration management using Augeas"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 77623160800d490881c12568edfc4906
+msgid ":obj:`cmd <salt.states.cmd>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 683d81198bc245818fdaca1526518b8e
+msgid "Execution of arbitrary commands"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 4e3d95db33ea4d94bbd4b32d545ed1c0
+msgid ":obj:`cron <salt.states.cron>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# c8be1b08630b4bacb585f50f19cb93cd
+msgid "Management of cron, the Unix command scheduler."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 57572111a86b4455a684b54fb73f70f2
+msgid ":obj:`debconfmod <salt.states.debconfmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 03c6fba8c80242ff9415f54c24e8b681
+msgid "Management of debconf selections."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 32e749eafae041d782efee8570539c2e
+msgid ":obj:`disk <salt.states.disk>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 58d6439a290b4d069e21084611a2d085
+msgid "Disk monitoring state"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 97364811b9f549e3ab9b1f156bc8c28f
+msgid ":obj:`eselect <salt.states.eselect>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# a060f3c17cec450c848453ca0180f671
+msgid "Management of Gentoo configuration using eselect"
+msgstr ""
+
+#: ../../<autosummary>:1
+# c2904f02c99d485e9cd2d839fc5657ec
+msgid ":obj:`file <salt.states.file>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# c3630b57bf304fd0ad2c9e307bb425d1
+msgid "Operations on regular files, special files, directories, and symlinks."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 838abda43dc74e98bc276a2823e1fcfe
+msgid ":obj:`gem <salt.states.gem>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6c1eebbdc82746e5a186dc21c2092625
+msgid "Installation of Ruby modules packaged as gems."
+msgstr ""
+
+#: ../../<autosummary>:1
+# cd85767e90774efe8f289cdf9ed036b8
+msgid ":obj:`git <salt.states.git>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# c78e36f1fb884c32b14c3116dcb449ce
+msgid "Interaction with Git repositories."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 48b99407a89a4eef9d83498934cd1ff8
+msgid ":obj:`grains <salt.states.grains>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 22d4303a598944f787c2d2c62b97bf9f
+msgid "Manage grains on the minion."
+msgstr ""
+
+#: ../../<autosummary>:1
+# e15394d57e934e0eb916f02455c2b371
+msgid ":obj:`group <salt.states.group>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# da1fbd99290e4d9b9d06173849c95694
+msgid "Management of user groups."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 02b2d58e391949b0820833bc3f30f980
+msgid ":obj:`hg <salt.states.hg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 5fdf01300b934691a70a02818779ca2f
+msgid "Interaction with Mercurial repositories."
+msgstr ""
+
+#: ../../<autosummary>:1
+# c4fd4271007548ab8c16c07c305fa4b6
+msgid ":obj:`host <salt.states.host>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 8fe42dc4b22542e7b16d661823b52aeb
+msgid "Management of addresses and names in hosts file."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 62eed872267c41b69c7a9dbd04bb3dfd
+msgid ":obj:`iptables <salt.states.iptables>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# f27f80c09d5343c38bf53c29fded584f
+msgid "Management of iptables"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 50185990e4aa49989d564ddffce43828
+msgid ":obj:`keyboard <salt.states.keyboard>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 0a1920e8a0bc494b8eb43fa0cc987c97
+msgid "Management of keyboard layouts"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 5e31d08203fb43da8489d25236a13f6b
+msgid ":obj:`kmod <salt.states.kmod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e5dafa46733943e096609c13e5943e2d
+msgid "Loading and unloading of kernel modules."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 23078f45396f42cab1f828b4160878b4
+msgid ":obj:`layman <salt.states.layman>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# de6d9c68dafb4f1d88db2808d4241d10
+msgid "Management of Gentoo Overlays using layman"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e69007ac8c13477da66f60a837229fd7
+msgid ":obj:`libvirt <salt.states.libvirt>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 829c580f1bd8482e843c2736c645052c
+msgid "Manage libvirt certs."
+msgstr ""
+
+#: ../../<autosummary>:1
+# acd408caf28f4dc38240f938ed2ed0eb
+msgid ":obj:`locale <salt.states.locale>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e4ea6801222c4919af19c4c8cb8bc6bc
+msgid "Management of languages/locales"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 1d23e71138964fb9a48c54ad798f1e16
+msgid ":obj:`lvm <salt.states.lvm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 40e3932324ce4a08b2a3d8540552be18
+msgid "Management of Linux logical volumes"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 9ce67ff5c345409a8b6edf861ae48488
+msgid ":obj:`makeconf <salt.states.makeconf>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# b9461a44a9cd4816838742c768eee301
+msgid "Management of Gentoo make.conf"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 754c097929e64d7daf175cd164f1fc37
+msgid ":obj:`mdadm <salt.states.mdadm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 14f57a541b694f40a001495a13406a0e
+msgid "Managing software RAID with mdadm"
+msgstr ""
+
+#: ../../<autosummary>:1
+# ebcb2f41edf5420da4904fa24de6c2a0
+msgid ":obj:`modjk_worker <salt.states.modjk_worker>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 5cbeda7188e04ed18608df9b8ee9b7c5
+msgid "Send commands to a :strong:`modjk` load balancer via the peer system"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 933e2e0410c7457686dae93c8e3930eb
+msgid ":obj:`module <salt.states.module>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# d3e11f4ab6924a199e6453493d37b26b
+msgid "Execution of Salt modules from within states."
+msgstr ""
+
+#: ../../<autosummary>:1
+# aa6865a040854db6870b737c856c0af2
+msgid ":obj:`mongodb_database <salt.states.mongodb_database>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 4add03ad365c486bbe1e4754cb190f93
+msgid "Management of Mongodb databases"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 4ca9b90adad44161a4fbc54ceea3921d
+msgid ":obj:`mongodb_user <salt.states.mongodb_user>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 42b726a5e95541fb89115a27709dec82
+msgid "Management of Mongodb users"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 86a35cf2e44a4754be295abecd207041
+msgid ":obj:`mount <salt.states.mount>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# a944e5d94f364e90a95f2568b941fa5b
+msgid "Mounting of filesystems."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6abac971daf342cb927fd127bc693516
+msgid ":obj:`mysql_database <salt.states.mysql_database>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 449d19d4a2474e249f34bf658d4f1680
+msgid "Management of MySQL databases (schemas)."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 08f208cf9175474f90d512078329c57d
+msgid ":obj:`mysql_grants <salt.states.mysql_grants>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# d1c1921631174892bacae80c346d7ba8
+msgid "Management of MySQL grants (user permissions)."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6403ffbccc13471bb247d92c63d18f4a
+msgid ":obj:`mysql_user <salt.states.mysql_user>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 79ae1cc94c3749d6848b8e9b2de5e1dd
+msgid "Management of MySQL users."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 80f5a6bfe0eb4849a85335245fc7d56c
+msgid ":obj:`network <salt.states.network>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# a833b4137df94cd387a9cf1ab1cdcc8b
+msgid "Configuration of network interfaces."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 582a9427d8ed4ad2989b33b072178c1c
+msgid ":obj:`npm <salt.states.npm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 8b962371fc7b45bd84ba4b0000d5fe14
+msgid "Installation of NPM Packages"
+msgstr ""
+
+#: ../../<autosummary>:1
+# cb7094e0200c4638afd5024342d2c1cb
+msgid ":obj:`ntp <salt.states.ntp>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7bdf64d5ed3b49f3b8423fb37cc0de71
+msgid "Management of NTP servers"
+msgstr ""
+
+#: ../../<autosummary>:1
+# b5ad90ad824f421997ad95bc0c1e01b3
+msgid ":obj:`pecl <salt.states.pecl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 278823f5b30d4f0d9e3a47efe25db0c0
+msgid "Installation of PHP Extensions Using pecl"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7432dc4db6154639bbd7c1eac0bc9a68
+msgid ":obj:`pip_state <salt.states.pip_state>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 1b2c3e7ec3c5403883a8f75c02cc3c53
+msgid "Installation of Python Packages Using pip"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 16ee6a40b9054161ae9e9e4180aa3c2a
+msgid ":obj:`pkg <salt.states.pkg>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# c6bfa96fab88428c80d9e26e9b12fce7
+msgid "Installation of packages using OS package managers such as yum or apt-get"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 16661d323b8b4746a23c55f94a49611e
+msgid ":obj:`pkgng <salt.states.pkgng>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 362243bbe6744afa8c2da28e587c8097
+msgid "Manage package remote repo using FreeBSD pkgng"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 39e6a893f04649cb8cd8d2e30bf55b5d
+msgid ":obj:`pkgrepo <salt.states.pkgrepo>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 2127fcb9f065472bab1b2c23d629dc45
+msgid "Management of package repos"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e41007ceb6c64d949e18cea061de6b46
+msgid ":obj:`portage_config <salt.states.portage_config>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 5bbc622d0f09473686b242ab512b43be
+msgid "Management of Portage package configuration on Gentoo"
+msgstr ""
+
+#: ../../<autosummary>:1
+# bb9b5605a7bc423e86bc5e845e5f501d
+msgid ":obj:`postgres_database <salt.states.postgres_database>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# ca7e1300a57743f489829323ce938806
+msgid "Management of PostgreSQL databases."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 48ec855d4cad406eb73209f79f96a151
+msgid ":obj:`postgres_group <salt.states.postgres_group>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# d7ac7ee27daa40e98c39ee5e28f72f84
+msgid "Management of PostgreSQL groups (roles)."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 0f4f5cf0d4744aefb2d5067f5af5cab6
+msgid ":obj:`postgres_user <salt.states.postgres_user>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 39282ea078774d66a8233d1aea6a71ae
+msgid "Management of PostgreSQL users (roles)."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 20eb7556a4c34fe3b8ab5bdeb15c9ec9
+msgid ":obj:`quota <salt.states.quota>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# b2805a9d70094614a078b49bafc57930
+msgid "Management of POSIX Quotas"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 801aeef95f4c48fa9689967da6089149
+msgid ":obj:`rabbitmq_user <salt.states.rabbitmq_user>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 8ed479e16581422ca1f6057bca7e4c0a
+msgid "Manage RabbitMQ Users."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 72ec76174d664d348d60c105b4301d9b
+msgid ":obj:`rabbitmq_vhost <salt.states.rabbitmq_vhost>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# d344364021354bbf9f42231b041abd58
+msgid "Manage RabbitMQ Virtual Hosts."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 37df1617574b46bea8132914599b4944
+msgid ":obj:`rbenv <salt.states.rbenv>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 47ea5f05708e497fbd4bd3e46deb4109
+msgid "Managing Ruby installations with rbenv."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 80122c380a0c41beae110f4d719040ed
+msgid ":obj:`rvm <salt.states.rvm>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 1c44583a429d4fa7b264e77b1efb3e78
+msgid "Managing Ruby installations and gemsets with Ruby Version Manager (RVM)."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 6ec9eaa7e5f447a79bd09a447d980bdf
+msgid ":obj:`selinux <salt.states.selinux>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7df975d252f44b408fafc006e6f4798e
+msgid "Management of SELinux rules."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 2b628cc2380f4a48805c145a87509095
+msgid ":obj:`service <salt.states.service>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 26958a2785d74414a760c5bff37df550
+msgid "Starting or restarting of services and daemons."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 04e54da709fa4b0ebedcf412bd53b0da
+msgid ":obj:`ssh_auth <salt.states.ssh_auth>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# b83d5eb98a204e7d8bfe15adf52120a8
+msgid "Control of entries in SSH authorized_key files."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 58e6639e53984e61ab51f767f3a8c0d5
+msgid ":obj:`ssh_known_hosts <salt.states.ssh_known_hosts>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# a8480a77ef7f4f7ab1bb21c78f008eea
+msgid "Control of SSH known_hosts entries."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 37414372b2d441a3957350f8427dad1f
+msgid ":obj:`stateconf <salt.states.stateconf>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# eec9dc8cbbdf4521820cb8e8b4694069
+msgid "Stateconf System"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 7cd852b4ec434208a329116f0c6532f0
+msgid ":obj:`supervisord <salt.states.supervisord>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# ff2a518e11514aa78c9bd029cf3c5ac9
+msgid "Interaction with the Supervisor daemon."
+msgstr ""
+
+#: ../../<autosummary>:1
+# bd55c8efec9c454eb9b37a32044abd82
+msgid ":obj:`svn <salt.states.svn>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 337ad8d2b59a4e0da33feb93d27e25d1
+msgid "Manage SVN repositories"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 30381df2a00c4cbf892d1714e1f43488
+msgid ":obj:`sysctl <salt.states.sysctl>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# f1dc626977c14ea69a634cea0fd6ef7b
+msgid "Configuration of the Linux kernel using sysctrl."
+msgstr ""
+
+#: ../../<autosummary>:1
+# b2e723fe75c340cbaf60c8db49e52e22
+msgid ":obj:`timezone <salt.states.timezone>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 035613bd7c5d4b339f1e42450c34d1bf
+msgid "Management of timezones"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 91a7a40ebb954c6eb3d3c4829d65cdf4
+msgid ":obj:`tomcat <salt.states.tomcat>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 200951e7950e430e81dc6bb6623fdfab
+msgid "This state uses the manager webapp to manage Apache tomcat webapps"
+msgstr ""
+
+#: ../../<autosummary>:1
+# c56287fdf6444d0f906c5bff9574b154
+msgid ":obj:`user <salt.states.user>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# b6e065c1513e437889db6b9b22ea011e
+msgid "Management of user accounts."
+msgstr ""
+
+#: ../../<autosummary>:1
+# fe281b61f67949458127eb30d1dc8c02
+msgid ":obj:`virtualenv_mod <salt.states.virtualenv_mod>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# f9e0e26759f6466caeaea8c38224cd21
+msgid "Setup of Python virtualenv sandboxes."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 9b4ffe8df16543ed9359294d133370e4
+msgid ":obj:`win_dns_client <salt.states.win_dns_client>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# cd17144df02c47cb9d526dbaad24f022
+msgid "Module for configuring DNS Client on Windows systems"
+msgstr ""
+
+#: ../../<autosummary>:1
+# a9034bfa5507412580cc0c5490a61f39
+msgid ":obj:`win_firewall <salt.states.win_firewall>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e916481bbdec4dcd9adb0f3161a99566
+msgid "State for configuring Windows Firewall"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 4dd4e842382748f291a373e0d53ca516
+msgid ":obj:`win_path <salt.states.win_path>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 37b601e737d94b83b5454e726d32852f
+msgid "Manage the Windows System PATH"
+msgstr ""
+
+#: ../../<autosummary>:1
+# cb18645adc314c3eb51ccf75aacd88c8
+msgid ":obj:`win_servermanager <salt.states.win_servermanager>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 367e0f981c704efb9132b54d06dca47d
+msgid "Manage Windows features via the ServerManager powershell module"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e79ad5dae18f4123917fc20761422962
+msgid ":obj:`win_system <salt.states.win_system>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# fc7b99d35e20416db05b60483a6e6f9c
+msgid "Management of Windows system information"
+msgstr ""
+

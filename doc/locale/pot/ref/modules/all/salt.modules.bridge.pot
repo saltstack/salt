@@ -1,0 +1,101 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.bridge.rst:6
+# eb9afc3b3b974786a6ce2e510013f4e7
+msgid "salt.modules.bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge:1
+# eec15a5cc8e24792a84c02a3dd8ae878
+msgid "Module for gathering and managing bridging information"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.add:1
+# 2f4db004cf3e44519291f6abf77f3fed
+msgid "Creates a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.add:3
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.addif:3
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.delete:3
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.delif:3
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.find_interfaces:3
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.interfaces:3
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.list_:3
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.show:5
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.stp:3
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.stp:13
+# 6e558e88203e4446bbb4629815a41b97
+# 680946a5d17b4394817b04c2003eac86
+# 1df30d4c7a134e89bf2e58aa1afff9ca
+# 26c4c9d959e54c6dac7a46258f62e24e
+# 4ddb557a5bf449888dfc80c6c57bcb1a
+# 58458bb53bde4333b9ffe34be95f5947
+# 6f4cc810b47845c8a599a4b3c6965e94
+# b0e1f9cfe4c448be826c1e025478c7ef
+# c9e999e162194f7f82642c5cf56619d8
+# 06d9a943748f41ae8d6a019d035c7da6
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.addif:1
+# 9ece35d5e5eb4d8abde4431f54a45645
+msgid "Adds an interface to a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.delete:1
+# 26f7d4fe00ab4711a99a3df87bc8a0a8
+msgid "Deletes a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.delif:1
+# b55d663292624e6cbeb3ccd25ad91bda
+msgid "Removes an interface from a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.find_interfaces:1
+# 86232536c69245be9c0741bf9c054325
+msgid "Returns the bridge to which the interfaces are bond to"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.interfaces:1
+# 904e4a9436784e939ee1328d6e8708dd
+msgid "Returns interfaces attached to a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.list_:1
+# 73f1f304f8ca43ac95b568c1048f7d76
+msgid "Returns the machine's bridges list"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.show:1
+# df7075ac1a51417888505c205d395da3
+msgid "Returns bridges interfaces along with enslaved physical interfaces. If no interface is given, all bridges are shown, else only the specified bridge values are returned."
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.stp:1
+# f897d97fe70e4816b715d5de794e7e6a
+msgid "Sets Spanning Tree Protocol state for a bridge"
+msgstr ""
+
+#: ../../../salt/modules/bridge.py:docstring of salt.modules.bridge.stp:10
+# c015941ad0144c61bc8435aad26213cb
+msgid "For the NetBSD operating system, it is required to add the interface on which to enable the STP."
+msgstr ""
+

@@ -1,0 +1,58 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/tops/all/salt.tops.reclass_adapter.rst:6
+# b73d1d755c1e4836bea0f07c7cc43005
+msgid "salt.tops.reclass_adapter"
+msgstr ""
+
+#: ../../../salt/tops/reclass_adapter.py:docstring of salt.tops.reclass_adapter:3
+# 7387088742a74f35a952dd836f610158
+msgid "This :doc:`master_tops </topics/master_tops/index>` plugin provides access to the |reclass| database, such that state information (top data) are retrieved from |reclass|."
+msgstr ""
+
+#: ../../../salt/tops/reclass_adapter.py:docstring of salt.tops.reclass_adapter:7
+# 1f7027a6846e475f9b263f1c0c14a5bc
+msgid "You can find more information about |reclass| at http://reclass.pantsfullofunix.net."
+msgstr ""
+
+#: ../../../salt/tops/reclass_adapter.py:docstring of salt.tops.reclass_adapter:10
+# 1ca91bc0abe043c7911a65d294f5b981
+msgid "To use the plugin, add it to the ``master_tops`` list in the Salt master config and tell |reclass| by way of a few options how and where to find the inventory:"
+msgstr ""
+
+#: ../../../salt/tops/reclass_adapter.py:docstring of salt.tops.reclass_adapter:21
+# d97c2470f18443af9627b95becf085d8
+msgid "This would cause |reclass| to read the inventory from YAML files in ``/srv/salt/nodes`` and ``/srv/salt/classes``."
+msgstr ""
+
+#: ../../../salt/tops/reclass_adapter.py:docstring of salt.tops.reclass_adapter:24
+# 8765ecc0617046b5ad2ef3aa847718b1
+msgid "If you are also using |reclass| as ``ext_pillar`` plugin, and you want to avoid having to specify the same information for both, use YAML anchors (take note of the differing data types for ``ext_pillar`` and ``master_tops``):"
+msgstr ""
+
+#: ../../../salt/tops/reclass_adapter.py:docstring of salt.tops.reclass_adapter:41
+# 823e1b3b86ae4fe4b509095b0f4c44e6
+msgid "If you want to run reclass from source, rather than installing it, you can either let the master know via the ``PYTHONPATH`` environment variable, or by setting the configuration option, like in the example above."
+msgstr ""
+
+#: ../../../salt/tops/reclass_adapter.py:docstring of salt.tops.reclass_adapter.top:1
+# 1603224c97154505868ddca7a2177b77
+msgid "Query |reclass| for the top data (states of the minions)."
+msgstr ""
+

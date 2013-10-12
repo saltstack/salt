@@ -1,0 +1,666 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/tutorials/walkthrough.rst:6
+# 892381050ecb47a09a5ed4328e2a57f8
+msgid "Salt Stack Walkthrough"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:9
+# 930a625c8de54737b3b7240131fbab8a
+msgid "Welcome!"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:11
+# c84fbe42edaa4c0da5835dcfa908ad30
+msgid "Welcome to Salt Stack! I am excited that you are interested in Salt and starting down the path to better infrastructure management. I developed (and am continuing to develop) Salt with the goal of making the best software available to manage computers of almost any kind. I hope you enjoy working with Salt and that the software can solve your real world needs!"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:17
+# 5887cc1dbc294f7b8455ec4495c17268
+msgid "Thomas S Hatch"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:18
+# f6081d51074941e09e53bbc9cfbf2546
+msgid "Salt creator and chief developer"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:19
+# 068fc44ab92d4e7d96c552f5a72c5ce0
+msgid "CTO of Salt Stack, Inc."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:23
+# aac653542ca94372b310514634c89b8b
+msgid "This is the first of a series of walkthroughs and serves as the best entry point for people new to Salt, after this be sure to read up on pillar and more on states:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:27
+#: ../../topics/tutorials/walkthrough.rst:602
+# 7013330de46b4d28b1f22a69d11120e8
+# 2143dc4305964c4aa1704a9fbbfcbc81
+msgid ":doc:`Starting States </topics/tutorials/starting_states>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:29
+#: ../../topics/tutorials/walkthrough.rst:604
+# 9e1fdfd4f1fd4be6adddf4b0e18dcc7d
+# 2a4627952eda4ebb8d9929e07f403635
+msgid ":doc:`Pillar Walkthrough </topics/tutorials/pillar>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:33
+# 8964a286739d4cfb998a58fb139667b0
+msgid "Getting Started"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:36
+# 6f16853f844c4bea99ee5447858e3abb
+msgid "What is Salt?"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:38
+# 5a56c4751310454dba60360e54c24db8
+msgid "Salt is a different approach to infrastructure management, it is founded on the idea that high speed communication with large numbers of systems can open up new capabilities. This approach makes Salt a powerful multitasking system that can solve many specific problems in an infrastructure. The backbone of Salt is the remote execution engine, which creates a high speed, secure and bi-directional communication net for groups of systems. On top of this communication system Salt provides an extremely fast, flexible and easy to use configuration management system called ``Salt States``."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:47
+# 76c4b09ce22842f3a3e27c9b350106e0
+msgid "This unique approach to management makes for a transparent control system that is not only amazingly easy to set up and use, but also capable of solving very complex problems in infrastructures; as will be explored in this walk through."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:51
+# 5eff2988592e4f5f86e2551b5d8b38df
+msgid "Salt is being used today by some of the largest infrastructures in the world and has a proven ability to scale to astounding proportions without modification. With the proven ability to scale out well beyond many tens of thousands of servers, Salt has also proven to be an excellent choice for small deployments as well, lowering compute and management overhead for infrastructures as small as just a few systems."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:60
+# 614151fcdd4e4cfd8cddbd91aa6a33f0
+msgid "Installing Salt"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:62
+# 57ef80e90d3c4f14b3e8047e731b4ce3
+msgid "Salt Stack has been made to be very easy to install and get started. Setting up Salt should be as easy as installing Salt via distribution packages on Linux or via the Windows installer. The :doc:`installation documents </topics/installation/index>` cover specific platform installation in depth."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:69
+# 0a16fb5009c7460eb89054c5038174cc
+msgid "Starting Salt"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:71
+# 0022ef6524e14cf6aa0bd01cdb94f54a
+msgid "Salt functions on a master/minion topology. A master server acts as a central control bus for the clients (called minions), and the minions connect back to the master."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:77
+# 938ccd427d174820bc8b29ee914d05e2
+msgid "Setting Up the Salt Master"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:79
+# b97566c98dde4b91aa713f8f5f11024b
+msgid "Turning on the Salt Master is easy, just turn it on! The default configuration is suitable for the vast majority of installations. The Salt master can be controlled by the local Linux/Unix service manager:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:83
+# 5976c1eaeb004401af05a70649f6c1fe
+msgid "On Systemd based platforms (OpenSuse, Fedora):"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:89
+# 68c2686b43004f1aa173baba66c3bcda
+msgid "On Upstart based systems (Ubuntu, older Fedora/RHEL):"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:95
+# 25e2ac78250e4a2691ddb614e0058c1e
+msgid "On SysV Init systems (Debian, Gentoo etc.):"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:101
+# a833592c0da54e7dad3c8c557df039bb
+msgid "Or the master can be started directly on the command line:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:107
+# 062ce50da772478ab5fe9fecc68434dc
+msgid "The Salt Master can also be started in the foreground in debug mode, thus greatly increasing the command output:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:114
+# 6fa865a2239045398d8c79d4f629d5c6
+msgid "The Salt Master needs to bind to 2 TCP network ports on the system, these ports are 4505 and 4506. For more in depth information on firewalling these ports, the firewall tutorial is available :doc:`here </topics/tutorials/firewall>`."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:120
+# 5f1fd5e096b24bdd81bf45c034019d36
+msgid "Setting up a Salt Minion"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:124
+# 61f3d1bc2f8347dca6d6bd6c050105cb
+msgid "The Salt Minion can operate with or without a Salt Master. This walkthrough assumes that the minion will be connected to the master, for information on how to run a master-less minion please see the masterless quickstart guide:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:128
+# 56714507ee744c50887ea7a0481cb4f3
+msgid ":doc:`Masterless Minion Quickstart </topics/tutorials/quickstart>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:130
+# b49a21628fa442c0995f542bae583d76
+msgid "The Salt Minion only needs to be aware of one piece of information to run, the network location of the master. By default the minion will look for the DNS name ``salt`` for the master, making the easiest approach to set internal DNS to resolve the name ``salt`` back to the Salt Master IP. Otherwise the minion configuration file will need to be edited, edit the configuration option ``master`` to point to the DNS name or the IP of the Salt Master:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:139
+# 8127173c549b4ab88e87f35423c18e01
+msgid "The default location of the configuration files is ``/etc/salt``. Most platforms adhere to this convention, but platforms such as FreeBSD and Microsoft Windows place this file in different locations."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:143
+# 9f50dc3a74ad44c48c08f0af48823599
+msgid "``/etc/salt/minion:``"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:149
+# bc721a52319c4a0a9ab806190bdfc01e
+msgid "Now that the master can be found, start the minion in the same way as the master; with the platform init system, or via the command line directly:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:152
+# 6fceefce03b64eeba78bad10f13a9abf
+msgid "As a daemon:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:158
+# 14cba9b4cad641ec955b0a246000140e
+msgid "In the foreground in debug mode:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:164
+# ae163f45302d46c5ac08598ffab7e7ac
+msgid "Now that the minion is started it will generate cryptographic keys and attempt to connect to the master. The next step is to venture back to the master server and accept the new minion's public key."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:170
+# 73b70f4cbbcf4f6da7c1681c9fa9c5c3
+msgid "When the minion is started, it will generate an ``id`` value, unless it has been generated on a previous run and cached in the configuration directory (``/etc/salt`` by default). This is the name by which the minion will attempt to authenticate to the master. The following steps are attempted, in order to try to find a value that is not ``localhost``:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:176
+# bf46f07fc47f4fceab0a33044cd3f0ad
+msgid "The Python function ``socket.getfqdn()`` is run"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:177
+# 1b892020e4bc4355a17c0c5346fab91f
+msgid "``/etc/hostname`` is checked (non-Windows only)"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:178
+# 52de5ae8d05545e8ac9b0cba4854a5a7
+msgid "``/etc/hosts`` (``%WINDIR%\\system32\\drivers\\etc\\hosts`` on Windows hosts) is checked for hostnames that map to anything within :strong:`127.0.0.0/8`."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:181
+# b97862ebe4154703a7c0587d6960ed41
+msgid "If none of the above are able to produce an id which is not ``localhost``, then a sorted list of IP addresses on the minion (excluding any within :strong:`127.0.0.0/8`) is inspected. The first publicly-routable IP address is used, if there is one. Otherwise, the first privately-routable IP address is used."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:187
+# ff617abbd5b1400f9b171c7134ae89f2
+msgid "If all else fails, then ``localhost`` is used as a fallback."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:189
+# 1038314adffc430d9331b761fefde417
+msgid "Overriding the ``id``"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:191
+# 6cb177a69b6247dda5560541be762120
+msgid "The minion id can be manually specified using the :conf_minion:`id` parameter in the minion config file.  If this configuration value is specified, it will override all other sources for the ``id``."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:197
+# 77d9c4ff57844e998118285643a0e210
+msgid "Using salt-key"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:199
+# 89409c0392344e5fb98aeaec9468cb10
+msgid "Salt authenticates minions using public key encryption and authentication. For a minion to start accepting commands from the master the minion keys need to be accepted. The ``salt-key`` command is used to manage all of the keys on the master. To list the keys that are on the master run a salt-key list command:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:208
+# 34e99026e4bc4f00b5e31c278640b111
+msgid "The keys that have been rejected, accepted and pending acceptance are listed. The easiest way to accept the minion key is to accept all pending keys:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:217
+# b1463ac2e6d343e1bd588fb35c8acfbb
+msgid "Keys should be verified! The secure thing to do before accepting a key is to run ``salt-key -p minion-id`` to print the public key for the minion. This can then be compared against the minion's public key file, which is located (on the minion, of course) at ``/etc/salt/pki/minion/minion.pub``."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:222
+# d144398f62574f9482c8ae1ae3b03a20
+msgid "On the master::"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:241
+# c475a279bde54d3ebfa6853b0c99192e
+msgid "On the minion::"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:261
+# 2b718944a2044f93ac035871109f91f7
+msgid "Sending the First Commands"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:263
+# dceb878bc3c347ee953afda63a9f34e3
+msgid "Now that the minion is connected to the master and authenticated, the master can start to command the minion. Salt commands allow for a vast set of functions to be executed and for specific minions and groups of minions to be targeted for execution. This makes the ``salt`` command very powerful, but the command is also very usable, and easy to understand."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:269
+# b8f9db39d0484e84be67b5dfa7da5f7e
+msgid "The ``salt`` command is comprised of command options, target specification, the function to execute, and arguments to the function. A simple command to start with looks like this:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:277
+# 7b79396ee9d941d0bbb6a25b8c71471f
+msgid "The ``*`` is the target, which specifies all minions, and ``test.ping`` tells the minion to run the :py:func:`test.ping <salt.modules.test.ping>` function. The result of running this command will be the master instructing all of the minions to execute :py:func:`test.ping <salt.modules.test.ping>` in parallel and return the result. This is not an actual ICMP ping, but rather a simple function which returns ``True``. Using :py:func:`test.ping <salt.modules.test.ping>` is a good way of confirming that a minion is connected."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:288
+# 859862eae2414179ae0f5bb1e6b4b2f6
+msgid "Each minion registers itself with a unique minion id. This id defaults to the minion's hostname, but can be explicitly defined in the minion config as well by using the :conf_minion:`id` parameter."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:294
+# 46c4dd47fa2048d99a5cbc95a85196ff
+msgid "Getting to Know the Functions"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:296
+# 819c4b6b19274a0aa76bbe1e991387ad
+msgid "Salt comes with a vast library of functions available for execution, and Salt functions are self documenting. To see what functions are available on the minions execute the :py:func:`sys.doc <salt.modules.sys.doc>` function:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:304
+# 2115acf254774725a9b1a282305f5b96
+msgid "This will display a very large list of available functions and documentation on them, this documentation is also available :doc:`here </ref/modules/all/index>`."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:308
+# 0d371ea04c3e444b9b2a29e1f1059f97
+msgid "These functions cover everything from shelling out to package management to manipulating database servers. They comprise a powerful system management API which is the backbone to Salt configuration management and many other aspects of Salt."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:315
+# a216f94a68dc4ef6a513fc75d5a8df64
+msgid "Salt comes with many plugin systems. The functions that are available via the ``salt`` command are called :doc:`Execution Modules </ref/modules/all/index>`."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:321
+# 7e0944f1bc9c41d2a7823d4704cdf77f
+msgid "Helpful Functions to Know"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:323
+# ff5cc34939bc4eb1b48f4e55823c65ac
+msgid "The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module contains functions to shell out on minions, such as :mod:`cmd.run <salt.modules.cmdmod.run>` and :mod:`cmd.run_all <salt.modules.cmdmod.run_all>`:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:332
+# fcf86fad948c4407a63007c55b347a8f
+msgid "The ``pkg`` functions automatically map local system package managers to the same salt functions. This means that ``pkg.install`` will install packages via yum on Red Hat based systems, apt on Debian systems, etc.:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:341
+# 79683f138e6048e086889d5f386af17a
+msgid "Some custom Linux spins and derivatives of other distros are not properly detected by Salt. If the above command returns an error message saying that ``pkg.install`` is not available, then you may need to override the pkg provider. This process is explained :doc:`here </ref/states/providers>`."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:346
+# ecedfec840334126986272ba32eb94ee
+msgid "The :mod:`network.interfaces <salt.modules.network.interfaces>` function will list all interfaces on a minion, along with their IP addresses, netmasks, MAC addresses, etc:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:355
+# 0b888ace35c44dfab2684353a408a1a7
+msgid "``salt-call``"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:357
+# 53b9f1045d8841b2932fcded5b5072fa
+msgid "The examples so far have described running commands from the Master using the ``salt`` command, but when troubleshooting it can be more beneficial to login to the minion directly and use ``salt-call``. Doing so allows you to see the minion log messages specific to the command you are running (which are *not* part of the return data you see when running the command from the Master using ``salt``), making it unnecessary to tail the minion log. More information on ``salt-call`` and how to use it can be found :ref:`here <using-salt-call>`."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:366
+#: ../../topics/tutorials/walkthrough.rst:397
+# a9137fba977c47fc9ed98553ed7c09a0
+# a9b2619775dc4e81a25bc2b7cdbad01e
+msgid "Grains"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:368
+# cd62af250e1e434da524698f9d79562b
+msgid "Salt uses a system called :doc:`Grains <../targeting/grains>` to build up static data about minions. This data includes information about the operating system that is running, CPU architecture and much more. The grains system is used throughout Salt to deliver platform data to many components and to users."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:373
+# 50de9f38585c4a8fa699587701d8ed6c
+msgid "Grains can also be statically set, this makes it easy to assign values to minions for grouping and managing. A common practice is to assign grains to minions to specify what the role or roles a minion might be. These static grains can be set in the minion configuration file or via the :mod:`grains.setval <salt.modules.grains.setval>` function."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:381
+# 0ddd1f728238445996eadca1839be0d9
+msgid "Targeting"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:383
+# f4e1fa7b79f94d9a87ea427657642403
+msgid "Salt allows for minions to be targeted based on a wide range of criteria.  The default targeting system uses globular expressions to match minions, hence if there are minions named ``larry1``, ``larry2``, ``curly1`` and ``curly2``, a glob of ``larry*`` will match ``larry1`` and ``larry2``, and a glob of ``*1`` will match ``larry1`` and ``curly1``."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:389
+# 754a55b986e54041966de90f36882445
+msgid "Many other targeting systems can be used other than globs, these systems include:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:393
+# bc24a7c922bd4ed6a6fda98959af2e32
+msgid "Regular Expressions"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:393
+# f4dc63a46b8c41bab3a7dd590bdc947b
+msgid "Target using PCRE compliant regular expressions"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:396
+# 8431393205c640bc984557be86015422
+msgid "Target based on grains data: :doc:`Targeting with Grains </topics/targeting/grains>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:401
+# d7f5dd0cdc8c46f8a2403f3c87135971
+msgid "Pillar"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:400
+# 15b4a5302a0d4497aff4ab35db08ffea
+msgid "Target based on pillar data: :doc:`Targeting with Pillar </ref/pillar/index>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:404
+# 7fdd173c9bdb49358674487c4ab54634
+msgid "IP"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:404
+# abebd5d9e332423282b436c0e074bbf9
+msgid "Target based on IP addr/subnet/range"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:408
+# 8ea945b312c94bd7a1148780abecf62e
+msgid "Compound"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:407
+# b093b4694a1b4b60914d52e00aa65f4b
+msgid "Create logic to target based on multiple targets: :doc:`Targeting with Compound </topics/targeting/compound>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:412
+# 75f682d7335b4882a1c4dbfad1a76f4b
+msgid "Nodegroup"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:411
+# a9af46320db54226a2e31cb22ed6b11d
+msgid "Target with nodegroups: :doc:`Targeting with Nodegroup </topics/targeting/nodegroups>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:414
+# 7b65a5c273e845fb921a475293a38314
+msgid "The concepts of targets are used on the command line with salt, but also function in many other areas as well, including the state system and the systems used for ACLs and user permissions."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:420
+# b98913436ac9416e8cbe97cc68d57a6c
+msgid "Passing in Arguments"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:422
+# 2c59f10e00814a0db6279aa9aacd48ca
+msgid "Many of the functions available accept arguments, these arguments can be passed in on the command line:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:429
+# eb6374c1773342a9a3bb945cf6764fae
+msgid "This example passes the argument ``vim`` to the pkg.install function, since many functions can accept more complex input then just a string the arguments are parsed through YAML, allowing for more complex data to be sent on the command line:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:438
+# 3732f7213f244b7cb6708739ed15848e
+msgid "In this case Salt translates the string 'foo: bar' into the dictionary \"{'foo': 'bar'}\""
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:443
+# 64a83c0138b24df48fc105a9ac7ac82e
+msgid "Any line that contains a newline will not be parsed by yaml."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:447
+# fc23e8931a3649a0aa9a5893473b30b9
+msgid "Salt States"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:449
+# 0e3699d134ec42be970936ad5d1b2083
+msgid "Now that the basics are covered the time has come to evaluate ``States``.  Salt ``States``, or the ``State System`` is the component of Salt made for configuration management. The State system is a fully functional configuration management system which has been designed to be exceptionally powerful while still being simple to use, fast, lightweight, deterministic and with salty levels of flexibility."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:456
+# a36208bba1d443b0988201c8cb79e9d4
+msgid "The state system is already available with a basic salt setup, no additional configuration is required, states can be set up immediately."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:461
+# df2af33477994f41be54b766cd900e28
+msgid "Before diving into the state system, a brief overview of how states are constructed will make many of the concepts clearer. Salt states are based on data modeling, and build on a low level data structure that is used to execute each state function. Then more logical layers are built on top of each other. The high layers of the state system which this tutorial will cover consists of everything that needs to be known to use states, the two high layers covered here are the `sls` layer and the highest layer `highstate`."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:470
+# 284efaa60e044a6ba80378223910c2d9
+msgid "Again, knowing that there are many layers of data management, will help with understanding states, but they never need to be used. Just as understanding how a compiler functions when learning a programming language, understanding what is going on under the hood of a configuration management system will also prove to be a valuable asset."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:478
+# 7a7adab844334f5b90093deb6e1e37aa
+msgid "The First SLS Formula"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:480
+# e7366fcd186e48a896b0a71930619be4
+msgid "The state system is built on sls formulas, these formulas are built out in files on Salt's file server. To make a very basic sls formula open up a file under /srv/salt named vim.sls and get vim installed:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:484
+#: ../../topics/tutorials/walkthrough.rst:502
+# e2f1e49df4f54b85b25b3fd06145873e
+# dce7ef4954a84164b5a6f3710de7715f
+msgid "``/srv/salt/vim.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:491
+# c4e5396062744d5db77041c6003fd49a
+msgid "Now install vim on the minions by calling the sls directly:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:497
+# 3d628edb852146c380884bd9b638f6bb
+msgid "This command will invoke the state system and run the named sls which was just created, ``vim``."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:500
+# 0cf4443247f74cef90d245c33cd863cf
+msgid "Now, to beef up the vim sls formula, a vimrc can be added:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:516
+# c48ed51d25574bfabe131995682a27f8
+msgid "Now the desired vimrc needs to be copied into the Salt file server to /srv/salt/vimrc, in Salt everything is a file, so no path redirection needs to be accounted for. The vimrc file is placed right next to the vim.sls file. The same command as above can be executed to all the vim sls formulas and now include managing the file."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:524
+# 082ecd54489d4929a6e65e414ad8cee1
+msgid "Salt does not need to be restarted/reloaded or have the master manipulated in any way when changing sls formulas, they are instantly available."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:529
+# c2fa2e115c06474f9fbe4decb3b7304e
+msgid "Adding Some Depth"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:531
+# 0f4beb4a2a8d441fad8caf539c1cf93d
+msgid "Obviously maintaining sls formulas right in the root of the file server will not scale out to reasonably sized deployments. This is why more depth is required. Start by making an nginx formula a better way, make an nginx subdirectory and add an init.sls file:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:536
+# cf636f7858a44808b4b49d496889cabd
+msgid "``/srv/salt/nginx/init.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:548
+# a63a574871494461a759de52f348af57
+msgid "A few things are introduced in this sls formula, first is the service statement which ensures that the nginx service is running, but the nginx service can't be started unless the package is installed, hence the ``require``. The ``require`` statement makes sure that the required component is executed before and that it results in success."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:556
+# 433381b7c3874275906bc6883e495d2e
+msgid "The `require` option belongs to a family of options called `requisites`. Requisites are a powerful component of Salt States, for more information on how requisites work and what is available see: :doc:`Requisites</ref/states/requisites>` Also evaluation ordering is available in Salt as well: :doc:`Ordering States</ref/states/ordering>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:563
+# e9229b32efb9460b9313dbd4131e484e
+msgid "Now this new sls formula has a special name, ``init.sls``, when an sls formula is named ``init.sls`` it inherits the name of the directory path that contains it, so this formula can be referenced via the following command:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:571
+# f6f594e082e84a0ca4ce0b4fda7c43ac
+msgid "Now that subdirectories can be used the vim.sls formula can be cleaned up, but to make things more flexible (and to illustrate another point of course), move the vim.sls and vimrc into a new subdirectory called ``edit`` and change the vim.sls file to reflect the change:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:576
+# 487f9a6609914d14ac6940b7fcf3a484
+msgid "``/srv/salt/edit/vim.sls:``"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:590
+# ca611d3ea04b412db78e6bfca0bf625a
+msgid "The only change in the file is fixing the source path for the vimrc file. Now the formula is referenced as ``edit.vim`` because it resides in the edit subdirectory. Now the edit subdirectory can contain formulas for emacs, nano, joe or any other editor that may need to be deployed."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:597
+# 54bd65eca1dd4ddeb2481a774be7b5cd
+msgid "Next Reading"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:599
+# 8cce253346dc478e882db936d32afd96
+msgid "Two walkthroughs are specifically recommended at this point. First, a deeper run through States, followed by an explanation of Pillar."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:606
+# c6d35d6ae79246e4a171dadd54b98955
+msgid "An understanding of Pillar is extremely helpful in using States."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:610
+# ae5294c479ad4d40a9fe5ec0bd4dda85
+msgid "Getting Deeper Into States"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:612
+# 07afb6fe65b446498418abe1140e344a
+msgid "Two more in-depth States tutorials exist, which delve much more deeply into States functionality."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:615
+# 86c15bb0d18d4935a00ef2094689a281
+msgid "Thomas' original states tutorial, :doc:`How Do I Use Salt States?</topics/tutorials/starting_states>`, covers much more to get off the ground with States."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:619
+# a6b692497ceb42f6ae0aa54061891d3f
+msgid "The :doc:`States Tutorial</topics/tutorials/states_pt1>` also provides a fantastic introduction."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:622
+# 95286788965b44c8b8869199e6fabec4
+msgid "These tutorials include much more in depth information including templating sls formulas etc."
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:627
+# 41650693dac94e61a1e2b779311f45db
+msgid "So Much More!"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:629
+# 1e1d43e28b83438cbe306aac98191c0a
+msgid "This concludes the initial Salt walkthrough, but there are many more things to learn still! These documents will cover important core aspects of Salt:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:632
+# 0ba63ca6f86045e597068817e6307206
+msgid ":doc:`Pillar</topics/pillar/index>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:634
+# 6861ecb9ddbd437eae493b05e15d9932
+msgid ":doc:`Job Management</topics/jobs/index>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:636
+# 011a5074e3554028878cb4c960653bb1
+msgid "A few more tutorials are also available:"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:638
+# 120f10713eee41eda5b6f78db5896a8a
+msgid ":doc:`Remote Execution Tutorial</topics/tutorials/modules>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:640
+# 167c267876b04891b7443df0ceb6be2b
+msgid ":doc:`Standalone Minion</topics/tutorials/standalone_minion>`"
+msgstr ""
+
+#: ../../topics/tutorials/walkthrough.rst:642
+# b52e3ac7f98d43e5b6e947043fdfa4a9
+msgid "This still is only scratching the surface, many components such as the reactor and event systems, extending Salt, modular components and more are not covered here. For an overview of all Salt features and documentation, look at the :doc:`Table of Contents</contents>`."
+msgstr ""
+

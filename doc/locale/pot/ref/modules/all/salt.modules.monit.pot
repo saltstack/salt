@@ -1,0 +1,68 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.monit.rst:6
+# 0c3ead3a42cc4751b6da6f56856618ff
+msgid "salt.modules.monit"
+msgstr ""
+
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit:1
+# 485f19d5783b43968b43f57087d4e74b
+msgid "Monit service module. This module will create a monit type service watcher."
+msgstr ""
+
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.monitor:1
+# 5e04441bc82448d09396d282bac2d34b
+msgid "monitor service via monit"
+msgstr ""
+
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.monitor:3
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.restart:3
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.start:1
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.stop:3
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.summary:3
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.unmonitor:3
+# 3b52e54107fe4d87bb76a16bac88c534
+# f1d56781c8dc4ca2a895e961a5227bfd
+# 1d38024fa5d746c09ff2a16aea746031
+# b1cc127fabf14f0bbdb031d05a5caf80
+# 9e5acd896e5941929fc21f4c0e5e7de1
+# cfc9b452ab0b49f6b9141cfc1ef09204
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.restart:1
+# 5cc0aa27904c4a2894c600957cc4514c
+msgid "Restart service via monit"
+msgstr ""
+
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.stop:1
+# 277f4a35640644b4b3f40a89ba83f857
+msgid "Stops service via monit"
+msgstr ""
+
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.summary:1
+# 0a5ad24f5a684282b1b651789a865deb
+msgid "Display a summary from monit"
+msgstr ""
+
+#: ../../../salt/modules/monit.py:docstring of salt.modules.monit.unmonitor:1
+# 9b1d3b4c42b4451182c4869072adc1de
+msgid "Unmonitor service via monit"
+msgstr ""
+

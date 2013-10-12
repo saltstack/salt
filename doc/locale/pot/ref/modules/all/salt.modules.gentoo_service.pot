@@ -1,0 +1,112 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.gentoo_service.rst:6
+# 8a48fc874339498098d2fbe669d144e2
+msgid "salt.modules.gentoo_service"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service:1
+# 178a396286ca4aff88f0c9553b9b06ef
+msgid "Top level package command wrapper, used to translate the os detected by grains to the correct service manager"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.available:1
+# 629cb5f1539c4c2bb09b0c57ac5f1214
+msgid "Returns ``True`` if the specified service is available, otherwise returns ``False``."
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.available:4
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.disable:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.disabled:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.enable:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.enabled:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.get_all:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.get_disabled:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.get_enabled:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.restart:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.start:3
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.status:5
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.stop:3
+# 2e5cc94fca0f44aca00f6b7639209731
+# 636be9a378184d07b1698edaec5cf457
+# 6959d9746aeb4e34acb6791d6bd87e80
+# dc7978406d3c4cada5c8191362d75104
+# f3492bfd21ca4162a281793f222a30aa
+# 538176f6db424fec80f646690a94ec4c
+# 27f65ef1d4e74406a79a6f5bd5b8a977
+# b8c6f1d872bd4db78bc2248f7ae85e03
+# aae8325be5984fa2a94f9c3296e91c68
+# aa9a30fef2324597ba394c74038a7eed
+# c6340cabb0b64f028cea53177ac201e6
+# f32cc9f74b1f493da2c42d90f392b56b
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.disable:1
+# 540a3f3653534236afda115576bed380
+msgid "Disable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.disabled:1
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.enabled:1
+# 56f2f9122ea3474e85ee9aecb975159d
+# 0fbcbce1b8954eca9d47faa8565e2c9e
+msgid "Return True if the named service is enabled, false otherwise"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.enable:1
+# aae190702df0439c959744dd69c081c5
+msgid "Enable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.get_all:1
+# e7305c035c9443bda08c78b05bda8569
+msgid "Return all available boot services"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.get_disabled:1
+# 28fa1914d4e3487eb24af8617a2e2aac
+msgid "Return a set of services that are installed but disabled"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.get_enabled:1
+# 0ee08183b86b4b34bd65d6acd93fe86e
+msgid "Return a list of service that are enabled on boot"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.restart:1
+# 5de0bc72821a4ad0bb1226944409613a
+msgid "Restart the named service"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.start:1
+# ae75d6c8ad574512999f955bd9eb9a85
+msgid "Start the specified service"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.status:1
+# cc377838dc2648c5865a08de058934ac
+msgid "Return the status for a service, returns the PID or an empty string if the service is running or not, pass a signature to use to find the service via ps"
+msgstr ""
+
+#: ../../../salt/modules/gentoo_service.py:docstring of salt.modules.gentoo_service.stop:1
+# f7efa785be6e41adbba1751074bfaaa7
+msgid "Stop the specified service"
+msgstr ""
+

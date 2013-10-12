@@ -1,0 +1,258 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.9.7.rst:6
+# 7c5fe3cfdd784505b8c56a63b79941d9
+msgid "Salt 0.9.7 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:8
+# 6323dde1954244d38ea8283e60033c4f
+msgid "Salt 0.9.7 is here! The latest iteration of Salt brings more features and many fixes. This release is a great refinement over 0.9.6, adding many conveniences under the hood, as well as some features that make working with Salt much better."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:13
+# 32efe91e1f464ccb8d0c2c728a08bd01
+msgid "A few highlights include the new Job system, refinements to the requisite system in states, the ``mod_init`` interface for states, external node classification, search path to managed files in the file state, and refinements and additions to dynamic module loading."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:18
+# 3bc6854d8f944068a476cb302942c5b4
+msgid "0.9.7 also introduces the long developed (and oft changed) unit test framework and the initial unit tests."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:23
+# e40010d0df9a496c82e5c77c730e58ab
+msgid "Major Features"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:26
+# 02cbf2474cba4560b1dbc919914d2e65
+msgid "Salt Jobs Interface"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:28
+# b2f8e774e55847b98a87a1874172d632
+msgid "The new jobs interface makes the management of running executions much cleaner and more transparent. Building on the existing execution framework the jobs system allows clear introspection into the active running state of the running Salt interface."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:33
+# c451c089e2d4406c8874849bea498081
+msgid "The Jobs interface is centered in the new minion side proc system. The minions now store msgpack serialized files under ``/var/cache/salt/proc``. These files keep track of the active state of processes on the minion."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:38
+# 2a5df29b44ac4f1db4c5190de03d254c
+msgid "Functions in the saltutil Module"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:40
+# 0df0757d51aa40439a1333c4d1562c35
+msgid "A number of functions have been added to the saltutil module to manage and view the jobs:"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:43
+# 0777f694feca4066b44ecc46f05d6ab1
+msgid "``running`` - Returns the data of all running jobs that are found in the proc directory."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:46
+# 44f0d4c9f4374a01b1797e374b35aacc
+msgid "``find_job`` - Returns specific data about a certain job based on job id."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:48
+# 8870ae23cccd41d4996976ddd0c2c3e0
+msgid "``signal_job`` - Allows for a given jid to be sent a signal."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:50
+# 92cf76dc16b043fe85543d0767d0a021
+msgid "``term_job`` - Sends a termination signal (``SIGTERM, 15``) to the process controlling the specified job."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:53
+# 8a241eb3f547413186e820c86cbe0674
+msgid "``kill_job`` Sends a kill signal (``SIGKILL, 9``) to the process controlling the specified job."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:57
+# 70a3b4476c3d468c93ea1a03ef0cc587
+msgid "The jobs Runner"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:59
+# 372d6cf9fae04adda63c31b6890abf5b
+msgid "A convenience runner front end and reporting system has been added as well. The jobs runner contains functions to make viewing data easier and cleaner."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:62
+# b844155afb1a4cc3b692d2896e1945c4
+msgid "The jobs runner contains a number of functions..."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:65
+# 4678c9872ee14bfaa2ad92e90f6709a9
+msgid "active"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:67
+# 73e8f208b8b24f9fa926a264f26f4120
+msgid "The active function runs ``saltutil.running`` on all minions and formats the return data about all running jobs in a much more usable and compact format. The active function will also compare jobs that have returned and jobs that are still running, making it easier to see what systems have completed a job and what systems are still being waited on."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:74
+# 56ac8fdc0fce4940b5abd249649fbba7
+msgid "lookup_jid"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:76
+# 093837b8fcc847d9bc24a4e1c5649d92
+msgid "When jobs are executed the return data is sent back to the master and cached. By default is is cached for 24 hours, but this can be configured via the ``keep_jobs`` option in the master configuration."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:80
+# 03964ec4022d4d58b4eb5ae76d9d03ba
+msgid "Using the ``lookup_jid`` runner will display the same return data that the initial job invocation with the salt command would display."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:84
+# 73d63721c8f8402091b027efdd029b68
+msgid "list_jobs"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:86
+# 0ce80c80409e44fcbc938dd4f4dcd1e3
+msgid "Before finding a historic job, it may be required to find the job id. ``list_jobs`` will parse the cached execution data and display all of the job data for jobs that have already, or partially returned."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:92
+# d42a5e4eb41b414a9f4ea162eb0fe349
+msgid "External Node Classification"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:94
+# e34f22d7fe584eb19d03cc43e6bbf4c6
+msgid "Salt can now use external node classifiers like Cobbler's ``cobbler-ext-nodes``."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:97
+# 02c1135174984cb7a361c84f10395e2a
+msgid "Salt uses specific data from the external node classifier. In particular the classes value denotes which sls modules to run, and the environment value sets to another environment."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:101
+# 0910cb2f1766451aa7cade3491b87846
+msgid "An external node classification can be set in the master configuration file via the ``external_nodes`` option: http://salt.readthedocs.org/en/latest/ref/configuration/master.html#external-nodes"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:105
+# 0b9b28bcb0884fa49d17713371cf7bdd
+msgid "External nodes are loaded in addition to the top files. If it is intended to only use external nodes, do not deploy any top files."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:109
+# f1d03b2d76a344e684c2a248f96f9ebb
+msgid "State Mod Init System"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:111
+# 2bc9e057ea35488199b5712e29455462
+msgid "An issue arose with the pkg state. Every time a package was run Salt would need to refresh the package database. This made systems with slower package metadata refresh speeds much slower to work with. To alleviate this issue the ``mod_init`` interface has been added to salt states."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:116
+# 1574e49ea60649c2856a7e19915ee88e
+msgid "The ``mod_init`` interface is a function that can be added to a state file. This function is called with the first state called. In the case of the pkg state, the ``mod_init`` function sets up a tag which makes the package database only refresh on the first attempt to install a package."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:121
+# 2a9a2b6d92bc46838c704c7a8ad13d3c
+msgid "In a nutshell, the ``mod_init`` interface allows a state to run any command that only needs to be run once, or can be used to set up an environment for working with the state."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:126
+# 327854b267704a60a5e5b5316442d9f8
+msgid "Source File Search Path"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:128
+# 53d4769480fc4c469b25932a8ccea019
+msgid "The file state continues to be refined, adding speed and capabilities. This release adds the ability to pass a list to the source option. This list is then iterated over until the source file is found, and the first found file is used."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:132
+# 488c979323734124b46ae23820473c26
+msgid "The new syntax looks like this:"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:143
+# 35c614a4ec4148a9aaf7ec90dd9fdc16
+msgid "The source option can take sources in the list from the salt file server as well as an arbitrary web source. If using an arbitrary web source the checksum needs to be passed as well for file verification."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:148
+# 47d128972f4b415a87ce6774e692ff37
+msgid "Refinements to the Requisite System"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:150
+# 95d85c937a474f9d8e68cc6ba86a3206
+msgid "A few discrepancies were still lingering in the requisite system, in particular, it was not possible to have a ``require`` and a ``watch`` requisite declared in the same state declaration."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:154
+# 0df091298a044140980e3823c1db5717
+msgid "This issue has been alleviated, as well as making the requisite system run more quickly."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:158
+# 3e4855b95de4481f9c5d3777b4dc464d
+msgid "Initial Unit Testing Framework"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:160
+# c973369f68c74f90a43a6d0374e568af
+msgid "Because of the module system, and the need to test real scenarios, the development of a viable unit testing system has been difficult, but unit testing has finally arrived. Only a small amount of unit testing coverage has been developed, much more coverage will be in place soon."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:165
+# fa6f40fc6fab4ffc9337df79aedcf657
+msgid "A huge thanks goes out to those who have helped with unit testing, and the contributions that have been made to get us where we are. Without these contributions unit tests would still be in the dark."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:170
+# b06499f755734046b733d699ebbd741b
+msgid "Compound Targets Expanded"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:172
+# ef857644f2c749d09411b42a60d3e994
+msgid "Originally only support for ``and`` and ``or`` were available in the compound target. 0.9.7 adds the capability to negate compound targets with ``not``."
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:176
+# afc72597926944f682bf9c3fe9244676
+msgid "Nodegroups in the Top File"
+msgstr ""
+
+#: ../../topics/releases/0.9.7.rst:178
+# 53e6ef223eda4d11a77c11f801f901af
+msgid "Previously the nodegroups defined in the master configuration file could not be used to match nodes for states. The nodegroups support has been expanded and the nodegroups defined in the master configuration can now be used to match minions in the top file."
+msgstr ""
+

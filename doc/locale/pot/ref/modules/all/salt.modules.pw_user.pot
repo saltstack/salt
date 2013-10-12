@@ -1,0 +1,129 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.pw_user.rst:6
+# 466ef72a26ad4b43bc48fcce5ce4693c
+msgid "salt.modules.pw_user"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user:1
+# 1016179efd4142ee864a59d9eb04c594
+msgid "Manage users with the useradd command"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.add:1
+# 4d0ab0de4e974069b4add27d37dfb911
+msgid "Add a user to the minion"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.add:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chfullname:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chgid:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chgroups:4
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chhome:4
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chhomephone:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chroomnumber:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chshell:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chuid:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chworkphone:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.delete:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.getent:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.info:3
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.list_groups:3
+# e22214795f904d8eb337bdb2b93246fa
+# 28e86f147e4b4817ad28dcbf692aac02
+# 71d3244573e84836bbddf0ae4c76c605
+# 451270bb1e6b4170b0af4aaa17a2928f
+# d154369083784ba78cbb9d95b79cd03b
+# db81db3836c84cc39252f046c71b0fa6
+# df227609a472435db4e0023a11197257
+# b2f6d0a70cd0406cb5617f399563f4a3
+# 569bf931abb3456ca12389a215f342b4
+# b73a60068fca4d6fb79c041ae00d9f51
+# 329d399502534df1b0bded45c78ffa44
+# 622498c1df06443888e4bd051e3485bd
+# b1619c726f1d420d8a70efd9d8a331ad
+# da08a5dc8158457aa3658419585a9729
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chfullname:1
+# 486cb76e8b304fd6a4d8047af293df90
+msgid "Change the user's Full Name"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chgid:1
+# 51af843ab8524739832550086208bed3
+msgid "Change the default group of the user"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chgroups:1
+# 028e9e7073ef4e9ebaf744cbc85fc154
+msgid "Change the groups this user belongs to, add append to append the specified groups"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chhome:1
+# 090511a9c8f443c3baca00cd81ec3050
+msgid "Change the home directory of the user, pass true for persist to copy files to the new home dir"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chhomephone:1
+# 37db1e3e0e5e4025ac898493f3058ca6
+msgid "Change the user's Home Phone"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chroomnumber:1
+# a3b35ce2f6a54b4c8f404cb59945414b
+msgid "Change the user's Room Number"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chshell:1
+# dcf58256194844d8a19baebcc743687f
+msgid "Change the default shell of the user"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chuid:1
+# 3bc25c4e1b85454c8a31ab13c3187e77
+msgid "Change the uid for a named user"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.chworkphone:1
+# 2b47d63f7e1d410ea5a279ab989f1419
+msgid "Change the user's Work Phone"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.delete:1
+# c8b48d267d254c4ea1f7b80275648ed6
+msgid "Remove a user from the minion"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.getent:1
+# 784c561589ab410d94f45cad0f33a9a2
+msgid "Return the list of all info for all users"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.info:1
+# 2d82490e2b25446b8ee12ac2f5e9775c
+msgid "Return user information"
+msgstr ""
+
+#: ../../../salt/modules/pw_user.py:docstring of salt.modules.pw_user.list_groups:1
+# ac26e887f08548ecbfedf6d6cb9caa25
+msgid "Return a list of groups the named user belongs to"
+msgstr ""
+

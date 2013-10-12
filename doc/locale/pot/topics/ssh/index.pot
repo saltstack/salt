@@ -1,0 +1,123 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/ssh/index.rst:6
+# 7b12460d9de64c37832421ad7b21f33c
+msgid "Salt SSH"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:10
+# a647d9a6e24146a39a07790b5f15a3f7
+msgid "On many systems, ``salt-ssh`` will be in its own package, usually named ``salt-ssh``."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:13
+# d0e57fa96abf4cb5b4a63c958fd7a611
+msgid "In version 0.17.0 of Salt a new transport system was introduced, the ability to use SSH for Salt communication. This addition allows for Salt routines to be executed on remote systems entirely through ssh, bypassing the need for a Salt Minion to be running on the remote systems and the need for a Salt Master."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:21
+# 3c8596e3abc24e3599ea4e1dc5adced3
+msgid "The Salt SSH system does not supercede the standard Salt communication systems, it simply offers an SSH based alternative that does not require ZeroMQ and a remote agent. Be aware that since all communication with Salt SSH is executed via SSH it is substantially slower than standard Salt with ZeroMQ."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:26
+# 345de8e1977e4568955b933c803fe0ad
+msgid "Salt SSH is very easy to use, simply set up a basic `roster` file of the systems to connect to and run ``salt-ssh`` commands in a similar way as standard ``salt`` commands."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:31
+# 5581917d94364aaabd72889148d989f8
+msgid "Salt SSH Roster"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:33
+# 150c4973d36d4b219b82418c46fd82ba
+msgid "The roster system in Salt allows for remote minions to be easily defined."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:37
+# 99f9abeb4c75474cbc3e0fed8c1a7df1
+msgid "See the :doc:`Roster documentation </topics/ssh/roster>` for more details."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:39
+# e50766d64be44484bc64f4a238f03f4c
+msgid "Simply create the roster file, the default location is `/etc/salt/roster`:"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:45
+# 24f0778692134c85b851ab2c91bf4bbe
+msgid "This is a very basic roster file where a Salt ID is being assigned to an IP address. A more elaborate roster can be created:"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:59
+# fe9f21637e134a03843b369a9dc2dc1c
+msgid "Calling Salt SSH"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:61
+# ffcf61e4b5a2478c985f2b52ca5bce00
+msgid "The ``salt-ssh`` command can be easily executed in the same was as a salt command:"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:68
+# a932bdaded1c486b837a987656e10bbb
+msgid "Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:70
+# ba868240e74249bcac4e4f847e45ca8d
+msgid "The standard salt functions are available! The output is the same as ``salt`` and many of the same flags are available. Please see http://docs.saltstack.com/ref/cli/salt-ssh.html for all of the available options."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:76
+# 860df24fec864070a917880a7f368f14
+msgid "Raw Shell Calls"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:78
+# 0d18e4076c3a468cba27a170a2f6cc16
+msgid "By default ``salt-ssh`` runs Salt execution modules on the remote system, but ``salt-ssh`` can also execute raw shell commands:"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:86
+# 8f6d27b08688490abd3b1fa045817384
+msgid "States Via Salt SSH"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:88
+# d8e3d28c512043fa9fb4251ec25b3754
+msgid "The Salt State system can also be used with ``salt-ssh``. The state system abstracts the same interface to the user in ``salt-ssh`` as it does when using standard ``salt``. The intent is that Salt Formulas defined for standard ``salt`` will work seamlessly with ``salt-ssh`` and vice-versa."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:93
+# fca5324b367e458b9e3501a4850dd410
+msgid "The standard Salt States walkthroughs function by simply replacing ``salt`` commands with ``salt-ssh``."
+msgstr ""
+
+#: ../../topics/ssh/index.rst:97
+# 14310e48e4724115b052724b963ce5f5
+msgid "Targeting with Salt SSH"
+msgstr ""
+
+#: ../../topics/ssh/index.rst:99
+# cfcc33aff8934eba8bd4dfe98308bd01
+msgid "Due to the fact that the targeting approach differs in salt-ssh, only glob and regex targets are supported as of this writing, the remaining target systems still need to be implemented."
+msgstr ""
+

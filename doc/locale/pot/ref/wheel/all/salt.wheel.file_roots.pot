@@ -1,0 +1,53 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/wheel/all/salt.wheel.file_roots.rst:6
+# 135d3e951676446c82fdcea2c795a36f
+msgid "salt.wheel.file_roots"
+msgstr ""
+
+#: ../../../salt/wheel/file_roots.py:docstring of salt.wheel.file_roots:1
+# 4c0dbe39693241ddaf1ddaf3bf11e511
+msgid "Read in files from the file_root and save files to the file root"
+msgstr ""
+
+#: ../../../salt/wheel/file_roots.py:docstring of salt.wheel.file_roots.find:1
+# a05c14cca948492f9eeab0c598612d2b
+msgid "Return a dict of the files located with the given path and environment"
+msgstr ""
+
+#: ../../../salt/wheel/file_roots.py:docstring of salt.wheel.file_roots.list_env:1
+# 2496f5b357a84cb8aed22c5ab72b86ed
+msgid "Return all of the file paths found in an environment"
+msgstr ""
+
+#: ../../../salt/wheel/file_roots.py:docstring of salt.wheel.file_roots.list_roots:1
+# 811a3dd89a084a6fb22b4fa73e539c92
+msgid "Return all of the files names in all available environments"
+msgstr ""
+
+#: ../../../salt/wheel/file_roots.py:docstring of salt.wheel.file_roots.read:1
+# 39b702bb3b4f4f8c8604c32b523c3258
+msgid "Read the contents of a text file, if the file is binary then"
+msgstr ""
+
+#: ../../../salt/wheel/file_roots.py:docstring of salt.wheel.file_roots.write:1
+# e172c09da3f442e0b2606a15212f6617
+msgid "Write the named file, by default the first file found is written, but the index of the file can be specified to write to a lower priority file root"
+msgstr ""
+

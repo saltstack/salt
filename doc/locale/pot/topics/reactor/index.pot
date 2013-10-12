@@ -1,0 +1,118 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/reactor/index.rst:6
+# a87028cec2414f6ea24843cb62156c5f
+msgid "Reactor System"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:8
+# d18444315624435892108c81bad94ae5
+msgid "Salt version 0.11.0 introduced the reactor system. The premise behind the reactor system is that with Salt's events and the ability to execute commands, a logic engine could be put in place to allow events to trigger actions, or more accurately, reactions."
+msgstr ""
+
+#: ../../topics/reactor/index.rst:13
+# 2b137de0c5f14a469c8d6be2ce60a5e0
+msgid "This system binds sls files to event tags on the master. These sls files then define reactions. This means that the reactor system has two parts. First, the reactor option needs to be set in the master configuration file.  The reactor option allows for event tags to be associated with sls reaction files. Second, these reaction files use highdata (like the state system) to define reactions to be executed."
+msgstr ""
+
+#: ../../topics/reactor/index.rst:21
+# ff9cbcd6051a4a3eabb3f1490e29c7ee
+msgid "Event System"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:23
+# ea2310f45cd74b8daeb372c98c2e90b3
+msgid "A basic understanding of the event system is required to understand reactors. The event system is a local ZeroMQ PUB interface which fires salt events. This event bus is an open system used for sending information notifying Salt and other systems about operations."
+msgstr ""
+
+#: ../../topics/reactor/index.rst:28
+# 77b6027cb0dd4613810d467158b0db11
+msgid "The event system fires events with a very specific criteria. Every event has a :strong:`tag` which is comprised of a maximum of 20 characters. Event tags allow for fast top level filtering of events. In addition to the tag, each event has a data structure. This data structure is a dict, which contains information about the event."
+msgstr ""
+
+#: ../../topics/reactor/index.rst:35
+# 15af10644810490bb47cb8b371fe8002
+msgid "Mapping Events to Reactor SLS Files"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:37
+# c864cde6c0f44b5488fd2e769c75c826
+msgid "The event tag and data are both critical when working with the reactor system. In the master configuration file under the reactor option, tags are associated with lists of reactor sls formulas (globs can be used for matching):"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:50
+# 71e17a8f09cf4ca4bb8289877e677540
+msgid "When an event with a tag of ``auth`` is fired, the reactor will catch the event and render the two listed files. The rendered files are standard sls files, so by default they are yaml + Jinja. The Jinja is packed with a few data structures similar to state and pillar sls files. The data available is in ``tag`` and ``data`` variables. The ``tag`` variable is just the tag in the fired event and the ``data`` variable is the event's data dict. Here is a simple reactor sls:"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:66
+# a531b31d09cf41a7a03e1388892c6dd0
+msgid "This simple reactor file uses Jinja to further refine the reaction to be made. If the ``id`` in the event data is ``mysql1`` (in other words, if the name of the minion is ``mysql1``) then the following reaction is defined.  The same data structure and compiler used for the state system is used for the reactor system. The only difference is that the data is matched up to the salt command API and the runner system.  In this example, a command is published to the ``mysql1`` minion with a function of ``state.highstate``. Similarly, a runner can be called:"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:82
+# b1efe63886fc497dbc78ecc524925d17
+msgid "This example will execute the state.overstate runner and initiate an overstate execution."
+msgstr ""
+
+#: ../../topics/reactor/index.rst:86
+# 960728f517ea45bb9b72a6a00d05b31a
+msgid "Fire an event"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:88
+# 9dcd409b7954469bb765ca03aafbd2a4
+msgid "From a minion, run bellow command"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:94
+# c5a002dc73334716ad4b8a385b5bab39
+msgid "In reactor fomular files that are associated with tag ``foo``, data can be accessed via ``data['data']``. Above command passed a dictionary as data, its ``overstate`` key can be accessed via ``data['data']['overstate']``. See :py:mod:`salt.modules.event` for more information."
+msgstr ""
+
+#: ../../topics/reactor/index.rst:100
+# 5b7d5e6d78574b758bea96b92f9d3e40
+msgid "Understanding the Structure of Reactor Formulas"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:102
+# cbf9b3dbd50d455db01617a99fc5accf
+msgid "While the reactor system uses the same data structure as the state system, this data does not translate the same way to operations. In state, formulas information is mapped to the state functions, but in the reactor system, information is mapped to a number of available subsystems on the master. These systems are the :strong:`LocalClient` and the :strong:`Runners`. The :strong:`state declaration` field takes a reference to the function to call in each interface. So to trigger a salt-run call the :strong:`state declaration` field will start with :strong:`runner`, followed by the runner function to call. This means that a call to what would be on the command line :strong:`salt-run manage.up` will be :strong:`runner.manage.up`. An example of this in a reactor formula would look like this:"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:119
+# cd9fe93d01164a8c85c1f78a540b8da0
+msgid "If the runner takes arguments then they can be specified as well:"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:127
+# e71b183f2ec747f6945a9b57355d944d
+msgid "Executing remote commands maps to the :strong:`LocalClient` interface which is used by the :strong:`salt` command. This interface more specifically maps to the :strong:`cmd_async` method inside of the :strong:`LocalClient` class. This means that the arguments passed are being passed to the :strong:`cmd_async` method, not the remote method. A field starts with :strong:`cmd` to use the :strong:`LocalClient` subsystem. The result is, to execute a remote command, a reactor fomular would look like this:"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:143
+# 7d4efe82ce504d54b5d527975e365641
+msgid "The ``arg`` option takes a list of arguments as they would be presented on the command line, so the above declaration is the same as running this salt command:"
+msgstr ""
+
+#: ../../topics/reactor/index.rst:151
+# cb40bca7b6a24908a55e7e51009759ae
+msgid "Use the ``expr_form`` argument to specify a matcher:"
+msgstr ""
+

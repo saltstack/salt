@@ -1,0 +1,128 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/releases/0.12.0.rst:6
+# 00ee9cd0890a4a6088ddefa494f9793c
+msgid "Salt 0.12.0 Release Notes"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:8
+# ea5f4eb1d1074d41a88d708b06593d27
+msgid "Another feature release of Salt is here! Some exciting additions are included with more ways to make salt modular and even easier management of the salt file server."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:13
+# 98c0517eac194bc3a9d67c2706a2ffc0
+msgid "Major Features"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:16
+# c07ca2da4ce24093af399f0757898b6e
+msgid "Modular Fileserver Backend"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:18
+# cd0626d64b73406db291ddccd1ae4e9a
+msgid "The new modular fileserver backend allows for any external system to be used as a salt file server. The main benefit here is that it is now possible to tell the master to directly use a git remote location, or many git remote locations, automatically mapping git branches and tags to salt environments."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:24
+# c9a9275eba8e4227bcc2a0b8899612ae
+msgid "Windows is First Class!"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:26
+# a96f63e1c07b43ccb997a52e3afc33b2
+msgid "A new Salt Windows installer is now available! Much work has been put in to improve Windows support. With this much easier method of getting Salt on your Windows machines, we hope even more development and progress will occur. Please file bug reports on the Salt GitHub repo issue tracker so we can continue improving."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:32
+# ceda0f2bb81b4e71af264f8e599e7eac
+msgid "One thing that is missing on Windows that Salt uses extensively is a software package manager and a software package repository. The Salt pkg state allows sys admins to install software across their infrastructure and across operating systems. Software on Windows can now be managed in the same way. The SaltStack team built a package manager that interfaces with the standard Salt pkg module to allow for installing and removing software on Windows. In addition, a software package repository has been built on top of the Salt fileserver. A small YAML file provides the information necessary for the package manager to install and remove software."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:42
+# ce7e102ee6b845558e06836f681b38cc
+msgid "An interesting feature of the new Salt Windows software package repository is that one or more remote git repositories can supplement the master's local repository. The repository can point to software on the master's fileserver or on an HTTP, HTTPS, or ftp server."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:48
+# d7537b9e75dc4a0cb7854f75116fc739
+msgid "New Default Outputter"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:50
+# 57406ce8978e4073a4b7c5f54abdb79b
+msgid "Salt displays data to the terminal via the outputter system. For a long time the default outputter for Salt has been the python pretty print library.  While this has been a generally reasonable outputter, it did have many failings.  The new default outputter is called \"nested\", it recursively scans return data structures and prints them out cleanly."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:56
+# 4a8026e658574c538fc8e9881c11b931
+msgid "If the result of the new nested outputter is not desired any other outputter can be used via the --out option, or the output option can be set in the master and minion configs to change the default outputter."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:61
+# 2fa1553b1c274be29a1c7d7b82e27c03
+msgid "Internal Scheduler"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:63
+# ab9c7eedeb244e2ca6460091fe2acf23
+msgid "The internal Salt scheduler is a new capability which allows for functions to be executed at given intervals on the minion, and for runners to be executed at given intervals on the master. The scheduler allows for sequences such as executing state runs (locally on the minion or remotely via an overstate) or continually gathering system data to be run at given intervals."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:69
+# 3cf5096bc25946dc93839315eb32aab1
+msgid "The configuration is simple, add the schedule option to the master or minion config and specify jobs to run, this in the master config will execute the state.over runner every 60 minutes:"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:80
+# 8e9c3d89d22b46078ad5dc88c6bd5289
+msgid "This example for the minion configuration will execute a highstate every 30 minutes:"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:91
+# f2410ad2b01849fd8ee7e8c842cbbd2f
+msgid "Optional DSL for SLS Formulas"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:93
+# 38018457f67141b29babbad95eeebecc
+msgid "Jack Kuan, our renderer expert, has created something that is astonishing. Salt, now comes with an optional Python based DSL, this is a very powerful interface that makes writing SLS files in pure python easier than it was with the raw py renderer. As usual this can be used with the renderer shebang line, so a single sls can be written with the DSL if pure python power is needed while keeping other sls files simple with YAML."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:101
+# 64d9d844b8ae40a1b4c3dbceecebec6f
+msgid "Set Grains Remotely"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:103
+# 49d0c93e0533402cac8e6275854154c1
+msgid "A new execution function and state module have been added that allows for grains to be set on the minion. Now grains can be set via a remote execution or via states. Use the `grains.present` state or the `grains.setval` execution functions."
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:109
+# b2a6c53f83ef4212a19c295fc879193e
+msgid "Gentoo Additions"
+msgstr ""
+
+#: ../../topics/releases/0.12.0.rst:111
+# cdcb55afd7de46eba59fabc771bddea7
+msgid "Major additions to Gentoo specific components have been made. The encompasses executions modules and states ranging from supporting the make.conf file to tools like layman."
+msgstr ""
+

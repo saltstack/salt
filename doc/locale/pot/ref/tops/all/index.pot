@@ -1,0 +1,58 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/tops/all/index.rst:8
+# f78db81459df413f833219d2e6435bde
+msgid "Full list of builtin master tops modules"
+msgstr ""
+
+#: ../../<autosummary>:1
+# ae6814acabdd437cb82fd5d86548f998
+msgid ":obj:`cobbler <salt.tops.cobbler>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 42c7fcfccc2a42fb980c2fcb372982c3
+msgid "Cobbler Tops"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 52dd40d55bed4154b778193eba8a7874
+msgid ":obj:`ext_nodes <salt.tops.ext_nodes>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# e4d1522ef56b472a8025107d429fe588
+msgid "External Nodes Classifier"
+msgstr ""
+
+#: ../../<autosummary>:1
+# 402939eee16c4218b097e9d352594c4f
+msgid ":obj:`mongo <salt.tops.mongo>`\\"
+msgstr ""
+
+#: ../../<autosummary>:1
+# a71b84be352a4eaab95e4c9743291d38
+msgid "Read tops data from a mongodb collection."
+msgstr ""
+
+#: ../../<autosummary>:1
+# 1d6e38fd9a9a480f85b32a01ccfcbc49
+msgid ":obj:`reclass_adapter <salt.tops.reclass_adapter>`\\"
+msgstr ""
+

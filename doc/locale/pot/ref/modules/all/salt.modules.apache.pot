@@ -1,0 +1,164 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.apache.rst:6
+# 99f92d1e092548419720f579576d5db2
+msgid "salt.modules.apache"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache:1
+# 6125eb15334f465ea6d34803bf280c98
+msgid "Support for Apache"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.a2dissite:1
+# f11b969a4fb4486585286ccf628fc594
+msgid "Runs a2dissite for the given site."
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.a2dissite:3
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.a2ensite:3
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.check_site_enabled:3
+# 94cb1a78e1f64a7586fea0f6f7e06e19
+# e22006868a1a424ab6295e40637de66f
+# 13689076302447868cdf908ad06c3b90
+msgid "This will only be functional on Debian-based operating systems (Ubuntu, Mint, etc)."
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.a2dissite:6
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.a2ensite:6
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.check_site_enabled:6
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.server_status:20
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.useradd:10
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.userdel:3
+# 77499c9bcffe4ccdad7e2db5fde41f58
+# 1f4e59548fa6447aa4ddfad5a62d8b29
+# 28926f9892a9483f9da71f68ef2de065
+# 74556f87608f406ca9c1c9dcadafc140
+# b18dda17f0d449d7b596e50eca8e3794
+# 26901c0e3d4a4268b47a530b57ceceae
+msgid "CLI Examples:"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.a2ensite:1
+# c237184fa5b24730adfe19af7b345acd
+msgid "Runs a2ensite for the given site."
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.check_site_enabled:1
+# 7aad4033a13c465ebf605e796a254e0c
+msgid "Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled."
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.directives:1
+# ffda8831bba541d9864c4aaded278da3
+msgid "Return list of directives together with expected arguments and places where the directive is valid (``apachectl -L``)"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.directives:4
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.fullversion:3
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.modules:3
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.servermods:3
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.signal:3
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.version:3
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.vhosts:6
+# 997d7fe879d444e19985f881bbb1e854
+# f5e48c8e84234b7b8869c9e48b0e2310
+# d279e26701c6477ca299344b60f8e2e8
+# a1d98e3078b542a98cf4a119b9625003
+# e8e5ffc89d6b425ba0ca0aeb25565fd1
+# 84924622d944406ca464581d439d992e
+# e7e5da18ca884be592a13c831cf6e0ff
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.fullversion:1
+# 715c67da2e99448895648aed04d835be
+msgid "Return server version from apachectl -V"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.modules:1
+# 1ab645b0205343c18532d094933f4a6a
+msgid "Return list of static and shared modules from apachectl -M"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.server_status:1
+# c839887d5c214e0fad05e767769e7959
+msgid "Get Information from the Apache server-status handler"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.server_status:3
+# c93b5fa6bad848b5b50b96a710aaae85
+msgid "NOTE: the server-status handler is disabled by default. in order for this function to work it needs to be enabled. http://httpd.apache.org/docs/2.2/mod/mod_status.html"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.server_status:8
+# df3260d530e148fea9fb44905d79d23f
+msgid "The following configuration needs to exists in pillar/grains each entry nested in apache.server-status is a profile of a vhost/server this would give support for multiple apache servers/vhosts"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.server_status:18
+# ba9efbae043946ef9fd3f4894766c933
+msgid "apache.server-status:"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.server_status:18
+# 4a9b968277264c70b6882657ffd1a2ca
+msgid "'default':"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.server_status:14
+# c5443bd74134408bb1e671c88cb77550
+msgid "'url': http://localhost/server-status 'user': someuser 'pass': password 'realm': 'authentication realm for digest passwords' 'timeout': 5"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.servermods:1
+# cb60a9a2eb7c45d2a506b66a18931b95
+msgid "Return list of modules compiled into the server (apachectl -l)"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.signal:1
+# 1259adac44884146b80ab2b7a6635cad
+msgid "Signals httpd to start, restart, or stop."
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.useradd:1
+# 7c3528f2f44e49ab88944a9cd56f45de
+msgid "Add an HTTP user using the htpasswd command. If the htpasswd file does not exist, it will be created. Valid options that can be passed are:"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.useradd:4
+# a82b68d5a4ce4367a441a12f2468a05c
+msgid "n  Don't update file; display results on stdout. m  Force MD5 encryption of the password (default). d  Force CRYPT encryption of the password. p  Do not encrypt the password (plaintext). s  Force SHA encryption of the password."
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.userdel:1
+# 1428448b06174f3f8afb22494a828988
+msgid "Delete an HTTP user from the specified htpasswd file."
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.version:1
+# 8a6bc43e06fd4f929d0f848a1b81db9a
+msgid "Return server version from apachectl -v"
+msgstr ""
+
+#: ../../../salt/modules/apache.py:docstring of salt.modules.apache.vhosts:1
+# cc1d7bc9395145c5a50765f69fdbcf9f
+msgid "Show the settings as parsed from the config file (currently only shows the virtualhost settings). (``apachectl -S``) Because each additional virtual host adds to the execution time, this command may require a long timeout be specified."
+msgstr ""
+

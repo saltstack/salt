@@ -1,0 +1,166 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.upstart.rst:6
+# 58da31ed149b48f89cb1bc1c675fd051
+msgid "salt.modules.upstart"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart:1
+# 6f939163f7474799a2d87814c7f2f8f0
+msgid "Module for the management of upstart systems. The Upstart system only supports service starting, stopping and restarting."
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart:4
+# 972d639f858d42909910911b965e572c
+msgid "Currently (as of Ubuntu 12.04) there is no tool available to disable Upstart services (like update-rc.d). This[1] is the recommended way to disable an Upstart service. So we assume that all Upstart services that have not been disabled in this manner are enabled."
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart:9
+# 83d43629dbd24c37840585a826337158
+msgid "But this is broken because we do not check to see that the dependent services are enabled. Otherwise we would have to do something like parse the output of \"initctl show-config\" to determine if all service dependencies are enabled to start on boot. For example, see the \"start on\" condition for the lightdm service below[2]. And this would be too hard. So we wait until the upstart developers have solved this problem. :) This is to say that an Upstart service that is enabled may not really be enabled."
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart:18
+# e33acda6cdb64829a3d335655a626d2d
+msgid "Also, when an Upstart service is enabled, should the dependent services be enabled too? Probably not. But there should be a notice about this, at least."
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart:22
+# 168203b2ea574c78858360e11b382f2d
+msgid "[1] http://upstart.ubuntu.com/cookbook/#disabling-a-job-from-automatically-starting"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart:24
+# 01250a6c25604f799e8cc997b3e1ce53
+msgid "[2] example upstart configuration file::"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart:34
+# 6c1980c6448d452f91d2940930bdb09c
+msgid "This module should not be used on Red Hat systems. For these, the :mod:`rh_service <salt.modules.rh_service>` module should be used, as it supports the hybrid upstart/sysvinit system used in RHEL/CentOS 6."
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.available:1
+# 20206a39a970478ba7e0e48699054123
+msgid "Returns ``True`` if the specified service is available, otherwise returns ``False``."
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.available:4
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.disable:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.disabled:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.enable:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.enabled:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.force_reload:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.full_restart:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.get_all:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.get_disabled:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.get_enabled:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.reload_:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.restart:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.start:3
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.status:4
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.stop:3
+# 93c72878561c4f5e9aba9635e687a7bb
+# d5391c007a844e149cfd92100459a162
+# 71937d6b34524f3487df128fce9143ad
+# 15c6a855572d4e6e9048713520483f27
+# 8531d819df6944abbbfc17e473f5d7c4
+# f8f34593a822493ebbe3fb21d857749f
+# ad73f335b86a478193c21e3dca2e49a6
+# 02147b4250064e5f9cdd0fccc5b961a4
+# 6185f6e31eb74dd3b0e2b422f34154d6
+# fbb29fcfbdfb45d99b626cca2f86e208
+# 75523d8759594f10ab69c3ebed098ba1
+# a7c84843829b4320a9795d905043ba21
+# dbd7d067a8484862a11f37aaa00e5001
+# e3535977beef4b73af3a0722458e3882
+# 19fdfa1db8dd425fa6157d6d59392432
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.disable:1
+# eef296a5e0dc4afb953232b6ddfacfe3
+msgid "Disable the named service from starting on boot"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.disabled:1
+# ab4288d60e7846cea55a93c8f728b044
+msgid "Check to see if the named service is disabled to start on boot"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.enable:1
+# 1b35d6a6a7bf41788d777ad4e70402d1
+msgid "Enable the named service to start at boot"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.enabled:1
+# 99216dc29a2f4992900e0cb5cda8b654
+msgid "Check to see if the named service is enabled to start on boot"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.force_reload:1
+# ef9e5007cc3642f89464fc268aed0664
+msgid "Force-reload the named service"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.full_restart:1
+# 58d7698a41334180a4a281a640bd2435
+msgid "Do a full restart (stop/start) of the named service"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.get_all:1
+# 28190a8cc38b4d7a83ffb724480742d3
+msgid "Return all installed services"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.get_disabled:1
+# dde7f68183fb4600981ebdb95df66a67
+msgid "Return the disabled services"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.get_enabled:1
+# ca6b1106c5ae4c25a8db1c5d668327b2
+msgid "Return the enabled services"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.reload_:1
+# fcb9abe910f740cb88fea66f83fe47f1
+msgid "Reload the named service"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.restart:1
+# e76ba0f441e04e5f9b919d2521a74b4a
+msgid "Restart the named service"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.start:1
+# d333843e36c74fe1bf428f1357c7fbb3
+msgid "Start the specified service"
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.status:1
+# 34226083bf624bbf8176fd6220f0df27
+msgid "Return the status for a service, returns a bool whether the service is running."
+msgstr ""
+
+#: ../../../salt/modules/upstart.py:docstring of salt.modules.upstart.stop:1
+# 639f97c44e2e4141b70a59de47b3db98
+msgid "Stop the specified service"
+msgstr ""
+

@@ -1,0 +1,45 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/runners/all/salt.runners.winrepo.rst:6
+# 2eab4876ebea4f0890aefdac78891c7a
+msgid "salt.runners.winrepo"
+msgstr ""
+
+#: ../../../salt/runners/winrepo.py:docstring of salt.runners.winrepo:1
+# fc1c7e86ca4b4e33b28a8b77f0d8a22c
+msgid "Runner to manage Windows software repo"
+msgstr ""
+
+#: ../../../salt/runners/winrepo.py:docstring of salt.runners.winrepo.genrepo:1
+# ce4cda3f98ab4458a78d6e4df6b6313f
+msgid "Generate win_repo_cachefile based on sls files in the win_repo"
+msgstr ""
+
+#: ../../../salt/runners/winrepo.py:docstring of salt.runners.winrepo.genrepo:3
+#: ../../../salt/runners/winrepo.py:docstring of salt.runners.winrepo.update_git_repos:3
+# ddba86c8215a4bb1b698805d6c9294f2
+# 1a32a6648dd5491da49fb13081f0d517
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/runners/winrepo.py:docstring of salt.runners.winrepo.update_git_repos:1
+# 692b67fdb85e4151bf9bb6c10f6b711f
+msgid "Checkout git repos containing Windows Software Package Definitions"
+msgstr ""
+

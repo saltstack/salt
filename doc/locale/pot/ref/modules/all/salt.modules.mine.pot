@@ -1,0 +1,76 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.mine.rst:6
+# a57b9e91e9f84fc6b3ad2ed2e87ec455
+msgid "salt.modules.mine"
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine:1
+# 88256c968f884d889fa6601f01fd3dd0
+msgid "The function cache system allows for data to be stored on the master so it can be easily read by other minions"
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.delete:1
+# bb977f0999f04281ab30a7c8a6d7d2ea
+msgid "Remove specific function contents of minion. Returns True on success."
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.delete:3
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.flush:3
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.get:11
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.send:3
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.update:15
+# 46f07dacd8e045ac932f1a2cd5854a3b
+# fec4665c9f334750888ef4a8548c1e6e
+# 7ed9717ecbef4b00b33ffa69ac475ab9
+# 501c9b8fb64c4325a517e99cf889e7fd
+# 139ec3d059c2444191824daa3c9b2b01
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.flush:1
+# 38ae550b557e4650a027b05df1385942
+msgid "Remove all mine contents of minion. Returns True on success."
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.get:1
+# 6a17d1d294ae496f9c4aa89c95487f09
+msgid "Get data from the mine based on the target, function and expr_form"
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.get:3
+# 5ebc09a8522544b88e2a357ae53b8991
+msgid "Targets can be matched based on any standard matching system that can be matched on the master via these keywords::"
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.send:1
+# 2a1100429dc44069a55857ef7c5aaf77
+msgid "Send a specific function to the mine."
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.update:1
+# 2763497e8847435cbd3f1d60dc4065f4
+msgid "Execute the configured functions and send the data back up to the master The functions to be executed are merged from the master config, pillar and minion config under the option \"function_cache\":"
+msgstr ""
+
+#: ../../../salt/modules/mine.py:docstring of salt.modules.mine.update:12
+# 23218f3f7a9943309ad80432423a8733
+msgid "The function cache will be populated with information from executing these functions"
+msgstr ""
+

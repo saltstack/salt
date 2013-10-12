@@ -1,0 +1,91 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.dig.rst:6
+# 05e00160523e416985d581b48594bfe3
+msgid "salt.modules.dig"
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig:1
+# 958b99fec47a4f8ca2c09f4b329b5949
+msgid "Compendium of generic DNS utilities"
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.A:1
+# 0aca81facf4b4b56bf351f14763b5c2f
+msgid "Return the A record for ``host``."
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.A:3
+# 8b2f5da3aa2a4e659e9e1a02fe6ba9a2
+msgid "Always returns a list."
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.A:5
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.MX:10
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.NS:5
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.SPF:7
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.check_ip:3
+# b476bf83269142bba8cd5e710273ae4e
+# 49c9ef6e46a743cf9f06460b648f467a
+# 0373de41a09e4480a708fa832c2659fb
+# 4234d923df7844dc8674671dcdf3e306
+# 4c31f067a0584ff18cc5765ea16a36fc
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.MX:1
+# 3a122f68f77e4dd58cb785defc516335
+msgid "Return a list of lists for the MX of ``domain``."
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.MX:3
+# b38896450ea14056b143625127743185
+msgid "If the ``resolve`` argument is True, resolve IPs for the servers."
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.MX:5
+# b0bf9acd0fd24e6194f6aff5266df67a
+msgid "It's limited to one IP, because although in practice it's very rarely a round robin, it is an acceptable configuration and pulling just one IP lets the data be similar to the non-resolved version. If you think an MX has multiple IPs, don't use the resolver here, resolve them in a separate step."
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.NS:1
+# 70a163e0da3b4a338ef6303675039521
+msgid "Return a list of IPs of the nameservers for ``domain``"
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.NS:3
+# bfb3f62bdd564f6d8460455e3928a8e3
+msgid "If ``resolve`` is False, don't resolve names."
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.SPF:1
+# bb10da6a43574e80a80b055760e5f5e0
+msgid "Return the allowed IPv4 ranges in the SPF record for ``domain``."
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.SPF:3
+# 20dc58b60d4b4fb893e87a82b74edc10
+msgid "If record is ``SPF`` and the SPF record is empty, the TXT record will be searched automatically. If you know the domain uses TXT and not SPF, specifying that will save a lookup."
+msgstr ""
+
+#: ../../../salt/modules/dig.py:docstring of salt.modules.dig.check_ip:1
+# dafde6a632fd4c7fb77fa3e7a51f14da
+msgid "Check that string x is a valid IP"
+msgstr ""
+

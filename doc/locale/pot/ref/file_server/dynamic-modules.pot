@@ -1,0 +1,103 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/dynamic-modules.rst:6
+# ff4d807ed44745d4b2fe56fb3edda2a3
+msgid "Dynamic Module Distribution"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:10
+# 8ef06ddd38694025a964dcb7b1301c5f
+msgid "Salt Python modules can be distributed automatically via the Salt file server. Under the root of any environment defined via the :conf_master:`file_roots` option on the master server directories corresponding to the type of module can be used."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:16
+# 35f3ee14d21c41939e37c990804b34a1
+msgid "Module sync"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:18
+# 4b5f3b4d39264e50ac9b3b642b1f843e
+msgid "Automatically transfer and load modules, grains, renderers, returners, states, etc from the master to the minions."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:21
+# d9506129aa9d4f6ca9142771927f8fcf
+msgid "The directories are prepended with an underscore:"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:23
+# af5ee93eacc44d38ab2e2a3f05950c03
+msgid ":file:`_modules`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:24
+# 38d21d4142124c3c916b82d65cda897c
+msgid ":file:`_grains`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:25
+# 443a2b86853d476da7825980ded95c75
+msgid ":file:`_renderers`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:26
+# 8357d288a02544e383376674ba80710c
+msgid ":file:`_returners`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:27
+# b633801e79c1428ead68442f2a49e731
+msgid ":file:`_states`"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:29
+# 2ae5c950b7fc43abb82511efaac95b49
+msgid "The contents of these directories need to be synced over to the minions after Python modules have been created in them. There are a number of ways to sync the modules."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:34
+# 0f8ce5462e3a45e3a9cba6cccb0f04c4
+msgid "Sync Via States"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:36
+# d2b794c5890545baa34519e5c40ae9af
+msgid "The minion configuration contains an option ``autoload_dynamic_modules`` which defaults to True. This option makes the state system refresh all dynamic modules when states are run. To disable this behavior set ``autoload_dynamic_modules`` to False in the minion config."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:41
+# d8a3bf090acf480e8b84ad4e3c0bf2cf
+msgid "When dynamic modules are autoloaded via states, modules only pertinent to the environments matched in the master's top file are downloaded."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:44
+# 3038e2dd13634ba89ddbbc3e81f79556
+msgid "This is important to remember, because modules can be manually loaded from any specific environment that environment specific modules will be loaded when a state run is executed."
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:49
+# 9593e78b72bb43ab8b509a55f1eb1f72
+msgid "Sync Via the saltutil Module"
+msgstr ""
+
+#: ../../ref/file_server/dynamic-modules.rst:51
+# ce2619e938ae4e9aa3acbedc7e1f413e
+msgid "The saltutil module has a number of functions that can be used to sync all or specific dynamic modules. The saltutil module function ``saltutil.sync_all`` will sync all module types over to a minion. For more information see: :mod:`salt.modules.saltutil`"
+msgstr ""
+

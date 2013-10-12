@@ -1,0 +1,88 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/file_server/all/salt.fileserver.hgfs.rst:6
+# 1d75f45d6cea494cb8f0224433626011
+msgid "salt.fileserver.hgfs"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs:1
+# 0cc5fe191c874f03ad877f981d3cd5cb
+msgid "The backed for the mercurial based file server system."
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs:3
+# dfd1fd8d0d89402c8380f09191b5ec32
+msgid "After enabling this backend, branches, bookmarks, and tags in a remote mercurial repository are exposed to salt as different environments. This feature is managed by the fileserver_backend option in the salt master config."
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs:7
+# 9a894b95bb004886a45fcb147d6346b7
+msgid "This fileserver has an additional option ``hgfs_branch_method`` that will set the desired branch method. Possible values are: ``branches``, ``bookmarks``, or ``mixed``. If using ``branches`` or ``mixed``, the ``default`` branch will be mapped to ``base``."
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs:12
+# 5560389fc8594f6da1b16101a6ec2c9a
+msgid "mercurial"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.dir_list:1
+# a83cd8a6b0084a169d57ac027f7927d6
+msgid "Return a list of all directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.envs:1
+# 60488cedfcd84a848f271cc00ca336a2
+msgid "Return a list of refs that can be used as environments"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.file_hash:1
+# 13476886742c44dbb33c10450913f8e1
+msgid "Return a file hash, the hash type is set in the master config file"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.file_list:1
+# 2031d53de3654df4a3bfb7ba85a39707
+msgid "Return a list of all files on the file server in a specified environment"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.file_list_emptydirs:1
+# f114d43462ed4d2ba5b0ae7baef96471
+msgid "Return a list of all empty directories on the master"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.find_file:1
+# 85cd57e912814cd8a7f35a7c6b191b31
+msgid "Find the first file to match the path and ref, read the file out of hg and send the path to the newly cached file"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.init:1
+# f5b60a9dca2b424292daace114194dde
+msgid "Return the hg repo object for this session"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.serve_file:1
+# f1c7240e994e46ddbdcda1575bedfd7a
+msgid "Return a chunk from a file based on the data received"
+msgstr ""
+
+#: ../../../salt/fileserver/hgfs.py:docstring of salt.fileserver.hgfs.update:1
+# c48b10ffbd764896a368f1ba65574ca7
+msgid "Execute a hg pull on all of the repos"
+msgstr ""
+

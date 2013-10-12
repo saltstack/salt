@@ -1,0 +1,43 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.apt.rst:6
+# b8ab97a8b1bf4672ad18e634bfbc67a4
+msgid "salt.states.apt"
+msgstr ""
+
+#: ../../../salt/states/apt.py:docstring of salt.states.apt:2
+# d2a8016b004d4de6bf509ac5ac748b53
+msgid "Package management operations specific to APT- and DEB-based systems"
+msgstr ""
+
+#: ../../../salt/states/apt.py:docstring of salt.states.apt.held:1
+# bb5c952fb2e243e9b853bc4c11544aa3
+msgid "Set package in 'hold' state, meaning it will not be upgraded."
+msgstr ""
+
+#: ../../../salt/states/apt.py:docstring of salt.states.apt.held:3
+# 7fbf167952f4468bb3cae74ef32f5eb2
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/apt.py:docstring of salt.states.apt.held:4
+# e93fbce54173441bbecde7df05136fd5
+msgid "The name of the package, e.g., 'tmux'"
+msgstr ""
+

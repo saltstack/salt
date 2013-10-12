@@ -1,0 +1,105 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/auth/all/salt.auth.pam.rst:6
+# 7df15f54937846efa04be95e2c051d6f
+msgid "salt.auth.pam"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam:1
+# 0f8ae58a3cc142bf8fbe6051d61fbbbc
+msgid "Authenticate against PAM"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam:3
+# f57865d8b4be4a94a5d400e13c8b747a
+msgid "Provides an authenticate function that will allow the caller to authenticate a user against the Pluggable Authentication Modules (PAM) on the system."
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam:6
+# a6dbc93820d94824878d5dd2bdb2d03b
+msgid "Implemented using ctypes, so no compilation is necessary."
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamConv:1
+# 22c63304e0e24a6a97d8fd70ee659414
+msgid "Wrapper class for pam_conv structure"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamConv.appdata_ptr:1
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamConv.conv:1
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamHandle.handle:1
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamMessage.msg:1
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamMessage.msg_style:1
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamResponse.resp:1
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamResponse.resp_retcode:1
+# ffc762211355407582fcbf899cfe41b9
+# f9d8e3cc555c48de94a90aa1318027a4
+# 19149d1a56994aba9881b8f055b7e759
+# 18aff1a9138f4e3a94d805e98d503fc6
+# 3bd04d2582604f6985647a57e6d56e6c
+# cd1d028ca8e4442094bf9225b75d95d7
+# 27683bbfa06b413b87e643f7fd992798
+msgid "Structure/Union member"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamHandle:1
+# 13d0a48aba2f47c4a00012207f812ae9
+msgid "Wrapper class for pam_handle_t"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamMessage:1
+# 5db74669ecba486f8bd9c52c6a7dcf60
+msgid "Wrapper class for pam_message structure"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.PamResponse:1
+# f2bb49a4012e44738a19bfcf338c9d6c
+msgid "Wrapper class for pam_response structure"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.auth:1
+# c3514282312646ccb9370e6868be2642
+msgid "Authenticate via pam"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.authenticate:1
+# f2eec7cffc304698993180019ddb26bb
+msgid "Returns True if the given username and password authenticate for the given service.  Returns False otherwise"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.authenticate:4
+# 4016b99c66ef4378be42b7c130208a5b
+msgid "``username``: the username to authenticate"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.authenticate:6
+# 6de71ff4fe254c2e91c52481be0d1b34
+msgid "``password``: the password in plain text"
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.authenticate:8
+# 31a68e1068ee45cc81a27f3bb6b0a02e
+msgid "``service``: the PAM service to authenticate against."
+msgstr ""
+
+#: ../../../salt/auth/pam.py:docstring of salt.auth.pam.authenticate:9
+# 826cf60eeda24bb6a424d692339b0af3
+msgid "Defaults to 'login'"
+msgstr ""
+

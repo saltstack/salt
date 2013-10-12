@@ -1,0 +1,40 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.stateconf.rst:6
+# 70134b9cd6e442b48d01e4d557f52672
+msgid "salt.states.stateconf"
+msgstr ""
+
+#: ../../../salt/states/stateconf.py:docstring of salt.states.stateconf:2
+# 86fbd7faea3d4ec59132e45ba3759a6e
+msgid "Stateconf System"
+msgstr ""
+
+#: ../../../salt/states/stateconf.py:docstring of salt.states.stateconf:4
+# 25a09a35367e4d0c9915c5b1462d9904
+msgid "The stateconf system is intended for use only with the stateconf renderer. This State module presents the set function. This function does not execute any functionality, but is used to interact with the stateconf renderer."
+msgstr ""
+
+#: ../../../salt/states/stateconf.py:docstring of salt.states.stateconf.context:1
+#: ../../../salt/states/stateconf.py:docstring of salt.states.stateconf.set:1
+# dccd6dcd0a8341709e44ec3e220bc3fc
+# e5e349113b28451c8681a21bfefff00e
+msgid "No-op state to support state config via the stateconf renderer."
+msgstr ""
+

@@ -1,0 +1,59 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/modules/all/salt.modules.keyboard.rst:6
+# 5e94806d13d8432d9fc577faf0f5df26
+msgid "salt.modules.keyboard"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard:1
+# 2ca5b45b27b248849bf1d99855d61f97
+msgid "Module for managing keyboards on POSIX-like systems."
+msgstr ""
+
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard.get_sys:1
+# 77bfe54bf80f4151b16754c8742a1cb9
+msgid "Get current system keyboard setting"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard.get_sys:3
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard.get_x:3
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard.set_sys:3
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard.set_x:3
+# d282883850044e36b7616a88a8312b65
+# 1a774021426546359db899f4ece267ed
+# d52af72e68d5472c99cba1eebc32f303
+# ab3f389411164641bb60ac92e4a69f65
+msgid "CLI Example:"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard.get_x:1
+# c3cedb30d2024ab199acbc1fcecec746
+msgid "Get current X keyboard setting"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard.set_sys:1
+# 87a060d4c3294820bccec463910a1a14
+msgid "Set current system keyboard setting"
+msgstr ""
+
+#: ../../../salt/modules/keyboard.py:docstring of salt.modules.keyboard.set_x:1
+# b5a0b610cbe14df39d6beb7ecf02632f
+msgid "Set current X keyboard setting"
+msgstr ""
+

@@ -1,0 +1,58 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/mine/index.rst:6
+# fe52827e7474414da83d43b98eaac475
+msgid "The Salt Mine"
+msgstr ""
+
+#: ../../topics/mine/index.rst:8
+# f63f769575b445139abee9c4d9181747
+msgid "Granted, it took a while for this name to be used in Salt, but version 0.15.0 introduces a new system to Salt called the Salt Mine."
+msgstr ""
+
+#: ../../topics/mine/index.rst:11
+# 8fd4dc53ea5644c98025e75c03140d9b
+msgid "The Salt Mine is used to bridge the gap between setting static variables and gathering live data. The Salt mine is used to collect arbitrary data from minions and store it on the master. This data is then made available to all minions via the ``mine`` module."
+msgstr ""
+
+#: ../../topics/mine/index.rst:16
+# d6aa4b9eb9054a45868e56b5f5fc8c6f
+msgid "The data is gathered on the minion and sent back to the master where only the most recent data is maintained (if long term data is required use returners or the external job cache)."
+msgstr ""
+
+#: ../../topics/mine/index.rst:21
+# 1462526e59624df89d79274b89e9a76a
+msgid "Mine Functions"
+msgstr ""
+
+#: ../../topics/mine/index.rst:23
+# 8d874c414f5842178c7c609a23574ebe
+msgid "To enable the Salt Mine the `mine_functions` option needs to be applied to a minion. This option can be applied via the minion's configuration file, or the minion's pillar. The `mine_functions` option dictates what functions are being executed and allows for arguments to be passed in:"
+msgstr ""
+
+#: ../../topics/mine/index.rst:35
+# 628a300ae1f14ebf8f6281e1d56c86be
+msgid "Mine Interval"
+msgstr ""
+
+#: ../../topics/mine/index.rst:37
+# a585fbffbb0f432a97f1c3bcc2828ceb
+msgid "The Salt Mine functions are executed when the minion starts and at a given interval by the scheduler. The default interval is every 60 minutes and can be adjusted for the minion via the `mine_interval` option:"
+msgstr ""
+

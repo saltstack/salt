@@ -1,0 +1,129 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../ref/states/all/salt.states.gem.rst:6
+# 5aacd9d1606a4089ad5963d05ecd486f
+msgid "salt.states.gem"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem:2
+# 1747c5d2a7be406bbb75bd2243b6e482
+msgid "Installation of Ruby modules packaged as gems."
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem:4
+# f5f8caeb6fd24854a4dc515c45bcddb4
+msgid "A state module to manage rubygems. Gems can be set up to be installed or removed. This module will use RVM if it is installed. In that case, you can specify what ruby version and gemset to target."
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:1
+# 3462451f622d43faab2d986c3549cebc
+msgid "Make sure that a gem is installed."
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:4
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:4
+# 855c2c119a0c4907ac9a14009b11e619
+# 32cb2c14bfad4e349c9f85725888cce9
+msgid "name"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:4
+# 0f833ed8338f4c7987624929f2436727
+msgid "The name of the gem to install"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:7
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:7
+# eabef728341242f0aa569820df20bd1c
+# b1120f0349424f95854941911645998b
+msgid "ruby: None"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:7
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:7
+# e43e1c5979f94e7fbe480d4b72274fee
+# a8706ba541c34ef49970a5bb085cba0d
+msgid "For RVM installations: the ruby version and gemset to target."
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:12
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:12
+# 366e0031aea3458da36e9acf69a8c2f0
+# 40e44029344b40f4915a2d0e18885a6d
+msgid "runas: None"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:10
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:15
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:10
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:15
+# 8562e6cb372a4224a2e2aaa959a9fcc1
+# 8a7b6d7b70a44346a2b2f2916f0ca059
+# 4d52d79b7acf4d368b09d73d28c5a0b5
+# bb130a1b71424934bb6604390733b8cb
+msgid "The user under which to run the ``gem`` command"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:17
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:16
+# 9c1964a714d047f382eb64f00a67b497
+# 828c752e3f414a4cad811a2c7103b1ea
+msgid "user: None"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:21
+# 7baaaca8546345219fa09e71b2b7fec0
+msgid "version : None"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:20
+# cfb7ff0663d44d79832751b61e8a35cc
+msgid "Specify the version to install for the gem. Doesn't play nice with multiple gems at once"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:24
+# 718d8a3277ea4454a5f97f74a4131fd3
+msgid "rdoc : False"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:24
+# c9158bb19d604c85922613536bbf9acf
+msgid "Generate RDoc documentation for the gem(s)."
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:26
+# e75a049748f14c38a9fa665f8efe81a7
+msgid "ri : False"
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.installed:27
+# 0240c1f79ed2407b884f539f96dde4de
+msgid "Generate RI documentation for the gem(s)."
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:1
+# 2765c028854445e68dd045855197c3e7
+msgid "Make sure that a gem is not installed."
+msgstr ""
+
+#: ../../../salt/states/gem.py:docstring of salt.states.gem.removed:4
+# a35b7625ad124fd7b37b703e71fa664b
+msgid "The name of the gem to uninstall"
+msgstr ""
+

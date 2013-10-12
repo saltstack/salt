@@ -1,0 +1,193 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2013 SaltStack, Inc.
+# This file is distributed under the same license as the Salt package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Salt 0.17.0-848-g77b77a3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-10-12 23:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../topics/troubleshooting/index.rst:6
+# 942ec283f55b4079862f57503f572273
+msgid "Troubleshooting"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:8
+# f8f7b1751fa143a2b2db5ba510112eb1
+msgid "The intent of the troubleshooting section is to introduce solutions to a number of common issues encountered by users and the tools that are available to aid in developing States and Salt code."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:13
+# 5726c229c1db4f32923e9740627f11e0
+msgid "Running in the Foreground"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:15
+# f1ca64c90b2f44aea930488e4b570ff7
+msgid "A great deal of information is available via the debug logging system, if you are having issues with minions connecting or not starting run the minion and/or master in the foreground:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:24
+# 1dd73380c7bc493f9898cbe4881ab30d
+msgid "Anyone wanting to run Salt daemons via a process supervisor such as `monit`_, `runit`_, or `supervisord`_, should omit the ``-d`` argument to the daemons and run them in the foreground."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:33
+# ea4476d4cda841fd9cc0e13e72b34db5
+msgid "What Ports do the Master and Minion Need Open?"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:35
+# b71b1e72b8274506b86134e2b08de9e9
+msgid "No ports need to be opened up on each minion. For the master, TCP ports 4505 and 4506 need to be open. If you've put both your Salt master and minion in debug mode and don't see an acknowledgment that your minion has connected, it could very well be a firewall."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:40
+# 7f870b4282f64d9a8db5b3968c0e9313
+msgid "You can check port connectivity from the minion with the nc command:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:47
+# a30a225b779843e78c88e58effabfb1a
+msgid "There is also a :doc:`firewall configuration</topics/tutorials/firewall>` document that might help as well."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:50
+# 48ba04262b6a4ef191132c402e03c659
+msgid "If you've enabled the right TCP ports on your operating system or Linux distribution's firewall and still aren't seeing connections, check that no additional access control system such as `SELinux`_ or `AppArmor`_ is blocking Salt."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:62
+# 92e35a4a9b25444092e9a9ea0db8f827
+msgid "Using salt-call"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:64
+# d1999e5a293448f39300264bd65a7273
+msgid "The ``salt-call`` command was originally developed for aiding in the development of new Salt modules. Since then, many applications have been developed for running any Salt module locally on a minion. These range from the original intent of salt-call, development assistance, to gathering more verbose output from calls like :mod:`state.highstate <salt.modules.state.highstate>`."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:70
+# b792fb1957a7477abfd3b8fa0bbeb9b4
+msgid "When creating your state tree, it is generally recommended to invoke :mod:`state.highstate <salt.modules.state.highstate>` with ``salt-call``. This displays far more information about the highstate execution than calling it remotely. For even more verbosity, increase the loglevel with the same argument as ``salt-minion``:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:80
+# 2d3eb963412c4ab6a602f3e001cff937
+msgid "The main difference between using ``salt`` and using ``salt-call`` is that ``salt-call`` is run from the minion, and it only runs the selected function on that minion. By contrast, ``salt`` is run from the master, and requires you to specify the minions on which to run the command using salt's :doc:`targeting system </topics/targeting/index>`."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:87
+# 07a91e318dd2401a84cd35f61d47047a
+msgid "Too many open files"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:89
+# 57507098772749a0a533adb4e854edf6
+msgid "The salt-master needs at least 2 sockets per host that connects to it, one for the Publisher and one for response port. Thus, large installations may, upon scaling up the number of minions accessing a given master, encounter:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:99
+# 880bf977347845eb88026ace7732db33
+msgid "The solution to this would be to check the number of files allowed to be opened by the user running salt-master (root by default):"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:107
+# 044c7537cb0b4d79b567cea2bd5233da
+msgid "And modify that value to be at least equal to the number of minions x 2. This setting can be changed in limits.conf as the nofile value(s), and activated upon new a login of the specified user."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:111
+# ceb0f32da30243449149226f162c06f9
+msgid "So, an environment with 1800 minions, would need 1800 x 2 = 3600 as a minimum."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:115
+# b436aa4c9e9c46adb31fc43442bd7a0e
+msgid "Salt Master Stops Responding"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:117
+# 81457d060f754d29930e8842e83e4a94
+msgid "There are known bugs with ZeroMQ versions less than 2.1.11 which can cause the Salt master to not respond properly. If you're running a ZeroMQ version greater than or equal to 2.1.9, you can work around the bug by setting the sysctls ``net.core.rmem_max`` and ``net.core.wmem_max`` to 16777216. Next, set the third field in ``net.ipv4.tcp_rmem`` and ``net.ipv4.tcp_wmem`` to at least 16777216."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:123
+# b6019e72c33b48938e8fb5e359998a71
+msgid "You can do it manually with something like:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:132
+# 1560a580f68f4a32838e436ff087a70b
+msgid "Or with the following Salt state:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:158
+# d4f22dae894747c2878261c9c2dc3cbc
+msgid "Salt and SELinux"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:160
+# 75445596933347ab9ecd042bef831f0b
+msgid "Currently there are no SELinux policies for Salt. For the most part Salt runs without issue when SELinux is running in Enforcing mode. This is because when the minion executes as a daemon the type context is changed to ``initrc_t``. The problem with SELinux arises when using salt-call or running the minion in the foreground, since the type context stays ``unconfined_t``."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:166
+# 16719b6ac64747cab447a1a7791d04e7
+msgid "This problem is generally manifest in the rpm install scripts when using the pkg module. Until a full SELinux Policy is available for Salt the solution to this issue is to set the execution context of ``salt-call`` and ``salt-minion`` to rpm_exec_t:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:181
+# 0109c29f3ab2489a9ad9825d8faede70
+msgid "This works well, because the ``rpm_exec_t`` context has very broad control over other types."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:185
+# ca3656df39d7409291b3dfc75af6acf0
+msgid "Red Hat Enterprise Linux 5"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:187
+# 94bfe0957cf2409bb9325942f6df8616
+msgid "Salt requires Python 2.6 or 2.7. Red Hat Enterprise Linux 5 and its variants come with Python 2.4 installed by default. When installing on RHEL 5 from the `EPEL repository`_ this is handled for you. But, if you run Salt from git, be advised that its dependencies need to be installed from EPEL and that Salt needs to be run with the ``python26`` executable."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:196
+# 59dd8b5408344739b14695350e66faed
+msgid "Common YAML Gotchas"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:198
+# a75b34b0cdb5451689eb2a31732703d2
+msgid "An extensive list of :doc:`YAML idiosyncrasies </topics/troubleshooting/yaml_idiosyncrasies>` has been compiled."
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:202
+# 6efc9776b92b4455a986699b41036a7b
+msgid "Live Python Debug Output"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:204
+# 1e5a817cd22940f692cd8da47cd2c3db
+msgid "If the minion or master seems to be unresponsive, a SIGUSR1 can be passed to the processes to display where in the code they are running. If encountering a situation like this, this debug information can be invaluable. First make sure the master of minion are running in the foreground:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:214
+# 3629696b43364da6b57b474ed38bc60d
+msgid "The pass the signal to the master or minion when it seems to be unresponsive:"
+msgstr ""
+
+#: ../../topics/troubleshooting/index.rst:221
+# bd304ed4003441d5959d6feed7df792d
+msgid "When filing an issue or sending questions to the mailing list for a problem with an unresponsive daemon this information can be invaluable."
+msgstr ""
+
