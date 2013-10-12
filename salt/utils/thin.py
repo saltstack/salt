@@ -19,6 +19,7 @@ except ImportError:
 
 # Import salt libs
 import salt
+import salt.utils
 
 SALTCALL = '''
 from salt.scripts import salt_call
@@ -69,3 +70,11 @@ def gen_thin(cachedir):
     os.chdir(start_dir)
     tfp.close()
     return thintar
+
+
+def thin_sum(cachedir, form='sha1'):
+    '''
+    Return the checksum of the current thin tarball
+    '''
+    thintar = gen_thin(cachedir)
+    return salt.utils.get_hash(thintar, form)
