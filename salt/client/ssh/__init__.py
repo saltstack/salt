@@ -405,7 +405,7 @@ class Single(object):
                 'timeout': timeout,
                 'sudo': sudo,
                 'tty': tty}
-        self.shell = salt.client.ssh.shell.Shell(**args)
+        self.shell = salt.client.ssh.shell.Shell(opts, **args)
 
         self.target = kwargs
         self.target.update(args)
