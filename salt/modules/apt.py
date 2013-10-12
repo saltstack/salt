@@ -857,7 +857,7 @@ def get_repo(repo, **kwargs):
                 if (sub['type'] == repo_type and
                     # strip trailing '/' from repo_uri, it's valid in definition
                     # but not valid when compared to persisted source
-                    sub['uri'] == repo_uri.rstrip('/') and
+                    sub['uri'].rstrip('/') == repo_uri.rstrip('/') and
                         sub['dist'] == repo_dist):
                     if not repo_comps:
                         return sub
