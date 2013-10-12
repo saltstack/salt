@@ -79,7 +79,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
             exit 1
          fi
          echo "{1}"
-         {{0}} install -m 1777 -d /tmp/.salt
+         install -m 1700 -d /tmp/.salt
          echo "deploy"
          exit 1
       fi
