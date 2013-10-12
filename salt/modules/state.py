@@ -624,7 +624,7 @@ def clear_cache():
     return ret
 
 
-def pkg(pkg_path, test=False, **kwargs):
+def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
     '''
     Execute a packaged state run, the packaged state run will exist in a
     tarball available locally. This packaged state
@@ -638,6 +638,8 @@ def pkg(pkg_path, test=False, **kwargs):
     '''
     # TODO - Add ability to download from salt master or other source
     if not os.path.isfile(pkg_path):
+        return {}
+    if not salt.utils.get_hash(pkg_path, hash_type) == pkg_sum:
         return {}
     root = tempfile.mkdtemp()
     s_pkg = tarfile.open(pkg_path, 'r:gz')
