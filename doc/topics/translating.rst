@@ -2,20 +2,18 @@ Translating Documentation
 =========================
 
 If you wish to help translate the Salt documentation to your language, please 
-head over to the `Salt project on WebTranslateIt`_, select the language for 
-which you wish to contribute, the file you which to translate, and have fun!
+head over to the `Transifex` website and `signup`_ for an account.
 
-If you don't find your language there, please `create a ticket`_ mentioning the 
-language for which you wish to help out translating.
+Once registered, head over to the `Salt Translation Project`_, and either click 
+on **Request Language** if you can't find yours, or, select the language for 
+which you wish to contribute and click **Join Team**.
 
-You can read more about the translation process on `WebTranslateIt 
-documentation`_.
-
-.. image:: https://webtranslateit.com/api/projects/1DKKWq_xmVagv3xoD5CCcQ/charts.png
-    :align: center
-    :alt: Translation Statistics
+`Transifex`_ provides some useful reading resources on their `support domain`_, 
+namely, some useful articles `directed to translators`_.
 
 
-.. _`WebTranslateIt documentation`: https://webtranslateit.com/en/docs
-.. _`Salt project on WebTranslateIt`: https://webtranslateit.com/en/projects/7435-Salt
-.. _`create a ticket`: http://goo.gl/8B7nxy
+.. _`signup`: https://www.transifex.com/signup/
+.. _`Transifex`: https://www.transifex.com
+.. _`Salt Translation Project`: https://www.transifex.com/projects/p/salt/
+.. _`support domain`: http://support.transifex.com/
+.. _`directed to translators`: http://support.transifex.com/customer/portal/topics/414107-translators/articles
