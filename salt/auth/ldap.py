@@ -50,12 +50,12 @@ def _config(key, mandatory=True):
     return value
 
 
-def _render_template(filter_, username):
+def _render_template(param, username):
     '''
-    Render filter_ template, substituting username where found.
+    Render config template, substituting username where found.
     '''
     env = Environment()
-    template = env.from_string(filter_)
+    template = env.from_string(param)
     variables = {'username': username}
     return template.render(variables)
 
@@ -106,14 +106,13 @@ def auth(username, password):
     Authenticate via an LDAP bind
     '''
     # Get config params; create connection dictionary
-    filter_ = _render_template(_config('filter'), username)
     basedn = _config('basedn')
     scope = _config('scope')
     connargs = {}
     # config params (auth.ldap.*)
     params = {
             'mandatory': ['server', 'port', 'tls', 'no_verify', 'anonymous'],
-            'additional': ['binddn', 'bindpw'],
+            'additional': ['binddn', 'bindpw', 'filter'],
     }
 
     paramvalues = {}
@@ -135,6 +134,9 @@ def auth(username, password):
         # so make sure to render it first before using it
         paramvalues['binddn'] = _render_template(paramvalues['binddn'], username)
 
+    if paramvalues['filter']:
+        paramvalues['filter'] = _render_template(paramvalues['filter'], username)
+
     # Only add binddn/bindpw to the connargs when they're set, as they're not
     # mandatory for initializing the LDAP object, but if they're provided
     # initially, a bind attempt will be done during the initialization to
@@ -154,10 +156,10 @@ def auth(username, password):
             log.debug(
                 'Running LDAP user dn search with filter:{0}, dn:{1}, '
                 'scope:{2}'.format(
-                    filter_, basedn, scope
+                    paramvalues['filter'], basedn, scope
                 )
             )
-            result = _ldap.search_s(basedn, int(scope), filter_)
+            result = _ldap.search_s(basedn, int(scope), paramvalues['filter'])
             if len(result) < 1:
                 log.warn('Unable to find user {0}'.format(username))
                 return False
