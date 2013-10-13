@@ -131,7 +131,7 @@ class PrintableDict(OrderedDict):
             output.append('{0!r}: {1!r}'.format(str(key), str(value)))
         return '{' + ', '.join(output) + '}'
 
-    def __repr__(self):
+    def __repr__(self):  # pylint: disable=W0221
         output = []
         for key, value in self.items():
             output.append('{0!r}: {1!r}'.format(key, value))

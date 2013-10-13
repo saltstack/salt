@@ -9,6 +9,8 @@ import logging
 # Import salt libs
 import salt.utils
 
+from salt.exceptions import CommandExecutionError
+
 log = logging.getLogger(__name__)
 
 
@@ -21,6 +23,22 @@ def __virtual__():
     return 'disk'
 
 
+def _clean_flags(args, caller):
+    '''
+    Sanitize flags passed into df
+    '''
+    flags = ''
+    allowed = ('a', 'B', 'h', 'H', 'i', 'k', 'l', 'P', 't', 'T', 'x', 'v')
+    for flag in args:
+        if flag in allowed:
+            flags += flag
+        else:
+            raise CommandExecutionError(
+                'Invalid flag passed to {0}'.format(caller)
+            )
+    return flags
+
+
 def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
@@ -31,14 +49,15 @@ def usage(args=None):
 
         salt '*' disk.usage
     '''
+    flags = _clean_flags(args, 'disk.usage')
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD':
         cmd = 'df -kP'
     else:
         cmd = 'df'
-    if args:
-        cmd = cmd + ' -' + args
+    if flags:
+        cmd += ' -{0}'.format(flags)
     ret = {}
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
@@ -86,9 +105,10 @@ def inodeusage(args=None):
 
         salt '*' disk.inodeusage
     '''
+    flags = _clean_flags(args, 'disk.inodeusage')
     cmd = 'df -i'
-    if args is not None:
-        cmd = cmd + ' -' + args
+    if flags:
+        cmd += ' -{0}'.format(flags)
     ret = {}
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:

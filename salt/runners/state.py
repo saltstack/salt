@@ -17,8 +17,7 @@ def over(env='base', os_fn=None):
 
     .. code-block:: bash
 
-        salt-run state.over
-        salt-run state.over env=dev /root/overstate.sls
+        salt-run state.over base /path/to/myoverstate.sls
     '''
     stage_num = 0
     overstate = salt.overstate.OverState(__opts__, env, os_fn)

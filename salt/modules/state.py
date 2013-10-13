@@ -267,6 +267,9 @@ def highstate(test=None, queue=False, **kwargs):
     # but I'm guessing it likely should not be.
     cumask = os.umask(191)
     try:
+        if salt.utils.is_windows():
+            # Make sure cache file isn't read-only
+            __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
@@ -351,6 +354,9 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     cumask = os.umask(191)
     try:
+        if salt.utils.is_windows():
+            # Make sure cache file isn't read-only
+            __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
         with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
@@ -618,7 +624,7 @@ def clear_cache():
     return ret
 
 
-def pkg(pkg_path, test=False, **kwargs):
+def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
     '''
     Execute a packaged state run, the packaged state run will exist in a
     tarball available locally. This packaged state
@@ -632,6 +638,8 @@ def pkg(pkg_path, test=False, **kwargs):
     '''
     # TODO - Add ability to download from salt master or other source
     if not os.path.isfile(pkg_path):
+        return {}
+    if not salt.utils.get_hash(pkg_path, hash_type) == pkg_sum:
         return {}
     root = tempfile.mkdtemp()
     s_pkg = tarfile.open(pkg_path, 'r:gz')

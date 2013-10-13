@@ -285,11 +285,18 @@ def check_user(user):
     if user == getpass.getuser():
         return True
     import pwd  # after confirming not running Windows
+    import grp
     try:
         pwuser = pwd.getpwnam(user)
         try:
             os.setgid(pwuser.pw_gid)
             os.setuid(pwuser.pw_uid)
+            if hasattr(os, 'initgroups'):
+                os.initgroups(user, pwuser.pw_gid)
+            else:
+                os.setgroups([e.gr_gid for e in grp.getgrall()
+                              if user in e.gr_mem] + [pwuser.gid]) 
+
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
             msg = msg.format(user)
@@ -309,7 +316,7 @@ def check_user(user):
 
 
 def list_path_traversal(path):
-    """
+    '''
     Returns a full list of directories leading up to, and including, a path.
 
     So list_path_traversal('/path/to/salt') would return:
@@ -319,7 +326,7 @@ def list_path_traversal(path):
     This routine has been tested on Windows systems as well.
     list_path_traversal('c:\\path\\to\\salt') on Windows would return:
         ['c:\\', 'c:\\path', 'c:\\path\\to', 'c:\\path\\to\\salt']
-    """
+    '''
     out = [path]
     (head, tail) = os.path.split(path)
     if tail == '':

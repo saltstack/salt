@@ -176,6 +176,43 @@ def checkout(cwd,
     return _run_svn('checkout', cwd, user, username, password, opts)
 
 
+def switch(cwd, remote, target=None, user=None, username=None,
+           password=None, *opts):
+    '''
+    .. versionadded:: Hydrogen
+
+    Switch a working copy of a remote Subversion repository
+    directory
+
+    cwd
+        The path to the Subversion repository
+
+    remote : None
+        URL to switch
+
+    target : None
+        The name to give the file or directory working copy
+        Default: svn uses the remote basename
+
+    user : None
+        Run svn as a user other than what the minion runs as
+
+    username : None
+        Connect to the Subversion server as another user
+
+    password : None
+        Connect to the Subversion server with this password
+
+    CLI Example::
+
+        salt '*' svn.switch /path/to/repo svn://remote/repo
+    '''
+    opts += (remote,)
+    if target:
+        opts += (target,)
+    return _run_svn('switch', cwd, user, username, password, opts)
+
+
 def update(cwd, targets=None, user=None, username=None, password=None, *opts):
     '''
     Update the current directory, files, or directories from

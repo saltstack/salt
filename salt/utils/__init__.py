@@ -12,6 +12,7 @@ import fnmatch
 import hashlib
 import imp
 import inspect
+import json
 import logging
 import os
 import random
@@ -1699,6 +1700,25 @@ def decode_dict(data):
     return rv
 
 
+def find_json(raw):
+    '''
+    Pass in a ras string and load the json when is starts. This allows for a
+    string to start with garbage and end with json but be cleanly loaded
+    '''
+    ret = {}
+    for ind in range(len(raw)):
+        working = '\n'.join(raw.splitlines()[ind:])
+        try:
+            ret = json.loads(working, object_hook=decode_dict)
+        except ValueError:
+            continue
+        if ret:
+            return ret
+    if not ret:
+        # Not json, rais an error
+        raise ValueError
+
+
 def is_bin_file(path):
     '''
     Detects if the file is a binary, returns bool. Returns True if the file is
@@ -1733,3 +1753,17 @@ def is_bin_str(data):
     if len(text) / len(data) > 0.30:
         return True
     return False
+
+
+def valid_mac(mac):
+    '''
+    Validates a mac address
+    '''
+    valid = re.compile(r'''
+                      (^([0-9A-F]{2}[-]){5}([0-9A-F]{2})$
+                      |^([0-9A-F]{2}[:]){5}([0-9A-F]{2})$)
+                      ''',
+                      re.VERBOSE|re.IGNORECASE)
+    if valid.match(mac) is None:
+            return False
+    return True

@@ -63,7 +63,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
       then
          if [ $(cat /tmp/.salt/version) != {0} ]
          then
-            {{0}} rm -rf /tmp/.salt && {{0}} install -m 1777 -d /tmp/.salt
+            {{0}} rm -rf /tmp/.salt && install -m 1700 -d /tmp/.salt
             if [ $? -ne 0 ]; then
                 exit 1
             fi
@@ -78,14 +78,19 @@ SSH_SHIM = '''/bin/sh << 'EOF'
             echo "Python too old" >&2
             exit 1
          fi
-         echo "{1}"
-         {{0}} install -m 1777 -d /tmp/.salt
-         echo "deploy"
-         exit 1
+         if [ -f /tmp/.salt/salt-thin.tgz ]
+         then
+             [ $({{2}}sum /tmp/.salt/salt-thin.tgz | cut -f1 -d' ') == {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
+         else
+             install -m 1700 -d /tmp/.salt
+             echo "{1}"
+             echo "deploy"
+             exit 1
+         fi
       fi
       echo "{1}"
       {{0}} $PYTHON $SALT --local --out json -l quiet {{1}}
-EOF\n'''.format(salt.__version__, RSTR)
+EOF'''.format(salt.__version__, RSTR)
 
 log = logging.getLogger(__name__)
 
@@ -197,65 +202,13 @@ class SSH(object):
                     **target)
             stdout, stderr = single.cmd_block()
             try:
-                data = json.loads(stdout)
+                data = salt.utils.find_json(stdout)
                 return {host: data.get('local', data)}
             except Exception:
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-
-    def process(self):
-        '''
-        Execute the desired routine on the specified systems
-        '''
-        running = {}
-        target_iter = self.targets.__iter__()
-        done = set()
-        while True:
-            if len(running) < self.opts.get('ssh_max_procs', 25):
-                try:
-                    host = next(target_iter)
-                except StopIteration:
-                    pass
-                for default in self.defaults:
-                    if not default in self.targets[host]:
-                        self.targets[host][default] = self.defaults[default]
-
-                if host not in running:
-                    single = Single(
-                            self.opts,
-                            self.opts['arg_str'],
-                            host,
-                            **self.targets[host])
-                    running[host] = {'iter': single.cmd(),
-                                     'single': single}
-            for host in running:
-                stdout, stderr = next(running[host]['iter'])
-                if stdout is None and stderr is None:
-                    continue
-                if stdout.startswith('deploy'):
-                    running[host]['single'].deploy()
-                    running[host]['iter'] = single.cmd()
-                else:
-                    # This job is done, yield
-                    id_ = running[host]['single'].id
-                    try:
-                        if not stdout and stderr:
-                            yield {id_: stderr}
-                        else:
-                            data = json.loads(stdout)
-                            if len(data) < 2 and 'local' in data:
-                                yield {id_: data['local']}
-                            else:
-                                yield {id_: data}
-                    except Exception:
-                        yield {id_: 'Bad Return'}
-                    done.add(host)
-            for host in done:
-                if host in running:
-                    running.pop(host)
-            if len(done) >= len(self.targets):
-                break
+        return ret
 
     def handle_routine(self, que, opts, host, target):
         '''
@@ -280,7 +233,7 @@ class SSH(object):
                 else:
                     ret['ret'] = stderr
             else:
-                data = json.loads(stdout)
+                data = salt.utils.find_json(stdout)
                 if len(data) < 2 and 'local' in data:
                     ret['ret'] = data['local']
                 else:
@@ -399,7 +352,7 @@ class Single(object):
                 'timeout': timeout,
                 'sudo': sudo,
                 'tty': tty}
-        self.shell = salt.client.ssh.shell.Shell(**args)
+        self.shell = salt.client.ssh.shell.Shell(opts, **args)
 
         self.target = kwargs
         self.target.update(args)
@@ -423,9 +376,6 @@ class Single(object):
         self.shell.send(
                 thin,
                 '/tmp/.salt/salt-thin.tgz')
-        self.shell.exec_cmd(
-                'tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt'
-                )
         return True
 
     def run(self, deploy_attempted=False):
@@ -533,7 +483,14 @@ class Single(object):
                     self.sls_seed, self.arg)
             self.sls_seed(*args, **kwargs)
         sudo = 'sudo' if self.target['sudo'] else ''
-        cmd = SSH_SHIM.format(sudo, self.arg_str)
+        thin_sum = salt.utils.thin.thin_sum(
+                self.opts['cachedir'],
+                self.opts['hash_type'])
+        cmd = SSH_SHIM.format(
+                sudo,
+                self.arg_str,
+                self.opts['hash_type'],
+                thin_sum)
         for stdout, stderr in self.shell.exec_nb_cmd(cmd):
             yield stdout, stderr
 
@@ -546,7 +503,14 @@ class Single(object):
         # 3. deploy salt-thin
         # 4. execute command
         sudo = 'sudo' if self.target['sudo'] else ''
-        cmd = SSH_SHIM.format(sudo, self.arg_str)
+        thin_sum = salt.utils.thin.thin_sum(
+                self.opts['cachedir'],
+                self.opts['hash_type'])
+        cmd = SSH_SHIM.format(
+                sudo,
+                self.arg_str,
+                self.opts['hash_type'],
+                thin_sum)
         log.debug("Performing shimmed command as follows:\n{0}".format(cmd))
         stdout, stderr = self.shell.exec_cmd(cmd)
 
@@ -559,12 +523,19 @@ class Single(object):
 
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
+        if stdout.startswith('deploy'):
+            self.deploy()
+            stdout, stderr = self.shell.exec_cmd(cmd)
+            if RSTR in stdout:
+                stdout = stdout.split(RSTR)[1].strip()
 
         return stdout, stderr
 
     def categorize_shim_errors(self, stdout, stderr):
         perm_error_fmt = "Permissions problem, target user may need "\
                          "to be root or use sudo:\n {0}"
+        if stderr.startswith('Permission denied'):
+            return None
         errors = [
             ("sudo: no tty present and no askpass program specified",
                 "sudo expected a password, NOPASSWD required"),

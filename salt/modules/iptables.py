@@ -114,8 +114,8 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         else:
             flag = '--'
 
-        return 'iptables {0}{1} {2} {3} {4}'.format(flag, command, chain,
-            position, rule)
+        return 'iptables -t {0} {1}{2} {3} {4} {5}'.format(table,
+            flag, command, chain, position, rule)
 
     return rule
 

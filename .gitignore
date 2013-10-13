@@ -43,3 +43,8 @@ tags
 # ignore Vagrant file
 Vagrantfile
 .vagrant
+
+# Compiled translation files should not be VCS'ed
+# locale/zh_CN/LC_MESSAGES/topics/virt/nic.mo
+*.mo
+.doctrees

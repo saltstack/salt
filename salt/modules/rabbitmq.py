@@ -504,6 +504,12 @@ def policy_exists(vhost, name, runas=None):
 def enable_plugin(name, runas=None):
     '''
     Enable a RabbitMQ plugin via the rabbitmq-plugin command.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.enable_plugin foo
     '''
 
     ret = __salt__['cmd.run'](
@@ -515,6 +521,12 @@ def enable_plugin(name, runas=None):
 def disable_plugin(name, runas=None):
     '''
     Disable a RabbitMQ plugin via the rabbitmq-plugin command.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.disable_plugin foo
     '''
 
     ret = __salt__['cmd.run'](

@@ -26,7 +26,7 @@ An example of an sls module with templating markup may look like this:
 
 .. code-block:: jinja
 
-    {% for usr in 'moe','larry','curly' %}
+    {% for usr in ['moe','larry','curly'] %}
     {{ usr }}:
       user.present
     {% endfor %}

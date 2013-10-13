@@ -129,6 +129,20 @@ def installed(name,
 
     .. versionchanged:: 0.17.0
         ``use_wheel`` option added.
+
+    .. admonition:: Attention
+
+        As of Salt 0.17.0 the pip state **needs** an importable pip module.
+        This usually means having the system's pip package installed or running
+        Salt from an active `virtualenv`_.
+
+        The reason for this requirement is because ``pip`` already does a
+        pretty good job parsing it's own requirements. It makes no sense for
+        Salt to do ``pip`` requirements parsing and validation before passing
+        them to the ``pip`` library. It's functionality duplication and it's
+        more error prone.
+
+    .. _`virtualenv`: http://www.virtualenv.org
     '''
     if pip_bin and not bin_env:
         bin_env = pip_bin
