@@ -2,7 +2,7 @@ Translating Documentation
 =========================
 
 If you wish to help translate the Salt documentation to your language, please 
-head over to the `Transifex` website and `signup`_ for an account.
+head over to the `Transifex`_ website and `signup`_ for an account.
 
 Once registered, head over to the `Salt Translation Project`_, and either click 
 on **Request Language** if you can't find yours, or, select the language for 
