@@ -14,7 +14,7 @@ The following packages are required packages for this module:
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -193,7 +193,7 @@ def block(bdaddr):
 
         salt '*' bluetooth.block DE:AD:BE:EF:CA:FE
     '''
-    if not salt.utils.valid_mac(bdaddr):
+    if not salt.utils.validate.net.mac(bdaddr):
         raise CommandExecutionError(
             'Invalid BD address passed to bluetooth.block'
         )
@@ -212,7 +212,7 @@ def unblock(bdaddr):
 
         salt '*' bluetooth.unblock DE:AD:BE:EF:CA:FE
     '''
-    if not salt.utils.valid_mac(bdaddr):
+    if not salt.utils.validate.net.mac(bdaddr):
         raise CommandExecutionError(
             'Invalid BD address passed to bluetooth.unblock'
         )
@@ -237,7 +237,7 @@ def pair(address, key):
     TODO: This function is currently broken, as the bluez-simple-agent program
     no longer ships with BlueZ >= 5.0. It needs to be refactored.
     '''
-    if not salt.utils.valid_mac(address):
+    if not salt.utils.validate.net.mac(address):
         raise CommandExecutionError(
             'Invalid BD address passed to bluetooth.pair'
         )
@@ -272,7 +272,7 @@ def unpair(address):
     TODO: This function is currently broken, as the bluez-simple-agent program
     no longer ships with BlueZ >= 5.0. It needs to be refactored.
     '''
-    if not salt.utils.valid_mac(address):
+    if not salt.utils.validate.net.mac(address):
         raise CommandExecutionError(
             'Invalid BD address passed to bluetooth.unpair'
         )
