@@ -74,14 +74,8 @@ translations:
 		echo "The locale directory for $(SPHINXLANG) does not exist"; \
 		exit 1; \
 	else \
-		echo "Extracting translatable strings"; \
-		make gettext; \
-		\
-		echo "Updating existing translation catalog for '$(SPHINXLANG)'"; \
-		sphinx-intl update -p _build/locale -l $(SPHINXLANG); \
-		\
 		echo "Compiling exising message catalog for '$(SPHINXLANG)'"; \
-		sphinx-intl build -l $(SPHINXLANG); \
+		.scripts/compile-translation-catalogs; \
 	fi
 
 html: translations
@@ -181,9 +175,9 @@ info: translations
 	@echo "makeinfo finished; the Info files are in $(BUILDDIR)/texinfo."
 
 gettext:
-	$(SPHINXBUILD) -b gettext $(I18NSPHINXOPTS) locale/pot
+	$(SPHINXBUILD) -b gettext $(I18NSPHINXOPTS) $(BUILDDIR)/locale
 	@echo
-	@echo "Build finished. The message catalogs are in locale/pot."
+	@echo "Build finished. The message catalogs are in $(BUILDDIR)/locale"
 
 changes: translations
 	$(SPHINXBUILD) -b changes $(ALLSPHINXOPTS) $(BUILDDIR)/changes
