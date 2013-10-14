@@ -19,7 +19,7 @@ domain`__, namely, some useful articles `directed to translators`__.
 
 
 Building A Localized Version of the Documentation
-=================================================
+-------------------------------------------------
 
 While you're working on your translation on `Transifex`_, you might want to 
 have a look at how it's rendering.
@@ -32,10 +32,12 @@ checkout:
 
 .. code-block:: bash
 
-    .scripts/download-translation-catalog pt_PT
+
+    make download-translations SPHINXLANG=pt_PT
 
 
-To download ``pt_PT``, Portuguese(Portugal) and ``nl``, Dutch:
+To download ``pt_PT``, Portuguese(Portugal) and ``nl``, Dutch, you can use the 
+helper script directly:
 
 .. code-block:: bash
 
@@ -51,8 +53,8 @@ Following the ``pt_PT`` example above:
     make html SPHINXLANG=pt_PT
 
 
-Open your browser, point it to the local documentation and check the localized 
-documentation you've just build.
+Open your browser, point it to the local documentation path and check the 
+localized output you've just build.
 
 
 .. _`Transifex`: https://www.transifex.com
