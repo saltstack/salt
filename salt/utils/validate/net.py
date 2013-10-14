@@ -14,6 +14,4 @@ def mac(mac):
                       |^([0-9A-F]{1,2}[:]){5}([0-9A-F]{1,2})$)
                       ''',
                       re.VERBOSE|re.IGNORECASE)
-    if valid.match(mac) is None:
-            return False
-    return True
+    return valid.match(mac) is not None
