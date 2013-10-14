@@ -1702,7 +1702,7 @@ def decode_dict(data):
 
 def find_json(raw):
     '''
-    Pass in a ras string and load the json when is starts. This allows for a
+    Pass in a raw string and load the json when is starts. This allows for a
     string to start with garbage and end with json but be cleanly loaded
     '''
     ret = {}
@@ -1715,7 +1715,7 @@ def find_json(raw):
         if ret:
             return ret
     if not ret:
-        # Not json, rais an error
+        # Not json, raise an error
         raise ValueError
 
 
