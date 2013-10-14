@@ -30,6 +30,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.templates
+import salt.utils.validate.net
 from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -594,7 +595,12 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     def _assign_mac(attributes):
         dmac = '{0}_mac'.format(attributes['name'])
         if dmac in kwargs:
-            attributes['mac'] = kwargs[dmac]
+            dmac = kwargs[dmac]
+            if salt.utils.validate.net.mac(dmac):
+                attributes['mac'] = dmac
+            else:
+                msg = 'Malformed MAC address: {0}'.format(dmac)
+                raise CommandExecutionError(msg)
         else:
             attributes['mac'] = salt.utils.gen_mac()
 
