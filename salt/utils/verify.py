@@ -295,7 +295,7 @@ def check_user(user):
                 os.initgroups(user, pwuser.pw_gid)
             else:
                 os.setgroups([e.gr_gid for e in grp.getgrall()
-                              if user in e.gr_mem] + [pwuser.gid]) 
+                              if user in e.gr_mem] + [pwuser.gid])
 
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
