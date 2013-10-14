@@ -27,6 +27,7 @@ def __virtual__():
 
 
 def installed(name,          # pylint: disable=C0103
+              cwd=None,
               ruby=None,
               runas=None,
               user=None,
@@ -38,6 +39,9 @@ def installed(name,          # pylint: disable=C0103
 
     name
         The name of the gem to install
+
+    cwd: None
+        The current working directory to execute ``gem`` command in.
 
     ruby: None
         For RVM installations: the ruby version and gemset to target.
@@ -102,6 +106,7 @@ def installed(name,          # pylint: disable=C0103
         ret['comment'] = 'The gem {0} would have been installed'.format(name)
         return ret
     if __salt__['gem.install'](name,
+                               cws=cwd,
                                ruby=ruby,
                                runas=user,
                                version=version,

@@ -11,13 +11,14 @@ __func_alias__ = {
 }
 
 
-def _gem(command, ruby=None, runas=None):
+def _gem(command, cwd=None, ruby=None, runas=None):
     cmdline = 'gem {command}'.format(command=command)
     if __salt__['rvm.is_installed']():
         return __salt__['rvm.do'](ruby, cmdline, runas=runas)
 
     ret = __salt__['cmd.run_all'](
         cmdline,
+        cwd=cwd,
         runas=runas
         )
 
@@ -28,6 +29,7 @@ def _gem(command, ruby=None, runas=None):
 
 
 def install(gems,           # pylint: disable=C0103
+            cwd=None,
             ruby=None,
             runas=None,
             version=None,
@@ -38,6 +40,8 @@ def install(gems,           # pylint: disable=C0103
 
     gems
         The gems to install
+    cwd : None
+        The current working directory to execute ``gem`` command in.
     ruby : None
         If RVM is installed, the ruby version and gemset to use.
     runas : None
@@ -56,16 +60,17 @@ def install(gems,           # pylint: disable=C0103
 
         salt '*' gem.install vagrant
     '''
-    options = ''
+    options = []
     if version:
-        options += ' --version {0}'.format(version)
+        options.append('--version {0}'.format(version))
     if not rdoc:
-        options += ' --no-rdoc'
+        options.append('--no-rdoc')
     if not ri:
-        options += ' --no-ri'
-
+        options.append('--no-ri')
+    options = ' '.join(options)
     return _gem('install {gems} {options}'.format(gems=gems, options=options),
                 ruby,
+                cwd=cwd,
                 runas=runas)
 
 
