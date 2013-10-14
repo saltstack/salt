@@ -1038,11 +1038,14 @@ def mod_repo(repo, basedir=None, **kwargs):
         salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
         salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
     '''
+    # Filter out '__pub' arguments
+    repo_opts = dict((x, kwargs[x]) for x in kwargs if not x.startswith('__'))
+
     # Build a list of keys to be deleted
     todelete = []
-    for key in kwargs.keys():
-        if kwargs[key] != 0 and not kwargs[key]:
-            del kwargs[key]
+    for key in repo_opts:
+        if repo_opts[key] != 0 and not repo_opts[key]:
+            del repo_opts[key]
             todelete.append(key)
 
     # Fail if the user tried to delete the name
@@ -1064,11 +1067,11 @@ def mod_repo(repo, basedir=None, **kwargs):
         # If the repo doesn't exist, create it in a new file
         repofile = '{0}/{1}.repo'.format(basedir, repo)
 
-        if 'name' not in kwargs:
+        if 'name' not in repo_opts:
             return ('Error: The repo does not exist and needs to be created, '
                     'but a name was not given')
 
-        if 'baseurl' not in kwargs and 'mirrorlist' not in kwargs:
+        if 'baseurl' not in repo_opts and 'mirrorlist' not in repo_opts:
             return ('Error: The repo does not exist and needs to be created, '
                     'but either a baseurl or a mirrorlist needs to be given')
         filerepos[repo] = {}
@@ -1079,11 +1082,11 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if 'baseurl' in todelete:
-        if 'mirrorlist' not in kwargs and 'mirrorlist' \
+        if 'mirrorlist' not in repo_opts and 'mirrorlist' \
                 not in filerepos[repo].keys():
             return 'Error: Cannot delete baseurl without specifying mirrorlist'
     if 'mirrorlist' in todelete:
-        if 'baseurl' not in kwargs and 'baseurl' \
+        if 'baseurl' not in repo_opts and 'baseurl' \
                 not in filerepos[repo].keys():
             return 'Error: Cannot delete mirrorlist without specifying baseurl'
 
@@ -1093,7 +1096,7 @@ def mod_repo(repo, basedir=None, **kwargs):
             del filerepos[repo][key]
 
     # Old file or new, write out the repos(s)
-    filerepos[repo].update(kwargs)
+    filerepos[repo].update(repo_opts)
     content = header
     for stanza in filerepos.keys():
         comments = ''
