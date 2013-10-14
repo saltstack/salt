@@ -5,7 +5,6 @@ The networking module for RHEL/Fedora based distros
 
 # Import python libs
 import logging
-import re
 import os.path
 import os
 import StringIO
