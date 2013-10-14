@@ -33,9 +33,12 @@ tests/integration/tmp/
 .coverage
 coverage.xml
 htmlcov/
+
+# IDE files
 /.project
 /.pydevproject
 /.idea
+/.ropeproject
 
 # ignore ctags file
 tags
