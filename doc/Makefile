@@ -35,7 +35,7 @@ ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(TRANSLATIONOPTS
 # the i18n builder cannot share the environment and doctrees with the others
 I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 
-.PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext translations
+.PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext translations download-translations
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -65,24 +65,6 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 	find locale/ -name *.mo -exec rm {} \;
-
-translations:
-	
-	@if [ "$(SPHINXLANG)" = "en" ] || [ "x$(SPHINXLANG)" = "x" ]; then \
-		echo "No need to update translations. Skipping..."; \
-	elif [ ! -d locale/$(SPHINXLANG) ]; then \
-		echo "The locale directory for $(SPHINXLANG) does not exist"; \
-		exit 1; \
-	else \
-		echo "Extracting translatable strings"; \
-		make gettext; \
-		\
-		echo "Updating existing translation catalog for '$(SPHINXLANG)'"; \
-		sphinx-intl update -p _build/locale -l $(SPHINXLANG); \
-		\
-		echo "Compiling exising message catalog for '$(SPHINXLANG)'"; \
-		sphinx-intl build -l $(SPHINXLANG); \
-	fi
 
 html: translations
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
@@ -181,9 +163,9 @@ info: translations
 	@echo "makeinfo finished; the Info files are in $(BUILDDIR)/texinfo."
 
 gettext:
-	$(SPHINXBUILD) -b gettext $(I18NSPHINXOPTS) locale/pot
+	$(SPHINXBUILD) -b gettext $(I18NSPHINXOPTS) $(BUILDDIR)/locale
 	@echo
-	@echo "Build finished. The message catalogs are in locale/pot."
+	@echo "Build finished. The message catalogs are in $(BUILDDIR)/locale"
 
 changes: translations
 	$(SPHINXBUILD) -b changes $(ALLSPHINXOPTS) $(BUILDDIR)/changes
@@ -210,3 +192,20 @@ pseudoxml: translations
 	$(SPHINXBUILD) -b pseudoxml $(ALLSPHINXOPTS) $(BUILDDIR)/pseudoxml
 	@echo
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
+
+
+translations:
+	
+	@if [ "$(SPHINXLANG)" = "en" ] || [ "x$(SPHINXLANG)" = "x" ]; then \
+		echo "No need to update translations. Skipping..."; \
+	elif [ ! -d locale/$(SPHINXLANG) ]; then \
+		echo "The locale directory for $(SPHINXLANG) does not exist"; \
+		exit 1; \
+	else \
+		echo "Compiling exising message catalog for '$(SPHINXLANG)'"; \
+		.scripts/compile-translation-catalogs; \
+	fi
+
+download-translations:
+	@echo "Downloading $(SPHINXLANG) translations"
+	.scripts/download-translation-catalog $(SPHINXLANG)

@@ -32,6 +32,7 @@ Full Table of Contents
     topics/conventions/*
     topics/git/*
     topics/development/index
+    topics/translating
 
     ref/configuration/logging/*
     ref/configuration/logging/handlers/*
