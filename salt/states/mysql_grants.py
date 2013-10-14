@@ -186,7 +186,8 @@ def absent(name,
                 grant_option,
                 **connection_args):
             ret['comment'] = 'Grant {0} on {1} for {2}@{3} has been revoked'
-            ret['comment'].format(grant, database, user, host)
+            ret['comment'] = ret['comment'].format(grant, database, user,
+                                                   host)
             ret['changes'][name] = 'Absent'
             return ret
         else:
