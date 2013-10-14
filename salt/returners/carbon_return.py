@@ -15,6 +15,7 @@ import socket
 import logging
 import time
 import struct
+import collections
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +43,20 @@ def _send_picklemetrics(metrics, carbon_sock):
             return
         total_sent_bytes += sent_bytes
         logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
+
+
+def _walk(path, value, metrics, timestamp):
+    if isinstance(value, collections.Mapping):
+        for key, val in value.items():
+            _walk('{0}.{1}'.format(path, key), val, metrics, timestamp)
+    else:
+        try:
+            val = float(value)
+            metrics.append((path, val, timestamp))
+        except TypeError:
+            raise
+            log.info('Error in carbon returner, when trying to'
+                     'convert metric:{0}, with val:{1}'.format(path, val))
 
 
 def returner(ret):
@@ -75,14 +90,8 @@ def returner(ret):
     if not metric_base.startswith('virt.'):
         metric_base += '.' + _formatHostname(ret['id'])
     metrics = []
-    for name, vals in saltdata.items():
-        for key, val in vals.items():
-            # XXX: force datatype, needs typechecks, etc
-            try:
-                val = float(val)
-                metrics.append((metric_base + '.' + _formatHostname(name) + '.' + key, val, timestamp))
-            except TypeError:
-                log.info('Error in carbon returner, when trying to convert metric:{0}, with val:{1}'.format(key, val))
+
+    _walk(metric_base, saltdata, metrics, timestamp)
 
     def _send_textmetrics(metrics):
         ''' Use text protorocol to send metric over socket '''
@@ -97,7 +106,7 @@ def returner(ret):
             if sent_bytes == 0:
                 log.error('Bytes sent 0, Connection reset?')
                 return
-            logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
+            log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
 
             total_sent_bytes += sent_bytes
 
