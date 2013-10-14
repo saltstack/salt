@@ -63,7 +63,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
       then
          if [ $(cat /tmp/.salt/version) != {0} ]
          then
-            {{0}} rm -rf /tmp/.salt && install -m 1700 -d /tmp/.salt
+            {{0}} rm -rf /tmp/.salt && install -m 0700 -d /tmp/.salt
             if [ $? -ne 0 ]; then
                 exit 1
             fi
@@ -82,7 +82,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          then
              [ $({{2}}sum /tmp/.salt/salt-thin.tgz | cut -f1 -d' ') == {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
          else
-             install -m 1700 -d /tmp/.salt
+             install -m 0700 -d /tmp/.salt
              echo "{1}"
              echo "deploy"
              exit 1
