@@ -103,28 +103,30 @@ def present(name,
                     read or '.*'
                 )
             )
-    elif not vhost_exists:
-        result = __salt__['rabbitmq.add_vhost'](name, runas=runas)
-        if 'Error' in result:
-            ret['result'] = False
-            ret['comment'] = result['Error']
-        elif 'Added' in result:
-            ret['comment'] = result['Added']
     else:
-        ret['comment'] = 'VHost {0} already exists'.format(name)
+        if not vhost_exists:
+            result = __salt__['rabbitmq.add_vhost'](name, runas=runas)
+            if 'Error' in result:
+                ret['result'] = False
+                ret['comment'] = result['Error']
+                return ret
+            elif 'Added' in result:
+                ret['comment'] = result['Added']
+        else:
+            ret['comment'] = 'VHost {0} already exists'.format(name)
 
-    if owner is not None:
-        conf = conf or '.*'
-        write = write or '.*'
-        read = read or '.*'
-        result = __salt__['rabbitmq.set_permissions'](
-            name, owner, conf, write, read, runas=runas)
+        if owner is not None:
+            conf = conf or '.*'
+            write = write or '.*'
+            read = read or '.*'
+            result = __salt__['rabbitmq.set_permissions'](
+                name, owner, conf, write, read, runas=runas)
 
-        if 'Error' in result:
-            ret['result'] = False
-            ret['comment'] = result['Error']
-        elif 'Permissions Set':
-            ret['comment'] += ' {0}'.format(result['Permissions Set'])
+            if 'Error' in result:
+                ret['result'] = False
+                ret['comment'] = result['Error']
+            elif 'Permissions Set':
+                ret['comment'] += ' {0}'.format(result['Permissions Set'])
 
     return ret
 
