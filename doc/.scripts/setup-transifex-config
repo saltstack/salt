@@ -1,0 +1,96 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+'''
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
+    setup-transifex-config
+    ~~~~~~~~~~~~~~~~~~~~~~
+
+    Setup the Transifex client configuration file
+'''
+
+# Import python libs
+import os
+import sys
+import getpass
+import ConfigParser
+
+HOST = 'https://www.transifex.com'
+RCFILE = os.path.abspath(os.path.expanduser('~/.transifexrc'))
+
+
+def main():
+    '''
+    Run the setup code
+    '''
+    print(
+        'This script will setup a Transifex client configuration file, or, '
+        'if it already exists, make some minimal checks to see if it\'s '
+        'properly configured\n'
+    )
+    if not os.path.exists(RCFILE):
+        while True:
+            try:
+                username = raw_input(
+                    'What is your username on Transifex.com? '
+                )
+                if username:
+                    break
+            except KeyboardInterrupt:
+                print
+                sys.exit(1)
+        while True:
+            try:
+                password = getpass.getpass(
+                    'What is your password on Transifex.com? '
+                )
+                if password:
+                    break
+            except KeyboardInterrupt:
+                print
+                sys.exit(1)
+
+        config = ConfigParser.SafeConfigParser()
+        config.add_section(HOST)
+        config.set(HOST, 'token', '')
+        config.set(HOST, 'hostname', HOST)
+        config.set(HOST, 'username', username)
+        config.set(HOST, 'password', password)
+
+        config.write(open(RCFILE, 'w'))
+        print('username and password stored in {0!r}'.format(RCFILE))
+
+        os.chmod(RCFILE, 0600)
+        print('Secured the permissions on {0!r} to 0600'.format(RCFILE))
+
+        sys.exit(0)
+
+    # The file exists, let's see if it's properly configured
+    config = ConfigParser.SafeConfigParser()
+    config.read([RCFILE])
+
+    if not config.has_section(HOST):
+        print('\'~/.transifexrc\' is not properly configured, it\'s missing '
+              'the {0} section'.format(HOST))
+
+    for setting in ('username', 'password', 'hostname', 'token'):
+        if not config.has_option(HOST, setting):
+            print('\'~/.transifexrc\' is not properly configured, it\'s '
+                  'missing the {0} option'.format(setting))
+            sys.exit(1)
+
+        if setting == 'token':
+            # Token should be left empty
+            continue
+
+        if not config.get(HOST, setting):
+            print('\'~/.transifexrc\' is not properly configured, it\'s '
+                  'missing a value for the {0} option'.format(setting))
+            sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
