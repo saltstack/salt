@@ -810,7 +810,7 @@ def build_bond(iface, **settings):
         log.error('Could not load template conf.jinja')
         return ''
     data = template.render({'name': iface, 'bonding': opts})
-    _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '{0}.conf')
+    _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
         __salt__['cmd.run'](
