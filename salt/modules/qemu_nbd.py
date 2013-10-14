@@ -14,9 +14,6 @@ import tempfile
 import time
 import logging
 
-# Import third party tools
-import yaml
-
 # Import salt libs
 import salt.utils
 import salt.crypt
