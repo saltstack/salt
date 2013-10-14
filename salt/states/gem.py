@@ -106,7 +106,7 @@ def installed(name,          # pylint: disable=C0103
         ret['comment'] = 'The gem {0} would have been installed'.format(name)
         return ret
     if __salt__['gem.install'](name,
-                               cws=cwd,
+                               cwd=cwd,
                                ruby=ruby,
                                runas=user,
                                version=version,
