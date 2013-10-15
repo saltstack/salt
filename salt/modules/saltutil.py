@@ -388,7 +388,13 @@ def running():
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
         with salt.utils.fopen(path, 'rb') as fp_:
-            data = serial.loads(fp_.read())
+            buf = fp_.read()
+            if buf:
+                data = serial.loads(buf)
+            else:
+                # Proc file is empty, remove
+                os.remove(path)
+                continue
         if not isinstance(data, dict):
             # Invalid serial object
             continue
