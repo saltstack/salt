@@ -240,7 +240,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         open(os.path.join(config_dir, config_file_name), 'w').write(
             yaml.dump(config, default_flow_style=False)
         )
-        self.run_script(
+        ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} minion test.ping'.format(
                 config_dir
