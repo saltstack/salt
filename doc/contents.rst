@@ -19,7 +19,6 @@ Full Table of Contents
     topics/master_tops/index
     topics/jobs/*
     topics/nonroot
-    topics/translating
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
     topics/community
