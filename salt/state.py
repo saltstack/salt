@@ -1386,7 +1386,7 @@ class State(object):
         '''
         Fire an event on the master bus
         '''
-        if not self.opts.get('local') and self.opts.get('state_events', True):
+        if not self.opts.get('local') and self.opts.get('state_events', True) and self.opts.get('master_uri'):
             tag = salt.utils.event.tagify(
                     [self.jid, 'prog', self.opts['id'], str(chunk_ret['__run_num__'])], 'job'
                     )
