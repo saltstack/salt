@@ -1,9 +1,12 @@
 '''
 The backed for the subversion based file server system.
 
-After enabling this backend, branches, bookmarks, and tags in a remote
-subversion repository are exposed to salt as different environments. This
-feature is managed by the fileserver_backend option in the salt master config.
+After enabling this backend, branches, and tags in a remote subversion
+repository are exposed to salt as different environments. This feature is
+managed by the fileserver_backend option in the salt master config.
+
+This backend assumes a standard svn layout with directories for ``branches``,
+``tags``, and ``trunk``, at the repository root.
 
 :depends:   - subversion
 '''
