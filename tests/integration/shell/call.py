@@ -215,7 +215,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         open(os.path.join(config_dir, 'minion'), 'w').write(
             yaml.dump(minion_config, default_flow_style=False)
         )
-        self.run_script(
+        ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
                 config_dir
