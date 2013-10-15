@@ -1925,6 +1925,8 @@ class BaseHighState(object):
         '''
         err = ''
         errors = []
+        if sls in mods:
+            return {}, errors
         state_data = self.client.get_state(sls, env)
         fn_ = state_data.get('dest', False)
         if not fn_:
