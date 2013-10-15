@@ -63,7 +63,9 @@ def _check_pillar(kwargs):
 
 
 def _wait(jid):
-    """ Wait for all previously started state jobs to finish running """
+    '''
+    Wait for all previously started state jobs to finish running
+    '''
     states = _prior_running_states(jid)
     while states:
         time.sleep(1)
