@@ -503,7 +503,7 @@ def policy_exists(vhost, name, runas=None):
 
 def enable_plugin(name, runas=None):
     '''
-    Enable a RabbitMQ plugin via the rabbitmq-plugin command.
+    Enable a RabbitMQ plugin via the rabbitmq-plugins command.
 
     CLI Example:
 
@@ -513,14 +513,14 @@ def enable_plugin(name, runas=None):
     '''
 
     ret = __salt__['cmd.run'](
-            'rabbitmq-plugin enable {0}'.format(name),
+            'rabbitmq-plugins enable {0}'.format(name),
             runas=runas)
     return _format_response(ret, 'Enabled')
 
 
 def disable_plugin(name, runas=None):
     '''
-    Disable a RabbitMQ plugin via the rabbitmq-plugin command.
+    Disable a RabbitMQ plugin via the rabbitmq-plugins command.
 
     CLI Example:
 
@@ -530,6 +530,6 @@ def disable_plugin(name, runas=None):
     '''
 
     ret = __salt__['cmd.run'](
-            'rabbitmq-plugin disable {0}'.format(name),
+            'rabbitmq-plugins disable {0}'.format(name),
             runas=runas)
     return _format_response(ret, 'Disabled')
