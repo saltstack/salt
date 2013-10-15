@@ -11,8 +11,8 @@ this module exclusively from the command line.
 
 .. code-block:: bash
 
-    salt minion-id ports.config sysutils/tmux LIBEVENT_STATIC=on
-    salt minion-id ports.install sysutils/tmux
+    salt minion-id ports.config security/nmap IPV6=off
+    salt minion-id ports.install security/nmap
 '''
 
 # Import python libs
@@ -87,6 +87,51 @@ def _write_options(name, pkg, config):
             )
 
 
+def install(name, clean=True):
+    '''
+    Install a port from the ports tree. Installs using ``BATCH=yes`` for
+    non-interactive building. To set config options for a given port, use
+    :mod:`ports.config <salt.modules.freebsdports.config>`.
+
+    clean : True
+        If ``True``, cleans after installation. Equivalent to running ``make
+        install clean BATCH=yes``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ports.install security/nmap
+    '''
+    portpath = _check_portname(name)
+    old = __salt__['pkg.list_pkgs']()
+    __salt__['cmd.run'](
+        'make install{0} BATCH=yes'.format(' clean' if clean else ''),
+        cwd=portpath
+    )
+    __context__.pop('pkg.list_pkgs', None)
+    new = __salt__['pkg.list_pkgs']()
+    return __salt__['pkg_resource.find_changes'](old, new)
+
+
+def deinstall(name):
+    '''
+    De-install a port.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ports.deinstall security/nmap
+    '''
+    portpath = _check_portname(name)
+    old = __salt__['pkg.list_pkgs']()
+    __salt__['cmd.run']('make deinstall BATCH=yes', cwd=portpath)
+    __context__.pop('pkg.list_pkgs', None)
+    new = __salt__['pkg.list_pkgs']()
+    return __salt__['pkg_resource.find_changes'](old, new)
+
+
 def rmconfig(name):
     '''
     Clear the cached options for the specified port; run a ``make rmconfig``
@@ -98,7 +143,7 @@ def rmconfig(name):
 
     .. code-block:: bash
 
-        salt '*' ports.rmconfig sysutils/tmux
+        salt '*' ports.rmconfig security/nmap
     '''
     portpath = _check_portname(name)
     return __salt__['cmd.run']('make rmconfig', cwd=portpath)
@@ -112,7 +157,7 @@ def showconfig(name, dict_return=False):
 
     .. code-block:: bash
 
-        salt '*' ports.showconfig sysutils/tmux
+        salt '*' ports.showconfig security/nmap
     '''
     portpath = _check_portname(name)
 
@@ -166,20 +211,20 @@ def config(name, reset=False, **kwargs):
     '''
     Modify configuration options for a given port. Multiple options can be
     specified. To see the available options for a port, use
-    :mod:`ports.showconfig <salt.modules.freebsdports.showconfig>`
+    :mod:`ports.showconfig <salt.modules.freebsdports.showconfig>`.
 
     name
         The port name, in ``category/name`` format
 
     reset : False
-        If true, runs a ``make rmconfig`` for the port, clearing its
+        If ``True``, runs a ``make rmconfig`` for the port, clearing its
         configuration before setting the desired options
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' ports.config sysutils/tmux LIBEVENT_STATIC=on
+        salt '*' ports.config security/nmap IPV6=off
     '''
     portpath = _check_portname(name)
 
@@ -239,3 +284,57 @@ def config(name, reset=False, **kwargs):
         return False
 
     return all(config[x] == new_config.get(x) for x in config)
+
+
+def update(extract=False):
+    '''
+    Update the ports tree
+
+    extract : False
+        If ``True``, runs a ``portsnap extract`` after fetching, should be used
+        for first-time installation of the ports tree.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ports.update
+    '''
+    result = __salt__['cmd.run_all']('portsnap fetch')
+    if not result['retcode'] == 0:
+        raise CommandExecutionError(
+            'Unable to fetch ports snapshot: {0}'.format(result['stderr'])
+        )
+
+    ret = []
+    try:
+        patch_count = re.search(
+            'Fetching (\d+) patches', result['stdout']
+        ).group(1)
+    except AttributeError:
+        patch_count = 0
+
+    try:
+        new_port_count = re.search(
+            'Fetching (\d+) new ports or files', result['stdout']
+        ).group(1)
+    except AttributeError:
+        new_port_count = 0
+
+    ret.append('Applied {0} new patches'.format(patch_count))
+    ret.append('Fetched {0} new ports or files'.format(new_port_count))
+
+    if extract:
+        result = __salt__['cmd.run_all']('portsnap extract')
+        if not result['retcode'] == 0:
+            raise CommandExecutionError(
+                'Unable to extract ports snapshot {0}'.format(result['stderr'])
+            )
+
+    result = __salt__['cmd.run_all']('portsnap update')
+    if not result['retcode'] == 0:
+        raise CommandExecutionError(
+            'Unable to apply ports snapshot: {0}'.format(result['stderr'])
+        )
+
+    return '\n'.join(ret)
