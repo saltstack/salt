@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The backed for the subversion based file server system.
 
@@ -15,6 +16,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
 import os
 import hashlib
 import logging
+import shutil
 
 # Import third party libs
 HAS_SVN = False
