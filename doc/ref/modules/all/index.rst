@@ -55,6 +55,7 @@ Full list of builtin execution modules
     freebsdjail
     freebsdkmod
     freebsdpkg
+    freebsdports
     freebsdservice
     gem
     gentoo_service
