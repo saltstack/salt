@@ -39,9 +39,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         if self.config['verify_env']:
-            if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+            if not self.config['log_file'].startswith(('tcp://',
+                                                       'udp://',
+                                                       'file://')):
                 # Logfile is not using Syslog, verify
                 verify_files(
                     [self.config['log_file']],
@@ -194,9 +194,9 @@ class SaltCP(parsers.SaltCPOptionParser):
         self.parse_args()
 
         if self.config['verify_env']:
-            if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+            if not self.config['log_file'].startswith(('tcp://',
+                                                       'udp://',
+                                                       'file://')):
                 # Logfile is not using Syslog, verify
                 verify_files(
                     [self.config['log_file']],
@@ -237,9 +237,9 @@ class SaltKey(parsers.SaltKeyOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
             )
-            if (not self.config['key_logfile'].startswith('tcp://') or
-                    not self.config['key_logfile'].startswith('udp://') or
-                    not self.config['key_logfile'].startswith('file://')):
+            if not self.config['log_file'].startswith(('tcp://',
+                                                       'udp://',
+                                                       'file://')):
                 # Logfile is not using Syslog, verify
                 verify_files(
                     [self.config['key_logfile']],
@@ -273,9 +273,9 @@ class SaltCall(parsers.SaltCallOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
             )
-            if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+            if not self.config['log_file'].startswith(('tcp://',
+                                                       'udp://',
+                                                       'file://')):
                 # Logfile is not using Syslog, verify
                 verify_files(
                     [self.config['log_file']],
@@ -322,9 +322,9 @@ class SaltRun(parsers.SaltRunOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
             )
-            if (not self.config['log_file'].startswith('tcp://') or
-                not self.config['log_file'].startswith('udp://') or
-                not self.config['log_file'].startswith('file://')):
+            if not self.config['log_file'].startswith(('tcp://',
+                                                       'udp://',
+                                                       'file://')):
                 # Logfile is not using Syslog, verify
                 verify_files(
                     [self.config['log_file']],
