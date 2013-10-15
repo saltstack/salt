@@ -27,6 +27,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     return 'ports' if __grains__.get('os', '') == 'FreeBSD' else False
 
