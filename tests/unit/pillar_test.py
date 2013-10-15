@@ -29,6 +29,7 @@ class PillarTestCase(TestCase):
             'renderer': 'json',
             'state_top': '',
             'pillar_roots': [],
+            'file_roots': [],
             'extension_modules': ''
         }
         grains = {
@@ -109,6 +110,7 @@ class PillarTestCase(TestCase):
             'pillar_roots': [],
             'extension_modules': '',
             'environment': 'base',
+            'file_roots': [],
         }
         grains = {
             'os': 'Ubuntu',
