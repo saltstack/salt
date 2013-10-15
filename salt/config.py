@@ -426,7 +426,13 @@ def _append_domain(opts):
 def _read_conf_file(path):
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.fopen(path, 'r') as conf_file:
-        conf_opts = yaml.safe_load(conf_file.read()) or {}
+        try:
+            conf_opts = yaml.safe_load(conf_file.read()) or {}
+        except yaml.YAMLError as err:
+            log.error(
+                'Error parsing configuration file: {0} - {1}'.format(path, err)
+            )
+            conf_opts = {}
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
@@ -487,20 +493,11 @@ def load_config(path, env_var, default_path=None):
                     out.write(ifile.read())
 
     if os.path.isfile(path):
-        try:
-            opts = _read_conf_file(path)
-            opts['conf_file'] = path
-            return opts
-        except Exception as err:
-            import salt.log
-            msg = 'Error parsing configuration file: {0} - {1}'
-            if salt.log.is_console_configured():
-                log.warn(msg.format(path, err))
-            else:
-                print(msg.format(path, err))
-    else:
-        log.debug('Missing configuration file: {0}'.format(path))
+        opts = _read_conf_file(path)
+        opts['conf_file'] = path
+        return opts
 
+    log.debug('Missing configuration file: {0}'.format(path))
     return {}
 
 
@@ -538,15 +535,8 @@ def include_config(include, orig_path, verbose):
                 )
 
         for fn_ in sorted(glob.glob(path)):
-            try:
-                log.debug('Including configuration from {0!r}'.format(fn_))
-                configuration.update(_read_conf_file(fn_))
-            except Exception as err:
-                log.warn(
-                    'Error parsing configuration file: {0} - {1}'.format(
-                        fn_, err
-                    )
-                )
+            log.debug('Including configuration from {0!r}'.format(fn_))
+            configuration.update(_read_conf_file(fn_))
     return configuration
 
 
