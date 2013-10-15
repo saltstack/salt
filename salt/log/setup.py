@@ -458,11 +458,8 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 logging.handlers, 'WatchedFileHandler', logging.FileHandler
             )(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
-            sys.stderr.write(
-                'Failed to open log file, do you have permission to write to '
-                '{0}\n'.format(log_path)
-            )
-            sys.exit(2)
+            handler = LOGGING_NULL_HANDLER
+            return
 
     handler.setLevel(level)
 
