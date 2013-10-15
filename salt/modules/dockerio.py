@@ -1,18 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-Managment of dockers: overview of this module
+Management of dockers: overview of this module
 =============================================
 
+.. note::
+    The DockerIO integration is still in beta, the api is subject to change
 
 General notes
 -------------
-- As we use states, we dont want to pop contineously dockers, we will map each
+- As we use states, we don't want to pop continuously dockers, we will map each
 container id  (or image) with a grain whenever it is relevant.
-- As a corollary, we will resolve for a container id eitheir directly this
+- As a corollary, we will resolve for a container id either directly this
 container id or try to find a container id matching something stocked in grain
 
-installation prerequsuites
+Installation prerequisites
 --------------------------
 - You will need the 'docker-py' python package in your python installation
   running salt.
@@ -75,13 +77,13 @@ Registry dialog methods
     - push
     - pull
 
-Docker managment
-----------------
+Docker management
+-----------------
     - version
     - info
 
 You have those methods:
-Image managment
+Image management
 ----------------
 You have those methods:
 
@@ -93,8 +95,8 @@ You have those methods:
     - build
     - tag
 
-container managment
--------------------
+Container management
+--------------------
 You have those methods:
 
     - start
@@ -428,13 +430,13 @@ def commit(container,
     repository
         repository/imageName to commit to
     tag
-        optionnal tag
+        optional tag
     message
-        optionnal commit message
+        optional commit message
     author
-        optionnal author
+        optional author
     conf
-        optionnal conf
+        optional conf
 
     CLI Example:
 
@@ -851,7 +853,7 @@ def restart(container, timeout=10, *args, **kwargs):
     except Exception:
         invalid(status, id=container, out=traceback.format_exc(),
                 comment=(
-                    'An exception occured while restarting '
+                    'An exception occurred while restarting '
                     'your container {0}').format(container))
     return status
 
@@ -898,7 +900,7 @@ def start(container, binds=None, ports=None, *args, **kwargs):
                 id=container,
                 out=traceback.format_exc(),
                 comment=(
-                    'An exception occured while starting '
+                    'An exception occurred while starting '
                     'your container {0}').format(container))
     return status
 
@@ -910,7 +912,7 @@ def wait(container, *args, **kwargs):
 
     container
         Container id
-    Return container id if succesful
+    Return container id if successful
          {'id': id of the container,
           'status': True if stopped }
 
@@ -940,7 +942,7 @@ def wait(container, *args, **kwargs):
     except Exception:
         invalid(status, id=container, out=traceback.format_exc(),
                 comment=(
-                    'An exception occured while waitting '
+                    'An exception occurred while waiting '
                     'your container {0}').format(container))
     return status
 
@@ -997,7 +999,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
         Container id to remove
     force
         By default, do not remove a running container, set this
-        to remove it unconditionnaly
+        to remove it unconditionally
     v
         verbose mode
 
@@ -1050,7 +1052,7 @@ def top(container, *args, **kwargs):
 
        {
             'Titles': top titles list,
-            'proceeses': list of orderered by
+            'processes': list of ordered by
                          titles processes informations,
             'mprocesses': list of mappings processes informations
             constructed above the upon informations
@@ -1711,10 +1713,11 @@ def push(repo, *args, **kwargs):
 
 
 def _run_wrapper(status, container, func, cmd,  *args, **kwargs):
-    '''Wrapper to a cmdmod function
+    '''
+    Wrapper to a cmdmod function
 
     Idea is to prefix the call to cmdrun with the relevant lxc-attach to
-    execute inside a container contexrt
+    execute inside a container context
 
     status
         status object
@@ -1760,7 +1763,7 @@ def run(container, cmd, *args, **kwargs):
         container id (or grain)
 
     Other params:
-        See cmdmod docuemntation
+        See cmdmod documentation
 
     The return is a bit different as we use the docker struct,
     The output of the command is in 'out'
@@ -1790,7 +1793,7 @@ def run_all(container, cmd, *args, **kwargs):
         container id (or grain)
 
     Other params:
-        See cmdmod docuemntation
+        See cmdmod documentation
 
     The return is a bit different as we use the docker struct,
     The output of the command is in 'out'
@@ -1820,7 +1823,7 @@ def run_stderr(container, cmd, *args, **kwargs):
         container id (or grain)
 
     Other params:
-        See cmdmod docuemntation
+        See cmdmod documentation
 
     The return is a bit different as we use the docker struct,
     The output of the command is in 'out'
@@ -1850,7 +1853,7 @@ def run_stdout(container, cmd, *args, **kwargs):
         container id (or grain)
 
     Other params:
-        See cmdmod docuemntation
+        See cmdmod documentation
 
     The return is a bit different as we use the docker struct,
     The output of the command is in 'out'
@@ -1880,7 +1883,7 @@ def retcode(container, cmd, *args, **kwargs):
         container id (or grain)
 
     Other params:
-        See cmdmod docuemntation
+        See cmdmod documentation
 
     The return is a bit different as we use the docker struct,
     The output of the command is in 'out'
