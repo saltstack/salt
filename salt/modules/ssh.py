@@ -54,6 +54,7 @@ def _refine_enc(enc):
         msg = 'Incorrect encryption key type "{}".'.format(enc)
         raise CommandExecutionError(msg)
 
+
 def _format_auth_line(key, enc, comment, options):
     '''
     Properly format user input.
