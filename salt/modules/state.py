@@ -99,10 +99,10 @@ def running():
 
 
 def _prior_running_states(jid):
-    """
+    '''
     Return a list of dicts of prior calls to state functions.  This function is
     used to queue state calls so only one is run at a time.
-    """
+    '''
 
     ret = []
     active = __salt__['saltutil.is_running']('state.*')
@@ -534,20 +534,6 @@ def show_top(queue=False, **kwargs):
         return errors
     matches = st_.top_matches(top_)
     return matches
-
-# Just commenting out, someday I will get this working
-#def show_masterstate():
-#    '''
-#    Display the data gathered from the master compiled state
-#
-#    CLI Example:
-#
-#    .. code-block:: bash
-#
-#        salt '*' state.show_masterstate
-#    '''
-#    st_ = salt.state.RemoteHighState(__opts__, __grains__)
-#    return st_.compile_master()
 
 
 def single(fun, name, test=None, queue=False, **kwargs):
