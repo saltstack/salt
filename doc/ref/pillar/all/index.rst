@@ -21,3 +21,4 @@ Full list of builtin pillar modules
     pillar_ldap
     puppet
     reclass_adapter
+    virtkey
