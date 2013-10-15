@@ -11,6 +11,7 @@ supported operating system to control your Salt Minions on Windows.
 Many of the standard Salt modules have been ported to work on Windows
 and many of the Salt States currently work on Windows, as well.
 
+
 Windows Installer
 =================
 
@@ -59,7 +60,6 @@ Windows service.
 If the minion won't start, try installing the Microsoft Visual C++ 2008 x64 SP1
 redistributable. Allow all Windows updates to run salt-minion smoothly.
 
-Make sure that the minion config file has the line `ipc_mode: tcp`
 
 Silent Installer option
 =======================
@@ -71,128 +71,142 @@ installer:
 
 .. code-block:: bash
 
-    Salt-Minion-0.15.3-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname
-
-Installer Source
-================
-
-The Salt Windows installer is built with the open-source NSIS compiler. The
-source for the installer is found in the pkg directory of the Salt repo here:
-https://github.com/saltstack/salt/blob/develop/pkg/windows/installer/Salt-Minion-Setup.nsi.
-To create the installer run ``python setup.py bdist_esky``, extract the
-frozen archive from ``dist/`` into ``pkg/windows/buildenv/`` and run NSIS.
-
-The NSIS installer can be found here: http://nsis.sourceforge.net/Main_Page
+    Salt-Minion-0.17.0-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname
 
 
-Installation from source
-========================
+Setting up a Windows build environment
+======================================
 
-To install Salt from source one must install each dependency separately and
-configure Salt to run on your Windows host.
+1.  Install the Microsoft Visual C++ 2008 SP1 Redistributable, `vcredist_x86`_ or `vcredist_x64`_.
 
-Rather than send you on a wild goose chase across the Internet, we've collected
-some of the more difficult to find installers in our GitHub repo for you.
+2.  Install `msysgit`_
 
+3. Clone the Salt git repository from GitHub
+    
+.. code-block:: bash
 
-Install on Windows XP 32bit
-===========================
-1.  Install `msysgit`_
+    git clone git://github.com/saltstack/salt.git
 
-    1. Clone the Salt git repository from GitHub
+4.  Install the latest point release of `Python 2.7`_ for the architecture you wish to target
+
+5.  Add C:\\Python27 and C:\\Python27\\Scripts to your system path
+
+6.  Download and run the Setuptools bootstrap - `ez_setup.py`_
 
 .. code-block:: bash
 
-        git clone git://github.com/saltstack/salt.git
+    python ez_setup.py
+    
+7.  Install Pip
 
-2.  Install Microsoft Visual Studio 2008 Express.
-    You must use Visual Studio 2008 Express, **not** Visual Studio 2010 Express.
+.. code-block:: bash
+    
+    easy_install pip
 
-3.  Install `Python 2.7.x`_
+8.  Install the latest point release of `OpenSSL for Windows`_
 
-4.  Add c:\\Python27 to your system path
+    #.  During setup, choose first option to install in Windows system directory
 
-5.  Install the Microsoft Visual C++ 2008 SP1 Redistributable, `vcredist_x86`_.
+9.  Install the latest point release of `M2Crypto`_
 
-6.  Install `Win32OpenSSL-1_0_0e.exe`_
+    #.  In general, be sure to download installers targeted at py2.7 for your chosen architecture
 
-    #.  Choose first option to install in Windows system directory
+10.  Install the latest point release of `pycrypto`_
 
-7.  Install `pyzmq-2.1.11.win32-py2.7.msi`_
+11.  Install the latest point release of `pywin32`_
 
-8.  Install `pycrypto-2.3.win32-py2.7.msi`_
+12.  Install the latest point release of `Cython`_
 
-9.  Install `M2Crypto`_
+13.  Install the latest point release of `jinja2`_
 
-10.  Install `pywin32`_
+14.  Install the latest point release of `msgpack`_
 
-11.  Install `PyYAML-3.10.win32-py2.7.msi`_
-
-12.  Install `Cython-0.15.1.win32-py2.79.exe`_
-
-13.  Download and run `distribute_setup.py`_
+15.  Install psutil
 
 .. code-block:: bash
 
-    python distribute_setup.py
+        easy_install psutil
 
-14.  Download and run `pip`_
-
-.. code-block:: bash
-
-        python get-pip.py
-
-15.  Add c:\\python27\\scripts to your path
-
-16.  Close terminal window and open a new terminal window (*cmd*)
-
-17.  Install jinja2
+16.  Install pyzmq
 
 .. code-block:: bash
 
-        pip install jinja2
+        easy_install pyzmq
+        
+17.  Install PyYAML
 
-18.  Install wmi 
+.. code-block:: bash
+
+        easy_install pyyaml
+        
+18.  Install bbfreeze
+
+.. code-block:: bash
+
+        easy_install bbfreeze
+
+19.  Install wmi 
 
 .. code-block:: bash
 
         pip install wmi
 
-19.  Install Messagepack
+20.  Install esky 
 
 .. code-block:: bash
 
-        pip install msgpack-python
+        pip install esky
 
-20.  Install Salt
+21.  Install Salt
 
 .. code-block:: bash
 
-        cd ./salt
+        cd salt
         python setup.py install
 
-21.  Edit c:\\etc\\salt\\minion
+22.  Build a frozen binary distribution of Salt
+
+.. code-block:: bash
+
+	python setup.py bdist_esky
+
+A zip file has been created in the ``dist/`` folder, containing a frozen copy of Python and the 
+dependency libraries, along with Windows executables for each of the Salt scripts.
+
+
+Building the installer
+======================
+
+The Salt Windows installer is built with the open-source NSIS compiler. The
+source for the installer is found in the pkg directory of the Salt repo here:
+https://github.com/saltstack/salt/blob/develop/pkg/windows/installer/Salt-Minion-Setup.nsi.
+To create the installer, extract the frozen archive from ``dist/`` into ``pkg/windows/buildenv/``
+and run NSIS.
+
+The NSIS installer can be found here: http://nsis.sourceforge.net/Main_Page
+
+
+Testing the Salt minion
+=======================
+
+1.  Create the directory C:\\salt (if it doesn't exist already)
+
+2.  Copy the example ``conf`` and ``var`` directories from ``pkg/windows/buildenv/`` into C:\\salt
+
+3.  Edit C:\\salt\\conf\\minion
 
 .. code-block:: bash
 
         master: ipaddress or hostname of your salt-master
-        master_port: 4506
-        ipc_mode: tcp
-        root_dir: c:\
-        pki_dir: /etc/salt/pki
-        cachedir: /var/cache/salt
-        renderer: yaml_jinja
-        open_mode: False
-        multiprocessing: False
 
-22.  Start the salt-minion
+4.  Start the salt-minion
 
 .. code-block:: bash
 
-        cd c:\python27\scripts
+        cd C:\Python27\Scripts
         python salt-minion
 
-23.  On the salt-master accept the new minion's key
+5.  On the salt-master accept the new minion's key
 
 .. code-block:: bash
 
@@ -200,7 +214,7 @@ Install on Windows XP 32bit
 
         (This accepts all unaccepted keys. If you're concerned about security just accept the key for this specific minion)
 
-24.  Test that your minion is responding
+6.  Test that your minion is responding
 
         a.  On the salt-master run:
 
@@ -239,20 +253,20 @@ For more info check `http://csa-net.dk/salt`_
 Packages management under Windows 2003
 ======================================
 
-On windows server 2003, you need to install optional component "wmi windows installer provider" to have full list of installed packages. If you don't have this, salt-minion can't report some installed softwares.
+On windows Server 2003, you need to install optional component "wmi windows installer provider" to have full list of installed packages. If you don't have this, salt-minion can't report some installed softwares.
 
 
 .. _http://csa-net.dk/salt: http://csa-net.dk/salt
-.. _msysgit: http://code.google.com/p/msysgit/downloads/list?can=3
-.. _Microsoft Visual Studio 2008 Express: http://www.microsoft.com/en-gb/download/details.aspx?id=20682
-.. _Python 2.7.x: http://www.python.org
 .. _vcredist_x86: http://www.microsoft.com/download/en/details.aspx?id=5582
-.. _Win32OpenSSL-1_0_0e.exe: http://www.slproweb.com/products/Win32OpenSSL.html
-.. _pyzmq-2.1.11.win32-py2.7.msi: https://github.com/zeromq/pyzmq/downloads
-.. _pycrypto-2.3.win32-py2.7.msi: http://www.voidspace.org.uk/python/modules.shtml#pycrypto
-.. _PyYAML-3.10.win32-py2.7.msi: http://pyyaml.org/wiki/PyYAML
-.. _Cython-0.15.1.win32-py2.79.exe: http://www.lfd.uci.edu/~gohlke/pythonlibs/#cython
-.. _distribute_setup.py: http://python-distribute.org/distribute_setup.py
-.. _pip: https://raw.github.com/pypa/pip/master/contrib/get-pip.py
-.. _M2Crypto: http://chandlerproject.org/pub/Projects/MeTooCrypto/M2Crypto-0.21.1.win32-py2.7.exe
-.. _pywin32: http://sourceforge.net/projects/pywin32/files/
+.. _vcredist_x64: http://www.microsoft.com/download/en/details.aspx?id=2092
+.. _msysgit: http://code.google.com/p/msysgit/downloads/list?can=3
+.. _Python 2.7: http://www.python.org/getit
+.. _ez_setup.py: https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
+.. _OpenSSL for Windows: http://www.slproweb.com/products/Win32OpenSSL.html
+.. _M2Crypto: http://chandlerproject.org/Projects/MeTooCrypto
+.. _pycrypto: http://www.voidspace.org.uk/python/modules.shtml#pycrypto
+.. _pywin32: http://sourceforge.net/projects/pywin32/files/pywin32
+.. _Cython: http://www.lfd.uci.edu/~gohlke/pythonlibs/#cython
+.. _jinja2: http://www.lfd.uci.edu/~gohlke/pythonlibs/#jinja2
+.. _msgpack: http://www.lfd.uci.edu/~gohlke/pythonlibs/#msgpack
+
