@@ -76,9 +76,9 @@ class Master(parsers.MasterOptionParser):
                     pki_dir=self.config['pki_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith('tcp://') \
-                        and not logfile.startswith('udp://') \
-                        and not logfile.startswith('file://'):
+                if logfile is not None and not logfile.startswith(('tcp://',
+                                                                   'udp://',
+                                                                   'file://')):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
@@ -171,9 +171,9 @@ class Minion(parsers.MinionOptionParser):
                     pki_dir=self.config['pki_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith('tcp://') \
-                        and not logfile.startswith('udp://') \
-                        and not logfile.startswith('file://'):
+                if logfile is not None and not logfile.startswith(('tcp://',
+                                                                   'udp://',
+                                                                   'file://')):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
@@ -256,9 +256,9 @@ class Syndic(parsers.SyndicOptionParser):
                     pki_dir=self.config['pki_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith('tcp://') \
-                        and not logfile.startswith('udp://') \
-                        and not logfile.startswith('file://'):
+                if logfile is not None and not logfile.startswith(('tcp://',
+                                                                   'udp://',
+                                                                   'file://')):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
