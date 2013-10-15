@@ -16,6 +16,7 @@ Full list of builtin state modules
     augeas
     cmd
     cron
+    ddns
     debconfmod
     disk
     eselect
@@ -28,6 +29,7 @@ Full list of builtin state modules
     host
     iptables
     keyboard
+    keystone
     kmod
     layman
     libvirt
@@ -55,11 +57,19 @@ Full list of builtin state modules
     postgres_database
     postgres_group
     postgres_user
+    powerpath
+    process
     quota
+    rabbitmq_cluster
+    rabbitmq_plugin
+    rabbitmq_policy
     rabbitmq_user
     rabbitmq_vhost
     rbenv
+    rdp
+    reg
     rvm
+    saltmod
     selinux
     service
     ssh_auth
