@@ -54,9 +54,9 @@ def _walk(path, value, metrics, timestamp):
             val = float(value)
             metrics.append((path, val, timestamp))
         except TypeError:
-            raise
             log.info('Error in carbon returner, when trying to'
                      'convert metric:{0}, with val:{1}'.format(path, val))
+            raise
 
 
 def returner(ret):
