@@ -375,8 +375,8 @@ def mklabel(device, label_type):
             'Invalid device passed to partition.mklabel'
         )
 
-    if label_type not in set('aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
-                             'msdos', 'pc98','sun'):
+    if label_type not in set('aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop',
+                             'mac', 'msdos', 'pc98', 'sun'):
         raise CommandExecutionError(
             'Invalid label_type passed to partition.mklabel'
         )
