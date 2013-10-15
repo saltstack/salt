@@ -28,7 +28,7 @@ def display_output(data, out, opts=None):
     '''
     try:
         display_data = get_printout(out, opts)(data).rstrip()
-    except KeyError:
+    except (KeyError, AttributeError):
         opts.pop('output', None)
         display_data = get_printout('nested', opts)(data).rstrip()
 
