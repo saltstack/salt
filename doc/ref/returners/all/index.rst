@@ -12,7 +12,9 @@ Full list of builtin returner modules
 
     carbon_return
     cassandra_return
+    couchdb_return
     local
+    memcache_return
     mongo_future_return
     mongo_return
     mysql
