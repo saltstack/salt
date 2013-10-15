@@ -231,16 +231,16 @@ def config(name, reset=False, **kwargs):
     if reset:
         rmconfig(name)
 
-    config = showconfig(name, dict_return=True)
+    configuration = showconfig(name, dict_return=True)
 
-    if not config:
+    if not configuration:
         raise CommandExecutionError(
             'Unable to get port configuration for {0!r}'.format(name)
         )
 
     # Unpack return data from showconfig
-    pkg = next(iter(config))
-    config = config[pkg]
+    pkg = next(iter(configuration))
+    configuration = configuration[pkg]
 
     def _on_off(val):
         '''
@@ -255,7 +255,7 @@ def config(name, reset=False, **kwargs):
         (x, _on_off(kwargs[x])) for x in kwargs if not x.startswith('_')
     )
 
-    bad_opts = [x for x in opts if x not in config]
+    bad_opts = [x for x in opts if x not in configuration]
     if bad_opts:
         raise SaltInvocationError(
             'The following opts are not valid for port {0}: {1}'
@@ -273,9 +273,9 @@ def config(name, reset=False, **kwargs):
         )
 
     for opt, val in opts.iteritems():
-        config[opt] = val
+        configuration[opt] = val
 
-    _write_options(name, pkg, config)
+    _write_options(name, pkg, configuration)
 
     new_config = showconfig(name, dict_return=True)
     try:
@@ -283,7 +283,7 @@ def config(name, reset=False, **kwargs):
     except (StopIteration, TypeError):
         return False
 
-    return all(config[x] == new_config.get(x) for x in config)
+    return all(configuration[x] == new_config.get(x) for x in configuration)
 
 
 def update(extract=False):
