@@ -105,6 +105,7 @@ Full list of builtin execution modules
     nova
     npm
     nzbget
+    omapi
     openbsdpkg
     openbsdservice
     osxdesktop
@@ -121,6 +122,7 @@ Full list of builtin execution modules
     portage_config
     postgres
     poudriere
+    powerpath
     ps
     publish
     puppet
@@ -131,13 +133,16 @@ Full list of builtin execution modules
     quota
     rabbitmq
     rbenv
+    rdp
     reg
     ret
     rh_ip
     rh_service
+    riak
     rpm
     rvm
     s3
+    saltcloudmod
     saltutil
     seed
     selinux
@@ -169,16 +174,24 @@ Full list of builtin execution modules
     useradd
     virt
     virtualenv_mod
+    win_autoruns
     win_disk
+    win_dns_client
     win_file
+    win_firewall
     win_groupadd
+    win_ip
     win_network
     win_ntp
+    win_path
     win_pkg
+    win_repo
+    win_servermanager
     win_service
     win_shadow
     win_status
     win_system
+    win_timezone
     win_useradd
     xapi
     yumpkg
