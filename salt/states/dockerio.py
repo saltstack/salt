@@ -64,6 +64,9 @@ from salt._compat import string_types
 
 
 def __virtual__():
+    '''
+    Only load if docker libs available
+    '''
     if HAS_DOCKER:
         return 'docker'
 
@@ -74,9 +77,9 @@ NOTSET = object()
 CONTAINER_GRAIN_ID = 'docker.containers.{id}.id'
 CONTAINER_GRAIN_ID_RE = re.compile(
     'docker.containers.([^.]+).id', re.S | re.M | re.U)
-"""
+'''
 Use a proxy mapping to allow queries & updates after the initial grain load
-"""
+'''
 MAPPING_CACHE = {}
 FN_CACHE = {}
 
@@ -86,7 +89,7 @@ def __salt(fn):
         FN_CACHE[fn] = __salt__[fn]
     return FN_CACHE[fn]
 
-def ret_status(exec_status=None,
+def _ret_status(exec_status=None,
                name='',
                comment='',
                result=None,
@@ -113,16 +116,16 @@ def ret_status(exec_status=None,
     }
 
 
-def valid(exec_status=None, name='', comment='', changes=None):
-    return ret_status(exec_status=exec_status,
+def _valid(exec_status=None, name='', comment='', changes=None):
+    return _ret_status(exec_status=exec_status,
                       comment=comment,
                       name=name,
                       changes=changes,
                       result=True)
 
 
-def invalid(exec_status=None, name='', comment='', changes=None):
-    return ret_status(exec_status=exec_status,
+def _invalid(exec_status=None, name='', comment='', changes=None):
+    return _ret_status(exec_status=exec_status,
                       comment=comment,
                       name=name,
                       changes=changes,
@@ -140,18 +143,16 @@ def pulled(name, force=False, *args, **kwargs):
         Tag of the image
     force
         pull even if the image is already pulled
-
-
     '''
     ins = __salt('docker.inspect_image')
     iinfos = ins(name)
     if iinfos['status'] and not force:
-        return valid(
+        return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
     func = __salt('docker.pull')
     a, kw = [name], {}
-    status = ret_status(func(*a, **kw), name)
+    status = _ret_status(func(*a, **kw), name)
     return status
 
 
@@ -173,12 +174,11 @@ def built(name,
         Tag of the image
     path
         URL or path in the filesystem to the dockerfile
-
     '''
     ins = __salt('docker.inspect_image')
     iinfos = ins(name)
     if iinfos['status'] and not force:
-        return valid(
+        return _valid(
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
                 name, iinfos['out']['id']))
@@ -190,32 +190,32 @@ def built(name,
         nocache=nocache,
         rm=rm
     )
-    status = ret_status(func(*a, **kw), name)
+    status = _ret_status(func(*a, **kw), name)
     return status
 
 
 def _toggle_container_running_status(cid, started):
-    """
+    '''
     Start or stop a container
     cid
         Container id
     started
         True if container is meaned to be started
-    """
+    '''
     running = __salt('docker.is_running')(cid)
     # if container exists but is not started, try to start it
     if started:
         if running:
-            return valid(comment='Container {0} is started'.format(cid))
+            return _valid(comment='Container {0} is started'.format(cid))
         else:
             started = __salt('docker.start')(cid)
             running = __salt('docker.is_running')(cid)
             if running:
-                return valid(
+                return _valid(
                     comment=('Container {0} was already stopped,\n'
                              'Container {0} was started.\n').format(cid))
             else:
-                return invalid(comment=(
+                return _invalid(comment=(
                     'Container {0} cannot be started\n{1}'
                 ).format(cid, started['out']))
     else:
@@ -223,12 +223,12 @@ def _toggle_container_running_status(cid, started):
             __salt('docker.stop')(cid, 1)
             running = __salt('docker.is_running')(cid)
             if running:
-                return invalid(
+                return _invalid(
                     comment='Container {0} could not be stopped'.format(cid))
             else:
-                return valid(comment='Container {0} was stopped,'.format(cid))
+                return _valid(comment='Container {0} was stopped,'.format(cid))
         else:
-            return valid(comment='Container {0} is stopped,'.format(cid))
+            return _valid(comment='Container {0} is stopped,'.format(cid))
 
 
 def installed(name,
@@ -293,7 +293,7 @@ def installed(name,
     dports, dvolumes, denvironment = [], [], {}
     iinfos = ins_image(image)
     if not iinfos['status']:
-        return invalid(comment="image '{0}' does not exist".format(image))
+        return _invalid(comment='image "{0}" does not exist'.format(image))
     existing_cid = _get_container_id(name)
     cinfos = ins_container(existing_cid)
     # if container exists but is not started, try to start it
@@ -342,7 +342,7 @@ def installed(name,
         volumes_from=volumes_from)
     already_exists = False
     if already_exists and not force:
-        return valid(
+        return _valid(
             name=name,
             comment='Container already exist {0}, id: {1}'.format(1, 1))
     if not already_exists or force:
@@ -364,7 +364,7 @@ def installed(name,
                 out['result'] = toggle_s['result']
                 out['status'] = toggle_s['result']
                 out['comment'] += '\n' + toggle_s['comment']
-        ret = ret_status(out, name)
+        ret = _ret_status(out, name)
     return ret
 
 
@@ -433,11 +433,11 @@ def absent(name):
         cid = cinfos['id']
         # destroy if we found meat to do
         _toggle_container_running_status(cid, False)
-        ret = ret_status(__salt('docker.remove_container')(cid))
+        ret = _ret_status(__salt('docker.remove_container')(cid))
         _del_container_id(cid=cid)
         return ret
     else:
-        return valid(comment='Container {0} not found'.format(name))
+        return _valid(comment='Container {0} not found'.format(name))
 
 
 def present(name):
@@ -459,9 +459,9 @@ def present(name):
         cinfos = ins_container(name)
     if cinfos['status']:
         cid = cinfos['id']
-        return valid(comment='Container {0} exists'.format(cid))
+        return _valid(comment='Container {0} exists'.format(cid))
     else:
-        return invalid(comment='Container {0} not found'.format(cid or name))
+        return _invalid(comment='Container {0} not found'.format(cid or name))
 
 
 def run(name,
