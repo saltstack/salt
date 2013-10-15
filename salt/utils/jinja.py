@@ -19,6 +19,7 @@ import yaml
 # Import salt libs
 import salt
 import salt.fileclient
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
