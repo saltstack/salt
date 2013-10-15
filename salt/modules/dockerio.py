@@ -16,7 +16,9 @@ installation prerequsuites
 --------------------------
 - You will need the 'docker-py' python package in your python installation
   running salt.
-- For now, you need docker-py from sources: https://github.com/dotcloud/docker-py
+- For now, you need docker-py from sources:
+
+    https://github.com/dotcloud/docker-py
 
 Prerequisite pillar configuration for authentication
 ----------------------------------------------------
@@ -182,7 +184,11 @@ def _sizeof_fmt(num):
         num /= 1024.0
 
 
-def _set_status(m, id=NOTSET, comment=INVALID_RESPONSE, status=False, out=None):
+def _set_status(m,
+                id=NOTSET,
+                comment=INVALID_RESPONSE,
+                status=False,
+                out=None):
     m['comment'] = comment
     m['status'] = status
     m['out'] = out
@@ -262,7 +268,8 @@ def _merge_auth_bits():
     return config
 
 
-def get_containers(all=True, trunc=False, since=None, before=None, limit=-1):
+def get_containers(all=True, trunc=False, since=None, before=None, limit=-1,
+                   *args, **kwargs):
     '''
     Get a list of mappings representing all containers
 
@@ -356,7 +363,7 @@ def _get_container_infos(container):
     return status['out']
 
 
-def logs(container):
+def logs(container, *args, **kwargs):
     '''
     Get container logs
     container
@@ -373,7 +380,7 @@ def logs(container):
 
 
 def commit(container, repository=None, tag=None, message=None,
-           author=None, conf=None):
+           author=None, conf=None, *args, **kwargs):
     '''
     Commit a container (promotes it to an image)
     container
@@ -416,7 +423,7 @@ def commit(container, repository=None, tag=None, message=None,
     return status
 
 
-def diff(container):
+def diff(container, *args, **kwargs):
     '''
     Get container diffs
     container
@@ -432,7 +439,7 @@ def diff(container):
     return status
 
 
-def export(container, path):
+def export(container, path, *args, **kwargs):
     '''
     Export a container to a file
     container
@@ -477,7 +484,8 @@ def create_container(image,
                      environment=None,
                      dns=None,
                      volumes=None,
-                     volumes_from=None):
+                     volumes_from=None,
+                     *args, **kwargs):
     '''
      Get container diffs
     image
@@ -549,20 +557,26 @@ def create_container(image,
         )
         container = info['Id']
         kill(container)
-        start(container, binds=binds)
-        valid(status,
-              id=container,
-              comment='Container created',
-              out={
-                  'info': _get_container_infos(container),
-                  'out': info
-              })
+        ret_start = start(container, binds=binds)
+        callback = valid
+        comment = 'Container created'
+        out = {
+            'info': _get_container_infos(container),
+            'started': ret_start,
+            'out': info
+        }
+        if not ret_start['status']:
+            callback = invalid
+            comment = 'Container created but cannot be started\n{0}'.format(
+                ret_start['out']
+            )
+        return callback(status, id=container, comment=comment, out=out)
     except Exception:
         invalid(status, id=image, out=traceback.format_exc())
     return status
 
 
-def version():
+def version(*args, **kwargs):
     '''
     Get docker version
 
@@ -580,7 +594,7 @@ def version():
     return status
 
 
-def info():
+def info(*args, **kwargs):
     '''
     Get the version information about docker
 
@@ -602,7 +616,7 @@ def info():
     return status
 
 
-def port(container, private_port):
+def port(container, private_port, *args, **kwargs):
     '''
     Private/Public for a specific port mapping allocation information
     This method is broken on docker-py side
@@ -626,7 +640,7 @@ def port(container, private_port):
     return status
 
 
-def stop(container, timeout=10):
+def stop(container, timeout=10, *args, **kwargs):
     '''
     Stop a running container
 
@@ -672,7 +686,7 @@ def stop(container, timeout=10):
     return status
 
 
-def kill(container):
+def kill(container, *args, **kwargs):
     '''
     Kill a running container
 
@@ -718,7 +732,7 @@ def kill(container):
     return status
 
 
-def restart(container, timeout=10):
+def restart(container, timeout=10, *args, **kwargs):
     '''
     Restart a running container
 
@@ -755,7 +769,7 @@ def restart(container, timeout=10):
     return status
 
 
-def start(container, binds=None, ports=None):
+def start(container, binds=None, ports=None, *args, **kwargs):
     '''
     restart the specified container
     container
@@ -795,7 +809,7 @@ def start(container, binds=None, ports=None):
     return status
 
 
-def wait(container):
+def wait(container, *args, **kwargs):
     '''
     Blocking wait for a container exit gracefully without
     timeout killing it
@@ -830,7 +844,7 @@ def wait(container):
     return status
 
 
-def exists(container):
+def exists(container, *args, **kwargs):
     '''
     Check if a given container exists
 
@@ -851,7 +865,7 @@ def exists(container):
         return False
 
 
-def is_running(container):
+def is_running(container, *args, **kwargs):
     '''
     Is this container running
     container
@@ -865,7 +879,7 @@ def is_running(container):
         return False
 
 
-def remove_container(container=None, force=False, v=False):
+def remove_container(container=None, force=False, v=False, *args, **kwargs):
     '''
     Removes a container from a docker installation
     container
@@ -907,7 +921,7 @@ def remove_container(container=None, force=False, v=False):
     return status
 
 
-def top(container):
+def top(container, *args, **kwargs):
     '''
     Run the docker top command on a specific container
     container
@@ -953,7 +967,7 @@ def top(container):
     return status
 
 
-def inspect_container(container):
+def inspect_container(container, *args, **kwargs):
     '''
     Get container information. This is similar to the docker inspect command.
 
@@ -981,7 +995,7 @@ def inspect_container(container):
     return status
 
 
-def login(url=None, username=None, password=None, email=None):
+def login(url=None, username=None, password=None, email=None, *args, **kwargs):
     '''
     Wrapper to the docker.py login method, does not do much yet
     '''
@@ -989,7 +1003,7 @@ def login(url=None, username=None, password=None, email=None):
     return client.login(url, username=username, password=password, email=email)
 
 
-def search(term):
+def search(term, *args, **kwargs):
     '''
     Search for an image on the registry
 
@@ -1011,7 +1025,7 @@ def search(term):
     return status
 
 
-def _create_image_assemble_error_status(status, ret, logs):
+def _create_image_assemble_error_status(status, ret, logs, *args, **kwargs):
     '''
     Given input in this form::
 
@@ -1056,7 +1070,7 @@ def _create_image_assemble_error_status(status, ret, logs):
     return status
 
 
-def import_image(src, repo, tag=None):
+def import_image(src, repo, tag=None, *args, **kwargs):
     '''
     Import content from a local tarball or an url to a docker image
 
@@ -1079,7 +1093,7 @@ def import_image(src, repo, tag=None):
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
-            logs, info = parse_image_multilogs_string(ret)
+            logs, info = _parse_image_multilogs_string(ret)
             _create_image_assemble_error_status(status, ret, logs)
             if status['status'] is not False:
                 infos = _get_image_infos(logs[0]['status'])
@@ -1094,7 +1108,7 @@ def import_image(src, repo, tag=None):
     return status
 
 
-def tag(image, repository, tag=None, force=False):
+def tag(image, repository, tag=None, force=False, *args, **kwargs):
     '''
     Tag an image into a repository
 
@@ -1138,7 +1152,7 @@ def tag(image, repository, tag=None, force=False):
     return status
 
 
-def get_images(name=None, quiet=False, all=True):
+def get_images(name=None, quiet=False, all=True, *args, **kwargs):
     '''
     List docker images
 
@@ -1192,28 +1206,54 @@ def build(path=None,
           tag=None,
           quiet=False,
           fileobj=None,
-          nocache=False):
+          nocache=False,
+          rm=True,
+          *args, **kwargs):
+    '''
+    Build a docker image from a dockerfile or an URL
+
+    You can either:
+
+        - give the url/branch/docker_dir
+        - give a path on the file system
+
+    path
+        URL or path in the filesystem to the dockerfile
+    tag
+        Tag of the image
+    quiet
+        quiet mode
+    nocache
+        do not use docker image cache
+    rm
+        remove intermediate commits
+
+    '''
     client = _get_client()
     status = base_status.copy()
     if path or fileobj:
         try:
-            ret = client.build(path=path, tag=tag, quiet=quiet,
-                               fileobj=fileobj, nocache=nocache)
+            ret = client.build(path=path,
+                               tag=tag,
+                               quiet=quiet,
+                               fileobj=fileobj,
+                               rm=rm,
+                               nocache=nocache)
+            if isinstance(ret, tuple):
+                id, out = ret[0], ret[1]
+                if id:
+                    valid(status, id=id, out=out, comment='Image built')
+                else:
+                    invalid(status, id=id, out=out)
         except Exception:
             invalid(status,
                     out=traceback.format_exc(),
                     comment='Unexpected error while building an image')
             return status
-        if isinstance(ret, tuple):
-            id, out = ret[0], ret[1]
-            if id:
-                valid(status, id=id, out=out, comment='Image built')
-            else:
-                invalid(status, id=id, out=out)
     return status
 
 
-def remove_image(image):
+def remove_image(image, *args, **kwargs):
     '''
     Remove an image from a system.
 
@@ -1258,7 +1298,7 @@ def remove_image(image):
     return status
 
 
-def inspect_image(image):
+def inspect_image(image, *args, **kwargs):
     status = base_status.copy()
     try:
         infos = _get_image_infos(image)
@@ -1345,7 +1385,7 @@ def _pull_assemble_error_status(status, ret, logs):
     return status
 
 
-def pull(repo, tag=None):
+def pull(repo, tag=None, *args, **kwargs):
     '''
     Pulls an image from any registry. See above documentation for
     how to configure authenticated access.
@@ -1411,7 +1451,7 @@ def pull(repo, tag=None):
     try:
         ret = client.pull(repo, tag=tag)
         if ret:
-            logs, infos = parse_image_multilogs_string(ret)
+            logs, infos = _parse_image_multilogs_string(ret)
             if infos and infos.get('id', None):
                 repotag = repo
                 if tag:
@@ -1472,7 +1512,7 @@ def _push_assemble_error_status(status, ret, logs):
     return status
 
 
-def push(repo):
+def push(repo, *args, **kwargs):
     '''
     Pushes an image from any registry
     See this top level documentation to know
@@ -1490,7 +1530,7 @@ def push(repo):
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     ret = client.push(repo)
-    logs, infos = parse_image_multilogs_string(ret)
+    logs, infos = _parse_image_multilogs_string(ret)
     if logs:
         laststatus = logs[0].get('status', None)
         if laststatus and (
@@ -1721,7 +1761,8 @@ def _script(status,
             __env__ = env
         path = salt.utils.mkstemp(dir=tpath)
         if template:
-            __salt__['cp.get_template'](source, path, template, __env__, **kwargs)
+            __salt__['cp.get_template'](
+                source, path, template, __env__, **kwargs)
         else:
             fn_ = __salt__['cp.cache_file'](source, __env__)
             if not fn_:
@@ -1765,6 +1806,7 @@ def script(container,
            reset_system_locale=True,
            __env__='base',
            no_clean=False,
+           *nargs,
            **kwargs):
     '''
     Same usage as cmd.script but running inside a container context
@@ -1806,6 +1848,7 @@ def script_retcode(container,
                    reset_system_locale=True,
                    __env__='base',
                    no_clean=False,
+                   *args,
                    **kwargs):
     '''
     Same usage as cmd.script_retcode but running inside a container context
@@ -1816,19 +1859,19 @@ def script_retcode(container,
         See cmd.retcode
     '''
     return _script(container,
-                  source=source,
-                  cwd=cwd,
-                  stdin=stdin,
-                  runas=runas,
-                  shell=shell,
-                  env=env,
-                  template=template,
-                  umask=umask,
-                  timeout=timeout,
-                  reset_system_locale=reset_system_locale,
-                  run_func_=retcode,
-                  no_clean=no_clean,
-                  **kwargs)
+                   source=source,
+                   cwd=cwd,
+                   stdin=stdin,
+                   runas=runas,
+                   shell=shell,
+                   env=env,
+                   template=template,
+                   umask=umask,
+                   timeout=timeout,
+                   reset_system_locale=reset_system_locale,
+                   run_func_=retcode,
+                   no_clean=no_clean,
+                   **kwargs)
 
 
 ## vim:set et sts=4 ts=4 tw=80:
