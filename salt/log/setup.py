@@ -458,7 +458,13 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 logging.handlers, 'WatchedFileHandler', logging.FileHandler
             )(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
-            handler = LOGGING_NULL_HANDLER
+            logging.getLogger(__name__).warning(
+                'Failed to open log file, do you have permission to write to '
+                '{0}?'.format(log_path)
+            )
+            # Do not proceed with any more configuration since it will fail, we
+            # have the console logging already setup and the user should see
+            # the error.
             return
 
     handler.setLevel(level)
