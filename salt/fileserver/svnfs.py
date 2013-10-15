@@ -131,7 +131,7 @@ def _env_root(repo, env):
     Check if the requested env is a valid env for this repo.
     '''
     trunk_root = os.path.join(repo, 'trunk')
-    if os.path.isdir(trunk_root) and env == 'base':
+    if os.path.isdir(trunk_root) and env == 'trunk':
         return trunk_root
 
     branch_root = os.path.join(repo, 'branches')
@@ -184,7 +184,7 @@ def find_file(path, env='base', **kwargs):
         full = os.path.join(env_root, path)
         if os.path.isfile(full):
             fnd['rel'] = local_path
-            fnd['path'] = dest
+            fnd['path'] = full
             return fnd
     return fnd
 
@@ -217,32 +217,51 @@ def file_hash(load, fnd):
     '''
     if 'path' not in load or 'env' not in load:
         return ''
-    ret = {'hash_type': __opts__['hash_type']}
     env = load['env']
     if env == 'base':
         env = 'trunk'
     relpath = fnd['rel']
     path = fnd['path']
+    ret = {}
+
     if __opts__['svnfs_root']:
         relpath = os.path.join(__opts__['svnfs_root'], relpath)
         path = os.path.join(__opts__['svnfs_root'], path)
 
-    hashdest = os.path.join(__opts__['cachedir'],
-                            'svnfs/hash',
-                            env,
-                            '{0}.hash.{1}'.format(relpath,
-                                                  __opts__['hash_type']))
-    if not os.path.isfile(hashdest):
-        with salt.utils.fopen(path, 'rb') as fp_:
-            ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
-                fp_.read()).hexdigest()
-        with salt.utils.fopen(hashdest, 'w+') as fp_:
-            fp_.write(ret['hsum'])
+    # if the file doesn't exist, we can't get a hash
+    if not path or not os.path.isfile(path):
         return ret
-    else:
-        with salt.utils.fopen(hashdest, 'rb') as fp_:
-            ret['hsum'] = fp_.read()
-        return ret
+
+    # set the hash_type as it is determined by config-- so mechanism won't change that
+    ret['hash_type'] = __opts__['hash_type']
+
+    # check if the hash is cached
+    # cache file's contents should be "hash:mtime"
+    cache_path = os.path.join(__opts__['cachedir'],
+                              'svnfs/hash',
+                              env,
+                              '{0}.hash.{1}'.format(relpath,
+                                                    __opts__['hash_type']))
+    # if we have a cache, serve that if the mtime hasn't changed
+    if os.path.exists(cache_path):
+        with salt.utils.fopen(cache_path, 'rb') as fp_:
+            hsum, mtime = fp_.read().split(':')
+            if os.path.getmtime(path) == mtime:
+                # check if mtime changed
+                ret['hsum'] = hsum
+                return ret
+
+    # if we don't have a cache entry-- lets make one
+    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    cache_dir = os.path.dirname(cache_path)
+    # make cache directory if it doesn't exist
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+    # save the cache object "hash:mtime"
+    with salt.utils.fopen(cache_path, 'w') as fp_:
+        fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
+
+    return ret
 
 
 def file_list(load):
@@ -259,12 +278,11 @@ def file_list(load):
     for repo in repos:
         env_root = _env_root(repo, load['env'])
         if env_root:
-            for path in env_root:
-                for root, dirs, files in os.walk(path):
-                    for fname in files:
-                        rel_fn = os.path.relpath(os.path.join(root, fname),
-                                                 path)
-                        ret.append(rel_fn)
+            for root, dirs, files in os.walk(env_root):
+                for fname in files:
+                    rel_fn = os.path.relpath(os.path.join(root, fname),
+                                             env_root)
+                    ret.append(rel_fn)
     return ret
 
 
@@ -281,11 +299,10 @@ def file_list_emptydirs(load):
     for repo in repos:
         env_root = _env_root(repo, load['env'])
         if env_root:
-            for path in env_root:
-                for root, dirs, files in os.walk(path):
-                    if len(dirs) == 0 and len(files) == 0:
-                        rel_fn = os.path.relpath(root, path)
-                        ret.append(rel_fn)
+            for root, dirs, files in os.walk(env_root):
+                if len(dirs) == 0 and len(files) == 0:
+                    rel_fn = os.path.relpath(root, env_root)
+                    ret.append(rel_fn)
     return ret
 
 
@@ -302,7 +319,6 @@ def dir_list(load):
     for repo in repos:
         env_root = _env_root(repo, load['env'])
         if env_root:
-            for path in env_root:
-                for root, dirs, files in os.walk(path):
-                    ret.append(os.path.relpath(root, path))
+            for root, dirs, files in os.walk(env_root):
+                ret.append(os.path.relpath(root, env_root))
     return ret
