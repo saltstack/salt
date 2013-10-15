@@ -9,7 +9,6 @@ Full list of builtin execution modules
     .. toctree::
 
         salt.modules.pkg
-        salt.modules.sys
 
 .. currentmodule:: salt.modules
 
