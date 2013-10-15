@@ -32,9 +32,9 @@ def _refine_enc(enc):
     '''
     Return the properly formatted ssh value for the authorized encryption key
     type. ecdsa defaults to 256 bits, must give full ecdsa enc schema string
-    if using higher enc. If the type is not found, return ssh-rsa, the ssh
-    default.
+    if using higher enc. If the type is not found, raise CommandExecutionError.
     '''
+
     rsa = ['r', 'rsa', 'ssh-rsa']
     dss = ['d', 'dsa', 'dss', 'ssh-dss']
     ecdsa = ['e', 'ecdsa', 'ecdsa-sha2-nistp521', 'ecdsa-sha2-nistp384',
@@ -51,8 +51,8 @@ def _refine_enc(enc):
             return 'ecdsa-sha2-nistp256'
         return enc
     else:
-        return 'ssh-rsa'
-
+        msg = 'Incorrect encryption key type "{}".'.format(enc)
+        raise CommandExecutionError(msg)
 
 def _format_auth_line(key, enc, comment, options):
     '''
@@ -75,6 +75,7 @@ def _replace_auth_key(
     '''
     Replace an existing key
     '''
+
     auth_line = _format_auth_line(key, enc, comment, options or [])
 
     lines = []
