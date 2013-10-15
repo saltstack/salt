@@ -66,7 +66,7 @@ def latest(name,
     password
         Connect to the Subversion server with this password
 
-        .. versionadded:: 0.17
+        .. versionadded:: 0.17.0
 
     force : False
         Continue if conflicts are encountered
@@ -180,7 +180,7 @@ def export(name,
     password
         Connect to the Subversion server with this password
 
-        .. versionadded:: 0.17
+        .. versionadded:: 0.17.0
 
     force : False
         Continue if conflicts are encountered
