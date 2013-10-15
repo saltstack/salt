@@ -4,6 +4,10 @@
 Managment of dockers
 =====================
 
+.. note::
+    This state module is beta, the api is subject to change and no promise
+    as to performance or functionality is yet present
+
 Available Functions
 -------------------
 - built
