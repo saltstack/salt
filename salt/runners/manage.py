@@ -246,8 +246,8 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
         base_url = 'http://saltstack.com/downloads/'
         source = urllib.urlopen(base_url).read()
         salty_rx = re.compile('>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<')
-        source_list = sorted([[path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")] \
-                              for path, ver, plat, date in salty_rx.findall(source)], \
+        source_list = sorted([[path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
+                              for path, ver, plat, date in salty_rx.findall(source)],
                              key=operator.itemgetter(3), reverse=True)
         if version:
             source_list = [s for s in source_list if s[1] == version]
