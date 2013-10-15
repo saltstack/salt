@@ -53,7 +53,6 @@ def _refine_enc(enc):
     else:
         msg = 'Incorrect encryption key type "{}".'.format(enc)
         raise CommandExecutionError(msg)
-        return 'ssh-rsa'
 
 def _format_auth_line(key, enc, comment, options):
     '''
