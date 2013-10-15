@@ -251,11 +251,13 @@ def master_config(opts, vm_):
     return master
 
 
-def salt_config_to_yaml(configuration):
+def salt_config_to_yaml(configuration, line_break='\n'):
     '''
     Return a salt configuration dictionary, master or minion, as a yaml dump
     '''
-    return yaml.safe_dump(configuration, default_flow_style=False)
+    return yaml.safe_dump(configuration,
+                          line_break=line_break,
+                          default_flow_style=False)
 
 
 def wait_for_fun(fun, timeout=900, **kwargs):
@@ -406,18 +408,54 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
         creds = '-U {0}%{1} //{2}'.format(
             username, password, host)
         # Shell out to smbclient to create C:\salttmp\
-        win_cmd('smbclient {0}/c$ -c "mkdir salttemp; cd salttemp; prompt; mput {1}; exit;"'.format(
-            creds, win_installer
-        ))
+        win_cmd('smbclient {0}/c$ -c "mkdir salttemp; exit;"'.format(creds))
+        # Shell out to smbclient to create C:\salt\conf\pki\minion
+        win_cmd('smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; exit;"'.format(creds))
         # Shell out to smbclient to copy over minion keys
         ## minion_pub, minion_pem, minion_conf
+        kwargs = {'hostname': host,
+                  'creds': creds}
+
+        if minion_conf:
+            if not isinstance(minion_conf, dict):
+                # Let's not just fail regarding this change, specially
+                # since we can handle it
+                raise DeprecationWarning(
+                    '`saltcloud.utils.deploy_windows` now only accepts '
+                    'dictionaries for its `minion_conf` parameter. '
+                    'Loading YAML...'
+                )
+                minion_conf = yaml.load(minion_conf)
+            minion_grains = minion_conf.pop('grains', {})
+            if minion_grains:
+                smb_file(
+                    'salt\\conf\\grains',
+                    salt_config_to_yaml(minion_grains, line_break='\r\n'),
+                    kwargs
+                )
+            smb_file(
+                'salt\\conf\\minion',
+                salt_config_to_yaml(minion_conf, line_break='\r\n'),
+                kwargs
+            )
+
+        if minion_pub:
+            smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
+
+        if minion_pem:
+            smb_file('salt\\conf\\pki\\minion\\minion.pem', minion_pem, kwargs)
+
         # Shell out to smbclient to copy over win_installer
         ## win_installer refers to a file such as:
-        ## Salt-Minion-0.16.3-win32-Setup.exe
+        ## /root/Salt-Minion-0.17.0-win32-Setup.exe
         ## ..which exists on the same machine as salt-cloud
-        # Shell out to winexe to execute win_installer
         comps = win_installer.split('/')
+        local_path = '/'.join(comps[:-1])
         installer = comps[-1]
+        win_cmd('smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; mput {2}; exit;"'.format(
+            creds, local_path, installer
+        ))
+        # Shell out to winexe to execute win_installer
         win_cmd('winexe {0} -c "c:\\salttemp\\{1} /S /master={2} /minion-name={3}'.format(
             creds, installer, master, name
         ))
@@ -434,8 +472,6 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
                    tag='salt.cloud.deploy_script')
         return True
     return False
-
-
 
 
 def deploy_script(host, port=22, timeout=900, username='root',
@@ -774,7 +810,7 @@ def scp_file(dest_path, contents, kwargs):
     with salt.utils.fopen(tmppath, 'w') as tmpfile:
         tmpfile.write(contents)
 
-    log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
+    log.debug('Uploading {0} to {1} (scp)'.format(dest_path, kwargs['hostname']))
 
     ssh_args = [
         # Don't add new hosts to the host key database
@@ -831,6 +867,32 @@ def scp_file(dest_path, contents, kwargs):
         )
     # Signal an error
     return 1
+
+
+def smb_file(dest_path, contents, kwargs):
+    '''
+    Use smbclient to copy a file to a server
+    '''
+    tmpfh, tmppath = tempfile.mkstemp()
+    with salt.utils.fopen(tmppath, 'w') as tmpfile:
+        tmpfile.write(contents)
+
+    log.debug('Uploading {0} to {1} (smbclient)'.format(
+        dest_path, kwargs['hostname'])
+    )
+
+    # Shell out to smbclient
+    comps = tmppath.split('/')
+    src_dir = '/'.join(comps[:-1])
+    src_file = comps[-1]
+    comps = dest_path.split('\\')
+    dest_dir = '\\'.join(comps[:-1])
+    dest_file = comps[-1]
+    cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; rename {2} {4}; exit;"'.format(
+        kwargs['creds'], src_dir, src_file, dest_dir, dest_file
+    )
+    log.debug('SCP command: {0!r}'.format(cmd))
+    win_cmd(cmd)
 
 
 def win_cmd(command, **kwargs):
