@@ -916,16 +916,20 @@ def create(vm_=None, call=None):
 
         # pull the root device name from the result and use it when
         # launching the new VM
-        if type(rd_data[0]['blockDeviceMapping']['item']) is list:
+        if rd_data[0]['blockDeviceMapping'] is None:
+            # Some ami instances do not have a root volume. Ignore such cases
+            rd_name = None
+        elif type(rd_data[0]['blockDeviceMapping']['item']) is list:
             rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
         else:
             rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
         log.info('Found root device name: {0}'.format(rd_name))
 
-        params[spot_prefix + 'BlockDeviceMapping.1.DeviceName'] = rd_name
-        params[spot_prefix + 'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
-            set_del_root_vol_on_destroy
-        ).lower()
+        if rd_name is not None:
+            params[spot_prefix + 'BlockDeviceMapping.1.DeviceName'] = rd_name
+            params[spot_prefix + 'BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
+                set_del_root_vol_on_destroy
+            ).lower()
 
     set_del_all_vols_on_destroy = config.get_config_value(
         'del_all_vols_on_destroy', vm_, __opts__, search_global=False
