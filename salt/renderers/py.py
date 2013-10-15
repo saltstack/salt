@@ -73,11 +73,17 @@ def render(template, env='', sls='', tmplpath=None, **kws):
             template,
             True,
             __salt__=__salt__,
+            salt=__salt__,
             __grains__=__grains__,
+            grains=__grains__,
             __opts__=__opts__,
+            opts=__opts__,
             __pillar__=__pillar__,
+            pillar=__pillar__,
             __env__=env,
+            env=env,
             __sls__=sls,
+            sls=sls,
             **kws)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
