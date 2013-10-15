@@ -205,7 +205,7 @@ def bootstrap(version="develop",
                         ").read()' | sh -s -- git " + version])
 
 
-def bootstrap_psexec(hosts='', master=None, version=None, arch='win32', 
+def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
                      installer_url=None, username=None, password=None):
     '''
     Bootstrap Windows minions via PsExec.
@@ -214,8 +214,8 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
         Comma separated list of hosts to deploy the Windows Salt minion.
 
     master
-        Address of the Salt master passed as an argument to the installer. 
-    
+        Address of the Salt master passed as an argument to the installer.
+
     version
         Point release of installer to download. Defaults to the most recent.
 
@@ -230,9 +230,9 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
         Optional user name for login on remote computer.
 
     password
-        Password for optional username. If omitted, PsExec will prompt for one 
+        Password for optional username. If omitted, PsExec will prompt for one
         to be entered for each host.
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -246,17 +246,17 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
         base_url = 'http://saltstack.com/downloads/'
         source = urllib.urlopen(base_url).read()
         salty_rx = re.compile('>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<')
-        source_list = sorted([[path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")] \
-                              for path, ver, plat, date in salty_rx.findall(source)], \
+        source_list = sorted([[path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
+                              for path, ver, plat, date in salty_rx.findall(source)],
                              key=operator.itemgetter(3), reverse=True)
         if version:
             source_list = [s for s in source_list if s[1] == version]
         if arch:
-            source_list = [s for s in source_list if s[2] == arch]    
+            source_list = [s for s in source_list if s[2] == arch]
 
         if not source_list:
             return -1
-        
+
         version = source_list[0][1]
         arch = source_list[0][2]
         installer_url = base_url+source_list[0][0]
@@ -277,9 +277,9 @@ objXMLHTTP.send()
 If objXMLHTTP.Status = 200 Then
 Set objADOStream = CreateObject("ADODB.Stream")
 objADOStream.Open
-objADOStream.Type = 1   
+objADOStream.Type = 1
 objADOStream.Write objXMLHTTP.ResponseBody
-objADOStream.Position = 0   
+objADOStream.Position = 0
 objADOStream.SaveToFile strHDLocation
 objADOStream.Close
 Set objADOStream = Nothing
@@ -291,8 +291,8 @@ objShell.Exec("{1}{2}")'''
     vb_saltexec = 'saltinstall.exe'
     vb_saltexec_args = ' /S /minion-name=%COMPUTERNAME%'
     if master:
-        vb_saltexec_args += ' /master='+master
-    
+        vb_saltexec_args += ' /master={0}'.format(master)
+
     # One further thing we need to do; the Windows Salt minion is pretty
     # self-contained, except for the Microsoft Visual C++ 2008 runtime.
     # It's tiny, so the bootstrap will attempt a silent install.
@@ -301,27 +301,27 @@ objShell.Exec("{1}{2}")'''
         vb_vcrun = vb.format('http://download.microsoft.com/download/d/2/4/d242c3fb-da5a-4542-ad66-f9661d0a8d19/vcredist_x64.exe', vb_vcrunexec, ' /q')
     else:
         vb_vcrun = vb.format('http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe', vb_vcrunexec, ' /q')
-    
+
     vb_salt = vb.format(installer_url, vb_saltexec, vb_saltexec_args)
 
-    # PsExec doesn't like extra long arguments; save the instructions as a batch 
+    # PsExec doesn't like extra long arguments; save the instructions as a batch
     # file so we can fire it over for execution.
-    
-    # First off, change to the local temp directory, stop salt-minion (if 
+
+    # First off, change to the local temp directory, stop salt-minion (if
     # running), and remove the master's public key.
     # This is to accomodate for reinstalling Salt over an old or broken build,
     # e.g. if the master address is changed, the salt-minion process will fail
     # to authenticate and quit; which means infinite restarts under Windows.
     batch = 'cd /d %TEMP%\nnet stop salt-minion\ndel c:\salt\conf\pki\minion\minion_master.pub\n'
-    
+
     # Speaking of command-line hostile, cscript only supports reading a script
     # from a file. Glue it together line by line.
     for x, y in ((vb_vcrunexec, vb_vcrun), (vb_saltexec, vb_salt)):
         vb_lines = y.split('\n')
         batch += '\ndel '+x+'\n@echo '+vb_lines[0]+'>'+x+'.vbs\n@echo ' + \
                  ('>>'+x+'.vbs\n@echo ').join(vb_lines[1:]) + \
-                 '>>'+x+'.vbs\ncscript.exe /NoLogo '+x+'.vbs' 
-    
+                 '>>'+x+'.vbs\ncscript.exe /NoLogo '+x+'.vbs'
+
     batch_path = tempfile.mkstemp(suffix='.bat')[1]
     batch_file = open(batch_path, 'wb')
     batch_file.write(batch)
