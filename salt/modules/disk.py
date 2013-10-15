@@ -28,6 +28,8 @@ def _clean_flags(args, caller):
     Sanitize flags passed into df
     '''
     flags = ''
+    if args is None:
+        return flags
     allowed = ('a', 'B', 'h', 'H', 'i', 'k', 'l', 'P', 't', 'T', 'x', 'v')
     for flag in args:
         if flag in allowed:
