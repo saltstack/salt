@@ -456,13 +456,13 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
             creds, local_path, installer
         ))
         # Shell out to winexe to execute win_installer
-        win_cmd('winexe {0} -c "c:\\salttemp\\{1} /S /master={2} /minion-name={3}'.format(
+        win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
             creds, installer, master, name
         ))
         # Shell out to smbclient to deltree C:\salttmp\
         ## Unless keep_tmp is True
         if not keep_tmp:
-            win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
+            win_cmd('smbclient {0}/c$ -c "rmdir /S salttemp; prompt; exit;"'.format(
                 creds,
             ))
 
