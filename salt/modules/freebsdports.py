@@ -18,12 +18,14 @@ this module exclusively from the command line.
 # Import python libs
 import os
 import re
+import logging
 
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
+log = logging.getLogger(__name__)
 
 def __virtual__():
     return 'ports' if __grains__.get('os', '') == 'FreeBSD' else False
@@ -309,14 +311,14 @@ def update(extract=False):
     ret = []
     try:
         patch_count = re.search(
-            'Fetching (\d+) patches', result['stdout']
+            r'Fetching (\d+) patches', result['stdout']
         ).group(1)
     except AttributeError:
         patch_count = 0
 
     try:
         new_port_count = re.search(
-            'Fetching (\d+) new ports or files', result['stdout']
+            r'Fetching (\d+) new ports or files', result['stdout']
         ).group(1)
     except AttributeError:
         new_port_count = 0
