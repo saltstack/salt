@@ -162,8 +162,8 @@ def set_(name, path):
     '''
     .. versionadded:: 0.17.0
 
-    Removes installed alternative for defined <name> and <path>
-    or fallback to default alternative, if some defined before.
+    Sets alternative for <name> to <path>, if <path> is defined
+    as an alternative for <name>.
 
     name
         is the master name for this link group
