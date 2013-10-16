@@ -373,33 +373,21 @@ def _gen_vol_xml(vmname,
     '''
     size = int(size) * 1024  # MB
     disk_info = _get_image_info(hypervisor, vmname, **kwargs)
-    data = '''
-<volume>
-  <name>%%NAME%%/%%FILENAME%%</name>
-  <key>%%NAME%%/%%VOLNAME%%</key>
-  <source>
-  </source>
-  <capacity unit='KiB'>%%SIZE%%</capacity>
-  <allocation unit='KiB'>0</allocation>
-  <target>
-    <path>%%POOL%%%%NAME%%/%%FILENAME%%</path>
-    <format type='%%DISKTYPE%%'/>
-    <permissions>
-      <mode>00</mode>
-      <owner>0</owner>
-      <group>0</group>
-    </permissions>
-  </target>
-</volume>
-'''
-    data = data.replace('%%NAME%%', vmname)
-    data = data.replace('%%FILENAME%%',
-                        '{0}.{1}'.format(diskname, disk_info['disktype']))
-    data = data.replace('%%VOLNAME%%', diskname)
-    data = data.replace('%%DISKTYPE%%', disk_info['disktype'])
-    data = data.replace('%%SIZE%%', str(size))
-    data = data.replace('%%POOL%%', disk_info['pool'])
-    return data
+    context = {
+        'name': vmname,
+        'filename': '{0}.{1}'.format(diskname, disk_info['disktype']),
+        'volname': diskname,
+        'disktype': disk_info['disktype'],
+        'size': str(size),
+        'pool': disk_info['pool'],
+    }
+    fn_ = 'libvirt_volume.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template {0}'.format(fn_))
+        return ''
+    return template.render(**context)
 
 
 def _qemu_image_info(path):
