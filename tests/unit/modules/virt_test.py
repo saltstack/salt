@@ -152,11 +152,19 @@ class VirtTestCase(TestCase):
         self.assertEqual(root.find('vcpu').text, '1')
         self.assertEqual(root.find('memory').text, '524288')
         self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-        self.assertTrue(len(root.findall('.//disk')) == 1)
+
+        disks = root.findall('.//disk')
+        self.assertEqual(len(disks), 1)
+        disk = disks[0]
+        self.assertTrue(disk.find('source').attrib['file'].startswith('/'))
+        self.assertTrue('hello/system' in disk.find('source').attrib['file'])
+        self.assertEqual(disk.find('target').attrib['dev'], 'vda')
+        self.assertEqual(disk.find('target').attrib['bus'], 'virtio')
+        self.assertEqual(disk.find('driver').attrib['name'], 'qemu')
+        self.assertEqual(disk.find('driver').attrib['type'], 'qcow2')
 
         interfaces = root.findall('.//interface')
         self.assertEqual(len(interfaces), 1)
-
         iface = interfaces[0]
         self.assertEqual(iface.attrib['type'], 'bridge')
         self.assertEqual(iface.find('source').attrib['bridge'], 'br0')
@@ -185,11 +193,18 @@ class VirtTestCase(TestCase):
         self.assertEqual(root.find('vcpu').text, '1')
         self.assertEqual(root.find('memory').text, '524288')
         self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-        self.assertTrue(len(root.findall('.//disk')) == 1)
+
+        disks = root.findall('.//disk')
+        self.assertEqual(len(disks), 1)
+        disk = disks[0]
+        self.assertTrue('[0]' in disk.find('source').attrib['file'])
+        self.assertTrue('hello/system' in disk.find('source').attrib['file'])
+        self.assertEqual(disk.find('target').attrib['dev'], 'sda')
+        self.assertEqual(disk.find('target').attrib['bus'], 'scsi')
+        self.assertEqual(disk.find('address').attrib['unit'], '0')
 
         interfaces = root.findall('.//interface')
         self.assertEqual(len(interfaces), 1)
-
         iface = interfaces[0]
         self.assertEqual(iface.attrib['type'], 'bridge')
         self.assertEqual(iface.find('source').attrib['bridge'], 'DEFAULT')
