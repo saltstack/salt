@@ -74,6 +74,26 @@ class VirtTestCase(TestCase):
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
+    def test_gen_xml_for_telnet_console_unspecified_port(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            serial_type='tcp',
+            console=True
+            )
+        root = ElementTree.fromstring(xml_data)
+        self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
+        self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
+        self.assertIsInstance(int(root.find('devices/console/source').attrib['service']), int)
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
     def test_gen_xml_for_serial_no_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')

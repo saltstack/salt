@@ -230,13 +230,16 @@ def _gen_xml(name,
 
     if 'serial_type' in kwargs:
         context['serial_type'] = kwargs['serial_type']
-    if 'console' in kwargs:
-        context['console'] = kwargs['console']
-    else:
-        context['console'] = True
-    if context['console']:
+    if 'serial_type' in context and context['serial_type'] == 'tcp':
         if 'telnet_port' in kwargs:
             context['telnet_port'] = kwargs['telnet_port']
+        else:
+            context['telnet_port'] = 23023  # FIXME: use random unused port
+    if 'serial_type' in context:
+        if 'console' in kwargs:
+            context['console'] = kwargs['console']
+        else:
+            context['console'] = True
 
     context['disks'] = {}
     for i, disk in enumerate(diskp):
