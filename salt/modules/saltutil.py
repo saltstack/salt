@@ -192,6 +192,9 @@ def sync_modules(env=None, refresh=True):
     to grab the contents of the _modules directory, base is the default
     environment.
 
+    Please note -- this module does not currently purge modules removed from
+    the master on the minions.
+
     CLI Example:
 
     .. code-block:: bash
