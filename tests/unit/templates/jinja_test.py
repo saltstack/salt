@@ -6,6 +6,7 @@ import tempfile
 import json
 import datetime
 import textwrap
+import pprint
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -303,6 +304,17 @@ class TestCustomExtensions(TestCase):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         self.assertEquals(dataset, yaml.load(rendered))
+
+    def test_serialize_python(self):
+        dataset = {
+            "foo": True,
+            "bar": 42,
+            "baz": [1, 2, 3],
+            "qux": 2.0
+        }
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|python }}').render(dataset=dataset)
+        self.assertEquals(rendered, pprint.pformat(dataset))
 
     def test_load_yaml(self):
         env = Environment(extensions=[SerializerExtension])
