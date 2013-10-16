@@ -166,6 +166,13 @@ class Auth(object):
             key = RSA.load_key(self.rsa_path)
         return key
 
+    def gen_token(self, clear_tok):
+        '''
+        Encrypt a string with the minion private key to verify identity
+        with the master.
+        '''
+        return self.get_keys().private_encrypt(clear_tok, 5)
+
     def minion_sign_in_payload(self):
         '''
         Generates the payload used to authenticate with the master
@@ -451,10 +458,3 @@ class SAuth(Auth):
                 continue
             break
         return Crypticle(self.opts, creds['aes'])
-
-    def gen_token(self, clear_tok):
-        '''
-        Encrypt a string with the minion private key to verify identity
-        with the master.
-        '''
-        return self.get_keys().private_encrypt(clear_tok, 5)
