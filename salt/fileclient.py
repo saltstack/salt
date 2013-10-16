@@ -813,7 +813,8 @@ class RemoteClient(Client):
         '''
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
-                'opts': self.opts}
+                'opts': self.opts,
+                'tok': self.auth.gen_token('salt')}
         try:
             return self.auth.crypticle.loads(
                 self.sreq.send('aes',

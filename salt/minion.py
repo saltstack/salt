@@ -515,7 +515,8 @@ class Minion(object):
         '''
         load = {'id': self.opts['id'],
                 'cmd': '_minion_event',
-                'pretag': pretag}
+                'pretag': pretag,
+                'tok': self.tok}
         if events:
             load['events'] = events
         elif data and tag:
@@ -876,6 +877,7 @@ class Minion(object):
             )
         )
         auth = salt.crypt.Auth(self.opts)
+        self.tok = auth.gen_token('salt')
         acceptance_wait_time = self.opts['acceptance_wait_time']
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
         if not acceptance_wait_time_max:
