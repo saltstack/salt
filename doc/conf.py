@@ -126,6 +126,7 @@ extensions = [
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
     'youtube',
+    'saltautodoc'   # Needs to be listed AFTER sphunx.ext.autodoc
 ]
 
 modindex_common_prefix = ['salt.']
