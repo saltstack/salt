@@ -32,7 +32,32 @@
 
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes' />
 
-                {{ serial }}
+                {% if serial_type == 'pty' %}
+                <serial type='pty'>
+                        <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='pty'>
+                        <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+                {% endif %}
+
+                {% if serial_type == 'tcp' %}
+                <serial type='tcp'>
+                        <source mode='bind' host='' service='{{ telnet_port }}'/>
+                        <protocol type='telnet'/>
+                        <target port='0'/>
+                </serial>
+                {% if console %}
+                <console type='tcp'>
+                        <source mode='bind' host='' service='{{ telnet_port }}'/>
+                        <protocol type='telnet'/>
+                        <target type='serial' port='0'/>
+                </console>
+                {% endif %}
+                {% endif %}
+
         </devices>
         <features>
                 <acpi />
