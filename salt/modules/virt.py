@@ -216,10 +216,10 @@ def _gen_xml(name,
         'mem': str(mem),
     }
     if hypervisor in ['qemu', 'kvm']:
-        context['controller'] = ''
+        context['controller_model'] = False
     elif hypervisor in ['esxi', 'vmware']:
         # TODO: make bus and model parameterized, this works for 64-bit Linux
-        context['controller'] = '<controller type=\'scsi\' index=\'0\' model=\'lsilogic\'/>'
+        context['controller_model'] = 'lsilogic'
 
     if 'boot_dev' in kwargs:
         context['boot_dev'] = []

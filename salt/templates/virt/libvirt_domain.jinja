@@ -22,7 +22,9 @@
                 </disk>
                 {% endfor %}
 
-                {{ controller }}
+                {% if controller_model %}
+                <controller type='scsi' index='0' model='{{ controller_model }}' />
+                {% endif %}
 
                 {% for nic in nics %}
                 <interface type='{{ nic.type }}'>
