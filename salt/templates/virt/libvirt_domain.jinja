@@ -1,0 +1,30 @@
+<domain type='{{ hypervisor }}'>
+        <name>{{ name }}</name>
+        <vcpu>{{ cpu }}</vcpu>
+        <memory unit='KiB'>{{ mem }}</memory>
+        <os>
+                <type>hvm</type>
+                {{ boot }}
+        </os>
+        <devices>
+                {% for diskname, disk in disks.iteritems() %}
+                <disk type='file' device='disk'>
+                        <source file='{{ disk.source_file }}' />
+                        <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
+                        {% if disk.address -%}
+                        <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
+                        {% endif %}
+                        {% if disk.driver -%}
+                        <driver name='qemu' type='{{ disk.type }}' cache='none' io='native'/>
+                        {% endif %}
+                </disk>
+                {% endfor %}
+                {{ controller }}
+                {{ nics }}
+                <graphics type='vnc' listen='0.0.0.0' autoport='yes' />
+                {{ serial }}
+        </devices>
+        <features>
+                <acpi />
+        </features>
+</domain>
