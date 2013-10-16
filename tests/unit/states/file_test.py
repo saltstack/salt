@@ -1,5 +1,6 @@
 # Import python libs
 import json
+import pprint
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -45,6 +46,9 @@ class TestFileState(TestCase):
 
         filestate.serialize('/tmp', dataset, formatter="json")
         self.assertEquals(json.loads(returner.returned), dataset)
+
+        filestate.serialize('/tmp', dataset, formatter="python")
+        self.assertEquals(returner.returned, pprint.pformat(dataset))
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
