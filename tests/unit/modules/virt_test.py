@@ -116,6 +116,26 @@ class VirtTestCase(TestCase):
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
+    def test_gen_vol_xml_for_kvm(self):
+        xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'kvm')
+        root = ElementTree.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'vmname/system.qcow2')
+        self.assertEqual(root.find('key').text, 'vmname/system')
+        self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
+        self.assertEqual(root.find('capacity').text, str(8192 * 1024))
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_gen_vol_xml_for_esxi(self):
+        xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'esxi')
+        root = ElementTree.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'vmname/system.vmdk')
+        self.assertEqual(root.find('key').text, 'vmname/system')
+        self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
+        self.assertEqual(root.find('capacity').text, str(8192 * 1024))
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
     def test_gen_xml_for_kvm_default_profile(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
