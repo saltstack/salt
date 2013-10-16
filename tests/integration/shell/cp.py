@@ -123,7 +123,6 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        os.unlink(self.get_config_file_path(config_file_name))
         config = yaml.load(
             open(self.get_config_file_path(config_file_name), 'r').read()
         )
