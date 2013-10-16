@@ -69,6 +69,7 @@ def update(clear=False):
             'data': data,
             'id': __opts__['id'],
             'clear': clear,
+            'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
@@ -114,6 +115,7 @@ def send(func, *args, **kwargs):
             'cmd': '_mine',
             'data': data,
             'id': __opts__['id'],
+            'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
@@ -153,6 +155,7 @@ def get(tgt, fun, expr_form='glob'):
             'tgt': tgt,
             'fun': fun,
             'expr_form': expr_form,
+            'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     ret = sreq.send('aes', auth.crypticle.dumps(load))
@@ -173,7 +176,8 @@ def delete(fun):
     load = {
             'cmd': '_mine_delete',
             'id': __opts__['id'],
-            'fun': fun
+            'fun': fun,
+            'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     ret = sreq.send('aes', auth.crypticle.dumps(load))
@@ -194,6 +198,7 @@ def flush():
     load = {
             'cmd': '_mine_flush',
             'id': __opts__['id'],
+            'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     ret = sreq.send('aes', auth.crypticle.dumps(load))
