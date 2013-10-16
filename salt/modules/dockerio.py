@@ -2,20 +2,24 @@
 # -*- coding: utf-8 -*-
 '''
 Management of dockers: overview of this module
-=============================================
+==============================================
 
 .. note::
+
     The DockerIO integration is still in beta, the api is subject to change
 
 General notes
 -------------
+
 - As we use states, we don't want to pop continuously dockers, we will map each
-container id  (or image) with a grain whenever it is relevant.
+  container id  (or image) with a grain whenever it is relevant.
 - As a corollary, we will resolve for a container id either directly this
-container id or try to find a container id matching something stocked in grain
+  container id or try to find a container id matching something stocked in
+  grain
 
 Installation prerequisites
 --------------------------
+
 - You will need the 'docker-py' python package in your python installation
   running salt.
 - For now, you need docker-py from sources:
@@ -28,7 +32,7 @@ Prerequisite pillar configuration for authentication
 - To push or pull you will need to be authenticated as the docker-py bindings
   require it
 - For this to happen, you will need to configure a mapping in the pillar
-representing your per URL authentication bits::
+  representing your per URL authentication bits::
 
     docker-registries:
         registry_url:
@@ -73,51 +77,55 @@ Would be the equivalent to::
 
 Registry dialog methods
 -----------------------
-    - login
-    - push
-    - pull
+
+- login
+- push
+- pull
 
 Docker management
 -----------------
-    - version
-    - info
 
-You have those methods:
+- version
+- info
+
 Image management
 ----------------
+
 You have those methods:
 
-    - search
-    - inspect_image
-    - get_images
-    - remove_image
-    - import_image
-    - build
-    - tag
+- search
+- inspect_image
+- get_images
+- remove_image
+- import_image
+- build
+- tag
 
 Container management
 --------------------
+
 You have those methods:
 
-    - start
-    - stop
-    - kill
-    - wait
-    - get_containers
-    - inspect_container
-    - remove_container
-    - is_running
-    - top
-    - ports
-    - logs
-    - diff
-    - commit
-    - create_container
-    - export
-    - get_container_root
+- start
+- stop
+- kill
+- wait
+- get_containers
+- inspect_container
+- remove_container
+- is_running
+- top
+- ports
+- logs
+- diff
+- commit
+- create_container
+- export
+- get_container_root
 
 Runtime execution within a specific already existing and running container
 --------------------------------------------------------------------------
+
 - Idea is to use lxc-attach to execute inside the container context.
 - We do not use a "docker run command" but want to execute something inside a
   running container.
@@ -125,13 +133,13 @@ Runtime execution within a specific already existing and running container
 
 You have those methods:
 
-    - retcode
-    - run
-    - run_all
-    - run_stderr
-    - run_stdout
-    - script
-    - script_retcode
+- retcode
+- run
+- run_all
+- run_stderr
+- run_stdout
+- script
+- script_retcode
 
 '''
 __docformat__ = 'restructuredtext en'
@@ -577,7 +585,7 @@ def create_container(image,
 
     EG:
 
-        salt-call lxcdocker.create_container o/ubuntu volumes="['/s','/m:/f']"
+        salt-call docker.create_container o/ubuntu volumes="['/s','/m:/f']"
 
     CLI Example:
 
@@ -724,7 +732,8 @@ def stop(container, timeout=10, *args, **kwargs):
 
     :rtype: dict
     :returns: A status message with the command output
-          ex:
+          ex::
+
             {'id': 'abcdef123456789',
            'status': True}
 
@@ -771,7 +780,8 @@ def kill(container, *args, **kwargs):
 
     :rtype: dict
     :returns: A status message with the command output
-          ex:
+          ex::
+
             {'id': 'abcdef123456789',
            'status': True}
 
@@ -826,7 +836,8 @@ def restart(container, timeout=10, *args, **kwargs):
 
     :rtype: dict
     :returns: A status message with the command output
-          ex:
+          ex::
+
             {'id': 'abcdef123456789',
            'status': True}
 
@@ -973,6 +984,7 @@ def is_running(container, *args, **kwargs):
 
     container
         Container id
+
     Return boolean
 
     CLI Example:

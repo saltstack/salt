@@ -19,6 +19,7 @@ Full list of builtin state modules
     ddns
     debconfmod
     disk
+    dockerio
     eselect
     file
     gem

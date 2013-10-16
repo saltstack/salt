@@ -43,6 +43,7 @@ Full list of builtin execution modules
     djangomod
     dnsmasq
     dnsutil
+    dockerio
     dpkg
     ebuild
     eix
