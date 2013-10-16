@@ -110,6 +110,7 @@ class Schedule(object):
             for returner in rets:
                 ret_str = '{0}.returner'.format(returner)
                 if ret_str in self.returners:
+                    ret['success'] = True
                     self.returners[ret_str](ret)
                 else:
                     log.info(
