@@ -14,6 +14,7 @@
 # Import python libs
 import os
 import sys
+import getpass
 import logging
 import optparse
 import traceback
@@ -26,6 +27,7 @@ import salt.utils as utils
 import salt.version as version
 import salt.syspaths as syspaths
 import salt.log.setup as log
+from salt.utils.validate.path import is_writeable
 
 
 def _sorted(mixins_or_funcs):
@@ -507,6 +509,39 @@ class LogLevelMixIn(object):
                 )
             )
         )
+
+        if not is_writeable(logfile, check_parent=True):
+            # Since we're not be able to write to the log file or it's parent
+            # directory(if the log file does not exit), are we the same user
+            # as the one defined in the configuration file?
+            current_user = getpass.getuser()
+            if self.config['user'] != current_user:
+                # Yep, not the same user!
+                # Is the current user in ACL?
+                if current_user in self.config.get('client_acl', {}).keys():
+                    # Yep, the user is in ACL!
+                    # Let's write the logfile to it's home directory instead.
+                    user_salt_dir = os.path.expanduser('~/.salt')
+                    if not os.path.isdir(user_salt_dir):
+                        os.makedirs(user_salt_dir, 0750)
+                    logfile_basename = os.path.basename(
+                        self._default_logging_logfile_
+                    )
+                    logging.getLogger(__name__).warning(
+                        'The user {0!r} is not allowed to write to {1!r}. '
+                        'The log file will be stored in '
+                        '\'~/.salt/{2!r}.log\''.format(
+                            current_user,
+                            logfile,
+                            logfile_basename
+                        )
+                    )
+                    logfile = os.path.join(
+                        user_salt_dir, '{0}.log'.format(logfile_basename)
+                    )
+
+            # If we haven't changed the logfile path and it's not writeable,
+            # salt will fail once we try to setup the logfile logging.
 
         log.setup_logfile_logger(
             logfile,
