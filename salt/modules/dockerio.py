@@ -147,6 +147,7 @@ from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
 import salt.utils
+from salt.utils.odict import OrderedDict
 
 try:
     import docker
@@ -156,12 +157,7 @@ except ImportError:
 
 import logging
 
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
-
-salt_log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 INVALID_RESPONSE = 'We did not get any expectable answer from docker'
 VALID_RESPONSE = ''
@@ -394,7 +390,7 @@ def get_containers(all=True,
 def logs(container, *args, **kwargs):
     '''
     Return logs for a specified container
-    
+
     container
         container id
 
@@ -473,7 +469,7 @@ def commit(container,
 def diff(container, *args, **kwargs):
     '''
     Get container diffs
-    
+
     container
         container id
 
@@ -548,7 +544,7 @@ def create_container(image,
                      *args, **kwargs):
     '''
     Get container diffs
-    
+
     image
         image to create the container from
     command
@@ -994,7 +990,7 @@ def is_running(container, *args, **kwargs):
 def remove_container(container=None, force=False, v=False, *args, **kwargs):
     '''
     Removes a container from a docker installation
-    
+
     container
         Container id to remove
     force
@@ -1747,7 +1743,7 @@ def _run_wrapper(status, container, func, cmd,  *args, **kwargs):
             ):
                 return invalid(status, id=container, out=ret, comment=comment)
             valid(status, id=container, out=ret, comment=comment,)
-        except:
+        except Exception:
             invalid(status, id=container,
                     comment=comment, out=traceback.format_exc())
     except Exception:
@@ -1924,7 +1920,7 @@ def get_container_root(container):
         _get_container_infos(container)['id'],
     )
     default_rootfs = os.path.join(default_path, 'roofs')
-    rootfs_re = re.compile('^lxc.rootfs\s*=\s*(.*)\s*$', re.U)
+    rootfs_re = re.compile(r'^lxc.rootfs\s*=\s*(.*)\s*$', re.U)
     try:
         lxcconfig = os.path.join(
             default_path, 'config.lxc')
