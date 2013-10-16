@@ -112,10 +112,10 @@ def install_ruby(ruby, runas=None):
     #   libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev autoconf libc6-dev
     #   libncurses5-dev automake libtool bison subversion ruby
     if runas and runas != 'root':
-            _rvm('autolibs disable', ruby, runas=runas)
-	    return _rvm('install --disable-binary', ruby, runas=runas)
+        _rvm('autolibs disable', ruby, runas=runas)
+        return _rvm('install --disable-binary', ruby, runas=runas)
     else:
-	    return _rvm('install', ruby, runas=runas)
+        return _rvm('install', ruby, runas=runas)
 
 
 def reinstall_ruby(ruby, runas=None):
