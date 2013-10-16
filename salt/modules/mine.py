@@ -64,6 +64,7 @@ def update(clear=False):
             log.error('Function {0} in mine_functions failed to execute'
                       .format(func))
             continue
+    auth = _auth()
     load = {
             'cmd': '_mine',
             'data': data,
@@ -72,7 +73,6 @@ def update(clear=False):
             'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    auth = _auth()
     try:
         sreq.send('aes', auth.crypticle.dumps(load), 1, 0)
     except Exception:
@@ -111,6 +111,7 @@ def send(func, *args, **kwargs):
         log.error('Function {0} in mine.send failed to execute: {1}'
                   .format(func, exc))
         return False
+    auth = _auth()
     load = {
             'cmd': '_mine',
             'data': data,
@@ -118,7 +119,6 @@ def send(func, *args, **kwargs):
             'tok': auth.gen_token('salt'),
     }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    auth = _auth()
     try:
         sreq.send('aes', auth.crypticle.dumps(load), 1, 10)
     except Exception:
