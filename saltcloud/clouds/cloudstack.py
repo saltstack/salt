@@ -105,11 +105,19 @@ def get_conn():
             'secretkey', get_configured_provider(), __opts__,
             search_global=False
         ),
+        secure=config.get_config_value(
+            'secure', get_configured_provider(), __opts__,
+            default=True, search_global=False
+        ),
         host=config.get_config_value(
             'host', get_configured_provider(), __opts__, search_global=False
         ),
         path=config.get_config_value(
             'path', get_configured_provider(), __opts__, search_global=False
+        ),
+        port=config.get_config_value(
+            'port', get_configured_provider(), __opts__,
+            default=None, search_global=False
         )
     )
 
@@ -150,14 +158,12 @@ def get_keypair(vm_):
     '''
     Return the keypair to use
     '''
-
     keypair = config.get_config_value('keypair', vm_, __opts__)
 
-    if keypair is not None:
+    if keypair:
         return keypair
-
-    raise SaltCloudNotFound('The specified keypair could not be found.')
-
+    else:
+        return False
 
 def get_ip(data):
     '''
@@ -171,14 +177,16 @@ def get_ip(data):
         ip = data.private_ips[0]
     return ip
 
-def get_networkid(conn, vm_):
+def get_networkid(vm_):
     '''
-    Return the networkid to use
+    Return the networkid to use, only valid for Advanced Zone
     '''
     networkid = config.get_config_value('networkid', vm_, __opts__)
+    
     if networkid is not None:
         return networkid
-    raise SaltCloudNotFound('The specified networkid could not be found.')
+    else:
+        return False
 
 def create(vm_):
     '''
@@ -202,10 +210,13 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'keypair': get_keypair(vm_),
-        'networks': ( CloudStackNetwork( None, None, None, get_networkid(conn, vm_), None, None ), ), # The only attr that is used is 'id'. Setting the rest to None
-        'password': [],
     }
+
+    if get_keypair(vm_) is not False:
+        kwargs['extra_args'] = {'keypair': get_keypair(vm_)}
+
+    if get_networkid(vm_) is not False:
+        kwargs['networids'] = get_networkid(vm_)
 
     saltcloud.utils.fire_event(
         'event',
@@ -236,7 +247,7 @@ def create(vm_):
         deploy_kwargs = {
             'host': get_ip(data),
             'username': 'root',
-            'password': data.extra['password'],
+            #'password': data.extra['password'],
             'key_filename': get_key(),
             'script': deploy_script.script,
             'name': vm_['name'],
