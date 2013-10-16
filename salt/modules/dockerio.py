@@ -577,7 +577,7 @@ def create_container(image,
 
     EG:
 
-        salt-call lxcdocker.create_container o/ubuntu volumes="['/s','/m:/f']"
+        salt-call docker.create_container o/ubuntu volumes="['/s','/m:/f']"
 
     CLI Example:
 

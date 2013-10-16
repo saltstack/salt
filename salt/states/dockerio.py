@@ -506,9 +506,9 @@ def run(name,
     '''
     if not hostname:
         hostname = cid
-    retcode = __salt__['lxcdocker.retcode']
+    retcode = __salt__['docker.retcode']
     dretcode = __salt__['cmd.retcode']
-    drun = __salt__['lxcdocker.run']
+    drun = __salt__['docker.run']
     cmd_kwargs = ''
     if onlyif is not None:
         if not isinstance(onlyif, string_types):
