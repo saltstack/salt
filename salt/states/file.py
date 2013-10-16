@@ -191,6 +191,7 @@ import logging
 import re
 import fnmatch
 import json
+import pprint
 
 # Import third party libs
 import yaml
@@ -2613,7 +2614,11 @@ def serialize(name,
         the dataset that will be serialized
 
     formatter
-        the formatter, currently only yaml and json are supported
+        Write the data as this format. Supported output formats:
+
+        * JSON
+        * YAML
+        * Python (via pprint.pformat)
 
     user
         The user to own the directory, this defaults to the user salt is
@@ -2685,6 +2690,8 @@ def serialize(name,
                               indent=2,
                               separators=(',', ': '),
                               sort_keys=True)
+    elif formatter == 'python':
+        contents = pprint.pformat(dataset)
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
