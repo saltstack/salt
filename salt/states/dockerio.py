@@ -15,7 +15,7 @@ Available Functions
 .. code-block:: yaml
 
     corp/mysuperdocker_img:
-        lxcdocker.build:
+        docker.build:
             - path: /path/to/dir/container/Dockerfile
 
 - pulled
@@ -23,14 +23,14 @@ Available Functions
 .. code-block:: yaml
 
     ubuntu:
-      lxcdocker.pulled
+      docker.pulled
 
 - installed
 
 .. code-block:: yaml
 
     mysuperdocker:
-        lxcdocker.installed:
+        docker.installed:
             - hostname: superdocker
             - image: corp/mysuperdocker_img
 
@@ -39,20 +39,20 @@ Available Functions
 .. code-block:: yaml
 
      mys_old_uperdocker:
-        lxcdocker.absent
+        docker.absent
 
 - run
 
 .. code-block:: yaml
 
      /finish-install.sh:
-         lxcdocker.run:
+         docker.run:
              - container: mysuperdocker
              - unless: grep -q something /var/log/foo
              - docker_unless: grep -q done /install_log
 
 Note:
-The lxcdocker Modules can't be called docker as
+The docker Modules can't be called docker as
 it would conflict with the underlying binding modules: docker-py
 '''
 
@@ -81,9 +81,7 @@ NOTSET = object()
 CONTAINER_GRAIN_ID = 'docker.containers.{id}.id'
 CONTAINER_GRAIN_ID_RE = re.compile(
     'docker.containers.([^.]+).id', re.S | re.M | re.U)
-'''
-Use a proxy mapping to allow queries & updates after the initial grain load
-'''
+#Use a proxy mapping to allow queries & updates after the initial grain load
 MAPPING_CACHE = {}
 FN_CACHE = {}
 
@@ -92,6 +90,7 @@ def __salt(fn):
     if not fn in FN_CACHE:
         FN_CACHE[fn] = __salt__[fn]
     return FN_CACHE[fn]
+
 
 def _ret_status(exec_status=None,
                name='',
@@ -355,7 +354,7 @@ def installed(name,
         # it as installed
         try:
             cid = out['out']['info']['id']
-        except:
+        except Exception:
             # not created at all
             cid = None
         if cid:
@@ -373,30 +372,27 @@ def installed(name,
 
 
 def _get_container_id(name, pdb=False):
-    from salt.states import dockerio
     k = CONTAINER_GRAIN_ID.format(id=name)
     val = None
-    if not k in dockerio.MAPPING_CACHE:
+    if not k in MAPPING_CACHE:
         getval = __salt('grains.get')
         val = getval(k, None)
     else:
-        val = dockerio.MAPPING_CACHE[k]
+        val = MAPPING_CACHE[k]
     if val:
-        dockerio.MAPPING_CACHE[k] = val
+        MAPPING_CACHE[k] = val
     return val
 
 
 def _set_container_id(name, val):
-    from salt.states import dockerio
     setval = __salt('grains.setval')
     k = CONTAINER_GRAIN_ID.format(id=name)
-    dockerio.MAPPING_CACHE[k] = val
+    MAPPING_CACHE[k] = val
     ret = setval(k, val)
     return ret
 
 
 def _del_container_id(name=None, cid=None):
-    from salt.states import dockerio
     delval = __salt('grains.delval')
     getval = __salt('grains.get')
     grains = __salt('grains.items')()
@@ -408,8 +404,8 @@ def _del_container_id(name=None, cid=None):
             values.append(g)
     for n in values:
         k = CONTAINER_GRAIN_ID.format(id=n)
-        if k in dockerio.MAPPING_CACHE:
-            del dockerio.MAPPING_CACHE[k]
+        if k in MAPPING_CACHE:
+            del MAPPING_CACHE[k]
         val = getval(k, None)
         if val:
             delval(k)
@@ -454,7 +450,7 @@ def present(name):
         Either the state_id or container id
 
     '''
-    cid = _get_container_id(name,True)
+    cid = _get_container_id(name, True)
     ins_container = __salt('docker.inspect_container')
     if cid:
         cinfos = ins_container(cid)
@@ -509,7 +505,7 @@ def run(name,
 
     '''
     if not hostname:
-        hostname=cid
+        hostname = cid
     retcode = __salt__['lxcdocker.retcode']
     dretcode = __salt__['cmd.retcode']
     drun = __salt__['lxcdocker.run']
@@ -558,6 +554,7 @@ def run(name,
 
 def script(name,
            cid=None,
+           hostname=None,
            state_id=None,
            stateful=False,
            onlyif=None,
@@ -597,10 +594,10 @@ def script(name,
 
     '''
     if not hostname:
-        hostname=cid
-    retcode = __salt__['lxcdocker.retcode']
+        hostname = cid
+    retcode = __salt__['docker.retcode']
     dretcode = __salt__['cmd.retcode']
-    drun = __salt__['lxcdocker.run']
+    drun = __salt__['docker.run']
     cmd_kwargs = ''
     if onlyif is not None:
         if not isinstance(onlyif, string_types):
