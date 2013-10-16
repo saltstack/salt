@@ -95,7 +95,7 @@ def add(name,
     elif groups is not None and name in groups:
         try:
             for line in salt.utils.fopen('/etc/login.defs'):
-                if 'USERGROUPS_ENAB' in line[:15]:
+                if not 'USERGROUPS_ENAB' in line[:15]:
                     continue
 
                 if 'yes' in line:
