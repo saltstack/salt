@@ -4,7 +4,9 @@
         <memory unit='KiB'>{{ mem }}</memory>
         <os>
                 <type>hvm</type>
-                {{ boot }}
+                {% for dev in boot_dev %}
+                <boot dev='{{ dev }}' />
+                {% endfor %}
         </os>
         <devices>
                 {% for diskname, disk in disks.iteritems() %}
