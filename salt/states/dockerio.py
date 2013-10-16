@@ -14,44 +14,44 @@ Available Functions
 
 - built
 
-.. code-block:: yaml
+  .. code-block:: yaml
 
-    corp/mysuperdocker_img:
-        docker.build:
-            - path: /path/to/dir/container/Dockerfile
+      corp/mysuperdocker_img:
+          docker.build:
+              - path: /path/to/dir/container/Dockerfile
 
 - pulled
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-        ubuntu:
-          docker.pulled
+      ubuntu:
+        docker.pulled
 
 - installed
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-        mysuperdocker:
-            docker.installed:
-                - hostname: superdocker
-                - image: corp/mysuperdocker_img
+      mysuperdocker:
+          docker.installed:
+              - hostname: superdocker
+              - image: corp/mysuperdocker_img
 
 - absent
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-         mys_old_uperdocker:
-            docker.absent
+       mys_old_uperdocker:
+          docker.absent
 
 - run
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-         /finish-install.sh:
-             docker.run:
-                 - container: mysuperdocker
-                 - unless: grep -q something /var/log/foo
-                 - docker_unless: grep -q done /install_log
+       /finish-install.sh:
+           docker.run:
+               - container: mysuperdocker
+               - unless: grep -q something /var/log/foo
+               - docker_unless: grep -q done /install_log
 
 Note:
 The docker Modules can't be called docker as
