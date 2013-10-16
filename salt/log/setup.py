@@ -444,10 +444,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                     err
                 )
             )
-            # Do not proceed with any more configuration since it will fail, we
-            # have the console logging already setup and the user should see
-            # the error.
-            return
+            sys.exit(2)
     else:
         try:
             # Logfile logging is UTF-8 on purpose.
@@ -458,11 +455,14 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 logging.handlers, 'WatchedFileHandler', logging.FileHandler
             )(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
-            sys.stderr.write(
+            logging.getLogger(__name__).warning(
                 'Failed to open log file, do you have permission to write to '
-                '{0}\n'.format(log_path)
+                '{0}?'.format(log_path)
             )
-            sys.exit(2)
+            # Do not proceed with any more configuration since it will fail, we
+            # have the console logging already setup and the user should see
+            # the error.
+            return
 
     handler.setLevel(level)
 
