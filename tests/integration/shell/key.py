@@ -108,6 +108,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         finally:
             shutil.rmtree(tempdir)
 
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_keys_generation_no_configdir(self):
         tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
