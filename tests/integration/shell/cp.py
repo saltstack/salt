@@ -13,6 +13,7 @@
 import os
 import yaml
 import pipes
+import shutil
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -106,6 +107,38 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             data = yaml.load('\n'.join(ret))
             self.assertTrue(data[minion])
+
+    def test_issue_7754(self):
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        config_file_name = 'master'
+        os.unlink(self.get_config_file_path(config_file_name))
+        config = yaml.load(
+            open(self.get_config_file_path(config_file_name), 'r').read()
+        )
+        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+        open(os.path.join(config_dir, config_file_name), 'w').write(
+            yaml.dump(config, default_flow_style=False)
+        )
+
+        self.run_script(
+            self._call_binary_,
+            '--config-dir {0} \'*\' test.ping'.format(
+                config_dir
+            ),
+            timeout=15
+        )
+        try:
+            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        finally:
+            os.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)
 
 
 if __name__ == '__main__':
