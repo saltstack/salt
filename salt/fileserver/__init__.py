@@ -244,6 +244,10 @@ class Fileserver(object):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # some *fs do not handle prefix. Ensure it is filtered
+        prefix = load.get('prefix', '').strip('/')
+        if prefix != '':
+            ret = [ f for f in ret if f.startswith(prefix) ]
         return sorted(ret)
 
     def file_list_emptydirs(self, load):
@@ -257,6 +261,10 @@ class Fileserver(object):
             fstr = '{0}.file_list_emptydirs'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # some *fs do not handle prefix. Ensure it is filtered
+        prefix = load.get('prefix', '').strip('/')
+        if prefix != '':
+            ret = [ f for f in ret if f.startswith(prefix) ]
         return sorted(ret)
 
     def dir_list(self, load):
@@ -270,6 +278,10 @@ class Fileserver(object):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # some *fs do not handle prefix. Ensure it is filtered
+        prefix = load.get('prefix', '').strip('/')
+        if prefix != '':
+            ret = [ f for f in ret if f.startswith(prefix) ]
         return sorted(ret)
 
     def symlink_list(self, load):
@@ -283,4 +295,8 @@ class Fileserver(object):
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
+        # some *fs do not handle prefix. Ensure it is filtered
+        prefix = load.get('prefix', '').strip('/')
+        if prefix != '':
+            ret = [ f for f in ret if f.startswith(prefix) ]
         return ret
