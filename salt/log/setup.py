@@ -444,10 +444,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                     err
                 )
             )
-            # Do not proceed with any more configuration since it will fail, we
-            # have the console logging already setup and the user should see
-            # the error.
-            return
+            sys.exit(2)
     else:
         try:
             # Logfile logging is UTF-8 on purpose.
