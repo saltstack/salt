@@ -34,7 +34,7 @@ class VirtTestCase(TestCase):
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
-    def test_gen_xml_for_serial(self):
+    def test_gen_xml_for_serial_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
@@ -44,12 +44,33 @@ class VirtTestCase(TestCase):
             diskp,
             nicp,
             'kvm',
-            serial_type="pty",
+            serial_type='pty',
             console=True
             )
         root = ElementTree.fromstring(xml_data)
         self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
         self.assertEqual(root.find('devices/console').attrib['type'], 'pty')
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_gen_xml_for_telnet_console(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            serial_type='tcp',
+            console=True,
+            telnet_port=22223
+            )
+        root = ElementTree.fromstring(xml_data)
+        self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
+        self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
+        self.assertEqual(root.find('devices/console/source').attrib['service'], '22223')
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
@@ -63,11 +84,30 @@ class VirtTestCase(TestCase):
             diskp,
             nicp,
             'kvm',
-            serial_type="pty",
+            serial_type='pty',
             console=False
             )
         root = ElementTree.fromstring(xml_data)
         self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
+        self.assertEqual(root.find('devices/console'), None)
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_gen_xml_for_telnet_no_console(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            serial_type='tcp',
+            console=False,
+            )
+        root = ElementTree.fromstring(xml_data)
+        self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
         self.assertEqual(root.find('devices/console'), None)
 
     def test_default_disk_profile_hypervisor_esxi(self):
