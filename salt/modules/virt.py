@@ -304,16 +304,6 @@ def _gen_xml(name,
         serial_section = ''
     data = data.replace('%%SERIAL%%', serial_section)
 
-    boot_str = ''
-    if 'boot_dev' in kwargs:
-        for dev in kwargs['boot_dev']:
-            boot_part = "<boot dev='%%DEV%%' />"
-            boot_part = boot_part.replace('%%DEV%%', dev)
-            boot_str += boot_part
-    else:
-        boot_str = '''<boot dev='hd'/>'''
-    data = data.replace('%%BOOT%%', boot_str)
-
     disk_t = '''
                 <disk type='file' device='disk'>
                         <source %%SOURCE%%/>
