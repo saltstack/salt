@@ -73,6 +73,7 @@ def __virtual__():
     '''
     if HAS_DOCKER:
         return 'docker'
+    return False
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from docker'

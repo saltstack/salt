@@ -109,7 +109,13 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.assertTrue(data[minion])
 
     def test_issue_7754(self):
-        old_cwd = os.getcwd()
+        try:
+            old_cwd = os.getcwd()
+        except OSError:
+            # Jenkins throws an OSError from os.getcwd()??? Let's not worry
+            # about it
+            old_cwd = None
+
         config_dir = os.path.join(integration.TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
@@ -136,7 +142,8 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         finally:
-            os.chdir(old_cwd)
+            if old_cwd is not None:
+                os.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
