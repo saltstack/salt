@@ -34,6 +34,57 @@ class VirtTestCase(TestCase):
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
+    def test_boot_default_dev(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm'
+            )
+        root = ElementTree.fromstring(xml_data)
+        self.assertEqual(root.find('os/boot').attrib['dev'], 'hd')
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_boot_custom_dev(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            boot_dev='cdrom'
+            )
+        root = ElementTree.fromstring(xml_data)
+        self.assertEqual(root.find('os/boot').attrib['dev'], 'cdrom')
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_boot_multiple_devs(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            boot_dev='cdrom network'
+            )
+        root = ElementTree.fromstring(xml_data)
+        devs = root.findall('.//boot')
+        self.assertTrue(len(devs) == 2)
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
     def test_gen_xml_for_serial_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
