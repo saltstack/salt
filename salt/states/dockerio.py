@@ -5,11 +5,13 @@ Managment of dockers
 =====================
 
 .. note::
+
     This state module is beta, the api is subject to change and no promise
     as to performance or functionality is yet present
 
 Available Functions
 -------------------
+
 - built
 
 .. code-block:: yaml
@@ -20,36 +22,36 @@ Available Functions
 
 - pulled
 
-.. code-block:: yaml
+    .. code-block:: yaml
 
-    ubuntu:
-      docker.pulled
+        ubuntu:
+          docker.pulled
 
 - installed
 
-.. code-block:: yaml
+    .. code-block:: yaml
 
-    mysuperdocker:
-        docker.installed:
-            - hostname: superdocker
-            - image: corp/mysuperdocker_img
+        mysuperdocker:
+            docker.installed:
+                - hostname: superdocker
+                - image: corp/mysuperdocker_img
 
 - absent
 
-.. code-block:: yaml
+    .. code-block:: yaml
 
-     mys_old_uperdocker:
-        docker.absent
+         mys_old_uperdocker:
+            docker.absent
 
 - run
 
-.. code-block:: yaml
+    .. code-block:: yaml
 
-     /finish-install.sh:
-         docker.run:
-             - container: mysuperdocker
-             - unless: grep -q something /var/log/foo
-             - docker_unless: grep -q done /install_log
+         /finish-install.sh:
+             docker.run:
+                 - container: mysuperdocker
+                 - unless: grep -q something /var/log/foo
+                 - docker_unless: grep -q done /install_log
 
 Note:
 The docker Modules can't be called docker as
