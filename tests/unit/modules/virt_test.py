@@ -425,6 +425,26 @@ class VirtTestCase(TestCase):
         self.assertTrue(len(root.findall('.//interface')) == 2)
 
 
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_controller_for_esxi(self):
+        diskp = virt._disk_profile('default', 'esxi')
+        nicp = virt._nic_profile('default', 'esxi')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'esxi'
+            )
+        root = _ElementTree.fromstring(xml_data)
+        controllers = root.findall('.//devices/controller')
+        self.assertTrue(len(controllers) == 1)
+        controller = controllers[0]
+        self.assertEqual(controller.attrib['model'], 'lsilogic')
+
+
     def test_mixed_dict_and_list_as_profile_objects(self):
 
         yaml_config = '''
