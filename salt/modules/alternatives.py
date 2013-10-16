@@ -53,9 +53,8 @@ def display(name):
 
         salt '*' alternatives.display editor
     '''
-
-    cmd = '{0} --display {1}'.format(_get_cmd(), name)
-    out = __salt__['cmd.run_all'](cmd)
+    cmd = [_get_cmd(), '--display', name]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] > 0 and out['stderr'] != '':
         return out['stderr']
     return out['stdout']
