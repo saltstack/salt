@@ -148,10 +148,10 @@ class VirtTestCase(TestCase):
             'kvm',
             )
         root = ElementTree.fromstring(xml_data)
-        self.assertTrue(root.attrib['type'] == 'kvm')
-        self.assertTrue(root.find('vcpu').text == '1')
-        self.assertTrue(root.find('memory').text == '524288')
-        self.assertTrue(root.find('memory').attrib['unit'] == 'KiB')
+        self.assertEqual(root.attrib['type'], 'kvm')
+        self.assertEqual(root.find('vcpu').text, '1')
+        self.assertEqual(root.find('memory').text, '524288')
+        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
         self.assertTrue(len(root.findall('.//disk')) == 1)
 
         interfaces = root.findall('.//interface')
@@ -181,10 +181,10 @@ class VirtTestCase(TestCase):
             'esxi',
             )
         root = _ElementTree.fromstring(xml_data)
-        self.assertTrue(root.attrib['type'] == 'vmware')
-        self.assertTrue(root.find('vcpu').text == '1')
-        self.assertTrue(root.find('memory').text == '524288')
-        self.assertTrue(root.find('memory').attrib['unit'] == 'KiB')
+        self.assertEqual(root.attrib['type'], 'vmware')
+        self.assertEqual(root.find('vcpu').text, '1')
+        self.assertEqual(root.find('memory').text, '524288')
+        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
         self.assertTrue(len(root.findall('.//disk')) == 1)
 
         interfaces = root.findall('.//interface')
@@ -242,10 +242,10 @@ class VirtTestCase(TestCase):
             'esxi',
             )
         root = _ElementTree.fromstring(xml_data)
-        self.assertTrue(root.attrib['type'] == 'vmware')
-        self.assertTrue(root.find('vcpu').text == '1')
-        self.assertTrue(root.find('memory').text == '524288')
-        self.assertTrue(root.find('memory').attrib['unit'] == 'KiB')
+        self.assertEqual(root.attrib['type'], 'vmware')
+        self.assertEqual(root.find('vcpu').text, '1')
+        self.assertEqual(root.find('memory').text, '524288')
+        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
         self.assertTrue(len(root.findall('.//disk')) == 2)
         self.assertTrue(len(root.findall('.//interface')) == 2)
 
@@ -291,10 +291,10 @@ class VirtTestCase(TestCase):
             'kvm',
             )
         root = _ElementTree.fromstring(xml_data)
-        self.assertTrue(root.attrib['type'] == 'kvm')
-        self.assertTrue(root.find('vcpu').text == '1')
-        self.assertTrue(root.find('memory').text == '524288')
-        self.assertTrue(root.find('memory').attrib['unit'] == 'KiB')
+        self.assertEqual(root.attrib['type'], 'kvm')
+        self.assertEqual(root.find('vcpu').text, '1')
+        self.assertEqual(root.find('memory').text, '524288')
+        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
         self.assertTrue(len(root.findall('.//disk')) == 2)
         self.assertTrue(len(root.findall('.//interface')) == 2)
 
