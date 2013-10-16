@@ -176,6 +176,7 @@ def __virtual__():
     '''
     if HAS_DOCKER:
         return 'docker'
+    return False
 
 
 def _sizeof_fmt(num):
