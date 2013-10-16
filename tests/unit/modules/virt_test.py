@@ -445,6 +445,25 @@ class VirtTestCase(TestCase):
         self.assertEqual(controller.attrib['model'], 'lsilogic')
 
 
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_controller_for_kvm(self):
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm'
+            )
+        root = _ElementTree.fromstring(xml_data)
+        controllers = root.findall('.//devices/controller')
+        # There should be no controller
+        self.assertTrue(len(controllers) == 0)
+
+
     def test_mixed_dict_and_list_as_profile_objects(self):
 
         yaml_config = '''
