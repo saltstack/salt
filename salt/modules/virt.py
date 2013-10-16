@@ -224,24 +224,6 @@ def _prepare_serial_port_xml(serial_type='pty',
                            console=console)
 
 
-def _prepare_nics_xml(interfaces):
-    '''
-    Prepares the network interface section of the VM xml
-
-    interfaces: list of dicts as returned from _nic_profile
-
-    Returns string representing interfaces devices suitable for
-    insertion into the VM XML definition
-    '''
-    fn_ = 'interface.jinja'
-    try:
-        template = JINJA.get_template(fn_)
-    except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template {0}'.format(fn_))
-        return ''
-    return template.render(interfaces=interfaces)
-
-
 def _gen_xml(name,
              cpu,
              mem,
@@ -299,7 +281,7 @@ def _gen_xml(name,
             context['disks'][disk_name]['type'] = args['format']
             context['disks'][disk_name]['index'] = str(i)
 
-    context['nics'] = _prepare_nics_xml(nicp)
+    context['nics'] = nicp
 
     fn_ = 'libvirt_domain.jinja'
     try:

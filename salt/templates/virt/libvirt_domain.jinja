@@ -19,9 +19,19 @@
                         {% endif %}
                 </disk>
                 {% endfor %}
+
                 {{ controller }}
-                {{ nics }}
+
+                {% for nic in nics %}
+                <interface type='{{ nic.type }}'>
+                    <source {{ nic.type }}='{{ nic.source }}'/>
+                    <mac address='{{ nic.mac }}'/>
+                    <model type='{{ nic.model }}'/>
+                </interface>
+                {% endfor %}
+
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes' />
+
                 {{ serial }}
         </devices>
         <features>
