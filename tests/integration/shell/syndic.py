@@ -51,7 +51,7 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         config['root_dir'] = config_dir
         config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
         config['ret_port'] = int(config['ret_port']) + 10
-        config['publish_port'] = nt(config['publish_port']) + 10
+        config['publish_port'] = int(config['publish_port']) + 10
 
         open(os.path.join(config_dir, config_file_name), 'w').write(
             yaml.dump(config, default_flow_style=False)
