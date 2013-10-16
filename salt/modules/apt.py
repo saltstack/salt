@@ -159,7 +159,6 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
     pkgs = list_pkgs(versions_as_list=True)
-    #repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
     repo = ['-o', 'APT::Default-Release="{0}"'.format(fromrepo)] \
         if fromrepo else ''
 
@@ -173,7 +172,6 @@ def latest_version(*names, **kwargs):
         all_virt.update(provides)
 
     for name in names:
-        #cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
         cmd = ['apt-cache', '-q', 'policy', name]
         if isinstance(repo, list):
             cmd = cmd + repo
