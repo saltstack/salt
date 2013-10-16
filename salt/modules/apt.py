@@ -160,7 +160,8 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
     pkgs = list_pkgs(versions_as_list=True)
-    repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
+    #repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
+    repo = ['-o', 'APT::Default-Release="{0}"'.format(fromrepo)] \
         if fromrepo else ''
 
     # Refresh before looking for the latest version available
@@ -173,9 +174,14 @@ def latest_version(*names, **kwargs):
         all_virt.update(provides)
 
     for name in names:
-        cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
-        out = __salt__['cmd.run_all'](cmd)
-        candidate = out['stdout'].split()
+        #cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
+        cmd = ['apt-cache', '-q', 'policy', name]
+        if isinstance(repo, list):
+            cmd = cmd + repo
+        out = __salt__['cmd.run_all'](cmd, python_shell=False)
+        for line in out['stdout'].splitlines():
+            if 'Candidate' in line:
+                candidate = line.split()
         if len(candidate) >= 2:
             candidate = candidate[-1]
             if candidate.lower() == '(none)':
@@ -402,17 +408,20 @@ def install(name=None,
                 targets.append('"{0}={1}"'.format(param, version_num))
         if fromrepo:
             log.info('Targeting repo "{0}"'.format(fromrepo))
-        cmd = 'apt-get -q -y {force_yes} {confold} {confdef} {verify} ' \
-              '{target} install {pkg}'.format(
-                  force_yes='--force-yes' if downgrade else '',
-                  confold='-o DPkg::Options::=--force-confold',
-                  confdef='-o DPkg::Options::=--force-confdef',
-                  verify='--allow-unauthenticated' if skip_verify else '',
-                  target='-t {0}'.format(fromrepo) if fromrepo else '',
-                  pkg=' '.join(targets),
-              )
+        cmd = ['apt-get', '-q', '-y']
+        if downgrade:
+            cmd.append('--force-yes')
+        cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
+        cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
+        if skip_verify:
+            cmd.append('--allow-unauthenticated')
+        if fromrepo:
+            cmd.extend(['-t', fromrepo])
+        cmd.append('install')
+        cmd.extend(targets)
 
-    __salt__['cmd.run_all'](cmd)
+
+    __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -437,8 +446,9 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         targets.extend([x for x in pkg_params if x in old_removed])
     if not targets:
         return {}
-    cmd = 'apt-get -q -y {0} {1}'.format(action, ' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    cmd = ['apt-get', '-q', '-y', action]
+    cmd.extend(targets)
+    __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
@@ -532,9 +542,9 @@ def upgrade(refresh=True, **kwargs):
         refresh_db()
 
     old = list_pkgs()
-    cmd = ('apt-get -q -y -o DPkg::Options::=--force-confold '
-           '-o DPkg::Options::=--force-confdef dist-upgrade')
-    __salt__['cmd.run_all'](cmd)
+    cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
+           '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
+    __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
