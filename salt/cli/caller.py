@@ -104,6 +104,7 @@ class Caller(object):
             ret['fun_args'] = self.opts['arg']
             for returner in self.opts['return'].split(','):
                 try:
+                    ret['success'] = True
                     self.minion.returners['{0}.returner'.format(returner)](ret)
                 except Exception:
                     pass
