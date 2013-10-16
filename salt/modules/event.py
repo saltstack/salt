@@ -24,12 +24,13 @@ def fire_master(data, tag, preload=None):
     if preload:
         load.update(preload)
 
+    auth = salt.crypt.SAuth(__opts__)
     load.update({'id': __opts__['id'],
             'tag': tag,
             'data': data,
+            'tok': auth.gen_token('salt'),
             'cmd': '_minion_event'})
 
-    auth = salt.crypt.SAuth(__opts__)
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     try:
         sreq.send('aes', auth.crypticle.dumps(load))

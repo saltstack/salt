@@ -831,6 +831,15 @@ class AESFuncs(object):
             return {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return {}
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                )
+            )
+            return {}
         ret = {}
         # The old ext_nodes method is set to be deprecated in 0.10.4
         # and should be removed within 3-5 releases in favor of the
@@ -910,6 +919,15 @@ class AESFuncs(object):
         '''
         if any(key not in load for key in ('id', 'tgt', 'fun')):
             return {}
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                )
+            )
+            return {}
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -952,6 +970,15 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                )
+            )
+            return {}
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -976,6 +1003,15 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                )
+            )
+            return {}
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1001,6 +1037,15 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                )
+            )
+            return {}
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1027,6 +1072,15 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                )
+            )
+            return {}
         cpath = os.path.join(
                 self.opts['cachedir'],
                 'minions',
@@ -1077,19 +1131,6 @@ class AESFuncs(object):
                             )
         return data
 
-    def _master_state(self, load):
-        '''
-        Call the master to compile a master side highstate
-        '''
-        if 'opts' not in load or 'grains' not in load:
-            return False
-        return salt.state.master_compile(
-                self.opts,
-                load['opts'],
-                load['grains'],
-                load['opts']['id'],
-                load['opts']['environment'])
-
     def _minion_event(self, load):
         '''
         Receive an event from the minion and fire it on the master event
@@ -1099,6 +1140,15 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                )
+            )
+            return {}
         if 'events' not in load and ('tag' not in load or 'data' not in load):
             return False
         if 'events' in load:

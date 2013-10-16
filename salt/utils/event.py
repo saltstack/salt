@@ -607,7 +607,8 @@ class StateFire(object):
         load.update({'id': self.opts['id'],
                     'tag': tag,
                     'data': data,
-                    'cmd': '_minion_event'})
+                    'cmd': '_minion_event',
+                    'tok': self.auth.gen_token('salt')})
 
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
