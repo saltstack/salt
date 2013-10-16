@@ -1661,7 +1661,7 @@ class BaseHighState(object):
     The BaseHighState is an abstract base class that is the foundation of running a highstate, extend it and
     add a self.state object of type State.
 
-    When extending this class, please note that self.client self.matcher should be instantiated and handled.
+    When extending this class, please note that self.client and self.matcher should be instantiated and handled.
     '''
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
