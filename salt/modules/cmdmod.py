@@ -329,7 +329,7 @@ def _run(cmd,
     if not salt.utils.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
-        if kwargs['shell'] == True:
+        if kwargs['shell'] is True:
             kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
