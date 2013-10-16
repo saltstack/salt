@@ -222,11 +222,11 @@ def _gen_xml(name,
         context['controller'] = '<controller type=\'scsi\' index=\'0\' model=\'lsilogic\'/>'
 
     if 'boot_dev' in kwargs:
-        context['boot_devs'] = []
-        for dev in kwargs['boot_dev']:
-            context['boot_devs'].append('''<boot dev='{0}' />\n'''.format(dev))
+        context['boot_dev'] = []
+        for dev in kwargs['boot_dev'].split():
+            context['boot_dev'].append(dev)
     else:
-        context['boot_devs'] = ['''<boot dev='hd'/>''']
+        context['boot_dev'] = ['hd']
 
     if 'serial_type' in kwargs:
         context['serial_type'] = kwargs['serial_type']
