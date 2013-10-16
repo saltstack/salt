@@ -7,6 +7,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 from os import path
 import logging
 import json
+import pprint
 from functools import wraps
 
 # Import third party libs
@@ -160,11 +161,13 @@ class SerializerExtension(Extension, object):
 
         yaml = {{ data|yaml }}
         json = {{ data|json }}
+        python = {{ data|python }}
 
     will be rendered has::
 
         yaml = {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
+        python = {'bar': 42, 'baz': [1, 2, 3], 'foo': True, 'qux': 2.0}
 
     Load filters
     ~~~~~~~~~~~~
@@ -253,6 +256,7 @@ class SerializerExtension(Extension, object):
         self.environment.filters.update({
             'yaml': self.format_yaml,
             'json': self.format_json,
+            'python': self.format_python,
             'load_yaml': self.load_yaml,
             'load_json': self.load_json
         })
@@ -285,6 +289,9 @@ class SerializerExtension(Extension, object):
     def format_yaml(self, value):
         return Markup(yaml.dump(value, default_flow_style=True,
                                 Dumper=OrderedDictDumper).strip())
+
+    def format_python(self, value):
+        return Markup(pprint.pformat(value).strip())
 
     def load_yaml(self, value):
         if isinstance(value, TemplateModule):
