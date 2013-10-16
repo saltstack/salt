@@ -418,7 +418,6 @@ def install(name=None,
         cmd.append('install')
         cmd.extend(targets)
 
-
     __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
