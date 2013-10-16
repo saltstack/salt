@@ -5,7 +5,7 @@
                 </serial>
                 {% if console %}
                 <console type='tcp'>
-                    <source mode='bind' host='' service='{{telnet_port}}'/>
+                    <source mode='bind' host='' service='{{ telnet_port }}'/>
                     <protocol type='telnet'/>
                     <target type='serial' port='0'/>
                 </console>

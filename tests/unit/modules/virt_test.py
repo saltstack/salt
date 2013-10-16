@@ -269,12 +269,12 @@ class VirtTestCase(TestCase):
         nicp_yaml = '''
 - type: bridge
   name: eth1
-  source: b2 
-  model: virtio 
+  source: b2
+  model: virtio
   mac: '00:00:00:00:00:00'
 - name: eth2
   type: bridge
-  source: b2 
+  source: b2
   model: virtio
   mac: '00:00:00:00:00:00'
 '''
