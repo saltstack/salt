@@ -254,103 +254,61 @@ def _gen_xml(name,
     '''
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
     mem = mem * 1024  # MB
-    data = '''
-<domain type='%%HYPERVISOR%%'>
-        <name>%%NAME%%</name>
-        <vcpu>%%CPU%%</vcpu>
-        <memory unit='KiB'>%%MEM%%</memory>
-        <os>
-                <type>hvm</type>
-                %%BOOT%%
-        </os>
-        <devices>
-                %%DISKS%%
-                %%CONTROLLER%%
-                %%NICS%%
-                <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
-                %%SERIAL%%
-        </devices>
-        <features>
-                <acpi/>
-        </features>
-</domain>
-'''
-    data = data.replace('%%HYPERVISOR%%', hypervisor)
-    data = data.replace('%%NAME%%', name)
-    data = data.replace('%%CPU%%', str(cpu))
-    data = data.replace('%%MEM%%', str(mem))
-
+    context = {
+        'hypervisor': hypervisor,
+        'name': name,
+        'cpu': str(cpu),
+        'mem': str(mem),
+    }
     if hypervisor in ['qemu', 'kvm']:
-        controller = ''
+        context['controller'] = ''
     elif hypervisor in ['esxi', 'vmware']:
         # TODO: make bus and model parameterized, this works for 64-bit Linux
-        controller = '<controller type=\'scsi\' index=\'0\' model=\'lsilogic\'/>'
-    data = data.replace('%%CONTROLLER%%', controller)
+        context['controller'] = '<controller type=\'scsi\' index=\'0\' model=\'lsilogic\'/>'
 
-    boot_str = ''
     if 'boot_dev' in kwargs:
+        context['boot_devs'] = []
         for dev in kwargs['boot_dev']:
-            boot_part = '''<boot dev='%%DEV%%' />
-'''
-            boot_part = boot_part.replace('%%DEV%%', dev)
-            boot_str += boot_part
+            context['boot_devs'].append('''<boot dev='{0}' />\n'''.format(dev))
     else:
-        boot_str = '''<boot dev='hd'/>'''
-    data = data.replace('%%BOOT%%', boot_str)
+        context['boot_devs'] = ['''<boot dev='hd'/>''']
 
     if 'serial_type' in kwargs:
-        serial_section = _prepare_serial_port_xml(**kwargs)
+        context['serial'] = _prepare_serial_port_xml(**kwargs)
     else:
-        serial_section = ''
-    data = data.replace('%%SERIAL%%', serial_section)
+        context['serial'] = ''
 
-    disk_t = '''
-                <disk type='file' device='disk'>
-                        <source %%SOURCE%%/>
-                        <target %%TARGET%%/>
-                        %%ADDRESS%%
-                        %%DRIVER%%
-                </disk>
-'''
-    source = 'file=\'%%SOURCE_FILE%%\''
-
-    if hypervisor in ['qemu', 'kvm']:
-        target = 'dev=\'vd%%CHARINDEX%%\' bus=\'%%DISKBUS%%\''
-        address = ''
-        driver = '<driver name=\'qemu\' type=\'%%DISKTYPE%%\' cache=\'none\' io=\'native\'/>'
-    elif hypervisor in ['esxi', 'vmware']:
-        target = 'dev=\'sd%%CHARINDEX%%\' bus=\'%%DISKBUS%%\''
-        address = '<address type=\'drive\' controller=\'0\' bus=\'0\' target=\'0\' unit=\'%%DISKINDEX%%\'/>'
-        driver = ''
-
-    disk_t = disk_t.replace('%%SOURCE%%', source)
-    disk_t = disk_t.replace('%%TARGET%%', target)
-    disk_t = disk_t.replace('%%ADDRESS%%', address)
-    disk_t = disk_t.replace('%%DRIVER%%', driver)
-    disk_str = ''
+    context['disks'] = {}
     for i, disk in enumerate(diskp):
         for disk_name, args in disk.items():
-            disk_i = disk_t
-            file_name = '{0}.{1}'.format(disk_name, args['format'])
-            source_file = os.path.join(args['pool'],
-                                       name,
-                                       file_name)
-            disk_i = disk_i.replace('%%SOURCE_FILE%%', source_file)
+            context['disks'][disk_name] = {}
+            fn_ = '{0}.{1}'.format(disk_name, args['format'])
+            context['disks'][disk_name]['file_name'] = fn_
+            context['disks'][disk_name]['source_file'] = os.path.join(args['pool'],
+                                                                      name,
+                                                                      fn_)
+            if hypervisor in ['qemu', 'kvm']:
+                context['disks'][disk_name]['target_dev'] = 'vd{0}'.format(string.ascii_lowercase[i])
+                context['disks'][disk_name]['address'] = False
+                context['disks'][disk_name]['driver'] = True
+            elif hypervisor in ['esxi', 'vmware']:
+                context['disks'][disk_name]['target_dev'] = 'sd{0}'.format(string.ascii_lowercase[i])
+                context['disks'][disk_name]['address'] = True
+                context['disks'][disk_name]['driver'] = False
+            context['disks'][disk_name]['disk_bus'] = args['model']
+            context['disks'][disk_name]['type'] = args['format']
+            context['disks'][disk_name]['index'] = str(i)
 
-            disk_i = disk_i.replace('%%CHARINDEX%%', string.ascii_lowercase[i])
-            disk_i = disk_i.replace('%%DISKBUS%%', args['model'])
+    context['nics'] = _prepare_nics_xml(nicp)
 
-            if '%%DISKTYPE%%' in driver:
-                disk_i = disk_i.replace('%%DISKTYPE%%', args['format'])
-            if '%%DISKINDEX%%' in address:
-                disk_i = disk_i.replace('%%DISKINDEX%%', str(i))
-            disk_str += disk_i
-    data = data.replace('%%DISKS%%', disk_str)
+    fn_ = 'libvirt_domain.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template {0}'.format(fn_))
+        return ''
 
-    nic_str = _prepare_nics_xml(nicp)
-    data = data.replace('%%NICS%%', nic_str)
-
-    return data
+    return template.render(**context)
 
 
 def _gen_vol_xml(vmname,
