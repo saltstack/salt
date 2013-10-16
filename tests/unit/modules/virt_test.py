@@ -48,8 +48,8 @@ class VirtTestCase(TestCase):
             console=True
             )
         root = ElementTree.fromstring(xml_data)
-        self.assertEquals(root.find('devices/serial').attrib['type'], 'pty')
-        self.assertEquals(root.find('devices/console').attrib['type'], 'pty')
+        self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
+        self.assertEqual(root.find('devices/console').attrib['type'], 'pty')
 
     @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
             ' which comes with Python 2.7')
@@ -67,8 +67,8 @@ class VirtTestCase(TestCase):
             console=False
             )
         root = ElementTree.fromstring(xml_data)
-        self.assertEquals(root.find('devices/serial').attrib['type'], 'pty')
-        self.assertEquals(root.find('devices/console'), None)
+        self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
+        self.assertEqual(root.find('devices/console'), None)
 
     def test_default_disk_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
@@ -155,12 +155,12 @@ class VirtTestCase(TestCase):
         self.assertTrue(len(root.findall('.//disk')) == 1)
 
         interfaces = root.findall('.//interface')
-        self.assertEquals(len(interfaces), 1)
+        self.assertEqual(len(interfaces), 1)
 
         iface = interfaces[0]
-        self.assertEquals(iface.attrib['type'], 'bridge')
-        self.assertEquals(iface.find('source').attrib['bridge'], 'br0')
-        self.assertEquals(iface.find('model').attrib['type'], 'virtio')
+        self.assertEqual(iface.attrib['type'], 'bridge')
+        self.assertEqual(iface.find('source').attrib['bridge'], 'br0')
+        self.assertEqual(iface.find('model').attrib['type'], 'virtio')
 
         mac = iface.find('mac').attrib['address']
         self.assertTrue(
@@ -188,12 +188,12 @@ class VirtTestCase(TestCase):
         self.assertTrue(len(root.findall('.//disk')) == 1)
 
         interfaces = root.findall('.//interface')
-        self.assertEquals(len(interfaces), 1)
+        self.assertEqual(len(interfaces), 1)
 
         iface = interfaces[0]
-        self.assertEquals(iface.attrib['type'], 'bridge')
-        self.assertEquals(iface.find('source').attrib['bridge'], 'DEFAULT')
-        self.assertEquals(iface.find('model').attrib['type'], 'e1000')
+        self.assertEqual(iface.attrib['type'], 'bridge')
+        self.assertEqual(iface.find('source').attrib['bridge'], 'DEFAULT')
+        self.assertEqual(iface.find('model').attrib['type'], 'e1000')
 
         mac = iface.find('mac').attrib['address']
         self.assertTrue(
@@ -328,14 +328,14 @@ class VirtTestCase(TestCase):
 
         for name in mock_config['virt.nic'].keys():
             profile = salt.modules.virt._nic_profile(name, 'kvm')
-            self.assertEquals(len(profile), 2)
+            self.assertEqual(len(profile), 2)
 
             interface_attrs = profile[0]
             self.assertIn('source', interface_attrs)
             self.assertIn('type', interface_attrs)
             self.assertIn('name', interface_attrs)
             self.assertIn('model', interface_attrs)
-            self.assertEquals(interface_attrs['model'], 'virtio')
+            self.assertEqual(interface_attrs['model'], 'virtio')
             self.assertIn('mac', interface_attrs)
             self.assertTrue(
                 re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
