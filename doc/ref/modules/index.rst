@@ -259,6 +259,12 @@ Objects NOT Loaded into the Salt Minion
 
     cheese = {} # Not a callable Python object
 
+.. note::
+
+    Some callable names also end with an underscore ``_``, to avoid keyword clashes
+    with Python keywords.  When using Salt modules, or state modules, with these
+    in them the trailing underscore should be omitted.
+
 Useful Decorators for Modules
 =============================
 Sometimes when writing modules for large scale deployments you run into some small
