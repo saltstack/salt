@@ -105,10 +105,8 @@ def install(name, link, path, priority):
 
         salt '*' alternatives.install editor /usr/bin/editor /usr/bin/emacs23 50
     '''
-
-    cmd = '{0} --install {1} {2} {3} {4}'.format(_get_cmd(), link, name,
-                                                 path, priority)
-    out = __salt__['cmd.run_all'](cmd)
+    cmd = [_get_cmd(), '--install', link, name, path, str(priority)]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] > 0 and out['stderr'] != '':
         return out['stderr']
     return out['stdout']
@@ -124,9 +122,8 @@ def remove(name, path):
 
         salt '*' alternatives.remove name path
     '''
-
-    cmd = '{0} --remove {1} {2}'.format(_get_cmd(), name, path)
-    out = __salt__['cmd.run_all'](cmd)
+    cmd = [_get_cmd(), '--remove', name, path]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
@@ -143,9 +140,8 @@ def auto(name):
 
         salt '*' alternatives.auto name
     '''
-
-    cmd = '{0} --auto {1}'.format(_get_cmd(), name)
-    out = __salt__['cmd.run_all'](cmd)
+    cmd = [_get_cmd(), '--auto', name]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
@@ -161,9 +157,8 @@ def set_(name, path):
 
         salt '*' alternatives.set name path
     '''
-
-    cmd = '{0} --set {1} {2}'.format(_get_cmd(), name, path)
-    out = __salt__['cmd.run_all'](cmd)
+    cmd = [_get_cmd(), '--set', name, path]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
