@@ -83,10 +83,11 @@ def update_git_repos():
     '''
     Checkout git repos containing Windows Software Package Definitions
 
-    Note: This function will not work unless git is installed and the git
-          module is further updated to work on Windows.
-          In the meantime just place all Windows package files in
-      the 'win_repo' directory.
+    .. note::
+
+        This function will not work unless git is installed and the git module
+        is further updated to work on Windows. In the meantime just place all
+        Windows package files in the 'win_repo' directory.
     '''
     ret = {}
     #mminion = salt.minion.MasterMinion(__opts__)
