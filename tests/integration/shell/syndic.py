@@ -69,7 +69,10 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            os.kill(int(open(pid_path).read()), signal.SIGKILL)
+            try:
+                os.kill(int(open(pid_path).read()), signal.SIGKILL)
+            except OSError:
+                pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         finally:
