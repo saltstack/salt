@@ -72,12 +72,16 @@ except ImportError:
     HAS_DOCKER = False
 
 
+# Define the module's virtual name
+__virtualname__ = 'docker'
+
+
 def __virtual__():
     '''
     Only load if docker libs available
     '''
     if HAS_DOCKER:
-        return 'docker'
+        return __virtualname__
     return False
 
 
