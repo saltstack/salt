@@ -14,13 +14,16 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
     Only work on Debian and when systemd isn't running
     '''
     if __grains__['os'] in ('Debian', 'Raspbian') and not _sd_booted():
-        return 'service'
+        return __virtualname__
     return False
 
 
