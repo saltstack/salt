@@ -9,13 +9,16 @@ import re
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'firewall'
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows():
-        return 'firewall'
+        return __virtualname__
     return False
 
 
