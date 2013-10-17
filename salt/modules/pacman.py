@@ -14,12 +14,17 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    return 'pkg' if __grains__['os'] in ('Arch', 'Arch ARM') else False
+    if __grains__['os'] in ('Arch', 'Arch ARM'):
+        return __virtualname__
+    return False
 
 
 def _list_removed(old, new):
