@@ -20,12 +20,15 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'whoosh'
+
 
 def __virtual__():
     '''
     Only load if the whoosh libs are available
     '''
-    return 'whoosh' if HAS_WHOOSH else False
+    return __virtualname__ if HAS_WHOOSH else False
 
 
 def index():
