@@ -10,9 +10,12 @@ import os
 import salt.utils
 import salt.exceptions
 
+# Define the module's virtual name
+__virtualname__ = 'django'
+
 
 def __virtual__():
-    return 'django'
+    return __virtualname__
 
 
 def _get_django_admin(bin_env):
