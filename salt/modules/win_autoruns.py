@@ -16,6 +16,9 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'autoruns'
+
 
 def __virtual__():
     '''
@@ -23,7 +26,7 @@ def __virtual__():
     '''
 
     if salt.utils.is_windows():
-        return 'autoruns'
+        return __virtualname__
     return False
 
 
