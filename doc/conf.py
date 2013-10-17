@@ -108,7 +108,7 @@ copyright = '2013 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '0.17.0'
+release = '0.17.1'
 
 language = 'en'
 locale_dirs = [
