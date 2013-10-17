@@ -38,6 +38,10 @@ set_file
 '''
 
 
+# Define the module's virtual name
+__virtualname__ = 'debconf'
+
+
 def __virtual__():
     '''
     Confirm this module is on a Debian based system
@@ -48,7 +52,7 @@ def __virtual__():
     if 'debconf.show' not in __salt__:
         return False
 
-    return 'debconf'
+    return __virtualname__
 
 
 def set_file(name, source, **kwargs):
