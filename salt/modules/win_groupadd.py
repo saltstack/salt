@@ -6,12 +6,15 @@ Manage groups on Windows
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'group'
+
 
 def __virtual__():
     '''
     Set the group module if the kernel is Windows
     '''
-    return 'group' if salt.utils.is_windows() else False
+    return __virtualname__ if salt.utils.is_windows() else False
 
 
 def add(name, gid=None, system=False):
