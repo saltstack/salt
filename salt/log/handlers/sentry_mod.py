@@ -79,10 +79,13 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'sentry'
+
 
 def __virtual__():
     if HAS_RAVEN is True:
-        return 'sentry'
+        return __virtualname__
     return False
 
 
