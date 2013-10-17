@@ -21,11 +21,14 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'user'
+
 
 def __virtual__():
     if __grains__.get('kernel') != 'Darwin':
         return False
-    return 'user' if _osmajor() >= 10.7 else False
+    return __virtualname__ if _osmajor() >= 10.7 else False
 
 
 def _osmajor():
