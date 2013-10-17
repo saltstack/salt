@@ -16,13 +16,16 @@ try:
 except ImportError:
     HAS_WIN32NET_MODS = False
 
+# Define the module's virtual name
+__virtualname__ = 'user'
+
 
 def __virtual__():
     '''
     Set the user module if the kernel is Windows
     '''
     if HAS_WIN32NET_MODS is True and salt.utils.is_windows():
-        return 'user'
+        return __virtualname__
     return False
 
 
