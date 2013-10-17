@@ -16,11 +16,14 @@ try:
 except ImportError:
     HAS_SYSLOG = False
 
+# Define the module's virtual name
+__virtualname__ = 'syslog'
+
 
 def __virtual__():
     if not HAS_SYSLOG:
         return False
-    return 'syslog'
+    return __virtualname__
 
 
 def returner(ret):
