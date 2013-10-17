@@ -28,13 +28,16 @@ JINJA = jinja2.Environment(
     )
 )
 
+# Define the module's virtual name
+__virtualname__ = 'ip'
+
 
 def __virtual__():
     '''
     Confine this module to RHEL/Fedora based distros
     '''
     if __grains__['os_family'] == 'RedHat':
-        return 'ip'
+        return __virtualname__
     return False
 
 
