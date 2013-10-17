@@ -42,6 +42,15 @@ cloud providers.
 
 * :doc:`Core Configuration <topics/config>`
 
+Windows Configuration
+=====================
+
+Salt Cloud may be used to spin up a Windows minion, and then install the Salt
+Minion client on that instance. At this time, Salt Cloud itself still needs to
+be run from a Linux or Unix machine.
+
+* :doc:`Windows Configuration <topics/windows>`
+
 Using Salt Cloud
 ================
 
