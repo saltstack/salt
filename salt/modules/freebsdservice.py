@@ -18,6 +18,9 @@ __func_alias__ = {
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
@@ -25,7 +28,7 @@ def __virtual__():
     '''
     # Disable on these platforms, specific service modules exist:
     if __grains__['os'] == 'FreeBSD':
-        return 'service'
+        return __virtualname__
     return False
 
 
