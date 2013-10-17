@@ -10,12 +10,15 @@ import os
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+# Define the module's virtual name
+__virtualname__ = 'sysctl'
+
 
 def __virtual__():
     '''
     Only run on Darwin (OS X) systems
     '''
-    return 'sysctl' if __grains__['os'] == 'MacOS' else False
+    return __virtualname__ if __grains__['os'] == 'MacOS' else False
 
 
 def show():

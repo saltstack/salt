@@ -15,13 +15,16 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'saltcloud'
+
 
 def __virtual__():
     '''
     Only load if salt cloud is installed
     '''
     if HAS_CLOUD:
-        return 'saltcloud'
+        return __virtualname__
     return False
 
 

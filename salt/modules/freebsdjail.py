@@ -9,12 +9,15 @@ import os
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'jail'
+
 
 def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    return 'jail' if __grains__['os'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['os'] == 'FreeBSD' else False
 
 
 def start(jail=''):

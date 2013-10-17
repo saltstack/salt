@@ -6,13 +6,16 @@ Support for Linux LVM2
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'lvm'
+
 
 def __virtual__():
     '''
     Only load the module if lvm is installed
     '''
     if salt.utils.which('lvm'):
-        return 'lvm'
+        return __virtualname__
     return False
 
 

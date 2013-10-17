@@ -25,8 +25,10 @@ import logging
 # Import salt libs
 import salt.utils
 
-
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'system'
 
 
 def __virtual__():
@@ -34,7 +36,7 @@ def __virtual__():
     This only supports Windows
     '''
     if salt.utils.is_windows() and 'system.get_computer_desc' in __salt__:
-        return 'system'
+        return __virtualname__
     return False
 
 

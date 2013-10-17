@@ -58,15 +58,22 @@ The docker Modules can't be called docker as
 it would conflict with the underlying binding modules: docker-py
 '''
 
+# Import python libs
+import re
+
+# Import salt libs
+from salt._compat import string_types
+
+# Import 3rd-party libs
 try:
     import docker
     HAS_DOCKER = True
 except ImportError:
     HAS_DOCKER = False
 
-import re
 
-from salt._compat import string_types
+# Define the module's virtual name
+__virtualname__ = 'docker'
 
 
 def __virtual__():
@@ -74,7 +81,7 @@ def __virtual__():
     Only load if docker libs available
     '''
     if HAS_DOCKER:
-        return 'docker'
+        return __virtualname__
     return False
 
 

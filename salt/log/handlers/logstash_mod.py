@@ -125,6 +125,9 @@ from salt.log.mixins import NewStyleClassMixIn
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'logstash'
+
 
 def __virtual__():
     if not any(['logstash_udp_handler' in __opts__,
@@ -136,7 +139,7 @@ def __virtual__():
             'logging handlers module.'
         )
         return False
-    return 'logstash'
+    return __virtualname__
 
 
 def setup_handlers():

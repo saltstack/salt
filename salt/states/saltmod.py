@@ -29,12 +29,15 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'salt'
+
 
 def __virtual__():
     '''
     Named salt
     '''
-    return 'salt'
+    return __virtualname__
 
 
 def state(

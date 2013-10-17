@@ -11,13 +11,16 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
     Only work on NetBSD
     '''
     if __grains__['os'] == 'NetBSD' and os.path.exists('/etc/rc.subr'):
-        return 'service'
+        return __virtualname__
     return False
 
 

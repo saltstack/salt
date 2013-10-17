@@ -48,6 +48,9 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'ldap'
+
 
 def __virtual__():
     '''
@@ -55,7 +58,7 @@ def __virtual__():
     '''
     # These config items must be set in the minion config
     if HAS_LDAP:
-        return 'ldap'
+        return __virtualname__
     return False
 
 

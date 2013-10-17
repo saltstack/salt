@@ -102,6 +102,9 @@ except (ImportError, AttributeError):
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
@@ -120,19 +123,19 @@ def __virtual__():
         os_major = 0
 
     if os_grain == 'Amazon':
-        return 'pkg'
+        return __virtualname__
     elif os_grain == 'Fedora':
         # Fedora <= 10 used Python 2.5 and below
         if os_major >= 11:
-            return 'pkg'
+            return __virtualname__
     elif os_grain == 'XCP':
         if os_major >= 2:
-            return 'pkg'
+            return __virtualname__
     elif os_grain == 'XenServer':
         if os_major > 6:
-            return 'pkg'
+            return __virtualname__
     elif os_family == 'RedHat' and os_major >= 6:
-        return 'pkg'
+        return __virtualname__
     return False
 
 

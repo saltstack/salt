@@ -13,6 +13,9 @@ import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _osmajor, _dscl, _flush_dscl_cache
 
+# Define the module's virtual name
+__virtualname__ = 'group'
+
 
 def __virtual__():
     global _osmajor, _dscl, _flush_dscl_cache
@@ -23,7 +26,7 @@ def __virtual__():
     _flush_dscl_cache = salt.utils.namespaced_function(
         _flush_dscl_cache, globals()
     )
-    return 'group'
+    return __virtualname__
 
 
 def add(name, gid=None, **kwargs):

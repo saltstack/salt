@@ -30,14 +30,16 @@ try:
 except ImportError:
     HAS_PYMONGO = False
 
-
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'mongo'
 
 
 def __virtual__():
     if not HAS_PYMONGO:
         return False
-    return 'mongo'
+    return __virtualname__
 
 
 def _remove_dots(src):

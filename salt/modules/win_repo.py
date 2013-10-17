@@ -25,13 +25,16 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'winrepo'
+
 
 def __virtual__():
     '''
     Set the winrepo module if the OS is Windows
     '''
     if salt.utils.is_windows():
-        return 'winrepo'
+        return __virtualname__
     return False
 
 

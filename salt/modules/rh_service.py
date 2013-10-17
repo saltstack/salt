@@ -18,6 +18,9 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 # Import upstart module if needed
 HAS_UPSTART = False
 if salt.utils.which('initctl'):
@@ -53,7 +56,7 @@ def __virtual__():
         if __grains__['os'] == 'Fedora':
             if __grains__.get('osrelease', 0) > 15:
                 return False
-        return 'service'
+        return __virtualname__
     return False
 
 

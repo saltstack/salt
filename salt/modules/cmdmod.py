@@ -31,10 +31,11 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'cmd'
 
 # Set up logging
 log = logging.getLogger(__name__)
-
 
 DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 
@@ -44,15 +45,17 @@ def __virtual__():
     Overwriting the cmd python module makes debugging modules
     with pdb a bit harder so lets do it this way instead.
     '''
-    return 'cmd'
+    return __virtualname__
 
 
 def _chugid(runas):
     uinfo = pwd.getpwnam(runas)
     supgroups_seen = set()
-    supgroups = [g.gr_gid for g in grp.getgrall()
-                 if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid
-                 and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)]
+    supgroups = [
+        g.gr_gid for g in grp.getgrall()
+        if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid
+        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
+    ]
 
     # No logging can happen on this function
     #

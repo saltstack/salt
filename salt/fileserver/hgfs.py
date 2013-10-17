@@ -37,6 +37,9 @@ from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'hg'
+
 
 def __virtual__():
     '''
@@ -54,7 +57,7 @@ def __virtual__():
         log.error('Mercurial fileserver backend is enabled in configuration '
                   'but could not be loaded, is hglib installed?')
         return False
-    return 'hg'
+    return __virtualname__
 
 
 def _get_ref(repo, name):

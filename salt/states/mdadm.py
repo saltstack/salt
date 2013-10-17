@@ -21,6 +21,9 @@ import salt.utils
 # Set up logger
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'raid'
+
 
 def __virtual__():
     '''
@@ -30,7 +33,7 @@ def __virtual__():
         return False
     if not salt.utils.which('mdadm'):
         return False
-    return 'raid'
+    return __virtualname__
 
 
 def present(name, opts=None):

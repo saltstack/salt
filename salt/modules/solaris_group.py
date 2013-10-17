@@ -18,12 +18,15 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'group'
+
 
 def __virtual__():
     '''
     Set the group module if the kernel is SunOS
     '''
-    return 'group' if __grains__['kernel'] == 'SunOS' else False
+    return __virtualname__ if __grains__['kernel'] == 'SunOS' else False
 
 
 def add(name, gid=None, **kwargs):

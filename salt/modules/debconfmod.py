@@ -17,6 +17,9 @@ __func_alias__ = {
     'set_': 'set'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'debconf'
+
 
 def __virtual__():
     '''
@@ -30,7 +33,7 @@ def __virtual__():
         log.info('Package debconf-utils is not installed.')
         return False
 
-    return 'debconf'
+    return __virtualname__
 
 
 def _unpack_lines(out):

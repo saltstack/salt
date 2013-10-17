@@ -8,6 +8,9 @@ import os
 
 # XXX enable/disable support would be nice
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
@@ -18,7 +21,7 @@ def __virtual__():
         # The -f flag, used to force a script to run even if disabled,
         # was added after the 5.0 release.
         if krel[0] > 5 or (krel[0] == 5 and krel[1] > 0):
-            return 'service'
+            return __virtualname__
     return False
 
 

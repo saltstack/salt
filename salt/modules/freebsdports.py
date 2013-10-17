@@ -28,9 +28,12 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'ports'
+
 
 def __virtual__():
-    return 'ports' if __grains__.get('os', '') == 'FreeBSD' else False
+    return __virtualname__ if __grains__.get('os', '') == 'FreeBSD' else False
 
 
 def _check_portname(name):
