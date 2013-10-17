@@ -25,11 +25,14 @@ try:
 except ImportError:
     HAS_MEMCACHE = False
 
+# Define the module's virtual name
+__virtualname__ = 'memcache'
+
 
 def __virtual__():
     if not HAS_MEMCACHE:
         return False
-    return 'memcache'
+    return __virtualname__
 
 
 def _get_serv():
