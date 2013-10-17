@@ -182,7 +182,7 @@ def get_colors(use=True):
     return colors
 
 
-def daemonize():
+def daemonize(redirect_out=True):
     '''
     Daemonize a process
     '''
@@ -219,10 +219,11 @@ def daemonize():
     # Unfortunately when a python multiprocess is called the output is
     # not cleanly redirected and the parent process dies when the
     # multiprocessing process attempts to access stdout or err.
-    #dev_null = open('/dev/null', 'rw')
-    #os.dup2(dev_null.fileno(), sys.stdin.fileno())
-    #os.dup2(dev_null.fileno(), sys.stdout.fileno())
-    #os.dup2(dev_null.fileno(), sys.stderr.fileno())
+    if redirect_out:
+        dev_null = open('/dev/null', 'rw')
+        os.dup2(dev_null.fileno(), sys.stdin.fileno())
+        os.dup2(dev_null.fileno(), sys.stdout.fileno())
+        os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
 def daemonize_if(opts):
@@ -236,7 +237,7 @@ def daemonize_if(opts):
         return
     if sys.platform.startswith('win'):
         return
-    daemonize()
+    daemonize(False)
 
 
 def profile_func(filename=None):
