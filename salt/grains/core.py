@@ -600,6 +600,8 @@ def _ps(osdata):
         grains['ps'] = 'tasklist.exe'
     elif osdata.get('virtual', '') == 'openvzhn':
         grains['ps'] = 'ps -fH -p $(grep -l \"^envID:[[:space:]]*0\\$\" /proc/[0-9]*/status | sed -e \"s=/proc/\\([0-9]*\\)/.*=\\1=\")  | awk \'{ $7=\"\"; print }\''
+    elif osdata['os_family'] == 'Debian':
+        grains['ps'] = 'ps -efHww'
     else:
         grains['ps'] = 'ps -efH'
     return grains
