@@ -58,11 +58,14 @@ from salt.utils.reclass import (
 
 from salt.exceptions import SaltInvocationError
 
+# Define the module's virtual name
+__virtualname__ = 'reclass'
+
 
 def __virtual__(retry=False):
     try:
         import reclass
-        return 'reclass'
+        return __virtualname__
     except ImportError:
         if retry:
             return False
