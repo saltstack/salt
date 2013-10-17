@@ -9,9 +9,12 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'shadow'
+
 
 def __virtual__():
-    return 'shadow' if 'BSD' in __grains__.get('os', '') else False
+    return __virtualname__ if 'BSD' in __grains__.get('os', '') else False
 
 
 def default_hash():
