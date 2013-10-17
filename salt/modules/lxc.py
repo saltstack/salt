@@ -68,7 +68,8 @@ def _nic_profile(nic):
 def _gen_config(nicp,
                 cpuset=None,
                 cpushare=None,
-                memory=None):
+                memory=None,
+                nic_opts=None):
     '''
     Generate the config string for an lxc container
     '''
@@ -85,7 +86,19 @@ def _gen_config(nicp,
         data.append(('lxc.network.type', args.pop('type', 'veth')))
         data.append(('lxc.network.name', dev))
         data.append(('lxc.network.flags', args.pop('flags', 'up')))
-        data.append(('lxc.network.hwaddr', salt.utils.gen_mac()))
+        opts = nic_opts.get(dev) if nic_opts else None
+        if opts:
+            mac = opts.get('mac')
+            ipv4 = opts.get('ipv4')
+            ipv6 = opts.get('ipv6')
+        else:
+            ipv4, ipv6 = None, None
+            mac = salt.utils.gen_mac()
+        data.append(('lxc.network.hwaddr', mac))
+        if ipv4:
+          data.append(('lxc.network.ipv4', ipv4))
+        if ipv6:
+          data.append(('lxc.network.ipv6', ipv6))
         for k, v in args.items():
             data.append(('lxc.network.{0}'.format(k), v))
 
@@ -98,6 +111,7 @@ def init(name,
          memory=None,
          nic='default',
          profile=None,
+         nic_opts=None,
          **kwargs):
     '''
     Initialize a new container.
@@ -107,8 +121,9 @@ def init(name,
         salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
                 [nic=nic_profile] [profile=lxc_profile] \\
-                [start=(true|false)] [seed=(true|false)] \\
-                [install=(true|false)] [config=minion_config]
+                [nic_opts=nic_opts] [start=(true|false)] \\
+                [seed=(true|false)] [install=(true|false)] \\
+                [config=minion_config]
 
     name
         Name of the container.
@@ -127,6 +142,10 @@ def init(name,
 
     profile
         A LXC profile (defined in config or pillar).
+
+    nic_opts
+        Extra options for network interfaces. E.g:
+        {"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}
 
     start
         Start the newly created container.
@@ -150,7 +169,7 @@ def init(name,
 
     with tempfile.NamedTemporaryFile() as cfile:
         cfile.write(_gen_config(cpuset=cpuset, cpushare=cpushare,
-                                memory=memory, nicp=nicp))
+                                memory=memory, nicp=nicp, nic_opts=nic_opts))
         cfile.flush()
         ret = create(name, config=cfile.name, profile=profile, **kwargs)
     if not ret['created']:
