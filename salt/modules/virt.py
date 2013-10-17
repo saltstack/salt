@@ -197,51 +197,6 @@ def _get_target(target, ssh):
     return ' {0}://{1}/{2}'.format(proto, target, 'system')
 
 
-def _prepare_serial_port_xml(serial_type='pty',
-                             telnet_port='',
-                             console=True,
-                             **sink):  # pylint: disable=unused-argument
-    '''
-    Prepares the serial and console sections of the VM xml
-
-    serial_type: presently 'pty' or 'tcp'(telnet)
-
-    telnet_port: When selecting tcp, which port to listen on
-
-    console: Is this serial device the console or for some other purpose
-
-    Returns string representing the serial and console devices suitable for
-    insertion into the VM XML definition
-    '''
-    fn_ = 'serial_port_{0}.jinja'.format(serial_type)
-    try:
-        template = JINJA.get_template(fn_)
-    except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template {0}'.format(fn_))
-        return ''
-    return template.render(serial_type=serial_type,
-                           telnet_port=telnet_port,
-                           console=console)
-
-
-def _prepare_nics_xml(interfaces):
-    '''
-    Prepares the network interface section of the VM xml
-
-    interfaces: list of dicts as returned from _nic_profile
-
-    Returns string representing interfaces devices suitable for
-    insertion into the VM XML definition
-    '''
-    fn_ = 'interface.jinja'
-    try:
-        template = JINJA.get_template(fn_)
-    except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template {0}'.format(fn_))
-        return ''
-    return template.render(interfaces=interfaces)
-
-
 def _gen_xml(name,
              cpu,
              mem,
@@ -254,113 +209,69 @@ def _gen_xml(name,
     '''
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
     mem = mem * 1024  # MB
-    data = '''
-<domain type='%%HYPERVISOR%%'>
-        <name>%%NAME%%</name>
-        <vcpu>%%CPU%%</vcpu>
-        <memory unit='KiB'>%%MEM%%</memory>
-        <os>
-                <type>hvm</type>
-                %%BOOT%%
-        </os>
-        <devices>
-                %%DISKS%%
-                %%CONTROLLER%%
-                %%NICS%%
-                <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
-                %%SERIAL%%
-        </devices>
-        <features>
-                <acpi/>
-        </features>
-</domain>
-'''
-    data = data.replace('%%HYPERVISOR%%', hypervisor)
-    data = data.replace('%%NAME%%', name)
-    data = data.replace('%%CPU%%', str(cpu))
-    data = data.replace('%%MEM%%', str(mem))
-
+    context = {
+        'hypervisor': hypervisor,
+        'name': name,
+        'cpu': str(cpu),
+        'mem': str(mem),
+    }
     if hypervisor in ['qemu', 'kvm']:
-        controller = ''
+        context['controller_model'] = False
     elif hypervisor in ['esxi', 'vmware']:
         # TODO: make bus and model parameterized, this works for 64-bit Linux
-        controller = '<controller type=\'scsi\' index=\'0\' model=\'lsilogic\'/>'
-    data = data.replace('%%CONTROLLER%%', controller)
+        context['controller_model'] = 'lsilogic'
 
-    boot_str = ''
     if 'boot_dev' in kwargs:
-        for dev in kwargs['boot_dev']:
-            boot_part = '''<boot dev='%%DEV%%' />
-'''
-            boot_part = boot_part.replace('%%DEV%%', dev)
-            boot_str += boot_part
+        context['boot_dev'] = []
+        for dev in kwargs['boot_dev'].split():
+            context['boot_dev'].append(dev)
     else:
-        boot_str = '''<boot dev='hd'/>'''
-    data = data.replace('%%BOOT%%', boot_str)
+        context['boot_dev'] = ['hd']
 
     if 'serial_type' in kwargs:
-        serial_section = _prepare_serial_port_xml(**kwargs)
-    else:
-        serial_section = ''
-    data = data.replace('%%SERIAL%%', serial_section)
+        context['serial_type'] = kwargs['serial_type']
+    if 'serial_type' in context and context['serial_type'] == 'tcp':
+        if 'telnet_port' in kwargs:
+            context['telnet_port'] = kwargs['telnet_port']
+        else:
+            context['telnet_port'] = 23023  # FIXME: use random unused port
+    if 'serial_type' in context:
+        if 'console' in kwargs:
+            context['console'] = kwargs['console']
+        else:
+            context['console'] = True
 
-    boot_str = ''
-    if 'boot_dev' in kwargs:
-        for dev in kwargs['boot_dev']:
-            boot_part = "<boot dev='%%DEV%%' />"
-            boot_part = boot_part.replace('%%DEV%%', dev)
-            boot_str += boot_part
-    else:
-        boot_str = '''<boot dev='hd'/>'''
-    data = data.replace('%%BOOT%%', boot_str)
-
-    disk_t = '''
-                <disk type='file' device='disk'>
-                        <source %%SOURCE%%/>
-                        <target %%TARGET%%/>
-                        %%ADDRESS%%
-                        %%DRIVER%%
-                </disk>
-'''
-    source = 'file=\'%%SOURCE_FILE%%\''
-
-    if hypervisor in ['qemu', 'kvm']:
-        target = 'dev=\'vd%%CHARINDEX%%\' bus=\'%%DISKBUS%%\''
-        address = ''
-        driver = '<driver name=\'qemu\' type=\'%%DISKTYPE%%\' cache=\'none\' io=\'native\'/>'
-    elif hypervisor in ['esxi', 'vmware']:
-        target = 'dev=\'sd%%CHARINDEX%%\' bus=\'%%DISKBUS%%\''
-        address = '<address type=\'drive\' controller=\'0\' bus=\'0\' target=\'0\' unit=\'%%DISKINDEX%%\'/>'
-        driver = ''
-
-    disk_t = disk_t.replace('%%SOURCE%%', source)
-    disk_t = disk_t.replace('%%TARGET%%', target)
-    disk_t = disk_t.replace('%%ADDRESS%%', address)
-    disk_t = disk_t.replace('%%DRIVER%%', driver)
-    disk_str = ''
+    context['disks'] = {}
     for i, disk in enumerate(diskp):
         for disk_name, args in disk.items():
-            disk_i = disk_t
-            file_name = '{0}.{1}'.format(disk_name, args['format'])
-            source_file = os.path.join(args['pool'],
-                                       name,
-                                       file_name)
-            disk_i = disk_i.replace('%%SOURCE_FILE%%', source_file)
+            context['disks'][disk_name] = {}
+            fn_ = '{0}.{1}'.format(disk_name, args['format'])
+            context['disks'][disk_name]['file_name'] = fn_
+            context['disks'][disk_name]['source_file'] = os.path.join(args['pool'],
+                                                                      name,
+                                                                      fn_)
+            if hypervisor in ['qemu', 'kvm']:
+                context['disks'][disk_name]['target_dev'] = 'vd{0}'.format(string.ascii_lowercase[i])
+                context['disks'][disk_name]['address'] = False
+                context['disks'][disk_name]['driver'] = True
+            elif hypervisor in ['esxi', 'vmware']:
+                context['disks'][disk_name]['target_dev'] = 'sd{0}'.format(string.ascii_lowercase[i])
+                context['disks'][disk_name]['address'] = True
+                context['disks'][disk_name]['driver'] = False
+            context['disks'][disk_name]['disk_bus'] = args['model']
+            context['disks'][disk_name]['type'] = args['format']
+            context['disks'][disk_name]['index'] = str(i)
 
-            disk_i = disk_i.replace('%%CHARINDEX%%', string.ascii_lowercase[i])
-            disk_i = disk_i.replace('%%DISKBUS%%', args['model'])
+    context['nics'] = nicp
 
-            if '%%DISKTYPE%%' in driver:
-                disk_i = disk_i.replace('%%DISKTYPE%%', args['format'])
-            if '%%DISKINDEX%%' in address:
-                disk_i = disk_i.replace('%%DISKINDEX%%', str(i))
-            disk_str += disk_i
-    data = data.replace('%%DISKS%%', disk_str)
+    fn_ = 'libvirt_domain.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template {0}'.format(fn_))
+        return ''
 
-    nic_str = _prepare_nics_xml(nicp)
-    data = data.replace('%%NICS%%', nic_str)
-
-    return data
+    return template.render(**context)
 
 
 def _gen_vol_xml(vmname,
@@ -373,33 +284,21 @@ def _gen_vol_xml(vmname,
     '''
     size = int(size) * 1024  # MB
     disk_info = _get_image_info(hypervisor, vmname, **kwargs)
-    data = '''
-<volume>
-  <name>%%NAME%%/%%FILENAME%%</name>
-  <key>%%NAME%%/%%VOLNAME%%</key>
-  <source>
-  </source>
-  <capacity unit='KiB'>%%SIZE%%</capacity>
-  <allocation unit='KiB'>0</allocation>
-  <target>
-    <path>%%POOL%%%%NAME%%/%%FILENAME%%</path>
-    <format type='%%DISKTYPE%%'/>
-    <permissions>
-      <mode>00</mode>
-      <owner>0</owner>
-      <group>0</group>
-    </permissions>
-  </target>
-</volume>
-'''
-    data = data.replace('%%NAME%%', vmname)
-    data = data.replace('%%FILENAME%%',
-                        '{0}.{1}'.format(diskname, disk_info['disktype']))
-    data = data.replace('%%VOLNAME%%', diskname)
-    data = data.replace('%%DISKTYPE%%', disk_info['disktype'])
-    data = data.replace('%%SIZE%%', str(size))
-    data = data.replace('%%POOL%%', disk_info['pool'])
-    return data
+    context = {
+        'name': vmname,
+        'filename': '{0}.{1}'.format(diskname, disk_info['disktype']),
+        'volname': diskname,
+        'disktype': disk_info['disktype'],
+        'size': str(size),
+        'pool': disk_info['pool'],
+    }
+    fn_ = 'libvirt_volume.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template {0}'.format(fn_))
+        return ''
+    return template.render(**context)
 
 
 def _qemu_image_info(path):
