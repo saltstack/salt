@@ -40,6 +40,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.modules.pkg_resource import _repack_pkgs
 
 if salt.utils.is_windows():
     from salt.utils import namespaced_function as _namespaced_function
@@ -108,7 +109,7 @@ def _find_install_targets(name=None,
     cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     if any((pkgs, sources)):
         if pkgs:
-            desired = __salt__['pkg_resource.pack_pkgs'](pkgs)
+            desired = _repack_pkgs(pkgs)
         elif sources:
             desired = __salt__['pkg_resource.pack_sources'](sources)
 
@@ -578,7 +579,7 @@ def latest(
                 'result': False,
                 'comment': 'The "sources" parameter is not supported.'}
     elif pkgs:
-        desired_pkgs = __salt__['pkg_resource.pack_pkgs'](pkgs).keys()
+        desired_pkgs = _repack_pkgs(pkgs).keys()
         if not desired_pkgs:
             # Badly-formatted SLS
             return {'name': name,
