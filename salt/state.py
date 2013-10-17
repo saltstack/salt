@@ -2199,6 +2199,8 @@ class BaseHighState(object):
                             .format(sls_match, env)
                     )
                 for sls in statefiles:
+                    if sls in mods:
+                        continue
                     state, errors = self.render_state(sls, env, mods, matches)
                     if state:
                         self.merge_included_states(highstate, state, errors)
