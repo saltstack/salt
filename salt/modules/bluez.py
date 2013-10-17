@@ -29,13 +29,16 @@ __func_alias__ = {
     'address_': 'address'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'bluetooth'
+
 
 def __virtual__():
     '''
     Only load the module if bluetooth is installed
     '''
     if HAS_PYBLUEZ:
-        return 'bluetooth'
+        return __virtualname__
     return False
 
 
