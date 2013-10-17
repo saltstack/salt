@@ -17,13 +17,16 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'disk'
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows():
-        return 'disk'
+        return __virtualname__
     return False
 
 
