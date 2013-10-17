@@ -17,13 +17,16 @@ LOCAL_CONFIG_PATH = '/etc/systemd/system'
 VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',
                     'swap', 'target', 'path', 'timer']
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
     Only work on systems that have been booted with systemd
     '''
     if __grains__['kernel'] == 'Linux' and _sd_booted():
-        return 'service'
+        return __virtualname__
     return False
 
 
