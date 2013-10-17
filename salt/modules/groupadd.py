@@ -9,15 +9,17 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'group'
+
 
 def __virtual__():
     '''
     Set the user module if the kernel is Linux or OpenBSD
     '''
-    return (
-        'group' if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD')
-        else False
-    )
+    if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
+        return __virtualname__
+    return False
 
 
 def add(name, gid=None, system=False):
