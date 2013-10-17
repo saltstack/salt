@@ -7,13 +7,16 @@ Windows Service module.
 import time
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows():
-        return 'service'
+        return __virtualname__
     return False
 
 
