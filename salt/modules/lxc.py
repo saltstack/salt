@@ -96,9 +96,9 @@ def _gen_config(nicp,
             mac = salt.utils.gen_mac()
         data.append(('lxc.network.hwaddr', mac))
         if ipv4:
-          data.append(('lxc.network.ipv4', ipv4))
+            data.append(('lxc.network.ipv4', ipv4))
         if ipv6:
-          data.append(('lxc.network.ipv6', ipv6))
+            data.append(('lxc.network.ipv6', ipv6))
         for k, v in args.items():
             data.append(('lxc.network.{0}'.format(k), v))
 
