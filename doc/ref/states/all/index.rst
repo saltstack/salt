@@ -55,6 +55,7 @@ Full list of builtin state modules
     pkgng
     pkgrepo
     portage_config
+    ports
     postgres_database
     postgres_group
     postgres_user
