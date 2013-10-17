@@ -11,8 +11,10 @@ import logging
 # Import salt libs
 import salt.utils
 
-
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'pkg'
 
 
 def __virtual__():
@@ -20,7 +22,7 @@ def __virtual__():
     Set the virtual pkg module if the os is Solaris
     '''
     if __grains__['os'] == 'Solaris':
-        return 'pkg'
+        return __virtualname__
     return False
 
 
