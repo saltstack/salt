@@ -14,9 +14,12 @@ import json
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'couchdb'
+
 
 def __virtual__():
-    return 'couchdb'
+    return __virtualname__
 
 
 def _get_options():
