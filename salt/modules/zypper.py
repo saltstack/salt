@@ -13,6 +13,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
@@ -23,7 +26,7 @@ def __virtual__():
     # Not all versions of Suse use zypper, check that it is available
     if not salt.utils.which('zypper'):
         return False
-    return 'pkg'
+    return __virtualname__
 
 
 def list_upgrades(refresh=True):
