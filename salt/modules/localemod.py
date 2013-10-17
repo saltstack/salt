@@ -12,6 +12,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'locale'
+
 
 def __virtual__():
     '''
@@ -19,7 +22,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'locale'
+    return __virtualname__
 
 
 def _parse_localectl():
