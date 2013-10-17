@@ -19,13 +19,16 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
     Only run this module if the augeas python module is installed
     '''
     if HAS_AUGEAS:
-        return 'augeas'
+        return __virtualname__
     return False
 
 
