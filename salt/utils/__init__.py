@@ -15,6 +15,7 @@ import inspect
 import json
 import logging
 import os
+import pprint
 import random
 import re
 import shlex
@@ -69,6 +70,7 @@ import salt.log
 import salt.minion
 import salt.payload
 import salt.version
+from salt._compat import string_types
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     SaltClientError, CommandNotFoundError, SaltSystemExit, SaltInvocationError
@@ -495,7 +497,7 @@ def is_jid(jid):
     '''
     Returns True if the passed in value is a job id
     '''
-    if not isinstance(jid, basestring):
+    if not isinstance(jid, string_types):
         return False
     if len(jid) != 20:
         return False
@@ -1146,7 +1148,7 @@ def is_true(value=None):
     # Now check for truthiness
     if isinstance(value, (int, float)):
         return value > 0
-    elif isinstance(value, basestring):
+    elif isinstance(value, string_types):
         return str(value).lower() == 'true'
     else:
         return bool(value)
@@ -1753,3 +1755,34 @@ def is_bin_str(data):
     if len(text) / len(data) > 0.30:
         return True
     return False
+
+
+def repack_dictlist(data):
+    '''
+    Takes a list of one-element dicts (as found in many SLS schemas) and
+    repacks into a single dictionary.
+    '''
+    if isinstance(data, string_types):
+        try:
+            data = yaml.safe_load(data)
+        except yaml.parser.ParserError as err:
+            log.error(err)
+            return {}
+    if not isinstance(data, list) \
+            or [x for x in data
+                if not isinstance(x, (string_types, int, float, dict))]:
+        log.error('Invalid input: {0}'.format(pprint.pformat(data)))
+        log.error('Input must be a list of strings/dicts')
+        return {}
+    ret = {}
+    for element in data:
+        if isinstance(element, (string_types, int, float)):
+            ret[element] = None
+        else:
+            if len(element) != 1:
+                log.error('Invalid input: key/value pairs must contain '
+                          'only one element (data passed: {0}).'
+                          .format(element))
+                return {}
+            ret.update(element)
+    return ret
