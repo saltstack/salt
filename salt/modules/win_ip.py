@@ -13,13 +13,16 @@ import salt.utils
 # Set up logging
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'ip'
+
 
 def __virtual__():
     '''
     Confine this module to Windows systems
     '''
     if salt.utils.is_windows():
-        return 'ip'
+        return __virtualname__
     return False
 
 
