@@ -25,6 +25,9 @@ log = logging.getLogger(__name__)
 # it without considering its impact there.
 __QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}'
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
@@ -63,7 +66,7 @@ def __virtual__():
         get_repo = _namespaced_function(get_repo, globals())
         expand_repo_def = _namespaced_function(expand_repo_def, globals())
         del_repo = _namespaced_function(del_repo, globals())
-        return 'pkg'
+        return __virtualname__
     return False
 
 
