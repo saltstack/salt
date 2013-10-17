@@ -5,11 +5,11 @@ Salt 0.17.1 Release Notes
 The 0.17.1 release comes with a number of improvements to salt-ssh, many
 bugfixes, and a number of security updates.
 
-Salt SSH has been improved to be faster, more featureful, and more secure.
-Since the original release of Salt SSH was primarily a proof of concept it
-has been very exciting to see the rapid addoption and the willingness of
-security experts to overview Salt SSH and help discover oversights and
-ensure that security issues only exist for such a tiny window of time.
+Salt SSH has been improved to be faster, more feature full and more secure.
+Since the original release of Salt SSH was primarily a proof of concept, it has
+been very exciting to see its rapid adoption. We appreciate the willingness of
+security experts to review Salt SSH and help discover oversights and ensure
+that security issues only exist for such a tiny window of time.
 
 
 SSH Enhancements
@@ -18,8 +18,8 @@ SSH Enhancements
 Shell Improvements
 ------------------
 
-Improvements to the communication has been added making Salt SSH more cleanly
-execute routines despite what the target system's login shell is.
+Improvements to Salt SSH's communication have been added that improve routine
+execution regardless of the target system's login shell.
 
 Performance
 -----------
@@ -39,7 +39,7 @@ This issue allowed for a user with limited privileges to embed executions
 inside of routines to execute routines that should be restricted. This applies
 to users using external auth or client acl and opening up specific routines.
 
-Be advised that these patches adress the direct issue, additional commits have
+Be advised that these patches address the direct issue, additional commits have
 been applied to help mitigate this issue from resurfacing.
 
 CVE
@@ -72,7 +72,7 @@ Feth Arezki, of Majerti
 MITM ssh attack in salt-ssh
 ---------------------------
 
-Shh host keys were being accepted by default and not enforced on future ssh
+Ssh host keys were being accepted by default and not enforced on future ssh
 connections. These patches set ssh host key checking by default and can be
 overridden by passing the -i flag to `salt-ssh`.
 
@@ -94,9 +94,9 @@ Michael Scherer, Red Hat
 Insecure Usage of /tmp in salt-ssh
 ----------------------------------
 
-The initial release of salt-ssh used the /tmp directory in an insecure way,
-these patches add not only secure usage of files under /tmp in salt-ssh, but
-also add checksub validation for all packages sent into the now secure
+The initial release of salt-ssh used the /tmp directory in an insecure way.
+These patches not only secure usage of files under /tmp in salt-ssh, but
+also add checksum validation for all packages sent into the now secure
 locations on target systems.
 
 CVE
@@ -131,7 +131,7 @@ YAML Calling Unsafe Loading Routine
 It has been argued that this is not a valid security issue, as the YAML loading
 that was happening was only being called after an initial gateway filter in
 Salt has already safely loaded the YAML and would fail if non-safe routines
-we embedded. Nonetheless the CVE was filed and patches applied.
+were embedded. Nonetheless, the CVE was filed and patches applied.
 
 CVE
 ~~~
@@ -157,7 +157,7 @@ process to have only the groups of the running user.
 CVE
 ~~~
 
-CVE not considered nessisary by submitter
+CVE not considered necessary by submitter.
 
 Affected Versions
 ~~~~~~~~~~~~~~~~~
@@ -177,7 +177,7 @@ Failure to Validate Minions Posting Data
 ----------------------------------------
 
 This issue allowed a minion to pose as another authorized minion when posting
-data such as the mine data, all minions now pass through the id challenge
+data such as the mine data. All minions now pass through the id challenge
 before posting such data.
 
 CVE
