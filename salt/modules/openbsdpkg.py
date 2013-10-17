@@ -21,6 +21,7 @@ __virtualname__ = 'pkg'
 
 # XXX need a way of setting PKG_PATH instead of inheriting from the environment
 
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is OpenBSD
