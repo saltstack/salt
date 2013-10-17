@@ -11,6 +11,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'lowpkg'
+
 
 def __virtual__():
     '''
@@ -29,13 +32,13 @@ def __virtual__():
         os_major = 0
 
     if os_grain == 'Amazon':
-        return 'lowpkg'
+        return __virtualname__
     elif os_grain == 'Fedora':
         # Fedora <= 10 used Python 2.5 and below
         if os_major >= 11:
-            return 'lowpkg'
+            return __virtualname__
     elif os_family == 'RedHat' and os_major >= 6:
-        return 'lowpkg'
+        return __virtualname__
     return False
 
 
