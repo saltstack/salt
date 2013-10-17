@@ -20,6 +20,9 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'raid'
+
 
 def __virtual__():
     '''
@@ -29,7 +32,7 @@ def __virtual__():
         return False
     if not salt.utils.which('mdadm'):
         return False
-    return 'raid'
+    return __virtualname__
 
 
 def list_():
