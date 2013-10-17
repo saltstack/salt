@@ -7,9 +7,12 @@ for better readability.
 # Import third party libs
 import yaml
 
+# Define the module's virtual name
+__virtualname__ = 'yaml'
+
 
 def __virtual__():
-    return 'yaml'
+    return __virtualname__
 
 
 def output(data):
