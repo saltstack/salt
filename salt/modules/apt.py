@@ -43,6 +43,9 @@ LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
 _MODIFY_OK = frozenset(['uri', 'comps', 'architectures', 'disabled',
                         'file', 'dist'])
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
@@ -50,7 +53,7 @@ def __virtual__():
     '''
     if __grains__['os_family'] != 'Debian':
         return False
-    return 'pkg'
+    return __virtualname__
 
 
 def __init__(opts):
