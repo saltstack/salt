@@ -15,6 +15,9 @@ import salt.utils.decorators as decorators
 VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 @decorators.memoize
 def _check_pkgin():
@@ -58,7 +61,7 @@ def __virtual__():
     supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin', 'SmartOS']
 
     if __grains__['os'] in supported and _check_pkgin():
-        return 'pkg'
+        return __virtualname__
     return False
 
 

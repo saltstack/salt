@@ -19,9 +19,12 @@ import collections
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'carbon'
+
 
 def __virtual__():
-    return 'carbon'
+    return __virtualname__
 
 
 def _formatHostname(hostname, separator='_'):

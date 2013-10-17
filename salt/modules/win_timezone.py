@@ -448,13 +448,16 @@ LINTOWIN = {
     'Pacific/Wallis': 'UTC+12'
     }
 
+# Define the module's virtual name
+__virtualname__ = 'timezone'
+
 
 def __virtual__():
     '''
     Only load on windows
     '''
     if salt.utils.is_windows():
-        return 'timezone'
+        return __virtualname__
     return False
 
 

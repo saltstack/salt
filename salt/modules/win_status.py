@@ -27,13 +27,16 @@ except ImportError:
 
 __opts__ = {}
 
+# Define the module's virtual name
+__virtualname__ = 'status'
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows() and has_required_packages:
-        return 'status'
+        return __virtualname__
     return False
 
 

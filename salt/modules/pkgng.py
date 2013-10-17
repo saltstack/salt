@@ -41,13 +41,16 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
     Load as 'pkg' on FreeBSD 10 and greater
     '''
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
-        return 'pkg'
+        return __virtualname__
     return False
 
 

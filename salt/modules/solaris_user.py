@@ -18,13 +18,16 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'user'
+
 
 def __virtual__():
     '''
     Set the user module if the kernel is SunOS
     '''
 
-    return 'user' if __grains__['kernel'] == 'SunOS' else False
+    return __virtualname__ if __grains__['kernel'] == 'SunOS' else False
 
 
 def _get_gecos(name):

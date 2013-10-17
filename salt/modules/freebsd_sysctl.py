@@ -7,12 +7,15 @@ Module for viewing and modifying sysctl parameters
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+# Define the module's virtual name
+__virtualname__ = 'sysctl'
+
 
 def __virtual__():
     '''
     Only run on FreeBSD systems
     '''
-    return 'sysctl' if __grains__['os'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['os'] == 'FreeBSD' else False
 
 
 def _formatfor(name, value, config, tail=''):

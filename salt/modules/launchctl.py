@@ -12,13 +12,16 @@ import plistlib
 # Import salt libs
 import salt.utils.decorators as decorators
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
     Only work on MacOS
     '''
     if __grains__['os'] == 'MacOS':
-        return 'service'
+        return __virtualname__
     return False
 
 

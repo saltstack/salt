@@ -6,15 +6,17 @@ Support for DEB packages
 # Import python libs
 import logging
 
-
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'lowpkg'
 
 
 def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return 'lowpkg' if __grains__['os_family'] == 'Debian' else False
+    return __virtualname__ if __grains__['os_family'] == 'Debian' else False
 
 
 def list_pkgs(*packages):

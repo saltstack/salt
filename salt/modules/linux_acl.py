@@ -6,13 +6,16 @@ Support for Linux File Access Control Lists
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'acl'
+
 
 def __virtual__():
     '''
     Only load the module if getfacl is installed
     '''
     if salt.utils.which('getfacl'):
-        return 'acl'
+        return __virtualname__
     return False
 
 

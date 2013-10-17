@@ -22,9 +22,12 @@ __opts__ = {
 
 __pillar__ = {}
 
+# Define the module's virtual name
+__virtualname__ = 'virtualenv'
+
 
 def __virtual__():
-    return 'virtualenv'
+    return __virtualname__
 
 
 def create(path,

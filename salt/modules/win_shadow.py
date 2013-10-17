@@ -5,13 +5,16 @@ Manage the shadow file
 
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'shadow'
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows():
-        return 'shadow'
+        return __virtualname__
     return False
 
 

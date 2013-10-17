@@ -21,13 +21,16 @@ try:
 except ImportError:
     HAS_DEPENDENCIES = False
 
+# Define the module's virtual name
+__virtualname__ = 'network'
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
-        return 'network'
+        return __virtualname__
     return False
 
 

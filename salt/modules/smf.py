@@ -8,6 +8,9 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
@@ -21,7 +24,7 @@ def __virtual__():
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == "5.9":
             return False
-        return 'service'
+        return __virtualname__
     return False
 
 

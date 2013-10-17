@@ -41,6 +41,9 @@ from salt.utils import namespaced_function as _namespaced_function
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'file'
+
 
 def __virtual__():
     '''
@@ -60,7 +63,7 @@ def __virtual__():
             mkdir = _namespaced_function(mkdir, globals())
             __clean_tmp = _namespaced_function(__clean_tmp, globals())
 
-            return 'file'
+            return __virtualname__
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 

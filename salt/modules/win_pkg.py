@@ -33,13 +33,16 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
-        return 'pkg'
+        return __virtualname__
     return False
 
 

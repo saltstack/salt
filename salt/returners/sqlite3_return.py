@@ -59,11 +59,14 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'sqlite3'
+
 
 def __virtual__():
     if not HAS_SQLITE3:
         return False
-    return 'sqlite3'
+    return __virtualname__
 
 
 def _get_conn():

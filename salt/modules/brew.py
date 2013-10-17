@@ -12,6 +12,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
@@ -19,7 +22,7 @@ def __virtual__():
     '''
 
     if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
-        return 'pkg'
+        return __virtualname__
     return False
 
 

@@ -15,9 +15,12 @@ import salt.version
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'virtualenv'
+
 
 def __virtual__():
-    return 'virtualenv'
+    return __virtualname__
 
 
 def managed(name,

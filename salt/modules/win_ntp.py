@@ -13,6 +13,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'ntp'
+
 
 def __virtual__():
     '''
@@ -20,7 +23,7 @@ def __virtual__():
     '''
     if not salt.utils.is_windows():
         return False
-    return 'ntp'
+    return __virtualname__
 
 
 def set_servers(*servers):

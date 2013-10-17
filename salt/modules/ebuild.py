@@ -16,10 +16,6 @@ import re
 # Import salt libs
 import salt.utils
 
-log = logging.getLogger(__name__)
-
-HAS_PORTAGE = False
-
 # Import third party libs
 try:
     import portage
@@ -34,14 +30,22 @@ except ImportError:
             import portage
             HAS_PORTAGE = True
         except ImportError:
-            pass
+            HAS_PORTAGE = False
+
+
+log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'pkg'
 
 
 def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo') else False
+    if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
+        return __virtualname__
+    return False
 
 
 def _vartree():

@@ -12,12 +12,15 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'sys'
+
 
 def __virtual__():
     '''
     Return as sys
     '''
-    return 'sys'
+    return __virtualname__
 
 
 def _strip_rst(docs):

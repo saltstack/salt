@@ -11,6 +11,9 @@ from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.utils.decorators as decorators
 
+# Define the module's virtual name
+__virtualname__ = 'virt'
+
 
 @decorators.memoize
 def _check_vmadm():
@@ -32,7 +35,7 @@ def __virtual__():
     Provides virt on SmartOS
     '''
     if __grains__['os'] == "SmartOS" and _check_vmadm():
-        return 'virt'
+        return __virtualname__
     return False
 
 

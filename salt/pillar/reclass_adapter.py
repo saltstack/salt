@@ -55,11 +55,14 @@ from salt.utils.reclass import (
     set_inventory_base_uri_default
 )
 
+# Define the module's virtual name
+__virtualname__ = 'reclass'
+
 
 def __virtual__(retry=False):
     try:
         import reclass
-        return 'reclass'
+        return __virtualname__
 
     except ImportError as e:
         if retry:

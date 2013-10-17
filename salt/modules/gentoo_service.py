@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Top level package command wrapper, used to translate the os detected by grains to the correct service manager
+Top level package command wrapper, used to translate the os detected by grains
+to the correct service manager
 '''
+
+# Define the module's virtual name
+__virtualname__ = 'service'
 
 
 def __virtual__():
@@ -9,7 +13,7 @@ def __virtual__():
     Only work on systems which default to systemd
     '''
     if __grains__['os'] == 'Gentoo':
-        return 'service'
+        return __virtualname__
     return False
 
 

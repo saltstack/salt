@@ -32,6 +32,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'svn'
+
 
 def __virtual__():
     '''
@@ -47,7 +50,7 @@ def __virtual__():
         log.error('subversion fileserver backend is enabled in configuration '
                   'but could not be loaded, is pysvn installed?')
         return False
-    return 'svn'
+    return __virtualname__
 
 
 def init():

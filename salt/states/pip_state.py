@@ -37,13 +37,16 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pip'
+
 
 def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
     if HAS_PIP and 'pip.list' in __salt__:
-        return 'pip'
+        return __virtualname__
     return False
 
 

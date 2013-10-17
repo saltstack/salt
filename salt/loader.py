@@ -764,7 +764,25 @@ class Loader(object):
                                         module_name, virtual
                                     )
                                 )
+
+                                if not hasattr(mod, '__virtualname__'):
+                                    salt.utils.warn_until(
+                                        'Hydrogen',
+                                        'The {0!r} module is renaming itself '
+                                        'in it\'s __virtual__() function ({1} '
+                                        '=> {2}). Please set it\'s virtual '
+                                        'name as the \'__virtualname__\' '
+                                        'module attribute. Example: '
+                                        '"__virtualname__ = {2!r}"'.format(
+                                            mod.__name__,
+                                            module_name,
+                                            virtual
+                                        )
+                                    )
                                 module_name = virtual
+
+                            elif virtual and hasattr(mod, '__virtualname__'):
+                                module_name = mod.__virtualname__
 
                 except KeyError:
                     # Key errors come out of the virtual function when passing

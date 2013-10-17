@@ -33,6 +33,9 @@ from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'git'
+
 
 def __virtual__():
     '''
@@ -55,7 +58,7 @@ def __virtual__():
                   'GitPython version is not greater than 0.3.0, '
                   'version {0} detected'.format(git.__version__))
         return False
-    return 'git'
+    return __virtualname__
 
 
 def _get_ref(repo, short):

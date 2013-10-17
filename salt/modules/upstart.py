@@ -49,6 +49,9 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
@@ -56,7 +59,7 @@ def __virtual__():
     '''
     # Disable on these platforms, specific service modules exist:
     if __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS'):
-        return 'service'
+        return __virtualname__
     return False
 
 

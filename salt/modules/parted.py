@@ -25,6 +25,8 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'partition'
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
@@ -39,7 +41,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'partition'
+    return __virtualname__
 
 
 def probe(device=''):
