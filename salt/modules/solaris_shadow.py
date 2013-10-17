@@ -19,12 +19,17 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'shadow'
+
 
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return 'shadow' if __grains__.get('kernel', '') == 'SunOS' else False
+    if __grains__.get('kernel', '') == 'SunOS':
+        return __virtualname__
+    return False
 
 
 def default_hash():
