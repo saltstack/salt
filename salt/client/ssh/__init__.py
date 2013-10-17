@@ -80,7 +80,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          fi
          if [ -f /tmp/.salt/salt-thin.tgz ]
          then
-             [ $({{2}}sum /tmp/.salt/salt-thin.tgz | cut -f1 -d' ') == {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
+             [ $({{2}}sum /tmp/.salt/salt-thin.tgz | cut -f1 -d' ') = {{3}} ] && {{0}} tar xzvf /tmp/.salt/salt-thin.tgz -C /tmp/.salt
          else
              install -m 0700 -d /tmp/.salt
              echo "{1}"
