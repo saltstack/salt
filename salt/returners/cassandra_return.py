@@ -32,11 +32,14 @@ __opts__ = {'cassandra.servers': ['localhost:9160'],
             'cassandra.column_family': 'returns',
             'cassandra.consistency_level': 'ONE'}
 
+# Define the module's virtual name
+__virtualname__ = 'cassandra'
+
 
 def __virtual__():
     if not HAS_PYCASSA:
         return False
-    return 'cassandra'
+    return __virtualname__
 
 
 def returner(ret):
