@@ -15,13 +15,16 @@ try:
 except ImportError:
     pass
 
+# Define the module's virtual name
+__virtualname__ = 'gentoolkit'
+
 
 def __virtual__():
     '''
     Only work on Gentoo systems with gentoolkit installed
     '''
     if __grains__['os'] == 'Gentoo' and HAS_GENTOOLKIT:
-        return 'gentoolkit'
+        return __virtualname__
     return False
 
 
