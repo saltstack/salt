@@ -239,6 +239,7 @@ def sync_grains(env=None, refresh=True):
     ret = _sync('grains', env)
     if refresh:
         refresh_modules()
+        refresh_pillar()
     return ret
 
 
