@@ -6,12 +6,15 @@ Module to manage FreeBSD kernel modules
 # Import python libs
 import os
 
+# Define the module's virtual name
+__virtualname__ = 'kmod'
+
 
 def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    return 'kmod' if __grains__['kernel'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
 
 
 def _new_mods(pre_mods, post_mods):
