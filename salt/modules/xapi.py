@@ -40,6 +40,8 @@ __virtualname__ = 'virt'
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
 # XenAPI.
+
+
 def _check_xenapi():
     if __grains__['os'] == 'Debian':
         debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
