@@ -12,6 +12,9 @@ import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'imgadm'
+
 
 @decorators.memoize
 def _check_imgadm():
@@ -37,7 +40,7 @@ def __virtual__():
     Provides imgadm only on SmartOS
     '''
     if __grains__['os'] == "SmartOS" and _check_imgadm():
-        return 'imgadm'
+        return __virtualname__
     return False
 
 
