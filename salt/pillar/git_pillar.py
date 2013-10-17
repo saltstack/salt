@@ -95,11 +95,10 @@ def update(branch, repo_location):
     pid = os.getpid()
     repo = init(branch, repo_location)
     try:
-        repo.git.checkout(branch)
+        repo.git.checkout("origin/" + branch)
     except git.exc.GitCommandError as e:
         logging.error('Unable to checkout branch {0}: {1}'.format(branch, e))
         return False
-    repo.git.pull()
     return True
 
 
