@@ -213,7 +213,7 @@ def get_conn():
             'service_type', vm_, __opts__, search_global=False
         )
     if service_type:
-	    authinfo['ex_force_service_type'] = service_type
+        authinfo['ex_force_service_type'] = service_type
 
     insecure = config.get_config_value(
         'insecure', vm_, __opts__, search_global=False
