@@ -506,7 +506,7 @@ def show_low_sls(mods, env='base', test=None, queue=False, **kwargs):
     if errors:
         __context__['retcode'] = 1
         return errors
-    return st_.compile_high_data(high_)
+    return st_.state.compile_high_data(high_)
 
 
 def show_sls(mods, env='base', test=None, queue=False, **kwargs):
