@@ -708,11 +708,11 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
                 # Remove the deploy script
                 if not keep_tmp:
-                    root_cmd('rm /tmp/deploy.sh', tty, sudo, **kwargs)
+                    root_cmd('rm -f /tmp/deploy.sh', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/deploy.sh')
                     if script_env:
                         root_cmd(
-                            'rm /tmp/environ-deploy-wrapper.sh',
+                            'rm -f /tmp/environ-deploy-wrapper.sh',
                             tty, sudo, **kwargs
                         )
                         log.debug('Removed /tmp/environ-deploy-wrapper.sh')
@@ -723,26 +723,26 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Remove minion configuration
             if not keep_tmp:
                 if minion_pub:
-                    root_cmd('rm /tmp/minion.pub', tty, sudo, **kwargs)
+                    root_cmd('rm -f /tmp/minion.pub', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion.pub')
                 if minion_pem:
-                    root_cmd('rm /tmp/minion.pem', tty, sudo, **kwargs)
+                    root_cmd('rm -f /tmp/minion.pem', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion.pem')
                 if minion_conf:
-                    root_cmd('rm /tmp/grains', tty, sudo, **kwargs)
+                    root_cmd('rm -f /tmp/grains', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/grains')
-                    root_cmd('rm /tmp/minion', tty, sudo, **kwargs)
+                    root_cmd('rm -f /tmp/minion', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion')
 
                 # Remove master configuration
                 if master_pub:
-                    root_cmd('rm /tmp/master.pub', tty, sudo, **kwargs)
+                    root_cmd('rm -f /tmp/master.pub', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master.pub')
                 if master_pem:
-                    root_cmd('rm /tmp/master.pem', tty, sudo, **kwargs)
+                    root_cmd('rm -f /tmp/master.pem', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master.pem')
                 if master_conf:
-                    root_cmd('rm /tmp/master', tty, sudo, **kwargs)
+                    root_cmd('rm -f /tmp/master', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master')
 
                 # Remove pre-seed keys directory
