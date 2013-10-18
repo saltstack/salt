@@ -113,8 +113,15 @@ import pprint
 
 # Import libcloud
 from libcloud.compute.base import NodeState
-from libcloud.compute.drivers.openstack import OpenStack_1_1_FloatingIpPool
-from libcloud.compute.drivers.openstack import OpenStackNetwork
+
+# These functions requre libcloud trunk or >= 0.14.0
+HAS014 = False
+try:
+    from libcloud.compute.drivers.openstack import OpenStackNetwork
+    from libcloud.compute.drivers.openstack import OpenStack_1_1_FloatingIpPool
+    HAS014 = True
+except Exception:
+    pass
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
@@ -415,7 +422,7 @@ def create(vm_):
 
     floating = []
 
-    if networks is not None:
+    if HAS014 and networks is not None:
         for net in networks:
             if 'fixed' in net:
                 kwargs['networks'] = [
