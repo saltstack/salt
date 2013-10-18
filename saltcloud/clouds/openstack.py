@@ -294,25 +294,28 @@ def ssh_interface(vm_):
         search_global=False
     )
 
+
 def rackconnect(vm_):
     '''
-    Determine if we should wait for rackconnect automation before running. Either
-    'False' (default) or 'True'.
+    Determine if we should wait for rackconnect automation before running.
+    Either 'False' (default) or 'True'.
     '''
     return config.get_config_value(
         'rackconnect', vm_, __opts__, default='False',
         search_global=False
     )
 
+
 def managedcloud(vm_):
     '''
-    Determine if we should wait for the managed cloud automation before running. Either
-    'False' (default) or 'True'.
+    Determine if we should wait for the managed cloud automation before
+    running. Either 'False' (default) or 'True'.
     '''
     return config.get_config_value(
         'managedcloud', vm_, __opts__, default='False',
         search_global=False
     )
+
 
 def create(vm_):
     '''
@@ -398,7 +401,7 @@ def create(vm_):
                 group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(
-                    'No such security group: \'{0}\''.format(vgm)
+                    'No such security group: \'{0}\''.format(vmg)
                 )
 
         kwargs['ex_security_groups'] = [
