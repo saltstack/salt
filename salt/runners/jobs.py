@@ -33,13 +33,8 @@ def active():
             continue
         for job in data:
             if not job['jid'] in ret:
-                ret[job['jid']] = {'Running': [],
-                                   'Returned': [],
-                                   'Function': job['fun'],
-                                   'Arguments': list(job['arg']),
-                                   'Target': job['tgt'],
-                                   'Target-type': job['tgt_type'],
-                                   'User': job.get('user', 'root')}
+                ret[job['jid']] = _format_job_instance(job)
+                ret[job['jid']].update({'Running': [], 'Returned': []})
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
     for jid in ret:
@@ -137,8 +132,8 @@ def list_jobs():
     serial = salt.payload.Serial(__opts__)
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid, load, t_path, final in _walk_through(serial, job_dir):
-        ret[jid] = _format_jid_instance(jid, load)
+    for jid, job, t_path, final in _walk_through(serial, job_dir):
+        ret[jid] = _format_jid_instance(jid, job)
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
@@ -156,7 +151,7 @@ def print_job(job_id):
     serial = salt.payload.Serial(__opts__)
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid, load, t_path, final in _walk_through(serial, job_dir):
+    for jid, job, t_path, final in _walk_through(serial, job_dir):
         if job_id == jid:
             hosts_path = os.path.join(t_path, final)
             hosts_return = {}
@@ -170,30 +165,35 @@ def print_job(job_id):
                         salt.utils.fopen(return_file, 'rb')
                     )
                     hosts_return[host] = return_data
-                    ret[jid] = _format_jid_instance_with_results(hosts_return, jid, load)
+                    ret[jid] = _format_jid_instance_with_results(hosts_return, jid, job)
 
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
 
-def _format_jid_instance(jid, load):
-    return {'Start Time': salt.utils.jid_to_time(jid),
-            'Function': load['fun'],
-            'Arguments': list(load['arg']),
-            'Target': load['tgt'],
-            'Target-type': load['tgt_type'],
-            'User': load.get('user', 'root')}
+def _format_job_instance(job):
+    return {'Function': job['fun'],
+            'Arguments': list(job['arg']),
+            'Target': job['tgt'],
+            'Target-type': job['tgt_type'],
+            'User': job.get('user', 'root')}
 
 
-def _format_jid_instance_with_results(hosts_return, jid, load):
-    ret = _format_jid_instance(jid, load)
-    ret['Result'] = hosts_return
+def _format_jid_instance(jid, job):
+    ret = _format_job_instance(job)
+    ret.update({'StartTime': salt.utils.jid_to_time(jid)})
     return ret
 
 
-def _format_jid_instance_with_jid_identifier(jid, load):
-    ret = _format_jid_instance(jid, load)
-    ret['jid'] = jid
+def _format_jid_instance_with_results(hosts_return, jid, job):
+    ret = _format_jid_instance(jid, job)
+    ret.update({'Result': hosts_return})
+    return ret
+
+
+def _format_jid_instance_with_jid_identifier(jid, job):
+    ret = _format_jid_instance(jid, job)
+    ret.update({'jid': jid})
     return ret
 
 
@@ -204,6 +204,6 @@ def _walk_through(serial, job_dir):
             load_path = os.path.join(t_path, final, '.load.p')
             if not os.path.isfile(load_path):
                 continue
-            load = serial.load(salt.utils.fopen(load_path, 'rb'))
-            jid = load['jid']
-            yield jid, load, t_path, final
+            job = serial.load(salt.utils.fopen(load_path, 'rb'))
+            jid = job['jid']
+            yield jid, job, t_path, final
