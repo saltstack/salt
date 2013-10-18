@@ -138,6 +138,8 @@ def setval(key, val, destructive=False):
     '''
     Set a grains value in the grains config file
 
+    :param Destructive: If an operation results in a key being removed, delete the key, too. Defaults to False.
+
     CLI Example:
 
     .. code-block:: bash

@@ -90,7 +90,7 @@ Grains in /etc/salt/grains
 ==========================
 
 If you do not want to place your custom static grains in the minion config
-file, you can also put them in ``/etc/salt/grains``. They are configured in the
+file, you can also put them in ``/etc/salt/grains`` on the minion. They are configured in the
 same way as in the above example, only without a top-level ``grains:`` key:
 
 .. code-block:: yaml
