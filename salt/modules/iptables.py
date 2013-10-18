@@ -81,7 +81,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         kwargs['jump'] = kwargs['target']
         del kwargs['target']
 
-    for ignore in '__id__', 'fun', 'table', 'chain':
+    for ignore in '__id__', 'fun', 'table', 'chain','__env__','__sls__','order':
         if ignore in kwargs:
             del kwargs[ignore]
 
