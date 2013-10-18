@@ -163,7 +163,7 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
     pkgs = list_pkgs(versions_as_list=True)
-    repo = ['-o', 'APT::Default-Release="{0}"'.format(fromrepo)] \
+    repo = ['-o', 'APT::Default-Release={0!r}'.format(fromrepo)] \
         if fromrepo else ''
 
     # Refresh before looking for the latest version available
@@ -406,9 +406,9 @@ def install(name=None,
                                                         ver2=cver,
                                                         cmp_func=version_cmp):
                     downgrade = True
-                targets.append('"{0}={1}"'.format(param, version_num))
+                targets.append('{0}={1}'.format(param, version_num.lstrip('=')))
         if fromrepo:
-            log.info('Targeting repo "{0}"'.format(fromrepo))
+            log.info('Targeting repo {0!r}'.format(fromrepo))
         cmd = ['apt-get', '-q', '-y']
         if downgrade:
             cmd.append('--force-yes')
@@ -728,8 +728,8 @@ def version_cmp(pkg1, pkg2):
     '''
     try:
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
-            cmd = 'dpkg --compare-versions "{0}" {1} ' \
-                  '"{2}"'.format(pkg1, oper, pkg2)
+            cmd = 'dpkg --compare-versions {0!r} {1} ' \
+                  '{2!r}'.format(pkg1, oper, pkg2)
             if __salt__['cmd.retcode'](cmd) == 0:
                 return ret
     except Exception as e:
@@ -744,7 +744,7 @@ def _split_repo_str(repo):
 
 def _consolidate_repo_sources(sources):
     if not isinstance(sources, sourceslist.SourcesList):
-        raise TypeError('"{0}" not a "{1}"'.format(type(sources),
+        raise TypeError('{0!r} not a {1!r}'.format(type(sources),
                                                    sourceslist.SourcesList))
 
     consolidated = {}
@@ -859,7 +859,7 @@ def get_repo(repo, **kwargs):
                                                        ppa_auth,
                                                        uri_match.group(2))
         except SyntaxError:
-            error_str = 'Error: repo "{0}" is not a well formatted definition'
+            error_str = 'Error: repo {0!r} is not a well formatted definition'
             raise Exception(error_str.format(repo))
 
         for source in repos.values():
@@ -875,7 +875,7 @@ def get_repo(repo, **kwargs):
                         if comp in sub.get('comps', []):
                             return sub
 
-    raise Exception('repo "{0}" was not found'.format(repo))
+    raise Exception('repo {0!r} was not found'.format(repo))
 
 
 def del_repo(repo, **kwargs):
@@ -926,7 +926,7 @@ def del_repo(repo, **kwargs):
         try:
             repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
         except SyntaxError:
-            error_str = 'Error: repo "{0}" not a well formatted definition'
+            error_str = 'Error: repo {0!r} not a well formatted definition'
             return error_str.format(repo)
 
         for source in repos:
@@ -965,10 +965,10 @@ def del_repo(repo, **kwargs):
                 if source.file in deleted_from:
                     deleted_from[source.file] += 1
             for repo_file, c in deleted_from.iteritems():
-                msg = 'Repo "{0}" has been removed from {1}.\n'
+                msg = 'Repo {0!r} has been removed from {1}.\n'
                 if c == 0 and 'sources.list.d/' in repo_file:
                     if os.path.isfile(repo_file):
-                        msg = ('File {1} containing repo "{0}" has been '
+                        msg = ('File {1} containing repo {0!r} has been '
                                'removed.\n')
                         try:
                             os.remove(repo_file)
@@ -1048,7 +1048,7 @@ def mod_repo(repo, **kwargs):
                     err_str = 'Unable to get PPA info from argument. ' \
                               'Expected format "<PPA_OWNER>/<PPA_NAME>" ' \
                               '(e.g. saltstack/salt) not found.  Received ' \
-                              '"{0}" instead.'
+                              '{0!r} instead.'
                     raise Exception(err_str.format(repo[4:]))
                 dist = __grains__['lsb_distrib_codename']
                 # ppa has a lot of implicit arguments. Make them explicit.
@@ -1122,7 +1122,7 @@ def mod_repo(repo, **kwargs):
         repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(
             repo)
     except SyntaxError:
-        error_str = 'Error: repo "{0}" not a well formatted definition'
+        error_str = 'Error: repo {0!r} not a well formatted definition'
         raise SyntaxError(error_str.format(repo))
 
     full_comp_list = set(repo_comps)
@@ -1370,7 +1370,7 @@ def get_selections(pattern=None, state=None):
     ret = {}
     cmd = 'dpkg --get-selections'
     if pattern:
-        cmd += ' "{0}"'.format(pattern)
+        cmd += ' {0!r}'.format(pattern)
     else:
         cmd += ' "*"'
     stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
