@@ -128,6 +128,59 @@ def up():  # pylint: disable=C0103
     return ret
 
 
+FINGERPRINT_REGEX = re.compile(r"[a-f0-9]{2}:"*15 + r"[a-f0-9]{2}")
+def safe_accept(target, expr_form='glob'):
+    '''
+    Accept a minion's public key after checking the fingerprint over salt-ssh
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.safe_accept my_minion
+        salt-run manage.safe_accept minion1,minion2 expr_form=list
+    '''
+    salt_key = salt.key.Key(__opts__)
+    ssh_client = salt.client.SSHClient()
+
+    ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
+
+    failures = {}
+    for minion, finger in ret.items():
+        if not FINGERPRINT_REGEX.match(finger):
+            failures[minion] = finger
+        else:
+            fingerprints = salt_key.finger(minion)
+            accepted = fingerprints.get('minions', {})
+            pending = fingerprints.get('minions_pre', {})
+            if minion in accepted:
+                del ret[minion]
+                continue
+            elif minion not in pending:
+                failures[minion] = ("Minion key {0} not found by salt-key"
+                                    .format(minion))
+            elif pending[minion] != finger:
+                failures[minion] = ("Minion key {0} does not match the key in "
+                                    "salt-key: {1}"
+                                    .format(finger, pending[minion]))
+            else:
+                subprocess.call(["salt-key", "-qya", minion])
+
+        if minion in failures:
+            del ret[minion]
+
+    if failures:
+        print "safe_accept failed on the following minions:"
+        for minion, message in failures.iteritems():
+            print minion
+            print '-' * len(minion)
+            print message
+            print
+
+    print "Accepted {0:d} keys".format(len(ret))
+    return ret, failures
+
+
 def versions():
     '''
     Check the version of active minions
