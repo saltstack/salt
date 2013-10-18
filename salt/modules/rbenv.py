@@ -257,3 +257,27 @@ def list_(runas=None):
                 continue
             ret.append(line.strip())
     return ret
+
+
+def do(cmdline=None, runas=None):
+    '''
+    Execute a ruby command with rbenv's shims from the user or the system.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbenv.do "gem list bundler"
+        salt '*' rbenv.do "gem list bundler" deploy
+    '''
+
+    path = _rbenv_path(runas)
+    result = __salt__['cmd.run_all'](
+        "env PATH={0}/shims:$PATH {1}".format(path, cmdline),
+        runas=runas
+    )
+
+    if result['retcode'] == 0:
+        return result['stdout']
+    else:
+        return False
