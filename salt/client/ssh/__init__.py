@@ -31,8 +31,8 @@ import salt.exceptions
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
 
-# This shim facilitaites remote salt-call operations
-# - Explicitly invokes bourne shell for univeral compatibility
+# This shim facilitates remote salt-call operations
+# - Explicitly invokes Bourne shell for universal compatibility
 #
 # 1. Identify a suitable python
 # 2. Test for remote salt-call and version if present
@@ -137,7 +137,7 @@ class SSH(object):
 
     def get_pubkey(self):
         '''
-        Return the keystring for the SSH public key
+        Return the key string for the SSH public key
         '''
         priv = self.opts.get(
                 'ssh_priv',
@@ -245,7 +245,7 @@ class SSH(object):
     def handle_ssh(self):
         '''
         Spin up the needed threads or processes and execute the subsequent
-        rouintes
+        routines
         '''
         que = multiprocessing.Queue()
         running = {}
@@ -470,7 +470,7 @@ class Single(object):
 
     def cmd(self):
         '''
-        Prepare the precheck command to send to the subsystem
+        Prepare the pre-check command to send to the subsystem
         '''
         # 1. check if python is on the target
         # 2. check is salt-call is on the target
@@ -496,7 +496,7 @@ class Single(object):
 
     def cmd_block(self, is_retry=False):
         '''
-        Prepare the precheck command to send to the subsystem
+        Prepare the pre-check command to send to the subsystem
         '''
         # 1. check if python is on the target
         # 2. check is salt-call is on the target
