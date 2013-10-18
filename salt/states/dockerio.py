@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-Managment of dockers
+Management of dockers
 =====================
 
 .. note::
 
-    This state module is beta, the api is subject to change and no promise
+    This state module is beta; the API is subject to change and no promise
     as to performance or functionality is yet present
 
 Available Functions
