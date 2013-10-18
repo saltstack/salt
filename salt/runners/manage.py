@@ -18,6 +18,8 @@ import salt.key
 import salt.client
 import salt.output
 
+FINGERPRINT_REGEX = re.compile(r"[a-f0-9]{2}:"*15 + r"[a-f0-9]{2}")
+
 
 def status(output=True):
     '''
@@ -128,7 +130,6 @@ def up():  # pylint: disable=C0103
     return ret
 
 
-FINGERPRINT_REGEX = re.compile(r"[a-f0-9]{2}:"*15 + r"[a-f0-9]{2}")
 def safe_accept(target, expr_form='glob'):
     '''
     Accept a minion's public key after checking the fingerprint over salt-ssh
