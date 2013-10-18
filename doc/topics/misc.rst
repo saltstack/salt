@@ -134,7 +134,15 @@ available, etc.
 
 If you find that the Salt Cloud defaults are not enough and your deployment 
 fails because Salt Cloud did not wait log enough, there are some settings you 
-can tweak. **All values should be provided in seconds**.
+can tweak.
+
+.. admonition:: Note
+
+    All values should be provided in seconds
+
+
+You can tweak these settings globally, per cloud provider, or event per profile 
+definition.
 
 
 wait_for_ip_timeout
