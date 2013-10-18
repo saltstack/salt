@@ -17,6 +17,7 @@ class TestGemModule(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
+                         'rbenv.is_installed': MagicMock(return_value=False),
                          'cmd.run_all': mock}):
             gem._gem('install rails')
             mock.assert_called_once_with('gem install rails', runas=None)
@@ -24,10 +25,21 @@ class TestGemModule(TestCase):
         mock = MagicMock(return_value=None)
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=True),
+                         'rbenv.is_installed': MagicMock(return_value=False),
                          'rvm.do': mock}):
             gem._gem('install rails', ruby='1.9.3')
             mock.assert_called_once_with(
                 '1.9.3', 'gem install rails', runas=None
+            )
+
+        mock = MagicMock(return_value=None)
+        with patch.dict(gem.__salt__,
+                        {'rvm.is_installed': MagicMock(return_value=False),
+                         'rbenv.is_installed': MagicMock(return_value=True),
+                         'rbenv.do': mock}):
+            gem._gem('install rails')
+            mock.assert_called_once_with(
+                'gem install rails', runas=None
             )
 
     def test_list(self):
