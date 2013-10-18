@@ -472,6 +472,43 @@ def show_lowstate(queue=False, **kwargs):
     return ret
 
 
+def show_low_sls(mods, env='base', test=None, queue=False, **kwargs):
+    '''
+    Display the low data from a specific sls
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_low_sls foo
+    '''
+    if queue:
+        _wait(kwargs['__pub_jid'])
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
+    opts = copy.copy(__opts__)
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = __opts__.get('test', None)
+    st_ = salt.state.HighState(opts)
+    if isinstance(mods, string_types):
+        mods = mods.split(',')
+    st_.push_active()
+    try:
+        high_, errors = st_.render_highstate({env: mods})
+    finally:
+        st_.pop_active()
+    errors += st_.state.verify_high(high_)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    return st_.compile_high_data(high_)
+
+
 def show_sls(mods, env='base', test=None, queue=False, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
