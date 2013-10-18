@@ -31,8 +31,8 @@ import salt.exceptions
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
 
-# This shim facilitaites remote salt-call operations
-# - Explicitly invokes bourne shell for univeral compatibility
+# This shim facilitates remote salt-call operations
+# - Explicitly invokes Bourne shell for universal compatibility
 #
 # 1. Identify a suitable python
 # 2. Test for remote salt-call and version if present
