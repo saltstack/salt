@@ -6,7 +6,7 @@ Management of dockers: overview of this module
 
 .. note::
 
-    The DockerIO integration is still in beta, the api is subject to change
+    The DockerIO integration is still in beta; the API is subject to change
 
 General notes
 -------------
@@ -376,7 +376,7 @@ def get_containers(all=True,
     trunc
         Set it to True to have the short ID
 
-    Returns a mapping of something which look's like
+    Returns a mapping of something which looks like
     container
 
     CLI Example:
@@ -570,7 +570,7 @@ def create_container(image,
     environment
         environment variable mapping ({'foo':'BAR'})
     dns
-        list of dns servers
+        list of DNS servers
     ports
         ports redirections (['222:22'])
     volumes
@@ -729,7 +729,7 @@ def stop(container, timeout=10, *args, **kwargs):
     :type container: string
     :param container: The container id to stop
 
-    :type timout: int
+    :type timeout: int
     :param timeout: Wait for a timeout to let the container exit gracefully
         before killing it
 
@@ -821,7 +821,7 @@ def kill(container, *args, **kwargs):
                 id=container,
                 out=traceback.format_exc(),
                 comment=(
-                    'An exception occured while killing '
+                    'An exception occurred while killing '
                     'your container {0}').format(container))
     return status
 
@@ -1180,7 +1180,7 @@ def _create_image_assemble_error_status(status, ret, logs, *args, **kwargs):
        u'message':u'Get file:///r.tar.gz:unsupported protocol scheme "file"'}},
        {u'status': u'Downloading from file:///r.tar.gz'}]
     '''
-    comment = 'An error occured while importing your image'
+    comment = 'An error occurred while importing your image'
     out = None
     is_invalid = True
     status['out'] = ''
@@ -1206,7 +1206,7 @@ def _create_image_assemble_error_status(status, ret, logs, *args, **kwargs):
         is_invalid = True
         trace = traceback.format_exc()
         out = (
-            'An error occured while '
+            'An error occurred while '
             'parsing error output:\n{0}'
         ).format(trace)
     if is_invalid:
@@ -1216,7 +1216,7 @@ def _create_image_assemble_error_status(status, ret, logs, *args, **kwargs):
 
 def import_image(src, repo, tag=None, *args, **kwargs):
     '''
-    Import content from a local tarball or an url to a docker image
+    Import content from a local tarball or a URL to a docker image
 
     :type src: string
     :param src: The content to import (URL, absolute path to a tarball)
@@ -1520,12 +1520,12 @@ def _pull_assemble_error_status(status, ret, logs):
         "image (latest) from foo/  ...
          rogress":"complete","id":"2c80228370c9"}'
 
-    construct something like that (load json data is possible)::
+    construct something like that (load JSON data is possible)::
 
         [u'{"status":"Pulling repository foo/ubuntubox"',
          {"status":"Download","progress":"complete","id":"2c80228370c9"}]
     '''
-    comment = 'An error occured pulling your image'
+    comment = 'An error occurred pulling your image'
     out = ''
     try:
         out = '\n' + ret
@@ -1649,7 +1649,7 @@ def _push_assemble_error_status(status, ret, logs):
         [u'{"status":"Pulling repository foo/ubuntubox"',
          {"status":"Download","progress":"complete","id":"2c80228370c9"}]
     '''
-    comment = 'An error occured pushing your image'
+    comment = 'An error occurred pushing your image'
     status['out'] = ''
     try:
         status['out'] += '\n' + ret
@@ -1671,7 +1671,7 @@ def _push_assemble_error_status(status, ret, logs):
     except Exception:
         trace = traceback.format_exc()
         status['out'] = (
-            'An error occured while '
+            'An error occurred while '
             'parsing error output:\n{0}'
         ).format(trace)
     invalid(status, comment=comment)
