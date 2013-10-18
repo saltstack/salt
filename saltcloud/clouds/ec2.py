@@ -1123,6 +1123,10 @@ def create(vm_=None, call=None):
         data = saltcloud.utils.wait_for_ip(
             __query_ip_address,
             update_args=(params, requesturl),
+            timeout=config.get_config_value(
+                'wait_for_ip_timeout', vm_, __opts__, default=10) * 60,
+            interval=config.get_config_value(
+                'wait_for_ip_interval', vm_, __opts__, default=10),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
