@@ -28,6 +28,7 @@ Full list of builtin execution modules
     bridge
     bsd_shadow
     cassandra
+    chocolatey
     cmdmod
     config
     cp

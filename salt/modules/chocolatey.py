@@ -2,6 +2,8 @@
 '''
 A dead simple module wrapping calls to the Chocolatey package manager
 (http://chocolatey.org)
+
+.. versionadded:: Hydrogen
 '''
 
 import logging
@@ -20,7 +22,7 @@ def __virtual__():
     '''
     Confirm this module is on a Windows system running Vista or later.
 
-    While it is possible to make Chocolatey run under XP and Server 2003 with 
+    While it is possible to make Chocolatey run under XP and Server 2003 with
     an awful lot of hassle (e.g. SSL is completely broken), the PowerShell shim
     for simulating UAC forces a GUI prompt, and is not compatible with
     salt-minion running as SYSTEM.
@@ -48,12 +50,12 @@ def _find_chocolatey():
 
 def bootstrap(force=False):
     '''
-    Download and install the latest version of the Chocolatey package manager 
-    via the official bootstrap. 
+    Download and install the latest version of the Chocolatey package manager
+    via the official bootstrap.
 
     Chocolatey requires Windows PowerShell and the .NET v4.0 runtime. Depending
-    on the host's version of Windows, chocolatey.bootstrap will attempt to 
-    ensure these prerequisites are met by downloading and executing the 
+    on the host's version of Windows, chocolatey.bootstrap will attempt to
+    ensure these prerequisites are met by downloading and executing the
     appropriate installers from Microsoft.
 
     Note that if PowerShell is installed, you may have to restart the host
@@ -63,7 +65,7 @@ def bootstrap(force=False):
         Run the bootstrap process even if Chocolatey is found in the path.
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.bootstrap
         salt '*' chocolatey.bootstrap force=True
     '''
@@ -71,10 +73,10 @@ def bootstrap(force=False):
     choc_path = _find_chocolatey()
     if choc_path and not force:
         return 'Chocolatey found at {0}'.format(choc_path)
-    
-    # The following lookup tables are required to determine the correct 
+
+    # The following lookup tables are required to determine the correct
     # download required to install PowerShell. That's right, there's more
-    # than one! You're welcome. 
+    # than one! You're welcome.
     ps_downloads = {
         ('Vista', 'x86'): ('http://download.microsoft.com/download/A/7/5/A75BC017-63CE-47D6-8FA4-AFB5C21BAC54/Windows6.0-KB968930-x86.msu'),
         ('Vista', 'AMD64'): ('http://download.microsoft.com/download/3/C/8/3C8CF51E-1D9D-4DAA-AAEA-5C48D1CD055C/Windows6.0-KB968930-x64.msu'),
@@ -98,7 +100,7 @@ def bootstrap(force=False):
             url = ps_downloads[(__grains__['osrelease'], __grains__['cpuarch'])]
             dest = os.path.join(temp_dir, 'powershell.exe')
             __salt__['cp.get_url'](url, dest)
-            result = __salt__['cmd.run_all'](dest+' /quiet /norestart')
+            result = __salt__['cmd.run_all'](dest + ' /quiet /norestart')
             if result['retcode'] != 0:
                 err = 'Installing Windows PowerShell failed. Please run the installer GUI on the host to get a more specific reason.'
                 log.error(err)
@@ -111,15 +113,20 @@ def bootstrap(force=False):
     # Run the .NET Framework 4 web installer
     dest = os.path.join(temp_dir, 'dotnet4.exe')
     __salt__['cp.get_url'](net4_url, dest)
-    result = __salt__['cmd.run_all'](dest+' /q /norestart')
+    result = __salt__['cmd.run_all'](dest + ' /q /norestart')
     if result['retcode'] != 0:
         err = 'Installing .NET v4.0 failed. Please run the installer GUI on the host to get a more specific reason.'
         log.error(err)
         raise CommandExecutionError(err)
 
     # Run the Chocolatey bootstrap.
-    result = __salt__['cmd.run_all'](ps_path+' -NoProfile -ExecutionPolicy unrestricted -Command "iex ((new-object net.webclient).DownloadString(\'https://chocolatey.org/install.ps1\'))" && SET PATH=%PATH%;%systemdrive%\\chocolatey\\bin')
-    
+    result = __salt__['cmd.run_all'](
+        '{0} -NoProfile -ExecutionPolicy unrestricted '
+        '-Command "iex ((new-object net.webclient).'
+        'DownloadString(\'https://chocolatey.org/install.ps1\'))" '
+        '&& SET PATH=%PATH%;%systemdrive%\\chocolatey\\bin'
+    )
+
     if result['retcode'] != 0:
         err = 'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
@@ -146,9 +153,9 @@ def list(filter, all_versions=False, pre_versions=False, source=None):
         comes from. Defaults to the official Chocolatey feed.
 
     CLI Example:
-    
+
     .. code-block:: bash
-        
+
         salt '*' chocolatey.list <filter>
         salt '*' chocolatey.list <filter> all_versions=True
     '''
@@ -157,17 +164,17 @@ def list(filter, all_versions=False, pre_versions=False, source=None):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' list '+filter
+
+    cmd = choc_path + ' list ' + filter
     if salt.utils.is_true(all_versions):
         cmd += ' -AllVersions'
     if salt.utils.is_true(pre_versions):
         cmd += ' -Prerelease'
     if source:
-        cmd += ' -Source '+source
-    
+        cmd += ' -Source ' + source
+
     result = __salt__['cmd.run_all'](cmd)
-    
+
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
@@ -176,7 +183,7 @@ def list(filter, all_versions=False, pre_versions=False, source=None):
     ret = {}
     pkg_re = re.compile(r'(\S+)\s+(\S+)')
     for line in result['stdout'].split('\n'):
-        if line.startswith("No packages"): 
+        if line.startswith("No packages"):
             return ret
         for name, ver in pkg_re.findall(line):
             if name not in ret:
@@ -192,9 +199,9 @@ def list_webpi():
     Instructs Chocolatey to pull a full package list from the Microsoft Web PI repository.
 
     CLI Example:
-    
+
     .. code-block:: bash
-        
+
         salt '*' chocolatey.list_webpi
     '''
     choc_path = _find_chocolatey()
@@ -202,10 +209,10 @@ def list_webpi():
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' list -Source webpi'
+
+    cmd = choc_path + ' list -Source webpi'
     result = __salt__['cmd.run_all'](cmd)
-    
+
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
@@ -220,9 +227,9 @@ def list_windowsfeatures():
     list, via the Deployment Image Servicing and Management tool.
 
     CLI Example:
-    
+
     .. code-block:: bash
-        
+
         salt '*' chocolatey.list_windowsfeatures
     '''
     choc_path = _find_chocolatey()
@@ -230,10 +237,10 @@ def list_windowsfeatures():
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' list -Source windowsfeatures'
+
+    cmd = choc_path + ' list -Source windowsfeatures'
     result = __salt__['cmd.run_all'](cmd)
-    
+
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
@@ -262,7 +269,7 @@ def install(name, version=None, source=None, force=False):
     CLI Example:
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.install <package name>
         salt '*' chocolatey.install <package name> version=<package version>
     '''
@@ -271,13 +278,13 @@ def install(name, version=None, source=None, force=False):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
+
     # chocolatey helpfully only supports a single package argument
-    cmd = choc_path+' install '+name
+    cmd = choc_path + ' install ' + name
     if version:
-        cmd += ' -Version '+version
+        cmd += ' -Version ' + version
     if source:
-        cmd += ' -Source '+source
+        cmd += ' -Source ' + source
     if salt.utils.is_true(force):
         cmd += ' -Force'
     result = __salt__['cmd.run_all'](cmd)
@@ -300,7 +307,7 @@ def install_cygwin(name):
     CLI Example:
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.install_cygwin <package name>
     '''
     choc_path = _find_chocolatey()
@@ -308,8 +315,8 @@ def install_cygwin(name):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' cygwin '+name
+
+    cmd = choc_path + ' cygwin ' + name
     result = __salt__['cmd.run_all'](cmd)
 
     if result['retcode'] != 0:
@@ -334,7 +341,7 @@ def install_gem(name, version=None):
     CLI Example:
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.install_gem <package name>
         salt '*' chocolatey.install_gem <package name> version=<package version>
     '''
@@ -343,10 +350,10 @@ def install_gem(name, version=None):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' gem '+name
+
+    cmd = choc_path + ' gem ' + name
     if version:
-        cmd += ' -Version '+version
+        cmd += ' -Version ' + version
     result = __salt__['cmd.run_all'](cmd)
 
     if result['retcode'] != 0:
@@ -375,7 +382,7 @@ def install_missing(name, version=None, source=None):
     CLI Example:
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.install_missing <package name>
         salt '*' chocolatey.install_missing <package name> version=<package version>
     '''
@@ -384,13 +391,13 @@ def install_missing(name, version=None, source=None):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
+
     # chocolatey helpfully only supports a single package argument
-    cmd = choc_path+' installmissing '+name
+    cmd = choc_path + ' installmissing ' + name
     if version:
-        cmd += ' -Version '+version
+        cmd += ' -Version ' + version
     if source:
-        cmd += ' -Source '+source
+        cmd += ' -Source ' + source
     result = __salt__['cmd.run_all'](cmd)
 
     if result['retcode'] != 0:
@@ -415,7 +422,7 @@ def install_python(name, version=None):
     CLI Example:
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.install_python <package name>
         salt '*' chocolatey.install_python <package name> version=<package version>
     '''
@@ -424,10 +431,10 @@ def install_python(name, version=None):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' python '+name
+
+    cmd = choc_path + ' python ' + name
     if version:
-        cmd += ' -Version '+version
+        cmd += ' -Version ' + version
     result = __salt__['cmd.run_all'](cmd)
 
     if result['retcode'] != 0:
@@ -440,7 +447,7 @@ def install_python(name, version=None):
 
 def install_windowsfeatures(name):
     '''
-    Instructs Chocolatey to install a Windows Feature via the Deployment Image 
+    Instructs Chocolatey to install a Windows Feature via the Deployment Image
     Servicing and Management tool.
 
     name
@@ -449,7 +456,7 @@ def install_windowsfeatures(name):
     CLI Example:
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.install_windowsfeatures <package name>
     '''
     choc_path = _find_chocolatey()
@@ -457,8 +464,8 @@ def install_windowsfeatures(name):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' windowsfeatures '+name
+
+    cmd = choc_path + ' windowsfeatures ' + name
     result = __salt__['cmd.run_all'](cmd)
 
     if result['retcode'] != 0:
@@ -479,7 +486,7 @@ def install_webpi(name):
     CLI Example:
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.install_webpi <package name>
     '''
     choc_path = _find_chocolatey()
@@ -487,8 +494,8 @@ def install_webpi(name):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' webpi '+name
+
+    cmd = choc_path + ' webpi ' + name
     result = __salt__['cmd.run_all'](cmd)
 
     if result['retcode'] != 0:
@@ -513,7 +520,7 @@ def uninstall(name, version=None):
     CLI Example:
 
     .. code-block:: bash
-        
+
         salt '*' chocolatey.uninstall <package name>
         salt '*' chocolatey.uninstall <package name> version=<package version>
     '''
@@ -522,11 +529,11 @@ def uninstall(name, version=None):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
+
     # chocolatey helpfully only supports a single package argument
-    cmd = choc_path+' uninstall '+name
+    cmd = choc_path + ' uninstall ' + name
     if version:
-        cmd += ' -Version '+version
+        cmd += ' -Version ' + version
     result = __salt__['cmd.run_all'](cmd)
 
     if result['retcode'] != 0:
@@ -555,7 +562,7 @@ def update(name, source=None, pre_versions=False):
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt "*" chocolatey.update all
         salt "*" chocolatey.update <package name> pre_versions=True
     '''
@@ -565,10 +572,10 @@ def update(name, source=None, pre_versions=False):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' update '+name
+
+    cmd = choc_path + ' update ' + name
     if source:
-        cmd += ' -Source '+source
+        cmd += ' -Source ' + source
     if salt.utils.is_true(pre_versions):
         cmd += ' -PreRelease'
     result = __salt__['cmd.run_all'](cmd)
@@ -579,7 +586,6 @@ def update(name, source=None, pre_versions=False):
         raise CommandExecutionError(err)
 
     return result['stdout']
-
 
 
 def version(name, check_remote=False, source=None, pre_versions=False):
@@ -613,24 +619,24 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         err = 'Chocolatey not installed. Use chocolatey.bootstrap to install the Chocolatey package manager.'
         log.error(err)
         raise CommandExecutionError(err)
-    
-    cmd = choc_path+' version '+name
+
+    cmd = choc_path + ' version ' + name
     if not salt.utils.is_true(check_remote):
         cmd += ' -LocalOnly'
     if salt.utils.is_true(pre_versions):
         cmd += ' -Prerelease'
     if source:
-        cmd += ' -Source '+source
-    
+        cmd += ' -Source ' + source
+
     result = __salt__['cmd.run_all'](cmd)
-    
+
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
 
     ret = {}
-    
+
     # the next bit is to deal with the stupid default PowerShell formatting.
     # printing two value pairs is shown in columns, whereas printing six
     # pairs is shown in rows...
@@ -647,5 +653,3 @@ def version(name, check_remote=False, source=None, pre_versions=False):
                 ret[key] = value
 
     return ret
-
-
