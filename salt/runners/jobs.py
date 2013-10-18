@@ -33,13 +33,8 @@ def active():
             continue
         for job in data:
             if not job['jid'] in ret:
-                ret[job['jid']] = {'Running': [],
-                                   'Returned': [],
-                                   'Function': job['fun'],
-                                   'Arguments': list(job['arg']),
-                                   'Target': job['tgt'],
-                                   'Target-type': job['tgt_type'],
-                                   'User': job.get('user', 'root')}
+                ret[job['jid']] = _format_job_instance(job)
+                ret[job['jid']].update({'Running': [], 'Returned': []})
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
     for jid in ret:
@@ -110,20 +105,15 @@ def list_job(jid):
     serial = salt.payload.Serial(__opts__)
     ret = {}
     jid_dir = salt.utils.jid_dir(jid, __opts__['cachedir'], __opts__['hash_type'])
-    loadpath = os.path.join(jid_dir, '.load.p')
-    minionspath = os.path.join(jid_dir, '.minions.p')
-    if os.path.isfile(loadpath):
-        load = serial.load(salt.utils.fopen(loadpath, 'rb'))
+    load_path = os.path.join(jid_dir, '.load.p')
+    minions_path = os.path.join(jid_dir, '.minions.p')
+    if os.path.isfile(load_path):
+        load = serial.load(salt.utils.fopen(load_path, 'rb'))
         jid = load['jid']
-        ret = {'jid': jid,
-               'Start Time': salt.utils.jid_to_time(jid),
-               'Function': load['fun'],
-               'Arguments': list(load['arg']),
-               'Target': load['tgt'],
-               'Target-type': load['tgt_type'],
-               'User': load.get('user', 'root')}
-        if os.path.isfile(minionspath):
-            minions = serial.load(salt.utils.fopen(minionspath, 'rb'))
+        ret = _format_jid_instance(jid, load)
+        ret.update({'jid': jid})
+        if os.path.isfile(minions_path):
+            minions = serial.load(salt.utils.fopen(minions_path, 'rb'))
             ret['Minions'] = minions
 
     salt.output.display_output(ret, 'yaml', __opts__)
@@ -140,29 +130,10 @@ def list_jobs():
 
         salt-run jobs.list_jobs
     '''
-    serial = salt.payload.Serial(__opts__)
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for top in os.listdir(job_dir):
-        t_path = os.path.join(job_dir, top)
-        for final in os.listdir(t_path):
-            loadpath = os.path.join(t_path, final, '.load.p')
-            minionspath = os.path.join(t_path, final, '.minions.p')
-            if not os.path.isfile(loadpath):
-                continue
-            load = serial.load(salt.utils.fopen(loadpath, 'rb'))
-            jid = load['jid']
-            ret[jid] = {'jid': jid,
-                        'Start Time': salt.utils.jid_to_time(jid),
-                        'Function': load['fun'],
-                        'Arguments': list(load['arg']),
-                        'Target': load['tgt'],
-                        'Target-type': load['tgt_type'],
-                        'User': load.get('user', 'root')}
-            if os.path.isfile(minionspath):
-                minions = serial.load(salt.utils.fopen(minionspath, 'rb'))
-                ret[jid]['Minions'] = minions
-
+    for jid, job, t_path, final in _walk_through(job_dir):
+        ret[jid] = _format_jid_instance(jid, job)
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
@@ -180,34 +151,53 @@ def print_job(job_id):
     serial = salt.payload.Serial(__opts__)
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for top in os.listdir(job_dir):
-        t_path = os.path.join(job_dir, top)
-        for final in os.listdir(t_path):
-            loadpath = os.path.join(t_path, final, '.load.p')
-            if not os.path.isfile(loadpath):
-                continue
-            load = serial.load(salt.utils.fopen(loadpath, 'rb'))
-            jid = load['jid']
-            if job_id == jid:
-                hosts_path = os.path.join(t_path, final)
-                hosts_return = {}
-                for host in os.listdir(hosts_path):
-                    host_path = os.path.join(hosts_path, host)
-                    if os.path.isdir(host_path):
-                        returnfile = os.path.join(host_path, 'return.p')
-                        if not os.path.isfile(returnfile):
-                            continue
-                        return_data = serial.load(
-                            salt.utils.fopen(returnfile, 'rb')
-                        )
-                        hosts_return[host] = return_data
-                        ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
-                                    'Function': load['fun'],
-                                    'Arguments': list(load['arg']),
-                                    'Target': load['tgt'],
-                                    'Target-type': load['tgt_type'],
-                                    'User': load.get('user', 'root'),
-                                    'Result': hosts_return}
-                                    
+    for jid, job, t_path, final in _walk_through(job_dir):
+        if job_id == jid:
+            hosts_path = os.path.join(t_path, final)
+            hosts_return = {}
+            for host in os.listdir(hosts_path):
+                host_path = os.path.join(hosts_path, host)
+                if os.path.isdir(host_path):
+                    return_file = os.path.join(host_path, 'return.p')
+                    if not os.path.isfile(return_file):
+                        continue
+                    return_data = serial.load(
+                        salt.utils.fopen(return_file, 'rb')
+                    )
+                    hosts_return[host] = return_data
+                    ret[jid] = _format_jid_instance(jid, job)
+                    ret[jid].update({'Result': hosts_return})
+
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
+
+
+def _format_job_instance(job):
+    return {'Function': job['fun'],
+            'Arguments': list(job['arg']),
+            'Target': job['tgt'],
+            'Target-type': job['tgt_type'],
+            'User': job.get('user', 'root')}
+
+
+def _format_jid_instance(jid, job):
+    ret = _format_job_instance(job)
+    ret.update({'StartTime': salt.utils.jid_to_time(jid)})
+    return ret
+
+
+def _walk_through(job_dir):
+    serial = salt.payload.Serial(__opts__)
+
+    for top in os.listdir(job_dir):
+        t_path = os.path.join(job_dir, top)
+
+        for final in os.listdir(t_path):
+            load_path = os.path.join(t_path, final, '.load.p')
+
+            if not os.path.isfile(load_path):
+                continue
+
+            job = serial.load(salt.utils.fopen(load_path, 'rb'))
+            jid = job['jid']
+            yield jid, job, t_path, final
