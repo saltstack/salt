@@ -26,6 +26,7 @@ import time
 
 # Import salt cloud libs
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudSystemExit
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.utils import namespaced_function
 
@@ -310,7 +311,11 @@ def create(vm_):
         time.sleep(1)
         return False
 
-    ip_address = saltcloud.utils.wait_for_fun(wait_for_ip)
+    ip_address = saltcloud.utils.wait_for_fun(
+        wait_for_ip,
+        timeout=config.get_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15) * 60,
+    )
     if config.get_config_value('deploy', vm_, __opts__) is not True:
         return show_instance(vm_['name'], call='action')
 
@@ -341,7 +346,11 @@ def create(vm_):
         time.sleep(5)
         return False
 
-    passwd = saltcloud.utils.wait_for_fun(get_passwd)
+    passwd = saltcloud.utils.wait_for_fun(
+        get_passwd,
+        timeout=config.get_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15) * 60,
+    )
     response['password'] = passwd
     response['public_ip'] = ip_address
 
