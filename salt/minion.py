@@ -911,6 +911,24 @@ class Minion(object):
                 data['arg'] = []
             self._handle_decoded_payload(data)
 
+    def _refresh_grains_watcher(self, refresh_interval_in_seconds):
+        '''
+        Create a loop that will fire a pillar refresh to inform a master about a change in the grains of this minion
+        :param refresh_interval_in_seconds:
+        :return: None
+        '''
+
+        def _do_refresh():
+            if grain_cache != self.opts['grains']:
+                log.debug('Grain refresh is launching Pillar refresh!')
+                self.pillar_refresh()
+
+            threading.Timer(refresh_interval_in_seconds, _do_refresh).start()
+
+        grain_cache = self.opts['grains']
+        threading.Timer(refresh_interval_in_seconds, _do_refresh).start()
+        log.debug('Starting grain refresh routine')
+
     @property
     def master_pub(self):
         '''
@@ -982,6 +1000,7 @@ class Minion(object):
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
+        :rtype : None
         '''
         try:
             log.info(
@@ -1134,6 +1153,21 @@ class Minion(object):
         time.sleep(.5)
 
         loop_interval = int(self.opts['loop_interval'])
+
+        # Calculate the refresh interval for grain refresh
+        if loop_interval and self.opts['grains_refresh_every']:
+            grains_refresh_interval = self.opts['grains_refresh_every']
+            if loop_interval > grains_refresh_interval:     # We can't refresh grains more frequently
+                                                            # than we check for events
+                grains_refresh_interval = int(int(self.opts['grains_refresh_every']) / (loop_interval * 1000))
+
+        try:
+            if grains_refresh_interval:
+                self._refresh_grains_watcher(grains_refresh_interval)
+        except Exception:
+            log.error(
+                'Exception occurred in attempt to initialize grain refresh routine during minion tune-in'
+            )
         while True:
             try:
                 self.schedule.eval()
