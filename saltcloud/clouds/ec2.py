@@ -1177,7 +1177,8 @@ def create(vm_=None, call=None):
             if saltcloud.utils.wait_for_passwd(
                 host=ip_address,
                 username=user,
-                ssh_timeout=60,
+                ssh_timeout=config.get_config_value(
+                    'wait_for_passwd_timeout', vm_, __opts__, default=1) * 60,
                 key_filename=key_filename,
                 display_ssh_output=display_ssh_output
             ):
