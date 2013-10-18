@@ -899,7 +899,7 @@ class Minion(object):
         Execute a state run based on information set in the minion config file
         '''
         if self.opts['startup_states']:
-            data = {'jid': 'req', 'ret': self.opts['ext_job_cache']}
+            data = {'jid': 'req', 'ret': self.opts.get('ext_job_cache', '')}
             if self.opts['startup_states'] == 'sls':
                 data['fun'] = 'state.sls'
                 data['arg'] = [self.opts['sls_list']]
