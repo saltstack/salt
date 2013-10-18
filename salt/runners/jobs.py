@@ -105,14 +105,15 @@ def list_job(jid):
     serial = salt.payload.Serial(__opts__)
     ret = {}
     jid_dir = salt.utils.jid_dir(jid, __opts__['cachedir'], __opts__['hash_type'])
-    loadpath = os.path.join(jid_dir, '.load.p')
-    minionspath = os.path.join(jid_dir, '.minions.p')
-    if os.path.isfile(loadpath):
-        load = serial.load(salt.utils.fopen(loadpath, 'rb'))
+    load_path = os.path.join(jid_dir, '.load.p')
+    minions_path = os.path.join(jid_dir, '.minions.p')
+    if os.path.isfile(load_path):
+        load = serial.load(salt.utils.fopen(load_path, 'rb'))
         jid = load['jid']
-        ret = _format_jid_instance_with_jid_identifier(jid, load)
-        if os.path.isfile(minionspath):
-            minions = serial.load(salt.utils.fopen(minionspath, 'rb'))
+        ret = _format_jid_instance(jid, load)
+        ret.update({'jid': jid})
+        if os.path.isfile(minions_path):
+            minions = serial.load(salt.utils.fopen(minions_path, 'rb'))
             ret['Minions'] = minions
 
     salt.output.display_output(ret, 'yaml', __opts__)
@@ -165,7 +166,8 @@ def print_job(job_id):
                         salt.utils.fopen(return_file, 'rb')
                     )
                     hosts_return[host] = return_data
-                    ret[jid] = _format_jid_instance_with_results(hosts_return, jid, job)
+                    ret[jid] = _format_jid_instance(jid, job)
+                    ret[jid].update({'Result': hosts_return})
 
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
@@ -182,18 +184,6 @@ def _format_job_instance(job):
 def _format_jid_instance(jid, job):
     ret = _format_job_instance(job)
     ret.update({'StartTime': salt.utils.jid_to_time(jid)})
-    return ret
-
-
-def _format_jid_instance_with_results(hosts_return, jid, job):
-    ret = _format_jid_instance(jid, job)
-    ret.update({'Result': hosts_return})
-    return ret
-
-
-def _format_jid_instance_with_jid_identifier(jid, job):
-    ret = _format_jid_instance(jid, job)
-    ret.update({'jid': jid})
     return ret
 
 
