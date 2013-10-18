@@ -208,5 +208,6 @@ def print_job(job_id):
                                     'Target-type': load['tgt_type'],
                                     'User': load.get('user', 'root'),
                                     'Result': hosts_return}
-                        salt.output.display_output(ret, 'yaml', __opts__)
+                                    
+    salt.output.display_output(ret, 'yaml', __opts__)
     return ret
