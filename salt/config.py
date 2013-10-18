@@ -225,6 +225,7 @@ DEFAULT_MINION_OPTS = {
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
     'test': False,
+    'ext_job_cache': '',
     'cython_enable': False,
     'state_verbose': True,
     'state_output': 'full',
