@@ -480,7 +480,11 @@ def create(vm_):
         time.sleep(1)
         return False
 
-    ip_address = saltcloud.utils.wait_for_fun(wait_for_ip)
+    ip_address = saltcloud.utils.wait_for_fun(
+        wait_for_ip,
+        timeout=config.get_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15) * 60,
+    )
 
     if not saltcloud.utils.wait_for_port(ip_address):
         raise SaltCloudSystemExit(
