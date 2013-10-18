@@ -5,7 +5,7 @@ Salt 0.17.1 Release Notes
 The 0.17.1 release comes with a number of improvements to salt-ssh, many
 bugfixes, and a number of security updates.
 
-Salt SSH has been improved to be faster, more feature full and more secure.
+Salt SSH has been improved to be faster, more featureful and more secure.
 Since the original release of Salt SSH was primarily a proof of concept, it has
 been very exciting to see its rapid adoption. We appreciate the willingness of
 security experts to review Salt SSH and help discover oversights and ensure
@@ -32,14 +32,14 @@ Security Updates
 Be advised that these security issues all apply to a small subset of Salt
 users and mostly apply to Salt SSH.
 
-Insufficent Argument Validation
+Insufficient Argument Validation
 -------------------------------
 
 This issue allowed for a user with limited privileges to embed executions
 inside of routines to execute routines that should be restricted. This applies
-to users using external auth or client acl and opening up specific routines.
+to users using external auth or client ACL and opening up specific routines.
 
-Be advised that these patches address the direct issue, additional commits have
+Be advised that these patches address the direct issue. Additional commits have
 been applied to help mitigate this issue from resurfacing.
 
 CVE
@@ -69,11 +69,11 @@ Found By
 
 Feth Arezki, of Majerti
 
-MITM ssh attack in salt-ssh
+MITM SSH attack in salt-ssh
 ---------------------------
 
-Ssh host keys were being accepted by default and not enforced on future ssh
-connections. These patches set ssh host key checking by default and can be
+SSH host keys were being accepted by default and not enforced on future SSH
+connections. These patches set SSH host key checking by default and can be
 overridden by passing the -i flag to `salt-ssh`.
 
 CVE
@@ -231,7 +231,7 @@ Version 0.17.1 is the first bugfix release for :doc:`0.17.0
   :issue:`5951`)
 - Remove pillar matching for mine.get (:issue:`7197`)
 - Sanitize args for multiple execution modules
-- Fix yumpkag mod_repo functions to filter hidden args (:issue:`7656`)
+- Fix yumpkg mod_repo functions to filter hidden args (:issue:`7656`)
 - Fix conflicting IDs in state includes (:issue:`7526`)
 - Fix mysql_grants.absent string formatting issue (:issue:`7827`)
 - Fix postgres.version so it won't return None (:issue:`7695`)
