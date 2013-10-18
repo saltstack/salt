@@ -44,6 +44,11 @@ def set_pidfile(pidfile, user):
             )
         )
         sys.exit(2)
+
+    if os.getuid() == uid:
+        # The current user already owns the pidfile. Return!
+        return
+
     try:
         os.chown(pidfile, uid, gid)
     except OSError as err:
