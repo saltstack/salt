@@ -475,7 +475,7 @@ def show_lowstate(queue=False, **kwargs):
 def show_low_sls(mods, env='base', test=None, queue=False, **kwargs):
     '''
     Display the low data from a specific sls
-    
+
     CLI Example:
 
     .. code-block:: bash
