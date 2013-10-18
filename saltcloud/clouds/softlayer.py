@@ -1,8 +1,9 @@
 '''
 SoftLayer Cloud Module
-===================
+======================
 
-The SoftLayer cloud module is used to control access to the SoftLayer VPS system
+The SoftLayer cloud module is used to control access to the SoftLayer VPS
+system.
 
 Use of this module only requires the ``apikey`` parameter. Set up the cloud
 configuration at:
@@ -26,6 +27,7 @@ import time
 
 # Import salt cloud libs
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudSystemExit
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.utils import namespaced_function
 
@@ -33,12 +35,11 @@ from saltcloud.utils import namespaced_function
 try:
     import SoftLayer
     HAS_SLLIBS = True
-except Exception as exc:
+except ImportError:
     HAS_SLLIBS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
-
 
 # Redirect SoftLayer functions to this module namespace
 script = namespaced_function(script, globals())
@@ -51,8 +52,8 @@ def __virtual__():
     '''
     if get_configured_provider() is False:
         log.debug(
-            'There is no SoftLayer cloud provider configuration available. Not '
-            'loading module.'
+            'There is no SoftLayer cloud provider configuration available. '
+            'Not loading module.'
         )
         return False
 
@@ -268,9 +269,9 @@ def create(vm_):
         'max_net_speed', vm_, __opts__, default=10
     )
     if max_net_speed:
-        kwargs['networkComponents'] = [ {
+        kwargs['networkComponents'] = [{
             'maxSpeed': int(max_net_speed)
-        } ]
+        }]
 
     saltcloud.utils.fire_event(
         'event',
@@ -310,11 +311,19 @@ def create(vm_):
         time.sleep(1)
         return False
 
-    ip_address = saltcloud.utils.wait_for_fun(wait_for_ip)
+    ip_address = saltcloud.utils.wait_for_fun(
+        wait_for_ip,
+        timeout=config.get_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
     if config.get_config_value('deploy', vm_, __opts__) is not True:
         return show_instance(vm_['name'], call='action')
 
-    if not saltcloud.utils.wait_for_port(ip_address):
+    ssh_connect_timeout = config.get_config_value(
+        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+    )
+    if not saltcloud.utils.wait_for_port(ip_address,
+                                         timeout=ssh_connect_timeout):
         raise SaltCloudSystemExit(
             'Failed to authenticate against remote ssh'
         )
@@ -341,7 +350,11 @@ def create(vm_):
         time.sleep(5)
         return False
 
-    passwd = saltcloud.utils.wait_for_fun(get_passwd)
+    passwd = saltcloud.utils.wait_for_fun(
+        get_passwd,
+        timeout=config.get_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
     response['password'] = passwd
     response['public_ip'] = ip_address
 

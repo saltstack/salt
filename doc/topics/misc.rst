@@ -123,3 +123,66 @@ disable this output:
 .. code-block:: yaml
 
     display_ssh_output: False
+
+
+Connection Timeout
+==================
+
+There are several stages when deploying Salt where Salt Cloud needs to wait for 
+something to happen. The VM getting it's IP address, the VM's SSH port is 
+available, etc.
+
+If you find that the Salt Cloud defaults are not enough and your deployment 
+fails because Salt Cloud did not wait log enough, there are some settings you 
+can tweak.
+
+.. admonition:: Note
+
+    All values should be provided in seconds
+
+
+You can tweak these settings globally, per cloud provider, or event per profile 
+definition.
+
+
+wait_for_ip_timeout
+~~~~~~~~~~~~~~~~~~~
+
+The amount of time Salt Cloud should wait for a VM to start and get an IP back 
+from the cloud provider. Default: 5 minutes.
+
+
+wait_for_ip_interval
+~~~~~~~~~~~~~~~~~~~~
+
+The amount of time Salt Cloud should sleep while querying for the VM's IP.  
+Default: 5 seconds.
+
+
+ssh_connect_timeout
+~~~~~~~~~~~~~~~~~~~
+
+The amount of time Salt Cloud should wait for a successful SSH connection to 
+the VM. Default: 5 minutes.
+
+
+wait_for_passwd_timeout
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The amount of time until an ssh connection can be established via password or 
+ssh key. Default 15 seconds.
+
+
+wait_for_fun_timeout
+~~~~~~~~~~~~~~~~~~~~
+
+Some cloud drivers check for an available IP or a successful SSH connection 
+using a function, namely, SoftLayer and SoftLayer-HW. So, the amount of time 
+Salt Cloud should retry such functions before failing. Default: 5 minutes.
+
+
+wait_for_spot_timeout
+~~~~~~~~~~~~~~~~~~~~~
+
+The amount of time Salt Cloud should wait before an EC2 Spot instance is 
+available. This setting is only available for the EC2 cloud driver.

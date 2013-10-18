@@ -27,6 +27,7 @@ import time
 
 # Import salt cloud libs
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudSystemExit
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.utils import namespaced_function
 
@@ -34,7 +35,7 @@ from saltcloud.utils import namespaced_function
 try:
     import SoftLayer
     HAS_SLLIBS = True
-except Exception as exc:
+except ImportError:
     HAS_SLLIBS = False
 
 # Get logging started
@@ -480,9 +481,17 @@ def create(vm_):
         time.sleep(1)
         return False
 
-    ip_address = saltcloud.utils.wait_for_fun(wait_for_ip)
+    ip_address = saltcloud.utils.wait_for_fun(
+        wait_for_ip,
+        timeout=config.get_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
 
-    if not saltcloud.utils.wait_for_port(ip_address):
+    ssh_connect_timeout = config.get_config_value(
+        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+    )
+    if not saltcloud.utils.wait_for_port(ip_address,
+                                         timeout=ssh_connect_timeout):
         raise SaltCloudSystemExit(
             'Failed to authenticate against remote ssh'
         )
@@ -509,7 +518,11 @@ def create(vm_):
         time.sleep(5)
         return False
 
-    passwd = saltcloud.utils.wait_for_fun(get_passwd)
+    passwd = saltcloud.utils.wait_for_fun(
+        get_passwd,
+        timeout=config.get_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
     response['password'] = passwd
     response['public_ip'] = ip_address
 

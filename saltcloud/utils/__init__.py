@@ -396,7 +396,7 @@ def deploy_windows(host, port=445, timeout=900, username='Administrator',
     '''
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
-    if wait_for_port(host=host, port=port, timeout=timeout):
+    if wait_for_port(host=host, port=port, timeout=port_timeout * 60):
         log.debug('SMB port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         log.debug(
@@ -496,7 +496,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
         )
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
-    if wait_for_port(host=host, port=port, timeout=timeout):
+    if wait_for_port(host=host, port=port, timeout=ssh_timeout):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,

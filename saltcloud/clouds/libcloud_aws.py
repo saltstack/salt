@@ -392,7 +392,10 @@ def create(vm_):
         data = saltcloud.utils.wait_for_ip(
             __get_node_data,
             update_args=(conn, vm_['name']),
-            interval=0.5
+            timeout=config.get_config_value(
+                'wait_for_ip_timeout', vm_, __opts__, default=5 * 60),
+            interval=config.get_config_value(
+                'wait_for_ip_interval', vm_, __opts__, default=0.5),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
@@ -414,12 +417,18 @@ def create(vm_):
         ip_address = data.public_ips[0]
 
     username = 'ec2-user'
-    if saltcloud.utils.wait_for_port(ip_address):
+    ssh_connect_timeout = config.get_config_value(
+        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+    )
+    if saltcloud.utils.wait_for_port(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
-            if saltcloud.utils.wait_for_passwd(host=ip_address,
-                                               username=user,
-                                               ssh_timeout=60,
-                                               key_filename=key_filename):
+            if saltcloud.utils.wait_for_passwd(
+                    host=ip_address,
+                    username=user,
+                    ssh_timeout=config.get_config_value(
+                        'wait_for_passwd_timeout', vm_, __opts__,
+                        default=1 * 60),
+                    key_filename=key_filename):
                 username = user
                 break
         else:

@@ -213,7 +213,7 @@ def get_conn():
             'service_type', vm_, __opts__, search_global=False
         )
     if service_type:
-	    authinfo['ex_force_service_type'] = service_type
+        authinfo['ex_force_service_type'] = service_type
 
     insecure = config.get_config_value(
         'insecure', vm_, __opts__, search_global=False
@@ -294,25 +294,28 @@ def ssh_interface(vm_):
         search_global=False
     )
 
+
 def rackconnect(vm_):
     '''
-    Determine if we should wait for rackconnect automation before running. Either
-    'False' (default) or 'True'.
+    Determine if we should wait for rackconnect automation before running.
+    Either 'False' (default) or 'True'.
     '''
     return config.get_config_value(
         'rackconnect', vm_, __opts__, default='False',
         search_global=False
     )
 
+
 def managedcloud(vm_):
     '''
-    Determine if we should wait for the managed cloud automation before running. Either
-    'False' (default) or 'True'.
+    Determine if we should wait for the managed cloud automation before
+    running. Either 'False' (default) or 'True'.
     '''
     return config.get_config_value(
         'managedcloud', vm_, __opts__, default='False',
         search_global=False
     )
+
 
 def create(vm_):
     '''
@@ -398,7 +401,7 @@ def create(vm_):
                 group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(
-                    'No such security group: \'{0}\''.format(vgm)
+                    'No such security group: \'{0}\''.format(vmg)
                 )
 
         kwargs['ex_security_groups'] = [
@@ -527,6 +530,7 @@ def create(vm_):
                 # already attached.
                 pass
 
+        result = []
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         if private and not public:
@@ -534,7 +538,6 @@ def create(vm_):
                 'Private IPs returned, but not public... Checking for '
                 'misidentified IPs'
             )
-            result = []
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if saltcloud.utils.is_public_ip(private_ip):
@@ -570,8 +573,10 @@ def create(vm_):
         data = saltcloud.utils.wait_for_ip(
             __query_node_data,
             update_args=(vm_, data, floating),
-            timeout=10 * 60,
-            interval=10
+            timeout=config.get_config_value(
+                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
+            interval=config.get_config_value(
+                'wait_for_ip_interval', vm_, __opts__, default=10),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:

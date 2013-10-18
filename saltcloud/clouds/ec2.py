@@ -1031,7 +1031,8 @@ def create(vm_=None, call=None):
             data = _wait_for_spot_instance(
                 __query_spot_instance_request,
                 update_args=(sir_id, location),
-                timeout=10 * 60,
+                timeout=config.get_config_value(
+                    'wait_for_spot_timeout', vm_, __opts__, default=10 * 60),
                 max_failures=5
             )
             log.debug('wait_for_spot_instance data {0}'.format(data))
@@ -1123,6 +1124,10 @@ def create(vm_=None, call=None):
         data = saltcloud.utils.wait_for_ip(
             __query_ip_address,
             update_args=(params, requesturl),
+            timeout=config.get_config_value(
+                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
+            interval=config.get_config_value(
+                'wait_for_ip_interval', vm_, __opts__, default=10),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
@@ -1165,7 +1170,7 @@ def create(vm_=None, call=None):
     )
 
     ssh_connect_timeout = config.get_config_value(
-        'ssh_connect_timeout', vm_, __opts__, 900
+        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
     )
 
     if saltcloud.utils.wait_for_port(ip_address, timeout=ssh_connect_timeout):
@@ -1173,7 +1178,8 @@ def create(vm_=None, call=None):
             if saltcloud.utils.wait_for_passwd(
                 host=ip_address,
                 username=user,
-                ssh_timeout=60,
+                ssh_timeout=config.get_config_value(
+                    'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60),
                 key_filename=key_filename,
                 display_ssh_output=display_ssh_output
             ):
