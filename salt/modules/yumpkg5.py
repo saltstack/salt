@@ -25,6 +25,11 @@ log = logging.getLogger(__name__)
 # it without considering its impact there.
 __QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}'
 
+__SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
+
+# Define the module's virtual name
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
@@ -77,7 +82,8 @@ def _parse_pkginfo(line):
     # other modules
     import collections
 
-    pkginfo = collections.namedtuple('PkgInfo', ('name', 'version'))
+    pkginfo = collections.namedtuple('PkgInfo', ('name', 'shortname',
+                                                 'version', 'arch'))
 
     try:
         name, pkgver, rel, arch = line.split('_|-')
@@ -86,14 +92,15 @@ def _parse_pkginfo(line):
     except ValueError:
         return None
 
+    shortname = name
     # Support 32-bit packages on x86_64 systems
-    if __grains__.get('cpuarch', '') == 'x86_64' \
-            and re.match(r'i\d86', arch):
+    if __grains__.get('cpuarch') in __SUFFIX_NOT_NEEDED \
+            and arch not in __SUFFIX_NOT_NEEDED:
         name += '.{0}'.format(arch)
     if rel:
         pkgver += '-{0}'.format(rel)
 
-    return pkginfo(name, pkgver)
+    return pkginfo(name, shortname, pkgver, arch)
 
 
 def _repoquery(repoquery_args):
@@ -141,6 +148,22 @@ def _get_repo_options(**kwargs):
     return repo_arg
 
 
+def _pkg_arch(name):
+    '''
+    Returns a 2-tuple of the name and arch parts of the passed string. Note
+    that packages that are for the system architecture should not have the
+    architecture specified in the passed string.
+    '''
+    # TODO: Fix __grains__ availability in provider overrides
+    try:
+        pkgname, pkgarch = name.rsplit('.', 1)
+    except ValueError:
+        return name, __grains__['cpuarch']
+    if pkgarch in __SUFFIX_NOT_NEEDED:
+        pkgname = name
+    return pkgname, pkgarch
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -161,16 +184,20 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-    # FIXME: do stricter argument checking that somehow takes _get_repo_options() into account
-    # if kwargs:
-    #     raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
+    # FIXME: do stricter argument checking that somehow takes
+    # _get_repo_options() into account
 
     if len(names) == 0:
         return ''
     ret = {}
-    # Initialize the dict with empty strings
+    namearch_map = {}
+    # Initialize the return dict with empty strings, and populate the namearch
+    # dict
     for name in names:
         ret[name] = ''
+        pkgname, pkgarch = _pkg_arch(name)
+        namearch_map.setdefault(name, {})['name'] = pkgname
+        namearch_map[name]['arch'] = pkgarch
 
     # Refresh before looking for the latest version available
     if refresh:
@@ -178,12 +205,23 @@ def latest_version(*names, **kwargs):
 
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
-    updates = _repoquery('{0} --pkgnarrow=available --queryformat {1!r} '
-                         '{2}'.format(repo_arg,
-                                      __QUERYFORMAT,
-                                      ' '.join(names)))
-    for pkg in updates:
-        ret[pkg.name] = pkg.version
+    updates = _repoquery(
+        '{0} --pkgnarrow=available --queryformat {1!r} '
+        '{2}'.format(
+            repo_arg,
+            __QUERYFORMAT,
+            ' '.join([namearch_map[x]['name'] for x in names])
+        )
+    )
+
+    for name in names:
+        for pkg in (x for x in updates
+                    if x.shortname == namearch_map[name]['name']):
+            if (all(x in __SUFFIX_NOT_NEEDED
+                    for x in (namearch_map[name]['arch'], pkg.arch))
+                    or namearch_map[name]['arch'] == pkg.arch):
+                ret[name] = pkg.version
+
     # Return a string if only one package name passed
     if len(names) == 1:
         return ret[names[0]]
