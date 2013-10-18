@@ -213,7 +213,7 @@ def _toggle_container_running_status(cid, started):
     cid
         Container id
     started
-        True if container is meaned to be started
+        True if container is meant to be started
     '''
     running = __salt('docker.is_running')(cid)
     # if container exists but is not started, try to start it
@@ -371,7 +371,7 @@ def installed(name,
             _set_container_id(name, cid)
             out['comment'] = 'Container {0} created'.format(cid)
             # force start or stop status of this container
-            # only if creation process is sucessfull
+            # only if creation process is successful
             if out['status']:
                 toggle_s = _toggle_container_running_status(cid, started)
                 out['result'] = toggle_s['result']
