@@ -1,8 +1,9 @@
 '''
 SoftLayer Cloud Module
-===================
+======================
 
-The SoftLayer cloud module is used to control access to the SoftLayer VPS system
+The SoftLayer cloud module is used to control access to the SoftLayer VPS
+system.
 
 Use of this module only requires the ``apikey`` parameter. Set up the cloud
 configuration at:
@@ -34,12 +35,11 @@ from saltcloud.utils import namespaced_function
 try:
     import SoftLayer
     HAS_SLLIBS = True
-except Exception as exc:
+except ImportError:
     HAS_SLLIBS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
-
 
 # Redirect SoftLayer functions to this module namespace
 script = namespaced_function(script, globals())
@@ -52,8 +52,8 @@ def __virtual__():
     '''
     if get_configured_provider() is False:
         log.debug(
-            'There is no SoftLayer cloud provider configuration available. Not '
-            'loading module.'
+            'There is no SoftLayer cloud provider configuration available. '
+            'Not loading module.'
         )
         return False
 
@@ -269,9 +269,9 @@ def create(vm_):
         'max_net_speed', vm_, __opts__, default=10
     )
     if max_net_speed:
-        kwargs['networkComponents'] = [ {
+        kwargs['networkComponents'] = [{
             'maxSpeed': int(max_net_speed)
-        } ]
+        }]
 
     saltcloud.utils.fire_event(
         'event',

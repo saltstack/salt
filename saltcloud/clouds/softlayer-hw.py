@@ -27,6 +27,7 @@ import time
 
 # Import salt cloud libs
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudSystemExit
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.utils import namespaced_function
 
@@ -34,7 +35,7 @@ from saltcloud.utils import namespaced_function
 try:
     import SoftLayer
     HAS_SLLIBS = True
-except Exception as exc:
+except ImportError:
     HAS_SLLIBS = False
 
 # Get logging started
