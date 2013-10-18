@@ -527,6 +527,7 @@ def create(vm_):
                 # already attached.
                 pass
 
+        result = []
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         if private and not public:
@@ -534,7 +535,6 @@ def create(vm_):
                 'Private IPs returned, but not public... Checking for '
                 'misidentified IPs'
             )
-            result = []
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if saltcloud.utils.is_public_ip(private_ip):
