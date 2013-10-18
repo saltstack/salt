@@ -1031,7 +1031,8 @@ def create(vm_=None, call=None):
             data = _wait_for_spot_instance(
                 __query_spot_instance_request,
                 update_args=(sir_id, location),
-                timeout=10 * 60,
+                timeout=config.get_config_value(
+                    'wait_for_spot_timeout', vm_, __opts__, default=10) * 60,
                 max_failures=5
             )
             log.debug('wait_for_spot_instance data {0}'.format(data))
