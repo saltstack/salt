@@ -422,10 +422,13 @@ def create(vm_):
     )
     if saltcloud.utils.wait_for_port(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
-            if saltcloud.utils.wait_for_passwd(host=ip_address,
-                                               username=user,
-                                               ssh_timeout=60,
-                                               key_filename=key_filename):
+            if saltcloud.utils.wait_for_passwd(
+                    host=ip_address,
+                    username=user,
+                    ssh_timeout=config.get_config_value(
+                        'wait_for_passwd_timeout', vm_, __opts__, default=1
+                    ) * 60,
+                    key_filename=key_filename):
                 username = user
                 break
         else:
