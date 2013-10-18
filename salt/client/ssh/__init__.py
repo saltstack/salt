@@ -137,7 +137,7 @@ class SSH(object):
 
     def get_pubkey(self):
         '''
-        Return the keystring for the SSH public key
+        Return the key string for the SSH public key
         '''
         priv = self.opts.get(
                 'ssh_priv',
@@ -245,7 +245,7 @@ class SSH(object):
     def handle_ssh(self):
         '''
         Spin up the needed threads or processes and execute the subsequent
-        rouintes
+        routines
         '''
         que = multiprocessing.Queue()
         running = {}
@@ -470,7 +470,7 @@ class Single(object):
 
     def cmd(self):
         '''
-        Prepare the precheck command to send to the subsystem
+        Prepare the pre-check command to send to the subsystem
         '''
         # 1. check if python is on the target
         # 2. check is salt-call is on the target
@@ -496,7 +496,7 @@ class Single(object):
 
     def cmd_block(self, is_retry=False):
         '''
-        Prepare the precheck command to send to the subsystem
+        Prepare the pre-check command to send to the subsystem
         '''
         # 1. check if python is on the target
         # 2. check is salt-call is on the target
