@@ -484,7 +484,7 @@ def create(vm_):
     ip_address = saltcloud.utils.wait_for_fun(
         wait_for_ip,
         timeout=config.get_config_value(
-            'wait_for_fun_timeout', vm_, __opts__, default=15) * 60,
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
 
     ssh_connect_timeout = config.get_config_value(
@@ -518,7 +518,11 @@ def create(vm_):
         time.sleep(5)
         return False
 
-    passwd = saltcloud.utils.wait_for_fun(get_passwd)
+    passwd = saltcloud.utils.wait_for_fun(
+        get_passwd,
+        timeout=config.get_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
     response['password'] = passwd
     response['public_ip'] = ip_address
 

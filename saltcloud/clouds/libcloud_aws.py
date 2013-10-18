@@ -393,7 +393,7 @@ def create(vm_):
             __get_node_data,
             update_args=(conn, vm_['name']),
             timeout=config.get_config_value(
-                'wait_for_ip_timeout', vm_, __opts__, default=5) * 60,
+                'wait_for_ip_timeout', vm_, __opts__, default=5 * 60),
             interval=config.get_config_value(
                 'wait_for_ip_interval', vm_, __opts__, default=0.5),
         )
@@ -426,8 +426,8 @@ def create(vm_):
                     host=ip_address,
                     username=user,
                     ssh_timeout=config.get_config_value(
-                        'wait_for_passwd_timeout', vm_, __opts__, default=1
-                    ) * 60,
+                        'wait_for_passwd_timeout', vm_, __opts__,
+                        default=1 * 60),
                     key_filename=key_filename):
                 username = user
                 break

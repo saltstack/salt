@@ -314,7 +314,7 @@ def create(vm_):
     ip_address = saltcloud.utils.wait_for_fun(
         wait_for_ip,
         timeout=config.get_config_value(
-            'wait_for_fun_timeout', vm_, __opts__, default=15) * 60,
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
     if config.get_config_value('deploy', vm_, __opts__) is not True:
         return show_instance(vm_['name'], call='action')
@@ -353,7 +353,7 @@ def create(vm_):
     passwd = saltcloud.utils.wait_for_fun(
         get_passwd,
         timeout=config.get_config_value(
-            'wait_for_fun_timeout', vm_, __opts__, default=15) * 60,
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
     response['password'] = passwd
     response['public_ip'] = ip_address

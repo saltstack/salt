@@ -267,7 +267,7 @@ def create(vm_):
                     vm_.get('location', DEFAULT_LOCATION)
                 ),
                 timeout=config.get_config_value(
-                    'wait_for_ip_timeout', vm_, __opts__, default=5) * 60,
+                    'wait_for_ip_timeout', vm_, __opts__, default=5 * 60),
                 interval=config.get_config_value(
                     'wait_for_ip_interval', vm_, __opts__, default=1),
             )

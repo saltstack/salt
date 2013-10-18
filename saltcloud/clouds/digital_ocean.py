@@ -312,7 +312,7 @@ def create(vm_):
             __query_node_data,
             update_args=(vm_['name'],),
             timeout=config.get_config_value(
-                'wait_for_ip_timeout', vm_, __opts__, default=10) * 60,
+                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_config_value(
                 'wait_for_ip_interval', vm_, __opts__, default=10),
         )
