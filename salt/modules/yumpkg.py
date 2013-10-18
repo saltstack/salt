@@ -202,6 +202,21 @@ def _set_repo_options(yumbase, **kwargs):
         return exc
 
 
+def _pkg_arch(name):
+    '''
+    Returns a 2-tuple of the name and arch parts of the passed string. Note
+    that packages that are for the system architecture should not have the
+    architecture specified in the passed string.
+    '''
+    try:
+        pkgname, pkgarch = name.rsplit('.', 1)
+    except ValueError:
+        return name, __grains__['cpuarch']
+    if pkgarch in rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']:
+        pkgname = name
+    return pkgname, pkgarch
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -222,16 +237,20 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-    # FIXME: do stricter argument checking that somehow takes _get_repo_options() into account
-    # if kwargs:
-    #     raise TypeError('Got unexpected keyword argument(s): {0!r}'.format(kwargs))
+    # FIXME: do stricter argument checking that somehow takes
+    # _get_repo_options() into account
 
     if len(names) == 0:
         return ''
     ret = {}
-    # Initialize the dict with empty strings
+    namearch_map = {}
+    # Initialize the return dict with empty strings, and populate the namearch
+    # dict
     for name in names:
         ret[name] = ''
+        pkgname, pkgarch = _pkg_arch(name)
+        namearch_map.setdefault(name, {})['name'] = pkgname
+        namearch_map[name]['arch'] = pkgarch
 
     # Refresh before looking for the latest version available
     if refresh:
@@ -242,19 +261,22 @@ def latest_version(*names, **kwargs):
     if error:
         log.error(error)
 
+    suffix_notneeded = rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']
     # look for available packages only, if package is already installed with
     # latest version it will not show up here.  If we want to use wildcards
     # here we can, but for now its exact match only.
     for pkgtype in ('available', 'updates'):
         pkglist = yumbase.doPackageLists(pkgtype)
         exactmatch, matched, unmatched = yum.packages.parsePackages(
-            pkglist, names
+            pkglist, [namearch_map[x]['name'] for x in names]
         )
-        for pkg in exactmatch:
-            if pkg.name in ret \
-                    and (pkg.arch in rpmUtils.arch.legitMultiArchesInSameLib()
-                         or pkg.arch == 'noarch'):
-                ret[pkg.name] = '-'.join([pkg.version, pkg.release])
+        for name in names:
+            for pkg in (x for x in exactmatch
+                        if x.name == namearch_map[name]['name']):
+                if (all(x in suffix_notneeded
+                        for x in (namearch_map[name]['arch'], pkg.arch))
+                        or namearch_map[name]['arch'] == pkg.arch):
+                    ret[name] = '-'.join([pkg.version, pkg.release])
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -368,12 +390,18 @@ def check_db(*names, **kwargs):
 
     ret = {}
     for name in names:
+        pkgname, pkgarch = _pkg_arch(name)
         ret.setdefault(name, {})['found'] = bool(
-            [x for x in yumbase.searchPackages(('name',), (name,))
-             if x.name == name]
+            [x for x in yumbase.searchPackages(('name', 'arch'), (pkgname,))
+             if x.name == pkgname and x.arch == pkgarch]
         )
         if ret[name]['found'] is False:
-            provides = yumbase.whatProvides(name, None, None).returnPackages()
+            provides = [
+                x for x in yumbase.whatProvides(
+                    pkgname, None, None
+                ).returnPackages()
+                if x.arch == pkgarch
+            ]
             if provides:
                 for pkg in provides:
                     ret[name].setdefault('suggestions', []).append(pkg.name)
