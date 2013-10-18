@@ -86,6 +86,14 @@ systems is easy.
 * :doc:`Adding Cloud Providers <topics/cloud>`
 * :doc:`Adding OS Support <topics/deploy>`
 
+Feature Comparison
+==================
+
+A table is available which compares various features available across all
+supported cloud providers.
+
+* :doc:`Features <topics/features>`
+
 Releases
 ========
 
