@@ -487,7 +487,11 @@ def create(vm_):
             'wait_for_fun_timeout', vm_, __opts__, default=15) * 60,
     )
 
-    if not saltcloud.utils.wait_for_port(ip_address):
+    ssh_connect_timeout = config.get_config_value(
+        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+    )
+    if not saltcloud.utils.wait_for_port(ip_address,
+                                         timeout=ssh_connect_timeout):
         raise SaltCloudSystemExit(
             'Failed to authenticate against remote ssh'
         )
