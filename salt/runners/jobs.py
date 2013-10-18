@@ -130,10 +130,9 @@ def list_jobs():
 
         salt-run jobs.list_jobs
     '''
-    serial = salt.payload.Serial(__opts__)
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid, job, t_path, final in _walk_through(serial, job_dir):
+    for jid, job, t_path, final in _walk_through(job_dir):
         ret[jid] = _format_jid_instance(jid, job)
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
@@ -152,7 +151,7 @@ def print_job(job_id):
     serial = salt.payload.Serial(__opts__)
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid, job, t_path, final in _walk_through(serial, job_dir):
+    for jid, job, t_path, final in _walk_through(job_dir):
         if job_id == jid:
             hosts_path = os.path.join(t_path, final)
             hosts_return = {}
@@ -187,13 +186,18 @@ def _format_jid_instance(jid, job):
     return ret
 
 
-def _walk_through(serial, job_dir):
+def _walk_through(job_dir):
+    serial = salt.payload.Serial(__opts__)
+
     for top in os.listdir(job_dir):
         t_path = os.path.join(job_dir, top)
+
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, '.load.p')
+
             if not os.path.isfile(load_path):
                 continue
+
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
             yield jid, job, t_path, final
