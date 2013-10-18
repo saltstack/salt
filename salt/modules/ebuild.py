@@ -17,6 +17,7 @@ import re
 import salt.utils
 
 # Import third party libs
+HAS_PORTAGE = False
 try:
     import portage
     HAS_PORTAGE = True
@@ -30,8 +31,7 @@ except ImportError:
             import portage
             HAS_PORTAGE = True
         except ImportError:
-            HAS_PORTAGE = False
-
+            pass
 
 log = logging.getLogger(__name__)
 
