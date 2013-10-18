@@ -18,8 +18,6 @@ Manage software from FreeBSD ports
 # Import python libs
 import copy
 import logging
-import os
-import re
 import sys
 
 # Import salt libs
