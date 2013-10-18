@@ -17,6 +17,10 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'list_': 'list'
+}
+
 
 def __virtual__():
     '''
@@ -135,7 +139,7 @@ def bootstrap(force=False):
     return result['stdout']
 
 
-def list(filter, all_versions=False, pre_versions=False, source=None):
+def list_(filter, all_versions=False, pre_versions=False, source=None):
     '''
     Instructs Chocolatey to pull a vague package list from the repository.
 
