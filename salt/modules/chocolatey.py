@@ -645,13 +645,13 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     # printing two value pairs is shown in columns, whereas printing six
     # pairs is shown in rows...
     if not salt.utils.is_true(check_remote):
-        ver_re = re.compile('(\S+)\s+(.+)')
+        ver_re = re.compile(r'(\S+)\s+(.+)')
         for line in result['stdout'].split('\n'):
             for name, ver in ver_re.findall(line):
                 ret['name'] = name
                 ret['found'] = ver
     else:
-        ver_re = re.compile('(\S+)\s+:\s*(.*)')
+        ver_re = re.compile(r'(\S+)\s+:\s*(.*)')
         for line in result['stdout'].split('\n'):
             for key, value in ver_re.findall(line):
                 ret[key] = value
