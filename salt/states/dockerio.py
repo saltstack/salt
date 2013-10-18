@@ -381,7 +381,7 @@ def installed(name,
     return ret
 
 
-def _get_container_id(name, pdb=False):
+def _get_container_id(name):
     k = CONTAINER_GRAIN_ID.format(id=name)
     val = None
     if not k in MAPPING_CACHE:
@@ -460,7 +460,7 @@ def present(name):
         Either the state_id or container id
 
     '''
-    cid = _get_container_id(name, True)
+    cid = _get_container_id(name)
     ins_container = __salt('docker.inspect_container')
     if cid:
         cinfos = ins_container(cid)
