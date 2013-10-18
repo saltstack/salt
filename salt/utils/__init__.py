@@ -29,7 +29,6 @@ import tempfile
 import time
 import types
 import warnings
-import yaml
 from calendar import month_abbr as months
 
 
@@ -76,6 +75,14 @@ from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     SaltClientError, CommandNotFoundError, SaltSystemExit, SaltInvocationError
 )
+
+# Ideally this would be up with third-party libs, but we want to throw an exception
+# that provides a more obvious solution
+try:
+    import yaml
+except ImportError:
+    msg = 'Salt needs PyYAML 3.10 or later.  No version of PyYAML is installed.'
+    raise SaltClientError(msg)
 
 
 # Do not use these color declarations, use get_colors()
