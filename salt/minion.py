@@ -18,6 +18,7 @@ import time
 import traceback
 import sys
 import signal
+import yaml
 from random import randint
 
 # Import third party libs
@@ -54,14 +55,6 @@ from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
     SaltInvocationError, SaltReqTimeoutError, SaltClientError
 )
-
-# Ideally this would be up with third-party libs, but we want to throw an exception
-# that provides a more obvious solution
-try:
-    import yaml
-except ImportError:
-    msg = 'Salt needs PyYAML 3.10 or later.  No version of PyYAML is installed.'
-    raise SaltClientError(msg)
 
 import salt.client
 import salt.crypt
