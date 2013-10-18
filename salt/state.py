@@ -390,12 +390,19 @@ class Compiler(object):
             if 'order' in chunk:
                 if not isinstance(chunk['order'], int):
                     continue
-                if chunk['order'] > cap - 1 and chunk['order'] > 0:
-                    cap = chunk['order'] + 100
+
+                chunk_order = chunk['order']
+                if 'name_order' in chunk:
+                    chunk_order = chunk_order + chunk['name_order']
+
+                if chunk_order > cap - 1 and chunk_order > 0:
+                    cap = chunk_order + 100
         for chunk in chunks:
             if 'order' not in chunk:
                 chunk['order'] = cap
             else:
+                if isinstance(chunk['order'], int) and 'name_order' in chunk:
+                    chunk['order'] = chunk['order'] + chunk.pop('name_order')
                 if not isinstance(chunk['order'], int):
                     if chunk['order'] == 'last':
                         chunk['order'] = cap + 1000000
@@ -439,9 +446,12 @@ class Compiler(object):
                             else:
                                 chunk.update(arg)
                 if names:
+                    name_order = 1
                     for low_name in names:
                         live = copy.deepcopy(chunk)
                         live['name'] = low_name
+                        live['name_order'] = name_order
+                        name_order = name_order + 1
                         for fun in funcs:
                             live['fun'] = fun
                             chunks.append(live)
@@ -851,12 +861,19 @@ class State(object):
             if 'order' in chunk:
                 if not isinstance(chunk['order'], int):
                     continue
-                if chunk['order'] > cap - 1 and chunk['order'] > 0:
-                    cap = chunk['order'] + 100
+
+                chunk_order = chunk['order']
+                if 'name_order' in chunk:
+                    chunk_order = chunk_order + chunk['name_order']
+
+                if chunk_order > cap - 1 and chunk_order > 0:
+                    cap = chunk_order + 100
         for chunk in chunks:
             if 'order' not in chunk:
                 chunk['order'] = cap
             else:
+                if isinstance(chunk['order'], int) and 'name_order' in chunk:
+                    chunk['order'] = chunk['order'] + chunk.pop('name_order')
                 if not isinstance(chunk['order'], int):
                     if chunk['order'] == 'last':
                         chunk['order'] = cap + 1000000
@@ -906,9 +923,12 @@ class State(object):
                             else:
                                 chunk[key] = val
                 if names:
+                    name_order = 1
                     for low_name in names:
                         live = copy.deepcopy(chunk)
                         live['name'] = low_name
+                        live['name_order'] = name_order
+                        name_order = name_order + 1
                         for fun in funcs:
                             live['fun'] = fun
                             chunks.append(live)
