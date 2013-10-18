@@ -1170,7 +1170,7 @@ def create(vm_=None, call=None):
     )
 
     ssh_connect_timeout = config.get_config_value(
-        'ssh_connect_timeout', vm_, __opts__, 900
+        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
     )
 
     if saltcloud.utils.wait_for_port(ip_address, timeout=ssh_connect_timeout):

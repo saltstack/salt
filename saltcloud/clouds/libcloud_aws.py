@@ -417,7 +417,10 @@ def create(vm_):
         ip_address = data.public_ips[0]
 
     username = 'ec2-user'
-    if saltcloud.utils.wait_for_port(ip_address):
+    ssh_connect_timeout = config.get_config_value(
+        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+    )
+    if saltcloud.utils.wait_for_port(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(host=ip_address,
                                                username=user,
