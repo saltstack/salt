@@ -390,6 +390,7 @@ def running():
         path = os.path.join(proc_dir, fn_)
         with salt.utils.fopen(path, 'rb') as fp_:
             buf = fp_.read()
+            fp_.close()
             if buf:
                 data = serial.loads(buf)
             else:
