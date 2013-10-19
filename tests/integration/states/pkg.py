@@ -18,7 +18,7 @@ import salt.utils
 
 _PKG_TARGETS = {
     'Arch': ['bzr', 'finch'],
-    'Debian': ['bzr', 'finch'],
+    'Debian': ['python-plist', 'finch'],
     'RedHat': ['bzr', 'finch'],
     'FreeBSD': ['aalib', 'pth'],
     'Suse': ['aalib', 'finch']
