@@ -70,13 +70,12 @@ def append(name, **kwargs):
         ret['comment'] = 'Set iptables rule for {0} to: {1}'.format(
             name,
             command.strip())
-    	if 'save' in kwargs:
-    	    if kwargs['save']:
-        	    out = __salt__['iptables.save'](filename=None)
-    	        ret['comment'] = 'Set and Saved iptables rule for {0} to: {1}'.format(
-                name,
-                command.strip())
-	return ret
+        if 'save' in kwargs:
+            if kwargs['save']:
+                out = __salt__['iptables.save'](filename=None)
+                ret['comment'] = ('Set and Saved iptables rule for {0} to: '
+                                  '{1}'.format(name, command.strip()))
+        return ret
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to set iptables rule for {0}'.format(name)
