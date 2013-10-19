@@ -20,7 +20,7 @@ except ImportError:
 from salt.exceptions import SaltInvocationError
 
 # Define the module's virtual name
-__virtualname__ = 'pkg'
+__virtualname__ = 'augeas'
 
 
 def __virtual__():
