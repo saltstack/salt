@@ -95,7 +95,7 @@ def update(branch, repo_location):
     '''
     Ensure you are on the right branch, and execute a git pull
 
-    return boolean wether it worked
+    return boolean whether it worked
     '''
     pid = os.getpid()
     repo = init(branch, repo_location)
