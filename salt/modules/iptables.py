@@ -88,7 +88,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
     rule = ''
 
     if 'proto' in kwargs:
-	rule +='-p {0} '.format(kwargs['proto'])
+        rule += '-p {0} '.format(kwargs['proto'])
 
     if 'match' in kwargs:
         rule += '-m {0} '.format(kwargs['match'])
@@ -98,23 +98,23 @@ def build_rule(table=None, chain=None, command=None, position='', full=None,
         del kwargs['state']
 
     if 'connstate' in kwargs:
-        rule += '--state {0} -m {1} '.format(kwargs['connstate'],kwargs['proto'])
-	del kwargs['connstate']
-	del kwargs['proto']
+        rule += '--state {0} -m {1} '.format(kwargs['connstate'], kwargs['proto'])
+    del kwargs['connstate']
+    del kwargs['proto']
 
     if 'dport' in kwargs:
-	rule += '--dport {0} '.format(kwargs['dport'])
-	del kwargs['dport']
+        rule += '--dport {0} '.format(kwargs['dport'])
+    del kwargs['dport']
 
     if 'jump' in kwargs:
-	kwargs['j']=kwargs['jump']
-	del kwargs['jump']
+        kwargs['j'] = kwargs['jump']
+    del kwargs['jump']
 
     for item in kwargs:
-	if len(item)==1:	
-        	rule +='-{0} {1} '.format(item, kwargs[item])
-	else:	
-	        rule += '--{0} {1} '.format(item, kwargs[item])
+        if len(item) == 1:
+            rule += '-{0} {1} '.format(item, kwargs[item])
+        else:
+            rule += '--{0} {1} '.format(item, kwargs[item])
 
     if full is True:
         if not table:
@@ -256,16 +256,16 @@ def check(table='filter', chain=None, rule=None):
         return 'Error: Chain needs to be specified'
     if not rule:
         return 'Error: Rule needs to be specified'
-    
+
     if __grains__['os_family'] == 'RedHat':
-	cmd = 'iptables-save'
-	out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(table, chain, rule))
-	if out!=-1:
-	   out=''
+        cmd = 'iptables-save'
+        out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(table, chain, rule))
+    if out != -1:
+        out = ''
     else:
-	cmd = 'iptables -t {0} -C {1} {2}'.format(table, chain, rule)
-    	out = __salt__['cmd.run'](cmd)
-    
+        cmd = 'iptables -t {0} -C {1} {2}'.format(table, chain, rule)
+        out = __salt__['cmd.run'](cmd)
+
     if not out:
         return True
     return out
