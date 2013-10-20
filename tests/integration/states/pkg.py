@@ -17,9 +17,9 @@ import integration
 import salt.utils
 
 _PKG_TARGETS = {
-    'Arch': ['bzr', 'finch'],
+    'Arch': ['python2-django', 'finch'],
     'Debian': ['python-plist', 'finch'],
-    'RedHat': ['bzr', 'finch'],
+    'RedHat': ['python-cli', 'finch'],
     'FreeBSD': ['aalib', 'pth'],
     'Suse': ['aalib', 'finch']
 }
