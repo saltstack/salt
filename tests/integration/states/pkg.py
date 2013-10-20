@@ -34,24 +34,23 @@ _PKG_TARGETS_32 = {
 }
 
 
-def _wait_for_pkgdb_lock():
-    '''
-    Package tests tend to fail on Arch Linux due to pkgdb lockfile being
-    present. This will wait up to 60 seconds before bailing.
-    '''
-    for idx in xrange(12):
-        if not os.path.isfile('/var/lib/pacman/db.lck'):
-            return
-        time.sleep(5)
-    raise Exception('Package database locked after 60 seconds, bailing out')
-
-
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(integration.ModuleCase,
               integration.SaltReturnAssertsMixIn):
     '''
     pkg.installed state tests
     '''
+    def _wait_for_pkgdb_lock():
+        '''
+        Package tests tend to fail on Arch Linux due to pkgdb lockfile being
+        present. This will wait up to 60 seconds before bailing.
+        '''
+        for idx in xrange(12):
+            if not os.path.isfile('/var/lib/pacman/db.lck'):
+                return
+            time.sleep(5)
+        raise Exception('Package database locked after 60 seconds, bailing out')
+
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
@@ -101,7 +100,7 @@ class PkgTest(integration.ModuleCase,
         self.assertTrue(pkg_targets)
 
         if os_family == 'Arch':
-            _wait_for_pkgdb_unlock()
+            self._wait_for_pkgdb_unlock()
 
         target = pkg_targets[0]
         version = self.run_function('pkg.latest_version', [target])
@@ -164,7 +163,7 @@ class PkgTest(integration.ModuleCase,
         self.assertTrue(pkg_targets)
 
         if os_family == 'Arch':
-            _wait_for_pkgdb_unlock()
+            self._wait_for_pkgdb_unlock()
 
         version = self.run_function('pkg.latest_version', [pkg_targets[0]])
 
@@ -224,7 +223,7 @@ class PkgTest(integration.ModuleCase,
         # platforms.
         if target:
             if os_family == 'Arch':
-                _wait_for_pkgdb_unlock()
+                self._wait_for_pkgdb_unlock()
 
             version = self.run_function('pkg.latest_version', [target])
 
