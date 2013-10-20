@@ -12,6 +12,10 @@ from salttesting.helpers import (
 )
 ensure_in_syspath('../../')
 
+# Import python libs
+import os
+import time
+
 # Import salt libs
 import integration
 import salt.utils
@@ -30,6 +34,18 @@ _PKG_TARGETS_32 = {
 }
 
 
+def _wait_for_pkgdb_lock():
+    '''
+    Package tests tend to fail on Arch Linux due to pkgdb lockfile being
+    present. This will wait up to 60 seconds before bailing.
+    '''
+    for idx in xrange(12):
+        if not os.path.isfile('/var/lib/pacman/db.lck'):
+            return
+        time.sleep(5)
+    raise Exception('Package database locked after 60 seconds, bailing out')
+
+
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(integration.ModuleCase,
               integration.SaltReturnAssertsMixIn):
@@ -39,7 +55,7 @@ class PkgTest(integration.ModuleCase,
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_installed(self, grains=None):
+    def test_pkg_001_installed(self, grains=None):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -67,7 +83,7 @@ class PkgTest(integration.ModuleCase,
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_installed_with_version(self, grains=None):
+    def test_pkg_002_installed_with_version(self, grains=None):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -83,6 +99,9 @@ class PkgTest(integration.ModuleCase,
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
         # with two packages that are not installed before these tests are run
         self.assertTrue(pkg_targets)
+
+        if os_family == 'Arch':
+            _wait_for_pkgdb_unlock()
 
         target = pkg_targets[0]
         version = self.run_function('pkg.latest_version', [target])
@@ -100,7 +119,7 @@ class PkgTest(integration.ModuleCase,
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_installed_multipkg(self, grains=None):
+    def test_pkg_003_installed_multipkg(self, grains=None):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
@@ -127,7 +146,7 @@ class PkgTest(integration.ModuleCase,
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_installed_multipkg_with_version(self, grains=None):
+    def test_pkg_004_installed_multipkg_with_version(self, grains=None):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
@@ -143,6 +162,9 @@ class PkgTest(integration.ModuleCase,
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
         # with two packages that are not installed before these tests are run
         self.assertTrue(pkg_targets)
+
+        if os_family == 'Arch':
+            _wait_for_pkgdb_unlock()
 
         version = self.run_function('pkg.latest_version', [pkg_targets[0]])
 
@@ -161,7 +183,7 @@ class PkgTest(integration.ModuleCase,
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_installed_32bit(self, grains=None):
+    def test_pkg_005_installed_32bit(self, grains=None):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -189,7 +211,7 @@ class PkgTest(integration.ModuleCase,
     @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_installed_32bit_with_version(self, grains=None):
+    def test_pkg_006_installed_32bit_with_version(self, grains=None):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -201,6 +223,9 @@ class PkgTest(integration.ModuleCase,
         # Debian and Redhat). Don't actually perform this test on other
         # platforms.
         if target:
+            if os_family == 'Arch':
+                _wait_for_pkgdb_unlock()
+
             version = self.run_function('pkg.latest_version', [target])
 
             # If this assert fails, we need to find a new target. This test
