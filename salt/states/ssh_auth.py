@@ -8,9 +8,20 @@ controlled via the ssh_auth state. Defaults can be set by the enc, options,
 and comment keys. These defaults can be overridden by including them in the
 name.
 
+Since the YAML specification limits the length of simple keys to 1024 
+characters, and since SSH keys are often longer than that, you may have
+to use a YAML 'explicit key', as demonstrated in the second example below.
+
 .. code-block:: yaml
 
     AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==:
+      ssh_auth:
+        - present
+        - user: root
+        - enc: ssh-dss
+
+    ? AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==...
+    :
       ssh_auth:
         - present
         - user: root
