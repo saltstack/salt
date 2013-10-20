@@ -24,6 +24,11 @@ _PKG_TARGETS = {
     'Suse': ['aalib', 'finch']
 }
 
+_PKG_TARGETS_32 = {
+    'Debian': '',
+    'RedHat': 'zlib.i686'
+}
+
 
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(integration.ModuleCase,
@@ -82,7 +87,7 @@ class PkgTest(integration.ModuleCase,
         # needs to not be installed before we run the states below
         self.assertTrue(version)
 
-        ret = self.run_state('pkg.installed', name=target)
+        ret = self.run_state('pkg.installed', name=target, version=version)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
@@ -142,6 +147,63 @@ class PkgTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @requires_system_grains
+    def test_pkg_installed_32bit(self, grains=None):
+        '''
+        This is a destructive test as it installs and then removes a package
+        '''
+        os_family = grains.get('os_family', '')
+        target = _PKG_TARGETS_32.get(os_family, '')
+
+        # _PKG_TARGETS_32 is only populated for the OS families for which Salt
+        # has to munge package names for 32-bit-on-x86_64 (Currently only
+        # Debian and Redhat). Don't actually perform this test on other
+        # platforms.
+        if target:
+            version = self.run_function('pkg.version', [target])
+
+            # If this assert fails, we need to find a new target. This test
+            # needs to be able to test successful installation of packages, so
+            # the target needs to not be installed before we run the states
+            # below
+            self.assertFalse(version)
+
+            ret = self.run_state('pkg.installed', name=target)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.removed', name=target)
+            self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @requires_system_grains
+    def test_pkg_installed_32bit_with_version(self, grains=None):
+        '''
+        This is a destructive test as it installs and then removes a package
+        '''
+        os_family = grains.get('os_family', '')
+        target = _PKG_TARGETS_32.get(os_family, '')
+
+        # _PKG_TARGETS_32 is only populated for the OS families for which Salt
+        # has to munge package names for 32-bit-on-x86_64 (Currently only
+        # Debian and Redhat). Don't actually perform this test on other
+        # platforms.
+        if target:
+            version = self.run_function('pkg.latest_version', [target])
+
+            # If this assert fails, we need to find a new target. This test
+            # needs to be able to test successful installation of the package, so
+            # the target needs to not be installed before we run the states
+            # below
+            self.assertTrue(version)
+
+            ret = self.run_state('pkg.installed', name=target, version=version)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.removed', name=target)
+            self.assertSaltTrueReturn(ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests
