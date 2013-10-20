@@ -1083,10 +1083,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if len(self.args) <= 1 and not self.options.doc:
             try:
                 self.print_help()
-            except:     # We get an argument that Python's optparser just can't deal with.
-                        # Perhaps stdout was redirected, or a file glob was passed in. Regardless, we're in an unknown
-                        # state here.
-                sys.stdout.write("Invalid options passed. Please try -h for help.")  # Try to warn if we can.
+            except Exception:
+                # We get an argument that Python's optparser just can't deal
+                # with. Perhaps stdout was redirected, or a file glob was
+                # passed in. Regardless, we're in an unknown state here.
+                sys.stdout.write('Invalid options passed. Please try -h for '
+                                 'help.')  # Try to warn if we can.
                 sys.exit(1)
 
         if self.options.doc:
