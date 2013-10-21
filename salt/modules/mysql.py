@@ -181,17 +181,17 @@ def _grant_to_tokens(grant):
             grant_tokens.append(cleaned_token)
             position_tracker += 1
 
-        if phrase == 'db':
+        elif phrase == 'db':
             database = token.strip('`')
             phrase = 'tables'
 
-        if phrase == 'user':
+        elif phrase == 'user':
             user, host = token.split('@')
 
         if token == 'ON':
             phrase = 'db'
 
-        if token == 'TO':
+        elif token == 'TO':
             phrase = 'user'
 
     return {
