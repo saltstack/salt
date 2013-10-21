@@ -142,11 +142,16 @@ def prep_trans_tar(opts, chunks, file_refs):
                     break
     cwd = os.getcwd()
     os.chdir(gendir)
-    with tarfile.open(trans_tar, 'w:gz') as tfp:
+    try:
+        tfp =  tarfile.open(trans_tar, 'w:gz')
         for root, dirs, files in os.walk(gendir):
             for name in files:
                 full = os.path.join(root, name)
                 tfp.add(full[len(gendir):].lstrip(os.sep))
+    except Exception, ex:
+        print ex
+    finally:
+        tfp.close()
     os.chdir(cwd)
     shutil.rmtree(gendir)
     return trans_tar
