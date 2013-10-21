@@ -208,13 +208,10 @@ def _grant_to_tokens(grant):
 
         position_tracker += 1
 
-    return {
-        'user':     user,
-        'host':     host,
-        'grant':    grant_tokens,
-        'database': database,
-
-    }
+    return dict(user=user,
+                host=host,
+                grant=grant_tokens,
+                database=database)
 
 
 
