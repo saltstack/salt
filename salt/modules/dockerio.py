@@ -1,8 +1,9 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-Management of dockers: overview of this module
-==============================================
+Management of dockers
+=====================
+
+.. versionadded:: Hydrogen
 
 .. note::
 
