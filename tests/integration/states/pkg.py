@@ -40,7 +40,7 @@ class PkgTest(integration.ModuleCase,
     '''
     pkg.installed state tests
     '''
-    def _wait_for_pkgdb_lock():
+    def _wait_for_pkgdb_unlock():
         '''
         Package tests tend to fail on Arch Linux due to pkgdb lockfile being
         present. This will wait up to 60 seconds before bailing.
