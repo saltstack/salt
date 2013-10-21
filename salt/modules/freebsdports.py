@@ -404,6 +404,12 @@ def list_all():
     '''
     Lists all ports available.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ports.list_all
+
     .. warning::
 
         Takes a while to run, and returns a **LOT** of output
