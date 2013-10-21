@@ -141,10 +141,9 @@ def _linux_gpu_data():
             'The `lspci` binary is not available on the system. GPU grains '
             'will not be available.'
         )
-        return {}
+	return {}
 
     elif not __opts__.get('enable_gpu_grains', None):
-	log.debug(__opts__.get('enable_gpu_grains', None))
 	log.info(
 	    'Skipping lspci call because enable_gpu_grains was set to False in the config. '
 	    'GPU grains will not be available.'
