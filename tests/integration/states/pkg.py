@@ -23,14 +23,14 @@ import salt.utils
 _PKG_TARGETS = {
     'Arch': ['python2-django', 'finch'],
     'Debian': ['python-plist', 'finch'],
-    'RedHat': ['python-meh', 'finch'],
+    'RedHat': ['xz-devel', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
     'Suse': ['aalib', 'finch']
 }
 
 _PKG_TARGETS_32 = {
-    'Debian': '',
-    'RedHat': 'zlib.i686'
+    'Ubuntu': 'memtest86+:i386',
+    'CentOS': 'xz-devel.i686'
 }
 
 
@@ -186,14 +186,18 @@ class PkgTest(integration.ModuleCase,
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        target = _PKG_TARGETS_32.get(os_family, '')
+        os_name = grains.get('os', '')
+        target = _PKG_TARGETS_32.get(os_name, '')
 
-        # _PKG_TARGETS_32 is only populated for the OS families for which Salt
-        # has to munge package names for 32-bit-on-x86_64 (Currently only
-        # Debian and Redhat). Don't actually perform this test on other
-        # platforms.
+        # _PKG_TARGETS_32 is only populated for platforms for which Salt has to
+        # munge package names for 32-bit-on-x86_64 (Currently only Ubuntu and
+        # RHEL-based). Don't actually perform this test on other platforms.
         if target:
+            # CentOS 5 has .i386 arch designation for 32-bit pkgs
+            elif os_name == 'CentOS' \
+                    and grains['osrelease'].startswith('5.'):
+                target = target.replace('.i686', '.i386')
+
             version = self.run_function('pkg.version', [target])
 
             # If this assert fails, we need to find a new target. This test
@@ -214,16 +218,20 @@ class PkgTest(integration.ModuleCase,
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        target = _PKG_TARGETS_32.get(os_family, '')
+        os_name = grains.get('os', '')
+        target = _PKG_TARGETS_32.get(os_name, '')
 
-        # _PKG_TARGETS_32 is only populated for the OS families for which Salt
-        # has to munge package names for 32-bit-on-x86_64 (Currently only
-        # Debian and Redhat). Don't actually perform this test on other
-        # platforms.
+        # _PKG_TARGETS_32 is only populated for platforms for which Salt has to
+        # munge package names for 32-bit-on-x86_64 (Currently only Ubuntu and
+        # RHEL-based). Don't actually perform this test on other platforms.
         if target:
-            if os_family == 'Arch':
+            if grains.get('os_family', '') == 'Arch':
                 self._wait_for_pkgdb_unlock()
+
+            # CentOS 5 has .i386 arch designation for 32-bit pkgs
+            elif os_name == 'CentOS' \
+                    and grains['osrelease'].startswith('5.'):
+                target = target.replace('.i686', '.i386')
 
             version = self.run_function('pkg.latest_version', [target])
 
