@@ -11,6 +11,7 @@ import shutil
 import time
 import logging
 import tarfile
+import datetime
 import tempfile
 
 # Import salt libs
@@ -66,6 +67,8 @@ def _wait(jid):
     '''
     Wait for all previously started state jobs to finish running
     '''
+    if jid is None:
+        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
     states = _prior_running_states(jid)
     while states:
         time.sleep(1)
@@ -126,7 +129,7 @@ def low(data, queue=False, **kwargs):
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -157,7 +160,7 @@ def high(data, queue=False, **kwargs):
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -180,7 +183,7 @@ def template(tem, queue=False, **kwargs):
         salt '*' state.template '<Path to template on the minion>'
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -203,7 +206,7 @@ def template_str(tem, queue=False, **kwargs):
         salt '*' state.template_str '<Template String>'
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -229,7 +232,7 @@ def highstate(test=None, queue=False, **kwargs):
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -293,7 +296,7 @@ def sls(mods, env='base', test=None, exclude=None, queue=False, **kwargs):
     '''
 
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -382,7 +385,7 @@ def top(topfn, test=None, queue=False, **kwargs):
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -423,7 +426,7 @@ def show_highstate(queue=False, **kwargs):
         salt '*' state.show_highstate
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -451,7 +454,7 @@ def show_lowstate(queue=False, **kwargs):
         salt '*' state.show_lowstate
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -478,7 +481,7 @@ def show_sls(mods, env='base', test=None, queue=False, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -515,7 +518,7 @@ def show_top(queue=False, **kwargs):
         salt '*' state.show_top
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
@@ -564,7 +567,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
 
     '''
     if queue:
-        _wait(kwargs['__pub_jid'])
+        _wait(kwargs.get('__pub_jid'))
     else:
         conflict = running()
         if conflict:
