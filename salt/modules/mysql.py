@@ -172,14 +172,32 @@ def _grant_to_tokens(grant):
     '''
     exploded_grant = shlex.split(grant)
     grant_tokens = []
+    multiword_statement = []
     position_tracker = 1  # Skip the initial 'GRANT' word token
     phrase = 'grants'
 
     for token in exploded_grant[position_tracker:]:
+
+        if token == 'ON':
+            phrase = 'db'
+            continue
+
+        elif token == 'TO':
+            phrase = 'user'
+            continue
+
         if phrase == 'grants':
-            cleaned_token = token.rstrip(',')
-            grant_tokens.append(cleaned_token)
-            position_tracker += 1
+            if token[-1:] == ',' or exploded_grant[position_tracker+1] == 'ON':  # Read-ahead
+                cleaned_token = token.rstrip(',')
+                if multiword_statement:
+                    multiword_statement.append(cleaned_token)
+                    grant_tokens.append(' '.join(multiword_statement))
+                    multiword_statement = []
+                else:
+                    grant_tokens.append(cleaned_token)
+
+            elif token[-1:] != ',':  # This is a multi-word, ala LOCK TABLES
+                multiword_statement.append(token)
 
         elif phrase == 'db':
             database = token.strip('`')
@@ -188,11 +206,7 @@ def _grant_to_tokens(grant):
         elif phrase == 'user':
             user, host = token.split('@')
 
-        if token == 'ON':
-            phrase = 'db'
-
-        elif token == 'TO':
-            phrase = 'user'
+        position_tracker += 1
 
     return {
         'user':     user,
