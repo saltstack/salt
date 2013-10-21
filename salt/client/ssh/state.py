@@ -8,6 +8,7 @@ import tarfile
 import tempfile
 import json
 import shutil
+from contextlib import closing
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -142,16 +143,11 @@ def prep_trans_tar(opts, chunks, file_refs):
                     break
     cwd = os.getcwd()
     os.chdir(gendir)
-    try:
-        tfp =  tarfile.open(trans_tar, 'w:gz')
+    with closing(tarfile.open(trans_tar, 'w:gz')) as tfp:
         for root, dirs, files in os.walk(gendir):
             for name in files:
                 full = os.path.join(root, name)
                 tfp.add(full[len(gendir):].lstrip(os.sep))
-    except Exception, ex:
-        print ex
-    finally:
-        tfp.close()
     os.chdir(cwd)
     shutil.rmtree(gendir)
     return trans_tar
