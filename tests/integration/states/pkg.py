@@ -29,7 +29,6 @@ _PKG_TARGETS = {
 }
 
 _PKG_TARGETS_32 = {
-    'Ubuntu': 'memtest86+:i386',
     'CentOS': 'xz-devel.i686'
 }
 
