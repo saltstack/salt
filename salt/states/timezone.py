@@ -21,10 +21,11 @@ will be set to UTC, and the system clock will be an offset of that.
       timezone.system:
         - utc: True
 
-The Ubuntu community documentation contains an explanation of this setting, as
-it applies to systems that dual-boot with Windows.
+.. _here: https://help.ubuntu.com/community/UbuntuTime#Multiple_Boot_Systems_Time_Conflicts
 
-http://tinyurl.com/5fjzmn
+The Ubuntu community documentation contains an explanation of this setting, as
+it applies to systems that dual-boot with Windows. This is explained in greater
+detail here_.
 '''
 
 
