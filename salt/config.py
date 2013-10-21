@@ -351,7 +351,7 @@ DEFAULT_MASTER_OPTS = {
     'enable_gpu_grains': False,
     # XXX: Remove 'key_logfile' support in 0.18.0
     'key_logfile': os.path.join(syspaths.LOGS_DIR, 'key'),
-    'verify_env': False,
+    'verify_env': True,
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
     'win_repo': os.path.join(syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
