@@ -194,7 +194,7 @@ class PkgTest(integration.ModuleCase,
         # RHEL-based). Don't actually perform this test on other platforms.
         if target:
             # CentOS 5 has .i386 arch designation for 32-bit pkgs
-            elif os_name == 'CentOS' \
+            if os_name == 'CentOS' \
                     and grains['osrelease'].startswith('5.'):
                 target = target.replace('.i686', '.i386')
 
@@ -229,7 +229,7 @@ class PkgTest(integration.ModuleCase,
                 self._wait_for_pkgdb_unlock()
 
             # CentOS 5 has .i386 arch designation for 32-bit pkgs
-            elif os_name == 'CentOS' \
+            if os_name == 'CentOS' \
                     and grains['osrelease'].startswith('5.'):
                 target = target.replace('.i686', '.i386')
 
