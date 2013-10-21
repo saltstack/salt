@@ -102,6 +102,10 @@ except InputError:
 # Import salt libs
 import salt.utils
 import salt.client
+try:
+    from salt.utils.decorators import memoize
+except ImportError:
+    from salt.utils import momoize
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -139,8 +143,6 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 
-salt_client = salt.client.LocalClient()
-
 
 # Only load in this module is the OPENSTACK configurations are in place
 def __virtual__():
@@ -169,6 +171,11 @@ def get_configured_provider():
     )
 
 
+@memoize
+def _get_salt_client():
+    return salt.client.LocalClient()
+
+
 def get_conn():
     '''
     Return a conn object for the passed VM data
@@ -184,9 +191,9 @@ def get_conn():
     if config_profile:
         return {
             'auth_minion': auth_minion,
-            'ks': salt_client.cmd(auth_minion,
-                                  'nova.auth',
-                                  [config_profile]),
+            'ks': _get_salt_client().cmd(auth_minion,
+                                         'nova.auth',
+                                         [config_profile]),
             'profile': config_profile
         }
 
@@ -213,7 +220,7 @@ def get_conn():
 
     return {
         'auth_minion': auth_minion,
-        'ks': salt_client.cmd(auth_minion, 'nova.auth', **authinfo)
+        'ks': _get_salt_client().cmd(auth_minion, 'nova.auth', **authinfo)
     }
 
 
@@ -706,9 +713,9 @@ def avail_images():
     ret = {}
     conn = get_conn()
 
-    return salt_client.cmd(conn['auth_minion'],
-                           'glance.image_list',
-                           [conn['profile']])
+    return _get_salt_client().cmd(conn['auth_minion'],
+                                  'glance.image_list',
+                                  [conn['profile']])
 
 
 def avail_sizes():
@@ -718,6 +725,6 @@ def avail_sizes():
     ret = {}
     conn = get_conn()
 
-    return salt_client.cmd(conn['auth_minion'],
-                           'nova.flavor_list',
-                           [conn['profile']])
+    return _get_salt_client().cmd(conn['auth_minion'],
+                                  'nova.flavor_list',
+                                  [conn['profile']])
