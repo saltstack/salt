@@ -940,11 +940,11 @@ def os_data():
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
 
         grains['osfinger'] = '{os}-{ver}'.format(
-                os=grains['osfullname'],
+                os=grains['os'],
                 ver=grains['osrelease'].partition('.')[0])
     elif grains.get('osfullname') == 'Ubuntu':
         grains['osfinger'] = '{os}-{ver}'.format(
-                os=grains['osfullname'],
+                os=grains['os'],
                 ver=grains['osrelease'])
 
     return grains
