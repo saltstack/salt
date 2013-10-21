@@ -1038,10 +1038,10 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'minions to have running')
         )
         self.add_option(
-            '-a', '--auth', '--eauth', '--extended-auth',
+            '-a', '--auth', '--eauth', '--external-auth',
             default='',
             dest='eauth',
-            help=('Specify an extended authentication system to use.')
+            help=('Specify an external authentication system to use.')
         )
         self.add_option(
             '-T', '--make-token',
