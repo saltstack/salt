@@ -5,9 +5,25 @@ OpenStack Nova Cloud Module
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
-OpenStack provides a number of ways to authenticate. This module uses password-
-based authentication, using auth v2.0. It is likely to start supporting other
-methods of authentication provided by OpenStack in the future.
+The OpenStack Nova module for Salt Cloud was bootstrapped from the OpenStack
+module for Salt Cloud, which uses a libcloud-based connection. The Nova module
+is designed to use the nova and glance modules already built into Salt.
+
+PLEASE NOTE: This module is currently in early development, and considered to be
+experimental and unstable. It is not recommended for production use.
+
+These modules use the Python novaclient and glanceclient libraries,
+respectively. In order to use this module, the proper salt configuration must
+also be in place.  This can be specified in the master config, the minion
+config, a set of grains or a set of pillars. 
+
+.. code-block:: yaml
+
+    my_openstack_profile:
+      keystone.user: admin
+      keystone.password: verybadpass
+      keystone.tenant: admin
+      keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 
 Note that there is currently a dependency upon netaddr. This can be installed
 on Debian-based systems by means of the python-netaddr package.
@@ -23,17 +39,11 @@ could be set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-openstack-config:
-      # The OpenStack Nova identity service url
-      auth_url: http://127.0.0.1:5000/v2.0/
-      # The OpenStack Nova compute region
-      region_name: regionOne
-      # The OpenStack Nova service name
-      service_type: compute
-      # The OpenStack Nova tenant name (not tenant ID)
-      tenant: mytenant
-      # The OpenStack Nova user name
-      user: myuser
-      # The OpenStack Nova keypair name
+      # The ID of the minion that will execute the salt nova functions
+      auth_minion: myminion
+      # The name of the configuration profile to use on said minion
+      config_profile: my_openstack_profile
+
       ssh_key_name: mykey
       # The OpenStack Nova network UUIDs
       networks:
@@ -44,18 +54,6 @@ could be set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 
       provider: nova
       userdata_file: /tmp/userdata.txt
-
-
-Either a password or an API key must also be specified:
-
-.. code-block:: yaml
-
-    my-nova-password-or-api-config:
-      # The OpenStack password
-      password: letmein
-      # The OpenStack API key
-      apikey: 901d3f579h23c8v73q9
-
 
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
