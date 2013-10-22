@@ -3,7 +3,7 @@
 Module to provide MySQL compatibility to salt.
 
 :depends:   - MySQLdb Python module
-    .. note::
+.. note::
 
         On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb need to be installed.
 
