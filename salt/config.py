@@ -254,7 +254,7 @@ DEFAULT_MINION_OPTS = {
     'tcp_keepalive_cnt': -1,
     'tcp_keepalive_intvl': -1,
     'modules_max_memory': -1,
-    'grains_refresh_every': 1,
+    'grains_refresh_every': 0,
 }
 
 DEFAULT_MASTER_OPTS = {
