@@ -69,7 +69,7 @@ def present(name,
             host='localhost',
             grant_option=False,
             escape=True,
-            revoke_if_necessary=False,
+            revoke_first=False,
             **connection_args):
     '''
     Ensure that the grant is present with the specified properties
@@ -128,25 +128,19 @@ def present(name,
             ret['comment'] = err
             ret['result'] = False
             return ret
-
-    #  for each grant, break into tokens and see if its on the same user/db as ours. (there is probably only one)
-    for user_grant in __salt__['mysql.user_grants'](user, host, **connection_args):
-
-        print "Comparing: "
-        print __salt__['mysql.tokenize_grant'](user_grant)['database'].replace('`', '')
-        print " to "
-        print database.replace('`', '')
-
-        if __salt__['mysql.tokenize_grant'](user_grant)['database'].replace('`', '')\
-        == database.replace('`', ''):
-            grant_to_revoke = ','.join(__salt__['mysql.tokenize_grant'](user_grant)['grant']).rstrip(',')
-            __salt__['mysql.grant_revoke'](grant_to_revoke,
-            database,
-            user,
-            host=host,
-            grant_option=grant_option,
-            escape=escape,
-            connection_args=connection_args)  #  Probably needs some ordering love
+    if revoke_first:
+        #  for each grant, break into tokens and see if its on the same user/db as ours. (there is probably only one)
+        for user_grant in __salt__['mysql.user_grants'](user, host, **connection_args):
+            if __salt__['mysql.tokenize_grant'](user_grant)['database'].replace('`', '')\
+            == database.replace('`', ''):
+                grant_to_revoke = ','.join(__salt__['mysql.tokenize_grant'](user_grant)['grant']).rstrip(',')
+                __salt__['mysql.grant_revoke'](grant_to_revoke,
+                database,
+                user,
+                host=host,
+                grant_option=grant_option,
+                escape=escape,
+                connection_args=connection_args)  #  Probably needs some ordering love
 
     # The grant is not present, make it!
     if __opts__['test']:
