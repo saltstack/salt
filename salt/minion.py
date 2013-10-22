@@ -276,6 +276,7 @@ class MasterMinion(object):
         self.mk_rend = rend
         self.mk_matcher = matcher
         self.gen_modules()
+        self.grains_cache = self.opts['grains']
 
     def gen_modules(self):
         '''
@@ -911,6 +912,25 @@ class Minion(object):
                 data['arg'] = []
             self._handle_decoded_payload(data)
 
+    def _refresh_grains_watcher(self, refresh_interval_in_minutes):
+        '''
+        Create a loop that will fire a pillar refresh to inform a master about a change in the grains of this minion
+        :param refresh_interval_in_minutes:
+        :return: None
+        '''
+        if '__update_grains' not in self.opts.get('schedule', {}):
+            if not 'schedule' in self.opts:
+                self.opts['schedule'] = {}
+            self.opts['schedule'].update({
+                '__update_grains':
+                    {
+                        'function': 'event.fire',
+                        'args': [{}, "grains_refresh"],
+                        'minutes': refresh_interval_in_minutes
+                    }
+            })
+
+
     @property
     def master_pub(self):
         '''
@@ -982,6 +1002,7 @@ class Minion(object):
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
+        :rtype : None
         '''
         try:
             log.info(
@@ -1134,6 +1155,29 @@ class Minion(object):
         time.sleep(.5)
 
         loop_interval = int(self.opts['loop_interval'])
+
+        try:
+            if self.opts['grains_refresh_every']:  # If exists and is not zero. In minutes, not seconds!
+                if self.opts['grains_refresh_every'] > 1:
+                    log.debug(
+                        "Enabling the grains refresher. Will run every {0} minutes.".format\
+                            (self.opts['grains_refresh_every'])
+                    )
+                else:  # Clean up minute vs. minutes in log message
+                    log.debug(
+                        "Enabling the grains refresher. Will run every {0} minute.".format\
+                            (self.opts['grains_refresh_every'])
+
+                    )
+                self._refresh_grains_watcher(
+                    abs(self.opts['grains_refresh_every'])
+                )
+        except Exception as exc:
+            log.error(
+                'Exception occurred in attempt to initialize grain refresh routine during minion tune-in: {0}'.format(
+                    exc)
+            )
+
         while True:
             try:
                 self.schedule.eval()
@@ -1164,6 +1208,10 @@ class Minion(object):
                                 self.module_refresh()
                             elif package.startswith('pillar_refresh'):
                                 self.pillar_refresh()
+                            elif package.startswith('grains_refresh'):
+                                if self.grains_cache != self.opts['grains']:
+                                    self.pillar_refresh()
+                                    self.grains_cache = self.opts['grains']
                             self.epub_sock.send(package)
                     except Exception:
                         pass
