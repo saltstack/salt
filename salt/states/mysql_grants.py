@@ -140,7 +140,7 @@ def present(name,
                 host=host,
                 grant_option=grant_option,
                 escape=escape,
-                connection_args=connection_args)  #  Probably needs some ordering love
+                connection_args=connection_args)  # Probably needs some ordering love
 
     # The grant is not present, make it!
     if __opts__['test']:
@@ -161,7 +161,6 @@ def present(name,
             ret['comment'] += ' ({0})'.format(err)
         ret['result'] = False
     return ret
-
 
 
 def absent(name,
