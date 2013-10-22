@@ -69,6 +69,7 @@ def present(name,
             host='localhost',
             grant_option=False,
             escape=True,
+            revoke_first=False,
             **connection_args):
     '''
     Ensure that the grant is present with the specified properties
@@ -93,6 +94,22 @@ def present(name,
 
     escape
         Defines if the database value gets escaped or not. default: True
+
+    revoke_first
+        By default, MySQL will not do anything if you issue a command to grant
+        privileges that are more restrictive than what's already in place. This
+        effectively means that you cannot downgrade permissions without first
+        revoking permissions applied to a db.table/user pair first.
+
+        To have Salt forcibly revoke perms before applying a new grant, enable
+        the 'revoke_first options.
+
+        WARNING: This will *remove* permissions for a database before attempting to apply
+        new permissions. There is no guarantee that new permissions will be applied correctly
+        which can leave your database security in an unknown and potentially dangerous state.
+        Use with caution!
+
+        default: False
     '''
     comment = 'Grant {0} on {1} to {2}@{3} is already present'
     ret = {'name': name,
@@ -111,6 +128,19 @@ def present(name,
             ret['comment'] = err
             ret['result'] = False
             return ret
+    if revoke_first:
+        #  for each grant, break into tokens and see if its on the same user/db as ours. (there is probably only one)
+        for user_grant in __salt__['mysql.user_grants'](user, host, **connection_args):
+            if __salt__['mysql.tokenize_grant'](user_grant)['database'].replace('`', '')\
+            == database.replace('`', ''):
+                grant_to_revoke = ','.join(__salt__['mysql.tokenize_grant'](user_grant)['grant']).rstrip(',')
+                __salt__['mysql.grant_revoke'](grant_to_revoke,
+                database,
+                user,
+                host=host,
+                grant_option=grant_option,
+                escape=escape,
+                connection_args=connection_args)  #  Probably needs some ordering love
 
     # The grant is not present, make it!
     if __opts__['test']:
@@ -131,6 +161,7 @@ def present(name,
             ret['comment'] += ' ({0})'.format(err)
         ret['result'] = False
     return ret
+
 
 
 def absent(name,
