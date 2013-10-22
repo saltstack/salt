@@ -6,9 +6,12 @@ The networking module for Windows based systems
 # Import python libs
 import logging
 import socket
+import time
 
 # Import salt libs
 import salt.utils
+import salt.utils.network
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -134,26 +137,84 @@ def get_interface(iface):
     return False
 
 
-def set_static_ip(iface, addr, netmask, gateway):
+def set_static_ip(iface, addr, gateway=None, append=False):
     '''
     Set static IP configuration on a Windows NIC
+
+    iface
+        The name of the interface to manage
+
+    addr
+        IP address with subnet length (ex. ``10.1.2.3/24``)
+
+    gateway : None
+        If specified, the default gateway will be set to this value.
+
+    append : False
+        If ``True``, this IP address will be added to the interface. Default is
+        ``False``, which overrides any existing configuration for the interface
+        and sets ``addr`` as the only address on the interface.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' ip.set_static_ip 'Local Area Connection' 192.168.1.5 255.255.255.0 192.168.1.1
+        salt '*' ip.set_static_ip 'Local Area Connection' 10.1.2.3/24 gateway=10.1.2.1
+        salt '*' ip.set_static_ip 'Local Area Connection' 10.1.2.4/24 append=True
     '''
-    if not any((iface, addr, netmask, gateway)):
-        return False
-    cmd = 'netsh int ip set address "{0}" static {1} {2} {3} 1'.format(
+    def _find_addr(iface, addr, timeout=1):
+        ip, cidr = addr.rsplit('/', 1)
+        netmask = salt.utils.network.cidr_to_ipv4_netmask(cidr)
+        for idx in xrange(timeout):
+            for addrinfo in \
+                    get_all_interfaces().get(iface, {}).get('ip_addrs', []):
+                if addrinfo['IP Address'] == ip \
+                        and addrinfo['Netmask'] == netmask:
+                    return addrinfo
+            time.sleep(1)
+        return {}
+
+    if not salt.utils.network.valid_ipv4(addr):
+        raise SaltInvocationError('Invalid address {0!r}'.format(addr))
+
+    if gateway and not salt.utils.network.valid_ipv4(addr):
+        raise SaltInvocationError(
+            'Invalid default gateway {0!r}'.format(gateway)
+        )
+
+    if '/' not in addr:
+        addr += '/32'
+
+    if append and _find_addr(iface, addr):
+        raise CommandExecutionError(
+            'Address {0!r} already exists on interface '
+            '{1!r}'.format(addr, iface)
+        )
+
+    cmd = (
+        'netsh interface ip {0} address name="{1}" {2} '
+        'address={3}{4}'.format(
+            'add' if append else 'set',
             iface,
+            '' if append else 'source=static',
             addr,
-            netmask,
-            gateway,
-            )
-    __salt__['cmd.run'](cmd)
-    return {'IP Address': addr, 'Netmask': netmask, 'Default Gateway': gateway}
+            ' gateway={0}'.format(gateway) if gateway else '',
+        )
+    )
+    result = __salt__['cmd.run_all'](cmd)
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Unable to set IP address: {0}'.format(result['stderr'])
+        )
+
+    new_addr = _find_addr(iface, addr, timeout=10)
+    if not new_addr:
+        return {}
+
+    ret = {'New Address': new_addr}
+    if gateway:
+        ret['Default Gateway'] = gateway
+    return ret
 
 
 def set_dhcp_ip(iface):
