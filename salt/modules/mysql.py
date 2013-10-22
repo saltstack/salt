@@ -34,6 +34,9 @@ import sys
 # Import salt libs
 import salt.utils
 
+#import shlex which should be distributed with Python
+import shlex
+
 # Import third party libs
 try:
     import MySQLdb
@@ -146,6 +149,73 @@ def _connect(**kwargs):
 
     dbc.autocommit(True)
     return dbc
+
+
+def _grant_to_tokens(grant):
+    '''
+
+    This should correspond fairly closely to the YAML rendering of a mysql_grants state which comes out
+    as follows:
+
+     OrderedDict([('whatever_identifier', OrderedDict([('mysql_grants.present',
+     [OrderedDict([('database', 'testdb.*')]), OrderedDict([('user', 'testuser')]),
+     OrderedDict([('grant', 'ALTER, SELECT, LOCK TABLES')]), OrderedDict([('host', 'localhost')])])]))])
+
+    :param grant: An un-parsed MySQL GRANT statement str, like
+        "GRANT SELECT, ALTER, LOCK TABLES ON `testdb`.* TO 'testuser'@'localhost'"
+    :return:
+        A Python dict with the following keys/values:
+            - user: MySQL User
+            - host: MySQL host
+            - grant: [grant1, grant2] (ala SELECT, USAGE, etc)
+            - database: MySQL DB
+    '''
+    exploded_grant = shlex.split(grant)
+    grant_tokens = []
+    multiword_statement = []
+    position_tracker = 1  # Skip the initial 'GRANT' word token
+    phrase = 'grants'
+
+    for token in exploded_grant[position_tracker:]:
+
+        if token == 'ON':
+            phrase = 'db'
+            continue
+
+        elif token == 'TO':
+            phrase = 'user'
+            continue
+
+        if phrase == 'grants':
+            if token[-1:] == ',' or exploded_grant[position_tracker+1] == 'ON':  # Read-ahead
+                cleaned_token = token.rstrip(',')
+                if multiword_statement:
+                    multiword_statement.append(cleaned_token)
+                    grant_tokens.append(' '.join(multiword_statement))
+                    multiword_statement = []
+                else:
+                    grant_tokens.append(cleaned_token)
+
+            elif token[-1:] != ',':  # This is a multi-word, ala LOCK TABLES
+                multiword_statement.append(token)
+
+        elif phrase == 'db':
+            database = token.strip('`')
+            phrase = 'tables'
+
+        elif phrase == 'user':
+            user, host = token.split('@')
+
+        position_tracker += 1
+
+    return {
+        'user':     user,
+        'host':     host,
+        'grant':    grant_tokens,
+        'database': database,
+
+    }
+
 
 
 def query(database, query, **connection_args):
@@ -1080,12 +1150,28 @@ def grant_exists(grant,
     )
 
     grants = user_grants(user, host, **connection_args)
-    if grants is not False and target in grants:
-        log.debug('Grant exists.')
-        return True
+
+    for grant in grants:
+        try:
+            target_tokens = None
+            if not target_tokens: # Avoid the overhead of re-calc in loop
+                target_tokens = _grant_to_tokens(target)
+            grant_tokens = _grant_to_tokens(grant)
+            if grant_tokens['user'] == target_tokens['user'] and \
+                grant_tokens['database'] == target_tokens['database'] and \
+                grant_tokens['host'] == target_tokens['host']:
+                    if set(grant_tokens['grant']) == set(target_tokens['grant']):
+                        return True
+
+        except Exception as exc:  # Fallback to strict parsing
+            log.debug("OH NO CAUGHT EXCEPTION: {0}".format(exc))
+            if grants is not False and target in grants:
+                log.debug('Grant exists.')
+                return True
 
     log.debug('Grant does not exist, or is perhaps not ordered properly?')
     return False
+
 
 
 def grant_add(grant,
