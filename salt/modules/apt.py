@@ -386,7 +386,7 @@ def install(name=None,
     elif pkg_type == 'file':
         cmd = ['dpkg', '-i', '--force-confold']
         if skip_verify:
-            cmd.append['--force-bad-verify']
+            cmd.append('--force-bad-verify')
         cmd.extend(pkg_params)
     elif pkg_type == 'repository':
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
