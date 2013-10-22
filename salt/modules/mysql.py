@@ -218,7 +218,6 @@ def _grant_to_tokens(grant):
                 database=database)
 
 
-
 def query(database, query, **connection_args):
     '''
     Run an arbitrary SQL query and return the results or
@@ -975,7 +974,8 @@ def tokenize_grant(grant):
     :param grant:
     :return: dict
     '''
-    return  _grant_to_tokens(grant)
+    return _grant_to_tokens(grant)
+
 
 # Maintenance
 def db_check(name,
@@ -1160,7 +1160,7 @@ def grant_exists(grant,
     for grant in grants:
         try:
             target_tokens = None
-            if not target_tokens: # Avoid the overhead of re-calc in loop
+            if not target_tokens:  # Avoid the overhead of re-calc in loop
                 target_tokens = _grant_to_tokens(target)
             grant_tokens = _grant_to_tokens(grant)
             if grant_tokens['user'] == target_tokens['user'] and \
@@ -1178,7 +1178,6 @@ def grant_exists(grant,
 
     log.debug('Grant does not exist, or is perhaps not ordered properly?')
     return False
-
 
 
 def grant_add(grant,
