@@ -130,7 +130,7 @@ def ext_pillar(pillar,
                 log.error('Virtualenv {} not a directory!'.format(path))
                 return {}
         # load the virtualenv
-        sys.path.append(virtualenv.path_locations(env)[1] + '/site-packages/')
+        sys.path[0:0] = (virtualenv.path_locations(env)[1] + '/site-packages/',)
 
     # load the django project
     sys.path.append(project_path)
