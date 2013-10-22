@@ -86,10 +86,17 @@ def ip_to_host(ip):
 # pylint: enable=C0103
 
 
-def _cidr_to_ipv4_netmask(cidr_bits):
+def cidr_to_ipv4_netmask(cidr_bits):
     '''
     Returns an IPv4 netmask
     '''
+    try:
+        cidr_bits = int(cidr_bits)
+        if not 1 <= cidr_bits <= 32:
+            return ''
+    except ValueError:
+        return ''
+
     netmask = ''
     for idx in range(4):
         if idx:
@@ -109,7 +116,7 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
 
     Ex. 0xffffff00 -> '255.255.255.0'
     '''
-    return _cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
+    return cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
 
 
 # pylint: disable=C0103
@@ -148,7 +155,7 @@ def _interfaces_ip(out):
             cidr = 32
 
         if type_ == 'inet':
-            mask = _cidr_to_ipv4_netmask(int(cidr))
+            mask = cidr_to_ipv4_netmask(int(cidr))
             if 'brd' in cols:
                 brd = cols[cols.index('brd') + 1]
         elif type_ == 'inet6':
