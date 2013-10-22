@@ -1160,12 +1160,12 @@ def grant_exists(grant,
                 target_tokens = _grant_to_tokens(target)
             grant_tokens = _grant_to_tokens(grant)
             if grant_tokens['user'] == target_tokens['user'] and \
-                grant_tokens['database'] == target_tokens['database'] and \
-                grant_tokens['host'] == target_tokens['host']:
-                    if set(grant_tokens['grant']) == set(target_tokens['grant']):
-                        log.debug(grant_tokens)
-                        log.debug(target_tokens)
-                        return True
+                    grant_tokens['database'] == target_tokens['database'] and \
+                    grant_tokens['host'] == target_tokens['host'] and \
+                    set(grant_tokens['grant']) == set(target_tokens['grant']):
+                log.debug(grant_tokens)
+                log.debug(target_tokens)
+                return True
 
         except Exception as exc:  # Fallback to strict parsing
             if grants is not False and target in grants:
