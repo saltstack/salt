@@ -94,7 +94,7 @@ HASNOVA = False
 try:
     from novaclient.v1_1 import client
     HASNOVA = True
-except ImporttError:
+except ImportError:
     pass
 
 # Import salt libs
@@ -103,7 +103,7 @@ import salt.client
 try:
     from salt.utils.decorators import memoize
 except ImportError:
-    from salt.utils import momoize
+    from salt.utils import memoize
 
 # Import saltcloud libs
 import saltcloud.utils
