@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Configuration of network interfaces.
-====================================
+Configuration of network interfaces
+===================================
 
 The network module is used to create and manage network settings,
 interfaces can be set as either managed or ignored. By default
