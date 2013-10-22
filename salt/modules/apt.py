@@ -388,7 +388,7 @@ def install(name=None,
             confold='--force-confold',
             verify='--force-bad-verify' if skip_verify else '',
             pkg=' '.join(pkg_params),
-        )
+        ).split()
     elif pkg_type == 'repository':
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
             # Only use the 'version' param if 'name' was not specified as a
