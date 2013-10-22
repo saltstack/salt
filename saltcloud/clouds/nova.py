@@ -191,37 +191,8 @@ def get_conn():
     if config_profile:
         return {
             'auth_minion': auth_minion,
-            'ks': _get_salt_client().cmd(auth_minion,
-                                         'nova.auth',
-                                         [config_profile]),
             'profile': config_profile
         }
-
-    authinfo = {
-        'user': config.get_config_value(
-            'user', vm_, __opts__, search_global=False
-        ),
-        'api_key': config.get_config_value(
-            'password', vm_, __opts__, search_global=False
-        ),
-        'auth_url': config.get_config_value(
-            'auth_url', vm_, __opts__, search_global=False
-        ),
-        'service_type': config.get_config_value(
-            'service_type', vm_, __opts__, search_global=False
-        ),
-        'region_name': config.get_config_value(
-            'region_name', vm_, __opts__, search_global=False
-        ),
-        'project_id': config.get_config_value(
-            'tenant', vm_, __opts__, search_global=False
-        ),
-    }
-
-    return {
-        'auth_minion': auth_minion,
-        'ks': _get_salt_client().cmd(auth_minion, 'nova.auth', **authinfo)
-    }
 
 
 def preferred_ip(vm_, ips):
