@@ -20,7 +20,7 @@ Environments
 .. note::
 
     Environments in Salt are very flexible, this section defines how the top
-    file can be used to define what ststates from what environments are to be
+    file can be used to define what states from what environments are to be
     used fro specific minions.
 
     If the intent is to bind minions to specific environments, then the
