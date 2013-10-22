@@ -94,7 +94,7 @@ HASNOVA = False
 try:
     from novaclient.v1_1 import client
     HASNOVA = True
-except InputError:
+except ImporttError:
     pass
 
 # Import salt libs
