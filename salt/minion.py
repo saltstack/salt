@@ -276,7 +276,6 @@ class MasterMinion(object):
         self.mk_rend = rend
         self.mk_matcher = matcher
         self.gen_modules()
-        self.grains_cache = self.opts['grains']
 
     def gen_modules(self):
         '''
@@ -502,6 +501,7 @@ class Minion(object):
             self.opts,
             self.functions,
             self.returners)
+        self.grains_cache = self.opts['grains']
 
     def __prep_mod_opts(self):
         '''
@@ -930,7 +930,6 @@ class Minion(object):
                     }
             })
 
-
     @property
     def master_pub(self):
         '''
@@ -1160,13 +1159,13 @@ class Minion(object):
             if self.opts['grains_refresh_every']:  # If exists and is not zero. In minutes, not seconds!
                 if self.opts['grains_refresh_every'] > 1:
                     log.debug(
-                        "Enabling the grains refresher. Will run every {0} minutes.".format\
-                            (self.opts['grains_refresh_every'])
+                        'Enabling the grains refresher. Will run every {0} minutes.'.format(
+                            self.opts['grains_refresh_every'])
                     )
                 else:  # Clean up minute vs. minutes in log message
                     log.debug(
-                        "Enabling the grains refresher. Will run every {0} minute.".format\
-                            (self.opts['grains_refresh_every'])
+                        'Enabling the grains refresher. Will run every {0} minute.'.format(
+                            self.opts['grains_refresh_every'])
 
                     )
                 self._refresh_grains_watcher(
