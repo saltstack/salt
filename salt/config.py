@@ -166,6 +166,7 @@ VALID_OPTS = {
     'win_gitrepos': list,
     'modules_max_memory': int,
     'grains_refresh_every': int,
+    'enable_lspci': bool,
 }
 
 # default configurations
@@ -347,6 +348,7 @@ DEFAULT_MASTER_OPTS = {
     'loop_interval': 60,
     'nodegroups': {},
     'cython_enable': False,
+    'enable_gpu_grains': False,
     # XXX: Remove 'key_logfile' support in 0.18.0
     'key_logfile': os.path.join(syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
