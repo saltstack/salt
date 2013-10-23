@@ -169,7 +169,7 @@ def get_configured_provider():
 
 
 @memoize
-def _get_salt_client():
+def _salt_client():
     return salt.client.LocalClient()
 
 
@@ -679,9 +679,9 @@ def avail_images():
     Return a dict of all available VM images on the cloud provider.
     '''
     conn = get_conn()
-    return _get_salt_client().cmd(conn['auth_minion'],
-                                  'glance.image_list',
-                                  [conn['profile']])
+    return _salt_client().cmd(conn['auth_minion'],
+                              'glance.image_list',
+                              [conn['profile']])
 
 
 def avail_sizes():
@@ -689,16 +689,98 @@ def avail_sizes():
     Return a dict of all available VM sizes on the cloud provider.
     '''
     conn = get_conn()
-    return _get_salt_client().cmd(conn['auth_minion'],
-                                  'nova.flavor_list',
-                                  [conn['profile']])
+    return _salt_client().cmd(conn['auth_minion'],
+                              'nova.flavor_list',
+                              [conn['profile']])
+
+
+def list_nodes():
+    '''
+    Return a list of the VMs that in this location
+    '''
+    ret = {}
+    import pprint
+    conn = get_conn()
+    server_list = _salt_client().cmd(conn['auth_minion'],
+                                   'nova.server_list',
+                                   [conn['profile']])
+    for server_name in server_list[conn['auth_minion']]:
+        server = server_list[conn['auth_minion']][server_name]
+        ret[server['name']] = {
+            'id': server['id'],
+            'image': server['image'],
+            'size': server['flavor'],
+            'state': server['status'],
+            'private_ips': [server['accessIPv4']],
+            'public_ips': [server['accessIPv4'], server['accessIPv6']],
+        }
+    return ret
 
 
 def list_nodes_full():
     '''
     Return a list of the VMs that in this location
     '''
+    ret = {}
     conn = get_conn()
-    return _get_salt_client().cmd(conn['auth_minion'],
-                                  'nova.server_list',
-                                  [conn['profile']])
+    server_list = _salt_client().cmd(conn['auth_minion'],
+                                     'nova.server_list_detailed',
+                                     [conn['profile']])
+    for server_name in server_list[conn['auth_minion']]:
+        server = server_list[conn['auth_minion']][server_name]
+        ret[server['name']] = server
+        ret[server['name']]['size'] = server['flavor']
+        ret[server['name']]['state'] = server['status']
+        ret[server['name']]['private_ips'] = [server['accessIPv4']]
+        ret[server['name']]['public_ips'] = [server['accessIPv4'], server['accessIPv6']]
+    return ret
+
+
+def list_nodes_select():
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    ret = {}
+    nodes = list_nodes_full(get_location())
+    if 'error' in nodes:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                nodes['error']['Errors']['Error']['Message']
+            )
+        )
+
+    for node in nodes:
+        pairs = {}
+        data = nodes[node]
+        for key in data:
+            if str(key) in __opts__['query.selection']:
+                value = data[key]
+                pairs[key] = value
+        ret[node] = pairs
+
+    return ret
+
+
+def list_nodes_select():
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    ret = {}
+    nodes = list_nodes_full()
+    if 'error' in nodes:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                nodes['error']['Errors']['Error']['Message']
+            )
+        )
+
+    for node in nodes:
+        pairs = {}
+        data = nodes[node]
+        for key in data:
+            if str(key) in __opts__['query.selection']:
+                value = data[key]
+                pairs[key] = value
+        ret[node] = pairs
+
+    return ret
