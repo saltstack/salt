@@ -989,6 +989,7 @@ def replace(path,
 
     return has_changes
 
+
 def blockreplace(path,
         marker_start='#-- start managed zone --',
         marker_end='#-- end managed zone --',
@@ -1050,7 +1051,7 @@ def blockreplace(path,
     new_file = []
     in_block = False
     old_content = ''
-    done=False
+    done = False
     # we do not use in_place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
     # written file.
@@ -1065,8 +1066,7 @@ def blockreplace(path,
             # managed block start found, start recording
             in_block = True
 
-        else :
-
+        else:
             if in_block:
                 if marker_end in line:
                     # end of block detected
@@ -1076,7 +1076,7 @@ def blockreplace(path,
                     for cline in content.split("\n"):
                         new_file.append(cline+"\n")
 
-                    done=True
+                    done = True
 
                 else:
                     # remove old content, but keep a trace
@@ -1087,8 +1087,6 @@ def blockreplace(path,
         orig_file.append(line)
         if result is not None:
             new_file.append(result)
-
-
     # end for. If we are here without block managment we maybe have some problems,
     # or we need to initialise the marked block
 
@@ -1098,11 +1096,11 @@ def blockreplace(path,
 
     if not done:
         if append_if_not_found:
-           # add the markers and content at the end of file
-           new_file.append(marker_start+"\n")
-           new_file.append(content+"\n")
-           new_file.append(marker_end+"\n")
-           done=True
+             # add the markers and content at the end of file
+             new_file.append(marker_start + '\n')
+             new_file.append(content + '\n')
+             new_file.append(marker_end + '\n')
+             done = True
         else:
             raise CommandExecutionError("Cannot edit marked block. Markers were not found in file.")
 
@@ -1112,7 +1110,7 @@ def blockreplace(path,
         if has_changes and not dry_run:
             # changes detected
             # backup old content
-            if backup != False:
+            if backup is not False:
                 shutil.copy2(path, '{0}{1}'.format(path, backup))
 
             # backup file attrs
@@ -1122,9 +1120,9 @@ def blockreplace(path,
             perms['mode'] = __salt__['config.manage_mode'](get_mode(path))
 
             # write new content in the file while avoiding partial reads
-            f=salt.utils.atomicfile.atomic_open(path,'wb')
+            f = salt.utils.atomicfile.atomic_open(path, 'wb')
             for line in new_file:
-              f.write(line)
+                f.write(line)
             f.close()
 
             # this may have overwritten file attrs
