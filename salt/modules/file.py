@@ -1096,11 +1096,11 @@ def blockreplace(path,
 
     if not done:
         if append_if_not_found:
-             # add the markers and content at the end of file
-             new_file.append(marker_start + '\n')
-             new_file.append(content + '\n')
-             new_file.append(marker_end + '\n')
-             done = True
+            # add the markers and content at the end of file
+            new_file.append(marker_start + '\n')
+            new_file.append(content + '\n')
+            new_file.append(marker_end + '\n')
+            done = True
         else:
             raise CommandExecutionError("Cannot edit marked block. Markers were not found in file.")
 
