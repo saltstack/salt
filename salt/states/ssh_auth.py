@@ -226,7 +226,12 @@ def present(
     return ret
 
 
-def absent(name, user, config='.ssh/authorized_keys'):
+def absent(name,
+           user,
+           enc='ssh-rsa',
+           comment='',
+           options=None,
+           config='.ssh/authorized_keys'):
     '''
     Verifies that the specified ssh key is absent
 
@@ -252,9 +257,9 @@ def absent(name, user, config='.ssh/authorized_keys'):
         check = __salt__['ssh.check_key'](
                 user,
                 name,
-                '',
-                '',
-                [],
+                enc,
+                comment,
+                options or [],
                 config)
         if check == 'update' or check == 'exists':
             ret['result'] = None
