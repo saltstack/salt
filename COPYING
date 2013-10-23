@@ -1,0 +1,29 @@
+
+--
+salt/doc/_build/html/_static/css/bootstrap-responsive.css
+Licensed under the Apache License v2.0
+--
+
+--
+salt/doc/_build/html/_static/jquery.js
+Dual licensed under the MIT or GPL Version 2 licenses.
+--
+
+--
+salt/doc/_build/html/_static/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js
+MIT & BSD
+--
+
+--
+salt/salt/utils/ipaddr.py
+Licensed under the Apache License, Version 2.0
+--
+
+--
+salt/salt/auth/pam.py
+Licensed under the MIT license
+--
+
+--
+All other files licensed according to the LICENSE file included in the top-level of this package
+--
