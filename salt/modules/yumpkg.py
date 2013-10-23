@@ -204,17 +204,19 @@ def _set_repo_options(yumbase, **kwargs):
 
 def _pkg_arch(name):
     '''
-    Returns a 2-tuple of the name and arch parts of the passed string. Note
-    that packages that are for the system architecture should not have the
-    architecture specified in the passed string.
+    Returns a 2-tuple of the name and list of acceptable architectures for the
+    package name passed as string. Note that packages that are for the system
+    architecture should not have the architecture specified in the name string
+    passed to the function.
     '''
+    suffix_notneeded = rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']
     try:
         pkgname, pkgarch = name.rsplit('.', 1)
     except ValueError:
-        return name, __grains__['cpuarch']
-    if pkgarch in rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']:
-        pkgname = name
-    return pkgname, pkgarch
+        return name, suffix_notneeded
+    if pkgarch in suffix_notneeded:
+        return name, suffix_notneeded
+    return pkgname, [pkgarch]
 
 
 def latest_version(*names, **kwargs):
@@ -261,7 +263,6 @@ def latest_version(*names, **kwargs):
     if error:
         log.error(error)
 
-    suffix_notneeded = rpmUtils.arch.legitMultiArchesInSameLib() + ['noarch']
     # look for available packages only, if package is already installed with
     # latest version it will not show up here.  If we want to use wildcards
     # here we can, but for now its exact match only.
@@ -272,11 +273,9 @@ def latest_version(*names, **kwargs):
         )
         for name in names:
             for pkg in (x for x in exactmatch
-                        if x.name == namearch_map[name]['name']):
-                if (all(x in suffix_notneeded
-                        for x in (namearch_map[name]['arch'], pkg.arch))
-                        or namearch_map[name]['arch'] == pkg.arch):
-                    ret[name] = '-'.join([pkg.version, pkg.release])
+                        if x.name == namearch_map[name]['name'] \
+                                and x.arch in namearch_map[name]['arch']):
+                ret[name] = '-'.join([pkg.version, pkg.release])
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -393,14 +392,14 @@ def check_db(*names, **kwargs):
         pkgname, pkgarch = _pkg_arch(name)
         ret.setdefault(name, {})['found'] = bool(
             [x for x in yumbase.searchPackages(('name', 'arch'), (pkgname,))
-             if x.name == pkgname and x.arch == pkgarch]
+             if x.name == pkgname and x.arch in pkgarch]
         )
         if ret[name]['found'] is False:
             provides = [
                 x for x in yumbase.whatProvides(
                     pkgname, None, None
                 ).returnPackages()
-                if x.arch == pkgarch
+                if x.arch in pkgarch
             ]
             if provides:
                 for pkg in provides:

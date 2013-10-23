@@ -150,18 +150,19 @@ def _get_repo_options(**kwargs):
 
 def _pkg_arch(name):
     '''
-    Returns a 2-tuple of the name and arch parts of the passed string. Note
-    that packages that are for the system architecture should not have the
-    architecture specified in the passed string.
+    Returns a 2-tuple of the name and list of acceptable architectures for the
+    package name passed as string. Note that packages that are for the system
+    architecture should not have the architecture specified in the name string
+    passed to the function.
     '''
     # TODO: Fix __grains__ availability in provider overrides
     try:
         pkgname, pkgarch = name.rsplit('.', 1)
     except ValueError:
-        return name, __grains__['cpuarch']
+        return name, (__grains__['cpuarch'], 'noarch')
     if pkgarch in __SUFFIX_NOT_NEEDED:
-        pkgname = name
-    return pkgname, pkgarch
+        return name, __SUFFIX_NOT_NEEDED
+    return pkgname, [pkgarch]
 
 
 def latest_version(*names, **kwargs):
@@ -216,11 +217,9 @@ def latest_version(*names, **kwargs):
 
     for name in names:
         for pkg in (x for x in updates
-                    if x.shortname == namearch_map[name]['name']):
-            if (all(x in __SUFFIX_NOT_NEEDED
-                    for x in (namearch_map[name]['arch'], pkg.arch))
-                    or namearch_map[name]['arch'] == pkg.arch):
-                ret[name] = pkg.version
+                    if x.shortname == namearch_map[name]['name'] \
+                            and x.arch in namearch_map[name]['arch']):
+            ret[name] = pkg.version
 
     # Return a string if only one package name passed
     if len(names) == 1:
