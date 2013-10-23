@@ -138,7 +138,6 @@ script = namespaced_function(script, globals())
 destroy = namespaced_function(destroy, globals())
 reboot = namespaced_function(reboot, globals())
 list_nodes = namespaced_function(list_nodes, globals())
-list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 
 
@@ -679,9 +678,7 @@ def avail_images():
     '''
     Return a dict of all available VM images on the cloud provider.
     '''
-    ret = {}
     conn = get_conn()
-
     return _get_salt_client().cmd(conn['auth_minion'],
                                   'glance.image_list',
                                   [conn['profile']])
@@ -691,9 +688,17 @@ def avail_sizes():
     '''
     Return a dict of all available VM sizes on the cloud provider.
     '''
-    ret = {}
     conn = get_conn()
-
     return _get_salt_client().cmd(conn['auth_minion'],
                                   'nova.flavor_list',
+                                  [conn['profile']])
+
+
+def list_nodes_full():
+    '''
+    Return a list of the VMs that in this location
+    '''
+    conn = get_conn()
+    return _get_salt_client().cmd(conn['auth_minion'],
+                                  'nova.server_list',
                                   [conn['profile']])
