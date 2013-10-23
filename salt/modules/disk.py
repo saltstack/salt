@@ -142,7 +142,8 @@ def inodeusage(args=None):
             log.warn("Problem parsing inode usage information")
             ret = {}
     return ret
-    
+
+
 def percent(args=None):
     '''
     Return partion information for volumes mounted on this minion
@@ -180,4 +181,3 @@ def percent(args=None):
         return ret[args]
     else:
         return ret
-        
