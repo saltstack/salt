@@ -131,10 +131,77 @@ def get_interface(iface):
 
         salt '*' ip.get_interface 'Local Area Connection'
     '''
-    ifaces = _interface_configs()
-    if iface in ifaces:
-        return ifaces[iface]
+    return _interface_configs().get(iface, {})
+
+
+def is_enabled(iface):
+    '''
+    Returns ``True`` if interface is enabled, otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.is_enabled 'Local Area Connection #2'
+    '''
+    cmd = 'netsh interface show interface name="{0}"'.format(iface)
+    iface_found = False
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if 'Connect state:' in line:
+            iface_found = True
+            return line.split()[-1] == 'Connected'
+    if not iface_found:
+        raise CommandExecutionError('Interface {0!r} not found')
     return False
+
+
+def is_disabled(iface):
+    '''
+    Returns ``True`` if interface is disabled, otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.is_disabled 'Local Area Connection #2'
+    '''
+    return not is_enabled(iface)
+
+
+def enable(iface):
+    '''
+    Enable an interface
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.enable 'Local Area Connection #2'
+    '''
+    if is_enabled(iface):
+        return True
+    __salt__['cmd.run'](
+        'netsh interface set interface "{0}" admin=ENABLED'.format(iface)
+    )
+    return is_enabled(iface)
+
+
+def disable(iface):
+    '''
+    Disable an interface
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.disable 'Local Area Connection #2'
+    '''
+    if is_disabled(iface):
+        return True
+    __salt__['cmd.run'](
+        'netsh interface set interface "{0}" admin=DISABLED'.format(iface)
+    )
+    return is_disabled(iface)
 
 
 def set_static_ip(iface, addr, gateway=None, append=False):
@@ -166,8 +233,7 @@ def set_static_ip(iface, addr, gateway=None, append=False):
         ip, cidr = addr.rsplit('/', 1)
         netmask = salt.utils.network.cidr_to_ipv4_netmask(cidr)
         for idx in xrange(timeout):
-            for addrinfo in \
-                    get_all_interfaces().get(iface, {}).get('ip_addrs', []):
+            for addrinfo in get_interface(iface).get('ip_addrs', []):
                 if addrinfo['IP Address'] == ip \
                         and addrinfo['Netmask'] == netmask:
                     return addrinfo
@@ -191,6 +257,8 @@ def set_static_ip(iface, addr, gateway=None, append=False):
             '{1!r}'.format(addr, iface)
         )
 
+    # Do not use raw string formatting (ex. {1!r}) for interface name, as the
+    # windows command shell does not like single quotes.
     cmd = (
         'netsh interface ip {0} address name="{1}" {2} '
         'address={3}{4}'.format(
@@ -211,7 +279,7 @@ def set_static_ip(iface, addr, gateway=None, append=False):
     if not new_addr:
         return {}
 
-    ret = {'New Address': new_addr}
+    ret = {'Address Info': new_addr}
     if gateway:
         ret['Default Gateway'] = gateway
     return ret
