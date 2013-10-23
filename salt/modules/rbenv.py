@@ -267,13 +267,13 @@ def do(cmdline=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rbenv.do "gem list bundler"
-        salt '*' rbenv.do "gem list bundler" deploy
+        salt '*' rbenv.do 'gem list bundler'
+        salt '*' rbenv.do 'gem list bundler' deploy
     '''
 
     path = _rbenv_path(runas)
     result = __salt__['cmd.run_all'](
-        "env PATH={0}/shims:$PATH {1}".format(path, cmdline),
+        'env PATH={0}/shims:$PATH {1}'.format(path, cmdline),
         runas=runas
     )
 
