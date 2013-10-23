@@ -649,9 +649,11 @@ def latest(
                       'installed/upgraded: ' \
                       '{0}.'.format(to_be_upgraded)
             if up_to_date:
-                comment += ' The following packages are already ' \
-                           'up-to-date: ' \
-                           '{0}.'.format(', '.join(sorted(up_to_date)))
+                if len(up_to_date) <= 10:
+                    comment += ' The following packages are already ' \
+                        'up-to-date: {0}.'.format(', '.join(sorted(up_to_date)))
+                else:
+                    comment += ' {} packages are already up-to-date.'.format(len(up_to_date))
 
             return {'name': name,
                     'changes': {},
@@ -687,8 +689,11 @@ def latest(
                       '{0}.'.format(', '.join(sorted(successful)))
                 comments.append(msg)
             if up_to_date:
-                msg = 'The following packages were already up-to-date: ' \
-                      '{0}.'.format(', '.join(sorted(up_to_date)))
+                if len(up_to_date) <= 10:
+                    msg = 'The following packages were already up-to-date: ' \
+                        '{0}.'.format(', '.join(sorted(up_to_date)))
+                else:
+                    msg = '{} packages were already up-to-date. '.format(len(up_to_date))
                 comments.append(msg)
 
             return {'name': name,
@@ -696,27 +701,37 @@ def latest(
                     'result': False if failed else True,
                     'comment': ' '.join(comments)}
         else:
-            if len(targets) > 1:
+            if len(targets) > 10:
+                comment = 'All targeted {} packages failed to update.'\
+                    .format(len(targets))
+            elif len(targets) > 1:
                 comment = 'All targeted packages failed to update: ' \
                           '({0}).'.format(', '.join(sorted(targets.keys())))
             else:
                 comment = 'Package {0} failed to ' \
                           'update.'.format(targets.keys()[0])
             if up_to_date:
-                comment += ' The following packages were already ' \
-                           'up-to-date: ' \
-                           '{0}'.format(', '.join(sorted(up_to_date)))
+                if len(up_to_date) <= 10:
+                    comment += ' The following packages were already ' \
+                        'up-to-date: ' \
+                        '{0}'.format(', '.join(sorted(up_to_date)))
+                else:
+                    comment += '{} packages were already ' \
+                        'up-to-date.'.format(len(up_to_date))
+
             return {'name': name,
                     'changes': changes,
                     'result': False,
                     'comment': comment}
     else:
-        if len(desired_pkgs) > 1:
+        if len(desired_pkgs) > 10:
+            comment = 'All {} packages are up-to-date.'.format(len(desired_pkgs))
+        elif len(desired_pkgs) > 1:
             comment = 'All packages are up-to-date ' \
-                      '({0}).'.format(', '.join(sorted(desired_pkgs)))
+                '({0}).'.format(', '.join(sorted(desired_pkgs)))
         else:
             comment = 'Package {0} is already ' \
-                      'up-to-date.'.format(desired_pkgs[0])
+                'up-to-date.'.format(desired_pkgs[0])
 
         return {'name': name,
                 'changes': {},

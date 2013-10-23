@@ -19,6 +19,7 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - dport: 80
         - proto: tcp
         - sport: 1025:65535
+        - save: True
 '''
 
 
@@ -50,7 +51,6 @@ def append(name, **kwargs):
     for ignore in "__env__",  "__sls__", "order":
         if ignore in kwargs:
             del kwargs[ignore]
-
     rule = __salt__['iptables.build_rule'](**kwargs)
     command = __salt__['iptables.build_rule'](full=True, command='A', **kwargs)
     if __salt__['iptables.check'](kwargs['table'], kwargs['chain'], rule) is True:
@@ -70,6 +70,11 @@ def append(name, **kwargs):
         ret['comment'] = 'Set iptables rule for {0} to: {1}'.format(
             name,
             command.strip())
+        if 'save' in kwargs:
+            if kwargs['save']:
+                out = __salt__['iptables.save'](filename=None)
+                ret['comment'] = ('Set and Saved iptables rule for {0} to: '
+                                  '{1}'.format(name, command.strip()))
         return ret
     else:
         ret['result'] = False

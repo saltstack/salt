@@ -50,7 +50,7 @@ class Shell(object):
 
     def get_error(self, errstr):
         '''
-        Parse out an error and return a targetted error string
+        Parse out an error and return a targeted error string
         '''
         for line in errstr.split('\n'):
             if line.startswith('ssh:'):
@@ -91,7 +91,7 @@ class Shell(object):
         Return options to pass to sshpass
         '''
         # TODO ControlMaster does not work without ControlPath
-        # user could take advange of it if they set ControlPath in thier
+        # user could take advantage of it if they set ControlPath in their
         # ssh config.  Also, ControlPersist not widely available.
         options = ['ControlMaster=auto',
                    'StrictHostKeyChecking=no',

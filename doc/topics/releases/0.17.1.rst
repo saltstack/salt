@@ -33,7 +33,7 @@ Be advised that these security issues all apply to a small subset of Salt
 users and mostly apply to Salt SSH.
 
 Insufficient Argument Validation
--------------------------------
+--------------------------------
 
 This issue allowed for a user with limited privileges to embed executions
 inside of routines to execute routines that should be restricted. This applies

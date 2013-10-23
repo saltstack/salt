@@ -12,6 +12,7 @@
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
+!include "nsProcess.nsh"; using plugin nsProcess
 
 Var Dialog
 Var Label
@@ -126,11 +127,15 @@ ShowUnInstDetails show
 
 Section "MainSection" SEC01
 
+  Exec "sc stop salt-minion" ;stopping service before upgrading
+  ${nsProcess::CloseProcess} "salt-minion.exe" $R0
+  ${nsProcess::Unload}
   SetOutPath "$INSTDIR\"
   SetOverwrite try
   CreateDirectory $INSTDIR\conf\pki\minion
   File /r "..\buildenv\"
   Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F' 
+  
 
 SectionEnd
 
@@ -149,6 +154,7 @@ SectionEnd
 
 Function .onInstSuccess
   Exec "nssm.exe install salt-minion $INSTDIR\salt-minion.exe -c $INSTDIR\conf -l quiet"
+  RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
   Exec "sc start salt-minion"
 FunctionEnd
 

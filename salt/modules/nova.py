@@ -428,7 +428,7 @@ def list_(profile=None):
 
 def server_list(profile=None):
     '''
-    Return detailed information for an active server
+    Return list of active servers
 
     CLI Example:
 
@@ -443,6 +443,12 @@ def server_list(profile=None):
             'id': item.id,
             'name': item.name,
             'status': item.status,
+            'accessIPv4': item.accessIPv4,
+            'accessIPv6': item.accessIPv6,
+            'flavor': {'id': item.flavor['id'],
+                       'links': item.flavor['links']},
+            'image': {'id': item.image['id'],
+                      'links': item.image['links']},
             }
     return ret
 
@@ -455,45 +461,43 @@ def show(server_id, profile=None):
     return server_show(server_id, profile)
 
 
-def server_show(server_id, profile=None):
+def server_list_detailed(profile=None):
     '''
-    Return detailed information for an active server
+    Return detailed list of active servers
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' nova.show
+        salt '*' nova.server_list_detailed
     '''
     nt_ks = _auth(profile)
     ret = {}
     for item in nt_ks.servers.list():
-        if item.id == server_id:
-            ret[item.name] = {
-                'OS-EXT-SRV-ATTR': {},
-                'OS-EXT-STS': {},
-                'accessIPv4': item.accessIPv4,
-                'accessIPv6': item.accessIPv6,
-                'addresses': item.addresses,
-                'config_drive': item.config_drive,
-                'created': item.created,
-                'flavor': {'id': item.flavor['id'],
-                           'links': item.flavor['links']},
-                'hostId': item.hostId,
-                'id': item.id,
-                'image': {'id': item.image['id'],
-                           'links': item.image['links']},
-                'key_name': item.key_name,
-                'links': item.links,
-                'metadata': item.metadata,
-                'name': item.name,
-                'progress': item.progress,
-                'security_groups': item.security_groups,
-                'status': item.status,
-                'tenant_id': item.tenant_id,
-                'updated': item.updated,
-                'user_id': item.user_id,
-            }
+        ret[item.name] = {
+            'OS-EXT-SRV-ATTR': {},
+            'OS-EXT-STS': {},
+            'accessIPv4': item.accessIPv4,
+            'accessIPv6': item.accessIPv6,
+            'addresses': item.addresses,
+            'config_drive': item.config_drive,
+            'created': item.created,
+            'flavor': {'id': item.flavor['id'],
+                       'links': item.flavor['links']},
+            'hostId': item.hostId,
+            'id': item.id,
+            'image': {'id': item.image['id'],
+                      'links': item.image['links']},
+            'key_name': item.key_name,
+            'links': item.links,
+            'metadata': item.metadata,
+            'name': item.name,
+            'progress': item.progress,
+            'status': item.status,
+            'tenant_id': item.tenant_id,
+            'updated': item.updated,
+            'user_id': item.user_id,
+        }
         if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
             ret[item.name]['OS-DCF'] = {
                 'diskConfig': item.__dict__['OS-DCF:diskConfig']
@@ -510,6 +514,27 @@ def server_show(server_id, profile=None):
             ret[item.name]['OS-EXT-STS']['task_state'] = item.__dict__['OS-EXT-STS:task_state']
         if hasattr(item.__dict__, 'OS-EXT-STS:vm_state'):
             ret[item.name]['OS-EXT-STS']['vm_state'] = item.__dict__['OS-EXT-STS:vm_state']
+        if hasattr(item.__dict__, 'security_groups'):
+            ret[item.name]['security_groups'] = item.__dict__['security_groups']
+    return ret
+
+
+def server_show(server_id, profile=None):
+    '''
+    Return detailed information for an active server
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.server_show <server_id>
+    '''
+    ret = {}
+    server_list = server_list_detailed(profile)
+    for item in server_list:
+        id_ = server_list[item]['id']
+        if str(id_) == server_id:
+            ret[server_list[item]['name']] = server_list[item]
     return ret
 
 

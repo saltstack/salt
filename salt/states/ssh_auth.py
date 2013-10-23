@@ -3,14 +3,25 @@
 Control of entries in SSH authorized_key files.
 ===============================================
 
-The information stored in a user's ssh authorized key file can be easily
+The information stored in a user's SSH authorized key file can be easily
 controlled via the ssh_auth state. Defaults can be set by the enc, options,
 and comment keys. These defaults can be overridden by including them in the
 name.
 
+Since the YAML specification limits the length of simple keys to 1024
+characters, and since SSH keys are often longer than that, you may have
+to use a YAML 'explicit key', as demonstrated in the second example below.
+
 .. code-block:: yaml
 
     AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==:
+      ssh_auth:
+        - present
+        - user: root
+        - enc: ssh-dss
+
+    ? AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==...
+    :
       ssh_auth:
         - present
         - user: root
@@ -105,19 +116,19 @@ def present(
         config='.ssh/authorized_keys',
         **kwargs):
     '''
-    Verifies that the specified ssh key is present for the specified user
+    Verifies that the specified SSH key is present for the specified user
 
     name
-        The ssh key to manage
+        The SSH key to manage
 
     user
-        The user who owns the ssh authorized keys file to modify
+        The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used, can be ecdsa ssh-rsa, ssh-dss
+        Defines what type of key is being used; can be ecdsa, ssh-rsa or ssh-dss
 
     comment
-        The comment to be placed with the ssh public key
+        The comment to be placed with the SSH public key
 
     source
         The source file for the key(s). Can contain any number of public keys,
@@ -226,15 +237,29 @@ def present(
     return ret
 
 
-def absent(name, user, config='.ssh/authorized_keys'):
+def absent(name,
+           user,
+           enc='ssh-rsa',
+           comment='',
+           options=None,
+           config='.ssh/authorized_keys'):
     '''
-    Verifies that the specified ssh key is absent
+    Verifies that the specified SSH key is absent
 
     name
-        The ssh key to manage
+        The SSH key to manage
 
     user
-        The user who owns the ssh authorized keys file to modify
+        The user who owns the SSH authorized keys file to modify
+
+    enc
+        Defines what type of key is being used; can be ecdsa, ssh-rsa or ssh-dss
+
+    comment
+        The comment to be placed with the SSH public key
+
+    options
+        The options passed to the key, pass a list object
 
     config
         The location of the authorized keys file relative to the user's home
@@ -252,9 +277,9 @@ def absent(name, user, config='.ssh/authorized_keys'):
         check = __salt__['ssh.check_key'](
                 user,
                 name,
-                '',
-                '',
-                [],
+                enc,
+                comment,
+                options or [],
                 config)
         if check == 'update' or check == 'exists':
             ret['result'] = None

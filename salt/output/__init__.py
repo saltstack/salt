@@ -39,7 +39,8 @@ def display_output(data, out, opts=None):
                 ofh.write(display_data)
                 ofh.write('\n')
             return
-        print(display_data)
+        if display_data:
+            print(display_data)
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:

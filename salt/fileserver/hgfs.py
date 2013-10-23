@@ -142,7 +142,10 @@ def init():
 
 def purge_cache():
     bp_ = os.path.join(__opts__['cachedir'], 'hgfs')
-    remove_dirs = os.listdir(bp_)
+    try:
+        remove_dirs = os.listdir(bp_)
+    except OSError:
+        remove_dirs = []
     for _, opt in enumerate(__opts__['hgfs_remotes']):
         repo_hash = hashlib.md5(opt).hexdigest()
         try:
