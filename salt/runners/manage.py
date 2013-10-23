@@ -18,7 +18,7 @@ import salt.key
 import salt.client
 import salt.output
 
-FINGERPRINT_REGEX = re.compile(r"[a-f0-9]{2}:"*15 + r"[a-f0-9]{2}")
+FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
 
 def status(output=True):
