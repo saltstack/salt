@@ -67,7 +67,7 @@ def __virtual__():
             if 'upstart' in initctl_version:
                 return 'service'
     return False
-    
+
 
 def _find_utmp():
     '''
