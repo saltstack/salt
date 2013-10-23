@@ -116,19 +116,19 @@ def present(
         config='.ssh/authorized_keys',
         **kwargs):
     '''
-    Verifies that the specified ssh key is present for the specified user
+    Verifies that the specified SSH key is present for the specified user
 
     name
-        The ssh key to manage
+        The SSH key to manage
 
     user
-        The user who owns the ssh authorized keys file to modify
+        The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used, can be ecdsa ssh-rsa, ssh-dss
+        Defines what type of key is being used; can be ecdsa, ssh-rsa or ssh-dss
 
     comment
-        The comment to be placed with the ssh public key
+        The comment to be placed with the SSH public key
 
     source
         The source file for the key(s). Can contain any number of public keys,
@@ -244,13 +244,22 @@ def absent(name,
            options=None,
            config='.ssh/authorized_keys'):
     '''
-    Verifies that the specified ssh key is absent
+    Verifies that the specified SSH key is absent
 
     name
-        The ssh key to manage
+        The SSH key to manage
 
     user
-        The user who owns the ssh authorized keys file to modify
+        The user who owns the SSH authorized keys file to modify
+
+    enc
+        Defines what type of key is being used; can be ecdsa, ssh-rsa or ssh-dss
+
+    comment
+        The comment to be placed with the SSH public key
+
+    options
+        The options passed to the key, pass a list object
 
     config
         The location of the authorized keys file relative to the user's home
