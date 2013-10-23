@@ -240,7 +240,7 @@ def cache_file(path, env='base'):
     _mk_client()
     if path.startswith('salt://|'):
         # Strip pipe. Windows doesn't allow pipes in filenames
-        path = 'salt://{0}'.format(path.lstrip('salt://|'))
+        path = 'salt://{0}'.format(path[8:])
     result = __context__['cp.fileclient'].cache_file(path, env)
     if not result:
         log.error(

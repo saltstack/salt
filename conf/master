@@ -90,6 +90,12 @@
 # Set the directory used to hold unix sockets
 #sock_dir: /var/run/salt/master
 
+# The master can take a while to start up when lspci and/or dmidecode is used
+# to populate the grains for the master. Enable if you want to see GPU hardware
+# data for your master.
+#
+# enable_gpu_grains: False
+
 # The master maintains a job cache, while this is a great addition it can be
 # a burden on the master for larger deployments (over 5000 minions).
 # Disabling the job cache will make previously executed jobs unavailable to

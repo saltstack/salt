@@ -341,7 +341,7 @@ class Resolver(object):
 
     def mk_token(self, load):
         '''
-        Request a token fromt he master
+        Request a token from the master
         '''
         load['cmd'] = 'mk_token'
         sreq = salt.payload.SREQ(
@@ -354,7 +354,7 @@ class Resolver(object):
 
     def get_token(self, token):
         '''
-        Request a token fromt he master
+        Request a token from the master
         '''
         load = {}
         load['token'] = token
