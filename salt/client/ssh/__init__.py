@@ -170,7 +170,7 @@ class SSH(object):
             if deploy.startswith(('n', 'N')):
                 return ret
             target['passwd'] = getpass.getpass(
-                    'Password for {0}@{1}:'.format(host, target['user'])
+                    'Password for {0}@{1}:'.format(target['user'], host)
                 )
             return self._key_deploy_run(host, target, True)
         return ret
