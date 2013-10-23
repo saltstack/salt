@@ -1776,7 +1776,6 @@ def replace(name,
     return ret
 
 
-
 def blockreplace(name,
             marker_start='#-- start managed zone --',
             marker_end='#-- end managed zone --',
@@ -1789,7 +1788,7 @@ def blockreplace(name,
 
     .. versionadded:: 0.18.0
 
-    A block of content delimited by comments can help you manage several lines 
+    A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you maintaining
     an unmanaged file containing manual edits.
     Note: this function will store two copies of the file in-memory
@@ -1831,7 +1830,7 @@ def blockreplace(name,
             - append_if_not_found: True
             - backup: '.bak'
             - show_changes: True
-        
+
         hosts-config-block-{{ myvar }}-accumulated1:
           file.accumulated:
             - filename: /etc/hosts
@@ -1839,7 +1838,7 @@ def blockreplace(name,
             - text: "text 2"
             - require_in:
               - file: foobar-config-block-{{ myvar }}
-        
+
         hosts-config-block-{{ myvar }}-accumulated2:
           file.accumulated:
             - filename: /etc/hosts
@@ -1869,7 +1868,7 @@ def blockreplace(name,
         accumulator = _ACCUMULATORS[name]
         for acc, acc_content in accumulator.iteritems():
             for line in acc_content:
-                if content=='':
+                if content == '':
                     content = line
                 else:
                     content += "\n" + line
@@ -1890,7 +1889,6 @@ def blockreplace(name,
 
     ret['result'] = True
     return ret
-
 
 
 def sed(name,
