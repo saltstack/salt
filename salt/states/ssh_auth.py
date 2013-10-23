@@ -3,7 +3,7 @@
 Control of entries in SSH authorized_key files.
 ===============================================
 
-The information stored in a user's ssh authorized key file can be easily
+The information stored in a user's SSH authorized key file can be easily
 controlled via the ssh_auth state. Defaults can be set by the enc, options,
 and comment keys. These defaults can be overridden by including them in the
 name.
