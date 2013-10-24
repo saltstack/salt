@@ -102,7 +102,7 @@ def raw_interface_configs():
 
     .. code-block:: bash
 
-        salt '*' ip.raw_interface_configs
+        salt -G 'os_family:Windows' ip.raw_interface_configs
     '''
     cmd = 'netsh interface ip show config'
     return __salt__['cmd.run'](cmd)
@@ -116,7 +116,7 @@ def get_all_interfaces():
 
     .. code-block:: bash
 
-        salt '*' ip.get_all_interfaces
+        salt -G 'os_family:Windows' ip.get_all_interfaces
     '''
     return _interface_configs()
 
@@ -129,7 +129,7 @@ def get_interface(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.get_interface 'Local Area Connection'
+        salt -G 'os_family:Windows' ip.get_interface 'Local Area Connection'
     '''
     return _interface_configs().get(iface, {})
 
@@ -142,7 +142,7 @@ def is_enabled(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.is_enabled 'Local Area Connection #2'
+        salt -G 'os_family:Windows' ip.is_enabled 'Local Area Connection #2'
     '''
     cmd = 'netsh interface show interface name="{0}"'.format(iface)
     iface_found = False
@@ -163,7 +163,7 @@ def is_disabled(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.is_disabled 'Local Area Connection #2'
+        salt -G 'os_family:Windows' ip.is_disabled 'Local Area Connection #2'
     '''
     return not is_enabled(iface)
 
@@ -176,7 +176,7 @@ def enable(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.enable 'Local Area Connection #2'
+        salt -G 'os_family:Windows' ip.enable 'Local Area Connection #2'
     '''
     if is_enabled(iface):
         return True
@@ -194,7 +194,7 @@ def disable(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.disable 'Local Area Connection #2'
+        salt -G 'os_family:Windows' ip.disable 'Local Area Connection #2'
     '''
     if is_disabled(iface):
         return True
@@ -226,8 +226,8 @@ def set_static_ip(iface, addr, gateway=None, append=False):
 
     .. code-block:: bash
 
-        salt '*' ip.set_static_ip 'Local Area Connection' 10.1.2.3/24 gateway=10.1.2.1
-        salt '*' ip.set_static_ip 'Local Area Connection' 10.1.2.4/24 append=True
+        salt -G 'os_family:Windows' ip.set_static_ip 'Local Area Connection' 10.1.2.3/24 gateway=10.1.2.1
+        salt -G 'os_family:Windows' ip.set_static_ip 'Local Area Connection' 10.1.2.4/24 append=True
     '''
     def _find_addr(iface, addr, timeout=1):
         ip, cidr = addr.rsplit('/', 1)
@@ -293,7 +293,7 @@ def set_dhcp_ip(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.set_dhcp_ip 'Local Area Connection'
+        salt -G 'os_family:Windows' ip.set_dhcp_ip 'Local Area Connection'
     '''
     cmd = 'netsh interface ip set address "{0}" dhcp'.format(iface)
     __salt__['cmd.run'](cmd)
@@ -308,8 +308,8 @@ def set_static_dns(iface, *addrs):
 
     .. code-block:: bash
 
-        salt '*' ip.set_static_dns 'Local Area Connection' '192.168.1.1'
-        salt '*' ip.set_static_dns 'Local Area Connection' '192.168.1.252' '192.168.1.253'
+        salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.1'
+        salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.252' '192.168.1.253'
     '''
     addr_index = 1
     for addr in addrs:
@@ -335,7 +335,7 @@ def set_dhcp_dns(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.set_dhcp_dns 'Local Area Connection'
+        salt -G 'os_family:Windows' ip.set_dhcp_dns 'Local Area Connection'
     '''
     cmd = 'netsh interface ip set dns "{0}" dhcp'.format(iface)
     __salt__['cmd.run'](cmd)
@@ -350,8 +350,29 @@ def set_dhcp_all(iface):
 
     ..code-block:: bash
 
-        salt '*' ip.set_dhcp_all 'Local Area Connection'
+        salt -G 'os_family:Windows' ip.set_dhcp_all 'Local Area Connection'
     '''
     set_dhcp_ip(iface)
     set_dhcp_dns(iface)
     return {'Interface': iface, 'DNS Server': 'DHCP', 'DHCP enabled': 'Yes'}
+
+
+def get_default_gateway():
+    '''
+    Set DNS source to DHCP on Windows
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt -G 'os_family:Windows' ip.get_default_gateway
+    '''
+    try:
+        return next(iter(
+            x.split()[-1] for x in __salt__['cmd.run'](
+                'netsh interface ip show config'
+            ).splitlines()
+            if 'Default Gateway:' in x
+        ))
+    except StopIteration:
+        raise CommandExecutionError('Unable to find default gateway')
