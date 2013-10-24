@@ -61,12 +61,9 @@ def __virtual__():
             'There is no CloudStack cloud provider configuration available. '
             'Not loading module.'
         )
-        return False
+        return False   
 
-    verify_ssl_cert = config.get_config_value(
-            'verify_ssl_cert', get_configured_provider(), __opts__, default=True, search_global=False
-        )
-    if not verify_ssl_cert:
+    if not provider.get('verify_ssl_cert', True):
       try:
         import libcloud.security
         libcloud.security.VERIFY_SSL_CERT = False
@@ -216,7 +213,7 @@ def create(vm_):
         kwargs['extra_args'] = {'keypair': get_keypair(vm_)}
 
     if get_networkid(vm_) is not False:
-        kwargs['networids'] = get_networkid(vm_)
+        kwargs['networkids'] = get_networkid(vm_)
 
     saltcloud.utils.fire_event(
         'event',
