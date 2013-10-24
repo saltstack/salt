@@ -2672,11 +2672,10 @@ def mknod(name,
 
 def list_backups(path, limit=None):
     '''
-    .. note::
-        This function will be available in version 0.17.0.
-
     Lists the previous versions of a file backed up using Salt's :doc:`file
     state backup </ref/states/backup_mode>` system.
+
+    .. versionadded:: 0.17.0
 
     path
         The path on the minion to check for backups
@@ -2728,11 +2727,10 @@ list_backup = list_backups
 
 def restore_backup(path, backup_id):
     '''
-    .. note::
-        This function will be available in version 0.17.0.
-
     Restore a previous version of a file that was backed up using Salt's
     :doc:`file state backup </ref/states/backup_mode>` system.
+
+    .. versionadded:: 0.17.0
 
     path
         The path on the minion to check for backups
@@ -2788,11 +2786,10 @@ def restore_backup(path, backup_id):
 
 def delete_backup(path, backup_id):
     '''
-    .. note::
-        This function will be available in version 0.17.0.
-
     Restore a previous version of a file that was backed up using Salt's
     :doc:`file state backup </ref/states/backup_mode>` system.
+
+    .. versionadded:: 0.17.0
 
     path
         The path on the minion to check for backups
