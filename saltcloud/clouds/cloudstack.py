@@ -63,7 +63,10 @@ def __virtual__():
         )
         return False   
 
-    if not provider.get('verify_ssl_cert', True):
+    verify_ssl_cert = config.get_config_value(
+            'verify_ssl_cert', get_configured_provider(), __opts__, default=True, search_global=False
+        )
+    if not verify_ssl_cert:
       try:
         import libcloud.security
         libcloud.security.VERIFY_SSL_CERT = False
