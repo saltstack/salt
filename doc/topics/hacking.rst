@@ -438,3 +438,10 @@ Change to salt documentation directory, then:
 .. code-block:: bash
 
     make SPHINXBUILD=sphinx-1.0-build html
+
+Once you've updated the documentation, you can run the following command to
+launch a simple Python http server to see your changes:
+
+.. code-block:: bash
+
+    cd _build/html; python -m SimpleHTTPServer
