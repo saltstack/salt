@@ -292,7 +292,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
-        self.assertEquals(dataset, json.loads(rendered))
+        self.assertEqual(dataset, json.loads(rendered))
 
     def test_serialize_yaml(self):
         dataset = {
@@ -303,7 +303,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
-        self.assertEquals(dataset, yaml.load(rendered))
+        self.assertEqual(dataset, yaml.load(rendered))
 
     def test_serialize_python(self):
         dataset = {
@@ -314,16 +314,16 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|python }}').render(dataset=dataset)
-        self.assertEquals(rendered, pprint.pformat(dataset))
+        self.assertEqual(rendered, pprint.pformat(dataset))
 
     def test_load_yaml(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = "{foo: it works}"|load_yaml %}{{ document.foo }}').render()
-        self.assertEquals(rendered, u"it works")
+        self.assertEqual(rendered, u"it works")
 
         rendered = env.from_string('{% set document = document|load_yaml %}'
                                    '{{ document.foo }}').render(document="{foo: it works}")
-        self.assertEquals(rendered, u"it works")
+        self.assertEqual(rendered, u"it works")
 
         with self.assertRaises(exceptions.TemplateRuntimeError):
             env.from_string('{% set document = document|load_yaml %}'
@@ -337,13 +337,13 @@ class TestCustomExtensions(TestCase):
                                         '{{ docu.foo }}'
 
         rendered = env.from_string(source).render(bar="barred")
-        self.assertEquals(rendered, u"barred, it works")
+        self.assertEqual(rendered, u"barred, it works")
 
         source = '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}": "baz"}{% endload %}' + \
                                         '{{ docu.foo }}'
 
         rendered = env.from_string(source).render(bar="barred")
-        self.assertEquals(rendered, u"barred, it works")
+        self.assertEqual(rendered, u"barred, it works")
 
         with self.assertRaises(exceptions.TemplateSyntaxError):
             env.from_string('{% load_yamle as document %}{foo, bar: it works}{% endload %}').render()
@@ -356,11 +356,11 @@ class TestCustomExtensions(TestCase):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = \'{"foo": "it works"}\'|load_json %}'
                                    '{{ document.foo }}').render()
-        self.assertEquals(rendered, u"it works")
+        self.assertEqual(rendered, u"it works")
 
         rendered = env.from_string('{% set document = document|load_json %}'
                                    '{{ document.foo }}').render(document='{"foo": "it works"}')
-        self.assertEquals(rendered, u"it works")
+        self.assertEqual(rendered, u"it works")
 
         # bad quotes
         with self.assertRaises(exceptions.TemplateRuntimeError):
@@ -374,7 +374,7 @@ class TestCustomExtensions(TestCase):
         loader = DictLoader({'foo': '{bar: "my god is blue", foo: [1, 2, 3]}'})
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.from_string('{% import_yaml "foo" as doc %}{{ doc.bar }}').render()
-        self.assertEquals(rendered, u"my god is blue")
+        self.assertEqual(rendered, u"my god is blue")
 
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_yaml "does not exists" as doc %}').render()
@@ -383,7 +383,7 @@ class TestCustomExtensions(TestCase):
         loader = DictLoader({'foo': '{"bar": "my god is blue", "foo": [1, 2, 3]}'})
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.from_string('{% import_json "foo" as doc %}{{ doc.bar }}').render()
-        self.assertEquals(rendered, u"my god is blue")
+        self.assertEqual(rendered, u"my god is blue")
 
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_json "does not exists" as doc %}').render()
@@ -420,22 +420,22 @@ class TestCustomExtensions(TestCase):
 
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.get_template('main1').render()
-        self.assertEquals(rendered, u"my god is blue")
+        self.assertEqual(rendered, u"my god is blue")
 
         rendered = env.get_template('main2').render()
-        self.assertEquals(rendered, u"it works")
+        self.assertEqual(rendered, u"it works")
 
         rendered = env.get_template('main3').render().strip()
-        self.assertEquals(rendered, u"my god is blue")
+        self.assertEqual(rendered, u"my god is blue")
 
         rendered = env.get_template('main4').render().strip()
-        self.assertEquals(rendered, u"it works")
+        self.assertEqual(rendered, u"it works")
 
         rendered = env.get_template('main5').render().strip()
-        self.assertEquals(rendered, u"my god is blue")
+        self.assertEqual(rendered, u"my god is blue")
 
         rendered = env.get_template('main6').render().strip()
-        self.assertEquals(rendered, u"it works")
+        self.assertEqual(rendered, u"it works")
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])

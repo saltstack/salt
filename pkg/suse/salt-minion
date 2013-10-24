@@ -6,15 +6,16 @@
 # LSB header
 
 ### BEGIN INIT INFO
-# Provides:           salt-minion
-# Required-Start:     $local_fs $remote_fs $network $named $time 
-# Should-Start:		    $time ypbind smtp
-# Required-Stop:	    $local_fs $remote_fs $network $named $time 
-# Should-Stop:		    ypbind smtp
-# Default-Start:      3 5
-# Default-Stop:       0 1 2 6
-# Short-Description:  Salt minion daemon
-# Description:        This is the Salt minion daemon that can be controlled by the Salt master.
+# Provides:          salt-minion
+# Required-Start:    $local_fs $remote_fs $network $named $time
+# Should-Start:      $time ypbind smtp
+# Required-Stop:	 $local_fs $remote_fs $network $named $time
+# Should-Stop:       ypbind smtp
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
+# Short-Description: Salt minion daemon
+# Description:       This is the Salt minion daemon that can be controlled by the
+#                    Salt master.
 ### END INIT INFO
 
 
@@ -25,16 +26,6 @@
 #
 # processname: /usr/bin/salt-minion
 
-
-if [ -f /etc/default/salt ]; then
-    . /etc/default/salt
-else
-    SALTMINION=/usr/bin/salt-minion
-    PYTHON=/usr/bin/python
-fi
-
-# Sanity checks.
-[ -x $SALTMINION ] || exit 0
 
 DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
@@ -47,22 +38,30 @@ else
     . /etc/rc.d/init.d/functions
 fi
 
+# Default values (can be overridden below)
+SALTMINION=/usr/bin/salt-minion
+PYTHON=/usr/bin/python
+MINION_ARGS=""
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+fi
+
 SERVICE=salt-minion
 PROCESS=salt-minion
-CONFIG_ARGS=" "
 
 RETVAL=0
 
 start() {
     echo -n $"Starting salt-minion daemon: "
     if [ -f $SUSE_RELEASE ]; then
-        startproc -f -p /var/run/$SERVICE.pid $SALTMINION -d $CONFIG_ARGS
+        startproc -f -p /var/run/$SERVICE.pid $SALTMINION -d $MINION_ARGS
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
             echo -n "already started, lock file found"
             RETVAL=1
-        elif $PYTHON $SALTMINION -d >& /dev/null; then
+        elif $PYTHON $SALTMINION -d $MINION_ARGS >& /dev/null; then
             echo -n "OK"
             RETVAL=0
         fi
@@ -71,7 +70,7 @@ start() {
 	          RETVAL=$?
 	          echo -n "already running"
         else
-	          daemon --check $SERVICE $SALTMINION -d $CONFIG_ARGS
+	          daemon --check $SERVICE $SALTMINION -d $MINION_ARGS
 	          RETVAL=$?
         fi
     fi
@@ -133,11 +132,7 @@ case "$1" in
         ;;
     reload)
         echo "can't reload configuration, you have to restart it"
-        if [ -f $SUSE_RELEASE ]; then
-        	rc_status -v
-        else
-        	RETVAL=$?
-        fi
+        RETVAL=$?
         ;;
     *)
         echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"

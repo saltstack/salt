@@ -23,14 +23,19 @@ Major Features
 Halite
 ------
 
-The new Halite web GUI is now available, a great deal of work has been put into
-Halite to make it fully event driven and amazingly fast. The Halite UI can be
-started from within the Salt Master, or standalone, and does not require an
-external database to run, it is very lightweight!
+The new Halite web GUI is now available on PyPi, a great deal of work has
+been put into Halite to make it fully event driven and amazingly fast. The 
+Halite UI can be started from within the Salt Master (after being installed
+from PyPi), or standalone, and does not require an external database to run,
+it is very lightweight!
 
 This initial release of Halite is primarily the framework for the UI and the
 communication systems making it easy to extend and build the UI up. It
 presently supports watching the event bus and firing commands over Salt.
+
+At this time Halite is not available as a package, but installation
+documentation is available at:
+http://docs.saltstack.com/topics/tutorials/halite.html
 
 Halite is, like the rest of Salt, Open Source!
 

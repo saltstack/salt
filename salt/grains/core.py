@@ -141,14 +141,21 @@ def _linux_gpu_data():
             'The `lspci` binary is not available on the system. GPU grains '
             'will not be available.'
         )
-	return {}
+        return {}
 
+<<<<<<< HEAD
     elif __opts__.get('enable_gpu_grains', None) is False:
 	log.info(
 	    'Skipping lspci call because enable_gpu_grains was set to False in the config. '
 	    'GPU grains will not be available.'
 	)
 	return {}
+    elif  __opts__.get('enable_gpu_grains', None) is False:
+        log.info(
+            'Skipping lspci call because enable_gpu_grains was set to False in the config. '
+            'GPU grains will not be available.'
+        )
+        return {}
 
     # dominant gpu vendors to search for (MUST be lowercase for matching below)
     known_vendors = ['nvidia', 'amd', 'ati', 'intel']

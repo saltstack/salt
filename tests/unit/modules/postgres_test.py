@@ -29,7 +29,7 @@ class PostgresTestCase(TestCase):
         postgres._run_psql('echo "hi"')
         cmd = SALT_STUB['cmd.run_all']
 
-        self.assertEquals('postgres', cmd.call_args[1]['runas'])
+        self.assertEqual('postgres', cmd.call_args[1]['runas'])
 
 
 if __name__ == '__main__':

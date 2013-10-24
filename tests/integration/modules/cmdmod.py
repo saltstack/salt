@@ -69,7 +69,7 @@ class CMDModuleTest(integration.ModuleCase):
 
             environment2 = os.environ.copy()
 
-            self.assertEquals(environment, environment2)
+            self.assertEqual(environment, environment2)
 
             getpwnam_mock.assert_called_with('foobar')
             loads_mock.assert_called_with('{}')

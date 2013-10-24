@@ -3,6 +3,10 @@
 Module to provide MySQL compatibility to salt.
 
 :depends:   - MySQLdb Python module
+.. note::
+
+        On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb need to be installed.
+
 :configuration: In order to connect to MySQL, certain configuration is required
     in /etc/salt/minion on the relevant minions. Some sample configs might look
     like::
@@ -30,12 +34,10 @@ import time
 import logging
 import re
 import sys
+import shlex
 
 # Import salt libs
 import salt.utils
-
-#import shlex which should be distributed with Python
-import shlex
 
 # Import third party libs
 try:
@@ -187,7 +189,7 @@ def _grant_to_tokens(grant):
             continue
 
         if phrase == 'grants':
-            if token[-1:] == ',' or exploded_grant[position_tracker+1] == 'ON':  # Read-ahead
+            if token.endswith(',') or exploded_grant[position_tracker+1] == 'ON':  # Read-ahead
                 cleaned_token = token.rstrip(',')
                 if multiword_statement:
                     multiword_statement.append(cleaned_token)
@@ -208,14 +210,10 @@ def _grant_to_tokens(grant):
 
         position_tracker += 1
 
-    return {
-        'user':     user,
-        'host':     host,
-        'grant':    grant_tokens,
-        'database': database,
-
-    }
-
+    return dict(user=user,
+                host=host,
+                grant=grant_tokens,
+                database=database)
 
 
 def query(database, query, **connection_args):
@@ -968,6 +966,15 @@ def user_remove(user,
     return False
 
 
+def tokenize_grant(grant):
+    '''
+    External wrapper function
+    :param grant:
+    :return: dict
+    '''
+    return _grant_to_tokens(grant)
+
+
 # Maintenance
 def db_check(name,
              table=None,
@@ -1142,9 +1149,6 @@ def grant_exists(grant,
 
         salt '*' mysql.grant_exists 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
-    # TODO: This function is a bit tricky, since it requires the ordering to
-    #       be exactly the same. Perhaps should be replaced/reworked with a
-    #       better/cleaner solution.
     target = __grant_generate(
         grant, database, user, host, grant_option, escape
     )
@@ -1154,24 +1158,24 @@ def grant_exists(grant,
     for grant in grants:
         try:
             target_tokens = None
-            if not target_tokens: # Avoid the overhead of re-calc in loop
+            if not target_tokens:  # Avoid the overhead of re-calc in loop
                 target_tokens = _grant_to_tokens(target)
             grant_tokens = _grant_to_tokens(grant)
             if grant_tokens['user'] == target_tokens['user'] and \
-                grant_tokens['database'] == target_tokens['database'] and \
-                grant_tokens['host'] == target_tokens['host']:
-                    if set(grant_tokens['grant']) == set(target_tokens['grant']):
-                        return True
+                    grant_tokens['database'] == target_tokens['database'] and \
+                    grant_tokens['host'] == target_tokens['host'] and \
+                    set(grant_tokens['grant']) == set(target_tokens['grant']):
+                log.debug(grant_tokens)
+                log.debug(target_tokens)
+                return True
 
         except Exception as exc:  # Fallback to strict parsing
-            log.debug("OH NO CAUGHT EXCEPTION: {0}".format(exc))
             if grants is not False and target in grants:
                 log.debug('Grant exists.')
                 return True
 
     log.debug('Grant does not exist, or is perhaps not ordered properly?')
     return False
-
 
 
 def grant_add(grant,
