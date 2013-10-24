@@ -440,7 +440,7 @@ class TestCustomExtensions(TestCase):
     def test_nested_structures(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ data }}').render(data="foo")
-        self.assertEquals(rendered, u"foo")
+        self.assertEqual(rendered, u"foo")
 
         data = OrderedDict([
             ('foo', OrderedDict([
@@ -451,7 +451,7 @@ class TestCustomExtensions(TestCase):
         ])
 
         rendered = env.from_string('{{ data }}').render(data=data)
-        self.assertEquals(rendered, u"{'foo': {'bar': 'baz', 'qux': 42}}")
+        self.assertEqual(rendered, u"{'foo': {'bar': 'baz', 'qux': 42}}")
 
         rendered = env.from_string('{{ data }}').render(data=[
                                                             OrderedDict(
@@ -461,7 +461,7 @@ class TestCustomExtensions(TestCase):
                                                                 baz=42,
                                                             )
                                                         ])
-        self.assertEquals(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
+        self.assertEqual(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
