@@ -59,8 +59,7 @@ SSH_SHIM = '''/bin/sh << 'EOF'
          fi
       done
       SALT=/tmp/.salt/salt-call
-
-      if [ {{2}} == 'md5' ]
+      if [ {{2}} = 'md5' ]
       then
          for md5_candidate in \\
             md5sum            \\
