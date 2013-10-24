@@ -134,7 +134,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
 
         changes = ret.values()[0]['changes']
-        self.assertEquals('<show_diff=False>', changes['diff'])
+        self.assertEqual('<show_diff=False>', changes['diff'])
 
     def test_directory(self):
         '''
