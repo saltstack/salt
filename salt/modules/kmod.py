@@ -81,6 +81,8 @@ def _set_persistent_module(mod):
     commented uncomment it.
     '''
     conf = _get_modules_conf()
+    if not os.path.exists(conf):
+        __salt__['file.touch'](conf)
     mod_name = _strip_module_name(mod)
     if not mod_name or mod_name in mod_list(True) or mod_name not in available():
         return set()
@@ -184,12 +186,14 @@ def mod_list(only_persist=False):
     '''
     mods = set()
     if only_persist:
-        with salt.utils.fopen(_get_modules_conf(), 'r') as modules_file:
-            for line in modules_file:
-                line = line.strip()
-                mod_name = _strip_module_name(line)
-                if not line.startswith('#') and mod_name:
-                    mods.add(mod_name)
+        conf = _get_modules_conf()
+        if os.path.exists(conf):
+            with salt.utils.fopen(conf, 'r') as modules_file:
+                for line in modules_file:
+                    line = line.strip()
+                    mod_name = _strip_module_name(line)
+                    if not line.startswith('#') and mod_name:
+                        mods.add(mod_name)
     else:
         for mod in lsmod():
             mods.add(mod['module'])
