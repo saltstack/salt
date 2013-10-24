@@ -386,12 +386,18 @@ class SSH(object):
             print('')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
+            #self.cache_job(jid, host, ret)
             ret = self.key_deploy(host, ret)
             salt.output.display_output(
                     ret,
                     self.opts.get('output', 'nested'),
                     self.opts)
-            #self.cache_job(jid, host, ret)
+            if self.event:
+                self.event.fire_event(
+                        ret,
+                        salt.utils.event.tagify(
+                            [jid, 'ret', host],
+                            'job'))
 
 
 class Single(object):
