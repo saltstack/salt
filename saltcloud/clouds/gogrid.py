@@ -78,7 +78,7 @@ def __virtual__():
         return False
 
     log.debug('Loading GoGrid cloud module')
-    return 'gogrid'
+    return True
 
 
 def get_configured_provider():

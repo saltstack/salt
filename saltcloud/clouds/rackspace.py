@@ -94,7 +94,7 @@ def __virtual__():
         return False
 
     log.debug('Loading Rackspace cloud module')
-    return 'rackspace'
+    return True
 
 
 def get_configured_provider():

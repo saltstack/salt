@@ -181,7 +181,7 @@ def __virtual__():
         return False
 
     log.debug('Loading Openstack cloud module')
-    return 'openstack'
+    return True
 
 
 def get_configured_provider():

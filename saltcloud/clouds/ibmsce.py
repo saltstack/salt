@@ -96,7 +96,7 @@ def __virtual__():
         return False
 
     log.debug('Loading IBM SCE cloud module')
-    return 'ibmsce'
+    return True
 
 
 def get_configured_provider():

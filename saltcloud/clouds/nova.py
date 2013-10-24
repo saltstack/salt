@@ -15,7 +15,7 @@ experimental and unstable. It is not recommended for production use.
 These modules use the Python novaclient and glanceclient libraries,
 respectively. In order to use this module, the proper salt configuration must
 also be in place.  This can be specified in the master config, the minion
-config, a set of grains or a set of pillars. 
+config, a set of grains or a set of pillars.
 
 .. code-block:: yaml
 
@@ -152,7 +152,7 @@ def __virtual__():
         return False
 
     log.debug('Loading Openstack Nova cloud module')
-    return 'nova'
+    return True
 
 
 def get_configured_provider():

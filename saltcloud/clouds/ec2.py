@@ -166,7 +166,7 @@ def __virtual__():
             )
 
     log.debug('Loading EC2 cloud compute module')
-    return 'ec2'
+    return True
 
 
 def get_configured_provider():

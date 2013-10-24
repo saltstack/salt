@@ -67,7 +67,7 @@ def __virtual__():
         return False
 
     log.debug('Loading Digital Ocean cloud module')
-    return 'digital_ocean'
+    return True
 
 
 def get_configured_provider():

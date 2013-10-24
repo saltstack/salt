@@ -70,7 +70,7 @@ def __virtual__():
         return False
 
     log.debug('Loading Parallels cloud module')
-    return 'parallels'
+    return True
 
 
 def get_configured_provider():
